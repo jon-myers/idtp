@@ -100,7 +100,7 @@ export default {
         this.rightIsDisabled = true
       }
     },
-    
+  
     selectedRecording(newVal) {
       this.rightIsDisabled = newVal >= this.numRecordings
       if (newVal > 1) {
@@ -109,7 +109,7 @@ export default {
         this.leftIsDisabled = true
       }
     },
-    
+  
     selectedEventType(newVal) {
       this.addEventTypeVisibility = newVal === 'Other (specify)'
     }
@@ -130,12 +130,6 @@ export default {
     
     this.eventTypes = await getEventTypes()
     await this.eventTypes.push('Other (specify)');  
-  },
-  
-  async beforeUnmount() {
-    // if nothing has been added to mongoDB except for the creation of an _id, 
-    // then destroy it. This is to prevent empty ones from building up. 
-    // await cleanEmptyDoc(this.uniqueId)
   },
   
   
@@ -251,7 +245,8 @@ export default {
 .maint {
   background-color: #202621;
   border: 1px solid white;
-  z-index: 1
+  z-index: 1;
+  color: white
 }
 
 .closeWindow {

@@ -269,35 +269,35 @@ export default {
         this.allMusicians = result;
         this.allMusicians.push('Unknown', 'Other (specify)')
       })
-      
+  
     getRagaNames()
       .then(result => {
         this.ragaNames = result;
         this.ragaNames.push('Unknown', 'Other (specify)')
       })
-      
+  
     getInstruments(true)
       .then(result => {
         this.melodyInstruments = result;
         this.melodyInstruments.push('Unknown', 'Other (specify)')
       })
-      
+  
     getInstruments(false)
       .then(result => {
         this.allInstruments = result;
         this.allInstruments.push('Unknown', 'Other (specify)')
       })
-      
+  
     getLocationObject()
       .then(result => {
         this.location = result
       })
-      
-      
+  
+  
   },
   
   computed: {
-    
+  
     
     getCountries() {
       if (this.selectedContinent && this.location) {
@@ -311,7 +311,7 @@ export default {
     getContinents() {
       return this.location ? Object.keys(this.location) : [];
     },
-    
+  
     getCities() {
       if (this.selectedContinent && this.location && this.location[this.selectedContinent][this.selectedCountry]) {
         const cities = this.location[this.selectedContinent][this.selectedCountry];
@@ -320,7 +320,7 @@ export default {
         return ['Unknown', 'Other (specify)']
       }
     },
-    
+  
     getYears() {
       const stop = (new Date()).getFullYear();
       const start = 1903;
@@ -328,27 +328,22 @@ export default {
       outputArr.push('Unknown')
       return outputArr
     },
-    
+  
     possibleDays() {
-      const monthNum = this.months.indexOf(this.selectedMonth) + 1
-      return (new Date(Number(this.selectedYear), monthNum, 0)).getDate()
+      if (this.selectedMonth) {
+        const monthNum = this.months.indexOf(this.selectedMonth) + 1
+        return (new Date(Number(this.selectedYear), monthNum, 0)).getDate()
+      } else {
+        return 31
+      }
+      
     },
     
-    
+  
   },
   
   watch: {
     
-    // selectedMusician(newVal) {
-    //   if (newVal === 'Other (specify)') {
-    //     this.addMusicianVisibility = true;
-    //     this.gharana = null
-    //   } else {
-    //     this.addMusicianVisibility = false;
-    //     getGharana(newVal)
-    //       .then(result => this.gharana = result)
-    //   }
-    // },
     
     selectedSoloInstrument(newVal) {
       if (newVal === 'Other (specify)') {
@@ -369,13 +364,7 @@ export default {
       this.rightIsDisabled = newVal >= this.numRaags;
       this.leftIsDisabled = newVal === 1
     },
-    
-    // progressWidth(newVal) {
-    //   console.log(newVal);
-    //   if (newVal === 150) {
-    //     this.uploadDone = true
-    //   }
-    // }
+
     
   },
   
@@ -692,4 +681,7 @@ input {
   color: white;
 }
 
+.mainInner {
+  color: white
+}
 </style>

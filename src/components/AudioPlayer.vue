@@ -10,6 +10,13 @@
         </div>
         <div class='controlFlexer'>
           <div class='controlBox'>
+            <img :src='icons.loop'/>
+            <img :src='icons.beginning'/>
+            <div class='playCircle'>
+              <img :src='icons.play'/>
+            </div>
+            <img :src='icons.end'/>
+            <img :src='icons.shuffle'/>
           </div>
         </div>
         <div class='recInfo'>
@@ -21,19 +28,27 @@
 </template>
 <script>
 
-// import beginningIcon from '@/assets/icons/beginning.svg';
-// import endIcon from '@/assets/icons/end.svg';
-// import loopIcon from '@/assets/icons/loop.svg';
-// import pauseIcon from '@/assets/icons/pause.svg';
-// import playIcon from '@/assets/icons/play.svg';
-// import shuffleIcon from '@/assets/icons/shuffle.svg';
+import beginningIcon from '@/assets/icons/beginning.svg';
+import endIcon from '@/assets/icons/end.svg';
+import loopIcon from '@/assets/icons/loop.svg';
+import pauseIcon from '@/assets/icons/pause.svg';
+import playIcon from '@/assets/icons/play.svg';
+import shuffleIcon from '@/assets/icons/shuffle.svg';
 
 export default {
   name: 'AudioPlayer',
   
   data() {
     return {
-      progress: 0.1
+      progress: 0.1,
+      icons: {
+        beginning: beginningIcon,
+        end: endIcon,
+        loop: loopIcon,
+        pause: pauseIcon,
+        play: playIcon,
+        shuffle: shuffleIcon
+      }  
     }
   },
   
@@ -108,11 +123,46 @@ export default {
 }
 
 .controlBox {
-  width: 300px;
-  height: 60px;
-  background-color: orange
+  width: 400px;
+  height: 70px;
+  background-color: black;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-evenly;
 }
 
+.controlBox > img {
+  height: 30px;
+  width: 30px;
+  cursor: pointer;
+  filter: brightness(400%)
+}
+
+
+.controlBox > img:hover {
+  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg) brightness(94%) contrast(97%);
+}
+
+.playCircle > img {
+  object-position: 3px;
+}
+
+.playCircle {
+  background-color: grey;
+  border-radius: 30px;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.playCircle > img {
+  filter: brightness(400%)
+}
 
 
 
