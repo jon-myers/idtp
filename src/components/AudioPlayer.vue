@@ -1,7 +1,7 @@
 <template>
   <div class='main'>
     <div class='player'>
-      <div class='progressBarOuter'>
+      <div class='progressBarOuter' @click='handleProgressClick' ref='pbOuter'>
         <div class='progressBarInner'>
         </div>
       </div>
@@ -11,9 +11,9 @@
         <div class='controlFlexer'>
           <div class='controlBox'>
             <img :src='icons.loop'/>
-            <img :src='icons.beginning'/>
-            <div class='playCircle'>
-              <img :src='icons.play'/>
+            <img :src='icons.beginning' @click='goToBeginning'/>
+            <div class='playCircle' @click='togglePlay'>
+              <img ref='playImg' :src='[icons.play, icons.pause][Number(this.playing)]'/>
             </div>
             <img :src='icons.end'/>
             <img :src='icons.shuffle'/>
@@ -23,6 +23,9 @@
         </div>
       </div>
     </div>
+    <audio ref='audio'> 
+      <source :src='audioSource' type='audio/mpeg'>
+    </audio>
   
   </div>
 </template>
@@ -40,7 +43,11 @@ export default {
   
   data() {
     return {
-      progress: 0.1,
+      progress: 0.0,
+      playing: false,
+      audio: {
+        paused: false
+      },
       icons: {
         beginning: beginningIcon,
         end: endIcon,
@@ -61,11 +68,51 @@ export default {
     // shuffleIcon
   },
   
+  props: [
+    'audioSource'
+  ],
+  
   mounted() {
-    
+    this.audio = new Audio();
+    this.audio.ontimeupdate = () => {
+      this.progress = this.audio.currentTime / this.audio.duration
+    }
+  },
+  
+  watch: {
+    audioSource(newSrc) {
+      this.audio.src = newSrc;
+      this.audio.play();
+      this.playing = true;
+      this.$refs.playImg.className = 'playing';
+      
+    }
   },
   
   methods: {
+    
+    // getSrc(src) {
+    //   return require(src)
+    // }
+    togglePlay() {
+      if (this.audio.paused) {
+        this.audio.play();
+        this.playing = true
+      } else {
+        this.audio.pause();
+        this.playing = false
+      }
+    },
+    
+    goToBeginning() {
+      this.audio.currentTime = 0
+    },
+    
+    handleProgressClick(e) {
+      const bb = this.$refs.pbOuter.getBoundingClientRect();
+      this.audio.currentTime = this.audio.duration * e.clientX / bb.width
+    }
+    
     
   }
 }
@@ -106,16 +153,16 @@ export default {
 }
 
 .recInfo {
-  width: 200px;
-  min-width: 200px;
+  width: 300px;
+  min-width: 300px;
   height: 100%;
-  background-color: pink;
+  background-color: black;
 }
 
 .controlFlexer {
   width: 100%;
   height: 100%;
-  background-color: blue;
+  background-color: black;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -148,8 +195,12 @@ export default {
   object-position: 3px;
 }
 
+.playCircle > img.playing {
+  object-position: 0px;
+}
+
 .playCircle {
-  background-color: grey;
+  background-color: #242424;
   border-radius: 30px;
   width: 60px;
   height: 60px;
@@ -158,6 +209,10 @@ export default {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+
+.playCircle:hover {
+  background-color: #4f4f4f
 }
 
 .playCircle > img {

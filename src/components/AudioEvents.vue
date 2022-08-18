@@ -17,7 +17,8 @@
             <div 
               :class='`audioRecordingRow height${getRaagHeight(audioEvent.recordings[recKey])}`' 
               v-for='recKey in Object.keys(audioEvent.recordings)'
-              :key='audioEvent.recordings[recKey].audioFileId'>
+              :key='audioEvent.recordings[recKey].audioFileId'
+              @dblclick='sendAudioSource($event, audioEvent.recordings[recKey].audioFileId)'>
               <span class='recordingNum'>{{`${Number(recKey)+1}. `}}</span>
               <div :class='`soloist height${getRaagHeight(audioEvent.recordings[recKey])}`'>
                 <span>
@@ -46,14 +47,14 @@
                 </div>
               </div>
               
-              <div :class='`playCol height${getRaagHeight(audioEvent.recordings[recKey])}`'>
+              <!-- <div :class='`playCol height${getRaagHeight(audioEvent.recordings[recKey])}`'>
                   <audio controls :class='`height${getRaagHeight(audioEvent.recordings[recKey])}`'>
                     <source 
                       :src='`https://swara.studio/audio/mp3/${audioEvent.recordings[recKey].audioFileId}.mp3`' 
                       type='audio/mpeg'>
                   </audio>
                   
-              </div>
+              </div> -->
               
             </div>
           </div>
@@ -70,7 +71,7 @@
       class='audioEventPopup' 
       ref='addAudioEvent'
       :extUniqueId='editingId'/>
-    <AudioPlayer v-if='true'/>
+    <AudioPlayer v-if='true' :audioSource='audioSource'/>
       
     
     <!-- <div>
@@ -113,6 +114,7 @@ export default {
       showAddEvent: false,
       recHeight: 30,
       editingId: undefined,
+      audioSource: undefined
     }
   },
   components: {
@@ -140,6 +142,15 @@ export default {
   },
   
   methods: {
+    
+    sendAudioSource(e, _id) {
+      const playing = document.querySelector('.playing');
+      if (playing) {
+        playing.classList.remove('playing')
+      }
+      e.target.classList.add('playing');
+      this.audioSource = `https://swara.studio/audio/mp3/${_id}.mp3`;
+    },
     
     getRaags(recording) {
       return Object.keys(recording.raags)
@@ -221,6 +232,7 @@ export default {
   background-color: black;
   background-image: linear-gradient(black, #1e241e);
   color: white;
+  user-select: none;
 }
 
 button {
@@ -295,6 +307,10 @@ button {
   flex-direction: row;
   align-items: center;
   justify-content: left
+}
+
+.playing {
+  background-color: #3e4a40
 }
 
 .audioRecordingRow > label {
