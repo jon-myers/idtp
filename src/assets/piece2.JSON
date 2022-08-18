@@ -1,0 +1,1268 @@
+{
+  "phrases": [{
+    "trajectories": [{
+      "id": 6,
+      "pitches": [{
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }, {
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.2264118276812468,
+      "durArray": [0.5, 0.5],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 0,
+      "num": 0,
+      "name": "Bend: Half Cosine Interpolation"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 2.639030140001691,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 0.22641182768124676,
+      "num": 1,
+      "name": "Fixed"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 2.812975565365324,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 2.865441967682938,
+      "num": 2,
+      "name": "Fixed"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 4.328415212498988,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 5.678417533048262,
+      "num": 3,
+      "name": "Fixed"
+    }],
+    "durTot": 10.00683274554725,
+    "durArray": [0.02262572318718862, 0.26372281890850857, 0.28110548431190846, 0.4325459735923944],
+    "chikaris": {},
+    "connected": [true, true, true],
+    "raga": {
+      "name": "Yaman",
+      "fundamental": 261.63
+    },
+    "startTime": 0
+  }, {
+    "trajectories": [{
+      "id": 8,
+      "pitches": [{
+        "swara": 1,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }],
+      "durTot": 0.2754590495759817,
+      "durArray": [0.3333333333333333, 0.3333333333333333, 0.3333333333333333],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        },
+        "0.3333333333333333": {
+          "name": "hammer-off"
+        },
+        "0.6666666666666666": {
+          "name": "slide"
+        }
+      },
+      "startTime": 0,
+      "num": 0,
+      "name": "Krintin Slide"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }],
+      "durTot": 1.5697429500792863,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 0.2754590495759817,
+      "num": 1,
+      "name": "Fixed"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }],
+      "durTot": 1.3833644686806321,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 1.845201999655268,
+      "num": 2,
+      "name": "Fixed"
+    }, {
+      "id": 2,
+      "pitches": [{
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }],
+      "durTot": 0.22238193355231045,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 3.2285664683358997,
+      "num": 3,
+      "name": "Bend: Asymptotic Approach"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }],
+      "durTot": 0.8089466050504561,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 3.4509484018882106,
+      "num": 4,
+      "name": "Fixed"
+    }, {
+      "id": 6,
+      "pitches": [{
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }, {
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.526666840411177,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 4.259895006938667,
+      "num": 5,
+      "name": "Bend: Half Cosine Interpolation"
+    }, {
+      "id": 6,
+      "pitches": [{
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 1,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.9827661529425518,
+      "durArray": [0.5, 0.5],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 4.7865618473498435,
+      "num": 6,
+      "name": "Bend: Half Cosine Interpolation"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 2.2550698942924097,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 5.769328000292395,
+      "num": 7,
+      "name": "Fixed"
+    }],
+    "durTot": 8.024397894584805,
+    "durArray": [0.034327690774391045, 0.19562127535308457, 0.1723947998159692, 0.0277132236553702, 0.10081087898150796, 0.06563319109170714, 0.12247226095377985, 0.28102667937419007],
+    "chikaris": {},
+    "connected": [true, true, false, true, true, true, true],
+    "raga": {
+      "name": "Yaman",
+      "fundamental": 261.63
+    },
+    "startTime": 10.00683274554725
+  }, {
+    "trajectories": [{
+      "id": 0,
+      "pitches": [{
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 2.3797296058975594,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 0,
+      "num": 0,
+      "name": "Fixed"
+    }, {
+      "id": 2,
+      "pitches": [{
+        "swara": 1,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.564858441041857,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 2.3797296058975594,
+      "num": 1,
+      "name": "Bend: Asymptotic Approach"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.9200590696592558,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 2.9445880469394163,
+      "num": 2,
+      "name": "Fixed"
+    }, {
+      "id": 6,
+      "pitches": [{
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 1,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.4914154734486464,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 3.864647116598672,
+      "num": 3,
+      "name": "Bend: Half Cosine Interpolation"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 1,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.5928241570496787,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 4.356062590047318,
+      "num": 4,
+      "name": "Fixed"
+    }, {
+      "id": 6,
+      "pitches": [{
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }, {
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.4913670213723107,
+      "durArray": [0.5, 0.5],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 4.948886747096997,
+      "num": 5,
+      "name": "Bend: Half Cosine Interpolation"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 2.511448496187902,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 5.440253768469307,
+      "num": 6,
+      "name": "Fixed"
+    }, {
+      "id": 6,
+      "pitches": [{
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }, {
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }],
+      "durTot": 0.5317620858262315,
+      "durArray": [0.3333333333333333, 0.3333333333333333, 0.3333333333333333],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 7.951702264657208,
+      "num": 7,
+      "name": "Bend: Half Cosine Interpolation"
+    }, {
+      "id": 6,
+      "pitches": [{
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }, {
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 1,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 1,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 1.5038344924423386,
+      "durArray": [0.2, 0.2, 0.2, 0.2, 0.2],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 8.48346435048344,
+      "num": 8,
+      "name": "Bend: Half Cosine Interpolation"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 1.9813437448151638,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 9.987298842925778,
+      "num": 9,
+      "name": "Fixed"
+    }],
+    "durTot": 11.968642587740941,
+    "durArray": [0.1988303676421111, 0.04719486248343831, 0.07687246593875564, 0.041058580356638424, 0.049531444581433784, 0.041054532105052624, 0.2098357000617839, 0.044429606943973465, 0.12564787371816608, 0.16554456616864674],
+    "chikaris": {},
+    "connected": [false, true, true, true, false, true, true, true, true],
+    "raga": {
+      "name": "Yaman",
+      "fundamental": 261.63
+    },
+    "startTime": 18.031230640132055
+  }, {
+    "trajectories": [{
+      "id": 0,
+      "pitches": [{
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 2.630276022409449,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 0,
+      "num": 0,
+      "name": "Fixed"
+    }, {
+      "id": 6,
+      "pitches": [{
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }],
+      "durTot": 0.3282197544603834,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 2.630276022409449,
+      "num": 1,
+      "name": "Bend: Half Cosine Interpolation"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }],
+      "durTot": 1.186488287276303,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 2.9584957768698326,
+      "num": 2,
+      "name": "Fixed"
+    }, {
+      "id": 6,
+      "pitches": [{
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 1,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.6766246242501919,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 4.144984064146135,
+      "num": 3,
+      "name": "Bend: Half Cosine Interpolation"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 1,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.3698529171012176,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 4.821608688396327,
+      "num": 4,
+      "name": "Fixed"
+    }, {
+      "id": 4,
+      "pitches": [{
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 1,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.6443328656029313,
+      "durArray": [0.5, 0.5],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 5.191461605497544,
+      "num": 5,
+      "name": "Bend: Ladle"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 2.1781914013478025,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 5.835794471100475,
+      "num": 6,
+      "name": "Fixed"
+    }],
+    "durTot": 8.013985872448277,
+    "durArray": [0.3282107136540157, 0.04095586886280747, 0.14805220600093597, 0.08443047380160687, 0.046150932006600524, 0.08040104834950093, 0.2717987573245327],
+    "chikaris": {},
+    "raga": {
+      "name": "Yaman",
+      "fundamental": 261.63
+    },
+    "startTime": 29.999873227872996
+  }, {
+    "trajectories": [{
+      "id": 0,
+      "pitches": [{
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 2.420336779885266,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 0,
+      "num": 0,
+      "name": "Fixed"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 3.22541694978245,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 2.420336779885266,
+      "num": 1,
+      "name": "Fixed"
+    }, {
+      "id": 6,
+      "pitches": [{
+        "swara": 1,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 1,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 1,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.9372943616536121,
+      "durArray": [0.25, 0.25, 0.25, 0.25],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 5.645753729667716,
+      "num": 2,
+      "name": "Bend: Half Cosine Interpolation"
+    }, {
+      "id": 8,
+      "pitches": [{
+        "swara": 1,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }],
+      "durTot": 0.4076363551423073,
+      "durArray": [0.3333333333333333, 0.3333333333333333, 0.3333333333333333],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        },
+        "0.3333333333333333": {
+          "name": "hammer-off"
+        },
+        "0.6666666666666666": {
+          "name": "slide"
+        }
+      },
+      "startTime": 6.583048091321328,
+      "num": 3,
+      "name": "Krintin Slide"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }],
+      "durTot": 0.767803799569995,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 6.990684446463635,
+      "num": 4,
+      "name": "Fixed"
+    }, {
+      "id": 4,
+      "pitches": [{
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 1,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.704244838788638,
+      "durArray": [0.5, 0.5],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 7.75848824603363,
+      "num": 5,
+      "name": "Bend: Ladle"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 1.5093250086858219,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 8.462733084822267,
+      "num": 6,
+      "name": "Fixed"
+    }],
+    "durTot": 9.972058093508089,
+    "durArray": [0.24271186120154367, 0.3234454632672295, 0.0939920679226488, 0.0408778560373292, 0.07699552011934656, 0.07062181469310817, 0.151355416758794],
+    "chikaris": {},
+    "raga": {
+      "name": "Yaman",
+      "fundamental": 261.63
+    },
+    "startTime": 38.01385910032127
+  }, {
+    "trajectories": [{
+      "id": 8,
+      "pitches": [{
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }, {
+        "swara": 5,
+        "raised": true,
+        "oct": -1
+      }],
+      "durTot": 0.525541487885616,
+      "durArray": [0.3333333333333333, 0.3333333333333333, 0.3333333333333333],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        },
+        "0.3333333333333333": {
+          "name": "hammer-off"
+        },
+        "0.6666666666666666": {
+          "name": "slide"
+        }
+      },
+      "startTime": 0,
+      "num": 0,
+      "name": "Krintin Slide"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 5,
+        "raised": true,
+        "oct": -1
+      }],
+      "durTot": 0.5255414878856159,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 0.525541487885616,
+      "num": 1,
+      "name": "Fixed"
+    }, {
+      "id": 2,
+      "pitches": [{
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }],
+      "durTot": 0.3344906864516125,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 1.0510829757712319,
+      "num": 2,
+      "name": "Bend: Asymptotic Approach"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }],
+      "durTot": 0.35837203663086314,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 1.3855736622228443,
+      "num": 3,
+      "name": "Fixed"
+    }, {
+      "id": 6,
+      "pitches": [{
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }, {
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.358372036630863,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 1.7439456988537074,
+      "num": 4,
+      "name": "Bend: Half Cosine Interpolation"
+    }, {
+      "id": 4,
+      "pitches": [{
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 1,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 1.0748125420083754,
+      "durArray": [0.5, 0.5],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 2.102317735484571,
+      "num": 5,
+      "name": "Bend: Ladle"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 1.9345411484613915,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 3.1771302774929464,
+      "num": 6,
+      "name": "Fixed"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 1.783203157509385,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 5.111671425954339,
+      "num": 7,
+      "name": "Fixed"
+    }, {
+      "id": 8,
+      "pitches": [{
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }],
+      "durTot": 0.35837203663086287,
+      "durArray": [0.3333333333333333, 0.3333333333333333, 0.3333333333333333],
+      "slope": 2,
+      "articulations": {
+        "0.3333333333333333": {
+          "name": "hammer-off"
+        },
+        "0.6666666666666666": {
+          "name": "slide"
+        }
+      },
+      "startTime": 6.894874583463723,
+      "num": 8,
+      "name": "Krintin Slide"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }],
+      "durTot": 0.48749828873161494,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 7.253246620094587,
+      "num": 9,
+      "name": "Fixed"
+    }],
+    "durTot": 7.7407449088262,
+    "durArray": [0.06789288292995933, 0.06789288292995932, 0.04321169220680783, 0.046296841047201796, 0.04629684104720178, 0.13885130625901984, 0.2499166645132017, 0.23036583410417388, 0.04629684104720176, 0.06297821391527275],
+    "chikaris": {},
+    "connected": [true, false, true, true, true, true, true, true, true],
+    "raga": {
+      "name": "Yaman",
+      "fundamental": 261.63
+    },
+    "startTime": 47.98591719382936
+  }, {
+    "trajectories": [{
+      "id": 2,
+      "pitches": [{
+        "swara": 0,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }],
+      "durTot": 0.26152534438475084,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 0,
+      "num": 0,
+      "name": "Bend: Asymptotic Approach"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }],
+      "durTot": 0.20159011197985668,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 0.26152534438475084,
+      "num": 1,
+      "name": "Fixed"
+    }, {
+      "id": 6,
+      "pitches": [{
+        "swara": 6,
+        "raised": true,
+        "oct": -1
+      }, {
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.09170885257088425,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 0.46311545636460755,
+      "num": 2,
+      "name": "Bend: Half Cosine Interpolation"
+    }, {
+      "id": 6,
+      "pitches": [{
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 1,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.45132024700024875,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 0.5548243089354918,
+      "num": 3,
+      "name": "Bend: Half Cosine Interpolation"
+    }, {
+      "id": 6,
+      "pitches": [{
+        "swara": 1,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 3,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.38139580919453897,
+      "durArray": [0.5, 0.5],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 1.0061445559357407,
+      "num": 4,
+      "name": "Bend: Half Cosine Interpolation"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.6231345798942787,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 1.3875403651302798,
+      "num": 5,
+      "name": "Fixed"
+    }, {
+      "id": 6,
+      "pitches": [{
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 3,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 4,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 3,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.7380104420036587,
+      "durArray": [0.3333333333333333, 0.3333333333333333, 0.3333333333333333],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 2.0106749450245585,
+      "num": 6,
+      "name": "Bend: Half Cosine Interpolation"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 3,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.23255664872238546,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 2.748685387028217,
+      "num": 7,
+      "name": "Fixed"
+    }, {
+      "id": 6,
+      "pitches": [{
+        "swara": 3,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 1,
+        "raised": true,
+        "oct": 0
+      }, {
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 0.9577729608216033,
+      "durArray": [0.3333333333333333, 0.3333333333333333, 0.3333333333333333],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 2.9812420357506024,
+      "num": 8,
+      "name": "Bend: Half Cosine Interpolation"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 2,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 1.7049655248026168,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {},
+      "startTime": 3.939014996572206,
+      "num": 9,
+      "name": "Fixed"
+    }, {
+      "id": 0,
+      "pitches": [{
+        "swara": 1,
+        "raised": true,
+        "oct": 0
+      }],
+      "durTot": 1.6280486432163355,
+      "durArray": [1],
+      "slope": 2,
+      "articulations": {
+        "0": {
+          "name": "pluck",
+          "stroke": "d"
+        }
+      },
+      "startTime": 5.643980521374823,
+      "num": 10,
+      "name": "Fixed"
+    }],
+    "durTot": 7.272029164591157,
+    "durArray": [0.0359631869544976, 0.027721301361308594, 0.012611177773795444, 0.062062491332929424, 0.05244695814087559, 0.08568923003340458, 0.10148617742035011, 0.0319796089177896, 0.13170642459537638, 0.23445526499046596, 0.22387817847920666],
+    "chikaris": {},
+    "connected": [true, true, true, true, true, true, true, true, true, false],
+    "raga": {
+      "name": "Yaman",
+      "fundamental": 261.63
+    },
+    "startTime": 55.72666210265556
+  }],
+  "raga": {
+    "name": "Yaman",
+    "fundamental": 261.63
+  },
+  "durTot": 62.99869126724671,
+  "durArray": [0.15884191471688308, 0.12737404116133955, 0.18998240037985506, 0.12720876753537866, 0.15828992464630143, 0.12287151928266558, 0.11543143227757678],
+  "title": "Mushtaq Ali Khan",
+  "performers": [],
+  "dateCreated": "2022-01-17T21:08:25.983Z",
+  "dateModified": "2022-01-17T23:50:55.078Z",
+  "location": "Santa Cruz",
+  "transcriber": "Jon Myers",
+  "_id": "61e5daca03729a1e53a46a4d"
+}
