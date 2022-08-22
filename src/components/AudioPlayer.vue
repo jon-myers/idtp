@@ -8,8 +8,8 @@
       @mouseup='handleCircleMouseUp'>
       <div class='progressBarOuter' @click='handleProgressClick' ref='pbOuter'>
         <div class='progressBarInner'>
-          <div :class='`currentTime${tooLeftLimit() ? " tooLeft": ""}`'>
-            {{formattedCurrentTime()}}
+          <div :class='`currentTime tooLeft`'>
+            {{formattedCurrentTime}}
           </div>
           <div 
             class='progressCircle' 
@@ -20,20 +20,20 @@
           
           </div>
         </div>
-        <div class='timeLeft'>{{'-'+formattedTimeLeft()}}</div>
+        <div class='timeLeft'>{{'-'+formattedTimeLeft}}</div>
       </div>
       <div class='controlsContainer'>
         <div class='recInfo'>
         </div>
         <div class='controlFlexer'>
           <div class='controlBox'>
-            <img :src='icons.loop'/>
+            <img :src='icons.loop' @click='toggleLoop'/>
             <img :src='icons.beginning' @click='goToBeginning'/>
             <div class='playCircle' @click='togglePlay'>
               <img ref='playImg' :src='[icons.play, icons.pause][Number(this.playing)]'/>
             </div>
-            <img :src='icons.end'/>
-            <img :src='icons.shuffle'/>
+            <img :src='icons.end' @click='trackEnd'/>
+            <img :src='icons.shuffle' @click='toggleShuffle'/>
           </div>
         </div>
         <div class='recInfo'>
@@ -75,6 +75,8 @@ export default {
     return {
       progress: 0.0,
       playing: false,
+      looping: false,
+      shuffling: false,
       audio: {
         paused: false
       },
@@ -85,8 +87,10 @@ export default {
         pause: pauseIcon,
         play: playIcon,
         shuffle: shuffleIcon
-      } ,
-      circleDragging: false 
+      },
+      circleDragging: false,
+      formattedCurrentTime: '00:00',
+      formattedTimeLeft: '00:00'
     }
   },
   
@@ -106,8 +110,15 @@ export default {
   mounted() {
     this.audio = new Audio();
     this.audio.ontimeupdate = () => {
-      this.progress = this.audio.currentTime / this.audio.duration
-    }
+      this.progress = this.audio.currentTime / this.audio.duration;
+      const pbi = document.querySelector('.progressBarInner');
+      const pbo = document.querySelector('.progressBarOuter');
+      const totWidth = pbo.getBoundingClientRect().width;
+      pbi.style.width = this.progress * totWidth + 'px'
+      this.updateFormattedCurrentTime();
+      this.updateFormattedTimeLeft();
+    };
+    this.audio.onended = this.trackEnd
   },
   
   watch: {
@@ -128,6 +139,15 @@ export default {
   
   methods: {
     
+    trackEnd() {
+      if (this.looping) {
+        this.audio.currentTime = 0;
+        this.audio.play();
+      } else {
+        this.$parent.nextTrack(this.shuffling)
+      }
+    },
+    
     // getSrc(src) {
     //   return require(src)
     // }
@@ -139,6 +159,18 @@ export default {
         this.audio.pause();
         this.playing = false
       }
+    },
+    
+    toggleLoop(e) {
+      const cl = e.target.classList;
+      cl.toggle('looping');
+      this.looping = this.looping ? false : true;
+    },
+    
+    toggleShuffle(e) {
+      const cl = e.target.classList;
+      cl.toggle('shuffling');
+      this.shuffling = this.shuffling ? false : true;
     },
     
     goToBeginning() {
@@ -159,24 +191,33 @@ export default {
       }  
     },
     
-    formattedCurrentTime() {
+    tooRightLimit() {
+      if (this.$refs.pbOuter && this.progress) {
+        const bb = this.$refs.pbOuter.getBoundingClientRect();
+        return this.progress >= 1 - (90 / bb.width)
+      } else {
+        return false
+      }
+    },
+    
+    updateFormattedCurrentTime() {
       const st = structuredTime(this.audio.currentTime);
       if (st.hours !== 0) {
-        return st.minutes + ':' + st.seconds
+        this.formattedCurrentTime = st.minutes + ':' + st.seconds
       } else {
-        return st.hours + ':' + st.minutes + ':' + st.seconds
+        this.formattedCurrentTime = st.hours + ':' + st.minutes + ':' + st.seconds
       }       
     },
     
-    formattedTimeLeft() {
+    updateFormattedTimeLeft() {
       if (isNaN(this.audio.duration)) {
         return '00:00'
       } else {
         const st = structuredTime(Number(this.audio.duration) - Number(this.audio.currentTime))
         if (st.hours !== 0) {
-          return st.minutes + ':' + st.seconds
+          this.formattedTimeLeft = st.minutes + ':' + st.seconds
         } else {
-          return st.hours + ':' + st.minutes + ':' + st.seconds
+          this.formattedTimeLeft = st.hours + ':' + st.minutes + ':' + st.seconds
         } 
       }
     
@@ -221,7 +262,9 @@ export default {
         const pc = document.querySelector('.progressCircle');
         pc.style.right = '-7px';
         this.circleDragging = false;
-        this.$refs.main.classList.toggle('hovering')
+        this.$refs.main.classList.toggle('hovering');
+        // const pbi = document.querySelector('.progressBarInner');
+        // pbi.style.width = "v-bind(progress*100+'vw')"
       }
       
       
@@ -232,8 +275,12 @@ export default {
       if (this.circleDragging) {
         // const currentX = e.clientX;
         const diff = this.dragStart - e.clientX;
-        const pc = document.querySelector('.progressCircle');
-        pc.style.right = diff - 7 + 'px';
+        // const pc = document.querySelector('.progressCircle');
+        // pc.style.right = diff - 7 + 'px';
+        const pbi = document.querySelector('.progressBarInner');
+        const pbo = document.querySelector('.progressBarOuter');
+        const pboBox = pbo.getBoundingClientRect()
+        pbi.style.width = pboBox.width * this.progress - diff + 'px';
       }
     }
     
@@ -255,6 +302,9 @@ export default {
   flex-direction: column;
   border-top: 1px solid black;
   pointer-events: auto;
+  /* overflow-x: hidden; */
+  /* overflow-x: hidden;
+  overflow-y: visible; */
   /* border-top: 2px solid black; */
 }
 
@@ -262,6 +312,7 @@ export default {
   width: 100%;
   height: 8px;
   background-color: #242424;
+  overflow-x: hidden;
 }
 
 .progressBarOuter:hover {
@@ -269,7 +320,7 @@ export default {
 }
 
 .progressBarInner {
-  width: v-bind(progress*100+'vw');
+  width: 0px;
   background-color: lightgrey;
   height: 6px;
   position: absolute;
@@ -342,6 +393,14 @@ export default {
   filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg) brightness(94%) contrast(97%);
 }
 
+.controlBox > .looping {
+  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) brightness(97%) contrast(97%);
+}
+
+.controlBox > .shuffling {
+  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) brightness(97%) contrast(97%);
+}
+
 .playCircle > img {
   object-position: 3px;
 }
@@ -403,6 +462,10 @@ export default {
   left: 10px;
 }
 
+.tooRight {
+  left: calc(100vw - 120px);
+}
+
 .main {
   user-select: none;
   width: 100vw;
@@ -418,12 +481,13 @@ export default {
 }
 
 .invisibleProgressCircle {
-  width: 200px;
+  width: 500px;
   height: 100px;
   position: absolute;
   bottom: 0px;
-  right: -100px;
+  right: -25px;
   pointer-events: none;
+  overflow: hidden;
 }
 
 .invisibleProgressCircle.hovering {

@@ -1,9 +1,9 @@
 <template>
   <div class='main'>
-    <div class='fileContainer'>
+    <div class='fileContainer' ref='fileContainer'>
       <div 
         class='audioEventRow' 
-        v-for='audioEvent in allAudioEvents'
+        v-for='(audioEvent, aeIdx) in allAudioEvents'
         :key='audioEvent.name'>
         <div class='audioEventNameRow' @dblclick='toggleDisplay($event, audioEvent, true)'>
           <span @click='toggleDisplay($event, audioEvent)'>&#9654;</span>
@@ -18,7 +18,7 @@
               :class='`audioRecordingRow height${getRaagHeight(audioEvent.recordings[recKey])}`' 
               v-for='recKey in Object.keys(audioEvent.recordings)'
               :key='audioEvent.recordings[recKey].audioFileId'
-              @dblclick='sendAudioSource($event, audioEvent.recordings[recKey].audioFileId)'>
+              @dblclick='sendAudioSource($event, audioEvent.recordings[recKey].audioFileId, aeIdx, recKey)'>
               <span class='recordingNum'>{{`${Number(recKey)+1}. `}}</span>
               <div :class='`soloist height${getRaagHeight(audioEvent.recordings[recKey])}`'>
                 <span>
@@ -114,7 +114,8 @@ export default {
       showAddEvent: false,
       recHeight: 30,
       editingId: undefined,
-      audioSource: undefined
+      audioSource: undefined,
+      playing: [undefined, undefined]
     }
   },
   components: {
@@ -130,11 +131,7 @@ export default {
   },
   
   computed: {
-    
-    playing(idx) {
-      return this.playingIdx === idx
-    },
-    
+  
     
   },
   
@@ -143,13 +140,55 @@ export default {
   
   methods: {
     
-    sendAudioSource(e, _id) {
+    sendAudioSource(e, _id, aeIdx, recKey) {
+      this.playing = [aeIdx, recKey]
       const playing = document.querySelector('.playing');
-      if (playing) {
-        playing.classList.remove('playing')
-      }
+      if (playing) playing.classList.remove('playing');
       e.target.classList.add('playing');
+      const selected = document.querySelector('.selected');
+      if (selected) selected.classList.remove('selected');
+      const aeRow = this.$refs.fileContainer.children[aeIdx].children[0];
+      aeRow.classList.add('selected');
       this.audioSource = `https://swara.studio/audio/mp3/${_id}.mp3`;
+    },
+    
+    nextTrack(shuffling) {
+      const aeIdx = this.playing[0];
+      const recKey = this.playing[1];
+      const playingElem = document.querySelector('.playing');
+      if (playingElem) playingElem.classList.remove('playing');
+      const selected = document.querySelector('.selected');
+      if (selected) selected.classList.remove('selected');
+      const curEvent = this.allAudioEvents[aeIdx];
+      const curTotRecs = Object.keys(curEvent.recordings).length;
+      let newAeIdx;
+      let newRecKey;
+      if (!shuffling) {
+        if (recKey < curTotRecs-1) {
+          newAeIdx = aeIdx;
+          newRecKey = Number(recKey) + 1
+        } else if (aeIdx < this.allAudioEvents.length-1) {
+          newAeIdx = Number(aeIdx) + 1;
+          newRecKey = 0
+        } else {
+          newAeIdx = 0;
+          newRecKey = 0
+        }
+      } else {
+        newAeIdx = Math.floor(Math.random() * this.allAudioEvents.length);
+        const numRecs = Object.keys(this.allAudioEvents[newAeIdx].recordings).length;
+        newRecKey = Math.floor(Math.random() * numRecs);
+      }
+      
+      const _id = this.allAudioEvents[newAeIdx].recordings[Number(newRecKey)].audioFileId;
+      this.audioSource = `https://swara.studio/audio/mp3/${_id}.mp3`;
+      const newAEElem = this.$refs.fileContainer.children[newAeIdx];
+      const newRecElem = newAEElem.children[1].children[1].children[Number(newRecKey)];
+      newRecElem.classList.add('playing')
+      const aeRow = this.$refs.fileContainer.children[newAeIdx].children[0];
+      aeRow.classList.add('selected');
+      this.playing = [newAeIdx, newRecKey]
+      
     },
     
     getRaags(recording) {
@@ -323,9 +362,14 @@ button {
   background-color: #2b332c
 }
 
+.audioEventNameRow.selected {
+  background-color: #2a331e
+}
+
 .audioEventNameRow:hover {
   background-color: #181c18
 }
+
 
 .audioRecordingRow > label {
   width: 200px;
@@ -471,6 +515,7 @@ button {
 button {
   background-color: #2f3830;
   color: white;
+  cursor: pointer;
   /* border-radius: 8px; */
 }
 
