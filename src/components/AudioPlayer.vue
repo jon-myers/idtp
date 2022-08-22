@@ -1,9 +1,26 @@
 <template>
-  <div class='main'>
-    <div class='player'>
+  <div class='main' ref='main'>
+    <div 
+      class='player' 
+      @mouseover='hoverTrigger(true)' 
+      @mouseleave='hoverTrigger(false)'
+      @mousemove='handleCircleMouseMove'
+      @mouseup='handleCircleMouseUp'>
       <div class='progressBarOuter' @click='handleProgressClick' ref='pbOuter'>
         <div class='progressBarInner'>
+          <div :class='`currentTime${tooLeftLimit() ? " tooLeft": ""}`'>
+            {{formattedCurrentTime()}}
+          </div>
+          <div 
+            class='progressCircle' 
+            @mousedown='handleCircleMouseDown'         
+            >
+            <div class='invisibleProgressCircle'>
+            </div>
+          
+          </div>
         </div>
+        <div class='timeLeft'>{{'-'+formattedTimeLeft()}}</div>
       </div>
       <div class='controlsContainer'>
         <div class='recInfo'>
@@ -23,9 +40,7 @@
         </div>
       </div>
     </div>
-    <audio ref='audio'> 
-      <source :src='audioSource' type='audio/mpeg'>
-    </audio>
+    
   
   </div>
 </template>
@@ -37,6 +52,21 @@ import loopIcon from '@/assets/icons/loop.svg';
 import pauseIcon from '@/assets/icons/pause.svg';
 import playIcon from '@/assets/icons/play.svg';
 import shuffleIcon from '@/assets/icons/shuffle.svg';
+
+const structuredTime = dur => {
+  const hours = String(Math.floor(dur / 3600));
+  const minutes = leadingZeros(Math.floor((dur % 3600) / 60));
+  const seconds = leadingZeros(Math.round(dur % 60));
+  return { hours: hours, minutes: minutes, seconds: seconds }
+};
+
+const leadingZeros = int => {
+  if (int < 10) {
+    return '0'+int
+  } else {
+    return String(int)
+  }
+}
 
 export default {
   name: 'AudioPlayer',
@@ -55,7 +85,8 @@ export default {
         pause: pauseIcon,
         play: playIcon,
         shuffle: shuffleIcon
-      }  
+      } ,
+      circleDragging: false 
     }
   },
   
@@ -85,8 +116,14 @@ export default {
       this.audio.play();
       this.playing = true;
       this.$refs.playImg.className = 'playing';
+
       
     }
+  },
+  
+  computed: {
+    
+    
   },
   
   methods: {
@@ -111,9 +148,96 @@ export default {
     handleProgressClick(e) {
       const bb = this.$refs.pbOuter.getBoundingClientRect();
       this.audio.currentTime = this.audio.duration * e.clientX / bb.width
+    },
+    
+    tooLeftLimit() {
+      if (this.$refs.pbOuter && this.progress) {
+        const bb = this.$refs.pbOuter.getBoundingClientRect();
+        return this.progress < 35 / bb.width
+      } else {
+        return true
+      }  
+    },
+    
+    formattedCurrentTime() {
+      const st = structuredTime(this.audio.currentTime);
+      if (st.hours !== 0) {
+        return st.minutes + ':' + st.seconds
+      } else {
+        return st.hours + ':' + st.minutes + ':' + st.seconds
+      }       
+    },
+    
+    formattedTimeLeft() {
+      if (isNaN(this.audio.duration)) {
+        return '00:00'
+      } else {
+        const st = structuredTime(Number(this.audio.duration) - Number(this.audio.currentTime))
+        if (st.hours !== 0) {
+          return st.minutes + ':' + st.seconds
+        } else {
+          return st.hours + ':' + st.minutes + ':' + st.seconds
+        } 
+      }
+    
+    },
+    
+    hoverTrigger(bool) {
+      // const cl = document.querySelector('.currentTime').classList;
+      // const ocl = document.querySelector('.progressCircle').classList;
+      // const ecl = document.querySelector('.timeLeft').classList;
+      // const lcl = document.querySelector('.invisibleProgressCircle').classList;
+      // 
+      const classes_ = ['.currentTime', '.progressCircle', '.timeLeft', '.invisibleProgressCircle'];
+      const cls = classes_.map(cl => document.querySelector(cl).classList);
+      if (bool) {
+        cls.forEach(cl => {
+          if (!cl.contains('hovering')) cl.add('hovering')
+        })
+      } else {
+        cls.forEach(cl => {
+          if (cl.contains('hovering')) cl.remove('hovering')
+        })
+      }
+    },
+    
+    handleCircleMouseDown(e) {
+      this.circleDragging = true;
+      // console.log(e)
+      this.dragStart = e.clientX;
+      this.$refs.main.classList.toggle('hovering')
+      
+    },
+    
+    handleCircleMouseUp(e) {
+      if (this.circleDragging) {
+        const bb = this.$refs.pbOuter.getBoundingClientRect()
+        const newTime = this.audio.currentTime + this.audio.duration * (e.clientX - this.dragStart) / bb.width;
+        if (this.audio.fastSeek) {
+          this.audio.fastSeek(newTime)
+        } else {
+          this.audio.currentTime = newTime
+        }
+        const pc = document.querySelector('.progressCircle');
+        pc.style.right = '-7px';
+        this.circleDragging = false;
+        this.$refs.main.classList.toggle('hovering')
+      }
+      
+      
+      
+    },
+    
+    handleCircleMouseMove(e) {
+      if (this.circleDragging) {
+        // const currentX = e.clientX;
+        const diff = this.dragStart - e.clientX;
+        const pc = document.querySelector('.progressCircle');
+        pc.style.right = diff - 7 + 'px';
+      }
     }
     
-    
+       
   }
 }
 </script>
@@ -130,6 +254,7 @@ export default {
   display: flex;
   flex-direction: column;
   border-top: 1px solid black;
+  pointer-events: auto;
   /* border-top: 2px solid black; */
 }
 
@@ -139,10 +264,36 @@ export default {
   background-color: #242424;
 }
 
+.progressBarOuter:hover {
+  cursor: pointer
+}
+
 .progressBarInner {
   width: v-bind(progress*100+'vw');
   background-color: lightgrey;
   height: 6px;
+  position: absolute;
+}
+
+.progressBarInner:hover {
+  cursor: pointer
+}
+
+.progressCircle {
+  background-color: lightgrey;
+  width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  /* opacity: 0; */
+  position: absolute;
+  right: -7px;
+  top: -4px;
+  opacity: 0;
+  transition: opacity 0.25s 
+}
+
+.progressCircle:hover {
+  cursor: pointer;
 }
 
 .controlsContainer {
@@ -219,6 +370,65 @@ export default {
   filter: brightness(400%)
 }
 
+.currentTime {
+  color: white;
+  position: absolute;
+  top: -30px;
+  right: -10px;
+  width: 30px;
+  height: 20px;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.25s
+}
+
+.timeLeft {
+  color: white;
+  position: absolute;
+  top: -30px;
+  right: 25px;
+  width: 30px;
+  height: 20px;
+  transition: opacity 0.25s;
+  opacity: 0;
+}
+
+.hovering {
+  opacity: 1;
+}
+
+
+
+.tooLeft {
+  left: 10px;
+}
+
+.main {
+  user-select: none;
+  width: 100vw;
+  height: 100vh;
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+
+.main.hovering {
+  cursor: pointer
+}
+
+.invisibleProgressCircle {
+  width: 200px;
+  height: 100px;
+  position: absolute;
+  bottom: 0px;
+  right: -100px;
+  pointer-events: none;
+}
+
+.invisibleProgressCircle.hovering {
+  pointer-events: auto;
+}
 
 
 </style>

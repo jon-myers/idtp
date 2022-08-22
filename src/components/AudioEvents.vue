@@ -5,12 +5,12 @@
         class='audioEventRow' 
         v-for='audioEvent in allAudioEvents'
         :key='audioEvent.name'>
-        <div class='audioEventNameRow'>
+        <div class='audioEventNameRow' @dblclick='toggleDisplay($event, audioEvent, true)'>
           <span @click='toggleDisplay($event, audioEvent)'>&#9654;</span>
           <label>{{audioEvent.name}}</label>
           <button @click='openEditWindow(audioEvent._id)'>Edit</button>
         </div>
-        <div :class='`audioRecordingRowOuter height${getHeight(audioEvent)}`' v-if='audioEvent.visible'>
+        <div :class='`audioRecordingRowOuter height${getHeight(audioEvent)}`' v-show='audioEvent.visible'>
           <div :class='`audioRecordingRowSpacer height${getHeight(audioEvent)}`'>
           </div>
           <div class='audioRecordingCol'>
@@ -182,12 +182,14 @@ export default {
       this.showAddEvent = Boolean(Math.abs(this.showAddEvent - 1))
     },
     
-    toggleDisplay(t, audioEvent) {
-      if (t.target.className === '') {
-        t.target.className = 'rotated';
+    toggleDisplay(t, audioEvent, parent) {
+      // console.log(t, audioEvent, parent)
+      const target = parent ? t.target.children.item(0) : t.target;
+      if (target.className === '') {
+        target.className = 'rotated';
         audioEvent.visible = true
       } else {
-        t.target.className = '';
+        target.className = '';
         audioEvent.visible = undefined
       }
     },
@@ -270,6 +272,7 @@ button {
   flex-direction: row;
   align-items: center;
   justify-content: left;
+  cursor: pointer;
 }
 
 .audioEventNameRow > label {
@@ -306,11 +309,22 @@ button {
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: left
+  justify-content: left;
+  cursor: pointer
 }
+
+
 
 .playing {
   background-color: #3e4a40
+}
+
+.audioRecordingRow:hover {
+  background-color: #2b332c
+}
+
+.audioEventNameRow:hover {
+  background-color: #181c18
 }
 
 .audioRecordingRow > label {
@@ -443,6 +457,15 @@ button {
 .height6 {
   height: v-bind(recHeight*6+'px')
 }
+
+.audioRecordingRow * {
+  pointer-events: none
+}
+
+.audioEventNameRow > label {
+  pointer-events: none
+}
+
 
 
 button {
