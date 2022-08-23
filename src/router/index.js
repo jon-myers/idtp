@@ -18,8 +18,7 @@ const routes = [
     path: '/audioEvents',
     name: 'AudioEvents',
     component: AudioEvents
-  }
-  
+  },
 ];
 
 const router = createRouter({

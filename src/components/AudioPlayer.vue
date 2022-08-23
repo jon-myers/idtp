@@ -144,7 +144,7 @@ export default {
         this.audio.currentTime = 0;
         this.audio.play();
       } else {
-        this.$parent.nextTrack(this.shuffling)
+        this.$parent.nextTrack(this.shuffling, false)
       }
     },
     
@@ -153,8 +153,12 @@ export default {
     // }
     togglePlay() {
       if (this.audio.paused) {
-        this.audio.play();
-        this.playing = true
+        if (this.audio.currentSrc === '') {
+          this.$parent.nextTrack(this.shuffling, true)
+        } else {
+          this.audio.play();
+          this.playing = true
+        }
       } else {
         this.audio.pause();
         this.playing = false

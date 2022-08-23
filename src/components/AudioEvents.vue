@@ -115,7 +115,7 @@ export default {
       recHeight: 30,
       editingId: undefined,
       audioSource: undefined,
-      playing: [undefined, undefined]
+      playing: [0, 0]
     }
   },
   components: {
@@ -152,7 +152,7 @@ export default {
       this.audioSource = `https://swara.studio/audio/mp3/${_id}.mp3`;
     },
     
-    nextTrack(shuffling) {
+    nextTrack(shuffling, initial) {
       const aeIdx = this.playing[0];
       const recKey = this.playing[1];
       const playingElem = document.querySelector('.playing');
@@ -164,16 +164,21 @@ export default {
       let newAeIdx;
       let newRecKey;
       if (!shuffling) {
-        if (recKey < curTotRecs-1) {
-          newAeIdx = aeIdx;
-          newRecKey = Number(recKey) + 1
-        } else if (aeIdx < this.allAudioEvents.length-1) {
-          newAeIdx = Number(aeIdx) + 1;
-          newRecKey = 0
-        } else {
+        if (initial) {
           newAeIdx = 0;
           newRecKey = 0
-        }
+        } else {
+          if (recKey < curTotRecs-1) {
+            newAeIdx = aeIdx;
+            newRecKey = Number(recKey) + 1
+          } else if (aeIdx < this.allAudioEvents.length-1) {
+            newAeIdx = Number(aeIdx) + 1;
+            newRecKey = 0
+          } else {
+            newAeIdx = 0;
+            newRecKey = 0
+          }
+        }  
       } else {
         newAeIdx = Math.floor(Math.random() * this.allAudioEvents.length);
         const numRecs = Object.keys(this.allAudioEvents[newAeIdx].recordings).length;
