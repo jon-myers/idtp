@@ -400,6 +400,10 @@ button {
   scrollbar-width: none;
 }
 
+.raagName::-webkit-scrollbar {
+  display: none
+}
+
 .raagName > span {
   /* display: inline-block; */
   white-space: nowrap;
@@ -422,6 +426,10 @@ button {
   justify-content: center;
 }
 
+.soloist::-webkit-scrollbar {
+  display: none
+}
+
 .soloist > span {
   white-space: nowrap;
   display: flex;
@@ -438,6 +446,10 @@ button {
   justify-content: left;
   display: flex;
   flex-direction: column;
+}
+
+.performanceSections::-webkit-scrollbar {
+  display: none
 }
 
 .performanceSections > span {
