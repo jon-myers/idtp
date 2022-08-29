@@ -71,7 +71,11 @@
       class='audioEventPopup' 
       ref='addAudioEvent'
       :extUniqueId='editingId'/>
-    <AudioPlayer v-if='true' :audioSource='audioSource'/>
+    <AudioPlayer 
+      v-if='true' 
+      :audioSource='audioSource' 
+      :saEstimate='saEstimate'
+      :saVerified='saVerified'/>
       
     
     <!-- <div>
@@ -115,7 +119,9 @@ export default {
       recHeight: 30,
       editingId: undefined,
       audioSource: undefined,
-      playing: [0, 0]
+      playing: [0, 0],
+      saEstimate: undefined,
+      saVerified: undefined,
     }
   },
   components: {
@@ -150,6 +156,8 @@ export default {
       const aeRow = this.$refs.fileContainer.children[aeIdx].children[0];
       aeRow.classList.add('selected');
       this.audioSource = `https://swara.studio/audio/mp3/${_id}.mp3`;
+      this.saEstimate = this.allAudioEvents[aeIdx].recordings[recKey].saEstimate;
+      this.saVerified = this.allAudioEvents[aeIdx].recordings[recKey].saVerified;
     },
     
     nextTrack(shuffling, initial) {
@@ -202,10 +210,17 @@ export default {
     
     getSoloist(recording) {
       // get soloist _and_ instrument
-      const soloist = Object.entries(recording.musicians)
-                        .filter(c => c[1].role === 'Soloist')[0][0];
-      const instrument = recording.musicians[soloist].instrument;
-      return soloist + ', ' + instrument
+      const filtered = Object.entries(recording.musicians)
+                        .filter(c => c[1].role === 'Soloist');
+      let soloist;
+      let instrument;
+      if (filtered && filtered[0]) {
+        soloist = filtered[0][0];
+        instrument = recording.musicians[soloist].instrument;
+        return soloist + ', ' + instrument
+      } else {
+        return ''
+      }
     },
     
     getPSecs(raag) {

@@ -152,7 +152,7 @@ const getSortedMusicians = async () => {
   let request = {
     method: 'GET',
     headers: {
-      'Conent-Type': 'application/json'
+      'Content-Type': 'application/json'
     },
   };
   await fetch(url + 'getSortedMusicians', request)

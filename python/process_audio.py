@@ -111,4 +111,7 @@ with warnings.catch_warnings():
         os.remove(file_path + path)
 
 # print('finally: ', process.memory_info().rss)
+
+
+
         

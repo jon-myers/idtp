@@ -1,5 +1,5 @@
 <template>
-  <div class='main' ref='main'>
+  <div class='mainq' ref='main'>
     <div 
       class='player' 
       @mouseover='hoverTrigger(true)' 
@@ -23,7 +23,7 @@
         <div class='timeLeft'>{{'-'+formattedTimeLeft}}</div>
       </div>
       <div class='controlsContainer'>
-        <div class='recInfo'>
+        <div class='recInfo left'>
         </div>
         <div class='controlFlexer'>
           <div class='controlBox'>
@@ -36,10 +36,14 @@
             <img :src='icons.shuffle' @click='toggleShuffle'/>
           </div>
         </div>
-        <div class='recInfo'>
+        <div class='recInfo right'>
+          <div class='rulerBox'>
+            <img :src='icons.ruler' @click='toggleWaveform' />
+          </div>
         </div>
       </div>
     </div>
+    <WaveformAnalyzer v-if='showWaveform' :initSaEstimate='saEstimate' :saVerified='saVerified'/>
     
   
   </div>
@@ -52,6 +56,8 @@ import loopIcon from '@/assets/icons/loop.svg';
 import pauseIcon from '@/assets/icons/pause.svg';
 import playIcon from '@/assets/icons/play.svg';
 import shuffleIcon from '@/assets/icons/shuffle.svg';
+import rulerIcon from '@/assets/icons/ruler.svg';
+import WaveformAnalyzer from '@/components/WaveformAnalyzer.vue';
 
 const structuredTime = dur => {
   const hours = String(Math.floor(dur / 3600));
@@ -77,6 +83,7 @@ export default {
       playing: false,
       looping: false,
       shuffling: false,
+      showWaveform: true,
       audio: {
         paused: false
       },
@@ -86,7 +93,8 @@ export default {
         loop: loopIcon,
         pause: pauseIcon,
         play: playIcon,
-        shuffle: shuffleIcon
+        shuffle: shuffleIcon,
+        ruler: rulerIcon
       },
       circleDragging: false,
       formattedCurrentTime: '00:00',
@@ -95,6 +103,7 @@ export default {
   },
   
   components: {
+    WaveformAnalyzer
     // beginningIcon,
     // endIcon,
     // loopIcon,
@@ -104,7 +113,9 @@ export default {
   },
   
   props: [
-    'audioSource'
+    'audioSource', 
+    'saEstimate',
+    'saVerified'
   ],
   
   mounted() {
@@ -175,6 +186,12 @@ export default {
       const cl = e.target.classList;
       cl.toggle('shuffling');
       this.shuffling = this.shuffling ? false : true;
+    },
+    
+    toggleWaveform(e) {
+      const cl = e.target.classList;
+      cl.toggle('showWaveform');
+      this.showWaveform = this.showWaveform ? false: true;
     },
     
     goToBeginning() {
@@ -365,6 +382,36 @@ export default {
   background-color: black;
 }
 
+.right {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: right;
+}
+
+.rulerBox {
+  width: 100px;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.rulerBox > img {
+  height: 40px;
+  filter: brightness(400%);
+  cursor: pointer;
+}
+
+.rulerBox > img:hover {
+  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg) brightness(94%) contrast(97%);
+}
+
+.rulerBox > .showWaveform {
+  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) brightness(97%) contrast(97%);
+}
+
 .controlFlexer {
   width: 100%;
   height: 100%;
@@ -436,7 +483,7 @@ export default {
 .currentTime {
   color: white;
   position: absolute;
-  top: -30px;
+  top: 12px;
   right: -10px;
   width: 30px;
   height: 20px;
@@ -448,7 +495,7 @@ export default {
 .timeLeft {
   color: white;
   position: absolute;
-  top: -30px;
+  top: 12px;
   right: 25px;
   width: 30px;
   height: 20px;
@@ -470,14 +517,15 @@ export default {
   left: calc(100vw - 120px);
 }
 
-.main {
+.mainq {
   user-select: none;
   width: 100vw;
-  height: 100vh;
+  height: 100px;
   position: absolute;
   left: 0;
-  top: 0;
+  bottom: 0;
   pointer-events: none;
+  z-index: 1
 }
 
 .main.hovering {
@@ -498,5 +546,10 @@ export default {
   pointer-events: auto;
 }
 
+/* WaveformAnalyzer {
+  position: absolute;
+  left: 0px;
+  bottom: 100px;
+} */
 
 </style>

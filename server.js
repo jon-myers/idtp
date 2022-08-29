@@ -10,7 +10,8 @@ const https = require('https');
 const http = require('http');
 const fs = require('fs');
 const { spawn } = require('child_process');
-
+const history = require('connect-history-api-fallback');
+const cron = require('node-cron');
 const key = fs.readFileSync(__dirname + '/selfsigned.key');
 const cert = fs.readFileSync(__dirname + '/selfsigned.crt');
 const options = { key: key, cert: cert };
@@ -30,8 +31,17 @@ const getSuffix = mimetype => {
     return '.wav'
   } else if (end === 'm4a' || end === 'x-m4a') {
     return '.m4a'
+  } else if (end === 'flac' || end === 'x-flac') {
+    return '.flac'
   }
 };
+
+
+// continuous stuff, scheduled once a day
+cron.schedule('0 0 * * *', () => {
+  spawn('python3', ['delete_unlinked_audio.py'])
+})
+
 
 var corsOptions = {
   origin: function (origin, callback) {
@@ -47,6 +57,17 @@ var corsOptions = {
 
 app.use(fileUpload({
   createParentPath: true
+}))
+app.use(history({ 
+  htmlAcceptHeaders: ['text/html']
+  // rewrites: [
+  //   {
+  //     from: /^\/api\/.*$/,
+  //     to: function(context) {
+  //       return context.parsedUrl.path
+  //     }
+  //   }
+  // ]
 }))
 
 
@@ -382,8 +403,8 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
           const fileName = newUniqueId + getSuffix(avatar.mimetype);
  
           avatar.mv('./uploads/' + fileName);
-          const python = spawn('python3', ['process_audio.py', fileName, parentId, idx])
-          await python.on('close', () => {
+          const processAudio = spawn('python3', ['process_audio.py', fileName, parentId, idx])
+          await processAudio.on('close', () => {
             console.log('python closed, finally')
             res.send({
               status: true,
@@ -395,7 +416,8 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
                 audioFileId: newUniqueId
               }
             });
-          })
+          });
+          const makeImages = spawn('python3', ['make_images.py', newUniqueId.toString()])
           
         }
       } catch (err) {

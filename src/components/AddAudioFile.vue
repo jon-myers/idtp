@@ -381,7 +381,6 @@ export default {
     },
     
     displayTime(dur) {
-      console.log(dur)
       const hours = Math.floor(dur / 3600);
       let minutes = Math.floor((dur - hours * 3600) / 60);
       let seconds = dur % 60;

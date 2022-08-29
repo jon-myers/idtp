@@ -196,6 +196,7 @@ export default {
           recElem.audioFileId = rec.audioFileId;
           recElem.uploadDone = true;
           recElem.processingDone = true;
+          recElem.numPerformers = Object.keys(rec.musicians).length;
           
           Object.keys(rec.musicians).forEach((name, idx) => {
             const musician = rec.musicians[name]
