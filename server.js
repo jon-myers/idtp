@@ -14,6 +14,7 @@ const history = require('connect-history-api-fallback');
 const cron = require('node-cron');
 const key = fs.readFileSync(__dirname + '/selfsigned.key');
 const cert = fs.readFileSync(__dirname + '/selfsigned.crt');
+const dot = require('mongo-dot-notation');
 const options = { key: key, cert: cert };
 const whitelist = [
   'https://chaparr.al', 
@@ -36,12 +37,9 @@ const getSuffix = mimetype => {
   }
 };
 
-
-// continuous stuff, scheduled once a day
 cron.schedule('0 0 * * *', () => {
   spawn('python3', ['delete_unlinked_audio.py'])
 })
-
 
 var corsOptions = {
   origin: function (origin, callback) {
@@ -60,16 +58,7 @@ app.use(fileUpload({
 }))
 app.use(history({ 
   htmlAcceptHeaders: ['text/html']
-  // rewrites: [
-  //   {
-  //     from: /^\/api\/.*$/,
-  //     to: function(context) {
-  //       return context.parsedUrl.path
-  //     }
-  //   }
-  // ]
 }))
-
 
 app.use(cors({
   origin: '*'
@@ -99,7 +88,6 @@ app.use((req, res, next) => {
     next();
 });
 
-
 const uri = "mongodb+srv://jon_myers:tabular0sa@swara.f5cuf.mongodb.net/swara?retryWrites=true&w=majority"
 
 MongoClient.connect(uri, { useUnifiedTopology: true })
@@ -115,7 +103,6 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
     const instruments = db.collection('instruments');
     const location = db.collection('location');
     const performanceSections = db.collection('performanceSections');
-
 
     // creates new transcription entry in transcriptions collection
     app.post('/insertNewTranscription', (req, res) => {
@@ -342,14 +329,7 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
         .catch(err => {
           throw err
         })
-      
-      // 
-      // try {
-      //   const result = await audioEvents.insertOne();
-      //   res.json(result)
-      // } catch (err) {
-      //   throw err
-      // }        
+     
     })
     
     app.delete('/cleanEmptyDoc', (req, res) => {
@@ -378,6 +358,71 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
           res.json(result)
         })
         .catch(err => console.error(err))
+    })
+    
+    app.post('/updateSaEstimate', async (req, res) => {
+      try {
+        const verString = `recordings.${req.body.recIdx}.saVerified`;
+        const estString = `recordings.${req.body.recIdx}.saEstimate`;
+        const query = { _id: ObjectId(req.body.aeID)};
+        const update = { $set: {} };
+        update.$set[verString] = req.body.verified;
+        update.$set[estString] = req.body.saEstimate;
+        const result = await audioEvents.updateOne(query, update);
+        console.log(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err)
+      }
+    })
+    
+    app.get('/getVerifiedStatus', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.query.aeID) };
+        const verString = `$recordings.${req.query.recIdx}.saVerified`;
+        const estString = `$recordings.${req.query.recIdx}.saEstimate`;
+        const projection = { '_id': 0 };
+        projection['saEstimate'] = estString;
+        projection['saVerified'] = verString;
+        const options = { projection: projection }
+        // console.log(projection);
+        const result = await audioEvents.findOne(query, options);
+        // console.log(result);
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+    
+    app.get('/getRaagRule', async (req, res) => {
+      try {
+        const query = { name: req.query.name };
+        const projection = { _id: 0, rules: 1, updatedDate: 1 };
+        const options = { projection: projection };
+        const result = await ragas.findOne(query, options);
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err)
+      }
+    })
+    
+    app.post('/saveRaagRules', async (req, res) => {
+      try {
+        console.log(req.body.name)
+        const query = { name: req.body.name };
+        // const update = dot.flatten(req.body);
+        // console.log(update)
+        const update = { $set: { rules: req.body.rules, updatedDate: req.body.date }};
+        const options = { upsert: true }
+        const result = await ragas.updateOne(query, update, options);
+        console.log(result)
+        res.json(result.acknowledged)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
     })
     
     // upload files (probably this can be moved out of this mongodb thing)
@@ -434,11 +479,10 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
   
 
 app.use('/audio', express.static('audio'))
-// app.use('/mp3')
+app.use('/peaks', express.static('peaks'))
 app.use('/spectrograms', express.static('spectrograms'))
 app.use('/', express.static('dist'))
-// const httpServer = dhttp.createServer(app);
-// const httpsServer = https.createServer(options, app);
+
 
 const server = app.listen(3000);
 server.timeout = 600000;

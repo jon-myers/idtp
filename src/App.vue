@@ -4,6 +4,7 @@
       <router-link class='routerLink' to='/files/'><div class='link'>Files</div></router-link>
       <router-link class='routerLink' to='/editor'><div class='link'>Editor</div></router-link>
       <router-link class='routerLink' to='/audioEvents'><div class='link'>Audio Events</div></router-link>
+      <router-link class='routerLink' to='/raagEditor'><div class='link'>Raag Editor</div></router-link>
   </div>
   <router-view />
 </template>

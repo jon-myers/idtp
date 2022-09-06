@@ -3,24 +3,30 @@ import matplotlib.pyplot as plt
 from essentia.standard import (EasyLoader, MonoLoader, NSGConstantQ, NSGIConstantQ, PitchYin, FrameGenerator)
 import numpy as np
 
-process = psutil.Process(os.getpid())
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
+
+# process = psutil.Process(os.getpid())
 loader = EasyLoader(filename='../audio/Hamir_alap_denoised.wav', replayGain=0, startTime=240, endTime=300)
 
 audio = loader()
-# fund = 194
-# params = {
-#           'inputSize': audio.size,
-#           'minFrequency': fund,
-#           'maxFrequency': (2**3)*fund,
-#           'binsPerOctave': 48,
-#           'minimumWindow': 128
-#          }
-# 
-# constantq, dcchannel, nfchannel = NSGConstantQ(**params)(audio)
+fund = 194
+params = {
+          'inputSize': audio.size,
+          'minFrequency': fund,
+          'maxFrequency': (2**3)*fund,
+          'binsPerOctave': 48,
+          'minimumWindow': 128
+         }
+
+constantq, dcchannel, nfchannel = NSGConstantQ(**params)(audio)
 # y = NSGIConstantQ(**params)(constantq, dcchannel, nfchannel)
-# print(process.memory_info().rss)
-# arr = np.log10(np.abs(constantq))
-# plt.imsave('Hamir_alap_denoised.png', np.flip(arr))
+print(process.memory_info().rss)
+arr = np.log10(np.abs(constantq))
+plt.imsave('Hamir_alap_denoised.png', np.flip(arr))
 print('1')
 W = 1024
 H = 512

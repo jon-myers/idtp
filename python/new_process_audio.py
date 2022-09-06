@@ -6,6 +6,23 @@ import numpy as np
 import sys, os, pymongo, math
 import soundfile as sf
 
+def get_peaks(data, num_levels=4, block_size=64):
+    obj = {}
+    for i in range(num_levels):
+        top = []
+        bottom = []
+        size = block_size * 2 ** i
+        indices = np.repeat(size, len(data) // size)
+        if len(data) % size != 0:
+            indices = np.append(indices, len(data) % size)
+        cur_top = np.maximum.reduceat(data, np.append([0], np.cumsum(indices[:-1])))/size
+        top.append(cur_top)
+        cur_bottom = np.minimum.reduceat(data, np.append([0], np.cumsum(indices[:-1])))/size
+        bottom.append(cur_bottom)
+        peaks = np.dstack((top, bottom))
+        obj[size] = peaks[0].tolist()
+    return obj
+
 query = "mongodb+srv://jon_myers:tabular0sa@swara.f5cuf.mongodb.net/?retryWrites=true&w=majority"
 client = pymongo.MongoClient(query, server_api=ServerApi('1'))
 db = client.swara
@@ -51,3 +68,8 @@ else:
     sf.write(wav_path, audio, sr)
     os.system(f'ffmpeg -i {file_path + path} -vn -ar 44100 -ac 2 -b:a 192k {mp3_path}')
     os.remove(file_path + path)
+
+
+peaks = get_peaks(audio, block_size=2**11, num_levels=5)
+with open('peaks/' + file_name + '.json', 'w') as outfile:
+    json.dump(peaks, outfile)

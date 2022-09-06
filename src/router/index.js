@@ -2,6 +2,7 @@ import { createWebHistory, createRouter } from 'vue-router';
 import EditorComponent from '@/components/EditorComponent.vue';
 import FileManager from '@/components/FileManager.vue';
 import AudioEvents from '@/components/AudioEvents.vue';
+import RaagEditor from '@/components/RaagEditor.vue';
 
 const routes = [
   {
@@ -19,6 +20,11 @@ const routes = [
     name: 'AudioEvents',
     component: AudioEvents
   },
+  {
+    path: '/raagEditor',
+    name: 'RaagEditor',
+    component: RaagEditor
+  }
 ];
 
 const router = createRouter({

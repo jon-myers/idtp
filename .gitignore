@@ -25,5 +25,7 @@ pnpm-debug.log*
 *.wav
 *.mp4
 *.flac
-
+*.webp
+*.zip
 python/essentia/*.png
+python/visualization_tools/*.png

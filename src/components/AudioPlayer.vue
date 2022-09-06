@@ -43,7 +43,12 @@
         </div>
       </div>
     </div>
-    <WaveformAnalyzer v-if='showWaveform' :initSaEstimate='saEstimate' :saVerified='saVerified'/>
+    <WaveformAnalyzer 
+      v-show='showWaveform' 
+      :initSaEstimate='saEstimate' 
+      :initSaVerified='saVerified'
+      ref='waveformAnalyzer'
+      :key='waKey'/>
     
   
   </div>
@@ -83,7 +88,7 @@ export default {
       playing: false,
       looping: false,
       shuffling: false,
-      showWaveform: true,
+      showWaveform: false,
       audio: {
         paused: false
       },
@@ -98,7 +103,8 @@ export default {
       },
       circleDragging: false,
       formattedCurrentTime: '00:00',
-      formattedTimeLeft: '00:00'
+      formattedTimeLeft: '00:00',
+      waKey: 0
     }
   },
   
@@ -115,7 +121,8 @@ export default {
   props: [
     'audioSource', 
     'saEstimate',
-    'saVerified'
+    'saVerified',
+    'id'
   ],
   
   mounted() {
@@ -138,6 +145,12 @@ export default {
       this.audio.play();
       this.playing = true;
       this.$refs.playImg.className = 'playing';
+      // this.$refs.waveformAnalyzer.newChart('this one');
+      
+      // this.$nextTick(() => {
+      //   // this.$refs.waveformAnalyzer.setUpBuffer(newSrc);
+      // })
+      
 
       
     }

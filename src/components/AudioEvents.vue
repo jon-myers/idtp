@@ -75,7 +75,9 @@
       v-if='true' 
       :audioSource='audioSource' 
       :saEstimate='saEstimate'
-      :saVerified='saVerified'/>
+      :saVerified='saVerified'
+      :id='audioRecId'
+      ref='audioPlayer'/>
       
     
     <!-- <div>
@@ -122,6 +124,7 @@ export default {
       playing: [0, 0],
       saEstimate: undefined,
       saVerified: undefined,
+      audioRecId: undefined
     }
   },
   components: {
@@ -156,8 +159,12 @@ export default {
       const aeRow = this.$refs.fileContainer.children[aeIdx].children[0];
       aeRow.classList.add('selected');
       this.audioSource = `https://swara.studio/audio/mp3/${_id}.mp3`;
+      this.audioRecId = _id;
+      this.audioEventId = this.allAudioEvents[aeIdx]._id;
+      this.recIdx = recKey;
       this.saEstimate = this.allAudioEvents[aeIdx].recordings[recKey].saEstimate;
       this.saVerified = this.allAudioEvents[aeIdx].recordings[recKey].saVerified;
+      this.$refs.audioPlayer.waKey ++;
     },
     
     nextTrack(shuffling, initial) {

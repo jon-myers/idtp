@@ -263,6 +263,27 @@ const getRagaNames = async () => {
     return ragas
 };
 
+const getRaagRule = async name => {
+  let rule;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  const searchParams = new URLSearchParams({ name: name })
+  try {
+    const res = await fetch(url + 'getRaagRule?' + searchParams, request);
+    if (res.ok) {
+      rule = await res.json();
+      return rule
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  
+}
+
 const getLocationObject = async () => {
   // gets location object
   let location;
@@ -412,6 +433,78 @@ const saveAudioMetadata = async (_id, updates) => {
   }
 }
 
+const updateSaEstimate = async (recID, aeID, recIdx, saEstimate, verified) => {
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      'recID': recID,
+      'aeID': aeID,
+      'recIdx': recIdx,
+      'saEstimate': saEstimate,
+      'verified': verified
+    }),
+  };
+  let out;
+  try {
+    const response = await fetch(url + 'updateSaEstimate', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const getVerifiedStatus = async (aeID, recIdx) => {
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  };
+  let out;
+  try {
+    const response = await fetch(url + 'getVerifiedStatus?' + new URLSearchParams({
+      aeID: aeID,
+      recIdx: recIdx
+    }), request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const saveRaagRules = async (name, rules, date) => {
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      name: name,
+      rules: rules,
+      date: date
+    })
+  };
+  let out;
+  try {
+    const response = await fetch(url + 'saveRaagRules', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
 
 const altUploadFile = async (file, onProgress, parentID, idx) => {
   const formData = new FormData();
@@ -460,3 +553,7 @@ exports.cleanEmptyDoc = cleanEmptyDoc
 exports.saveAudioMetadata = saveAudioMetadata
 exports.getAllAudioEventMetadata = getAllAudioEventMetadata
 exports.getAudioEvent = getAudioEvent
+exports.updateSaEstimate = updateSaEstimate
+exports.getVerifiedStatus = getVerifiedStatus
+exports.getRaagRule = getRaagRule
+exports.saveRaagRules = saveRaagRules
