@@ -992,9 +992,9 @@ get sargamLetters() {
   initSargam.forEach(s => {
     if (isObject(this.ruleSet[s])) {
       if (this.ruleSet[s].lowered) sl.push(s.slice(0, 1) + '\u0332');
-      if (this.ruleSet[s].raised) sl.push(s.slice(0, 1));
+      if (this.ruleSet[s].raised) sl.push(s.slice(0, 1).toUpperCase());
     } else if (this.ruleSet[s]) {
-      sl.push(s.slice(0, 1))
+      sl.push(s.slice(0, 1).toUpperCase())
     }
   });
   return sl

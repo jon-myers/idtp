@@ -1099,7 +1099,8 @@ export default {
             x: Number(key)+phrase.startTime,
             y: phrase.compute(scaledX, true)
           };
-          const id = 'p' + phrase.pieceIdx + '_' + Math.floor(Number(key)) + '_' + (Number(key)%1).toFixed(2).toString().slice(2);
+          const id = 'p' + phrase.pieceIdx + '_' + Math.floor(Number(key)) + '_'
+           + (Number(key)%1).toFixed(2).toString().slice(2);
 
           this.transcription.append('g')
             .classed('chikari', true)
@@ -1127,9 +1128,6 @@ export default {
             .on('mouseover', this.handleMouseOver)
             .on('mouseout', this.handleMouseOut)
             .on('click', this.handleClickChikari)
-
-
-
         })
       })
     },
