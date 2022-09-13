@@ -18,10 +18,12 @@ const getPiece = async id => {
 
   await fetch(url + 'getOneTranscription', request)
     .then(response => {
+      console.log(response)
       if (response.ok) {
         return response.json()
       }
     }).then(data => {
+      console.log(data)
       if (data) {
         piece = data
       }

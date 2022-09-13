@@ -60,6 +60,7 @@ export default {
 
   async mounted() {
     const piece = await getPiece(this.$store.state._id);
+    console.log(piece)
     let fund = 246;
     this.freqMin = fund / 2;
     this.freqMax = fund * 4;

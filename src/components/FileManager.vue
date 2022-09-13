@@ -8,7 +8,7 @@
   <div class='fileInfo' v-for="piece in allPieces" :key="piece">
     <div class='infoKey' v-for="info in pieceInfo(piece)" :key="info">{{info}}</div>
     <button @click='openPiece(piece)'>open</button>
-    <button @click='deletePiece(piece)'>delete</button>
+    <!-- <button @click='deletePiece(piece)'>delete</button> -->
   </div>
   <div class='addNewPiece' @click="designNewPiece()">Add new Piece ...</div>
 </div>
