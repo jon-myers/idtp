@@ -28,7 +28,8 @@ max_samples = max_seconds * 44100
 file_id = sys.argv[1]
 sa = float(sys.argv[2])
 
-path_to_audio = './../audio'
+# path_to_audio = './../audio'
+path_to_audio = './audio'
 # process = psutil.Process(os.getpid())
 full_path = path_to_audio + '/wav/' + file_id + '.wav'
 loader = ess.EasyLoader(filename = full_path, replayGain=0, startTime=0)
@@ -63,41 +64,21 @@ obj.append(arr)
 for i in range(4):
     arr = halfen(arr)
     obj.append(arr)
-    # plt.imsave('test_' + str(i) + '.png', np.flip(arr, axis=0))
-# pickle.dump(obj, open('pickled.p', 'wb'))
 
-
-
-
-for colormap in plt.colormaps():
-    img_buf = io.BytesIO()
-    plt.imsave(img_buf, np.flip(obj[0][:,:16383], axis=0), cmap=colormap)
-    im = Image.open(img_buf)
-    im.save('webps/' + colormap + '.webp', format='webp', quality=95)
-
-
-
-# with open('./../spectrograms/' + str(file_id) + '.json', 'w') as outfile:
-#     json.dump(obj, outfile, cls=NumpyEncoder)
-
-
-# with gzip.open('spectrogram.gz', 'wb') as f:
-#     for i, arr in enumerate(obj):
-#         f.write(bytes(arr))
-# 
-# for i, arr in enumerate(obj):
-#     with gzip.open('gzip_test' + str(i) + '.gz', 'wb') as f:
-#         f.write(bytes(arr))
-# with open('./../spectrograms/' + str(file_id) + '.bson', 'w') as outfile:    
-#     bson.dump(obj, outfile, cls=NumpyEncoder)
-# 
-# audio1 = audio[:30 * 44100]
-# audio2 = audio[30*44100:]
-# 
-# constantq1, dcchannel, nfchannel = ess.NSGConstantQ(**params)(audio1)
-# arr1 = np.log10(np.abs(constantq1))
-# constantq2, dcchannel, nfchannel = ess.NSGConstantQ(**params)(audio2)
-# arr2 = np.log10(np.abs(constantq2))
-# arr3 = np.hstack((arr1, arr2[:,2:]))
-# arr3 =  (256 * (arr3 - np.min(arr3)) / (np.max(arr3) - np.min(arr3))).astype(np.uint8)
-# plt.imsave('test_stitched.png', np.flip(arr3, axis=0))
+max_size = 16383
+cmap = 'magma'
+folder_path = 'spectrograms/' + file_id
+if not os.path.exists(folder_path):
+    os.mkdir(folder_path)
+for i, array in enumerate(obj):
+    subfolder_path = folder_path + '/' + str(i)
+    if not os.path.exists(subfolder_path):
+        os.mkdir(subfolder_path)
+    for j in range(math.ceil(np.shape(array)[1] / max_size)):
+        start = j * max_size
+        end = (j + 1) * max_size
+        sub_arr = array[:, start: end]
+        img_buf = io.BytesIO()
+        plt.imsave(img_buf, np.flip(sub_arr, axis=0), cmap=cmap)
+        im = Image.open(img_buf)
+        im.save(subfolder_path + '/' + str(j) + '.webp', format='webp', quality=95)

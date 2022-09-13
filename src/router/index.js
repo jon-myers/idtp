@@ -3,6 +3,7 @@ import EditorComponent from '@/components/EditorComponent.vue';
 import FileManager from '@/components/FileManager.vue';
 import AudioEvents from '@/components/AudioEvents.vue';
 import RaagEditor from '@/components/RaagEditor.vue';
+import AltEditor from '@/components/AltEditor.vue';
 
 const routes = [
   {
@@ -24,6 +25,11 @@ const routes = [
     path: '/raagEditor',
     name: 'RaagEditor',
     component: RaagEditor
+  },
+  {
+    path: '/altEditor',
+    name: 'AltEditor',
+    component: AltEditor
   }
 ];
 

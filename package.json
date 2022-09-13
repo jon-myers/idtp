@@ -10,7 +10,9 @@
     "deployDist": "rsync -a ./dist/ root@137.184.90.119:dist",
     "deployProcessAudio": "rsync -a ./python/new_process_audio.py root@137.184.90.119:process_audio.py",
     "deployCleanUnlinkedAudio": "rsync -a ./python/dataManagement/aggregations/delete_unlinked_audio.py root@137.184.90.119:delete_unlinked_audio.py",
-    "deployGeneratePeaks": "rsync -a ./python/visualization_tools/generate_peaks.py root@137.184.90.119:generate_peaks.py"
+    "deployGeneratePeaks": "rsync -a ./python/visualization_tools/generate_peaks.py root@137.184.90.119:generate_peaks.py",
+    "deployGenerateSpectrograms": "rsync -a ./python/visualization_tools/generate_log_spectrograms.py root@137.184.90.119:generate_log_spectrograms.py",
+    "deployMakeAllSpectrograms": "rsync -a ./python/visualization_tools/make_all_spectrograms.py root@137.184.90.119:make_all_spectrograms.py"
   },
   "dependencies": {
     "audio-waveform-svg-path": "^1.0.2",
