@@ -24,7 +24,8 @@
 import {
   getAllPieces,
   createNewPiece,
-  deletePiece
+  deletePiece,
+  getRaagRule
 } from '@/js/serverCalls.js';
 import NewPieceRegistrar from '@/components/NewPieceRegistrar.vue';
 import {
@@ -65,15 +66,20 @@ export default {
     this.emitter.on('closeModal', () => {
       this.designPieceModal = false
     });
-    this.emitter.on('newPieceInfo', newPieceInfo => {
+    this.emitter.on('newPieceInfo', async newPieceInfo => {
       const npi = Object.assign({}, newPieceInfo);
+      const rsRes = await getRaagRule(npi.raga)
+      const ruleSet = rsRes.rules;
+      // console.log('just before: ', ruleSet);
       npi.raga = new Raga({
-        name: npi.raga
+        name: npi.raga,
+        ruleSet: ruleSet
       });
       npi.phrases = [new Phrase({ 
         trajectories: [new Trajectory({ id: 12, durTot: 5, fundID12: npi.raga.fundamental })],
       
       })]
+      // console.log(npi);
       this.createNewPiece(npi);
     });
 
@@ -191,7 +197,7 @@ export default {
 }
 
 .designPieceModal {
-  width: 350px;
+  width: 650px;
   height: 200px;
   background-color: lightgrey;
   border: 1px solid black;

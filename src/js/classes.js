@@ -1,6 +1,8 @@
 // const plt = require('matplotnode');
 const _ = require('lodash');
 
+// import { getRaagRule } from '@/js/serverCalls.js';
+
 const isObject = argument => typeof argument === 'object' && argument !== null;
 
 const getStarts = durArray => {
@@ -872,92 +874,118 @@ class Piece {
 
 }
 
+const yamanRuleSet = {
+  sa: true,
+  re: {
+    lowered: false,
+    raised: true
+  },
+  ga: {
+    lowered: false,
+    raised: true
+  },
+  ma: {
+    lowered: false,
+    raised: true
+  },
+  pa: true,
+  dha: {
+    lowered: false,
+    raised: true
+  },
+  ni: {
+    lowered: false,
+    raised: true
+  }
+}
+
 class Raga {
 
   constructor({
     name = 'Yaman',
-    fundamental = 261.63
+    fundamental = 261.63,
+    ruleSet = yamanRuleSet
   } = {}) {
 
-    const ruleSets = {
-      'Yaman': {
-        sa: true,
-        re: {
-          lowered: false,
-          raised: true
-        },
-        ga: {
-          lowered: false,
-          raised: true
-        },
-        ma: {
-          lowered: false,
-          raised: true
-        },
-        pa: true,
-        dha: {
-          lowered: false,
-          raised: true
-        },
-        ni: {
-          lowered: false,
-          raised: true
-        }
-      },
-      'Malkuans': {
-        sa: true,
-        re: {
-          lowered: false,
-          raised: false
-        },
-        ga: {
-          lowered: true,
-          raised: false
-        },
-        ma: {
-          lowered: true,
-          raised: false
-        },
-        pa: false,
-        dha: {
-          lowered: true,
-          raised: false
-        },
-        ni: {
-          lowered: true,
-          raised: false
-        }
-      },
-      'Bageshri': {
-        sa: true,
-        re: {
-          lowered: false,
-          raised: true
-        },
-        ga: {
-          lowered: true,
-          raised: false
-        },
-        ma: {
-          lowered: true,
-          raised: false
-        },
-        pa: true,
-        dha: {
-          lowered: false,
-          raised: true
-        },
-        ni: {
-          lowered: true,
-          raised: true
-        }
-      },
-    };
-
+    // const ruleSets = {
+    //   'Yaman': {
+    //     sa: true,
+    //     re: {
+    //       lowered: false,
+    //       raised: true
+    //     },
+    //     ga: {
+    //       lowered: false,
+    //       raised: true
+    //     },
+    //     ma: {
+    //       lowered: false,
+    //       raised: true
+    //     },
+    //     pa: true,
+    //     dha: {
+    //       lowered: false,
+    //       raised: true
+    //     },
+    //     ni: {
+    //       lowered: false,
+    //       raised: true
+    //     }
+    //   },
+    //   'Malkuans': {
+    //     sa: true,
+    //     re: {
+    //       lowered: false,
+    //       raised: false
+    //     },
+    //     ga: {
+    //       lowered: true,
+    //       raised: false
+    //     },
+    //     ma: {
+    //       lowered: true,
+    //       raised: false
+    //     },
+    //     pa: false,
+    //     dha: {
+    //       lowered: true,
+    //       raised: false
+    //     },
+    //     ni: {
+    //       lowered: true,
+    //       raised: false
+    //     }
+    //   },
+    //   'Bageshri': {
+    //     sa: true,
+    //     re: {
+    //       lowered: false,
+    //       raised: true
+    //     },
+    //     ga: {
+    //       lowered: true,
+    //       raised: false
+    //     },
+    //     ma: {
+    //       lowered: true,
+    //       raised: false
+    //     },
+    //     pa: true,
+    //     dha: {
+    //       lowered: false,
+    //       raised: true
+    //     },
+    //     ni: {
+    //       lowered: true,
+    //       raised: true
+    //     }
+    //   },
+    // };
 
 
   this.name = name;
-  this.ruleSet = ruleSets[this.name];
+  // this.ruleSet = ruleSets[this.name];
+  this.ruleSet = ruleSet;
   this.fundamental = fundamental;
   this.tuning = {
     sa: 2 ** (0 / 12),
@@ -983,7 +1011,7 @@ class Raga {
       raised: 2 ** (11 / 12)
     }
   };
-  this.setRatios(ruleSets[name])
+  this.setRatios(this.ruleSet)
 }
 
 get sargamLetters() {

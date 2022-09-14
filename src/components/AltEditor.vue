@@ -44,6 +44,7 @@ import {
 
 import {
   getPiece,
+  getRaagRule
   //   savePiece,
   //   getAudioDBEntry
 } from '@/js/serverCalls.js';
@@ -90,8 +91,10 @@ export default {
   methods: {
 
 
-    getPieceFromJson(piece, fundamental) {
+    async getPieceFromJson(piece, fundamental) {
       if (fundamental) piece.raga.fundamental = fundamental;
+      const rsRes = await getRaagRule(piece.raga.name);
+      piece.raga.ruleSet = rsRes.rules;
       piece.raga = new Raga(piece.raga);
       piece.phrases.forEach(phrase => {
         phrase.trajectories.forEach(traj => {

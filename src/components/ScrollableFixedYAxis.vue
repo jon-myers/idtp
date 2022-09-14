@@ -60,7 +60,8 @@ import {
 import {
   getPiece,
   savePiece,
-  getAudioDBEntry
+  getAudioDBEntry,
+  getRaagRule
 } from '@/js/serverCalls.js';
 
 // import savedPiece from '@/assets/piece2.JSON';
@@ -333,8 +334,9 @@ export default {
         fund = this.audioDB.fundamental;
       }
 
-      this.$parent.loaded = true;
+      
       await this.getPieceFromJson(piece, fund);
+      this.$parent.loaded = true;
       if (!(typeof this.piece.audioID === 'number')) {
 
         if (this.piece.durTot < 10) {
@@ -710,8 +712,10 @@ export default {
       return (rect.height - this.margin.top) / (this.freqMax / this.freqMin)
     },
 
-    getPieceFromJson(piece, fundamental) {
+    async getPieceFromJson(piece, fundamental) {
       if (fundamental) piece.raga.fundamental = fundamental;
+      const rsRes = await getRaagRule(piece.raga.name);
+      piece.raga.ruleSet = rsRes.rules;
       piece.raga = new Raga(piece.raga);
       piece.phrases.forEach(phrase => {
         phrase.trajectories.forEach(traj => {
