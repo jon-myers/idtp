@@ -23,6 +23,8 @@ const whitelist = [
   'chaparr.al'
 ];
 
+const aggregations = require('./aggregations.js');
+
 const getSuffix = mimetype => {
   // TODO add other audio file types
   const end = mimetype.split('/')[1];
@@ -355,7 +357,8 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
       const options = { upsert: true };
       audioEvents.updateOne(query, update, options)
         .then(result => {
-          res.json(result)
+          res.json(result);
+          aggregations.generateAudioRecordingsDB();
         })
         .catch(err => console.error(err))
     })
@@ -448,6 +451,7 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
           const fileName = newUniqueId + getSuffix(avatar.mimetype);
  
           avatar.mv('./uploads/' + fileName);
+          console.log('in here somewhere')
           const processAudio = spawn('python3', ['process_audio.py', fileName, parentId, idx])
           await processAudio.on('close', () => {
             console.log('python closed, finally')
