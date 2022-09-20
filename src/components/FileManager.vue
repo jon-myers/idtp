@@ -8,6 +8,7 @@
   <div class='fileInfo' v-for="piece in allPieces" :key="piece">
     <div class='infoKey' v-for="info in pieceInfo(piece)" :key="info">{{info}}</div>
     <button @click='openPiece(piece)'>open</button>
+    <button @click='openPieceAlt(piece)'>open in alt editor</button>
     <!-- <button @click='deletePiece(piece)'>delete</button> -->
   </div>
   <div class='addNewPiece' @click="designNewPiece()">Add new Piece ...</div>
@@ -112,6 +113,11 @@ export default {
       const _id = piece._id;
       this.$store.commit('update_id', _id)
       this.$router.push('/editor')
+    },
+    
+    openPieceAlt(piece) {
+      this.$store.commit('update_id', piece._id)
+      this.$router.push('/altEditor')
     },
 
     designNewPiece() {

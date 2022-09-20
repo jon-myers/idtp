@@ -45,8 +45,9 @@ const getAudioDBEntry = async _id => {
 }
 
 
-const savePiece = piece => {
+const savePiece = async piece => {
   const data = JSON.stringify(piece);
+  let result;
   let request = {
     method: 'POST',
     headers: {
@@ -54,13 +55,15 @@ const savePiece = piece => {
     },
     body: data
   };
-  fetch(url + 'updateTranscription', request)
-    .then(response => {
-      if (response.ok) {
-        return response.json()
-      }
-    }).then(out => console.log(out))
-    .catch(err => console.error(err))
+  try {
+    const res = await fetch(url + 'updateTranscription', request);
+    if (res.ok) {
+      result = await res.json()
+    }
+    return result
+  } catch (err) {
+    console.error(err)
+  }
 };
 
 const getAllPieces = async () => {
@@ -259,6 +262,28 @@ const getInstruments = async melody => {
       }
     }).catch(err => console.error(err))
     return instruments
+};
+
+const getNumberOfSpectrograms = async id => {
+  const suffix = '?' + new URLSearchParams({
+    id: id
+  });
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  };
+  try {
+    const res = await fetch(url + 'getNumberOfSpectrograms' + suffix, request);
+    if (res.ok) {
+      out = await res.json();
+      return out
+    }
+  } catch (err) {
+    console.error(err)
+  }  
 };
 
 const getRagaNames = async () => {
@@ -578,3 +603,4 @@ exports.getVerifiedStatus = getVerifiedStatus
 exports.getRaagRule = getRaagRule
 exports.saveRaagRules = saveRaagRules
 exports.getAudioRecording = getAudioRecording
+exports.getNumberOfSpectrograms = getNumberOfSpectrograms

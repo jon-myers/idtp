@@ -13,10 +13,12 @@
           v-model='spectrogramOpacity'
           >
       </div>
+      <div class='cbBox'>
+        <button @click='savePiece'>Save</button>
+        <span class='savedDate'>{{`Saved: ${dateModified ? dateModified.toLocaleString() : ''}`}}</span>
+      </div>
     </div>
   </div>
-  <!-- <div class='lower'>
-  </div> -->
 </div>
 <EditorAudioPlayer
   ref='audioPlayer'
@@ -67,16 +69,11 @@ import {
 import {
   getPiece,
   getRaagRule,
-  getAudioRecording
-  //   savePiece,
+  getAudioRecording,
+  getNumberOfSpectrograms,
+  savePiece,
   //   getAudioDBEntry
 } from '@/js/serverCalls.js';
-
-import webp0 from '@/assets/0/0.webp';
-import webp1 from '@/assets/0/1.webp';
-import webp2 from '@/assets/0/2.webp';
-import webp3 from '@/assets/0/3.webp';
-const webps = [webp0, webp1, webp2, webp3];
 
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
 import * as d3 from 'd3';
@@ -99,15 +96,24 @@ export default {
       initXScaleFactor: 1,
       d3: d3,
       spectrogramOpacity: 0,
-      transitionTime: 20,
+      transitionTime: 40,
       controlBoxWidth: 200,
       audioSource: undefined,
-      currentTime: 0
+      currentTime: 0,
+      selectedChikariID: undefined,
+      chikariColor: 'black',
+      selectedChikariColor: 'red',
+      dateModified: undefined,
+      setChikari: false
     }
   },
   
   components: {
     EditorAudioPlayer
+  },
+  
+  created() {
+    window.addEventListener('keydown', this.handleKeydown)
   },
 
   async mounted() {
@@ -129,70 +135,111 @@ export default {
     this.freqMax = fund * 4;
     await this.getPieceFromJson(piece, fund);
     await this.initializePiece();
+    
 
   },
 
   unmounted() {
-    window.removeEventListener('resize', this.resize)
+    window.removeEventListener('resize', this.resize);
+    window.removeEventListener('keydown', this.handleKeydown);
   },
 
   watch: {
     spectrogramOpacity(newVal) {
-      d3.select('.spectrogram')
+      d3.selectAll('.spectrogram')
         .style('opacity', newVal)
     }
   },
 
   methods: {
+    
+    async savePiece() {
+      const result = await savePiece(this.piece);
+      this.dateModified = new Date(result.dateModified);
+    },
+    
+    handleKeydown(e) {
+      if (e.key === ' ') {
+        this.$refs.audioPlayer.togglePlay()
+      } else if (e.key === 'Escape') {
+        this.clearSelectedChikari();
+        if (this.setChikari) {
+          this.setChikari = false;
+          this.svg.style('cursor', 'auto')
+        }
+      } else if (e.key === 'Backspace') {
+        if (this.selectedChikariID) {
+          const splitArr = this.selectedChikariID.split('_');
+          const pIdx = splitArr[0].slice(1);
+          const key = splitArr[1] + '.' + splitArr[2];
+          delete this.piece.phrases[pIdx].chikaris[key];
+          d3.select(`#${this.selectedChikariID}`).remove()
+          d3.select(`#circle__${this.selectedChikariID}`).remove()
+          this.selectedChikariID = undefined;
+        }
+      } else if (e.key === 'c') {
+        this.setChikari = true;
+        this.svg.style('cursor', 'cell')
+      }
+    },
 
     shrink() {
       d3.select('.spectrogram')
         .attr('transform', `translate(${this.yAxWidth},${this.xAxHeight}) scale(0.5, 1)`)
     },
 
-    addSpectrogram() {
+    async addSpectrogram() {
+      this.numSpecs = await getNumberOfSpectrograms(this.piece.audioID);      
       const rect = this.rect();
       const height = rect.height - this.xAxHeight;
-      this.imgs = webps.map(webp => {
+      this.imgs = [];
+      for (let i=0; i < this.numSpecs; i++) {    
+        const url = `https://swara.studio/spectrograms/${this.piece.audioID}/0/${i}.webp`;
         const img = new Image();
-        img.src = webp;
-        return img;
-      });
-      this.imgs[0].onload = () => {
-        this.totNaturalWidth = 0;
-        const unscaledWidths = []
-        if (this.imgs.every(img => img.complete)) {
-          this.imgs.forEach(img => {
-            this.totNaturalWidth += img.naturalWidth;
-            unscaledWidths.push(Number(height * img.naturalWidth / img.naturalHeight))
-          });
-          this.cumulativeWidths = [0].concat(unscaledWidths.map(cumsum).slice(0, unscaledWidths.length - 1))
-          this.unscaledWidth = height * this.totNaturalWidth / this.imgs[0].naturalHeight;
-          this.desiredWidth = (rect.width - this.yAxWidth) * this.initXScaleFactor;
-          this.xScale = this.desiredWidth / this.unscaledWidth;
-          this.desiredHeight = (rect.height - this.xAxHeight) * this.initYScaleFactor;
-          this.yScale = this.desiredHeight / height;
-          this.specBox = this.svg.insert('g', 'defs')
-            .attr('clip-path', 'url(#clip)');
-          this.imgs.forEach((img, i) => {
-            const imgPortion = img.naturalWidth / this.totNaturalWidth;
-            const unscaledWidth = this.unscaledWidth * imgPortion;
-            const xTranslate = this.yAxWidth + this.cumulativeWidths[i];
-            this.specBox.append('image')
-              .attr('class', `spectrogram img${i}`)
-              // .attr('clip-path', 'inset(0)')
-              .attr('xlink:href', webps[i])
-              .attr('width', unscaledWidth)
-              .attr('height', height)
-              .attr('transform', `translate(${xTranslate},${this.yr()(Math.log2(this.freqMax))}) scale(${this.xScale}, ${this.yScale})`)
-              .style('opacity', this.spectrogramOpacity)
-
-          });
-          // this.redrawSpectrogram();       
-        } else {
-          console.log('not all loaded')
-        }
+        img.src = url;
+        this.imgs.push(img)
       }
+      let loadedImgs = 0;
+      this.imgs.forEach(img => {
+        img.onload = () => {
+          loadedImgs ++;
+          if (loadedImgs === this.numSpecs) {
+            this.totNaturalWidth = 0;
+            const unscaledWidths = []
+            if (this.imgs.every(img => img.complete)) {
+              this.imgs.forEach(img => {
+                this.totNaturalWidth += img.naturalWidth;
+                unscaledWidths.push(Number(height * img.naturalWidth / img.naturalHeight))
+              });
+              this.cumulativeWidths = [0].concat(unscaledWidths.map(cumsum).slice(0, unscaledWidths.length - 1))
+              this.unscaledWidth = height * this.totNaturalWidth / this.imgs[0].naturalHeight;
+              this.desiredWidth = (rect.width - this.yAxWidth) * this.initXScaleFactor;
+              this.xScale = this.desiredWidth / this.unscaledWidth;
+              this.desiredHeight = (rect.height - this.xAxHeight) * this.initYScaleFactor;
+              this.yScale = this.desiredHeight / height;
+              this.specBox = this.svg.insert('g', 'defs')
+                .attr('clip-path', 'url(#clip)');
+              this.imgs.forEach((img, i) => {
+                const imgPortion = img.naturalWidth / this.totNaturalWidth;
+                const unscaledWidth = this.unscaledWidth * imgPortion;
+                const xTranslate = this.yAxWidth + this.cumulativeWidths[i];
+                this.specBox.append('image')
+                  .attr('class', `spectrogram img${i}`)
+                  // .attr('clip-path', 'inset(0)')
+                  .attr('xlink:href', this.imgs[i].src)
+                  .attr('width', unscaledWidth)
+                  .attr('height', height)
+                  .attr('transform', `translate(${xTranslate},${this.yr()(Math.log2(this.freqMax))}) scale(${this.xScale}, ${this.yScale})`)
+                  .style('opacity', this.spectrogramOpacity)
+
+              });
+              // this.redrawSpectrogram();       
+            } else {
+              console.log('not all loaded')
+            }
+          }
+        }
+      })
     },
 
     redrawSpectrogram() {
@@ -203,7 +250,7 @@ export default {
       this.xScale = this.desiredWidth / this.unscaledWidth;
       this.desiredHeight = height * this.ty().k;
       this.yScale = this.desiredHeight / height;
-      if (this.imgs[0].complete) {
+      if (this.imgs[this.numSpecs-1].complete) {
         this.imgs.forEach((img, i) => {
           // const imgPortion = img.naturalWidth / this.totNaturalWidth;
           // const unscaledWidth = this.unscaledWidth * imgPortion;
@@ -242,6 +289,7 @@ export default {
       });
       piece.phrases = piece.phrases.map(phrase => new Phrase(phrase));
       this.piece = new Piece(piece);
+      this.dateModified = new Date(this.piece.dateModified);
       this.fixTrajs();
     },
 
@@ -276,8 +324,10 @@ export default {
       const rect = this.rect();
       this.svg = d3.create('svg')
         .attr('viewBox', [0, 0, rect.width, rect.height - 1])
+        .on('click', this.handleClick)
+        
       this.paintBackgroundColors();
-      this.addSpectrogram();
+      if (this.piece.audioID) await this.addSpectrogram();
       this.curWidth = rect.width - this.yAxWidth;
       this.addClipPaths();
 
@@ -331,6 +381,12 @@ export default {
         this.$refs.audioPlayer.audio.currentTime = time;
         this.redrawPlayhead()
       }
+    },
+    
+    handleClick(e) {
+      const time = this.xr().invert(e.clientX);
+      console.log(time)
+      // if 
     },
 
     makeAxes() {
@@ -594,10 +650,11 @@ export default {
 
           this.svg.append('g')
             .classed('chikari', true)
+            .attr('clip-path', 'url(#clip)')
             .append('path')
             .attr('id', id)
             .attr('d', sym)
-            .attr('stroke', 'black')
+            .attr('stroke', this.chikariColor)
             .attr('stroke-width', 3)
             .attr('stroke-linecap', 'round')
             .data([dataObj])
@@ -606,36 +663,70 @@ export default {
 
 
           // for clicking  
-          // this.transcription.append('g')
-          //   .classed('chikari', true)
-          //   .append('circle')
-          //   .attr('id', 'circle__' + id)
-          //   .attr('stroke', 'green')
-          //   .style('opacity', '0')
-          //   .data([dataObj])
-          //   .attr('cx', d => this.xScale(d.x))
-          //   .attr('cy', d => this.yScale(d.y))
-          //   .attr('r', 6)
-          //   .on('mouseover', this.handleMouseOver)
-          //   .on('mouseout', this.handleMouseOut)
-          //   .on('click', this.handleClickChikari)
+          this.svg.append('g')
+            .classed('chikari', true)
+            .append('circle')
+            .attr('id', 'circle__' + id)
+            .classed('chikariCircle', true)
+            .style('opacity', '0')
+            .data([dataObj])
+            .attr('cx', d => this.xr()(d.x))
+            .attr('cy', d => this.yr()(d.y))
+            .attr('r', 6)
+            .on('mouseover', this.handleMouseOver)
+            .on('mouseout', this.handleMouseOut)
+            .on('click', this.handleClickChikari)
         })
       })
+    },
+    
+    handleMouseOver(e) {
+      if (e.target.id.slice(0, 8) === 'circle__') {
+        const id = e.target.id.slice(8)
+        d3.select(`#${id}`)
+          .attr('stroke', this.selectedChikariColor)
+        d3.select(`#${e.target.id}`)
+          .style('cursor', 'pointer')
+      }      
+    },
+    
+    handleMouseOut(e) {
+      if (e.target.id.slice(0, 8) === 'circle__') {
+        const id = e.target.id.slice(8)
+        if (id !== this.selectedChikariID) {
+          d3.select(`#${id}`)
+            .attr('stroke', this.chikariColor)
+        }      
+      }  
+    },
+    
+    handleClickChikari(e) {
+      if (this.selectedChikariID && this.selectedChikariID !== e.target.id.split('__')[1]) {
+        d3.select('#'+this.selectedChikariID).attr('stroke', this.chikariColor)
+      }
+      this.selectedChikariID = e.target.id.split('__')[1];
+      d3.select(`#${this.selectedChikariID}`)
+        .attr('stroke', this.selectedChikariColor)
+    },
+    
+    clearSelectedChikari() {
+      if (this.selectedChikariID) {
+        d3.select(`#${this.selectedChikariID}`)
+          .attr('stroke', this.chikariColor)
+        this.selectedChikariID = undefined
+      }
     },
 
     redrawChikaris() {
       this.piece.phrases.forEach(phrase => {
         Object.keys(phrase.chikaris).forEach(key => {
-          const scaledX = Number(key) / phrase.durTot;
-          const dataObj = {
-            x: Number(key) + phrase.startTime,
-            y: phrase.compute(scaledX, true)
-          };
           const id = 'p' + phrase.pieceIdx + '_' + Math.floor(Number(key)) + '_' +
             (Number(key) % 1).toFixed(2).toString().slice(2);
-          d3.select(`#${id}`)
-            .data([dataObj])
+          d3.select(`#${id}`).transition().duration(this.transitionTime)
             .attr('transform', d => `translate(${this.xr()(d.x)}, ${this.yr()(d.y)})`)
+          d3.select(`#circle__${id}`).transition().duration(this.transitionTime)
+            .attr('cx', d => this.xr()(d.x))
+            .attr('cy', d => this.yr()(d.y))
         })
       })
     },
@@ -718,7 +809,7 @@ export default {
     addPlayhead() {
       this.svg.append('path')
         .classed('playhead', true)
-        .attr('stroke', 'red')
+        .attr('stroke', 'darkgreen')
         .attr('stroke-width', '2px')
         .attr('d', this.playheadLine(0))
     },
@@ -738,7 +829,7 @@ export default {
           .attr('d', this.sargamLine(Math.log2(s)))
       });
       await this.redrawPhrases();
-      await this.redrawSpectrogram();
+      if (this.piece.audioID) await this.redrawSpectrogram();
       this.redrawPlayhead();
     },
 
@@ -975,4 +1066,13 @@ export default {
   align-items: center;
   justify-content: space-evenly;
 }
+
+button {
+  cursor: pointer
+}
+
+.savedDate {
+  font-size: 13px
+}
+
 </style>
