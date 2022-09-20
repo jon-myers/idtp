@@ -30,7 +30,6 @@ const getPiece = async id => {
 }
 
 const getAudioDBEntry = async _id => {
-  console.log('then', _id)
   let request = {
     method: 'POST',
     headers: {
@@ -145,6 +144,27 @@ const getAudioEvent = async _id => {
     console.error(err)
   }
 }
+
+const getAudioRecording = async _id => {
+  let audioRecording;
+  const suffix = '?' + new URLSearchParams({ _id: _id });
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const response = await fetch(url + 'getAudioRecording' + suffix, request);
+    if (response.ok) {
+      // console.log(response);
+      audioRecording = await response.json()
+    }
+    return audioRecording
+  } catch (err) {
+    console.error(err)
+  }
+};
 
 const getSortedMusicians = async () => {
   // query 'musicians' mongoDB collection to get all musicians in alphabetical order
@@ -557,3 +577,4 @@ exports.updateSaEstimate = updateSaEstimate
 exports.getVerifiedStatus = getVerifiedStatus
 exports.getRaagRule = getRaagRule
 exports.saveRaagRules = saveRaagRules
+exports.getAudioRecording = getAudioRecording

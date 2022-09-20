@@ -105,6 +105,7 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
     const instruments = db.collection('instruments');
     const location = db.collection('location');
     const performanceSections = db.collection('performanceSections');
+    const audioRecordings = db.collection('audioRecordings');
 
     // creates new transcription entry in transcriptions collection
     app.post('/insertNewTranscription', (req, res) => {
@@ -319,6 +320,15 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
       } catch (err) {
         throw err
       }    
+    })
+    
+    app.get('/getAudioRecording', async (req, res) => {
+      try {
+        const result = await audioRecordings.findOne({_id: ObjectId(req.query._id)});
+        res.json(result)
+      } catch (err) {
+        throw err
+      }
     })
     
     app.post('/initializeAudioEvent', (req, res) => {

@@ -16,7 +16,7 @@ const generateAudioRecordingsDB = async () => {
       }
     }, {
       '$project': {
-        'audioFileId:': '$recordings.v.audioFileId', 
+        '_id': '$recordings.v.audioFileId', 
         'duration': '$recordings.v.duration', 
         'saEstimate': '$recordings.v.saEstimate', 
         'date': '$recordings.v.date', 

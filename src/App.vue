@@ -42,6 +42,9 @@ body {
   margin: 0px;
   display: flex;
   flex-direction: row;
+  overflow: none;
+  position: fixed;
+  width: 100%;
 }
 
 #app {

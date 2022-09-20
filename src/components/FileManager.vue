@@ -198,7 +198,7 @@ export default {
 
 .designPieceModal {
   width: 650px;
-  height: 200px;
+  height: 500px;
   background-color: lightgrey;
   border: 1px solid black;
   position: fixed;

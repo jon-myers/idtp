@@ -246,7 +246,7 @@ export default {
 .maint {
   background-color: #202621;
   border: 1px solid white;
-  z-index: 1;
+  z-index: 2;
   color: white
 }
 

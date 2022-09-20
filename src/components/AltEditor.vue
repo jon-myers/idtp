@@ -1,7 +1,27 @@
 <template>
-<div class='main'>
-  <div class='graph' ref='graph'></div>
+<div class='mainzz'>
+  <div class='upperRow'>
+    <div class='graph' ref='graph'></div>
+    <div class='controlBox'>
+      <div class='cbBox'>
+        <label>Spectrogram Opacity</label>
+        <input 
+          type='range' 
+          min='0.0' 
+          max='1.0' 
+          step='0.01'
+          v-model='spectrogramOpacity'
+          >
+      </div>
+    </div>
+  </div>
+  <!-- <div class='lower'>
+  </div> -->
 </div>
+<EditorAudioPlayer
+  ref='audioPlayer'
+  :audioSource='audioSource'
+  />
 </template>
 <script>
 const structuredTime = dur => {
@@ -14,6 +34,8 @@ const structuredTime = dur => {
     return `${minutes}:${seconds}`
   }
 };
+
+const cumsum = (sum => value => sum += value)(0);
 
 const linSpace = (startValue, stopValue, cardinality) => {
   var arr = [];
@@ -44,12 +66,19 @@ import {
 
 import {
   getPiece,
-  getRaagRule
+  getRaagRule,
+  getAudioRecording
   //   savePiece,
   //   getAudioDBEntry
 } from '@/js/serverCalls.js';
 
+import webp0 from '@/assets/0/0.webp';
+import webp1 from '@/assets/0/1.webp';
+import webp2 from '@/assets/0/2.webp';
+import webp3 from '@/assets/0/3.webp';
+const webps = [webp0, webp1, webp2, webp3];
 
+import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
 import * as d3 from 'd3';
 export default {
   name: 'AltEditor',
@@ -60,35 +89,131 @@ export default {
       durTot: 600,
       freqMin: 100,
       freqMax: 800,
-      backColor: '#abe0ab',
+      backColor: '#fab6c3',
       axisColor: '#c4b18b',
       yAxWidth: 30,
       xAxHeight: 30,
       minDrawDur: 0.005, //this could be smaller, potentially, might be more efficient
       initViewDur: 10,
       initYScaleFactor: 2,
-      d3: d3
+      initXScaleFactor: 1,
+      d3: d3,
+      spectrogramOpacity: 0,
+      transitionTime: 20,
+      controlBoxWidth: 200,
+      audioSource: undefined,
+      currentTime: 0
     }
+  },
+  
+  components: {
+    EditorAudioPlayer
   },
 
   async mounted() {
+    this.d3 = d3;
     window.addEventListener('resize', this.resize);
 
     const piece = await getPiece(this.$store.state._id);
-    this.durTot = piece.durTot;
+    if (piece.audioID) {
+      this.audioSource = `https://swara.studio/audio/mp3/${piece.audioID}.mp3`;
+      this.audioDBDoc = await getAudioRecording(piece.audioID)
+      this.durTot = this.audioDBDoc.duration;
+    } else {
+      this.durTot = piece.durTot;
+    }
+
     this.initXScaleFactor = this.durTot / this.initViewDur;
     let fund = 246;
     this.freqMin = fund / 2;
     this.freqMax = fund * 4;
     await this.getPieceFromJson(piece, fund);
     await this.initializePiece();
+
   },
 
   unmounted() {
     window.removeEventListener('resize', this.resize)
   },
 
+  watch: {
+    spectrogramOpacity(newVal) {
+      d3.select('.spectrogram')
+        .style('opacity', newVal)
+    }
+  },
+
   methods: {
+
+    shrink() {
+      d3.select('.spectrogram')
+        .attr('transform', `translate(${this.yAxWidth},${this.xAxHeight}) scale(0.5, 1)`)
+    },
+
+    addSpectrogram() {
+      const rect = this.rect();
+      const height = rect.height - this.xAxHeight;
+      this.imgs = webps.map(webp => {
+        const img = new Image();
+        img.src = webp;
+        return img;
+      });
+      this.imgs[0].onload = () => {
+        this.totNaturalWidth = 0;
+        const unscaledWidths = []
+        if (this.imgs.every(img => img.complete)) {
+          this.imgs.forEach(img => {
+            this.totNaturalWidth += img.naturalWidth;
+            unscaledWidths.push(Number(height * img.naturalWidth / img.naturalHeight))
+          });
+          this.cumulativeWidths = [0].concat(unscaledWidths.map(cumsum).slice(0, unscaledWidths.length - 1))
+          this.unscaledWidth = height * this.totNaturalWidth / this.imgs[0].naturalHeight;
+          this.desiredWidth = (rect.width - this.yAxWidth) * this.initXScaleFactor;
+          this.xScale = this.desiredWidth / this.unscaledWidth;
+          this.desiredHeight = (rect.height - this.xAxHeight) * this.initYScaleFactor;
+          this.yScale = this.desiredHeight / height;
+          this.specBox = this.svg.insert('g', 'defs')
+            .attr('clip-path', 'url(#clip)');
+          this.imgs.forEach((img, i) => {
+            const imgPortion = img.naturalWidth / this.totNaturalWidth;
+            const unscaledWidth = this.unscaledWidth * imgPortion;
+            const xTranslate = this.yAxWidth + this.cumulativeWidths[i];
+            this.specBox.append('image')
+              .attr('class', `spectrogram img${i}`)
+              // .attr('clip-path', 'inset(0)')
+              .attr('xlink:href', webps[i])
+              .attr('width', unscaledWidth)
+              .attr('height', height)
+              .attr('transform', `translate(${xTranslate},${this.yr()(Math.log2(this.freqMax))}) scale(${this.xScale}, ${this.yScale})`)
+              .style('opacity', this.spectrogramOpacity)
+
+          });
+          // this.redrawSpectrogram();       
+        } else {
+          console.log('not all loaded')
+        }
+      }
+    },
+
+    redrawSpectrogram() {
+      // console.log('this is getting called')
+      const rect = this.rect();
+      const height = rect.height - this.xAxHeight;
+      this.desiredWidth = (rect.width - this.yAxWidth) * this.tx().k;
+      this.xScale = this.desiredWidth / this.unscaledWidth;
+      this.desiredHeight = height * this.ty().k;
+      this.yScale = this.desiredHeight / height;
+      if (this.imgs[0].complete) {
+        this.imgs.forEach((img, i) => {
+          // const imgPortion = img.naturalWidth / this.totNaturalWidth;
+          // const unscaledWidth = this.unscaledWidth * imgPortion;
+          const time = this.durTot * this.cumulativeWidths[i] / (this.totNaturalWidth * height / img.naturalHeight);
+          const xTranslate = this.xr()(time);
+          d3.select(`.spectrogram.img${i}`).transition().duration(this.transitionTime)
+            .attr('transform', `translate(${xTranslate}, ${this.yr()(Math.log2(this.freqMax))}) scale(${this.xScale}, ${this.yScale})`)
+        })
+      }
+    },
 
 
     async getPieceFromJson(piece, fundamental) {
@@ -143,7 +268,7 @@ export default {
       this.redraw();
     },
 
-    initializePiece() {
+    async initializePiece() {
       this.visibleSargam = this.piece.raga.getFrequencies({
         low: this.freqMin,
         high: this.freqMax
@@ -151,9 +276,11 @@ export default {
       const rect = this.rect();
       this.svg = d3.create('svg')
         .attr('viewBox', [0, 0, rect.width, rect.height - 1])
+      this.paintBackgroundColors();
+      this.addSpectrogram();
       this.curWidth = rect.width - this.yAxWidth;
       this.addClipPaths();
-      this.paintBackgroundColors();
+
       this.gx = this.svg.append('g');
       this.gy = this.svg.append('g');
       this.x = d3.scaleLinear()
@@ -164,7 +291,7 @@ export default {
         .range([this.xAxHeight, rect.height])
       this.z = d3.zoomIdentity;
       this.zoomX = d3.zoom()
-        .scaleExtent([1, 10])
+        .scaleExtent([1, 1000])
         .translateExtent([
           [0, 0],
           [rect.width, rect.height]
@@ -192,7 +319,6 @@ export default {
           .node();
         this.$refs.graph.appendChild(this.svgNode)
       });
-
     },
 
     makeAxes() {
@@ -214,9 +340,6 @@ export default {
     },
 
     addPhrases() {
-      const line = d3.line()
-        .x(d => this.xr()(d.x))
-        .y(d => this.yr()(Math.log2(d.y)))
       const timePts = Math.round(this.durTot / this.minDrawDur);
       const drawTimes = linSpace(0, this.durTot, timePts);
 
@@ -246,12 +369,13 @@ export default {
               .attr("stroke-width", '3px')
               .attr("stroke-linejoin", "round")
               .attr("stroke-linecap", "round")
-              .attr("d", line)
+              .attr("d", this.phraseLine())
           }
           this.addArticulations(traj, phrase.startTime)
         })
       });
       this.addChikaris();
+      this.addPlayhead();
     },
 
     addArticulations(traj, phraseStart) {
@@ -289,7 +413,7 @@ export default {
     },
 
     redrawPlucks(traj) {
-      d3.select(`#pluckp${traj.phraseIdx}t${traj.num}`)
+      d3.select(`#pluckp${traj.phraseIdx}t${traj.num}`).transition().duration(this.transitionTime)
         .attr('transform', d => `translate(${this.xr()(d.x)}, ${this.yr()(d.y)}) rotate(90)`)
     },
 
@@ -498,7 +622,7 @@ export default {
           const id = 'p' + phrase.pieceIdx + '_' + Math.floor(Number(key)) + '_' +
             (Number(key) % 1).toFixed(2).toString().slice(2);
           d3.select(`#${id}`)
-          .data([dataObj])
+            .data([dataObj])
             .attr('transform', d => `translate(${this.xr()(d.x)}, ${this.yr()(d.y)})`)
         })
       })
@@ -560,7 +684,6 @@ export default {
         const saFilter = freq => Math.abs(logOverFund(freq) % 1) == 0;
         const paFilter = freq => Math.abs((logOverFund(freq) - (7 / 12)) % 1) == 0;
         const strokeWidth = saFilter(s) || paFilter(s) ? 2 : 1;
-
         this.svg.append('path')
           .classed(`sargamLine s${i}`, true)
           .attr('clip-path', 'url(#clip)')
@@ -572,17 +695,39 @@ export default {
           .attr("d", this.sargamLine(Math.log2(s)));
       })
     },
+    
+    playheadLine(currentTime) {
+      return d3.line()([
+        [this.xr()(currentTime), this.yr()(Math.log2(this.freqMin))],
+        [this.xr()(currentTime), this.yr()(Math.log2(this.freqMax))]
+      ])
+    },
+    
+    addPlayhead() {
+      this.svg.append('path')
+        .classed('playhead', true)
+        .attr('stroke', 'red')
+        .attr('stroke-width', '2px')
+        .attr('d', this.playheadLine(0))
+    },
+    
+    redrawPlayhead() {
+      d3.select('.playhead').transition().duration(this.transitionTime)
+        .attr('d', this.playheadLine(this.currentTime))
+    },
 
     async redraw() {
       await this.updateTranslateExtent();
       // await this.svg.call(this.zoom.transform, d3.zoomIdentity);
-      await this.gx.call(this.xAxis, this.xr());
-      await this.gy.call(this.yAxis, this.yr());
+      await this.gx.transition().duration(this.transitionTime).call(this.xAxis, this.xr());
+      await this.gy.transition().duration(this.transitionTime).call(this.yAxis, this.yr());
       await this.visibleSargam.forEach((s, i) => {
-        d3.select(`.s${i}`)
+        d3.select(`.s${i}`).transition().duration(this.transitionTime)
           .attr('d', this.sargamLine(Math.log2(s)))
       });
       await this.redrawPhrases();
+      await this.redrawSpectrogram();
+      this.redrawPlayhead();
     },
 
     xr() {
@@ -593,32 +738,22 @@ export default {
       return this.ty().rescaleY(this.y)
     },
 
-    redrawPhrases() {
-      const line = d3.line()
+    phraseLine() {
+      return d3.line()
         .x(d => this.xr()(d.x))
-        .y(d => this.yr()(Math.log2(d.y)));
-      const timePts = Math.round(this.durTot / this.minDrawDur);
-      const drawTimes = linSpace(0, this.durTot, timePts);
+        .y(d => this.yr()(Math.log2(d.y)))
+    },
+
+    redrawPhrases() {
+
 
       this.piece.phrases.forEach((phrase, pIdx) => {
         phrase.trajectories.forEach((traj, tIdx) => {
           if (traj.id !== 12) {
-            const st = phrase.startTime + traj.startTime;
-            const end = st + traj.durTot;
-            const fltr = t => t >= st && t < end;
-            const mp = t => (t - st) / traj.durTot;
-            const trajDrawTimes = drawTimes.filter(fltr);
-            const trajDrawXs = trajDrawTimes.map(mp);
-            const trajDrawYs = trajDrawXs.map(x => traj.compute(x));
-            const data = trajDrawYs.map((y, i) => {
-              return {
-                x: trajDrawTimes[i],
-                y: y
-              }
-            });
+
             d3.select(`#p${pIdx}t${tIdx}`)
-              .datum(data)
-              .attr("d", line)
+              .transition().duration(this.transitionTime)
+              .attr("d", this.phraseLine())
             this.redrawPlucks(traj);
             this.redrawKrintin(traj, phrase.startTime);
             this.redrawSlide(traj, phrase.startTime);
@@ -646,6 +781,13 @@ export default {
         .attr('width', this.yAxWidth)
         .attr('height', rect.height - this.xAxHeight)
         .attr('transform', `translate(${-this.yAxWidth},${this.xAxHeight})`)
+
+      defs.append('clipPath')
+        .attr('id', 'imgClip')
+        .append('rect')
+        .attr('id', 'imgClipRect')
+        .attr('width', rect.width - this.yAxWidth)
+        .attr('height', rect.height - this.xAxHeight)
     },
 
     updateClipPaths() {
@@ -707,11 +849,11 @@ export default {
       const doY = point[1] > this.y.range()[0];
       if (doX && doY) {
         if (e.sourceEvent) {
-          let deltaX = e.sourceEvent.wheelDeltaX / this.tx().k;
-          let deltaY = e.sourceEvent.wheelDeltaY / this.ty().k;
+          let deltaX = 0.5 * e.sourceEvent.wheelDeltaX / this.tx().k;
+          let deltaY = 0.5 * e.sourceEvent.wheelDeltaY / this.ty().k;
           d3.select()
-          this.gx.transition().duration(25).call(this.zoomX.translateBy, deltaX, 0);
-          this.gy.transition().duration(25).call(this.zoomY.translateBy, 0, deltaY);
+          this.gx.call(this.zoomX.translateBy, deltaX, 0);
+          this.gy.call(this.zoomY.translateBy, 0, deltaY);
         } else {
           // just for in initial this.zoomX setting
           // const te = this.zoomY.translateExtent();
@@ -744,6 +886,27 @@ export default {
         return this.piece.raga.sargamLetters[(idxOfFirst + i) % totPitches]
       });
       return yTickLabels
+    },
+    
+    startAnimationFrame() {
+      this.animationStart = this.$refs.audioPlayer.audio.currentTime;
+      if (!this.requestId) {
+        this.requestId = window.requestAnimationFrame(this.loopAnimationFrame)
+      }
+    },
+    
+    loopAnimationFrame() {
+      this.requestId = undefined;
+      this.currentTime = this.$refs.audioPlayer.audio.currentTime;
+      this.redrawPlayhead();
+      this.startAnimationFrame();
+    },
+    
+    stopAnimationFrame() {
+      if (this.requestId) {
+        window.cancelAnimationFrame(this.requestId);
+        this.requestId = undefined;
+      }
     }
 
   }
@@ -752,8 +915,52 @@ export default {
 
 <style scoped>
 .graph {
+  width: calc(100% - v-bind(controlBoxWidth+1+'px'));
+  height: 100%;
+  border-bottom: 1px solid black;
+  border-right: 1px solid black;
+}
+
+.controlBox {
+  width: v-bind(controlBoxWidth+'px');
+  height: 100%;
+  border-bottom: 1px solid black;
+  background-color: #202621;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: top;
+  color: white;
+}
+
+.mainzz {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 31px);
+  /* min-height: 100%; */
+  background-color: black;
+}
+
+.upperRow {
+  display: flex;
+  flex-direction: row;
   width: 100%;
   height: 400px;
-  border-bottom: 1px solid black;
+}
+
+.lower {
+  width: 100%;
+  height: 150px;
+  background-color: black;
+}
+
+.cbBox {
+  width: 100%;
+  height: 70px;
+  /* border: 1px solid orange; */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
 }
 </style>

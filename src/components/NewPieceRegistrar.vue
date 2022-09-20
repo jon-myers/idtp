@@ -1,46 +1,156 @@
 <template>
-  <div class="formContainer">
-    <div class="formRow">
-      <label>Title</label>
-      <input v-model="title"/>
+  <div class='outer'>
+    <div class="formContainer">
+      <div class="formRow">
+        <label>Title</label>
+        <input v-model="title"/>
+      </div>
+      <div class="formRow">
+        <label>Transcriber</label>
+        <input v-model="transcriber"/>
+      </div>
+      <div class='formRow'>
+        <label>Recording</label>
+        <div class='formCol'>
+          <select v-model='aeIdx'>
+            <option 
+              v-for='(ae, i) in allAudioEvents' 
+              :key='ae.name'
+              :value='i'>
+              {{ae.name}}
+            </option>
+          </select>
+          <select class='c2' v-model='recording' v-if='aeIdx >= 0'>
+            <option
+              v-for='(recIdx, i) in Object.keys(allAudioEvents[aeIdx].recordings)'
+              :key='i'
+              :value='recIdx'
+              >{{getShorthand(allAudioEvents[aeIdx].recordings[recIdx])}}</option>
+          </select>
+        </div>
+      </div>
+      <div class="formRow">
+        <label>Raga
+          <input type='checkbox' v-model='showRaagEditor'>
+        </label>
+        <select v-model='raga'>
+          <option v-for='raag in raags' :key='raag'>
+            {{raag}}
+          </option>
+        </select>
+      </div>
+      <div class='buttonRow'>
+        <div class='buttonCol'>
+          <button @click="makeNewPiece">submit</button>
+          <button @click="cancel">cancel</button>
+        </div>
+      </div>
     </div>
-    <div class="formRow">
-      <label>Transcriber</label>
-      <input v-model="transcriber"/>
+    <div class='raagEditorBox' v-if='showRaagEditor'>
+      <div class='infoRow'>
+        <div class='sapa'>
+          <label class='small'>Sa</label>
+          <input type='checkbox' v-model='rules.sa'>
+        </div>
+      </div>
+      <div class='infoRow'>
+        <div class='sargam'>
+          <label class='small'>Re</label>
+          <div class='infoCol'>
+            <div class='smallInfoRow'>
+              <label>Lowered</label>
+              <input type='checkbox' v-model='rules.re.lowered'>
+            </div>
+            <div class='smallInfoRow'>
+              <label>Raised</label>
+              <input type='checkbox' v-model='rules.re.raised'>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class='infoRow'>
+        <div class='sargam'>
+          <label class='small'>Ga</label>
+          <div class='infoCol'>
+            <div class='smallInfoRow'>
+              <label>Lowered</label>
+              <input type='checkbox' v-model='rules.ga.lowered'>
+            </div>
+            <div class='smallInfoRow'>
+              <label>Raised</label>
+              <input type='checkbox' v-model='rules.ga.raised'>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class='infoRow'>
+        <div class='sargam'>
+          <label class='small'>Ma</label>
+          <div class='infoCol'>
+            <div class='smallInfoRow'>
+              <label>Lowered</label>
+              <input type='checkbox' v-model='rules.ma.lowered'>
+            </div>
+            <div class='smallInfoRow'>
+              <label>Raised</label>
+              <input type='checkbox' v-model='rules.ma.raised'>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class='infoRow'>
+        <div class='sapa'>
+          <label class='small'>Pa</label>
+          <input type='checkbox' v-model='rules.pa'>
+        </div>
+      </div>
+      <div class='infoRow'>
+        <div class='sargam'>
+          <label class='small'>Dha</label>
+          <div class='infoCol'>
+            <div class='smallInfoRow'>
+              <label>Lowered</label>
+              <input type='checkbox' v-model='rules.dha.lowered'>
+            </div>
+            <div class='smallInfoRow'>
+              <label>Raised</label>
+              <input type='checkbox' v-model='rules.dha.raised'>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class='infoRow'>
+        <div class='sargam'>
+          <label class='small'>Ni</label>
+          <div class='infoCol'>
+            <div class='smallInfoRow'>
+              <label>Lowered</label>
+              <input type='checkbox' v-model='rules.ni.lowered'>
+            </div>
+            <div class='smallInfoRow'>
+              <label>Raised</label>
+              <input type='checkbox' v-model='rules.ni.raised'>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class='infoRow'>
+        <button @click='save'>save</button>
+      </div>
+      <div class='infoRow'>
+        <span>{{savedMsg}}</span>
+      </div>
     </div>
-    <div class="formRow">
-      <label>Raga</label>
-      <input v-model="raga"/>
-    </div>
-    <div class='formRow'>
-      <label>Recording</label>
-      <select v-model='aeIdx'>
-        <option 
-          v-for='(ae, i) in allAudioEvents' 
-          :key='ae.name'
-          :value='i'>
-          {{ae.name}}
-        </option>
-      </select>
-      <select class='c2' v-model='recording' v-if='aeIdx >= 0'>
-        <option 
-          v-for='(recIdx, i) in Object.keys(allAudioEvents[aeIdx].recordings)'
-          :key='i'
-          :value='recIdx'
-          >{{getShorthand(allAudioEvents[aeIdx].recordings[recIdx])}}</option>
-      </select>
-    </div>
-    <div class='buttonRow'>
-      <button @click="makeNewPiece">submit</button>
-      <button @click="cancel">cancel</button>
+    <div class='closeWindow' @click='closeWindow'>
+      <span class='close-x'></span>
     </div>
   </div>
   
 </template>
 <script>
 
-import { getAllAudioEventMetadata } from '@/js/serverCalls.js';
-
+import { getAllAudioEventMetadata, getRagaNames, getRaagRule, saveRaagRules } from '@/js/serverCalls.js';
+import RaagEditor from '@/components/RaagEditor.vue';
 export default {
   name: 'NewPieceRegistrar',
   data() {
@@ -50,12 +160,42 @@ export default {
       raga: undefined,
       allAudioEvents: undefined,
       aeIdx: undefined,
-      recording: undefined
+      recording: undefined,
+      raags: undefined,
+      showRaagEditor: false,
+      rules: undefined,
+      savedMsg: 'unsaved',
+      rulesTemplate: {
+        sa: false,
+        re: {
+          lowered: false,
+          raised: false
+        },
+        ga: {
+          lowered: false,
+          raised: false
+        },
+        ma: {
+          lowered: false,
+          raised: false
+        },
+        pa: false,
+        dha: {
+          lowered: false,
+          raised: false
+        },
+        ni: {
+          lowered: false,
+          raised: false
+        }
+      },
     }
   },
   
   async mounted() {
     this.allAudioEvents = await getAllAudioEventMetadata();
+    this.raags = await getRagaNames();
+    this.rules = this.rulesTemplate;
   },
   
   watch: {
@@ -75,10 +215,37 @@ export default {
         }
         
       }
+    },
+    
+    raga(newVal) {
+      console.log(newVal)
+      getRaagRule(newVal).then(rules => {
+        if (rules.rules) {
+          this.rules = rules.rules;
+          const date = new Date(rules.updatedDate);
+          this.savedMsg = 'Saved: ' + date.toLocaleString();
+        } else {
+          this.rules = this.rulesTemplate;
+          this.savedMsg = 'unsaved';
+        }
+      })
     }
+
   },
   
+  components: [
+    RaagEditor
+  ],
+  
   methods: {
+    
+    async save() {
+      const date = new Date();
+      const res = await saveRaagRules(this.selectedRaag, this.rules, date);
+      if (res) {
+        this.savedMsg = 'Saved: ' + date.toLocaleString()
+      }
+    },
     
     makeNewPiece() {
       const newPieceInfo = {
@@ -109,6 +276,10 @@ export default {
         })
       })
       return out.join('')
+    },
+    
+    closeWindow() {
+      this.$parent.designPieceModal = false
     }
   }
 }
@@ -118,9 +289,10 @@ export default {
 
 .formContainer {
   height: 100%;
+  width: 350px;
   display: flex;
   flex-direction: column;
-  justify-content: space-evenly;
+  justify-content: top;
   align-items: center;
 }
 
@@ -130,6 +302,7 @@ export default {
   flex-direction: row;
   justify-content: left;
   align-items: center;
+  height: 50px;
 }
 
 label {
@@ -142,7 +315,7 @@ label {
   padding-left: 20px;
 }
 
-input {
+.formRow input {
   width: 200px;
 }
 
@@ -157,15 +330,123 @@ button {
   flex-direction: row;
   justify-content: space-around;
   width: 100%;
+  height: 50px;
 }
 
 select {
   width: 208px;
 }
 
-.c2 {
+/* .c2 {
   margin-left: 5px;
+} */
+
+.buttonCol {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
 }
 
+.formCol {
+  display: flex;
+  flex-direction: column;
+  width: 200px;
+  
+}
+
+.raagEditorBox {
+  width: 200px;
+  /* height: 200px;
+  min-height: 200px; */
+}
+
+
+.infoRow {
+  width: 100%;
+  height: 50px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.infoCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 150px;
+  max-width: 150px;
+}
+
+.smallInfoRow {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: left;
+  align-items: center;
+}
+
+.sapa {
+  width: 200px;
+  height: 50px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: left;
+}
+
+.sargam {
+  width: 200px;
+  height: 50px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: left;
+}
+
+.outer {
+  display: flex;
+  flex-direction: row;
+}
+
+.raagEditorBox label {
+  width: 70px;
+  text-align: right;
+  margin-right: 10px;
+}
+
+.raagEditorBox label.small {
+  width: 50px;
+  min-width: 50px;
+  font-weight: bold;
+  
+}
+
+.closeWindow {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  background-color: black;
+  right: 0;
+  top: 0;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.close-x {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        /* border: 7px solid #f56b00; */
+        background:
+            linear-gradient(45deg, rgba(0,0,0,0) 0%,rgba(0,0,0,0) 43%,#fff 45%,#fff 55%,rgba(0,0,0,0) 57%,rgba(0,0,0,0) 100%),
+            linear-gradient(135deg, rgba(0,0,0,0) 0%,rgba(0,0,0,0) 43%,#fff 45%,#fff 55%, rgba(0,0,0,0) 57%, rgba(0,0,0,0) 100%);
+}
 
 </style>
