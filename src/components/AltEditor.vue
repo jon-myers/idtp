@@ -306,7 +306,8 @@ export default {
       this.gy.call(this.zoomY).attr('pointer-events', 'none');
       this.zoom = d3.zoom()
         .filter(z_ => {
-          return z_.type !== 'mousedown' ? z_ : null
+          if (z_.type === 'dblclick') this.handleDblClick(z_);
+          return z_.type !== 'mousedown' && z_.type !== 'dblclick' ? z_ : null
         })
         .on('zoom', this.enactZoom);
       this.makeAxes();
@@ -319,6 +320,17 @@ export default {
           .node();
         this.$refs.graph.appendChild(this.svgNode)
       });
+    },
+    
+    handleDblClick(z) {
+      // console.log(z)
+      const graphX = z.clientX - this.yAxWidth;
+      const time = this.xr().invert(z.clientX);
+      if (graphX >= 0) {
+        this.currentTime = time;
+        this.$refs.audioPlayer.audio.currentTime = time;
+        this.redrawPlayhead()
+      }
     },
 
     makeAxes() {
