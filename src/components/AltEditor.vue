@@ -63,7 +63,7 @@ import {
   Pitch,
   Articulation,
   Raga,
-  //   Chikari
+  Chikari
 } from '@/js/classes.js';
 
 import {
@@ -315,6 +315,14 @@ export default {
       this.updateClipPaths();
       this.redraw();
     },
+    
+    phraseIdxFromTime(time) {
+      return this.piece.phrases.filter(phrase => {
+        const a = time >= phrase.startTime;
+        const b = time < phrase.startTime + phrase.durTot;
+        return a && b
+      })[0].pieceIdx
+    },
 
     async initializePiece() {
       this.visibleSargam = this.piece.raga.getFrequencies({
@@ -385,8 +393,53 @@ export default {
     
     handleClick(e) {
       const time = this.xr().invert(e.clientX);
-      console.log(time)
-      // if 
+      const pIdx = this.phraseIdxFromTime(time);
+      // need to figure out how to handle when click is over a non phrase
+      if (this.setChikari) {
+        const sym = d3.symbol().type(d3.symbolX).size(80);
+        const phrase = this.piece.phrases[pIdx];
+        const fixedTime = (time - phrase.startTime).toFixed(2);
+        phrase.chikaris[fixedTime] = new Chikari({
+          'fundamental': this.piece.raga.fundamental,
+          'pitches': this.piece.raga.chikariPitches
+        });
+        const scaledX = Number(fixedTime) / phrase.durTot;
+        const dataObj = {
+          x: Number(fixedTime) + phrase.startTime,
+          y: phrase.compute(scaledX, true)
+        };
+        const num = (Number(fixedTime) % 1).toFixed(2).toString().slice(2);
+        const id = `p${phrase.pieceIdx}_${Math.floor(Number(fixedTime))}_${num}`;   
+             
+        this.svg.append('g')
+          .classed('chikari', true)
+          .attr('clip-path', 'url(#clip)')
+          .append('path')
+          .attr('id', id)
+          .attr('d', sym)
+          .attr('stroke', this.chikariColor)
+          .attr('stroke-width', 3)
+          .attr('stroke-linecap', 'round')
+          .data([dataObj])
+          .attr('transform', d => `translate(${this.xr()(d.x)},${this.yr()(d.y)})`)
+          
+        this.svg.append('g')
+          .classed('chikari', true)
+          .append('circle')
+          .attr('id', 'circle__' + id)
+          .classed('chikariCircle', true)
+          .style('opacity', '0')
+          .data([dataObj])
+          .attr('cx', d => this.xr()(d.x))
+          .attr('cy', d => this.yr()(d.y))
+          .attr('r', 6)
+          .on('mouseover', this.handleMouseOver)
+          .on('mouseout', this.handleMouseOut)
+          .on('click', this.handleClickChikari) 
+          
+        this.setChikari = false;
+        this.svg.style('cursor', 'auto');
+      }
     },
 
     makeAxes() {
@@ -659,9 +712,7 @@ export default {
             .attr('stroke-linecap', 'round')
             .data([dataObj])
             .attr('transform', d => `translate(${this.xr()(d.x)}, ${this.yr()(d.y)})`)
-
-
-
+            
           // for clicking  
           this.svg.append('g')
             .classed('chikari', true)
