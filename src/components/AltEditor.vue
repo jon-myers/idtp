@@ -104,7 +104,10 @@ export default {
       chikariColor: 'black',
       selectedChikariColor: 'red',
       dateModified: undefined,
-      setChikari: false
+      setChikari: false,
+      selectedTrajColor: 'red',
+      trajColor: 'midnightblue',
+      selectedTraj: undefined
     }
   },
   
@@ -163,6 +166,7 @@ export default {
         this.$refs.audioPlayer.togglePlay()
       } else if (e.key === 'Escape') {
         this.clearSelectedChikari();
+        this.clearSelectedTraj();
         if (this.setChikari) {
           this.setChikari = false;
           this.svg.style('cursor', 'auto')
@@ -225,7 +229,6 @@ export default {
                 const xTranslate = this.yAxWidth + this.cumulativeWidths[i];
                 this.specBox.append('image')
                   .attr('class', `spectrogram img${i}`)
-                  // .attr('clip-path', 'inset(0)')
                   .attr('xlink:href', this.imgs[i].src)
                   .attr('width', unscaledWidth)
                   .attr('height', height)
@@ -233,7 +236,6 @@ export default {
                   .style('opacity', this.spectrogramOpacity)
 
               });
-              // this.redrawSpectrogram();       
             } else {
               console.log('not all loaded')
             }
@@ -486,11 +488,26 @@ export default {
               .attr('clip-path', 'url(#clip)')
               .attr('id', `p${pIdx}t${tIdx}`)
               .attr("fill", "none")
-              .attr("stroke", "midnightblue")
+              .attr("stroke", this.trajColor)
               .attr("stroke-width", '3px')
               .attr("stroke-linejoin", "round")
               .attr("stroke-linecap", "round")
               .attr("d", this.phraseLine())
+              
+            this.svg.append('path')
+            .datum(data)
+            .classed('phrase', true)
+            .attr('id', `overlay__p${pIdx}t${tIdx}`)
+            .attr('fill', 'none')
+            .attr('stroke', 'green')
+            .attr('stroke-width', '6px')
+            .attr('d', this.phraseLine())
+            .style('opacity', '0')
+            .style('cursor', 'pointer')
+            .on('mouseover', this.handleMouseOver)
+            .on('mouseout', this.handleMouseOut)
+            .on('click', this.handleTrajClick)
+            
           }
           this.addArticulations(traj, phrase.startTime)
         })
@@ -738,6 +755,12 @@ export default {
           .attr('stroke', this.selectedChikariColor)
         d3.select(`#${e.target.id}`)
           .style('cursor', 'pointer')
+      } else if (e.target.id.slice(0, 9) === 'overlay__') {
+        const id = e.target.id.slice(9);
+        d3.select(`#${id}`)
+          .attr('stroke', this.selectedTrajColor)
+        d3.select(`#${e.target.id}`)
+          .style('cursor', 'pointer')
       }      
     },
     
@@ -748,6 +771,13 @@ export default {
           d3.select(`#${id}`)
             .attr('stroke', this.chikariColor)
         }      
+      }
+      if (e.target.id.slice(0, 9) === 'overlay__') {
+        const id = e.target.id.slice(9)
+        if (id !== this.selectedTrajID) {
+          d3.select(`#${id}`)
+            .attr('stroke', this.trajColor)
+        }
       }  
     },
     
@@ -760,11 +790,29 @@ export default {
         .attr('stroke', this.selectedChikariColor)
     },
     
+    handleTrajClick(e) {
+      if (this.selectedTrajID && this.selectedTrajID !== e.target.id.split('__')[1]) {
+        d3.select(`#` + this.selectedTrajID)
+          .attr('stroke', this.trajColor)
+      }
+      this.selectedTrajID = e.target.id.split('__')[1];
+      d3.select(`#${this.selectedTrajID}`)
+        .attr('stroke', this.selectedTrajColor)
+    },
+    
     clearSelectedChikari() {
       if (this.selectedChikariID) {
         d3.select(`#${this.selectedChikariID}`)
           .attr('stroke', this.chikariColor)
         this.selectedChikariID = undefined
+      }
+    },
+    
+    clearSelectedTraj() {
+      if (this.selectedTrajID) {
+        d3.select(`#${this.selectedTrajID}`)
+          .attr('stroke', this.trajColor)
+        this.selectedTrajID = undefined
       }
     },
 
@@ -908,6 +956,9 @@ export default {
             d3.select(`#p${pIdx}t${tIdx}`)
               .transition().duration(this.transitionTime)
               .attr("d", this.phraseLine())
+            d3.select(`#overlay__p${pIdx}t${tIdx}`)
+              .transition().duration(this.transitionTime)
+              .attr('d', this.phraseLine())
             this.redrawPlucks(traj);
             this.redrawKrintin(traj, phrase.startTime);
             this.redrawSlide(traj, phrase.startTime);
