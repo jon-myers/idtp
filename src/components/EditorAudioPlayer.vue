@@ -26,7 +26,7 @@
         <div class='recInfo left'>
         </div>
         <div class='controlFlexer'>
-          <div class='controlBox'>
+          <div class='controlBox' v-if='!loading'>
             <img :src='icons.back_15' @click='back_15'/>
             <img :src='icons.beginning' @click='goToBeginning'/>
             <div class='playCircle' @click='togglePlay'>
@@ -34,6 +34,10 @@
             </div>
             <img :src='icons.end' @click='trackEnd'/>
             <img :src='icons.forward_15' @click='forward_15' class='icon'/>
+          </div>
+          <div class='loadingSymbol' v-else>
+            <div class='loader'>
+            </div>
           </div>
         </div>
         <div class='recInfo right'>
@@ -99,7 +103,13 @@ export default {
       circleDragging: false,
       formattedCurrentTime: '00:00',
       formattedTimeLeft: '00:00',
-      waKey: 0
+      waKey: 0,
+      loading: true,
+      startedAt: 0,
+      pausedAt: 0,
+      loop: false,
+      loopStart: undefined,
+      loopEnd: undefined
     }
   },
   
@@ -113,27 +123,31 @@ export default {
     'id'
   ],
   
-  mounted() {
-    this.audio = new Audio();
-    this.audio.ontimeupdate = () => {
-      this.progress = this.audio.currentTime / this.audio.duration;
-      const pbi = document.querySelector('.progressBarInner');
-      const pbo = document.querySelector('.progressBarOuter');
-      const totWidth = pbo.getBoundingClientRect().width;
-      pbi.style.width = this.progress * totWidth + 'px'
-      this.updateFormattedCurrentTime();
-      this.updateFormattedTimeLeft();
-      this.$parent.currentTime = this.audio.currentTime
-    };
-    this.audio.onended = this.trackEnd
+  async mounted() {
+    this.ac = new AudioContext();
+    this.gainNode = this.ac.createGain();
+    this.gainNode.connect(this.ac.destination);
+    
+    
+    // this.audio = new Audio();
+    // this.audio.ontimeupdate = () => {
+    //   this.progress = this.audio.currentTime / this.audio.duration;
+    //   const pbi = document.querySelector('.progressBarInner');
+    //   const pbo = document.querySelector('.progressBarOuter');
+    //   const totWidth = pbo.getBoundingClientRect().width;
+    //   pbi.style.width = this.progress * totWidth + 'px'
+    //   this.updateFormattedCurrentTime();
+    //   this.updateFormattedTimeLeft();
+    //   this.$parent.currentTime = this.audio.currentTime
+    // };
+    // this.audio.onended = this.trackEnd
   },
   
   watch: {
-    audioSource(newSrc) {
-      this.audio.src = newSrc;
-
-
-      
+    async audioSource(newSrc) {
+      this.loading = true;
+      this.audioBuffer = await this.getAudio(newSrc);
+      this.loading = false;
     }
   },
   
@@ -143,6 +157,20 @@ export default {
   },
   
   methods: {
+    
+    async getAudio(filepath) {
+      const start = await performance.now();
+      const res = await fetch(filepath);
+      const fetched = await performance.now() - start;
+      console.log('fetched: ', fetched / 1000)
+      const arrayBuffer = await res.arrayBuffer();
+      const midpoint = await performance.now() - start;
+      console.log('array buffd: ', midpoint/1000)
+      const audioBuffer = await this.ac.decodeAudioData(arrayBuffer);
+      const endpoint = await performance.now() - start;
+      console.log('done: ', endpoint/1000)
+      return audioBuffer
+    },
     
     back_15() {
       this.audio.currentTime = this.audio.currentTime - 15
@@ -161,20 +189,106 @@ export default {
       }
     },
     
-    // getSrc(src) {
-    //   return require(src)
-    // }
+    now() {
+      return this.ac.currentTime
+    },
+    
+    play() {
+      let offset = this.pausedAt;
+      this.startingDelta = this.pausedAt;
+      this.sourceNode = this.ac.createBufferSource();
+      this.sourceNode.connect(this.gainNode);
+      this.sourceNode.buffer = this.audioBuffer;
+      this.sourceNode.start(this.now(), offset);
+      if (this.loop && this.loopStart && this.loopEnd) {
+        console.log('yes')
+        this.sourceNode.loop = this.loop;
+        this.sourceNode.loopStart = this.loopStart;
+        this.sourceNode.loopEnd = this.loopEnd;
+      }
+      this.startedAt = this.now() - offset;
+      this.pausedAt = 0;
+      this.playing = true;    
+    },
+    
+    stop() {
+      if (this.sourceNode) {
+        this.sourceNode.disconnect();
+        this.sourceNode.stop(this.now());
+        this.sourceNode = null
+      }
+      this.pausedAt = 0;
+      this.startedAt = 0;
+      this.playing = false;
+    },
+    
+    pause() {
+      const elapsed = this.now() - this.startedAt;
+      this.stop();
+      this.pausedAt = this.loop ? this.loopTime : elapsed;    
+    },
+    
+    getCurrentTime() {
+      if (this.pausedAt) {
+        return this.pausedAt
+      } else if (this.playing) {
+        if (this.loop && (this.startingDelta < this.loopEnd)) {
+          const loopDur = this.loopEnd - this.loopStart;
+          const realTime = this.now() - this.startedAt;
+          this.loopTime = realTime;
+          if (realTime > this.loopEnd) {
+            this.loopTime = this.loopStart + (realTime - this.loopStart) % loopDur;
+          }
+          return this.loopTime
+        } else {
+          return this.now() - this.startedAt
+        }        
+      } else {
+        return 0
+      }
+    },
+    
+    startPlayCursorAnimation() {
+      if (!this.requestId) {
+        this.requestId = window.requestAnimationFrame(this.loopPlayCursorAnimation)
+      }
+    },
+    
+    updateProgress() {
+      this.progress = this.getCurrentTime() / this.audioBuffer.duration;
+      const pbi = document.querySelector('.progressBarInner');
+      const pbo = document.querySelector('.progressBarOuter');
+      const totWidth = pbo.getBoundingClientRect().width;
+      pbi.style.width = this.progress * totWidth + 'px'
+    },
+    
+    loopPlayCursorAnimation() {
+      this.requestId = undefined;
+      this.updateProgress();
+      this.updateFormattedCurrentTime();
+      this.updateFormattedTimeLeft();
+      this.$parent.currentTime = this.getCurrentTime();
+      this.startPlayCursorAnimation();
+    },
+    
+    stopPlayCursorAnimation() {
+      if (this.requestId) {
+        window.cancelAnimationFrame(this.requestId);
+        this.requestId = undefined
+      }
+    },
+
     togglePlay() {
-      if (this.audio.paused) {
-        this.audio.play();
-        this.playing = true;
+      if (!this.playing) {
+        this.play()
         this.$refs.playImg.classList.add('playing');
         this.$parent.startAnimationFrame();
+        this.startPlayCursorAnimation()
       } else {
-        this.audio.pause();
-        this.playing = false;
+        this.pause();
         this.$refs.playImg.classList.remove('playing');
         this.$parent.stopAnimationFrame();
+        this.stopPlayCursorAnimation();
       }
     },
     
@@ -192,9 +306,20 @@ export default {
     
     handleProgressClick(e) {
       const bb = this.$refs.pbOuter.getBoundingClientRect();
-      this.audio.currentTime = this.audio.duration * e.clientX / bb.width;
-      this.$parent.currentTime = this.audio.currentTime;
-      this.$parent.redrawPlayhead();
+      if (!this.playing) {
+        this.pausedAt = this.audioBuffer.duration * e.clientX / bb.width;
+        this.$parent.currentTime = this.pausedAt;
+        this.$parent.redrawPlayhead();
+        this.updateProgress();
+      } else {
+        this.stop();
+        this.pausedAt = this.audioBuffer.duration * e.clientX / bb.width;
+        this.play();
+      }
+      
+      // this.audio.currentTime = this.audio.duration * e.clientX / bb.width;
+      // this.$parent.currentTime = this.audio.currentTime;
+      // this.$parent.redrawPlayhead();
     },
     
     tooLeftLimit() {
@@ -216,7 +341,7 @@ export default {
     },
     
     updateFormattedCurrentTime() {
-      const st = structuredTime(this.audio.currentTime);
+      const st = structuredTime(this.getCurrentTime());
       if (st.hours !== 0) {
         this.formattedCurrentTime = st.minutes + ':' + st.seconds
       } else {
@@ -225,10 +350,10 @@ export default {
     },
     
     updateFormattedTimeLeft() {
-      if (isNaN(this.audio.duration)) {
+      if (isNaN(this.audioBuffer.duration)) {
         return '00:00'
       } else {
-        const st = structuredTime(Number(this.audio.duration) - Number(this.audio.currentTime))
+        const st = structuredTime(Number(this.audioBuffer.duration) - Number(this.getCurrentTime()))
         if (st.hours !== 0) {
           this.formattedTimeLeft = st.minutes + ':' + st.seconds
         } else {
@@ -426,6 +551,16 @@ export default {
   justify-content: space-evenly;
 }
 
+.loadingSymbol {
+  width: 400px;
+  height: 70px;
+  background-color: black;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
 .controlBox > img {
   height: 30px;
   width: 30px;
@@ -543,6 +678,20 @@ export default {
 .icon {
   fill: white;
   stroke: white;
+}
+
+.loader {
+  border: 8px solid grey;
+  border-top: 8px solid green;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* WaveformAnalyzer {

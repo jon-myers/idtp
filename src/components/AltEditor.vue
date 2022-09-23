@@ -21,6 +21,10 @@
         <label>View Phrases: </label>
         <input type='checkbox' v-model='viewPhrases' @change='updatePhraseLabel'>
       </div>
+      <div class='cbRow'>
+        <label>Loop: </label>
+        <input type='checkbox' v-model='loop' @change='updateLoop'>
+      </div>
     </div>
   </div>
 </div>
@@ -114,6 +118,7 @@ export default {
       selectedTraj: undefined,
       viewPhrases: false,
       phraseLabelHeight: 30,
+      loop: false
     }
   },
   
@@ -132,6 +137,7 @@ export default {
     const piece = await getPiece(this.$store.state._id);
     if (piece.audioID) {
       this.audioSource = `https://swara.studio/audio/mp3/${piece.audioID}.mp3`;
+      // this.audioSource = `https://swara.studio/audio/wav/${piece.audioID}.wav`;
       this.audioDBDoc = await getAudioRecording(piece.audioID)
       this.durTot = this.audioDBDoc.duration;
     } else {
@@ -184,6 +190,18 @@ export default {
       // this.redraw()
     },
     
+    updateLoop() {
+      if (this.loop) {
+        this.$refs.audioPlayer.loop = true;
+        this.$refs.audioPlayer.loopStart = this.regionStartTime;
+        this.$refs.audioPlayer.loopEnd = this.regionEndTime;
+      } else {
+        this.$refs.audioPlayer.loop = false;
+        this.$refs.audioPlayer.loopStart = undefined;
+        this.$refs.audioPlayer.loopEnd = undefined;
+      }
+    },
+    
     async savePiece() {
       const result = await savePiece(this.piece);
       this.dateModified = new Date(result.dateModified);
@@ -199,6 +217,10 @@ export default {
           this.setChikari = false;
           this.svg.style('cursor', 'auto')
         }
+        if (this.region) {
+          this.region.remove();
+          this.region = undefined
+        }
       } else if (e.key === 'Backspace') {
         if (this.selectedChikariID) {
           const splitArr = this.selectedChikariID.split('_');
@@ -212,6 +234,7 @@ export default {
           this.deleteTraj(this.selectedTrajID);
           this.selectedTrajID = undefined;
         }
+        
       } else if (e.key === 'c') {
         this.setChikari = true;
         this.svg.style('cursor', 'cell')
@@ -368,8 +391,16 @@ export default {
     handleMouseup(e) {
       const rect = this.rect();
       if (e.offsetY < this.xAxHeight && this.drawingRegion) {
-        this.regionEndTime = this.xr().invert(e.offsetX);
-        this.regionEndPx = e.offsetX;
+        if (e.offsetX < this.regionStartPx) {
+          this.regionEndPx = this.regionStartPx;
+          this.regionEndTime = this.xr().invert(this.regionEndPx)
+          this.regionStartPx = e.offsetX;
+          this.regionStartTime = this.xr().invert(this.regionStartPx)
+        } else {
+          this.regionEndTime = this.xr().invert(e.offsetX);
+          this.regionEndPx = e.offsetX;
+        }
+        this.updateLoop();
         if (!this.region) {
           this.region = this.svg
             .append('rect')
@@ -460,6 +491,18 @@ export default {
       const time = this.xr().invert(z.clientX);
       if (graphX >= 0) {
         this.currentTime = time;
+        
+        if (!this.$refs.audioPlayer.playing) {
+          this.$refs.audioPlayer.pausedAt = time;
+          this.$refs.audioPlayer.updateProgress();
+          this.$refs.audioPlayer.updateFormattedCurrentTime();
+          this.$refs.audioPlayer.updateFormattedTimeLeft();
+        } else {
+          this.$refs.audioPlayer.stop();
+          this.$refs.audioPlayer.pausedAt = time;
+          this.$refs.audioPlayer.play();
+        }
+        
         this.$refs.audioPlayer.audio.currentTime = time;
         this.redrawPlayhead()
       }
@@ -1216,7 +1259,7 @@ export default {
     },
     
     startAnimationFrame() {
-      this.animationStart = this.$refs.audioPlayer.audio.currentTime;
+      this.animationStart = this.$refs.audioPlayer.getCurrentTime();
       if (!this.requestId) {
         this.requestId = window.requestAnimationFrame(this.loopAnimationFrame)
       }
@@ -1224,7 +1267,7 @@ export default {
     
     loopAnimationFrame() {
       this.requestId = undefined;
-      this.currentTime = this.$refs.audioPlayer.audio.currentTime;
+      this.currentTime = this.$refs.audioPlayer.getCurrentTime();
       this.redrawPlayhead();
       this.startAnimationFrame();
     },
