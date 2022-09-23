@@ -17,6 +17,10 @@
         <button @click='savePiece'>Save</button>
         <span class='savedDate'>{{`Saved: ${dateModified ? dateModified.toLocaleString() : ''}`}}</span>
       </div>
+      <div class='cbRow'>
+        <label>View Phrases: </label>
+        <input type='checkbox' v-model='viewPhrases' @change='updatePhraseLabel'>
+      </div>
     </div>
   </div>
 </div>
@@ -86,7 +90,7 @@ export default {
       durTot: 600,
       freqMin: 100,
       freqMax: 800,
-      backColor: '#fab6c3',
+      backColor: 'aliceblue',
       axisColor: '#c4b18b',
       yAxWidth: 30,
       xAxHeight: 30,
@@ -107,7 +111,9 @@ export default {
       setChikari: false,
       selectedTrajColor: 'red',
       trajColor: 'midnightblue',
-      selectedTraj: undefined
+      selectedTraj: undefined,
+      viewPhrases: false,
+      phraseLabelHeight: 30,
     }
   },
   
@@ -155,6 +161,28 @@ export default {
   },
 
   methods: {
+    
+    updatePhraseLabel() {
+      // const rect = this.rect();
+      // if (this.viewPhrases) {
+      //   this.y.range([this.xAxHeight, rect.height - this.phraseLabelHeight]);
+      //   d3.select('#clip>#rect')
+      //     .attr('height', rect.height - this.xAxHeight - this.phraseLabelHeight);
+      //   d3.select('#yAxisClip>#yAxisClipRect')
+      //     .attr('height', rect.height - this.xAxHeight - this.phraseLabelHeight);
+      //   d3.select('#playheadClipRect')
+      //     .attr('height', rect.height - this.phraseLabelHeight);
+      // } else {
+      //   this.y.range([this.xAxHeight, rect.height]);
+      //   d3.select('#clip>#rect')
+      //     .attr('height', rect.height - this.xAxHeight)
+      //   d3.select('#yAxisClip>#yAxisClipRect')
+      //     .attr('height', rect.height - this.xAxHeight);
+      //   d3.select('#playheadClipRect')
+      //     .attr('height', rect.height);
+      // }
+      // this.redraw()
+    },
     
     async savePiece() {
       const result = await savePiece(this.piece);
@@ -328,6 +356,44 @@ export default {
         return a && b
       })[0].pieceIdx
     },
+    
+    handleMousedown(e) {
+      if (e.offsetY < this.xAxHeight) {
+        this.drawingRegion = true;
+        this.regionStartTime = this.xr().invert(e.offsetX);
+        this.regionStartPx = e.offsetX;
+      }
+    },
+    
+    handleMouseup(e) {
+      const rect = this.rect();
+      if (e.offsetY < this.xAxHeight && this.drawingRegion) {
+        this.regionEndTime = this.xr().invert(e.offsetX);
+        this.regionEndPx = e.offsetX;
+        if (!this.region) {
+          this.region = this.svg
+            .append('rect')
+            .classed('region', true)
+            .attr('width', this.regionEndPx-this.regionStartPx)
+            .attr('height', rect.height)
+            .attr('fill', 'white')
+            .attr('opacity', '0.4')
+            .attr('transform', `translate(${this.regionStartPx},0)`)    
+        } else {
+          d3.select('.region')
+            .attr('width', this.regionEndPx-this.regionStartPx)
+            .attr('transform', `translate(${this.regionStartPx},0)`)     
+        }
+      }
+    },
+    
+    moveRegion() {
+      const start = this.xr()(this.regionStartTime);
+      const end = this.xr()(this.regionEndTime);
+      d3.select('.region')
+        .attr('width', end - start)
+        .attr('transform', `translate(${start})`)
+    },
 
     async initializePiece() {
       this.visibleSargam = this.piece.raga.getFrequencies({
@@ -338,6 +404,8 @@ export default {
       this.svg = d3.create('svg')
         .attr('viewBox', [0, 0, rect.width, rect.height - 1])
         .on('click', this.handleClick)
+        .on('mousedown', this.handleMousedown)
+        .on('mouseup', this.handleMouseup)
         
       this.paintBackgroundColors();
       if (this.piece.audioID) await this.addSpectrogram();
@@ -558,8 +626,11 @@ export default {
     },
 
     movePlucks(traj) {
-      d3.select(`#pluckp${traj.phraseIdx}t${traj.num}`).transition().duration(this.transitionTime)
-        .attr('transform', d => `translate(${this.xr()(d.x)}, ${this.yr()(d.y)}) rotate(90)`)
+      if (traj.articulations[0] && traj.articulations[0].name === 'pluck') {
+        d3.select(`#pluckp${traj.phraseIdx}t${traj.num}`).transition().duration(this.transitionTime)
+          .attr('transform', d => `translate(${this.xr()(d.x)}, ${this.yr()(d.y)}) rotate(90)`)
+      }
+    
     },
     
 
@@ -935,24 +1006,29 @@ export default {
       })
     },
     
-    playheadLine(currentTime) {
+    playheadLine() {
       return d3.line()([
-        [this.xr()(currentTime), this.yr()(Math.log2(this.freqMin))],
-        [this.xr()(currentTime), this.yr()(Math.log2(this.freqMax))]
+        [0, this.yr()(Math.log2(this.freqMin))],
+        [0, this.yr()(Math.log2(this.freqMax)) - this.xAxHeight]
       ])
     },
     
     addPlayhead() {
-      this.svg.append('path')
+      this.svg
+        .append('g')
+        .attr('clip-path', 'url(#playheadClip)')
+        .append('path')
         .classed('playhead', true)
         .attr('stroke', 'darkgreen')
         .attr('stroke-width', '2px')
-        .attr('d', this.playheadLine(0))
+        .attr('d', this.playheadLine())
+        .attr('transform', `translate(${this.xr()(this.currentTime)})`)
     },
     
     redrawPlayhead() {
       d3.select('.playhead').transition().duration(this.transitionTime)
-        .attr('d', this.playheadLine(this.currentTime))
+        // .attr('d', this.playheadLine(this.currentTime))
+        .attr('transform', `translate(${this.xr()(this.currentTime)})`)
     },
 
     async redraw() {
@@ -967,6 +1043,7 @@ export default {
       await this.movePhrases();
       if (this.piece.audioID) await this.redrawSpectrogram();
       this.redrawPlayhead();
+      this.moveRegion();
     },
 
     xr() {
@@ -1030,6 +1107,14 @@ export default {
         .attr('id', 'imgClipRect')
         .attr('width', rect.width - this.yAxWidth)
         .attr('height', rect.height - this.xAxHeight)
+      
+      this.defs.append('clipPath')
+        .attr('id', 'playheadClip')
+        .append('rect')
+        .attr('id', 'playheadClipRect')
+        .attr('width', rect.width - this.yAxWidth)
+        .attr('height', rect.height)
+        .attr('transform', `translate(${this.yAxWidth},0)`)
     },
 
     updateClipPaths() {
@@ -1037,7 +1122,7 @@ export default {
       d3.select('#clip>#rect')
         .attr('width', rect.width - this.yAxWidth)
         .attr('height', rect.height - this.xAxHeight)
-      d3.select('#yAxisClip>#rect')
+      d3.select('#yAxisClip>#yAxisClipRect')
         .attr('height', rect.height - this.xAxHeight)
     },
 
@@ -1153,61 +1238,83 @@ export default {
     
     deleteTraj(trajID) {
       const split = trajID.split('t');
-      const pIdx = split[0].slice(1);
-      const tIdx = split[1];
+      const pIdx = Number(split[0].slice(1));
+      const tIdx = Number(split[1]);
       const phrase = this.piece.phrases[pIdx];
-      // const traj = phrase.trajectories[tIdx];
+      const traj = phrase.trajectories[tIdx];
+      const beforeSilent = tIdx > 0 ? phrase.trajectories[tIdx-1].id === 12 : false;
+      const afterSilent = phrase.trajectories.length > (tIdx + 1) ? phrase.trajectories[tIdx+1].id === 12 : false;
+      // if before is silent, but after is not, 
+      let delAfter = false;
+      let newTraj = undefined;
+      if (beforeSilent && !afterSilent) {
+        phrase.trajectories[tIdx-1].durTot += traj.durTot;
+      } else if (afterSilent && !beforeSilent) {
+        phrase.trajectories[tIdx+1].durTot += traj.durTot
+      } else if (beforeSilent && afterSilent) {
+        phrase.trajectories[tIdx-1].durTot += traj.durTot;
+        phrase.trajectories[tIdx-1].durTot += phrase.trajectories[tIdx+1].durTot;
+        delAfter = true;
+      } else if (!beforeSilent && !afterSilent) {
+        newTraj = new Trajectory({ id: 12, durTot: traj.durTot })
+      }
       
+        // if before and after are silence; combine all three trajs into single
+        //silent traj
       
       
       d3.select(`#${trajID}`).remove();
       d3.select(`#overlay__${trajID}`).remove();
       d3.select(`#articulations__${trajID}`).remove();
+      if (!newTraj) {
+        phrase.trajectories.filter(traj => traj.num > tIdx).forEach(traj => {
+          const oldId = `p${pIdx}t${traj.num}`;
+          const newId = `p${pIdx}t${traj.num-1}`;
+          d3.select(`#${oldId}`).attr('id', newId);
+          d3.select(`#overlay__${oldId}`).attr('id', `overlay__${newId}`);
+          d3.select(`#articulations__${oldId}`).attr('id', `articulations__${newId}`);
+          let hOffCt = 0;
+          let hOnCt = 0;
+          let slideCt = 0;
+          Object.keys(traj.articulations).forEach(key => {
+            const art = traj.articulations[key];
+            if (art.name === 'pluck') {
+              d3.select(`#pluck${oldId}`).attr('id', `pluck${newId}`);
+            } else if (art.name === 'hammer-off') {
+              d3.select(`#krintin${oldId}i${hOffCt}.hammer-off`)
+                .attr('id', `krintin${newId}i${hOffCt}`);
+              hOffCt++;            
+            } else if (art.name === 'hammer-on') {
+              d3.select(`#krintin${oldId}i${hOnCt}.hammer-on`)
+                .attr('id', `krintin${newId}i${hOnCt}`);
+              hOnCt++;
+            } else if (art.name === 'slide') {
+              d3.select(`#slide${oldId}i${slideCt}`)
+                .attr('id', `slide${newId}i${slideCt}`);
+              slideCt++;
+            }
+          })
+        });
+      }
       
-      phrase.trajectories.filter(traj => traj.num > tIdx).forEach(traj => {
-        const oldId = `p${pIdx}t${traj.num}`;
-        const newId = `p${pIdx}t${traj.num-1}`;
-        d3.select(`#${oldId}`).attr('id', newId);
-        d3.select(`#overlay__${oldId}`).attr('id', `overlay__${newId}`);
-        d3.select(`#articulations__${oldId}`).attr('id', `articulations__${newId}`);
-        let hOffCt = 0;
-        let hOnCt = 0;
-        let slideCt = 0;
-        Object.keys(traj.articulations).forEach(key => {
-          const art = traj.articulations[key];
-          if (art.name === 'pluck') {
-            d3.select(`#pluck${oldId}`).attr('id', `pluck${newId}`);
-          } else if (art.name === 'hammer-off') {
-            d3.select(`#krintin${oldId}i${hOffCt}.hammer-off`)
-              .attr('id', `krintin${newId}i${hOffCt}`);
-            hOffCt++;            
-          } else if (art.name === 'hammer-on') {
-            d3.select(`#krintin${oldId}i${hOnCt}.hammer-on`)
-              .attr('id', `krintin${newId}i${hOnCt}`);
-            hOnCt++;
-          } else if (art.name === 'slide') {
-            d3.select(`#slide${oldId}i${slideCt}`)
-              .attr('id', `slide${newId}i${slideCt}`);
-            slideCt++;
+      if (newTraj) {
+        phrase.trajectories[tIdx] = newTraj;
+      } else {
+        const newTrajs = phrase.trajectories.filter(traj => {
+          if (delAfter) {
+            return traj.num !== Number(tIdx) && traj.num !== Number(tIdx+1)
+          } else {
+            return traj.num !== Number(tIdx)
           }
-        })
-      });
-      
-      
-      
-      const newTrajs = phrase.trajectories.filter(traj => traj.num !== Number(tIdx));
-      this.piece.phrases[pIdx].trajectories = newTrajs;
+        });
+        this.piece.phrases[pIdx].trajectories = newTrajs;
+      }
       this.piece.phrases[pIdx].durArrayFromTrajectories();
       this.piece.phrases[pIdx].assignStartTimes();
       this.piece.phrases[pIdx].assignTrajNums();
       this.piece.durArrayFromPhrases();
       this.piece.updateStartTimes();
-
       this.redrawPhrase(pIdx);
-      // this.emitter.emit('deletedTraj')
-      // this.setNoteVals();
-      // this.setPluckVals();
-      // this.$forceUpdate();
     },
     
     redrawPhrase(pIdx) {
@@ -1363,4 +1470,12 @@ button {
   font-size: 13px
 }
 
+.cbRow {
+  height: 30px;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
 </style>

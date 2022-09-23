@@ -104,13 +104,6 @@ export default {
   },
   
   components: {
-    
-    // beginningIcon,
-    // endIcon,
-    // loopIcon,
-    // pauseIcon,
-    // playIcon,
-    // shuffleIcon
   },
   
   props: [
