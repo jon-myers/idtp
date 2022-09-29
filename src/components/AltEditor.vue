@@ -25,6 +25,9 @@
         <label>Loop: </label>
         <input type='checkbox' v-model='loop' @change='updateLoop'>
       </div>
+      <div class='filler'>
+      </div>
+      <AltTrajSelectPanel ref='trajSelectPanel'/>
     </div>
   </div>
 </div>
@@ -34,6 +37,10 @@
   />
 </template>
 <script>
+
+const getClosest = (counts, goal) => {
+  return counts.reduce((prev, curr) => Math.abs(curr - goal) < Math.abs(prev - goal) ? curr : prev)
+};
 const structuredTime = dur => {
   const hours = String(Math.floor(dur / 3600));
   const minutes = leadingZeros(Math.floor((dur % 3600) / 60));
@@ -45,8 +52,9 @@ const structuredTime = dur => {
   }
 };
 
-const cumsum = (sum => value => sum += value)(0);
+// const cumsum = (sum => value => sum += value)(0);
 
+const cumsum = sum => (sum = 0, n => sum += n);
 const linSpace = (startValue, stopValue, cardinality) => {
   var arr = [];
   var step = (stopValue - startValue) / (cardinality - 1);
@@ -84,6 +92,7 @@ import {
 } from '@/js/serverCalls.js';
 
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
+import AltTrajSelectPanel from'@/components/AltTrajSelectPanel.vue';
 import * as d3 from 'd3';
 export default {
   name: 'AltEditor',
@@ -102,7 +111,6 @@ export default {
       initViewDur: 10,
       initYScaleFactor: 2,
       initXScaleFactor: 1,
-      d3: d3,
       spectrogramOpacity: 0,
       transitionTime: 40,
       controlBoxWidth: 200,
@@ -118,12 +126,14 @@ export default {
       selectedTraj: undefined,
       viewPhrases: false,
       phraseLabelHeight: 30,
-      loop: false
+      loop: false,
+      init: true,
+      minTrajDur: 0.05
     }
   },
   
   components: {
-    EditorAudioPlayer
+    EditorAudioPlayer, AltTrajSelectPanel
   },
   
   created() {
@@ -151,7 +161,25 @@ export default {
     await this.getPieceFromJson(piece, fund);
     await this.initializePiece();
     
+    this.emitter.on('pluckBool', pluckBool => {
+      if (pluckBool) {
+        if (!this.selectedTraj.articulations[0]) {
+          this.selectedTraj.articulations[0] = new Articulation();
+          const pIdx = this.selectedTraj.phraseIdx;
+          const tIdx = this.selectedTraj.num;
+          const phrase = this.piece.phrases[pIdx];
+          const g = d3.select(`#articulations__p${pIdx}t${tIdx}`)
+          this.addPlucks(this.selectedTraj, phrase.startTime, g)
+          
 
+        }
+      } else {
+        if (this.selectedTraj.articulations[0]) {
+          delete this.selectedTraj.articulations[0];
+          this.removePlucks(this.selectedTraj)
+        }
+      }
+    })
   },
 
   unmounted() {
@@ -167,6 +195,639 @@ export default {
   },
 
   methods: {
+    
+    // showDragDots() {
+    //   d3.selectAll('.dragDots').remove();
+    //   const pIdx = this.selectedTraj.phraseIdx;
+    //   const tIdx = this.selectedTraj.num;
+    //   const phrase = this.piece.phrases[pIdx];
+    //   const startTime = this.selectedTraj.startTime + phrase.startTime;
+    //   if (this.selectedTraj.id === 1) {
+    //     const drag0 = () => {
+    //       const dragStart = e => {
+    //         const time = this.xr().invert(e.x);
+    //         const logFreq = this.yr().invert(e.y);
+    //         this.selectedTraj.logFreqs[0] = logFreq;
+    //         const endTime = startTime + this.selectedTraj.durTot;
+    //         const timePts = Math.round((endTime - time) / this.minDrawDur);
+    //         const drawTimes = linSpace(time, endTime, timePts);
+    //         const mp = t => (t - time) / (endTime - time);
+    //         const trajDrawXs = drawTimes.map(mp);
+    //         const trajDrawYs = trajDrawXs.map(x => this.selectedTraj.compute(x))
+    //         const data = trajDrawYs.map((y, i) => {
+    //           return {
+    //             x: drawTimes[i],
+    //             y: y
+    //           }
+    //         })
+    //         this.svg.append('path')
+    //           .datum(data)
+    //           .classed('transparentPhrase', true)
+    //           .attr('id', `p${pIdx}t${tIdx}`)
+    //           .attr('stroke', this.trajColor)
+    //           .attr('fill', 'none')
+    //           .attr('stroke-width', '3px')
+    //           .attr('stroke-linejoin', 'round')
+    //           .attr('stroke-linecap', 'round')
+    //           .attr('d', this.phraseLine())
+    //           .style('opacity', '0.35')
+    //       }
+    // 
+    //       const dragged = e => {
+    //         let time = this.constrainTime(e);
+    //         const x = this.xr()(time);
+    //         d3.select('.dragDot0')
+    //           .attr('cx', x)
+    //           .attr('cy', e.y)
+    // 
+    // 
+    //         const logFreq = this.yr().invert(e.y);
+    //         this.selectedTraj.logFreqs[0] = logFreq;
+    //         const endTime = startTime + this.selectedTraj.durTot;
+    //         const timePts = Math.round((endTime - time) / this.minDrawDur);
+    //         const drawTimes = linSpace(time, endTime, timePts);
+    //         const mp = t => (t - time) / (endTime - time);
+    //         const trajDrawXs = drawTimes.map(mp);
+    //         const trajDrawYs = trajDrawXs.map(x => this.selectedTraj.compute(x))
+    //         const data = trajDrawYs.map((y, i) => {
+    //           return {
+    //             x: drawTimes[i],
+    //             y: y
+    //           }
+    //         })
+    //         d3.select(`.transparentPhrase#p${pIdx}t${tIdx}`)
+    //           .datum(data)
+    //           .attr('d', this.phraseLine())
+    //       };
+    // 
+    //       const dragEnd = e => {
+    //         let time = this.constrainTime(e);
+    //         const x = this.xr()(time);
+    //         let logFreq = this.yr().invert(e.y);
+    //         const logSargamLines = this.visibleSargam.map(s => Math.log2(s));
+    //         logFreq = getClosest(logSargamLines, logFreq);
+    //         d3.select('.dragDot0')
+    //           .attr('cx', x)
+    //           .attr('cy', this.yr()(logFreq))
+    //         this.selectedTraj.logFreqs[0] = logFreq;
+    //         const endTime = startTime + this.selectedTraj.durTot;
+    //         const timePts = Math.round((endTime - time) / this.minDrawDur);
+    //         const drawTimes = linSpace(time, endTime, timePts);
+    //         const mp = t => (t - time) / (endTime - time);
+    //         const trajDrawXs = drawTimes.map(mp);
+    //         const trajDrawYs = trajDrawXs.map(x => this.selectedTraj.compute(x))
+    //         const data = trajDrawYs.map((y, i) => {
+    //           return {
+    //             x: drawTimes[i],
+    //             y: y
+    //           }
+    //         })
+    //         d3.select(`.transparentPhrase#p${pIdx}t${tIdx}`).remove()
+    //         d3.select(`#p${pIdx}t${tIdx}`)
+    //           .datum(data)
+    //           .attr('d', this.phraseLine())
+    //         d3.select(`#overlay__p${pIdx}t${tIdx}`)
+    //           .datum(data)
+    //           .attr('d', this.phraseLine())
+    // 
+    // 
+    //         //redraw articulations and chikaris
+    // 
+    //         // then you have to update traj start time, change duration of 
+    //         // previous traj, and if it isn't silence, redraw it as well.
+    // 
+    // 
+    // 
+    //       };
+    //       return d3.drag()
+    //         .on('drag', dragged)
+    //         .on('start', dragStart)
+    //         .on('end', dragEnd)
+    //     }
+    // 
+    //     const g = this.phraseG.append('g').classed('dragDots', true);    
+    //     g
+    //       .append('circle')
+    //       .classed('dragDot0', true)
+    //       .attr('cx', this.xr()(startTime))
+    //       .attr('cy', this.yr()(Math.log2(this.selectedTraj.freqs[0])))
+    //       .attr('r', 5)
+    //       .style('fill', 'purple')
+    //       .call(drag0())
+    //     g
+    //       .append('circle')
+    //       .classed('dragDot1', true)
+    //       .attr('cx', this.xr()(startTime + this.selectedTraj.durTot))
+    //       .attr('cy', this.yr()(Math.log2(this.selectedTraj.freqs[1])))
+    //       .attr('r', 5)
+    //       .style('fill', 'purple')
+    //   }
+    // },
+    
+    addAllDragDots() {
+      d3.selectAll('.dragDots').remove();
+      const pIdx = this.selectedTraj.phraseIdx;
+      // const tIdx = this.selectedTraj.num;
+      const phrase = this.piece.phrases[pIdx];
+      const drag = () => {
+        const dragStart = e => {
+          const phraseStart = phrase.startTime;
+          const trajStart = this.selectedTraj.startTime;
+          const idx = e.sourceEvent.target.id.split('dragDot')[1];
+          this.dragIdx = idx;
+          // const time = this.xr().invert(e.x);
+          const logFreq = this.yr().invert(e.y);
+          this.selectedTraj.logFreqs[idx] = logFreq;
+          const endTime = phraseStart + trajStart + this.selectedTraj.durTot;
+          const timePts = Math.round((endTime - (phraseStart + trajStart)) / this.minDrawDur);
+          const drawTimes = linSpace(phraseStart + trajStart, endTime, timePts);
+          const mp = t => (t - (phraseStart + trajStart)) / (endTime - (phraseStart + trajStart));
+          const trajDrawXs = drawTimes.map(mp);
+          const trajDrawYs = trajDrawXs.map(x => this.selectedTraj.compute(x))
+          const data = trajDrawYs.map((y, i) => {
+            return {
+              x: drawTimes[i],
+              y: y
+            }
+          });
+          this.phraseG.append('path')
+            .datum(data)
+            .attr('id', 'transparentPhrase')
+            .attr('stroke', this.trajColor)
+            .attr('fill', 'none')
+            .attr('stroke-width', '3px')
+            .attr('stroke-linejoin', 'round')
+            .attr('stroke-linecap', 'round')
+            .attr('d', this.phraseLine())
+            .style('opacity', '0.35')
+        };
+        const dragging = e => {
+          const idx = Number(this.dragIdx);
+          const time = this._constrainTime(e, idx);
+          const x = this.xr()(time);
+          d3.select(`#dragDot${idx}`)
+            .attr('cx', x)
+            .attr('cy', e.y)
+            
+          const traj = this.selectedTraj;
+          const tIdx = traj.num;
+          const pIdx = traj.phraseIdx;
+          const phrase = this.piece.phrases[traj.phraseIdx];
+          const logFreq = this.yr().invert(e.y);
+          if (traj.logFreqs[idx]) {
+            traj.logFreqs[idx] = logFreq;
+          }
+          // special case of moving inner dots, doesn't effect other trajs
+          if (idx > 0 && idx < traj.durArray.length) {
+            const newDurArray = this.calculateNewDurArray(phrase, traj, idx, time);
+            traj.durArray = newDurArray;
+          } else if (idx === 0) {
+            if (tIdx === 0) {
+              const prevPhrase = this.piece.phrases[pIdx-1];
+              const prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length-1];
+              const initTime = phrase.startTime + traj.startTime;
+              const delta = time - initTime;
+              if (prevTraj.durArray.length > 1) {
+                prevTraj.durArray = this.newDurArrayZ(prevTraj, delta)
+              }
+              
+              prevTraj.durTot += delta;
+              if (traj.durArray.length > 1) {
+                const initPortionA = traj.durArray[0] * traj.durTot;
+                const newDurTot = traj.durTot - delta;
+                const newPropA = (initPortionA - delta) / newDurTot;
+                let newDurArray = traj.durArray.map((i => i * traj.durTot / newDurTot));
+                newDurArray[0] = newPropA;
+                traj.durArray = newDurArray;
+              } 
+              traj.durTot -= delta;
+              phrase.startTime += delta;
+            } else {
+              const prevTraj = phrase.trajectories[tIdx-1];
+              const initTime = phrase.startTime + traj.startTime;
+              const delta = time - initTime;
+              if (prevTraj.durArray.length > 1) {
+                prevTraj.durArray = this.newDurArrayZ(prevTraj, delta)
+              }
+              prevTraj.durTot += delta;
+              if (traj.durArray.length > 1) {
+                const initPortionA = traj.durArray[0] * traj.durTot;
+                const newDurTot = traj.durTot - delta;
+                const newPropA = (initPortionA - delta) / newDurTot;
+                let newDurArray = traj.durArray.map((i => i * traj.durTot / newDurTot));
+                newDurArray[0] = newPropA;
+                traj.durArray = newDurArray;
+              }
+              traj.durTot -= delta;
+              traj.startTime += delta;
+            }
+            // if previous traj of this phrase
+            
+          } else if (idx === traj.durArray.length) {
+            if (tIdx < phrase.trajectories.length-1) {
+              const nextTraj = phrase.trajectories[tIdx + 1];
+              const initTime = phrase.startTime + traj.startTime + traj.durTot;
+              const delta = time - initTime;
+              if (nextTraj.durArray.length > 1) {
+                nextTraj.durArray = this.newDurArrayA(nextTraj, delta)
+              }
+              nextTraj.durTot -= delta;
+              nextTraj.startTime += delta;
+              phrase.durArrayFromTrajectories();
+              if (traj.durArray.length > 1) {
+                const initPortionZ = traj.durArray[traj.durArray.length-1] * traj.durTot;
+                const newDurTot = traj.durTot + delta;
+                const newPropZ = (initPortionZ + delta) / newDurTot;
+                let newDurArray = traj.durArray.map((i => i * traj.durTot / newDurTot));
+                newDurArray[newDurArray.length - 1] = newPropZ;
+                traj.durArray = newDurArray;
+              }
+              traj.durTot += delta;
+            } else {
+              if (this.piece.phrases[pIdx+1]) {
+                const nextPhrase = this.piece.phrases[pIdx+1];
+                const nextTraj = nextPhrase.trajectories[0];
+                const initTime = phrase.startTime + traj.startTime + traj.durTot;
+                const delta = time - initTime;
+                if (nextTraj.durArray.length > 1) {
+                    nextTraj.durArray = this.newDurArrayA(nextTraj, delta)
+                }
+                nextTraj.durTot -= delta;
+                nextPhrase.startTime += delta;
+                nextPhrase.durTotFromTrajectories();
+                nextPhrase.durArrayFromTrajectories();
+                nextPhrase.assignStartTimes();
+                if (traj.durArray.length > 1) {
+                  const initPortionZ = traj.durArray[traj.durArray.length-1] * traj.durTot;
+                  const newDurTot = traj.durTot + delta;
+                  const newPropZ = (initPortionZ + delta) / newDurTot;
+                  let newDurArray = traj.durArray.map((i => i * traj.durTot / newDurTot));
+                  newDurArray[newDurArray.length - 1] = newPropZ;
+                  traj.durArray = newDurArray;
+                }
+                
+                traj.durTot += delta;
+                phrase.durTotFromTrajectories();
+                phrase.durArrayFromTrajectories();
+                phrase.assignStartTimes();
+              }
+            }
+          }
+          const data = this.makeTrajData(traj, phrase.startTime)
+
+          d3.select(`#transparentPhrase`)
+            .datum(data)
+            .attr('d', this.phraseLine())
+        }
+        
+        const dragEnd = e => {
+          const idx = Number(this.dragIdx);
+          const time = this._constrainTime(e, idx);
+          const x = this.xr()(time);
+          
+            
+          const traj = this.selectedTraj;
+          const phrase = this.piece.phrases[traj.phraseIdx];
+          const pIdx = traj.phraseIdx;
+          const tIdx = traj.num;
+          let logFreq = this.yr().invert(e.y);
+          const logSargamLines = this.visibleSargam.map(s => Math.log2(s));
+          logFreq = getClosest(logSargamLines, logFreq)
+          const y = this.yr()(logFreq)
+          d3.select(`#dragDot${idx}`)
+            .attr('cx', x)
+            .attr('cy', y)
+          const visiblePitches = this.piece.raga.getPitches({
+            low: this.freqMin, 
+            high: this.freqMax
+          });
+          const newPitch = visiblePitches[logSargamLines.indexOf(logFreq)]
+          
+          if (traj.logFreqs[idx]) {
+            traj.logFreqs[idx] = logFreq;
+            traj.pitches[idx] = newPitch
+          }
+          // special case of moving inner dots, doesn't effect other trajs
+          if (idx > 0 && idx < traj.durArray.length) {
+            const newDurArray = this.calculateNewDurArray(phrase, traj, idx, time);
+            traj.durArray = newDurArray;
+          } else if (idx === 0) {
+            if (tIdx === 0) {
+              const prevPhrase = this.piece.phrases[pIdx-1];
+              const prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length-1];
+              const initTime = phrase.startTime + traj.startTime;
+              const delta = time - initTime;
+              prevTraj.durTot += delta;
+              prevPhrase.durTotFromTrajectories();
+              prevPhrase.durArrayFromTrajectories();
+              if (traj.durArray.length > 1) {
+                const initPortionA = traj.durArray[0] * traj.durTot;
+                const newDurTot = traj.durTot - delta;
+                const newPropA = (initPortionA - delta) / newDurTot;
+                let newDurArray = traj.durArray.map((i => i * traj.durTot / newDurTot));
+                newDurArray[0] = newPropA;
+                traj.durArray = newDurArray;
+                
+              } 
+              traj.durTot -= delta;
+              phrase.startTime += delta;
+              phrase.durTotFromTrajectories();
+              phrase.durArrayFromTrajectories();
+              
+              
+              // I need to proportionally alter the first portion of the dur array 
+              // first item needs to change by a factor of delta /  
+              // phrase.durTotFromTrajectories();
+              // phrase.durArrayFromTrajectories();
+              
+              
+            } else {
+              const prevTraj = phrase.trajectories[tIdx-1];
+              const initTime = phrase.startTime + traj.startTime;
+              const delta = time - initTime;
+              prevTraj.durTot += delta;
+              phrase.durArrayFromTrajectories();
+              if (traj.durArray.length > 1) {
+                const initPortionA = traj.durArray[0] * traj.durTot;
+                const newDurTot = traj.durTot - delta;
+                const newPropA = (initPortionA - delta) / newDurTot;
+                let newDurArray = traj.durArray.map((i => i * traj.durTot / newDurTot));
+                newDurArray[0] = newPropA;
+                traj.durArray = newDurArray;
+              }
+              traj.durTot -= delta;
+            }
+            
+            
+          } else if (idx === traj.durArray.length) {
+            if (tIdx < phrase.trajectories.length - 1) {
+              const nextTraj = phrase.trajectories[tIdx+1];
+              const initTime = phrase.startTime + traj.startTime + traj.durTot;
+              const delta = time - initTime;
+              nextTraj.durTot -= delta;
+              traj.durTot += delta;
+              
+              if (traj.durArray.length > 1) {
+                const initPortionZ = traj.durArray[traj.durArray.length - 1] * traj.durTot;
+                const newDurTot = traj.durTot + delta;
+                const newPropZ = (initPortionZ + delta) / newDurTot;
+                let newDurArray = traj.durArray.map((i => i * traj.durTot / newDurTot));
+                newDurArray[newDurArray.length - 1] = newPropZ;
+                traj.durArray = newDurArray;
+              }
+              phrase.trajectories[tIdx+1] = nextTraj;
+              phrase.durArrayFromTrajectories();
+            } else {
+              if (this.piece.phrases[pIdx+1]) {
+                const nextPhrase = this.piece.phrases[pIdx+1];
+                const nextTraj = nextPhrase.trajectories[0];
+                const initTime = phrase.startTime + traj.startTime + traj.durTot;
+                const delta = time - initTime;
+                nextTraj.durTot -= delta;
+                nextPhrase.startTime += delta;
+                nextPhrase.durTotFromTrajectories();
+                nextPhrase.durArrayFromTrajectories();
+                nextPhrase.assignStartTimes();
+                traj.durTot += delta;    
+              }  
+            }
+          }
+          const data = this.makeTrajData(traj, phrase.startTime);
+          d3.select(`#transparentPhrase`).remove()
+          d3.select(`#p${pIdx}t${tIdx}`)
+            .datum(data)
+            .attr('d', this.phraseLine())
+          d3.select(`#overlay__p${pIdx}t${tIdx}`)
+            .datum(data)
+            .attr('d', this.phraseLine())  
+            
+        if (idx === 0) {
+          if (tIdx === 0) {
+            const prevPhrase = this.piece.phrases[pIdx-1];
+            const prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length-1];
+            const newPrevTraj = this.fixTrajectory(prevTraj);
+            prevPhrase.trajectories[prevPhrase.trajectories.length-1] = newPrevTraj;
+            prevPhrase.assignStartTimes();
+            prevPhrase.assignTrajNums();
+            prevPhrase.assignPhraseIdx();
+            
+            const data = this.makeTrajData(newPrevTraj, prevPhrase.startTime);
+            d3.select(`#p${pIdx-1}t${prevPhrase.trajectories.length-1}`)
+            .datum(data)
+            .attr('d', this.phraseLine())
+            
+            d3.select(`#overlay__p${pIdx-1}t${prevPhrase.trajectories.length-1}`)
+            .datum(data)
+            .attr('d', this.phraseLine())
+            
+            this.moveKrintin(newPrevTraj, phrase.startTime);
+            this.moveSlides(newPrevTraj, phrase.startTime)
+          } else {
+            const prevTraj = phrase.trajectories[tIdx-1];
+            const newPrevTraj = this.fixTrajectory(prevTraj);
+            phrase.trajectories[tIdx-1] = newPrevTraj;
+            phrase.assignStartTimes();
+            phrase.assignTrajNums();
+            phrase.assignPhraseIdx();
+            const data = this.makeTrajData(newPrevTraj, phrase.startTime);
+            
+            d3.select(`#p${pIdx}t${tIdx-1}`)
+              .datum(data)
+              .attr('d', this.phraseLine())
+            d3.select(`#overlay__p${pIdx}t${tIdx-1}`)
+              .datum(data)
+              .attr('d', this.phraseLine())
+            
+            
+            this.moveKrintin(newPrevTraj, phrase.startTime);
+            this.moveSlides(newPrevTraj, phrase.startTime)
+          }
+        } else if (idx === traj.durArray.length) {
+          if (tIdx < phrase.trajectories.length-1) {
+            const nextTraj = phrase.trajectories[tIdx+1];
+            const newNextTraj = this.fixTrajectory(nextTraj);
+            phrase.trajectories[tIdx+1] = newNextTraj;
+            phrase.assignStartTimes();
+            phrase.assignTrajNums();
+            phrase.assignPhraseIdx();
+            const data = this.makeTrajData(nextTraj, phrase.startTime);
+            d3.select(`#p${pIdx}t${tIdx+1}`)
+              .datum(data)
+              .attr('d', this.phraseLine())
+            d3.select(`#overlay__p${pIdx}t${tIdx+1}`)
+              .datum(data)
+              .attr('d', this.phraseLine())
+              
+            this.moveKrintin(newNextTraj, phrase.startTime);
+            this.moveSlides(newNextTraj, phrase.startTime);
+            this.removePlucks(newNextTraj);
+            const g = d3.select(`#articulations__p${pIdx}t${tIdx+1}`);
+            this.addPlucks(newNextTraj, phrase.startTime, g)
+          } else {
+            if (this.piece.phrases[pIdx+1]) {
+              const nextPhrase = this.piece.phrases[pIdx+1];
+              const nextTraj = nextPhrase.trajectories[0];
+              const newNextTraj = this.fixTrajectory(nextTraj);
+              nextPhrase.trajectories[0] = newNextTraj;
+              nextPhrase.assignStartTimes();
+              nextPhrase.assignTrajNums();
+              nextPhrase.assignPhraseIdx();
+              const data = this.makeTrajData(newNextTraj, nextPhrase.startTime);
+              d3.select(`#p${pIdx+1}t${0}`)
+                .datum(data)
+                .attr('d', this.phraseLine())
+              d3.select(`#overlay__p${pIdx+1}t${0}`)
+                .datum(data)
+                .attr('d', this.phraseLine())
+              this.moveKrintin(newNextTraj, nextPhrase.startTime)
+              this.moveSlides(newNextTraj, nextPhrase.startTime)  
+              this.removePlucks(newNextTraj);
+              const g = d3.select(`#articulations__p${pIdx+1}t${0}`);
+              this.addPlucks(newNextTraj, nextPhrase.startTime, g)
+            }  
+          }
+        }
+          
+          this.removePlucks(traj);
+          const g = d3.select(`#articulations__p${pIdx}t${tIdx}`)
+          this.addPlucks(traj, phrase.startTime, g);
+          
+          const newTraj = this.fixTrajectory(traj)
+          this.piece.phrases[pIdx].trajectories[tIdx] = newTraj
+          phrase.assignStartTimes();
+          phrase.assignTrajNums();
+          phrase.assignPhraseIdx();
+          this.selectedTraj = newTraj;
+          // this.addArticulations(this.selectedTraj, phrase.startTime)
+          this.moveKrintin(this.selectedTraj, phrase.startTime);
+          this.moveSlides(this.selectedTraj, phrase.startTime)
+        }
+        return d3.drag()
+          .on('start', dragStart)
+          .on('drag', dragging)
+          .on('end', dragEnd)
+      };
+      const dragDotsG = this.phraseG.append('g').classed('dragDots', true);
+      let times = [0,...this.selectedTraj.durArray.map(cumsum())];
+      const phraseStart = phrase.startTime;
+      const trajStart = this.selectedTraj.startTime;
+      times = times.map(a => a * this.selectedTraj.durTot + phraseStart + trajStart)
+      for (let i = 0; i < times.length; i++) {
+        const lf = this.selectedTraj.logFreqs[i] ? 
+          this.selectedTraj.logFreqs[i] : 
+          this.selectedTraj.logFreqs[i-1];
+        dragDotsG
+          .append('circle')
+          .attr('id', `dragDot${i}`)
+          .attr('cx', this.codifiedXR(times[i]))
+          .attr('cy', this.codifiedYR(lf))
+          .attr('r', 5)
+          .style('fill', 'purple')
+          .call(drag())
+      }
+    },
+    
+    newDurArrayA(traj, delta) {
+      const initPortionA = traj.durArray[0] * traj.durTot;
+      const newDurTot = traj.durTot - delta;
+      const newPropA = (initPortionA - delta) / newDurTot;
+      let newDurArray = traj.durArray.map((i => i * traj.durTot / newDurTot));
+      newDurArray[0] = newPropA;
+      return newDurArray
+    },
+    
+    newDurArrayZ(traj, delta) {
+      const initPortionZ = traj.durArray[traj.durArray.length-1] * traj.durTot;
+      const newDurTot = traj.durTot + delta;
+      const newPropZ = (initPortionZ + delta) / newDurTot;
+      let newDurArray = traj.durArray.map((i => i * traj.durTot / newDurTot));
+      newDurArray[newDurArray.length - 1] = newPropZ;
+      return newDurArray;
+    },
+    
+    fixTrajectory(traj) {
+      // so that articulations are in the right place according to new durArray;
+      const trajObj = traj.toJSON();
+      const pluckExists = traj.articulations[0] && traj.articulations[0].name === 'pluck';
+      delete trajObj.articulations;
+      const newTraj = new Trajectory(trajObj);
+      if (!pluckExists) delete newTraj.articulations[0];
+      return newTraj
+    },
+    
+    _constrainTime(e, idx) {
+      let time = this.xr().invert(e.x);
+      const traj = this.selectedTraj;
+      const pIdx = traj.phraseIdx;
+      const tIdx = traj.num;
+      const phrase = this.piece.phrases[pIdx];
+      let times = [0,...traj.durArray.map(cumsum())];
+      times = times.map(a => a * traj.durTot + phrase.startTime + traj.startTime);  
+      if (idx === 0) {
+        if (tIdx > 0) {
+          const prevTrajStart = phrase.startTime + phrase.trajectories[tIdx-1].startTime;
+          if (time < prevTrajStart) time = prevTrajStart + this.minTrajDur;
+        } else if (pIdx > 0) {
+          const prevPhrase = this.piece.phrases[pIdx-1];
+          const prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length-1];
+          const prevTrajStart = prevPhrase.startTime + prevTraj.startTime;
+          if (time < prevTrajStart) time = prevTrajStart + this.minTrajDur;
+        } 
+        if (time > times[1]) time = times[1] - this.minTrajDur;
+      } else if (idx < times.length-1) {
+        if (time < times[idx-1]) time = times[idx-1] + this.minTrajDur;
+        if (time > times[idx+1]) time = times[idx+1] - this.minTrajDur;
+      } else {
+        if (time < times[idx-1]) time = times[idx-1] + this.minTrajDur;
+        if (phrase.trajectories[tIdx+1]) {
+          const nextTraj = phrase.trajectories[tIdx+1];
+          const nextEnd = phrase.startTime + nextTraj.startTime + nextTraj.durTot;
+          if (time > nextEnd - this.minTrajDur) time = nextEnd - this.minTrajDur;
+        } else if (this.piece.phrases[pIdx+1]) {
+          const nextPhrase = this.piece.phrases[pIdx+1];
+          const nextTraj = nextPhrase.trajectories[0];
+          const nextEnd = nextPhrase.startTime + nextTraj.startTime + nextTraj.durTot;
+          if (time > nextEnd) time = nextEnd - this.minTrajDur;
+        }
+      }
+      return time
+    },
+    
+    calculateNewDurArray(phrase, traj, idx, time) {
+      let times = [0,...traj.durArray.map(cumsum())];
+      times = times.map(a => a * traj.durTot + phrase.startTime + traj.startTime); 
+      const newTimes = times.slice();
+      newTimes[idx] = time;
+      let durArray = newTimes.slice(1).map((v, i) => v - newTimes[i]);
+      const daSum = durArray.reduce((a, b) => a+b, 0)
+      durArray = durArray.map(i => i/daSum)
+      return durArray
+    },
+    
+    constrainTime(e) {
+      let time = this.xr().invert(e.x);
+      const pIdx = this.selectedTraj.phraseIdx;
+      const tIdx = this.selectedTraj.num;
+      if (this.selectedTraj.num > 0) {
+        const phrase = this.piece.phrases[pIdx];
+        if (time < phrase.startTime + phrase.trajectories[tIdx-1].startTime) {
+          time = phrase.startTime + phrase.trajectories[tIdx-1].startTime;
+        }
+      } else if (pIdx > 0) {
+        const phrase = this.piece.phrases[pIdx-1];
+        const traj = phrase.trajectories[phrase.trajectories.length - 1];
+        if (time < phrase.startTime + traj.startTime) {
+          time = phrase.startTime + traj.startTime
+        }
+      } else {
+        if (time < 0) time = 0
+      }
+      const _phrase = this.piece.phrases[pIdx];
+      const _traj = _phrase.trajectories[tIdx];
+      const _endTime = _phrase.startTime + _traj.startTime + _traj.durTot;
+      if (time > _endTime) time = _endTime;
+      return time
+    },
     
     updatePhraseLabel() {
       // const rect = this.rect();
@@ -195,6 +856,10 @@ export default {
         this.$refs.audioPlayer.loop = true;
         this.$refs.audioPlayer.loopStart = this.regionStartTime;
         this.$refs.audioPlayer.loopEnd = this.regionEndTime;
+        if (this.$refs.audioPlayer.sourceNode) {
+          this.$refs.audioPlayer.sourceNode.loopStart = this.regionStartTime;
+          this.$refs.audioPlayer.sourceNode.loopEnd = this.regionEndTime;
+        }  
       } else {
         this.$refs.audioPlayer.loop = false;
         this.$refs.audioPlayer.loopStart = undefined;
@@ -217,9 +882,9 @@ export default {
           this.setChikari = false;
           this.svg.style('cursor', 'auto')
         }
-        if (this.region) {
-          this.region.remove();
-          this.region = undefined
+        if (this.regionG) {
+          this.regionG.remove();
+          this.regionG = undefined
         }
       } else if (e.key === 'Backspace') {
         if (this.selectedChikariID) {
@@ -269,7 +934,7 @@ export default {
                 this.totNaturalWidth += img.naturalWidth;
                 unscaledWidths.push(Number(height * img.naturalWidth / img.naturalHeight))
               });
-              this.cumulativeWidths = [0].concat(unscaledWidths.map(cumsum).slice(0, unscaledWidths.length - 1))
+              this.cumulativeWidths = [0].concat(unscaledWidths.map(cumsum()).slice(0, unscaledWidths.length - 1))
               this.unscaledWidth = height * this.totNaturalWidth / this.imgs[0].naturalHeight;
               this.desiredWidth = (rect.width - this.yAxWidth) * this.initXScaleFactor;
               this.xScale = this.desiredWidth / this.unscaledWidth;
@@ -299,7 +964,6 @@ export default {
     },
 
     redrawSpectrogram() {
-      // console.log('this is getting called')
       const rect = this.rect();
       const height = rect.height - this.xAxHeight;
       this.desiredWidth = (rect.width - this.yAxWidth) * this.tx().k;
@@ -401,22 +1065,119 @@ export default {
           this.regionEndPx = e.offsetX;
         }
         this.updateLoop();
-        if (!this.region) {
-          this.region = this.svg
+        const regionLine = d3.line()([
+          [0, 0],
+          [0, rect.height]
+        ])
+          
+        if (!this.regionG) {
+          this.regionG = this.svg
+            .append('g')
+            .attr('clip-path', 'url(#playheadClip)')
+            
+            
+          this.regionG
             .append('rect')
             .classed('region', true)
             .attr('width', this.regionEndPx-this.regionStartPx)
             .attr('height', rect.height)
             .attr('fill', 'white')
             .attr('opacity', '0.4')
-            .attr('transform', `translate(${this.regionStartPx},0)`)    
+            .attr('transform', `translate(${this.regionStartPx},0)`)
+          
+          this.regionG
+            .append('path')
+            .classed('regionStart', true)
+            .attr('d', regionLine)
+            .attr('stroke', 'grey')
+            .attr('opacity', '0.6')
+            .attr('stroke-width', 1)
+            .attr('transform', `translate(${this.regionStartPx},0)`)
+          
+          const rsDrag = () => {
+            const dragged = e => {
+              d3.select('.clickableRegionStart').attr('transform', `translate(${e.x},0)`)
+              d3.select('.regionStart').attr('transform', `translate(${e.x}, 0)`);
+              d3.select('.region')
+                .attr('width', this.xr()(this.regionEndTime) - e.x)
+                .attr('transform', `translate(${e.x}, 0)`)
+            }
+            const dragended = e => {
+              this.regionStartPx = e.x;
+              this.regionStartTime = this.xr().invert(this.regionStartPx);
+              this.updateLoop();
+            }
+            return d3.drag()
+              .on('drag', dragged)
+              .on('end', dragended)
+          };
+          
+          const reDrag = () => {
+            const dragged = e => {
+              d3.select('.clickableRegionEnd').attr('transform', `translate(${e.x},0)`)
+              d3.select('.regionEnd').attr('transform', `translate(${e.x}, 0)`);
+              d3.select('.region')
+                .attr('width', e.x - this.xr()(this.regionStartTime))
+            }
+            const dragended = e => {
+              this.regionEndPx = e.x;
+              this.regionEndTime = this.xr().invert(this.regionEndPx);
+              this.updateLoop();
+            }
+            return d3.drag()
+              .on('drag', dragged)
+              .on('end', dragended)
+          };
+          
+          
+          
+            
+          this.regionG
+            .append('path')
+            .classed('clickableRegionStart', true)
+            .attr('d', regionLine)
+            .attr('stroke', 'grey')
+            .attr('opacity', '0')
+            .attr('stroke-width', 8)
+            .attr('transform', `translate(${this.regionStartPx},0)`)
+            .style('cursor', 'col-resize')
+            .call(rsDrag())
+            
+          this.regionG
+            .append('path')
+            .classed('regionEnd', true)
+            .attr('d', regionLine)
+            .attr('stroke', 'grey')
+            .attr('opacity', '0.6')
+            .attr('stroke-width', 1 )
+            .attr('transform', `translate(${this.regionEndPx},0)`)
+            
+          this.regionG
+            .append('path')
+            .classed('clickableRegionEnd', true)
+            .attr('d', regionLine)
+            .attr('stroke', 'grey')
+            .attr('opacity', '0')
+            .attr('stroke-width', 8)
+            .attr('transform', `translate(${this.regionEndPx},0)`)
+            .style('cursor', 'col-resize')
+            .call(reDrag())
+            
+            
         } else {
           d3.select('.region')
             .attr('width', this.regionEndPx-this.regionStartPx)
-            .attr('transform', `translate(${this.regionStartPx},0)`)     
+            .attr('transform', `translate(${this.regionStartPx},0)`)
+          d3.select('.regionStart')
+            .attr('transform', `translate(${this.regionStartPx},0)`)
+          d3.select('.regionEnd')
+            .attr('transform', `translate(${this.regionEndPx},0)`)
         }
       }
     },
+    
+    // region start 
+    
     
     moveRegion() {
       const start = this.xr()(this.regionStartTime);
@@ -424,6 +1185,10 @@ export default {
       d3.select('.region')
         .attr('width', end - start)
         .attr('transform', `translate(${start})`)
+      d3.select('.regionStart')
+        .attr('transform', `translate(${start},0)`)
+      d3.select('.regionEnd')
+        .attr('transform', `translate(${end},0)`)
     },
 
     async initializePiece() {
@@ -433,6 +1198,7 @@ export default {
       })
       const rect = this.rect();
       this.svg = d3.create('svg')
+        .classed('noSelect', true)
         .attr('viewBox', [0, 0, rect.width, rect.height - 1])
         .on('click', this.handleClick)
         .on('mousedown', this.handleMousedown)
@@ -474,8 +1240,8 @@ export default {
         })
         .on('zoom', this.enactZoom);
       this.makeAxes();
-      this.addSargamLines();
       this.addPhrases();
+      
       this.updateTranslateExtent().then(() => {
         this.svgNode = this.svg
           .call(this.zoom)
@@ -486,7 +1252,6 @@ export default {
     },
     
     handleDblClick(z) {
-      // console.log(z)
       const graphX = z.clientX - this.yAxWidth;
       const time = this.xr().invert(z.clientX);
       if (graphX >= 0) {
@@ -576,11 +1341,23 @@ export default {
           .tickFormat((_, i) => yTickLabels[i]))
         .call(g => g.select('.domain'))
     },
+    
+    slidePhrases(xDelta, yDelta, xScale, yScale) {
+      this.phraseG.transition().duration(this.transitionTime)
+        .attr('transform', `translate(${xDelta},${yDelta}) scale(${xScale},${yScale})`)
+    },
 
     addPhrases() {
+      console.log(this.durTot)
       const timePts = Math.round(this.durTot / this.minDrawDur);
       const drawTimes = linSpace(0, this.durTot, timePts);
-
+      
+      this.clipG = this.svg.append('g')
+        .attr('clip-path', 'url(#clip)')
+      this.phraseG = this.clipG.append('g')
+        .classed('phraseG', true)
+        
+      this.addSargamLines();
       this.piece.phrases.forEach((phrase, pIdx) => {
         phrase.trajectories.forEach((traj, tIdx) => {
           if (traj.id !== 12) {
@@ -597,10 +1374,10 @@ export default {
                 y: y
               }
             })
-            this.svg.append('path')
+            this.phraseG.append('path')
               .datum(data)
               .classed('phrase', true)
-              .attr('clip-path', 'url(#clip)')
+              // .attr('clip-path', 'url(#clip)')
               .attr('id', `p${pIdx}t${tIdx}`)
               .attr("fill", "none")
               .attr("stroke", this.trajColor)
@@ -609,7 +1386,7 @@ export default {
               .attr("stroke-linecap", "round")
               .attr("d", this.phraseLine())
               
-            this.svg.append('path')
+            this.phraseG.append('path')
               .datum(data)
               .classed('phrase', true)
               .attr('id', `overlay__p${pIdx}t${tIdx}`)
@@ -632,12 +1409,18 @@ export default {
     },
 
     addArticulations(traj, phraseStart) {
-      const g = this.svg.append('g')
+      const g = this.phraseG.append('g')
         .attr('id', `articulations__p${traj.phraseIdx}t${traj.num}`)
         .attr('clip-path', 'url(#clip)')
       this.addPlucks(traj, phraseStart, g)
       this.addKrintin(traj, phraseStart, g)
       this.addSlide(traj, phraseStart, g)
+    },
+    
+    removePlucks(traj) {
+      const pIdx = traj.phraseIdx;
+      const tIdx = traj.num;
+      d3.select(`#pluckp${pIdx}t${tIdx}`).remove()
     },
 
     addPlucks(traj, phraseStart, g) {
@@ -719,11 +1502,11 @@ export default {
       // hammer-ons
       const hammerOnKeys = keys.filter(key => traj.articulations[key].name === 'hammer-on')
       const hammerOnData = hammerOnKeys.map(p => {
-        const normedX = (p) * traj.durTot;
-        const y = traj.compute(p - 0.01, true);
+        const normedX = Number(p) * traj.durTot;
+        const y = traj.compute(Number(p) - 0.01, true);
         return {
-          x: this.xr()(phraseStart + traj.startTime + Number(normedX)),
-          y: this.yr()(y)
+          x: phraseStart + traj.startTime + Number(normedX),
+          y: y
         }
       });
       const onOffset = {
@@ -754,25 +1537,17 @@ export default {
       const keys = Object.keys(traj.articulations);
       const hammerOffKeys = keys.filter(key => traj.articulations[key].name === 'hammer-off')
       const hammerOffData = hammerOffKeys.map((p, i) => {
-        const normedX = (p) * traj.durTot;
-        const y = traj.compute(p - 0.01, true);
+        const normedX = Number(p) * traj.durTot;
+        const y = traj.compute(Number(p) - 0.01, true);
         return {
-          x: this.xr()(phraseStart + traj.startTime + Number(normedX)),
-          y: this.yr()(y),
+          x: phraseStart + traj.startTime + Number(normedX),
+          y: y,
           i: i
         }
       });
-      const offOffset = {
-        x: 0,
-        y: 0
-      };
       hammerOffData.forEach(obj => {
         d3.select(`.hammer-off#krintinp${traj.phraseIdx}t${traj.num}i${obj.i}`)
-          .attr('d', d3.line()([
-            [obj.x - 10 + offOffset.x, obj.y + offOffset.y],
-            [obj.x + offOffset.x, obj.y + offOffset.y],
-            [obj.x + offOffset.x, obj.y + 10 + offOffset.y]
-          ]))
+          .attr('transform', `translate(${this.codifiedXR(obj.x)},${this.codifiedYR(obj.y)})`)
       });
       // hammer-ons
       const hammerOnKeys = keys.filter(key => traj.articulations[key].name === 'hammer-on')
@@ -780,22 +1555,32 @@ export default {
         const normedX = (p) * traj.durTot;
         const y = traj.compute(p - 0.01, true);
         return {
-          x: this.xr()(phraseStart + traj.startTime + Number(normedX)),
-          y: this.yr()(y)
+          x: phraseStart + traj.startTime + Number(normedX),
+          y: y
         }
       });
-      const onOffset = {
-        x: 0,
-        y: 0
-      };
+
       hammerOnData.forEach(obj => {
         d3.select(`.hammer-off#krintinp${traj.phraseIdx}t${traj.num}i${obj.i}`)
-          .attr('d', d3.line()([
-            [obj.x - 10 + onOffset.x, obj.y + onOffset.y],
-            [obj.x + onOffset.x, obj.y + onOffset.y],
-            [obj.x + onOffset.x, obj.y - 10 + onOffset.y]
-          ]))
+          .attr('transform', `translate(${this.codifiedXR(obj.x)},${this.codifiedYR(obj.y)})`)
       })
+    },
+    
+    makeTrajData(traj, phraseStart) {
+      const startTime = traj.startTime + phraseStart;
+      const endTime = startTime + traj.durTot;
+      const timePts = Math.round((endTime - startTime) / this.minDrawDur);
+      const drawTimes = linSpace(startTime, endTime, timePts);
+      const mp = t => (t - startTime) / (endTime - startTime);
+      const trajDrawXs = drawTimes.map(mp);
+      const trajDrawYs = trajDrawXs.map(x => traj.compute(x))
+      return trajDrawYs.map((y, i) => {
+        return {
+          x: drawTimes[i],
+          y: y
+        }
+      });
+
     },
 
     addSlide(traj, phraseStart, g) {
@@ -835,6 +1620,36 @@ export default {
       })
     },
     
+    moveSlides(traj, phraseStart) {
+      const keys = Object.keys(traj.articulations);
+      const relKeys = keys.filter(key => traj.articulations[key].name === 'slide')
+      const offset = {
+        x: 0,
+        y: 0
+      };
+      const data = relKeys.map((p, i) => {
+        const normedX = (p) * traj.durTot;
+        const y = traj.compute(p - 0.01, true);
+        const dirUp = y < traj.compute(p, true);
+        return {
+          x: phraseStart + traj.startTime + Number(normedX),
+          y: y,
+          dirUp: dirUp,
+          i: i
+        }
+      });
+      data.forEach(obj => {
+        const yMotion = obj.dirUp ? [10, -10] : [-10, 10];
+        d3.select(`#slidep${traj.phraseIdx}t${traj.num}i${obj.i}`)
+        .attr('d', d3.line()([
+          [0 + offset.x, 0 + yMotion[0] + offset.y],
+          [0 + offset.x, 0 + yMotion[1] + offset.y]
+        ]))
+        .attr('transform', `translate(${this.codifiedXR(obj.x)},${this.codifiedYR(obj.y)})`)
+      })
+      
+    },
+    
     addMarkers() {
       const markerBoxWidth = 4;
       const markerBoxHeight = 4;
@@ -868,7 +1683,7 @@ export default {
           const id = 'p' + phrase.pieceIdx + '_' + Math.floor(Number(key)) + '_' +
             (Number(key) % 1).toFixed(2).toString().slice(2);
 
-          this.svg.append('g')
+          this.phraseG.append('g')
             .classed('chikari', true)
             .attr('clip-path', 'url(#clip)')
             .append('path')
@@ -881,7 +1696,7 @@ export default {
             .attr('transform', d => `translate(${this.xr()(d.x)}, ${this.yr()(d.y)})`)
             
           // for clicking  
-          this.svg.append('g')
+          this.phraseG.append('g')
             .classed('chikari', true)
             .append('circle')
             .attr('id', 'circle__' + id)
@@ -949,11 +1764,23 @@ export default {
           .attr('stroke', this.trajColor)
       }
       this.selectedTrajID = e.target.id.split('__')[1];
+      const pIdx = this.selectedTrajID.split('t')[0].slice(1);
+      const tIdx = this.selectedTrajID.split('t')[1];
+      this.selectedTraj = this.piece.phrases[pIdx].trajectories[tIdx];
+      this.$refs.trajSelectPanel.selectedIdx = this.selectedTraj.id;
+      this.$refs.trajSelectPanel.parentSelected = true;
+      if (this.selectedTraj.articulations[0] && this.selectedTraj.articulations[0].name === 'pluck') {
+        this.$refs.trajSelectPanel.pluckBool = true
+      } else {
+        this.$refs.trajSelectPanel.pluckBool = false
+      }
       d3.select(`#${this.selectedTrajID}`)
         .attr('stroke', this.selectedTrajColor)
       if (this.selectedChikariID) {
         this.clearSelectedChikari()
       }
+      // this.showDragDots();
+      this.addAllDragDots();
     },
     
     clearSelectedChikari() {
@@ -1024,10 +1851,9 @@ export default {
     },
 
     sargamLine(y) {
-      const yr = this.ty().rescaleY(this.y);
       return d3.line()([
-        [this.x(0), yr(y)],
-        [this.x(this.durTot), yr(y)]
+        [0, this.yr()(y)],
+        [this.xr()(this.durTot), this.yr()(y)]
       ])
     },
 
@@ -1037,9 +1863,9 @@ export default {
         const saFilter = freq => Math.abs(logOverFund(freq) % 1) == 0;
         const paFilter = freq => Math.abs((logOverFund(freq) - (7 / 12)) % 1) == 0;
         const strokeWidth = saFilter(s) || paFilter(s) ? 2 : 1;
-        this.svg.append('path')
+        this.phraseG.append('path')
           .classed(`sargamLine s${i}`, true)
-          .attr('clip-path', 'url(#clip)')
+          // .attr('clip-path', 'url(#clip)')
           .attr("fill", "none")
           .attr("stroke", "grey")
           .attr("stroke-width", `${strokeWidth}px`)
@@ -1077,17 +1903,37 @@ export default {
     async redraw() {
       await this.updateTranslateExtent();
       // await this.svg.call(this.zoom.transform, d3.zoomIdentity);
-      await this.gx.transition().duration(this.transitionTime).call(this.xAxis, this.xr());
-      await this.gy.transition().duration(this.transitionTime).call(this.yAxis, this.yr());
-      await this.visibleSargam.forEach((s, i) => {
-        d3.select(`.s${i}`).transition().duration(this.transitionTime)
-          .attr('d', this.sargamLine(Math.log2(s)))
-      });
-      await this.movePhrases();
+      this.gx.transition().duration(this.transitionTime).call(this.xAxis, this.xr());
+      this.gy.transition().duration(this.transitionTime).call(this.yAxis, this.yr());
+
+      // await this.movePhrases();
+      if (this.init) {
+        this.movePhrases();
+        this.init = false;
+        this.codifiedXScale = this.tx().k;
+        this.codifiedYScale = this.ty().k;
+        this.codifiedYOffset = this.yr().invert(0);
+        this.codifiedXR = this.xr();
+        this.codifiedYR = this.yr();
+        this.visibleSargam.forEach((s, i) => {
+          d3.select(`.s${i}`).transition().duration(this.transitionTime)
+            .attr('d', this.sargamLine(Math.log2(s)))
+        });
+      } else {
+        this.slidePhrases(
+          this.xr()(0), 
+          this.yr()(this.codifiedYOffset),
+          this.tx().k / this.codifiedXScale,
+          this.ty().k / this.codifiedYScale
+        )
+      }
+      
       if (this.piece.audioID) await this.redrawSpectrogram();
       this.redrawPlayhead();
       this.moveRegion();
     },
+    
+    
 
     xr() {
       return this.tx().rescaleX(this.x)
@@ -1486,7 +2332,7 @@ export default {
   display: flex;
   flex-direction: row;
   width: 100%;
-  height: 400px;
+  height: 600px;
 }
 
 .lower {
@@ -1498,6 +2344,7 @@ export default {
 .cbBox {
   width: 100%;
   height: 70px;
+  min-height: 70px;
   /* border: 1px solid orange; */
   display: flex;
   flex-direction: column;
@@ -1515,10 +2362,36 @@ button {
 
 .cbRow {
   height: 30px;
+  min-height: 30px;
   width: 100%;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
+}
+
+.noSelect {
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none
+}
+
+.noSelect > * {
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none
+}
+
+* {
+    -webkit-touch-callout:none;
+    -webkit-user-select:none;
+    -moz-user-select:none;
+    -ms-user-select:none;
+    user-select:none;
+}
+
+.filler {
+  width: 100%;
+  height: 100%;
 }
 </style>

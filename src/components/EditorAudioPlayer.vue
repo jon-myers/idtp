@@ -201,7 +201,6 @@ export default {
       this.sourceNode.buffer = this.audioBuffer;
       this.sourceNode.start(this.now(), offset);
       if (this.loop && this.loopStart && this.loopEnd) {
-        console.log('yes')
         this.sourceNode.loop = this.loop;
         this.sourceNode.loopStart = this.loopStart;
         this.sourceNode.loopEnd = this.loopEnd;

@@ -485,9 +485,6 @@ class Trajectory {
     const out = x => {
       const starts = getStarts(durArray);
       const index = _.findLastIndex(starts, s => x >= s);
-      if (!outs[index]) {
-        console.log('')
-      }
       return outs[index](x)
     };
     return out(x)
@@ -637,9 +634,6 @@ class Phrase {
       const index = _.findLastIndex(starts, s => x >= s);
       const innerX = (x - starts[index]) / this.durArray[index];
       const traj = this.trajectories[index];
-      if (!traj) {
-        console.log()
-      }
       return traj.compute(innerX, logScale)
     }
   }
@@ -907,84 +901,7 @@ class Raga {
     ruleSet = yamanRuleSet
   } = {}) {
 
-    // const ruleSets = {
-    //   'Yaman': {
-    //     sa: true,
-    //     re: {
-    //       lowered: false,
-    //       raised: true
-    //     },
-    //     ga: {
-    //       lowered: false,
-    //       raised: true
-    //     },
-    //     ma: {
-    //       lowered: false,
-    //       raised: true
-    //     },
-    //     pa: true,
-    //     dha: {
-    //       lowered: false,
-    //       raised: true
-    //     },
-    //     ni: {
-    //       lowered: false,
-    //       raised: true
-    //     }
-    //   },
-    //   'Malkuans': {
-    //     sa: true,
-    //     re: {
-    //       lowered: false,
-    //       raised: false
-    //     },
-    //     ga: {
-    //       lowered: true,
-    //       raised: false
-    //     },
-    //     ma: {
-    //       lowered: true,
-    //       raised: false
-    //     },
-    //     pa: false,
-    //     dha: {
-    //       lowered: true,
-    //       raised: false
-    //     },
-    //     ni: {
-    //       lowered: true,
-    //       raised: false
-    //     }
-    //   },
-    //   'Bageshri': {
-    //     sa: true,
-    //     re: {
-    //       lowered: false,
-    //       raised: true
-    //     },
-    //     ga: {
-    //       lowered: true,
-    //       raised: false
-    //     },
-    //     ma: {
-    //       lowered: true,
-    //       raised: false
-    //     },
-    //     pa: true,
-    //     dha: {
-    //       lowered: false,
-    //       raised: true
-    //     },
-    //     ni: {
-    //       lowered: true,
-    //       raised: true
-    //     }
-    //   },
-    // };
-
-
   this.name = name;
-  // this.ruleSet = ruleSets[this.name];
   this.ruleSet = ruleSet;
   this.fundamental = fundamental;
   this.tuning = {
@@ -1183,21 +1100,3 @@ exports.getEnds = getEnds
 
 
 /////////
-
-
-//
-// const p = new Piece();
-// console.log(JSON.stringify(p))
-// const jsonString = JSON.stringify(p);
-
-
-// const phrase_ = p
-// console.log(traj)
-// console.log(JSON.stringify(p))
-// console.log(JSON.stringify(pitch))
-// const x = new Array(100).fill(0).map((x, i) => i);
-// const y = new Array(100).fill(0).map((x, i) => phrase.compute(i/100, logScale=true))
-// //
-// plt.plot(x, y)
-// //
-// plt.save("test.png");
