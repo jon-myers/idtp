@@ -1796,6 +1796,8 @@ export default {
       if (this.selectedTrajID) {
         d3.select(`#${this.selectedTrajID}`)
           .attr('stroke', this.trajColor)
+        d3.select(`#overlay__${this.selectedTrajID}`)
+          .style('cursor', 'pointer')
         this.selectedTrajID = undefined;
       }
     },
