@@ -145,6 +145,33 @@ export default {
   async mounted() {
     this.d3 = d3;
     window.addEventListener('resize', this.resize);
+    this.emitter.on('mutateTraj', newIdx => {
+      if (!this.selectedTraj) {
+        console.log('no selected traj')
+      } else {
+        const trajObj = this.selectedTraj.toJSON();
+        trajObj.id = newIdx;
+        const newTraj = new Trajectory(trajObj);
+        const pIdx = this.selectedTraj.phraseIdx;
+        const phrase = this.piece.phrases[pIdx];
+        
+        const tIdx = this.selectedTraj.num;
+        phrase.trajectories[tIdx] = newTraj;
+        phrase.assignStartTimes();
+        phrase.assignPhraseIdx();
+        phrase.assignTrajNums();
+        this.selectedTraj = newTraj;
+        const data = this.makeTrajData(this.selectedTraj, this.piece.phrases[pIdx].startTime);
+        d3.select(`#p${pIdx}t${tIdx}`)
+          .datum(data)
+          .attr('d', this.codifiedPhraseLine())
+        d3.select(`#overlay__p${pIdx}t${tIdx}`)
+          .datum(data)
+          .attr('d', this.codifiedPhraseLine())
+      }
+      d3.selectAll('.dragDots').remove();
+      this.addAllDragDots();
+    })
 
     const piece = await getPiece(this.$store.state._id);
     if (piece.audioID) {
@@ -171,22 +198,24 @@ export default {
           const tIdx = this.selectedTraj.num;
           const phrase = this.piece.phrases[pIdx];
           const g = d3.select(`#articulations__p${pIdx}t${tIdx}`)
-          this.addPlucks(this.selectedTraj, phrase.startTime, g)
-          
-
+          this.codifiedAddPlucks(this.selectedTraj, phrase.startTime, g)
         }
       } else {
+        // console.log(this, this.selectedTraj) 
         if (this.selectedTraj.articulations[0]) {
           delete this.selectedTraj.articulations[0];
           this.removePlucks(this.selectedTraj)
         }
       }
-    })
+    });
+    
   },
 
   unmounted() {
     window.removeEventListener('resize', this.resize);
     window.removeEventListener('keydown', this.handleKeydown);
+    this.emitter.off('pluckBool');
+    this.emitter.off('mutateTraj')
   },
 
   watch: {
@@ -195,8 +224,7 @@ export default {
         .style('opacity', newVal)
     },
     
-    loop(newVal) {
-      console.log(newVal);
+    loop() {
       if (this.loop) {
         this.$refs.audioPlayer.loop = true;
         this.$refs.audioPlayer.loopStart = this.regionStartTime;
@@ -595,6 +623,7 @@ export default {
           .attr('cy', this.codifiedYR(lf))
           .attr('r', 5)
           .style('fill', 'purple')
+          .style('cursor', 'pointer')
           .call(drag())
       }
     },
@@ -785,8 +814,11 @@ export default {
       if (e.key === ' ') {
         this.$refs.audioPlayer.togglePlay()
       } else if (e.key === 'Escape') {
+        e.preventDefault();
         this.clearSelectedChikari();
         this.clearSelectedTraj();
+        this.clearTrajSelectPanel();
+        d3.selectAll('.dragDots').remove();
         if (this.setChikari) {
           this.setChikari = false;
           this.svg.style('cursor', 'auto')
@@ -796,6 +828,7 @@ export default {
           this.regionG = undefined
         }
       } else if (e.key === 'Backspace') {
+        
         if (this.selectedChikariID) {
           const splitArr = this.selectedChikariID.split('_');
           const pIdx = splitArr[0].slice(1);
@@ -1105,7 +1138,7 @@ export default {
         low: this.freqMin,
         high: this.freqMax
       })
-      const rect = this.rect();
+      const rect = await this.rect();
       this.svg = d3.create('svg')
         .classed('noSelect', true)
         .attr('viewBox', [0, 0, rect.width, rect.height - 1])
@@ -1199,12 +1232,12 @@ export default {
           x: Number(fixedTime) + phrase.startTime,
           y: phrase.compute(scaledX, true)
         };
+        console.log(dataObj)
         const num = (Number(fixedTime) % 1).toFixed(2).toString().slice(2);
         const id = `p${phrase.pieceIdx}_${Math.floor(Number(fixedTime))}_${num}`;   
              
-        this.svg.append('g')
+        this.phraseG.append('g')
           .classed('chikari', true)
-          .attr('clip-path', 'url(#clip)')
           .append('path')
           .attr('id', id)
           .attr('d', sym)
@@ -1212,17 +1245,17 @@ export default {
           .attr('stroke-width', 3)
           .attr('stroke-linecap', 'round')
           .data([dataObj])
-          .attr('transform', d => `translate(${this.xr()(d.x)},${this.yr()(d.y)})`)
+          .attr('transform', d => `translate(${this.codifiedXR(d.x)},${this.codifiedYR(d.y)})`)
           
-        this.svg.append('g')
+        this.phraseG.append('g')
           .classed('chikari', true)
           .append('circle')
           .attr('id', 'circle__' + id)
           .classed('chikariCircle', true)
           .style('opacity', '0')
           .data([dataObj])
-          .attr('cx', d => this.xr()(d.x))
-          .attr('cy', d => this.yr()(d.y))
+          .attr('cx', d => this.codifiedXR(d.x))
+          .attr('cy', d => this.codifiedYR(d.y))
           .attr('r', 6)
           .on('mouseover', this.handleMouseOver)
           .on('mouseout', this.handleMouseOut)
@@ -1257,7 +1290,6 @@ export default {
     },
 
     addPhrases() {
-      console.log(this.durTot)
       const timePts = Math.round(this.durTot / this.minDrawDur);
       const drawTimes = linSpace(0, this.durTot, timePts);
       
@@ -1659,11 +1691,42 @@ export default {
           .style('cursor', 'pointer')
       } else if (e.target.id.slice(0, 9) === 'overlay__') {
         const id = e.target.id.slice(9);
+        const pIdx = Number(id.split('t')[0].slice(1));
+        const tIdx = Number(id.split('t')[1]);        
         d3.select(`#${id}`)
           .attr('stroke', this.selectedTrajColor)
-        d3.select(`#${e.target.id}`)
-          .style('cursor', 'pointer')
+        if (this.selectedTraj) {
+          if (!(this.selectedTraj.num === tIdx && this.selectedTraj.phraseIdx === pIdx)) {
+            d3.select(`#${e.target.id}`)
+              .style('cursor', 'pointer')
+          }
+        } else {
+          d3.select(`#${e.target.id}`)
+            .style('cursor', 'pointer')
+        }     
       }      
+    },
+    
+    alterSlope(newSlope) {
+      
+      const trajObj = this.selectedTraj.toJSON();
+      trajObj.slope = Number(newSlope);
+      const newTraj = new Trajectory(trajObj);
+      const pIdx = this.selectedTraj.phraseIdx;
+      const tIdx = this.selectedTraj.num;
+      const phrase = this.piece.phrases[pIdx];
+      phrase.trajectories[tIdx] = newTraj;
+      phrase.assignStartTimes();
+      phrase.assignPhraseIdx();
+      phrase.assignTrajNums();
+      this.selectedTraj = newTraj;
+      const data = this.makeTrajData(this.selectedTraj, phrase.startTime);
+      d3.select(`#p${pIdx}t${tIdx}`)
+        .datum(data)
+        .attr('d', this.codifiedPhraseLine())
+      d3.select(`#overlay__p${pIdx}t${tIdx}`)
+        .datum(data)
+        .attr('d', this.codifiedPhraseLine())
     },
     
     handleMouseOut(e) {
@@ -1713,6 +1776,8 @@ export default {
       }
       d3.select(`#${this.selectedTrajID}`)
         .attr('stroke', this.selectedTrajColor)
+      d3.select(`#overlay__${this.selectedTrajID}`)
+        .style('cursor', 'auto')
       if (this.selectedChikariID) {
         this.clearSelectedChikari()
       }
@@ -1731,8 +1796,13 @@ export default {
       if (this.selectedTrajID) {
         d3.select(`#${this.selectedTrajID}`)
           .attr('stroke', this.trajColor)
-        this.selectedTrajID = undefined
+        this.selectedTrajID = undefined;
       }
+    },
+    
+    clearTrajSelectPanel() {
+      this.$refs.trajSelectPanel.parentSelected = false;
+      this.$refs.trajSelectPanel.selectedIdx = undefined
     },
 
     redrawChikaris() {
@@ -1857,7 +1927,7 @@ export default {
         });
       } else {
         this.slidePhrases(
-          this.xr()(0), 
+          this.xr()(0) - 30, 
           this.yr()(this.codifiedYOffset),
           this.tx().k / this.codifiedXScale,
           this.ty().k / this.codifiedYScale
@@ -1958,8 +2028,11 @@ export default {
     },
 
     rect() {
-      const rect = this.$refs.graph.getBoundingClientRect();
-      return rect
+      if (this.$refs.graph) {
+        const rect = this.$refs.graph.getBoundingClientRect();
+        return rect
+      }
+      
     },
 
     paintBackgroundColors() {

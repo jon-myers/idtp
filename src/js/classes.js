@@ -340,7 +340,9 @@ class Trajectory {
         name: 'hammer-on'
       });
     } else if (this.id === 11) {
-      if (this.durArray === undefined) this.durArray = [0.5, 0.5];
+      if (this.durArray === undefined || this.durArray.length === 1) {
+        this.durArray = [0.5, 0.5]
+      }
       const starts = getStarts(this.durArray);
       this.articulations[starts[1]] = new Articulation({
         name: 'slide'

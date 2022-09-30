@@ -5,6 +5,18 @@
       <label>Pluck</label>
       <input type='checkbox' v-model='pluckBool' @change='updateBool'/>
     </div>
+    <div class='selectionRow' v-if='showSlope'>
+      <label>Slope</label>
+      <input 
+        type='range' 
+        class='slider'
+        v-model='slope'
+        min='0.0'
+        max='3.0'
+        step='0.01'
+        @input='updateSlope'
+        />
+    </div>
   </div>
   <div class='thumbRow' v-for='odx in 4' :key='odx'>
     <img 
@@ -44,6 +56,8 @@ export default {
       selectedIcon: undefined,
       selectedIdx: undefined,
       parentSelected: false,
+      slope: 1,
+      showSlope: false
     }
   },
 
@@ -57,48 +71,71 @@ export default {
       document.querySelectorAll('.thumb').forEach(t => {
         t.classList.remove('selected')
       })
-      const el = document.querySelector(`#id${newVal}`)
-      el.classList.add('selected')
+      if (newVal) {
+        const el = document.querySelector(`#id${newVal}`)
+        el.classList.add('selected')
+        const slopeIdxs = [2, 3, 4, 5]
+        this.showSlope = slopeIdxs.includes(this.selectedIdx);
+      }
     }
   },
 
   methods: {
 
     selectIcon(e) {
-      document.querySelectorAll('.thumb').forEach(t => {
-        t.classList.remove('selected')
-      })
-      e.target.classList.add('selected');
       const idx = Number(e.target.id.slice(2));
-      this.selectedIdx = idx;
-      const obj = { 
-        idx: idx, 
-        pluckBool: this.pluckBool, 
-        intraTrajDursBool: this.intraTrajDursBool
-       }
-       console.log(obj)
+      if (this.parentSelected) {
+        const twos = [1, 2, 3, 11];
+        const threes = [4, 5, 6];
+        if (twos.includes(this.selectedIdx)) {
+          if (idx !== this.selectedIdx && twos.includes(idx)) {
+            this.selectedIdx = idx;
+            this.emitter.emit('mutateTraj', this.selectedIdx);
+            document.querySelectorAll('.thumb').forEach(t => {
+              t.classList.remove('selected')
+            })
+            e.target.classList.add('selected');
+          }
+        } else if (threes.includes(this.selectedIdx)) {
+          if (idx !== this.selectedIdx && threes.includes(idx)) {
+            if (this.selectedIdx === 6) {
+              if (this.$parent.selectedTraj.durArray.length === 2) {
+                this.selectedIdx = idx;
+                this.emitter.emit('mutateTraj', this.selectedIdx);
+                document.querySelectorAll('.thumb').forEach(t => {
+                  t.classList.remove('selected')
+                })
+                e.target.classList.add('selected');
+              }
+            } else {
+              this.selectedIdx = idx;
+              this.emitter.emit('mutateTraj', this.selectedIdx);
+              document.querySelectorAll('.thumb').forEach(t => {
+                t.classList.remove('selected')
+              })
+              e.target.classList.add('selected');
+            }
+          }
+        }
+      } else {
+        this.selectedIdx = idx;
+        document.querySelectorAll('.thumb').forEach(t => {
+          t.classList.remove('selected')
+        })
+        e.target.classList.add('selected');
+      }
+    },
+    
+    updateSlope() {
+      
+      this.$parent.alterSlope((2 ** this.slope))
     },
     
     updateBool() {
       if (this.parentSelected) {
         this.emitter.emit('pluckBool', this.pluckBool)
-        // if (this.pluckBool) {
-        // 
-        //   if (!this.$parent.selectedTraj.articulations[0]) {
-        //     this.$parent.selectedTraj.articulations[0] = new Articulation();
-        //     this.$parent.
-        //   }
-        // } else {
-        //   if (this.$parent.selectedTraj.articulations[0]) {
-        //     delete this.$parent.selectedTraj.articulations[0]
-        //   }
-        // }
-      
-      
       }
     },
-    
-    
   }
 }
 </script>
@@ -141,7 +178,18 @@ export default {
 
 label {
   display: inline-block;
-  width: 100px;
+  width: 60px;
   text-align: right;
+}
+
+.slider {
+  width: 120px;
+}
+
+.selectionRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: left;
 }
 </style>

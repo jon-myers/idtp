@@ -146,7 +146,7 @@ export default {
   watch: {
     async audioSource(newSrc) {
       this.loading = true;
-      this.audioBuffer = await this.getAudio(newSrc);
+      this.audioBuffer = await this.getAudio(newSrc, false);
       this.loading = false;
     }
   },
@@ -158,17 +158,17 @@ export default {
   
   methods: {
     
-    async getAudio(filepath) {
+    async getAudio(filepath, verbose) {
       const start = await performance.now();
       const res = await fetch(filepath);
       const fetched = await performance.now() - start;
-      console.log('fetched: ', fetched / 1000)
+      if (verbose) console.log('fetched: ', fetched / 1000)
       const arrayBuffer = await res.arrayBuffer();
       const midpoint = await performance.now() - start;
-      console.log('array buffd: ', midpoint/1000)
+      if (verbose) console.log('array buffd: ', midpoint/1000)
       const audioBuffer = await this.ac.decodeAudioData(arrayBuffer);
       const endpoint = await performance.now() - start;
-      console.log('done: ', endpoint/1000)
+      if (verbose) console.log('done: ', endpoint/1000)
       return audioBuffer
     },
     
