@@ -23,7 +23,9 @@
       </div>
       <div class='cbRow'>
         <label>Loop: </label>
-        <input type='checkbox' v-model='loop' @change='updateLoop'>
+        <input type='checkbox' v-model='loop' 
+        @click='updateLoop' 
+        >
       </div>
       <div class='filler'>
       </div>
@@ -191,7 +193,25 @@ export default {
     spectrogramOpacity(newVal) {
       d3.selectAll('.spectrogram')
         .style('opacity', newVal)
+    },
+    
+    loop(newVal) {
+      console.log(newVal);
+      if (this.loop) {
+        this.$refs.audioPlayer.loop = true;
+        this.$refs.audioPlayer.loopStart = this.regionStartTime;
+        this.$refs.audioPlayer.loopEnd = this.regionEndTime;
+        if (this.$refs.audioPlayer.sourceNode) {
+          this.$refs.audioPlayer.sourceNode.loopStart = this.regionStartTime;
+          this.$refs.audioPlayer.sourceNode.loopEnd = this.regionEndTime;
+        }  
+      } else {
+        this.$refs.audioPlayer.loop = false;
+        this.$refs.audioPlayer.loopStart = undefined;
+        this.$refs.audioPlayer.loopEnd = undefined;
+      }
     }
+    
   },
 
   methods: {
@@ -736,20 +756,24 @@ export default {
       // this.redraw()
     },
     
-    updateLoop() {
-      if (this.loop) {
-        this.$refs.audioPlayer.loop = true;
-        this.$refs.audioPlayer.loopStart = this.regionStartTime;
-        this.$refs.audioPlayer.loopEnd = this.regionEndTime;
-        if (this.$refs.audioPlayer.sourceNode) {
-          this.$refs.audioPlayer.sourceNode.loopStart = this.regionStartTime;
-          this.$refs.audioPlayer.sourceNode.loopEnd = this.regionEndTime;
-        }  
-      } else {
-        this.$refs.audioPlayer.loop = false;
-        this.$refs.audioPlayer.loopStart = undefined;
-        this.$refs.audioPlayer.loopEnd = undefined;
-      }
+    updateLoop(e) {
+      if (e && e.clientX === 0) e.preventDefault(); // stops spacebar from checking box
+      // this.$nextTick(() => {
+      //   if (this.loop) {
+      //     this.$refs.audioPlayer.loop = true;
+      //     this.$refs.audioPlayer.loopStart = this.regionStartTime;
+      //     this.$refs.audioPlayer.loopEnd = this.regionEndTime;
+      //     if (this.$refs.audioPlayer.sourceNode) {
+      //       this.$refs.audioPlayer.sourceNode.loopStart = this.regionStartTime;
+      //       this.$refs.audioPlayer.sourceNode.loopEnd = this.regionEndTime;
+      //     }  
+      //   } else {
+      //     this.$refs.audioPlayer.loop = false;
+      //     this.$refs.audioPlayer.loopStart = undefined;
+      //     this.$refs.audioPlayer.loopEnd = undefined;
+      //   }
+      // })
+      
     },
     
     async savePiece() {
