@@ -764,7 +764,36 @@ export default {
     },
     
     updatePhraseLabel() {
-      // const rect = this.rect();
+      if (this.viewPhrases) {
+        
+        // lines
+        // if (!this.phraseDivsG) {
+        //   this.phraseDivsG = this.svg.append('g')
+        //     .attr('id', 'phraseDivsG')
+        //     .attr('clip-path', 'url(#playheadClip)');
+        // }
+        this.piece.phrases.forEach((phrase, i) => {
+          const endTime = phrase.startTime + phrase.durTot;
+          if (d3.select(`#phraseLine${i}`).node()) {
+            d3.select(`#phraseLine${i}`)
+              .style('opacity', '1')
+          } else {
+            this.phraseG
+              .append('path')
+              .attr('id', `phraseLine${i}`)
+              .attr('stroke', 'black')
+              .attr('stroke-width', '2px')
+              .attr('d', this.playheadLine())
+              .style('opacity', '1')
+              .attr('transform', `translate(${this.codifiedXR(endTime)},0)`)  
+          }
+        })
+      } else {
+        this.piece.phrases.forEach((phrase, i) => {
+          d3.select(`#phraseLine${i}`)
+            .style('opacity', 0)
+        })
+      }
       // if (this.viewPhrases) {
       //   this.y.range([this.xAxHeight, rect.height - this.phraseLabelHeight]);
       //   d3.select('#clip>#rect')
@@ -1938,8 +1967,11 @@ export default {
       
       if (this.piece.audioID) await this.redrawSpectrogram();
       this.redrawPlayhead();
+      // this.movePhraseDivs();
       this.moveRegion();
     },
+    
+
     
     
 
