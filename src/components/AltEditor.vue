@@ -852,6 +852,12 @@ export default {
           this.setChikari = false;
           this.svg.style('cursor', 'auto')
         }
+        if (this.setNewTraj) {
+          this.setNewTraj = false;
+          this.trajTimePts = [];
+          this.svg.style('cursor', 'auto');
+          d3.selectAll(`.newTrajDot`).remove()
+        }
         if (this.regionG) {
           this.regionG.remove();
           this.regionG = undefined
@@ -874,6 +880,12 @@ export default {
       } else if (e.key === 'c') {
         this.setChikari = true;
         this.svg.style('cursor', 'cell')
+        if (this.setNewTraj) this.setNewTraj = false
+      } else if (e.key === 't') {
+        this.setNewTraj = true;
+        this.svg.style('cursor', 'crosshair');
+        this.trajTimePts = [];
+        if (this.setChikari) this.setChikari = false
       }
     },
 
@@ -1244,6 +1256,16 @@ export default {
       }
     },
     
+    trajIdxFromTime(phrase, time) {
+      let phraseTime = time - phrase.startTime;
+      // phraseTime /= phrase.durTot;
+      return phrase.trajectories.filter(traj => {
+        const a = phraseTime >= traj.startTime;
+        const b = phraseTime < traj.startTime + traj.durTot;
+        return a && b
+      })[0].num
+    },
+    
     handleClick(e) {
       const time = this.xr().invert(e.clientX);
       const pIdx = this.phraseIdxFromTime(time);
@@ -1292,6 +1314,27 @@ export default {
           
         this.setChikari = false;
         this.svg.style('cursor', 'auto');
+      } else if (this.setNewTraj) {
+        const logSargamLines = this.visibleSargam.map(s => Math.log2(s));
+        let logFreq = this.yr().invert(e.clientY-this.xAxHeight);
+        logFreq = getClosest(logSargamLines, logFreq);
+        const phrase = this.piece.phrases[pIdx];
+        const tIdx = this.trajIdxFromTime(phrase, time);
+        const traj = phrase.trajectories[tIdx];
+        if (traj.id === 12) {
+          this.phraseG
+            .append('circle')
+            .classed('newTrajDot', true)
+            .attr('cx', this.codifiedXR(time))
+            .attr('cy', this.codifiedYR(logFreq))
+            .attr('r', 5)
+            .style('fill', 'forestgreen')
+          this.trajTimePts.push({
+            time: time,
+            logFreq: logFreq
+          })
+        }
+        
       }
     },
 
