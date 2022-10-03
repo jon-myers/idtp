@@ -117,12 +117,88 @@ export default {
             }
           }
         }
+      } else if (this.$parent.setNewTraj) {
+        const timePts = this.$parent.trajTimePts;
+        if (timePts.length === 2) {
+          const options = [1, 2, 3];
+          if (timePts[0].logFreq === timePts[1].logFreq) options.push(0)
+          if (options.includes(idx)) {
+            this.selectedIdx = idx;
+            e.target.classList.add('selected');
+            this.emitter.emit('newTraj', this.selectedIdx);
+          }
+        } else if (timePts.length === 3) {
+          const options = [4, 5, 6];
+          const sortedTimePts = timePts.slice().sort((a, b) => a.time - b.time);
+          const logFreqs = sortedTimePts.map(tp => tp.logFreq);
+          const lfDiffs = logFreqs.slice(1).map((x, i) => x - logFreqs[i]);
+          if (lfDiffs[0] < 0 && lfDiffs[1] === 0) options.push(7)
+          if (lfDiffs[1] === 0) options.push(11)
+          if (options.includes(idx)) {
+            this.selectedIdx = idx;
+            e.target.classList.add('selected');
+            this.emitter.emit('newTraj', this.selectedIdx);
+          }
+        } else if (timePts.length === 4) {
+          const options = [6];
+          const sortedTimePts = timePts.slice().sort((a, b) => a.time - b.time);
+          const logFreqs = sortedTimePts.map(tp => tp.logFreq);
+          const lfDiffs = logFreqs.slice(1).map((x, i) => x - logFreqs[i]);
+          if (lfDiffs[0] < 0 && lfDiffs[1] < 0 && lfDiffs[2] === 0) options.push(8)
+          if (options.includes(idx)) {
+            this.selectedIdx = idx;
+            e.target.classList.add('selected');
+            this.emitter.emit('newTraj', this.selectedIdx);
+          }
+        } else if (timePts.length === 5) {
+          const options = [6];
+          const sortedTimePts = timePts.slice().sort((a, b) => a.time - b.time);
+          const logFreqs = sortedTimePts.map(tp => tp.logFreq);
+          const lfDiffs = logFreqs.slice(1).map((x, i) => x - logFreqs[i]);
+          if (lfDiffs[0] < 0 && lfDiffs[1] < 0 && lfDiffs[2] > 0 && lfDiffs[3] === 0) {
+            options.push(9)
+          }
+          if (options.includes(idx)) {
+            this.selectedIdx = idx;
+            e.target.classList.add('selected');
+            this.emitter.emit('newTraj', this.selectedIdx);
+          }
+        } else if (timePts.length === 6) {
+          const options = [6];
+          if (options.includes(idx)) {
+            this.selectedIdx = idx;
+            e.target.classList.add('selected');
+            this.emitter.emit('newTraj', this.selectedIdx);
+          }
+        } else if (timePts.length === 7) {
+          const options = [6];
+          const sortedTimePts = timePts.slice().sort((a, b) => a.time - b.time);
+          const logFreqs = sortedTimePts.map(tp => tp.logFreq);
+          const lfDiffs = logFreqs.slice(1).map((x, i) => x - logFreqs[i]);
+          const c = [
+            lfDiffs[0] > 0,
+            lfDiffs[1] > 0,
+            lfDiffs[2] < 0,
+            lfDiffs[3] < 0,
+            lfDiffs[4] > 0,
+            lfDiffs[5] === 0
+          ];
+          if (c.every(a => a)) {
+            options.push(10)
+          }
+          if (options.includes(idx)) {
+            this.selectedIdx = idx;
+            e.target.classList.add('selected');
+            this.emitter.emit('newTraj', this.selectedIdx);
+          }
+        }
       } else {
         this.selectedIdx = idx;
         document.querySelectorAll('.thumb').forEach(t => {
           t.classList.remove('selected')
         })
         e.target.classList.add('selected');
+        
       }
     },
     
