@@ -1011,9 +1011,8 @@ export default {
           tIdx = ftIdx
         } else {
           pIdx = i + 1;
-          tIdx = ((ftIdx / lenA) - 1) * lenA;
+          tIdx = Math.round(((ftIdx / lenA) - 1) * lenA);
         }
-        // console.log(pIdx, tIdx)
         if (pIdx === i) {
           if (tIdx < phraseA.trajectories.length-1) {
             const ctA = phraseA.trajectories.length - 1 - tIdx;
@@ -1035,7 +1034,6 @@ export default {
               this.reIdAllReps(oldId, newId)
             }
             for (let j = ctA-1; j >= 0; j--) {
-              console.log(tIdx + j)
               const oldId = `p${phraseA.pieceIdx}t${tIdx + j + 1}`;
               const newId = `p${phraseB.pieceIdx}t${j}`;
               this.reIdAllReps(oldId, newId)
@@ -1066,7 +1064,6 @@ export default {
           for (let j = tIdx+1; j < ctB; j++) {
             const oldId = `p${phraseB.pieceIdx}t${j}`;
             const newId = `p${phraseB.pieceIdx}t${j-(tIdx+1)}`;
-            console.log(oldId, newId)
             this.reIdAllReps(oldId, newId);
           }
         }
