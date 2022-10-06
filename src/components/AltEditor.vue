@@ -119,7 +119,8 @@ export default {
       loop: false,
       init: true,
       minTrajDur: 0.1,
-      setNewTraj: false
+      setNewTraj: false,
+      d3: d3
     }
   },
 
@@ -960,7 +961,7 @@ export default {
               .style('opacity', '0')
               .attr('transform', `translate(${this.codifiedXR(endTime)},0)`)
               .call(drag())    
-              .style('cursor', 'col-resize')
+              .style('cursor', 'pointer')
 
           }
         })
@@ -1038,6 +1039,37 @@ export default {
               const newId = `p${phraseB.pieceIdx}t${j}`;
               this.reIdAllReps(oldId, newId)
             }
+            // fix chikaris
+            Object.keys(phraseB.chikaris).forEach(key => {
+              const delta = transfers.map(t => t.durTot).reduce((a, b) => a + b, 0);
+              const newKey = (Number(key) + delta).toFixed(2);
+              phraseB.chikaris[newKey] = phraseB.chikaris[key];
+              delete phraseB.chikaris[key];
+              const oldSec = Math.floor(Number(key));
+              const oldDec = (Number(key) % 1).toFixed(2).toString().slice(2);
+              const oldId = `p${phraseB.pieceIdx}_${oldSec}_${oldDec}`;
+              const newSec = Math.floor(Number(newKey));
+              const newDec = (Number(newKey) % 1).toFixed(2).toString().slice(2);
+              const newId = `p${phraseB.pieceIdx}_${newSec}_${newDec}`;
+              d3.select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
+              d3.select(`#${oldId}`).attr('id', newId);     
+            });
+            Object.keys(phraseA.chikaris).forEach(key => {
+              if (Number(key) >= phraseA.durTot) {
+                const obj = phraseA.chikaris[key];
+                const newKey = (Number(key) - phraseA.durTot).toFixed(2);
+                delete phraseA.chikaris[key];
+                phraseB.chikaris[newKey] = obj;
+                const oldSec = Math.floor(Number(key));
+                const oldDec = (Number(key) % 1).toFixed(2).toString().slice(2);
+                const oldId = `p${phraseA.pieceIdx}_${oldSec}_${oldDec}`;
+                const newSec = Math.floor(Number(newKey));
+                const newDec = (Number(newKey) % 1).toFixed(2).toString().slice(2);
+                const newId = `p${phraseB.pieceIdx}_${newSec}_${newDec}`;
+                d3.select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
+                d3.select(`#${oldId}`).attr('id', newId);
+              }
+            })
           }
         } else {
           const ctB = phraseB.trajectories.length;
@@ -1066,16 +1098,49 @@ export default {
             const newId = `p${phraseB.pieceIdx}t${j-(tIdx+1)}`;
             this.reIdAllReps(oldId, newId);
           }
+          //fix chikaris
+          Object.keys(phraseB.chikaris).forEach(key => {
+            const delta = transfers.map(t => t.durTot).reduce((a, b) => a + b, 0);
+            if (Number(key) < delta) {
+              const newKey = (phraseA.durTot - (delta - Number(key))).toFixed(2);
+              phraseA.chikaris[newKey] = phraseB.chikaris[key];
+              delete phraseB.chikaris;
+              const oldSec = Math.floor(Number(key));
+              const oldDec = (Number(key) % 1).toFixed(2).toString().slice(2);
+              const oldId = `p${phraseB.pieceIdx}_${oldSec}_${oldDec}`;
+              const newSec = Math.floor(Number(newKey));
+              const newDec = (Number(newKey) % 1).toFixed(2).toString().slice(2);
+              const newId = `p${phraseA.pieceIdx}_${newSec}_${newDec}`;
+              d3.select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
+              d3.select(`#${oldId}`).attr('id', newId);  
+            } else {
+              const newKey = (Number(key) - delta).toFixed(2);
+              phraseB.chikaris[newKey] = phraseB.chikaris[key];
+              delete phraseB.chikaris[key];
+              const oldSec = Math.floor(Number(key));
+              const oldDec = (Number(key) % 1).toFixed(2).toString().slice(2);
+              const oldId = `p${phraseB.pieceIdx}_${oldSec}_${oldDec}`;
+              const newSec = Math.floor(Number(newKey));
+              const newDec = (Number(newKey) % 1).toFixed(2).toString().slice(2);
+              const newId = `p${phraseB.pieceIdx}_${newSec}_${newDec}`;
+              d3.select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
+              d3.select(`#${oldId}`).attr('id', newId); 
+            }
+          })
         }
         
         d3.select(`#phraseLine${i}`)
           .attr('transform', `translate(${this.codifiedXR(finalTime)},0)`)
+          .attr('stroke', 'red')
         
         d3.select(`#overlay__phraseLine${i}`)
           .attr('transform', `translate(${this.codifiedXR(finalTime)},0)`)
         
         this.svg.style('cursor', 'auto');
         
+        this.selectedPhraseDivIdx = i;
+        this.clearSelectedTraj();
+        this.clearSelectedChikari();
         
       }
     },
@@ -1168,7 +1233,7 @@ export default {
         this.clearSelectedChikari();
         this.clearSelectedTraj();
         this.clearTrajSelectPanel();
-        d3.selectAll('.dragDots').remove();
+        this.clearSelectedPhraseDiv();
         if (this.setChikari) {
           this.setChikari = false;
           this.svg.style('cursor', 'auto')
@@ -1198,6 +1263,54 @@ export default {
           this.selectedTrajID = undefined;
           this.clearTrajSelectPanel();
           d3.selectAll('.dragDots').remove();
+        } else if (!(this.selectedPhraseDivIdx === undefined)) {
+          const phraseA = this.piece.phrases[this.selectedPhraseDivIdx];
+          const initPhraseADur = phraseA.durTot;
+          const phraseB = this.piece.phrases[this.selectedPhraseDivIdx+1];
+          const ctB = phraseB.trajectories.length;
+          const ctA = phraseA.trajectories.length;
+          phraseA.trajectories.splice(phraseA.trajectories.length, 0, ...phraseB.trajectories);
+          this.piece.phrases.splice(this.selectedPhraseDivIdx+1, 1);
+          phraseA.durTotFromTrajectories();
+          phraseA.durArrayFromTrajectories();
+          phraseA.assignStartTimes();
+          phraseA.assignTrajNums();
+          this.piece.durTotFromPhrases();
+          this.piece.durArrayFromPhrases();
+          this.piece.updateStartTimes();
+          for (let j=0; j < ctB; j++) {
+            const oldId = `p${phraseB.pieceIdx}t${j}`;
+            const newId = `p${phraseA.pieceIdx}t${j + ctA}`;
+            this.reIdAllReps(oldId, newId)
+          }
+          d3.select(`#phraseLine${this.selectedPhraseDivIdx}`).remove();
+          d3.select(`#overlay__phraseLine${this.selectedPhraseDivIdx}`).remove();
+          for (let j = this.selectedPhraseDivIdx+1; j < this.piece.phrases.length; j++) {
+            d3.select(`#phraseLine${j}`).attr('id', `phraseLine${j-1}`);
+            d3.select(`#overlay__phraseLine${j}`).attr('id', `overlay__phraseLine${j-1}`);
+            d3.select(`#overlay__phraseLine${j-1}`).on('.drag', null);
+            const drag = () => {
+              return d3.drag()
+                .on('start', this.phraseDivDragStart(j-1))
+                .on('drag', this.phraseDivDragDragging(j-1))
+                .on('end', this.phraseDivDragEnd(j-1))
+            };
+            d3.select(`#overlay__phraseLine${j-1}`).call(drag())
+          }
+          // fix chikaris
+          Object.keys(phraseB.chikaris).forEach(key => {
+            const newKey = (initPhraseADur + Number(key)).toFixed(2);
+            phraseA.chikaris[newKey] = phraseB.chikaris[key];
+            delete phraseB.chikaris[key];
+            const oldSec = Math.floor(Number(key));
+            const oldDec = (Number(key) % 1).toFixed(2).toString().slice(2);
+            const oldId = `p${phraseB.pieceIdx}_${oldSec}_${oldDec}`;
+            const newSec = Math.floor(Number(newKey));
+            const newDec = (Number(newKey) % 1).toFixed(2).toString().slice(2);
+            const newId = `p${phraseA.pieceIdx}_${newSec}_${newDec}`;
+            d3.select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
+            d3.select(`#${oldId}`).attr('id', newId);          
+          })
         }
 
       } else if (e.key === 'c') {
@@ -1207,7 +1320,6 @@ export default {
       } else if (e.key === 't' && this.setNewTraj === false) {
         this.clearSelectedTraj();
         this.clearTrajSelectPanel();
-        d3.selectAll('.dragDots').remove();
         this.setNewTraj = true;
         this.svg.style('cursor', 'crosshair');
         this.trajTimePts = [];
@@ -1601,7 +1713,6 @@ export default {
           x: Number(fixedTime) + phrase.startTime,
           y: phrase.compute(scaledX, true)
         };
-        console.log(dataObj)
         const num = (Number(fixedTime) % 1).toFixed(2).toString().slice(2);
         const id = `p${phrase.pieceIdx}_${Math.floor(Number(fixedTime))}_${num}`;
 
@@ -2168,7 +2279,6 @@ export default {
           ]))
           .attr('transform', `translate(${this.codifiedXR(obj.x)},${this.codifiedYR(obj.y)})`)
       })
-
     },
 
     addMarkers() {
@@ -2310,7 +2420,10 @@ export default {
       d3.select(`#${this.selectedChikariID}`)
         .attr('stroke', this.selectedChikariColor)
       if (this.selectedTrajID) {
-        this.clearSelectedTraj()
+        this.clearSelectedTraj();
+      }
+      if (!(this.selectedPhraseDivIdx === undefined)) {
+        this.clearSelectedPhraseDiv()
       }
     },
 
@@ -2338,6 +2451,9 @@ export default {
       if (this.selectedChikariID) {
         this.clearSelectedChikari()
       }
+      if (!(this.selectedPhraseDivIdx === undefined)) {
+        this.clearSelectedPhraseDiv()
+      }
       this.addAllDragDots();
     },
 
@@ -2348,6 +2464,13 @@ export default {
         this.selectedChikariID = undefined
       }
     },
+    
+    clearSelectedPhraseDiv() {  
+      if (!(this.selectedPhraseDivIdx === undefined)) {
+        d3.select(`#phraseLine${this.selectedPhraseDivIdx}`)
+          .attr('stroke', 'black')
+      }
+    },
 
     clearSelectedTraj() {
       if (this.selectedTrajID) {
@@ -2356,6 +2479,7 @@ export default {
         d3.select(`#overlay__${this.selectedTrajID}`)
           .style('cursor', 'pointer')
         this.selectedTrajID = undefined;
+        d3.selectAll('.dragDots').remove();
       }
     },
 
