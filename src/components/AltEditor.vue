@@ -935,6 +935,13 @@ export default {
             d3.select(`#phraseLine${i}`)
               .style('opacity', '1')
           } else {
+            
+            const drag = () => {
+              return d3.drag()
+                .on('start', this.phraseDivDragStart(i))
+                .on('drag', this.phraseDivDragDragging(i))
+                .on('end', this.phraseDivDragEnd(i))
+            }
             this.phraseG
               .append('path')
               .attr('id', `phraseLine${i}`)
@@ -943,6 +950,18 @@ export default {
               .attr('d', this.playheadLine())
               .style('opacity', '1')
               .attr('transform', `translate(${this.codifiedXR(endTime)},0)`)
+              
+            this.phraseG
+              .append('path')
+              .attr('id', `overlay__phraseLine${i}`)
+              .attr('stroke', 'black')
+              .attr('stroke-width', '10px')
+              .attr('d', this.playheadLine())
+              .style('opacity', '0')
+              .attr('transform', `translate(${this.codifiedXR(endTime)},0)`)
+              .call(drag())    
+              .style('cursor', 'col-resize')
+
           }
         })
       } else {
@@ -953,6 +972,117 @@ export default {
       }
     },
     
+    phraseDivDragStart(i) {
+      return e => {
+        let time = this.xr().invert(e.sourceEvent.clientX);
+        this.phraseG
+          .append('path')
+          .attr('id', `transparentPhraseLine${i}`)
+          .attr('stroke', 'black')
+          .attr('stroke-width', '2px')
+          .attr('d', this.playheadLine())
+          .style('opacity', '0.4')
+          .attr('transform', `translate(${this.codifiedXR(time)},0)`)        
+        this.svg.style('cursor', 'col-resize')
+      }
+    },
+    
+    phraseDivDragDragging(i) {
+      return e => {
+        let time = this.xr().invert(e.sourceEvent.clientX);
+        d3.select(`#transparentPhraseLine${i}`)
+          .attr('transform', `translate(${this.codifiedXR(time)},0)`)
+      }
+    },
+    
+    phraseDivDragEnd(i) {
+      return e => {
+        d3.select(`#transparentPhraseLine${i}`).remove();
+        const time = this.xr().invert(e.sourceEvent.clientX);
+        const possibleTimes = this.possibleTrajDivs(i);
+        const finalTime = getClosest(possibleTimes, time);
+        const ftIdx = possibleTimes.indexOf(finalTime);
+        const phraseA = this.piece.phrases[i];
+        const phraseB = this.piece.phrases[i+1]
+        let pIdx, tIdx;
+        const lenA = phraseA.trajectories.length;
+        if (ftIdx < lenA) {
+          pIdx = i;
+          tIdx = ftIdx
+        } else {
+          pIdx = i + 1;
+          tIdx = ((ftIdx / lenA) - 1) * lenA;
+        }
+        // console.log(pIdx, tIdx)
+        if (pIdx === i) {
+          if (tIdx < phraseA.trajectories.length-1) {
+            const ctA = phraseA.trajectories.length - 1 - tIdx;
+            const ctB = phraseB.trajectories.length;
+            const transfers = phraseA.trajectories.splice(tIdx+1);
+            phraseB.trajectories.splice(0, 0, ...transfers);
+            phraseA.durTotFromTrajectories();
+            phraseA.durArrayFromTrajectories();
+            phraseB.durTotFromTrajectories();
+            phraseB.durArrayFromTrajectories();
+            phraseB.assignStartTimes();
+            phraseB.assignTrajNums();
+            this.piece.durTotFromPhrases();
+            this.piece.durArrayFromPhrases();
+            this.piece.updateStartTimes();          
+            for (let j = ctB-1; j >= 0; j--) {
+              const oldId = `p${phraseB.pieceIdx}t${j}`;
+              const newId = `p${phraseB.pieceIdx}t${j + ctA}`;
+              this.reIdAllReps(oldId, newId)
+            }
+            for (let j = ctA-1; j >= 0; j--) {
+              console.log(tIdx + j)
+              const oldId = `p${phraseA.pieceIdx}t${tIdx + j + 1}`;
+              const newId = `p${phraseB.pieceIdx}t${j}`;
+              this.reIdAllReps(oldId, newId)
+            }
+          }
+        } else {
+          const ctB = phraseB.trajectories.length;
+          const ctA = phraseA.trajectories.length;
+          const transfers = phraseB.trajectories.splice(0, tIdx+1);
+          phraseA.trajectories.splice(phraseA.trajectories.length, 0, ...transfers);
+          phraseA.durTotFromTrajectories();
+          phraseA.durArrayFromTrajectories();
+          phraseA.assignStartTimes();
+          phraseA.assignTrajNums();
+          phraseB.durTotFromTrajectories();
+          phraseB.durArrayFromTrajectories();
+          phraseB.assignStartTimes();
+          phraseB.assignTrajNums();
+          this.piece.durTotFromPhrases();
+          this.piece.durArrayFromPhrases();
+          this.piece.updateStartTimes();
+          
+          for (let j = 0; j <= tIdx; j++) {
+            const oldId = `p${phraseB.pieceIdx}t${j}`;
+            const newId = `p${phraseA.pieceIdx}t${ctA+j}`;
+            this.reIdAllReps(oldId, newId);
+          }
+          for (let j = tIdx+1; j < ctB; j++) {
+            const oldId = `p${phraseB.pieceIdx}t${j}`;
+            const newId = `p${phraseB.pieceIdx}t${j-(tIdx+1)}`;
+            console.log(oldId, newId)
+            this.reIdAllReps(oldId, newId);
+          }
+        }
+        
+        d3.select(`#phraseLine${i}`)
+          .attr('transform', `translate(${this.codifiedXR(finalTime)},0)`)
+        
+        d3.select(`#overlay__phraseLine${i}`)
+          .attr('transform', `translate(${this.codifiedXR(finalTime)},0)`)
+        
+        this.svg.style('cursor', 'auto');
+        
+        
+      }
+    },
+    
     movePhraseDivs() {
       this.piece.phrases.forEach((phrase, i) => {
         const endTime = phrase.startTime + phrase.durTot;
@@ -960,6 +1090,52 @@ export default {
           .transition().duration(this.transitionTime)
           .attr('transform', `translate(${this.codifiedXR(endTime)},0)`)
       })
+    },
+    
+    reIdAllReps(oldId, newId) {
+      // console.log(oldId, newId)
+      // given old and new ids, change the ids of all svg representations 
+      d3.select(`#${oldId}`).attr('id', newId);
+      // console.log(orig)
+      d3.select(`#overlay__${oldId}`).attr('id', `overlay__${newId}`);
+      d3.select(`#articulations__${oldId}`).attr('id', `articulations__${newId}`);
+      // since trajs have already been updated, grab via new Id
+      const pIdx = Number(newId.split('t')[0].slice(1));
+      const tIdx = Number(newId.split('t')[1]);
+      // console.log(pIdx, tIdx)
+      const phrase = this.piece.phrases[pIdx];
+      const traj = phrase.trajectories[tIdx];
+      let hOffCt = 0;
+      let hOnCt = 0;
+      let slideCt = 0;
+      Object.keys(traj.articulations).forEach(key => {
+        const art = traj.articulations[key];
+        if (art.name === 'pluck') {
+          d3.select(`#pluck${oldId}`).attr('id', `pluck${newId}`);
+        } else if (art.name === 'hammer-off') {
+          d3.select(`#hammeroff${oldId}i${hOffCt}`)
+            .attr('id', `hammeroff${newId}i${hOffCt}`);
+          hOffCt++;
+        } else if (art.name === 'hammer-on') {
+          d3.select(`#hammeron${oldId}i${hOnCt}`)
+            .attr('id', `hammeron${newId}i${hOnCt}`);
+          hOnCt++;
+        } else if (art.name === 'slide') {
+          d3.select(`#slide${oldId}i${slideCt}`)
+            .attr('id', `slide${newId}i${slideCt}`);
+          slideCt++;
+        }
+      })
+    },
+    
+    possibleTrajDivs(pIdx) {
+      // returns times on left and right of phrase div (so, current phrase and next phrase)
+      const phraseA = this.piece.phrases[pIdx];
+      const phraseB = this.piece.phrases[pIdx+1];
+      // get all trajs except first one, and collect all start times
+      const divs = phraseA.trajectories.slice(1).map(traj => phraseA.startTime + traj.startTime);
+      divs.push(...phraseB.trajectories.map(traj => phraseB.startTime + traj.startTime));
+      return divs
     },
 
     updateLoop(e) {
