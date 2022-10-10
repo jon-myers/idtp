@@ -120,7 +120,8 @@ export default {
       init: true,
       minTrajDur: 0.1,
       setNewTraj: false,
-      d3: d3
+      d3: d3,
+      setNewPhraseDiv: false
     }
   },
 
@@ -401,7 +402,7 @@ export default {
     
     dragDotDragging(e) {
       const idx = Number(this.dragIdx);
-      const time = this._constrainTime(e, idx);
+      const time = this.constrainTime(e, idx);
       const x = this.codifiedXR(time);
       d3.select(`#dragDot${idx}`)
         .attr('cx', x)
@@ -520,7 +521,7 @@ export default {
     
     dragDotEnd(e) {
       const idx = Number(this.dragIdx);
-      const time = this._constrainTime(e, idx);
+      const time = this.constrainTime(e, idx);
       const x = this.codifiedXR(time);
 
 
@@ -811,7 +812,7 @@ export default {
       return newTraj
     },
 
-    _constrainTime(e, idx) {
+    constrainTime(e, idx) {
       let time = this.codifiedXR.invert(e.x);
       const traj = this.selectedTraj;
       const pIdx = traj.phraseIdx;
@@ -902,30 +903,82 @@ export default {
       durArray = durArray.map(i => i / daSum)
       return durArray
     },
-
-    constrainTime(e) {
-      let time = this.xr().invert(e.x);
-      const pIdx = this.selectedTraj.phraseIdx;
-      const tIdx = this.selectedTraj.num;
-      if (this.selectedTraj.num > 0) {
-        const phrase = this.piece.phrases[pIdx];
-        if (time < phrase.startTime + phrase.trajectories[tIdx - 1].startTime) {
-          time = phrase.startTime + phrase.trajectories[tIdx - 1].startTime;
-        }
-      } else if (pIdx > 0) {
-        const phrase = this.piece.phrases[pIdx - 1];
-        const traj = phrase.trajectories[phrase.trajectories.length - 1];
-        if (time < phrase.startTime + traj.startTime) {
-          time = phrase.startTime + traj.startTime
-        }
-      } else {
-        if (time < 0) time = 0
+    
+    addNewPhraseDiv(idx) {
+      const phrase = this.piece.phrases[idx];
+      const time = phrase.startTime + phrase.durTot;
+      const drag = () => {
+        return d3.drag()
+          .on('start', this.phraseDivDragStart(idx))
+          .on('drag', this.phraseDivDragDragging(idx))
+          .on('end', this.phraseDivDragEnd(idx))
+      };
+      this.phraseG
+        .append('path')
+        .attr('id', `phraseLine${idx}`)
+        .attr('stroke', 'black')
+        .attr('stroke-width', '2px')
+        .attr('d', this.playheadLine())
+        .style('opacity', this.viewPhrases ? '1' : '0')
+        .attr('transform', `translate(${this.codifiedXR(time)},0)`)
+        
+      this.phraseG
+        .append('path')
+        .attr('id', `overlay__phraseLine${idx}`)
+        .attr('stroke', 'black')
+        .attr('stroke-width', '10px')
+        .attr('d', this.playheadLine())
+        .style('opacity', '0')
+        .attr('transform', `translate(${this.codifiedXR(time)},0)`)
+        .call(drag())    
+        .style('cursor', 'pointer')
+        
+      // reId all trajs and articulations in following phrases
+      for (let i = this.piece.phrases.length-1; i > idx; i--) {
+        const thisPhrase = this.piece.phrases[i];
+        thisPhrase.trajectories.forEach(traj => {
+          const oldId = `p${i-1}t${traj.num}`;
+          const newId = `p${i}t${traj.num}`;
+          this.reIdAllReps(oldId, newId);
+        });
+        // chikaris
+        Object.keys(thisPhrase.chikaris).forEach(key => {
+          const lastPhrase = this.piece.phrases[i-1];
+          const oldSec = Math.floor(Number(key));
+          const oldDec = (Number(key) % 1).toFixed(2).toString().slice(2);
+          const oldId = `p${lastPhrase.pieceIdx}_${oldSec}_${oldDec}`;
+          const newId = `p${thisPhrase.pieceIdx}_${oldSec}_${oldDec}`;
+          d3.select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
+          d3.select(`#${oldId}`).attr('id', newId); 
+        })
       }
-      const _phrase = this.piece.phrases[pIdx];
-      const _traj = _phrase.trajectories[tIdx];
-      const _endTime = _phrase.startTime + _traj.startTime + _traj.durTot;
-      if (time > _endTime) time = _endTime;
-      return time
+      //reId all trajs to the right of the new phraseDivLine
+      const nextPhrase = this.piece.phrases[idx+1];
+      nextPhrase.trajectories.forEach(traj => {
+        const add = phrase.trajectories.length;
+        const oldId = `p${phrase.pieceIdx}t${traj.num + add}`;
+        const newId = `p${nextPhrase.pieceIdx}t${traj.num}`;
+        this.reIdAllReps(oldId, newId)
+      })
+      // move all chikaris to new phrase, and reId
+      Object.keys(phrase.chikaris).forEach(key => {
+        if (Number(key) > phrase.durTot) {
+          const newKey = (Number(key) - phrase.durTot).toFixed(2);
+          const oldSec = Math.floor(Number(key));
+          const oldDec = (Number(key) % 1).toFixed(2).toString().slice(2);
+          const oldId = `p${phrase.pieceIdx}_${oldSec}_${oldDec}`;
+          const newSec = Math.floor(Number(newKey));
+          const newDec = (Number(newKey) % 1).toFixed(2).toString().slice(2);
+          const newId = `p${nextPhrase.pieceIdx}_${newSec}_${newDec}`;
+          d3.select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
+          d3.select(`#${oldId}`).attr('id', newId);
+          nextPhrase.chikaris[newKey] = phrase.chikaris[key];
+          delete phrase.chikaris[key];
+        }
+      })
+      
+      // reId all chikaris
+      
     },
 
     updatePhraseDivs() {
@@ -1128,17 +1181,23 @@ export default {
             }
           })
         }
+        if (this.selectedPhraseDivIdx !== phraseA.pieceIdx) {
+          this.clearSelectedPhraseDiv();
+        }
         
         d3.select(`#phraseLine${i}`)
           .attr('transform', `translate(${this.codifiedXR(finalTime)},0)`)
           .attr('stroke', 'red')
-        
         d3.select(`#overlay__phraseLine${i}`)
           .attr('transform', `translate(${this.codifiedXR(finalTime)},0)`)
         
         this.svg.style('cursor', 'auto');
+        // if (this.selectedPhraseDivIdx !== undefined) {
+        //   this.clearSelectedPhraseDiv()
+        // }
         
         this.selectedPhraseDivIdx = i;
+        
         this.clearSelectedTraj();
         this.clearSelectedChikari();
         
@@ -1155,16 +1214,13 @@ export default {
     },
     
     reIdAllReps(oldId, newId) {
-      // console.log(oldId, newId)
       // given old and new ids, change the ids of all svg representations 
       d3.select(`#${oldId}`).attr('id', newId);
-      // console.log(orig)
       d3.select(`#overlay__${oldId}`).attr('id', `overlay__${newId}`);
       d3.select(`#articulations__${oldId}`).attr('id', `articulations__${newId}`);
       // since trajs have already been updated, grab via new Id
       const pIdx = Number(newId.split('t')[0].slice(1));
       const tIdx = Number(newId.split('t')[1]);
-      // console.log(pIdx, tIdx)
       const phrase = this.piece.phrases[pIdx];
       const traj = phrase.trajectories[tIdx];
       let hOffCt = 0;
@@ -1191,13 +1247,25 @@ export default {
     },
     
     possibleTrajDivs(pIdx) {
-      // returns times on left and right of phrase div (so, current phrase and next phrase)
-      const phraseA = this.piece.phrases[pIdx];
-      const phraseB = this.piece.phrases[pIdx+1];
-      // get all trajs except first one, and collect all start times
-      const divs = phraseA.trajectories.slice(1).map(traj => phraseA.startTime + traj.startTime);
-      divs.push(...phraseB.trajectories.map(traj => phraseB.startTime + traj.startTime));
-      return divs
+      if (pIdx !== undefined) {
+        // returns times on left and right of phrase div (so, current phrase and next phrase)
+        const phraseA = this.piece.phrases[pIdx];
+        const phraseB = this.piece.phrases[pIdx+1];
+        // get all trajs except first one, and collect all start times
+        const stA = phraseA.startTime;
+        const stB = phraseB.startTime;
+        const divs = phraseA.trajectories.slice(1).map(t => stA + t.startTime);
+        divs.push(...phraseB.trajectories.map(t => stB + t.startTime));
+        return divs
+      } else {
+        const divs = [];
+        this.piece.phrases.forEach(phrase => {
+          const st = phrase.startTime;
+          divs.push(...phrase.trajectories.slice(1).map(t => st + t.startTime))
+        });
+        return divs
+      }
+      
     },
 
     updateLoop(e) {
@@ -1316,14 +1384,24 @@ export default {
       } else if (e.key === 'c') {
         this.setChikari = true;
         this.svg.style('cursor', 'cell')
-        if (this.setNewTraj) this.setNewTraj = false
+        if (this.setNewTraj) this.setNewTraj = false;
+        if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
       } else if (e.key === 't' && this.setNewTraj === false) {
         this.clearSelectedTraj();
         this.clearTrajSelectPanel();
         this.setNewTraj = true;
         this.svg.style('cursor', 'crosshair');
         this.trajTimePts = [];
-        if (this.setChikari) this.setChikari = false
+        if (this.setChikari) this.setChikari = false;
+        if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
+      } else if (e.key === 'p' && this.setNewPhraseDiv === false) {
+        this.clearSelectedTraj();
+        this.clearTrajSelectPanel();
+        this.clearSelectedPhraseDiv();
+        if (this.setChikari) this.setChikari = false;
+        if (this.setNewTraj) this.setNewTraj = false;
+        this.setNewPhraseDiv = true;
+        this.svg.style('cursor', 's-resize');
       }
     },
 
@@ -1782,6 +1860,51 @@ export default {
             })
           }
         }
+      } else if (this.setNewPhraseDiv) {
+        const possibleTimes = this.possibleTrajDivs();
+        const finalTime = getClosest(possibleTimes, time);
+        const ftIdx = possibleTimes.indexOf(finalTime);
+        const ptPerP = this.piece.phrases.map(p => p.trajectories.length - 1);
+        const lims = [0, ...ptPerP.map(cumsum()).slice(0, ptPerP.length-1)];
+        const pIdx = lims.findLastIndex(lim => ftIdx >= lim);
+        const start = lims[pIdx];
+        const trajIdx = ftIdx - start;
+        const phrase = this.piece.phrases[pIdx];
+        // const newTraj = phrase.trajectories[trajIdx+1]
+        // const newTime = phrase.startTime + newTraj.startTime;
+        const end = phrase.trajectories.length - (trajIdx + 1);
+        const newTrajs = phrase.trajectories.splice(trajIdx+1, end);
+        phrase.durTotFromTrajectories();
+        phrase.durArrayFromTrajectories();
+        const newPhrase = new Phrase({
+          trajectories: newTrajs,
+          raga: phrase.raga
+        })
+        this.piece.phrases.splice(phrase.pieceIdx+1, 0, newPhrase);
+        this.piece.durTotFromPhrases();
+        this.piece.durArrayFromPhrases();
+        this.piece.updateStartTimes();
+        //move over names of old phrase divs, from the back forward
+        for (let i=this.piece.phrases.length-2; i >= phrase.pieceIdx; i--) {
+          const drag = () => {
+            return d3.drag()
+            .on('start', this.phraseDivDragStart(i+1))
+            .on('drag', this.phraseDivDragDragging(i+1))
+            .on('end', this.phraseDivDragEnd(i+1))
+          };
+          
+          d3.select(`#overlay__phraseLine${i}`)
+            .attr('id', `overlay__phraseLine${i+1}`)
+            .on('.drag', null)
+            .call(drag())
+          d3.select(`#phraseLine${i}`)
+            .attr('id', `phraseLine${i+1}`)
+          
+        }
+        this.addNewPhraseDiv(phrase.pieceIdx);
+        this.setNewPhraseDiv = false;
+        this.svg.style('cursor', 'auto');
+        
       }
     },
 
@@ -1804,8 +1927,14 @@ export default {
     },
 
     slidePhrases(xDelta, yDelta, xScale, yScale) {
+      
       this.phraseG.transition().duration(this.transitionTime)
+        .ease(d3.easeQuadInOut)
         .attr('transform', `translate(${xDelta},${yDelta}) scale(${xScale},${yScale})`)
+      
+      if (Math.abs(Math.log(xScale)) > 0.3) this.resetZoom();
+      if (Math.abs(Math.log(yScale)) > 0.3) this.resetZoom();
+      // console.log(Math.abs(Math.log(yScale)))
     },
 
     addPhrases() {
@@ -2347,6 +2476,50 @@ export default {
         })
       })
     },
+    
+    codifiedAddChikari() {
+      const sym = d3.symbol().type(d3.symbolX).size(80);
+      this.piece.phrases.forEach(phrase => {
+        Object.keys(phrase.chikaris).forEach(key => {
+          const scaledX = Number(key) / phrase.durTot;
+          const dataObj = {
+            x: Number(key) + phrase.startTime,
+            y: phrase.compute(scaledX, true)
+          };
+          const id = 'p' + phrase.pieceIdx + '_' + Math.floor(Number(key)) + '_' +
+            (Number(key) % 1).toFixed(2).toString().slice(2);
+
+          this.phraseG.append('g')
+            .classed('chikari', true)
+            .attr('clip-path', 'url(#clip)')
+            .append('path')
+            .attr('id', id)
+            .attr('d', sym)
+            .attr('stroke', this.chikariColor)
+            .attr('stroke-width', 3)
+            .attr('stroke-linecap', 'round')
+            .data([dataObj])
+            .attr('transform', d => {
+              return `translate(${this.codifiedXR(d.x)}, ${this.codifiedYR(d.y)})`
+            })
+
+          // for clicking  
+          this.phraseG.append('g')
+            .classed('chikari', true)
+            .append('circle')
+            .attr('id', 'circle__' + id)
+            .classed('chikariCircle', true)
+            .style('opacity', '0')
+            .data([dataObj])
+            .attr('cx', d => this.codifiedXR(d.x))
+            .attr('cy', d => this.codifiedYR(d.y))
+            .attr('r', 6)
+            .on('mouseover', this.handleMouseOver)
+            .on('mouseout', this.handleMouseOut)
+            .on('click', this.handleClickChikari)
+        })
+      })
+    },
 
     handleMouseOver(e) {
       if (e.target.id.slice(0, 8) === 'circle__') {
@@ -2466,9 +2639,10 @@ export default {
     },
     
     clearSelectedPhraseDiv() {  
-      if (!(this.selectedPhraseDivIdx === undefined)) {
+      if (this.selectedPhraseDivIdx !== undefined) {
         d3.select(`#phraseLine${this.selectedPhraseDivIdx}`)
           .attr('stroke', 'black')
+        this.selectedPhraseDivIdx = undefined
       }
     },
 
@@ -2587,8 +2761,15 @@ export default {
         [this.xr()(this.durTot), this.yr()(y)]
       ])
     },
+    
+    codifiedSargamLine(y) {
+      return d3.line()([
+        [this.codifiedXR(0), this.codifiedYR(y)],
+        [this.codifiedXR(this.durTot), this.codifiedYR(y)]
+      ])
+    },
 
-    addSargamLines() {
+    addSargamLines(codified) {
       this.visibleSargam.forEach((s, i) => { // draws hoizontal sargam lines
         const logOverFund = freq => Math.log2(freq / this.piece.raga.fundamental);
         const saFilter = freq => Math.abs(logOverFund(freq) % 1) == 0;
@@ -2602,7 +2783,9 @@ export default {
           .attr("stroke-width", `${strokeWidth}px`)
           .attr("stroke-linejoin", "round")
           .attr("stroke-linecap", "round")
-          .attr("d", this.sargamLine(Math.log2(s)));
+          .attr("d", codified ? 
+            this.codifiedSargamLine(Math.log2(s)) : 
+            this.sargamLine(Math.log2(s)));
       })
     },
 
@@ -2643,6 +2826,7 @@ export default {
         this.codifiedXScale = this.tx().k;
         this.codifiedYScale = this.ty().k;
         this.codifiedYOffset = this.yr().invert(0);
+        this.codifiedXOffset = this.xr().invert(0);
         this.codifiedXR = this.xr();
         this.codifiedYR = this.yr();
         this.visibleSargam.forEach((s, i) => {
@@ -2652,7 +2836,7 @@ export default {
         this.updatePhraseDivs();
       } else {
         this.slidePhrases(
-          this.xr()(0) - 30,
+          this.xr()(this.codifiedXOffset),
           this.yr()(this.codifiedYOffset),
           this.tx().k / this.codifiedXScale,
           this.ty().k / this.codifiedYScale
@@ -2666,7 +2850,31 @@ export default {
     },
 
 
-
+    resetZoom() {
+      // clear everything
+      this.phraseG.selectAll('*').remove();
+      this.phraseG
+        .attr('transform', `translate(0, 0) scale(1, 1)`)
+      this.codifiedXScale = this.tx().k;
+      this.codifiedYScale = this.ty().k;
+      this.codifiedYOffset = this.yr().invert(0);
+      this.codifiedXOffset = this.xr().invert(0);
+      this.codifiedXR = this.xr();
+      this.codifiedYR = this.yr();
+      this.codifiedAddPhrases();
+      this.updatePhraseDivs();
+      
+    },
+    
+    codifiedAddPhrases() {
+      this.addSargamLines(true);
+      this.piece.phrases.forEach(phrase => {
+        phrase.trajectories.forEach(traj => {
+          if (traj.id !== 12) this.codifiedAddTraj(traj, phrase.startTime)
+        });
+      })
+      this.codifiedAddChikari()
+    },
 
 
     xr() {
