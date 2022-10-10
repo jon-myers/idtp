@@ -166,6 +166,7 @@ export default {
     });
 
     this.emitter.on('newTraj', idx => {
+      console.log('new traj')
       this.trajTimePts.sort((a, b) => a.time - b.time);
       const logSargamLines = this.visibleSargam.map(s => Math.log2(s));
       const visiblePitches = this.piece.raga.getPitches({
@@ -188,6 +189,7 @@ export default {
       const tIdx = this.trajTimePts[0].tIdx;
       const phrase = this.piece.phrases[pIdx];
       const silentTraj = phrase.trajectories[tIdx];
+      console.log(silentTraj)
       const startsEqual = times[0] === phrase.startTime + silentTraj.startTime;
       const endsEqual = times[times.length - 1] === phrase.startTime + silentTraj.startTime + silentTraj.durTot;
       if (startsEqual && endsEqual) { // if replaces entire silent traj
@@ -196,7 +198,9 @@ export default {
         phrase.assignPhraseIdx();
         phrase.assignTrajNums();
       } else if (startsEqual) { // if replaces left side of silent traj
-        silentTraj.durTot = durTot - silentTraj.durTot;
+        // console.log('replaces Left Side')
+        // console.log(durTot, silentTraj.durTot)
+        silentTraj.durTot = silentTraj.durTot - durTot;
         phrase.trajectories.splice(tIdx, 0, newTraj);
         phrase.durArrayFromTrajectories();
         phrase.assignStartTimes();
@@ -217,7 +221,8 @@ export default {
         const lastSilentTraj = new Trajectory({
           id: 12,
           pitches: [],
-          durTot: lastDur
+          durTot: lastDur,
+          fundID12: this.piece.raga.fundamental
         });
         phrase.trajectories.splice(tIdx + 1, 0, newTraj);
         phrase.trajectories.splice(tIdx + 2, 0, lastSilentTraj);
@@ -267,7 +272,8 @@ export default {
       const silentTraj = new Trajectory({
         id: 12,
         pitches: [],
-        durTot: silentDur
+        durTot: silentDur,
+        fundID12: this.piece.raga.fundamental
       });
       const silentPhrase = new Phrase({
         trajectories: [silentTraj],
@@ -1053,143 +1059,264 @@ export default {
       return e => {
         d3.select(`#transparentPhraseLine${i}`).remove();
         const time = this.xr().invert(e.sourceEvent.clientX);
-        const possibleTimes = this.possibleTrajDivs(i);
-        const finalTime = getClosest(possibleTimes, time);
-        const ftIdx = possibleTimes.indexOf(finalTime);
+        const tempPIdx = this.phraseIdxFromTime(time);
+        const tempTIdx = this.trajIdxFromTime(this.piece.phrases[tempPIdx], time);
+        const tPhrase = this.piece.phrases[tempPIdx];
+        const tTraj = tPhrase.trajectories[tempTIdx];
+        let doNormal = true;
+        if (tTraj.id === 12) {
+           // this is hard
+           if (i === tempPIdx && tempTIdx === tPhrase.trajectories.length - 1) {         
+             const phraseA = this.piece.phrases[i];
+             const phraseB = this.piece.phrases[i+1];
+             const origDivTime = phraseA.startTime + phraseA.durTot;
+             if (phraseB.trajectories[0].id === 12) { // if next is also silent
+               doNormal = false;
+               const prevTraj = phraseA.trajectories[phraseA.trajectories.length-1];
+               const nextTraj = phraseB.trajectories[0];
+               prevTraj.durTot -= origDivTime - time;
+               nextTraj.durTot += origDivTime - time;
+               phraseA.durTotFromTrajectories();
+               phraseA.durArrayFromTrajectories();
+               phraseB.durTotFromTrajectories();
+               phraseB.durArrayFromTrajectories();
+               phraseB.assignStartTimes();
+               this.piece.durTotFromPhrases();
+               this.piece.durArrayFromPhrases();
+               this.piece.updateStartTimes();
+             } else {
+               doNormal = false;           
+               const prevTraj = phraseA.trajectories[phraseA.trajectories.length-1];
+               const newNextTraj = new Trajectory({ 
+                 id: 12, 
+                 durTot: origDivTime - time,
+                 fundID12: this.piece.raga.fundamental
+               });
+               prevTraj.durTot -= origDivTime - time;
+               phraseA.durTotFromTrajectories();
+               phraseA.durArrayFromTrajectories();
+               phraseB.trajectories.splice(0, 0, newNextTraj);
+               phraseB.durTotFromTrajectories();
+               phraseB.durArrayFromTrajectories();
+               phraseB.assignStartTimes();
+               phraseB.assignTrajNums();
+               this.piece.durTotFromPhrases();
+               this.piece.durArrayFromPhrases();
+               this.piece.updateStartTimes();
+               phraseB.trajectories.slice().reverse().forEach((traj, idx, arr) => {
+                 if (idx !== arr.length-1) {
+                   const oldId = `p${phraseB.pieceIdx}t${traj.num-1}`;
+                   const newId = `p${phraseB.pieceIdx}t${traj.num}`;
+                   this.reIdAllReps(oldId, newId)
+                 }
+               }) 
+             }
+             Object.keys(phraseB.chikaris).forEach(key => {
+               const delta = origDivTime - time;
+               const newKey = (Number(key) + delta).toFixed(2);
+               phraseB.chikaris[newKey] = phraseB.chikaris[key];
+               delete phraseB.chikaris[key];
+               this.reIdChikari(key, newKey, phraseB, phraseB)
+             });
+             Object.keys(phraseA.chikaris).forEach(key => {
+               if (Number(key) > phraseA.durTot) {
+                 const newKey = (Number(key) - phraseA.durTot);
+                 phraseB.chikaris[newKey] = phraseA.chikaris[key];
+                 delete phraseA.chikaris[key];
+                 this.reIdChikari(key, newKey, phraseA, phraseB)           
+               }
+             })
+           } else if (i + 1 === tempPIdx && tempTIdx === 0) {
+             console.log('next silence');
+             const phraseA = this.piece.phrases[i];
+             const phraseB = this.piece.phrases[i+1];
+             const origDivTime = phraseA.startTime + phraseA.durTot;
+             if (phraseA.trajectories[phraseA.trajectories.length-1].id === 12) {
+               doNormal = false       
+               const prevTraj = phraseA.trajectories[phraseA.trajectories.length-1];
+               const nextTraj = phraseB.trajectories[0];
+               prevTraj.durTot -= origDivTime - time;
+               nextTraj.durTot += origDivTime - time;
+               phraseA.durTotFromTrajectories();
+               phraseA.durArrayFromTrajectories();
+               phraseB.durTotFromTrajectories();
+               phraseB.durArrayFromTrajectories();
+               phraseB.assignStartTimes();
+               this.piece.durTotFromPhrases();
+               this.piece.durArrayFromPhrases();
+               this.piece.updateStartTimes();             
+             } else {
+               doNormal = false;
+               const newPrevTraj = new Trajectory({
+                 id: 12,
+                 durTot: time - origDivTime,
+                 fundID12: this.piece.raga.fundamental
+               });
+               const nextTraj = phraseB.trajectories[0];
+               nextTraj.durTot -= time - origDivTime;
+               phraseA.trajectories.splice(phraseA.trajectories.length, 0, newPrevTraj);
+               phraseA.durTotFromTrajectories();
+               phraseA.durArrayFromTrajectories();
+               phraseA.assignStartTimes();
+               phraseA.assignTrajNums();
+               phraseB.durTotFromTrajectories();
+               phraseB.durArrayFromTrajectories();
+               phraseB.assignStartTimes();
+               this.piece.durTotFromPhrases();
+               this.piece.durArrayFromPhrases();
+               this.piece.updateStartTimes();   
+             }
+             Object.keys(phraseB.chikaris).forEach(key => { 
+               if (Number(key) < time - origDivTime) {
+                 const newKey = (phraseA.durTot - ((time - origDivTime) - key)).toFixed(2);
+                 phraseA.chikaris[newKey] = phraseB.chikaris[key];
+                 delete phraseB.chikaris[key];
+                 this.reIdChikari(key, newKey, phraseB, phraseA);
+               } else {
+                 const newKey = (Number(key) - (time - origDivTime)).toFixed(2);
+                 phraseB.chikaris[newKey] = phraseB.chikaris[key];
+                 delete phraseB.chikaris[key];
+                 this.reIdChikari(key, newKey, phraseB, phraseB)
+               }
+             })
+           }
+        }
         const phraseA = this.piece.phrases[i];
         const phraseB = this.piece.phrases[i+1]
-        let pIdx, tIdx;
-        const lenA = phraseA.trajectories.length;
-        if (ftIdx < lenA) {
-          pIdx = i;
-          tIdx = ftIdx
-        } else {
-          pIdx = i + 1;
-          tIdx = Math.round(((ftIdx / lenA) - 1) * lenA);
-        }
-        if (pIdx === i) {
-          if (tIdx < phraseA.trajectories.length-1) {
-            const ctA = phraseA.trajectories.length - 1 - tIdx;
+        if (doNormal) {
+          const possibleTimes = this.possibleTrajDivs(i);
+          const finalTime = getClosest(possibleTimes, time);
+          const ftIdx = possibleTimes.indexOf(finalTime);
+          
+          let pIdx, tIdx;
+          const lenA = phraseA.trajectories.length;
+          if (ftIdx < lenA) {
+            pIdx = i;
+            tIdx = ftIdx
+          } else {
+            pIdx = i + 1;
+            tIdx = Math.round(((ftIdx / lenA) - 1) * lenA);
+          }
+          if (pIdx === i) {
+            if (tIdx < phraseA.trajectories.length-1) {
+              const ctA = phraseA.trajectories.length - 1 - tIdx;
+              const ctB = phraseB.trajectories.length;
+              const transfers = phraseA.trajectories.splice(tIdx+1);
+              phraseB.trajectories.splice(0, 0, ...transfers);
+              phraseA.durTotFromTrajectories();
+              phraseA.durArrayFromTrajectories();
+              phraseB.durTotFromTrajectories();
+              phraseB.durArrayFromTrajectories();
+              phraseB.assignStartTimes();
+              phraseB.assignTrajNums();
+              this.piece.durTotFromPhrases();
+              this.piece.durArrayFromPhrases();
+              this.piece.updateStartTimes();          
+              for (let j = ctB-1; j >= 0; j--) {
+                const oldId = `p${phraseB.pieceIdx}t${j}`;
+                const newId = `p${phraseB.pieceIdx}t${j + ctA}`;
+                this.reIdAllReps(oldId, newId)
+              }
+              for (let j = ctA-1; j >= 0; j--) {
+                const oldId = `p${phraseA.pieceIdx}t${tIdx + j + 1}`;
+                const newId = `p${phraseB.pieceIdx}t${j}`;
+                this.reIdAllReps(oldId, newId)
+              }
+              // fix chikaris
+              Object.keys(phraseB.chikaris).forEach(key => {
+                const delta = transfers.map(t => t.durTot).reduce((a, b) => a + b, 0);
+                const newKey = (Number(key) + delta).toFixed(2);
+                phraseB.chikaris[newKey] = phraseB.chikaris[key];
+                delete phraseB.chikaris[key];
+                this.reIdChikari(key, newKey, phraseB, phraseB);    
+              });
+              Object.keys(phraseA.chikaris).forEach(key => {
+                if (Number(key) >= phraseA.durTot) {
+                  const obj = phraseA.chikaris[key];
+                  const newKey = (Number(key) - phraseA.durTot).toFixed(2);
+                  delete phraseA.chikaris[key];
+                  phraseB.chikaris[newKey] = obj;
+                  this.reIdChikari(key, newKey, phraseA, phraseB);
+                }
+              })
+            }
+          } else {
             const ctB = phraseB.trajectories.length;
-            const transfers = phraseA.trajectories.splice(tIdx+1);
-            phraseB.trajectories.splice(0, 0, ...transfers);
+            const ctA = phraseA.trajectories.length;
+            const transfers = phraseB.trajectories.splice(0, tIdx+1);
+            phraseA.trajectories.splice(phraseA.trajectories.length, 0, ...transfers);
             phraseA.durTotFromTrajectories();
             phraseA.durArrayFromTrajectories();
+            phraseA.assignStartTimes();
+            phraseA.assignTrajNums();
             phraseB.durTotFromTrajectories();
             phraseB.durArrayFromTrajectories();
             phraseB.assignStartTimes();
             phraseB.assignTrajNums();
             this.piece.durTotFromPhrases();
             this.piece.durArrayFromPhrases();
-            this.piece.updateStartTimes();          
-            for (let j = ctB-1; j >= 0; j--) {
+            this.piece.updateStartTimes();
+            
+            for (let j = 0; j <= tIdx; j++) {
               const oldId = `p${phraseB.pieceIdx}t${j}`;
-              const newId = `p${phraseB.pieceIdx}t${j + ctA}`;
-              this.reIdAllReps(oldId, newId)
+              const newId = `p${phraseA.pieceIdx}t${ctA+j}`;
+              this.reIdAllReps(oldId, newId);
             }
-            for (let j = ctA-1; j >= 0; j--) {
-              const oldId = `p${phraseA.pieceIdx}t${tIdx + j + 1}`;
-              const newId = `p${phraseB.pieceIdx}t${j}`;
-              this.reIdAllReps(oldId, newId)
+            for (let j = tIdx+1; j < ctB; j++) {
+              const oldId = `p${phraseB.pieceIdx}t${j}`;
+              const newId = `p${phraseB.pieceIdx}t${j-(tIdx+1)}`;
+              this.reIdAllReps(oldId, newId);
             }
-            // fix chikaris
+            //fix chikaris
             Object.keys(phraseB.chikaris).forEach(key => {
               const delta = transfers.map(t => t.durTot).reduce((a, b) => a + b, 0);
-              const newKey = (Number(key) + delta).toFixed(2);
-              phraseB.chikaris[newKey] = phraseB.chikaris[key];
-              delete phraseB.chikaris[key];
-              const oldSec = Math.floor(Number(key));
-              const oldDec = (Number(key) % 1).toFixed(2).toString().slice(2);
-              const oldId = `p${phraseB.pieceIdx}_${oldSec}_${oldDec}`;
-              const newSec = Math.floor(Number(newKey));
-              const newDec = (Number(newKey) % 1).toFixed(2).toString().slice(2);
-              const newId = `p${phraseB.pieceIdx}_${newSec}_${newDec}`;
-              d3.select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
-              d3.select(`#${oldId}`).attr('id', newId);     
-            });
-            Object.keys(phraseA.chikaris).forEach(key => {
-              if (Number(key) >= phraseA.durTot) {
-                const obj = phraseA.chikaris[key];
-                const newKey = (Number(key) - phraseA.durTot).toFixed(2);
-                delete phraseA.chikaris[key];
-                phraseB.chikaris[newKey] = obj;
+              if (Number(key) < delta) {
+                const newKey = (phraseA.durTot - (delta - Number(key))).toFixed(2);
+                phraseA.chikaris[newKey] = phraseB.chikaris[key];
+                delete phraseB.chikaris;
                 const oldSec = Math.floor(Number(key));
                 const oldDec = (Number(key) % 1).toFixed(2).toString().slice(2);
-                const oldId = `p${phraseA.pieceIdx}_${oldSec}_${oldDec}`;
+                const oldId = `p${phraseB.pieceIdx}_${oldSec}_${oldDec}`;
+                const newSec = Math.floor(Number(newKey));
+                const newDec = (Number(newKey) % 1).toFixed(2).toString().slice(2);
+                const newId = `p${phraseA.pieceIdx}_${newSec}_${newDec}`;
+                d3.select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
+                d3.select(`#${oldId}`).attr('id', newId);  
+              } else {
+                const newKey = (Number(key) - delta).toFixed(2);
+                phraseB.chikaris[newKey] = phraseB.chikaris[key];
+                delete phraseB.chikaris[key];
+                const oldSec = Math.floor(Number(key));
+                const oldDec = (Number(key) % 1).toFixed(2).toString().slice(2);
+                const oldId = `p${phraseB.pieceIdx}_${oldSec}_${oldDec}`;
                 const newSec = Math.floor(Number(newKey));
                 const newDec = (Number(newKey) % 1).toFixed(2).toString().slice(2);
                 const newId = `p${phraseB.pieceIdx}_${newSec}_${newDec}`;
                 d3.select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
-                d3.select(`#${oldId}`).attr('id', newId);
+                d3.select(`#${oldId}`).attr('id', newId); 
               }
             })
           }
-        } else {
-          const ctB = phraseB.trajectories.length;
-          const ctA = phraseA.trajectories.length;
-          const transfers = phraseB.trajectories.splice(0, tIdx+1);
-          phraseA.trajectories.splice(phraseA.trajectories.length, 0, ...transfers);
-          phraseA.durTotFromTrajectories();
-          phraseA.durArrayFromTrajectories();
-          phraseA.assignStartTimes();
-          phraseA.assignTrajNums();
-          phraseB.durTotFromTrajectories();
-          phraseB.durArrayFromTrajectories();
-          phraseB.assignStartTimes();
-          phraseB.assignTrajNums();
-          this.piece.durTotFromPhrases();
-          this.piece.durArrayFromPhrases();
-          this.piece.updateStartTimes();
-          
-          for (let j = 0; j <= tIdx; j++) {
-            const oldId = `p${phraseB.pieceIdx}t${j}`;
-            const newId = `p${phraseA.pieceIdx}t${ctA+j}`;
-            this.reIdAllReps(oldId, newId);
-          }
-          for (let j = tIdx+1; j < ctB; j++) {
-            const oldId = `p${phraseB.pieceIdx}t${j}`;
-            const newId = `p${phraseB.pieceIdx}t${j-(tIdx+1)}`;
-            this.reIdAllReps(oldId, newId);
-          }
-          //fix chikaris
-          Object.keys(phraseB.chikaris).forEach(key => {
-            const delta = transfers.map(t => t.durTot).reduce((a, b) => a + b, 0);
-            if (Number(key) < delta) {
-              const newKey = (phraseA.durTot - (delta - Number(key))).toFixed(2);
-              phraseA.chikaris[newKey] = phraseB.chikaris[key];
-              delete phraseB.chikaris;
-              const oldSec = Math.floor(Number(key));
-              const oldDec = (Number(key) % 1).toFixed(2).toString().slice(2);
-              const oldId = `p${phraseB.pieceIdx}_${oldSec}_${oldDec}`;
-              const newSec = Math.floor(Number(newKey));
-              const newDec = (Number(newKey) % 1).toFixed(2).toString().slice(2);
-              const newId = `p${phraseA.pieceIdx}_${newSec}_${newDec}`;
-              d3.select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
-              d3.select(`#${oldId}`).attr('id', newId);  
-            } else {
-              const newKey = (Number(key) - delta).toFixed(2);
-              phraseB.chikaris[newKey] = phraseB.chikaris[key];
-              delete phraseB.chikaris[key];
-              const oldSec = Math.floor(Number(key));
-              const oldDec = (Number(key) % 1).toFixed(2).toString().slice(2);
-              const oldId = `p${phraseB.pieceIdx}_${oldSec}_${oldDec}`;
-              const newSec = Math.floor(Number(newKey));
-              const newDec = (Number(newKey) % 1).toFixed(2).toString().slice(2);
-              const newId = `p${phraseB.pieceIdx}_${newSec}_${newDec}`;
-              d3.select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
-              d3.select(`#${oldId}`).attr('id', newId); 
-            }
-          })
+          d3.select(`#phraseLine${i}`)
+            .attr('transform', `translate(${this.codifiedXR(finalTime)},0)`)
+            .attr('stroke', 'red')
+          d3.select(`#overlay__phraseLine${i}`)
+            .attr('transform', `translate(${this.codifiedXR(finalTime)},0)`)  
         }
+        
         if (this.selectedPhraseDivIdx !== phraseA.pieceIdx) {
           this.clearSelectedPhraseDiv();
         }
         
-        d3.select(`#phraseLine${i}`)
-          .attr('transform', `translate(${this.codifiedXR(finalTime)},0)`)
-          .attr('stroke', 'red')
-        d3.select(`#overlay__phraseLine${i}`)
-          .attr('transform', `translate(${this.codifiedXR(finalTime)},0)`)
+        if (!doNormal) {
+          d3.select(`#phraseLine${i}`)
+            .attr('transform', `translate(${this.codifiedXR(time)},0)`)
+            .attr('stroke', 'red')
+          d3.select(`#overlay__phraseLine${i}`)
+            .attr('transform', `translate(${this.codifiedXR(time)},0)`)
+        }
+        
+        
         
         this.svg.style('cursor', 'auto');
         // if (this.selectedPhraseDivIdx !== undefined) {
@@ -1204,6 +1331,7 @@ export default {
       }
     },
     
+    
     movePhraseDivs() {
       this.piece.phrases.forEach((phrase, i) => {
         const endTime = phrase.startTime + phrase.durTot;
@@ -1211,6 +1339,17 @@ export default {
           .transition().duration(this.transitionTime)
           .attr('transform', `translate(${this.codifiedXR(endTime)},0)`)
       })
+    },
+    
+    reIdChikari(key, newKey, oldPhrase, newPhrase) {
+      const oldSec = Math.floor(Number(key));
+      const oldDec = (Number(key) % 1).toFixed(2).toString().slice(2);
+      const oldId = `p${oldPhrase.pieceIdx}_${oldSec}_${oldDec}`;
+      const newSec = Math.floor(Number(newKey));
+      const newDec = (Number(newKey) % 1).toFixed(2).toString().slice(2);
+      const newId = `p${newPhrase.pieceIdx}_${newSec}_${newDec}`;
+      d3.select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
+      d3.select(`#${oldId}`).attr('id', newId);  
     },
     
     reIdAllReps(oldId, newId) {
@@ -1793,7 +1932,6 @@ export default {
         };
         const num = (Number(fixedTime) % 1).toFixed(2).toString().slice(2);
         const id = `p${phrase.pieceIdx}_${Math.floor(Number(fixedTime))}_${num}`;
-
         this.phraseG.append('g')
           .classed('chikari', true)
           .append('path')
@@ -2849,7 +2987,6 @@ export default {
       this.moveRegion();
     },
 
-
     resetZoom() {
       // clear everything
       this.phraseG.selectAll('*').remove();
@@ -2862,8 +2999,7 @@ export default {
       this.codifiedXR = this.xr();
       this.codifiedYR = this.yr();
       this.codifiedAddPhrases();
-      this.updatePhraseDivs();
-      
+      this.updatePhraseDivs();    
     },
     
     codifiedAddPhrases() {
@@ -3098,7 +3234,8 @@ export default {
       } else if (!beforeSilent && !afterSilent) {
         newTraj = new Trajectory({
           id: 12,
-          durTot: traj.durTot
+          durTot: traj.durTot,
+          fundID12: this.piece.raga.fundamental
         })
       }
 

@@ -129,7 +129,7 @@ export default {
       createNewPiece(piece)
         .then(data => {
           this.$store.commit('update_id', data.insertedId);
-          this.$router.push('/editor');
+          this.$router.push('/altEditor');
         })
     },
 

@@ -299,6 +299,15 @@ export default {
     
     goToBeginning() {
       this.audio.currentTime = 0;
+      if (!this.playing) {
+        this.pausedAt = 0;
+        this.updateProgress()
+      } else {
+        this.stop();
+        this.pausedAt = 0;
+        this.play();
+        this.updateProgress()
+      }
       this.$parent.currentTime = 0;
       this.$parent.redrawPlayhead();
     },

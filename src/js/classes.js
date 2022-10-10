@@ -373,7 +373,7 @@ class Trajectory {
 
 
   compute(x, logScale = false) {
-    const value = this.ids[this.id](x)
+    const value = this.ids[this.id](x);
     return logScale ? Math.log2(value) : value;
   }
 
