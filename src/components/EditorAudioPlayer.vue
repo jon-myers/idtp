@@ -756,15 +756,18 @@ export default {
 
 
 .controlBox > img:hover {
-  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg) brightness(94%) contrast(97%);
+  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg) 
+          brightness(94%) contrast(97%);
 }
 
 .controlBox > .looping {
-  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) brightness(97%) contrast(97%);
+  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) 
+          brightness(97%) contrast(97%);
 }
 
 .controlBox > .shuffling {
-  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) brightness(97%) contrast(97%);
+  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) 
+          brightness(97%) contrast(97%);
 }
 
 .playCircle > img {

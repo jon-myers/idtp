@@ -731,6 +731,13 @@ class Phrase {
       }
     })
   }
+  
+  reset() {
+    this.durArrayFromTrajectories();
+    this.assignStartTimes();
+    this.assignPhraseIdx();
+    this.assignTrajNums();
+  }
 }
 
 
