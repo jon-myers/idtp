@@ -42,7 +42,7 @@
     </div>
   </div>
   <AudioPlayback ref='audioPlayback'/>
-  <SynthesisComponent ref='synth' v-if="$parent.loaded"/>
+  <!-- <SynthesisComponent ref='synth' v-if="$parent.loaded"/> -->
 </div>
 </template>
 
@@ -69,7 +69,7 @@ import * as d3 from 'd3';
 
 // import spectrogram from '@/assets/yaman_cqt.png';
 import AudioPlayback from '@/components/AudioPlayback.vue';
-import SynthesisComponent from '@/components/SynthesisComponent.vue';
+// import SynthesisComponent from '@/components/SynthesisComponent.vue';
 
 
 const linSpace = (startValue, stopValue, cardinality) => {
@@ -126,7 +126,8 @@ export default {
   },
 
   components: {
-    AudioPlayback, SynthesisComponent
+    AudioPlayback, 
+    // SynthesisComponent
   },
 
   mounted() {

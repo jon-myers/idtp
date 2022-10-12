@@ -1,5 +1,4 @@
 const AMP = 1.0;
-// let t = 100000;
 
 class Processor extends AudioWorkletProcessor {
     static get parameterDescriptors() {
@@ -19,35 +18,18 @@ class Processor extends AudioWorkletProcessor {
         ];
     }
 
-    // constructor() {
-    //     // super();
-    // }
-
     process(inputs, outputs, params) {
         let freq = params['Frequency'][0];
         const cutoff = params['Cutoff'][0];
-
         const period = 1 / freq;
         setDelayTime(period);
-
         const out = outputs[0][0];
         const input = inputs[0][0];
-        
-        // console.log(inputs[0])
-        // console.log(in_)
         for (let i = 0; i < out.length; ++i) {
-            // let x = t < period ? 2 * Math.random() - 1 : 0;
-            // setDelayTime(1/params['Frequency'][i])
             let x = input ? input[i] : 0;
             x += filter(delayOutput(), cutoff);
-            // if (freq !== params['Frequency'][i]) {
-            //     freq = params['Frequency'][i];
-            //   setDelayTime(1/freq)
-            // }
             delayInput(x);
             out[i] = AMP * x;
-            // eslint-disable-next-line no-undef
-            // t += 1 / sampleRate;
         }
         return true;
     }

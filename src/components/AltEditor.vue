@@ -121,7 +121,8 @@ export default {
       minTrajDur: 0.1,
       setNewTraj: false,
       d3: d3,
-      setNewPhraseDiv: false
+      setNewPhraseDiv: false,
+      justEnded: false
     }
   },
 
@@ -166,7 +167,6 @@ export default {
     });
 
     this.emitter.on('newTraj', idx => {
-      console.log('new traj')
       this.trajTimePts.sort((a, b) => a.time - b.time);
       const logSargamLines = this.visibleSargam.map(s => Math.log2(s));
       const visiblePitches = this.piece.raga.getPitches({
@@ -189,7 +189,6 @@ export default {
       const tIdx = this.trajTimePts[0].tIdx;
       const phrase = this.piece.phrases[pIdx];
       const silentTraj = phrase.trajectories[tIdx];
-      console.log(silentTraj)
       const startsEqual = times[0] === phrase.startTime + silentTraj.startTime;
       const endsEqual = times[times.length - 1] === phrase.startTime + silentTraj.startTime + silentTraj.durTot;
       if (startsEqual && endsEqual) { // if replaces entire silent traj
@@ -198,8 +197,6 @@ export default {
         phrase.assignPhraseIdx();
         phrase.assignTrajNums();
       } else if (startsEqual) { // if replaces left side of silent traj
-        // console.log('replaces Left Side')
-        // console.log(durTot, silentTraj.durTot)
         silentTraj.durTot = silentTraj.durTot - durTot;
         phrase.trajectories.splice(tIdx, 0, newTraj);
         phrase.durArrayFromTrajectories();
@@ -244,8 +241,14 @@ export default {
       this.svg.style('cursor', 'auto');
       d3.selectAll(`.newTrajDot`).remove();
       this.addAllDragDots();
-
-
+      this.$refs.trajSelectPanel.selectedIdx = this.selectedTraj.id;
+      this.$refs.trajSelectPanel.parentSelected = true;
+      this.$refs.trajSelectPanel.slope = Math.log2(this.selectedTraj.slope);
+      if (this.selectedTraj.articulations[0] && this.selectedTraj.articulations[0].name === 'pluck') {
+        this.$refs.trajSelectPanel.pluckBool = true
+      } else {
+        this.$refs.trajSelectPanel.pluckBool = false
+      }
     });
 
     const piece = await getPiece(this.$store.state._id);
@@ -254,13 +257,9 @@ export default {
       this.audioDBDoc = await getAudioRecording(piece.audioID)
       this.durTot = this.audioDBDoc.duration;
       // if pieceDurTot is less than this, add slient phrase to make the two the same
-
-
-
     } else {
       this.durTot = piece.durTot;
     }
-
     this.initXScaleFactor = this.durTot / this.initViewDur;
     let fund = 246;
     this.freqMin = fund / 2;
@@ -284,7 +283,6 @@ export default {
       this.piece.updateStartTimes();
     }
 
-
     this.emitter.on('pluckBool', pluckBool => {
       if (pluckBool) {
         if (!this.selectedTraj.articulations[0]) {
@@ -296,14 +294,12 @@ export default {
           this.codifiedAddPlucks(this.selectedTraj, phrase.startTime, g)
         }
       } else {
-        // console.log(this, this.selectedTraj) 
         if (this.selectedTraj.articulations[0]) {
           delete this.selectedTraj.articulations[0];
           this.removePlucks(this.selectedTraj)
         }
       }
     });
-
   },
 
   unmounted() {
@@ -919,6 +915,11 @@ export default {
           .on('drag', this.phraseDivDragDragging(idx))
           .on('end', this.phraseDivDragEnd(idx))
       };
+      
+      const dontClick = e => {
+        e.stopPropagation();
+        console.log('clicking')
+      }
       this.phraseG
         .append('path')
         .attr('id', `phraseLine${idx}`)
@@ -926,8 +927,7 @@ export default {
         .attr('stroke-width', '2px')
         .attr('d', this.playheadLine())
         .style('opacity', this.viewPhrases ? '1' : '0')
-        .attr('transform', `translate(${this.codifiedXR(time)},0)`)
-        
+        .attr('transform', `translate(${this.codifiedXR(time)},0)`);
       this.phraseG
         .append('path')
         .attr('id', `overlay__phraseLine${idx}`)
@@ -938,6 +938,7 @@ export default {
         .attr('transform', `translate(${this.codifiedXR(time)},0)`)
         .call(drag())    
         .style('cursor', 'pointer')
+        .on('click', dontClick)
         
       // reId all trajs and articulations in following phrases
       for (let i = this.piece.phrases.length-1; i > idx; i--) {
@@ -1004,15 +1005,16 @@ export default {
             }
             this.phraseG
               .append('path')
+              .classed('phraseDiv', true)
               .attr('id', `phraseLine${i}`)
               .attr('stroke', 'black')
               .attr('stroke-width', '2px')
               .attr('d', this.playheadLine())
               .style('opacity', '1')
               .attr('transform', `translate(${this.codifiedXR(endTime)},0)`)
-              
             this.phraseG
               .append('path')
+              .classed('phraseDiv', true)
               .attr('id', `overlay__phraseLine${i}`)
               .attr('stroke', 'black')
               .attr('stroke-width', '10px')
@@ -1021,6 +1023,7 @@ export default {
               .attr('transform', `translate(${this.codifiedXR(endTime)},0)`)
               .call(drag())    
               .style('cursor', 'pointer')
+              
 
           }
         })
@@ -1057,6 +1060,7 @@ export default {
     
     phraseDivDragEnd(i) {
       return e => {
+        this.justEnded = true;
         d3.select(`#transparentPhraseLine${i}`).remove();
         const time = this.xr().invert(e.sourceEvent.clientX);
         const tempPIdx = this.phraseIdxFromTime(time);
@@ -1406,30 +1410,55 @@ export default {
       }
       
     },
+    
+    mouseUpUpdateLoop() {
+      if (this.loop) {
+        this.$refs.audioPlayer.loop = true;
+        this.$refs.audioPlayer.loopStart = this.regionStartTime;
+        this.$refs.audioPlayer.loopEnd = this.regionEndTime;
+        if (this.$refs.audioPlayer.sourceNode) {
+          this.$refs.audioPlayer.sourceNode.loopStart = this.regionStartTime;
+          this.$refs.audioPlayer.sourceNode.loopEnd = this.regionEndTime;
+        }
+      } else {
+        this.$refs.audioPlayer.loop = false;
+        this.$refs.audioPlayer.loopStart = undefined;
+        this.$refs.audioPlayer.loopEnd = undefined;
+      }
+    },
 
     updateLoop(e) {
       if (e && e.clientX === 0) e.preventDefault(); // stops spacebar from checking box
-      // this.$nextTick(() => {
-      //   if (this.loop) {
-      //     this.$refs.audioPlayer.loop = true;
-      //     this.$refs.audioPlayer.loopStart = this.regionStartTime;
-      //     this.$refs.audioPlayer.loopEnd = this.regionEndTime;
-      //     if (this.$refs.audioPlayer.sourceNode) {
-      //       this.$refs.audioPlayer.sourceNode.loopStart = this.regionStartTime;
-      //       this.$refs.audioPlayer.sourceNode.loopEnd = this.regionEndTime;
-      //     }  
-      //   } else {
-      //     this.$refs.audioPlayer.loop = false;
-      //     this.$refs.audioPlayer.loopStart = undefined;
-      //     this.$refs.audioPlayer.loopEnd = undefined;
-      //   }
-      // })
-
     },
 
     async savePiece() {
       const result = await savePiece(this.piece);
       this.dateModified = new Date(result.dateModified);
+    },
+    
+    clearAll() {
+      this.clearSelectedChikari();
+      this.clearSelectedTraj();
+      this.clearTrajSelectPanel();
+      this.clearSelectedPhraseDiv();
+      if (this.setChikari) {
+        this.setChikari = false;
+        this.svg.style('cursor', 'auto')
+      }
+      if (this.setNewTraj) {
+        this.setNewTraj = false;
+        this.trajTimePts = [];
+        this.svg.style('cursor', 'auto');
+        d3.selectAll(`.newTrajDot`).remove()
+      }
+      if (this.regionG) {
+        this.regionG.remove();
+        this.regionG = undefined;
+        this.regionStartTime = 0;
+        this.regionEndTime = this.durTot;
+        this.mouseUpUpdateLoop();
+        
+      }
     },
 
     handleKeydown(e) {
@@ -1437,24 +1466,7 @@ export default {
         this.$refs.audioPlayer.togglePlay()
       } else if (e.key === 'Escape') {
         e.preventDefault();
-        this.clearSelectedChikari();
-        this.clearSelectedTraj();
-        this.clearTrajSelectPanel();
-        this.clearSelectedPhraseDiv();
-        if (this.setChikari) {
-          this.setChikari = false;
-          this.svg.style('cursor', 'auto')
-        }
-        if (this.setNewTraj) {
-          this.setNewTraj = false;
-          this.trajTimePts = [];
-          this.svg.style('cursor', 'auto');
-          d3.selectAll(`.newTrajDot`).remove()
-        }
-        if (this.regionG) {
-          this.regionG.remove();
-          this.regionG = undefined
-        }
+        this.clearAll()
       } else if (e.key === 'Backspace') {
 
         if (this.selectedChikariID) {
@@ -1644,6 +1656,13 @@ export default {
           }
         });
         phrase.trajectories = phrase.trajectories.map(traj => new Trajectory(traj));
+        const chikariKeys = Object.keys(phrase.chikaris);
+        const chikariEntries = chikariKeys.map(key => phrase.chikaris[key]);
+        const chikariObj = {};
+        chikariKeys.forEach((key, i) => {
+          chikariObj[key] = new Chikari(chikariEntries[i])
+        })
+        phrase.chikaris = chikariObj
       });
       piece.phrases = piece.phrases.map(phrase => new Phrase(phrase));
       this.piece = new Piece(piece);
@@ -1702,7 +1721,7 @@ export default {
           this.regionEndTime = this.xr().invert(e.offsetX);
           this.regionEndPx = e.offsetX;
         }
-        this.updateLoop();
+        this.mouseUpUpdateLoop();
         const regionLine = d3.line()([
           [0, 0],
           [0, rect.height]
@@ -2008,8 +2027,6 @@ export default {
         const start = lims[pIdx];
         const trajIdx = ftIdx - start;
         const phrase = this.piece.phrases[pIdx];
-        // const newTraj = phrase.trajectories[trajIdx+1]
-        // const newTime = phrase.startTime + newTraj.startTime;
         const end = phrase.trajectories.length - (trajIdx + 1);
         const newTrajs = phrase.trajectories.splice(trajIdx+1, end);
         phrase.durTotFromTrajectories();
@@ -2043,6 +2060,12 @@ export default {
         this.setNewPhraseDiv = false;
         this.svg.style('cursor', 'auto');
         
+      } else {
+        if (this.justEnded) {
+          this.justEnded = false // this just prevents phrase div drag end from clearing all
+        } else {
+          this.clearAll()
+        }
       }
     },
 
@@ -2070,7 +2093,7 @@ export default {
         .ease(d3.easeQuadInOut)
         .attr('transform', `translate(${xDelta},${yDelta}) scale(${xScale},${yScale})`)
       
-      if (Math.abs(Math.log(xScale)) > 0.3) this.resetZoom();
+      if (Math.abs(Math.log(xScale)) > 0.2) this.resetZoom();
       if (Math.abs(Math.log(yScale)) > 0.3) this.resetZoom();
       // console.log(Math.abs(Math.log(yScale)))
     },
@@ -2584,10 +2607,8 @@ export default {
           };
           const id = 'p' + phrase.pieceIdx + '_' + Math.floor(Number(key)) + '_' +
             (Number(key) % 1).toFixed(2).toString().slice(2);
-
           this.phraseG.append('g')
             .classed('chikari', true)
-            .attr('clip-path', 'url(#clip)')
             .append('path')
             .attr('id', id)
             .attr('d', sym)
@@ -2629,7 +2650,6 @@ export default {
 
           this.phraseG.append('g')
             .classed('chikari', true)
-            .attr('clip-path', 'url(#clip)')
             .append('path')
             .attr('id', id)
             .attr('d', sym)
@@ -2724,6 +2744,7 @@ export default {
     },
 
     handleClickChikari(e) {
+      e.stopPropagation();
       if (this.selectedChikariID && this.selectedChikariID !== e.target.id.split('__')[1]) {
         d3.select('#' + this.selectedChikariID).attr('stroke', this.chikariColor)
       }
@@ -2739,6 +2760,7 @@ export default {
     },
 
     handleClickTraj(e) {
+      e.stopPropagation();
       if (this.selectedTrajID && this.selectedTrajID !== e.target.id.split('__')[1]) {
         d3.select(`#` + this.selectedTrajID)
           .attr('stroke', this.trajColor)
@@ -2989,9 +3011,9 @@ export default {
 
     resetZoom() {
       // clear everything
-      this.phraseG.selectAll('*').remove();
-      this.phraseG
-        .attr('transform', `translate(0, 0) scale(1, 1)`)
+      const selects = this.phraseG.selectAll('*');
+      // this.phraseG
+      //   .attr('transform', `translate(0, 0) scale(1, 1)`)
       this.codifiedXScale = this.tx().k;
       this.codifiedYScale = this.ty().k;
       this.codifiedYOffset = this.yr().invert(0);
@@ -2999,7 +3021,9 @@ export default {
       this.codifiedXR = this.xr();
       this.codifiedYR = this.yr();
       this.codifiedAddPhrases();
-      this.updatePhraseDivs();    
+      this.phraseG.selectAll('.phraseDiv').remove();
+      this.updatePhraseDivs();
+      selects.remove();  
     },
     
     codifiedAddPhrases() {

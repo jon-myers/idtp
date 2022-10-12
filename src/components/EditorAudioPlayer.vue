@@ -50,7 +50,12 @@
   </div>
 </template>
 <script>
+// import { WorkerUrl } from 'worker-url';
+// const karplusStrongPath = new WorkerUrl(new URL('@/audioWorklets/karplusStrong.worklet.js', import.meta.url), {
+//   name: 'worklet'
+// });
 
+// console.log(karplusStrongPath)
 import beginningIcon from '@/assets/icons/beginning.svg';
 import endIcon from '@/assets/icons/end.svg';
 import loopIcon from '@/assets/icons/loop.svg';
@@ -74,7 +79,9 @@ const leadingZeros = int => {
   } else {
     return String(int)
   }
-}
+};
+
+import { AudioWorklet } from "@/audio-worklet";
 
 export default {
   name: 'EditorAudioPlayer',
@@ -127,8 +134,13 @@ export default {
     this.ac = new AudioContext();
     this.gainNode = this.ac.createGain();
     this.gainNode.connect(this.ac.destination);
+    this.synthGainNode = this.ac.createGain();
+    this.synthGainNode.connect(this.ac.destination);
     
-    
+    await this.ac.audioWorklet.addModule(
+      AudioWorklet(new URL("@/audioWorklets/karplusStrong.worklet.js", import.meta.url))
+    );
+    await this.initializePluckNode()
     // this.audio = new Audio();
     // this.audio.ontimeupdate = () => {
     //   this.progress = this.audio.currentTime / this.audio.duration;
@@ -157,6 +169,19 @@ export default {
   },
   
   methods: {
+    
+    initializePluckNode() {
+      if (this.pluckNode) this.pluckNode.disconnect();
+      if (this.lowPassNode) this.lowPassNode.disconnect();
+      this.pluckNode = new AudioWorkletNode(this.ac, 'karplusStrong');
+      this.lowPassNode = this.ac.createBiquadFilter();
+      this.lowPassNode.type = 'lowpass';
+      const fund = this.$parent.piece.raga.fundamental;
+      this.lowPassNode.frequency.setValueAtTime(fund * (2**3), this.now());
+      this.pluckNode.connect(this.lowPassNode).connect(this.synthGainNode);
+      this.pluckNode.frequency = this.pluckNode.parameters.get('Frequency');
+      this.pluckNode.cutoff = this.pluckNode.parameters.get('Cutoff');
+    },
     
     async getAudio(filepath, verbose) {
       const start = await performance.now();
