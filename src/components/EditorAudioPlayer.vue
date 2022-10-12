@@ -17,7 +17,6 @@
             >
             <div class='invisibleProgressCircle'>
             </div>
-          
           </div>
         </div>
         <div class='timeLeft'>{{'-'+formattedTimeLeft}}</div>
@@ -30,7 +29,10 @@
             <img :src='icons.back_15' @click='back_15'/>
             <img :src='icons.beginning' @click='goToBeginning'/>
             <div class='playCircle' @click='togglePlay'>
-              <img ref='playImg' :src='[icons.play, icons.pause][Number(this.playing)]'/>
+              <img 
+                ref='playImg' 
+                :src='[icons.play, icons.pause][Number(this.playing)]'
+                />
             </div>
             <img :src='icons.end' @click='trackEnd'/>
             <img :src='icons.forward_15' @click='forward_15' class='icon'/>
@@ -50,12 +52,7 @@
   </div>
 </template>
 <script>
-// import { WorkerUrl } from 'worker-url';
-// const karplusStrongPath = new WorkerUrl(new URL('@/audioWorklets/karplusStrong.worklet.js', import.meta.url), {
-//   name: 'worklet'
-// });
 
-// console.log(karplusStrongPath)
 import beginningIcon from '@/assets/icons/beginning.svg';
 import endIcon from '@/assets/icons/end.svg';
 import loopIcon from '@/assets/icons/loop.svg';
@@ -65,6 +62,11 @@ import pauseIcon from '@/assets/icons/pause.svg';
 import playIcon from '@/assets/icons/play.svg';
 import shuffleIcon from '@/assets/icons/shuffle.svg';
 import rulerIcon from '@/assets/icons/ruler.svg';
+
+// GETBACK
+// import { getStarts, getEnds } from '@/js/classes.js';
+// import { AudioWorklet } from "@/audio-worklet";
+// end GETBACK
 
 const structuredTime = dur => {
   const hours = String(Math.floor(dur / 3600));
@@ -81,11 +83,8 @@ const leadingZeros = int => {
   }
 };
 
-import { AudioWorklet } from "@/audio-worklet";
-
 export default {
   name: 'EditorAudioPlayer',
-  
   data() {
     return {
       progress: 0.0,
@@ -116,43 +115,51 @@ export default {
       pausedAt: 0,
       loop: false,
       loopStart: undefined,
-      loopEnd: undefined
+      loopEnd: undefined,
+      slowRamp: 1,
+      bufferSourceNodes: [],
+      synthGain: 0,
+      recGain: 1,
+      chikariGain: 0,
     }
   },
-  
-  components: {
-  },
-  
   props: [
     'audioSource', 
     'saEstimate',
     'saVerified',
     'id'
   ],
-  
-  async mounted() {
+  mounted() {
     this.ac = new AudioContext();
     this.gainNode = this.ac.createGain();
     this.gainNode.connect(this.ac.destination);
-    this.synthGainNode = this.ac.createGain();
-    this.synthGainNode.connect(this.ac.destination);
-    
-    await this.ac.audioWorklet.addModule(
-      AudioWorklet(new URL("@/audioWorklets/karplusStrong.worklet.js", import.meta.url))
-    );
-    await this.initializePluckNode()
-    // this.audio = new Audio();
-    // this.audio.ontimeupdate = () => {
-    //   this.progress = this.audio.currentTime / this.audio.duration;
-    //   const pbi = document.querySelector('.progressBarInner');
-    //   const pbo = document.querySelector('.progressBarOuter');
-    //   const totWidth = pbo.getBoundingClientRect().width;
-    //   pbi.style.width = this.progress * totWidth + 'px'
-    //   this.updateFormattedCurrentTime();
-    //   this.updateFormattedTimeLeft();
-    //   this.$parent.currentTime = this.audio.currentTime
-    // };
-    // this.audio.onended = this.trackEnd
+    this.gainNode.gain.setValueAtTime(this.recGain, this.now());
+    // GETBACK
+    // this.masterSynthGainNode = this.ac.createGain();
+    // this.masterSynthGainNode.gain.setValueAtTime(this.synthGain, this.now())
+    // this.synthGainNode = this.ac.createGain();
+    // this.synthGainNode.connect(this.masterSynthGainNode);
+    // this.masterSynthGainNode.connect(this.ac.destination);    
+    // this.ac.audioWorklet.addModule(
+    //   AudioWorklet(new URL("@/audioWorklets/karplusStrong.worklet.js", import.meta.url))
+    // );
+    // this.ac.audioWorklet.addModule(
+    //   AudioWorklet(new URL("@/audioWorklets/chikaris.worklet.js", import.meta.url))
+    // );
+    // end GETBACK  
+    // this.initializePluckNode() this gets triggered in parent
+    this.audio = new Audio();
+    this.audio.ontimeupdate = () => {
+      this.progress = this.audio.currentTime / this.audio.duration;
+      const pbi = document.querySelector('.progressBarInner');
+      const pbo = document.querySelector('.progressBarOuter');
+      const totWidth = pbo.getBoundingClientRect().width;
+      pbi.style.width = this.progress * totWidth + 'px'
+      this.updateFormattedCurrentTime();
+      this.updateFormattedTimeLeft();
+      this.$parent.currentTime = this.audio.currentTime
+    };
+    this.audio.onended = this.trackEnd
   },
   
   watch: {
@@ -162,26 +169,174 @@ export default {
       this.loading = false;
     }
   },
-  
-  computed: {
-    
-    
-  },
-  
   methods: {
+    // GETBACK
+    // playChikaris(playHeadLoc, now) {
+    //   this.chikarisGainNode.gain.setValueAtTime(0, now);
+    //   this.chikarisGainNode.gain.linearRampToValueAtTime(1, now + this.slowRamp);
+    //   this.$parent.piece.phrases.forEach(phrase => {
+    //     Object.keys(phrase.chikaris).forEach(key => {
+    //       const time = now + phrase.startTime + Number(key) - Number(playHeadLoc);
+    //       if (time >= this.now()) {
+    //         this.sendNoiseBurst(time, 0.01, this.otherNode, 0.025, 0.2)            
+    //       }
+    //     })        
+    //   })
+    // },
+    // 
+    // cancelBursts() {
+    //   this.bufferSourceNodes.forEach(buf => {
+    //     buf.stop()
+    //     buf.disconnect()
+    //   })
+    // },
+    // 
+    // playTrajs(playHeadLoc=0, now) {
+    //   const allTrajs = this.$parent.piece.phrases.map(p => p.trajectories).flat();
+    //   const allStarts = getStarts(allTrajs.map(t => t.durTot));
+    //   const allEnds = getEnds(allTrajs.map(t => t.durTot));
+    //   const startIdx = allStarts.findIndex(s => s >= playHeadLoc);
+    //   this.synthGainNode.gain.setValueAtTime(0, now);
+    //   this.synthGainNode.gain.linearRampToValueAtTime(1, now + this.slowRamp);
+    //   allTrajs.slice(startIdx).forEach((traj, i_) => {
+    //     const i = i_ + startIdx;
+    //     this.playArticulations(traj, now + Number(allStarts[i]) - Number(playHeadLoc));
+    //     if (traj.id === 12) {
+    //       if (i_ !== 0 && allTrajs[i-1].id !== 12 ) {
+    //         //
+    //       }
+    //     } else {
+    //       if (i_ === 0 || allTrajs[i-1].id === 12) {
+    //         //
+    //        }
+    //       this.playTraj(traj, now + allStarts[i] - playHeadLoc, now + allEnds[i] - playHeadLoc, 512, i === 0)
+    //     }
+    //     if (i === allTrajs.length - 1) {
+    //       //
+    //     }
+    //   })
+    // },
+    // 
+    // playArticulations(traj, startTime) {
+    //   //plucks
+    //   if (traj.id !== 12) {
+    //     const keys = Object.keys(traj.articulations);
+    //     const plucks = keys.filter(key => traj.articulations[key].name === 'pluck');
+    //     const hammerOffs = keys.filter(key => traj.articulations[key].name === 'hammer-off');
+    //     const hammerOns = keys.filter(key => traj.articulations[key].name === 'hammer-on');
+    //     const slides = keys.filter(key => traj.articulations[key].name === 'slide');
+    // 
+    //     plucks.forEach(time => {
+    //         this.sendNoiseBurst(Number(startTime) + Number(time) * Number(traj.durTot), 0.01, this.pluckNode, 0.05, 1)
+    //     });
+    //     hammerOffs.forEach(time => {
+    //       this.sendNoiseBurst(Number(startTime) + Number(time) * Number(traj.durTot), 0.01, this.pluckNode, 0.05, 0.5)
+    //     });
+    //     hammerOns.forEach(time => {
+    //       this.sendNoiseBurst(Number(startTime) + Number(time) * Number(traj.durTot), 0.01, this.pluckNode, 0.05, 0.3)
+    //     });
+    //     slides.forEach(time => {
+    //       this.sendNoiseBurst(Number(startTime) + Number(time) * Number(traj.durTot), 0.01, this.pluckNode, 0.05, 0.1)
+    //     })
+    //   }
+    // },
+    // 
+    // sendNoiseBurst(when, dur, where, attack=0.05, amp=1) {
+    //   const bufferSize = this.ac.sampleRate * dur;
+    //   const noiseBuffer = this.ac.createBuffer(1, bufferSize, this.ac.sampleRate);
+    //   const attackSize = this.ac.sampleRate * attack;
+    //   const output = noiseBuffer.getChannelData(0);
+    //   let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0
+    //   for (let i = 0; i < bufferSize; i++) {
+    //     const white = Math.random() * 2 - 1;
+    //     b0 = 0.99886 * b0 + white * 0.0555179;
+    //     b1 = 0.99332 * b1 + white * 0.0750759;
+    //     b2 = 0.96900 * b2 + white * 0.1538520;
+    //     b3 = 0.86650 * b3 + white * 0.3104856;
+    //     b4 = 0.55000 * b4 + white * 0.5329522;
+    //     b5 = -0.7616 * b5 - white * 0.0168980;
+    //     output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+    //     b6 = white * 0.115926
+    //   }
+    //   for (let i = 0; i < attackSize; i++) {
+    //     output[i] *= i / attackSize
+    //   }
+    //   for (let i = 0; i < bufferSize; i++) {
+    //     output[i] *= amp
+    //   }
+    //   const bufferSourceNode = this.ac.createBufferSource();
+    //   this.bufferSourceNodes.push(bufferSourceNode);
+    //   bufferSourceNode.connect(where);
+    //   bufferSourceNode.buffer = noiseBuffer;
+    //   bufferSourceNode.start(when);
+    // },
+    // 
+    // 
+    // playTraj(traj, startTime, endTime, valueCt, first=false) {
+    //   if (first) {        
+    //     const offset = startTime < this.now() ? this.now() - startTime : 0;
+    //     this.pluckNode.frequency.setValueCurveAtTime(this.firstEnvelope, startTime + offset, endTime - (startTime + offset));
+    //     this.lowPassNode.frequency.setValueCurveAtTime(this.firstLPEnvelope, startTime + offset, endTime - (startTime + offset));
+    //   } else {
+    //     const envelope = new Float32Array(valueCt);
+    //     const lpEnvelope = new Float32Array(valueCt);
+    //     for (let i = 0; i < valueCt; i ++) {
+    //       envelope[i] = traj.compute(i/(valueCt-1));
+    //       lpEnvelope[i] = traj.compute(i/(valueCt-1)) * (2 ** 3);
+    //     }
+    //     this.pluckNode.frequency.setValueCurveAtTime(envelope, startTime, endTime - startTime);
+    //     this.lowPassNode.frequency.setValueCurveAtTime(lpEnvelope, startTime, endTime - startTime);
+    //   }
+    // 
+    // },
+    // 
+    // preSetFirstEnvelope(valueCt) {
+    //   const traj = this.$parent.piece.phrases.map(p => p.trajectories).flat()[0];
+    //   this.firstEnvelope = new Float32Array(valueCt);
+    //   this.firstLPEnvelope = new Float32Array(valueCt);
+    //   for (let i = 0; i < valueCt; i ++) {
+    //     this.firstEnvelope[i] = traj.compute(i/(valueCt-1));
+    //     this.firstLPEnvelope[i] = traj.compute(i/(valueCt-1)) * (2 ** 3);
+    //   }
+    // },
+    // 
+    // initializeChikariNodes() {
+    //   if (this.chikarisGainNode) this.chikarisGainNode.disconnect();
+    //   this.chikarisGainNode = this.ac.createGain();
+    //   if (this.chikariNodes) this.chikariNodes.forEach(cn => cn.disconnect());
+    //   this.otherNode = new AudioWorkletNode(this.ac, 'chikaris', { numberOfInputs: 1, numberOfOutputs: 4 });
+    //   this.otherNode.freq0 = this.otherNode.parameters.get('freq0');
+    //   this.otherNode.freq1 = this.otherNode.parameters.get('freq1');
+    //   this.otherNode.freq2 = this.otherNode.parameters.get('freq2');
+    //   this.otherNode.freq3 = this.otherNode.parameters.get('freq3');
+    //   this.otherNode.cutoff = this.otherNode.parameters.get('Cutoff');
+    //   this.otherNode.cutoff.setValueAtTime(0.6, this.now());
+    //   this.otherNode.connect(this.chikarisGainNode, 0);
+    //   this.otherNode.connect(this.chikarisGainNode, 1);
+    //   this.otherNode.connect(this.chikarisGainNode, 2);
+    //   this.otherNode.connect(this.chikarisGainNode, 3);
+    //   this.chikarisGainNode.connect(this.synthGainNode);
+    //   const raga = this.$parent.piece.raga;
+    //   this.otherNode.freq0.setValueAtTime(raga.chikariPitches[0].frequency, this.now());
+    //   this.otherNode.freq1.setValueAtTime(raga.chikariPitches[1].frequency, this.now());
+    //   this.otherNode.freq2.setValueAtTime(raga.chikariPitches[2].frequency, this.now());
+    //   this.otherNode.freq3.setValueAtTime(raga.chikariPitches[3].frequency, this.now());
+    // },
+    // 
+    // initializePluckNode() {
+    //   if (this.pluckNode) this.pluckNode.disconnect();
+    //   if (this.lowPassNode) this.lowPassNode.disconnect();
+    //   this.pluckNode = new AudioWorkletNode(this.ac, 'karplusStrong');
+    //   this.lowPassNode = this.ac.createBiquadFilter();
+    //   this.lowPassNode.type = 'lowpass';
+    //   const fund = this.$parent.piece.raga.fundamental;
+    //   this.lowPassNode.frequency.setValueAtTime(fund * (2**3), this.now());
+    //   this.pluckNode.connect(this.lowPassNode).connect(this.synthGainNode);
+    //   this.pluckNode.frequency = this.pluckNode.parameters.get('Frequency');
+    //   this.pluckNode.cutoff = this.pluckNode.parameters.get('Cutoff');
+    // },
+    // end GETBACK
     
-    initializePluckNode() {
-      if (this.pluckNode) this.pluckNode.disconnect();
-      if (this.lowPassNode) this.lowPassNode.disconnect();
-      this.pluckNode = new AudioWorkletNode(this.ac, 'karplusStrong');
-      this.lowPassNode = this.ac.createBiquadFilter();
-      this.lowPassNode.type = 'lowpass';
-      const fund = this.$parent.piece.raga.fundamental;
-      this.lowPassNode.frequency.setValueAtTime(fund * (2**3), this.now());
-      this.pluckNode.connect(this.lowPassNode).connect(this.synthGainNode);
-      this.pluckNode.frequency = this.pluckNode.parameters.get('Frequency');
-      this.pluckNode.cutoff = this.pluckNode.parameters.get('Cutoff');
-    },
     
     async getAudio(filepath, verbose) {
       const start = await performance.now();
@@ -257,11 +412,11 @@ export default {
         return this.pausedAt
       } else if (this.playing) {
         if (this.loop && (this.startingDelta < this.loopEnd)) {
-          const loopDur = this.loopEnd - this.loopStart;
+          const dur = this.loopEnd - this.loopStart;
           const realTime = this.now() - this.startedAt;
           this.loopTime = realTime;
           if (realTime > this.loopEnd) {
-            this.loopTime = this.loopStart + (realTime - this.loopStart) % loopDur;
+            this.loopTime = this.loopStart + (realTime - this.loopStart) % dur;
           }
           return this.loopTime
         } else {
@@ -274,7 +429,7 @@ export default {
     
     startPlayCursorAnimation() {
       if (!this.requestId) {
-        this.requestId = window.requestAnimationFrame(this.loopPlayCursorAnimation)
+        this.requestId = window.requestAnimationFrame(this.loopPlayAnimation)
       }
     },
     
@@ -286,7 +441,7 @@ export default {
       pbi.style.width = this.progress * totWidth + 'px'
     },
     
-    loopPlayCursorAnimation() {
+    loopPlayAnimation() {
       this.requestId = undefined;
       this.updateProgress();
       this.updateFormattedCurrentTime();
@@ -307,14 +462,35 @@ export default {
         this.play()
         this.$refs.playImg.classList.add('playing');
         this.$parent.startAnimationFrame();
-        this.startPlayCursorAnimation()
+        this.startPlayCursorAnimation();
+        // GETBACK
+        // this.playTrajs(this.audio.currentTime, this.now());
+        // this.playChikaris(this.audio.currentTime, this.now());
+        // end GETBACK
       } else {
         this.pause();
         this.$refs.playImg.classList.remove('playing');
         this.$parent.stopAnimationFrame();
         this.stopPlayCursorAnimation();
+        // GETBACK
+        // this.cancelPlayTrajs();
+        // this.cancelBursts();
+        // this.bufferSourceNodes = [];
+        // end GETBACK
       }
     },
+    
+    // GETBACK
+    // cancelPlayTrajs() {
+    //   this.pluckNode.frequency.cancelScheduledValues(this.now());
+    //   this.lowPassNode.frequency.cancelScheduledValues(this.now());
+    //   this.synthGainNode.gain.cancelScheduledValues(this.now());
+    //   this.synthGainNode.gain.setValueAtTime(1, this.now());
+    //   this.synthGainNode.gain.linearRampToValueAtTime(0, this.now() + this.slowRamp);
+    //   this.chikarisGainNode.gain.setValueAtTime(1, this.now());
+    //   this.chikarisGainNode.gain.linearRampToValueAtTime(0, this.now() + this.slowRamp);
+    // },
+    // end GETBACK
     
     toggleWaveform(e) {
       const cl = e.target.classList;
@@ -349,10 +525,6 @@ export default {
         this.pausedAt = this.audioBuffer.duration * e.clientX / bb.width;
         this.play();
       }
-      
-      // this.audio.currentTime = this.audio.duration * e.clientX / bb.width;
-      // this.$parent.currentTime = this.audio.currentTime;
-      // this.$parent.redrawPlayhead();
     },
     
     tooLeftLimit() {
@@ -375,34 +547,28 @@ export default {
     
     updateFormattedCurrentTime() {
       const st = structuredTime(this.getCurrentTime());
-      if (st.hours !== 0) {
-        this.formattedCurrentTime = st.minutes + ':' + st.seconds
-      } else {
-        this.formattedCurrentTime = st.hours + ':' + st.minutes + ':' + st.seconds
-      }       
+      const ms = st.minutes + ':' + st.seconds;
+      this.formattedCurrentTime = st.hours !== 0 ? ms : st.hours + ':' + ms;      
     },
     
     updateFormattedTimeLeft() {
       if (isNaN(this.audioBuffer.duration)) {
         return '00:00'
       } else {
-        const st = structuredTime(Number(this.audioBuffer.duration) - Number(this.getCurrentTime()))
-        if (st.hours !== 0) {
-          this.formattedTimeLeft = st.minutes + ':' + st.seconds
-        } else {
-          this.formattedTimeLeft = st.hours + ':' + st.minutes + ':' + st.seconds
-        } 
+        const buf = this.audioBuffer;
+        const ut = Number(buf.duration) - Number(this.getCurrentTime());
+        const st = structuredTime(ut);
+        const ms = st.minutes + ':' + st.seconds;
+        this.formattedTimeLeft = st.hours !== 0 ? ms : st.hours + ':' + ms;
       }
-    
     },
     
     hoverTrigger(bool) {
-      // const cl = document.querySelector('.currentTime').classList;
-      // const ocl = document.querySelector('.progressCircle').classList;
-      // const ecl = document.querySelector('.timeLeft').classList;
-      // const lcl = document.querySelector('.invisibleProgressCircle').classList;
-      // 
-      const classes_ = ['.currentTime', '.progressCircle', '.timeLeft', '.invisibleProgressCircle'];
+      const classes_ = [
+        '.currentTime', 
+        '.progressCircle', 
+        '.timeLeft', 
+        '.invisibleProgressCircle'];
       const cls = classes_.map(cl => document.querySelector(cl).classList);
       if (bool) {
         cls.forEach(cl => {
@@ -417,16 +583,16 @@ export default {
     
     handleCircleMouseDown(e) {
       this.circleDragging = true;
-      // console.log(e)
       this.dragStart = e.clientX;
       this.$refs.main.classList.toggle('hovering')
-      
     },
     
     handleCircleMouseUp(e) {
       if (this.circleDragging) {
-        const bb = this.$refs.pbOuter.getBoundingClientRect()
-        const newTime = this.audio.currentTime + this.audio.duration * (e.clientX - this.dragStart) / bb.width;
+        const bb = this.$refs.pbOuter.getBoundingClientRect();
+        const ct = this.audio.currentTime;
+        const dur = this.audio.duration;
+        const newTime = ct + dur * (e.clientX - this.dragStart) / bb.width;
         if (this.audio.fastSeek) {
           this.audio.fastSeek(newTime)
         } else {
@@ -436,28 +602,18 @@ export default {
         pc.style.right = '-7px';
         this.circleDragging = false;
         this.$refs.main.classList.toggle('hovering');
-        // const pbi = document.querySelector('.progressBarInner');
-        // pbi.style.width = "v-bind(progress*100+'vw')"
-      }
-      
-      
-      
+      }  
     },
     
     handleCircleMouseMove(e) {
       if (this.circleDragging) {
-        // const currentX = e.clientX;
         const diff = this.dragStart - e.clientX;
-        // const pc = document.querySelector('.progressCircle');
-        // pc.style.right = diff - 7 + 'px';
         const pbi = document.querySelector('.progressBarInner');
         const pbo = document.querySelector('.progressBarOuter');
         const pboBox = pbo.getBoundingClientRect()
         pbi.style.width = pboBox.width * this.progress - diff + 'px';
       }
-    }
-    
-       
+    }       
   }
 }
 </script>
@@ -475,10 +631,6 @@ export default {
   flex-direction: column;
   border-top: 1px solid black;
   pointer-events: auto;
-  /* overflow-x: hidden; */
-  /* overflow-x: hidden;
-  overflow-y: visible; */
-  /* border-top: 2px solid black; */
 }
 
 .progressBarOuter {
@@ -508,7 +660,6 @@ export default {
   width: 14px;
   height: 14px;
   border-radius: 7px;
-  /* opacity: 0; */
   position: absolute;
   right: -7px;
   top: -4px;
@@ -557,11 +708,13 @@ export default {
 }
 
 .rulerBox > img:hover {
-  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg) brightness(94%) contrast(97%);
+  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg) 
+          brightness(94%) contrast(97%);
 }
 
 .rulerBox > .showWaveform {
-  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) brightness(97%) contrast(97%);
+  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) 
+          brightness(97%) contrast(97%);
 }
 
 .controlFlexer {

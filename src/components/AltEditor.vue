@@ -98,7 +98,7 @@ export default {
       yAxWidth: 30,
       xAxHeight: 30,
       minDrawDur: 0.005, //this could be smaller, potentially, might be more efficient
-      initViewDur: 10,
+      initViewDur: 20,
       initYScaleFactor: 2,
       initXScaleFactor: 1,
       spectrogramOpacity: 0,
@@ -266,6 +266,11 @@ export default {
     this.freqMax = fund * 4;
     await this.getPieceFromJson(piece, fund);
     await this.initializePiece();
+    // GETBACK
+    // this.$refs.audioPlayer.initializePluckNode();
+    // this.$refs.audioPlayer.initializeChikariNodes();
+    // this.$refs.audioPlayer.preSetFirstEnvelope(256);
+    // end GETBACK
     const silentDur = this.durTot - piece.durTot;
     if (silentDur !== 0) {
       const silentTraj = new Trajectory({

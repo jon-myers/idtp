@@ -35,9 +35,10 @@ class Processor extends AudioWorkletProcessor {
     }
 }
 
-registerProcessor('main', Processor);
+registerProcessor('karplusStrong', Processor);
 
-const delay = new Float32Array(2048);
+// const delay = new Float32Array(2048);
+const delay = [...Array(2048)].map(() => 0);
 let readPtr = 0;
 let writePtr = 0;
 

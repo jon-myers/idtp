@@ -1029,6 +1029,12 @@ get chikariPitches() {
       new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
       new Pitch({ swara: 'd', oct: 0, raised: true, fundamental: this.fundamental }),
       new Pitch({ swara: 'm', oct: 0, raised: false, fundamental: this.fundamental })
+    ],
+    'Jaijaivanti': [
+      new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
+      new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
+      new Pitch({ swara: 'p', oct: 0, fundamental: this.fundamental }),
+      new Pitch({ swara: 'g', oct: 0, raised: true, fundamental: this.fundamental })
     ]
   };
   return templates[this.name]
