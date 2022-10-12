@@ -44,6 +44,8 @@ import {
   Raga,
 } from '@/js/classes.js';
 
+import { getRaagRule } from '@/js/serverCalls.js';
+
 // import savedPiece from '@/assets/piece2.JSON';
 // import * as d3 from 'd3';
 
@@ -128,7 +130,7 @@ export default {
       return out
     },
     
-    getPieceFromJson(piece) {
+    async getPieceFromJson(piece) {
       piece.phrases.forEach(phrase => {
         phrase.trajectories.forEach(traj => {
           traj.pitches = traj.pitches.map(pitch => new Pitch(pitch));
@@ -143,6 +145,8 @@ export default {
         phrase.trajectories = phrase.trajectories.map(traj => new Trajectory(traj));
       });
       piece.phrases = piece.phrases.map(phrase => new Phrase(phrase));
+      const rsRes = await getRaagRule(piece.raga.name);
+      piece.raga.ruleSet = rsRes.rules;
       piece.raga = new Raga(piece.raga);
       this.piece = new Piece(piece);
       this.pieceLoaded = true

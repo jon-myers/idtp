@@ -42,7 +42,7 @@
     </div>
   </div>
   <AudioPlayback ref='audioPlayback'/>
-  <SynthesisComponent ref='synth' v-if="$parent.loaded"/>
+  <!-- <SynthesisComponent ref='synth' v-if="$parent.loaded"/> -->
 </div>
 </template>
 
@@ -60,7 +60,8 @@ import {
 import {
   getPiece,
   savePiece,
-  getAudioDBEntry
+  getAudioDBEntry,
+  getRaagRule
 } from '@/js/serverCalls.js';
 
 // import savedPiece from '@/assets/piece2.JSON';
@@ -68,7 +69,7 @@ import * as d3 from 'd3';
 
 // import spectrogram from '@/assets/yaman_cqt.png';
 import AudioPlayback from '@/components/AudioPlayback.vue';
-import SynthesisComponent from '@/components/SynthesisComponent.vue';
+// import SynthesisComponent from '@/components/SynthesisComponent.vue';
 
 
 const linSpace = (startValue, stopValue, cardinality) => {
@@ -125,7 +126,8 @@ export default {
   },
 
   components: {
-    AudioPlayback, SynthesisComponent
+    AudioPlayback, 
+    // SynthesisComponent
   },
 
   mounted() {
@@ -333,8 +335,9 @@ export default {
         fund = this.audioDB.fundamental;
       }
 
-      this.$parent.loaded = true;
+      
       await this.getPieceFromJson(piece, fund);
+      this.$parent.loaded = true;
       if (!(typeof this.piece.audioID === 'number')) {
 
         if (this.piece.durTot < 10) {
@@ -710,8 +713,10 @@ export default {
       return (rect.height - this.margin.top) / (this.freqMax / this.freqMin)
     },
 
-    getPieceFromJson(piece, fundamental) {
+    async getPieceFromJson(piece, fundamental) {
       if (fundamental) piece.raga.fundamental = fundamental;
+      const rsRes = await getRaagRule(piece.raga.name);
+      piece.raga.ruleSet = rsRes.rules;
       piece.raga = new Raga(piece.raga);
       piece.phrases.forEach(phrase => {
         phrase.trajectories.forEach(traj => {
@@ -1099,7 +1104,8 @@ export default {
             x: Number(key)+phrase.startTime,
             y: phrase.compute(scaledX, true)
           };
-          const id = 'p' + phrase.pieceIdx + '_' + Math.floor(Number(key)) + '_' + (Number(key)%1).toFixed(2).toString().slice(2);
+          const id = 'p' + phrase.pieceIdx + '_' + Math.floor(Number(key)) + '_'
+           + (Number(key)%1).toFixed(2).toString().slice(2);
 
           this.transcription.append('g')
             .classed('chikari', true)
@@ -1127,9 +1133,6 @@ export default {
             .on('mouseover', this.handleMouseOver)
             .on('mouseout', this.handleMouseOut)
             .on('click', this.handleClickChikari)
-
-
-
         })
       })
     },

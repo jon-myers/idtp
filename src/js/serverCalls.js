@@ -18,12 +18,10 @@ const getPiece = async id => {
 
   await fetch(url + 'getOneTranscription', request)
     .then(response => {
-      console.log(response)
       if (response.ok) {
         return response.json()
       }
     }).then(data => {
-      console.log(data)
       if (data) {
         piece = data
       }
@@ -32,7 +30,6 @@ const getPiece = async id => {
 }
 
 const getAudioDBEntry = async _id => {
-  console.log('then', _id)
   let request = {
     method: 'POST',
     headers: {
@@ -48,8 +45,9 @@ const getAudioDBEntry = async _id => {
 }
 
 
-const savePiece = piece => {
+const savePiece = async piece => {
   const data = JSON.stringify(piece);
+  let result;
   let request = {
     method: 'POST',
     headers: {
@@ -57,13 +55,15 @@ const savePiece = piece => {
     },
     body: data
   };
-  fetch(url + 'updateTranscription', request)
-    .then(response => {
-      if (response.ok) {
-        return response.json()
-      }
-    }).then(out => console.log(out))
-    .catch(err => console.error(err))
+  try {
+    const res = await fetch(url + 'updateTranscription', request);
+    if (res.ok) {
+      result = await res.json()
+    }
+    return result
+  } catch (err) {
+    console.error(err)
+  }
 };
 
 const getAllPieces = async () => {
@@ -147,6 +147,27 @@ const getAudioEvent = async _id => {
     console.error(err)
   }
 }
+
+const getAudioRecording = async _id => {
+  let audioRecording;
+  const suffix = '?' + new URLSearchParams({ _id: _id });
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const response = await fetch(url + 'getAudioRecording' + suffix, request);
+    if (response.ok) {
+      // console.log(response);
+      audioRecording = await response.json()
+    }
+    return audioRecording
+  } catch (err) {
+    console.error(err)
+  }
+};
 
 const getSortedMusicians = async () => {
   // query 'musicians' mongoDB collection to get all musicians in alphabetical order
@@ -241,6 +262,28 @@ const getInstruments = async melody => {
       }
     }).catch(err => console.error(err))
     return instruments
+};
+
+const getNumberOfSpectrograms = async id => {
+  const suffix = '?' + new URLSearchParams({
+    id: id
+  });
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  };
+  try {
+    const res = await fetch(url + 'getNumberOfSpectrograms' + suffix, request);
+    if (res.ok) {
+      out = await res.json();
+      return out
+    }
+  } catch (err) {
+    console.error(err)
+  }  
 };
 
 const getRagaNames = async () => {
@@ -559,3 +602,5 @@ exports.updateSaEstimate = updateSaEstimate
 exports.getVerifiedStatus = getVerifiedStatus
 exports.getRaagRule = getRaagRule
 exports.saveRaagRules = saveRaagRules
+exports.getAudioRecording = getAudioRecording
+exports.getNumberOfSpectrograms = getNumberOfSpectrograms

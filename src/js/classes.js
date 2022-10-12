@@ -1,6 +1,8 @@
 // const plt = require('matplotnode');
 const _ = require('lodash');
 
+// import { getRaagRule } from '@/js/serverCalls.js';
+
 const isObject = argument => typeof argument === 'object' && argument !== null;
 
 const getStarts = durArray => {
@@ -338,7 +340,9 @@ class Trajectory {
         name: 'hammer-on'
       });
     } else if (this.id === 11) {
-      if (this.durArray === undefined) this.durArray = [0.5, 0.5];
+      if (this.durArray === undefined || this.durArray.length === 1) {
+        this.durArray = [0.5, 0.5]
+      }
       const starts = getStarts(this.durArray);
       this.articulations[starts[1]] = new Articulation({
         name: 'slide'
@@ -369,7 +373,7 @@ class Trajectory {
 
 
   compute(x, logScale = false) {
-    const value = this.ids[this.id](x)
+    const value = this.ids[this.id](x);
     return logScale ? Math.log2(value) : value;
   }
 
@@ -483,9 +487,6 @@ class Trajectory {
     const out = x => {
       const starts = getStarts(durArray);
       const index = _.findLastIndex(starts, s => x >= s);
-      if (!outs[index]) {
-        console.log('')
-      }
       return outs[index](x)
     };
     return out(x)
@@ -635,9 +636,6 @@ class Phrase {
       const index = _.findLastIndex(starts, s => x >= s);
       const innerX = (x - starts[index]) / this.durArray[index];
       const traj = this.trajectories[index];
-      if (!traj) {
-        console.log()
-      }
       return traj.compute(innerX, logScale)
     }
   }
@@ -732,6 +730,13 @@ class Phrase {
         delete this.chikaris[key]
       }
     })
+  }
+  
+  reset() {
+    this.durArrayFromTrajectories();
+    this.assignStartTimes();
+    this.assignPhraseIdx();
+    this.assignTrajNums();
   }
 }
 
@@ -872,92 +877,41 @@ class Piece {
 
 }
 
+const yamanRuleSet = {
+  sa: true,
+  re: {
+    lowered: false,
+    raised: true
+  },
+  ga: {
+    lowered: false,
+    raised: true
+  },
+  ma: {
+    lowered: false,
+    raised: true
+  },
+  pa: true,
+  dha: {
+    lowered: false,
+    raised: true
+  },
+  ni: {
+    lowered: false,
+    raised: true
+  }
+}
+
 class Raga {
 
   constructor({
     name = 'Yaman',
-    fundamental = 261.63
+    fundamental = 261.63,
+    ruleSet = yamanRuleSet
   } = {}) {
 
-    const ruleSets = {
-      'Yaman': {
-        sa: true,
-        re: {
-          lowered: false,
-          raised: true
-        },
-        ga: {
-          lowered: false,
-          raised: true
-        },
-        ma: {
-          lowered: false,
-          raised: true
-        },
-        pa: true,
-        dha: {
-          lowered: false,
-          raised: true
-        },
-        ni: {
-          lowered: false,
-          raised: true
-        }
-      },
-      'Malkuans': {
-        sa: true,
-        re: {
-          lowered: false,
-          raised: false
-        },
-        ga: {
-          lowered: true,
-          raised: false
-        },
-        ma: {
-          lowered: true,
-          raised: false
-        },
-        pa: false,
-        dha: {
-          lowered: true,
-          raised: false
-        },
-        ni: {
-          lowered: true,
-          raised: false
-        }
-      },
-      'Bageshri': {
-        sa: true,
-        re: {
-          lowered: false,
-          raised: true
-        },
-        ga: {
-          lowered: true,
-          raised: false
-        },
-        ma: {
-          lowered: true,
-          raised: false
-        },
-        pa: true,
-        dha: {
-          lowered: false,
-          raised: true
-        },
-        ni: {
-          lowered: true,
-          raised: true
-        }
-      },
-    };
-
-
-
   this.name = name;
-  this.ruleSet = ruleSets[this.name];
+  this.ruleSet = ruleSet;
   this.fundamental = fundamental;
   this.tuning = {
     sa: 2 ** (0 / 12),
@@ -983,7 +937,7 @@ class Raga {
       raised: 2 ** (11 / 12)
     }
   };
-  this.setRatios(ruleSets[name])
+  this.setRatios(this.ruleSet)
 }
 
 get sargamLetters() {
@@ -992,9 +946,9 @@ get sargamLetters() {
   initSargam.forEach(s => {
     if (isObject(this.ruleSet[s])) {
       if (this.ruleSet[s].lowered) sl.push(s.slice(0, 1) + '\u0332');
-      if (this.ruleSet[s].raised) sl.push(s.slice(0, 1));
+      if (this.ruleSet[s].raised) sl.push(s.slice(0, 1).toUpperCase());
     } else if (this.ruleSet[s]) {
-      sl.push(s.slice(0, 1))
+      sl.push(s.slice(0, 1).toUpperCase())
     }
   });
   return sl
@@ -1082,6 +1036,12 @@ get chikariPitches() {
       new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
       new Pitch({ swara: 'd', oct: 0, raised: true, fundamental: this.fundamental }),
       new Pitch({ swara: 'm', oct: 0, raised: false, fundamental: this.fundamental })
+    ],
+    'Jaijaivanti': [
+      new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
+      new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
+      new Pitch({ swara: 'p', oct: 0, fundamental: this.fundamental }),
+      new Pitch({ swara: 'g', oct: 0, raised: true, fundamental: this.fundamental })
     ]
   };
   return templates[this.name]
@@ -1155,21 +1115,3 @@ exports.getEnds = getEnds
 
 
 /////////
-
-
-//
-// const p = new Piece();
-// console.log(JSON.stringify(p))
-// const jsonString = JSON.stringify(p);
-
-
-// const phrase_ = p
-// console.log(traj)
-// console.log(JSON.stringify(p))
-// console.log(JSON.stringify(pitch))
-// const x = new Array(100).fill(0).map((x, i) => i);
-// const y = new Array(100).fill(0).map((x, i) => phrase.compute(i/100, logScale=true))
-// //
-// plt.plot(x, y)
-// //
-// plt.save("test.png");

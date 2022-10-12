@@ -8,20 +8,19 @@ const { MongoClient, ObjectId } = require('mongodb')
 const app = express();
 const https = require('https');
 const http = require('http');
-const fs = require('fs');
+const { promises: fs } = require('fs');
 const { spawn } = require('child_process');
 const history = require('connect-history-api-fallback');
 const cron = require('node-cron');
-const key = fs.readFileSync(__dirname + '/selfsigned.key');
-const cert = fs.readFileSync(__dirname + '/selfsigned.crt');
 const dot = require('mongo-dot-notation');
-const options = { key: key, cert: cert };
 const whitelist = [
   'https://chaparr.al', 
   'https://www.chaparr.al', 
   'http://localhost:8080',
   'chaparr.al'
 ];
+
+const aggregations = require('./aggregations.js');
 
 const getSuffix = mimetype => {
   // TODO add other audio file types
@@ -103,6 +102,7 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
     const instruments = db.collection('instruments');
     const location = db.collection('location');
     const performanceSections = db.collection('performanceSections');
+    const audioRecordings = db.collection('audioRecordings');
 
     // creates new transcription entry in transcriptions collection
     app.post('/insertNewTranscription', (req, res) => {
@@ -125,6 +125,7 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
       transcriptions.updateOne({ '_id': ObjectId(req.body._id) }, {'$set': updateObj})
         .then(result => {
           console.log('updated transcription')
+          result['dateModified'] = updateObj['dateModified']
           res.send(JSON.stringify(result))
         })
         .catch(error => console.error(error))
@@ -310,6 +311,16 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
         })
     })
     
+    app.get('/getNumberOfSpectrograms', async (req, res) => {
+      const dir = 'spectrograms/' + req.query.id + '/0';
+      try {
+        const files = await fs.readdir(dir);
+        res.json(files.length)
+      } catch (err) {
+        throw err
+      }  
+    })
+    
     app.get('/getAudioEvent', async (req, res) => {
       try {
         const result = await audioEvents.findOne({_id: ObjectId(req.query._id)});
@@ -317,6 +328,15 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
       } catch (err) {
         throw err
       }    
+    })
+    
+    app.get('/getAudioRecording', async (req, res) => {
+      try {
+        const result = await audioRecordings.findOne({_id: ObjectId(req.query._id)});
+        res.json(result)
+      } catch (err) {
+        throw err
+      }
     })
     
     app.post('/initializeAudioEvent', (req, res) => {
@@ -355,7 +375,8 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
       const options = { upsert: true };
       audioEvents.updateOne(query, update, options)
         .then(result => {
-          res.json(result)
+          res.json(result);
+          aggregations.generateAudioRecordingsDB();
         })
         .catch(err => console.error(err))
     })
@@ -448,6 +469,7 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
           const fileName = newUniqueId + getSuffix(avatar.mimetype);
  
           avatar.mv('./uploads/' + fileName);
+          console.log('in here somewhere')
           const processAudio = spawn('python3', ['process_audio.py', fileName, parentId, idx])
           await processAudio.on('close', () => {
             console.log('python closed, finally')

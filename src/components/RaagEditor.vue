@@ -107,6 +107,10 @@
       <span>{{savedMsg}}</span>
     </div>
   </div>
+  
+  <div class='closeWindow' @click='closeWindow'>
+    <span class='close-x'></span>
+  </div>
 </template>
 <script>
  
@@ -199,9 +203,7 @@ export default {
       if (res) {
         this.savedMsg = 'Saved: ' + date.toLocaleString()
       }
-      
     }
-    
   }
 }
 </script>
@@ -287,14 +289,10 @@ select {
   width: 250px;
 }
 
-.textInput {
-  width: 246px;
-  /* max-width: 246px; */
-  margin-top: 5px;
-  padding: 0px
-}
 
 button.right {
   margin-left: 10px;
 }
+
+
 </style>

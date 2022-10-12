@@ -1,8 +1,15 @@
-const WorkerUrlPlugin = require('worker-url/plugin');
 
 module.exports = {
-  plugins: [
-    new WorkerUrlPlugin(),
-  ]
+  module: {
+    rules: [
+      {
+        test: /\.js$/,
+        parser: {
+          javascript: {
+            worker: ["AudioWorklet() from audio-worklet", "..."]
+          }
+        }
+      }
+    ]
   }
 };

@@ -87,16 +87,27 @@ class Processor extends AudioWorkletProcessor {
 
 registerProcessor('chikaris', Processor);
 
-const delay0 = new Float32Array(2048);
-const delay1 = new Float32Array(2048);
-const delay2 = new Float32Array(2048);
-const delay3 = new Float32Array(2048);
+// const delay0 = new Float32Array(2048);
+// const delay1 = new Float32Array(2048);
+// const delay2 = new Float32Array(2048);
+// const delay3 = new Float32Array(2048);
+
+const delay0 = Array(2048).fill(0);
+const delay1 = Array(2048).fill(0);
+const delay2 = Array(2048).fill(0);
+const delay3 = Array(2048).fill(0);
+
 let readPtr0 = 0, readPtr1 = 0, readPtr2 = 0, readPtr3 = 0;
 let writePtr0 = 0, writePtr1 = 0, writePtr2 = 0, writePtr3 = 0;
 
-const initDelay1 = new Float32Array(2048);
-const initDelay2 = new Float32Array(2048);
-const initDelay3 = new Float32Array(2048);
+// const initDelay1 = new Float32Array(2048);
+// const initDelay2 = new Float32Array(2048);
+// const initDelay3 = new Float32Array(2048);
+
+const initDelay1 = Array(2048).fill(0);
+const initDelay2 = Array(2048).fill(0);
+const initDelay3 = Array(2048).fill(0);
+
 const del = 2 ** -8;
 const initDelDur1 = del; // must be less than 0.0464
 const initDelDur2 = 2 * del // must be less than 0.0464
