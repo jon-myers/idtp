@@ -16,10 +16,17 @@ const store = createStore({
   }
 })
 
+import GAuth from 'vue-google-oauth2';
+const gauthOption = {
+  clientId: 'CLIENT_ID.apps.googleusercontent.com',
+  scope: 'profile email',
+  prompt: 'select_account'
+};
+
 
 // for event bus
 import mitt from 'mitt';
 const emitter = mitt();
 const app = createApp(App);
 app.config.globalProperties.emitter = emitter;
-app.use(router).use(store).mount('#app')
+app.use(router).use(store).use(GAuth, gauthOption).mount('#app')

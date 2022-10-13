@@ -1,5 +1,4 @@
 import { createWebHistory, createRouter } from 'vue-router';
-import EditorComponent from '@/components/EditorComponent.vue';
 import FileManager from '@/components/FileManager.vue';
 import AudioEvents from '@/components/AudioEvents.vue';
 import RaagEditor from '@/components/RaagEditor.vue';
