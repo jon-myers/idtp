@@ -6,11 +6,11 @@ import RaagEditor from '@/components/RaagEditor.vue';
 import AltEditor from '@/components/AltEditor.vue';
 
 const routes = [
-  {
-    path: '/editor',
-    name: 'Editor',
-    component: EditorComponent,
-  },
+  // {
+  //   path: '/editor',
+  //   name: 'Editor',
+  //   component: EditorComponent,
+  // },
   {
     path: '/files',
     name: 'Files',
