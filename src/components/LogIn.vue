@@ -1,18 +1,18 @@
 <template>
   <div class='main'>
-    <GoogleLogin :callback='loggedIn' v-show='false' prompt auto-login/>
-    <div class='waiver' v-if='firstTime || returning'>
+    <div class='waiver' v-if='firstTime || returning || firstWelcome'>
       <div v-if='firstTime'>{{waiver}}</div>
       <input type='checkbox' @change='agreeToWaiver' v-model='agreeBool' v-if='firstTime'>
       <div v-if='returning'>{{`Welcome back, ${firstName}!`}}</div>
+      <div v-if='firstWelcome'>{{`Welcome, ${firstName}!`}}</div>
     </div>
   </div>
 </template>
 <script>
 
 
-import { decodeCredential } from 'vue3-google-login';
-import { userLoginGoogle, agreeToWaiver } from '@/js/serverCalls.js';
+// import { decodeCredential } from 'vue3-google-login';
+import { agreeToWaiver } from '@/js/serverCalls.js';
 
 export default {
   name: 'LogIn',
@@ -24,44 +24,62 @@ export default {
       waiver: 'TBD language regarding only using the service for scholarly and \
         / or pedagogical purposes. If agreed, check box.',
       agreeBool: false,
-      firstName: undefined
+      firstName: undefined,
+      userID: undefined
     }
   },
   
   mounted() {
+    this.firstTime = this.$store.state.firstTime;
+    this.returning = this.$store.state.returning;
+    this.userID = this.$store.state.userID;
+  },
+  
+  computed: {
+    getStoreFirstTime() {
+      return this.$store.state.firstTime
+    },
     
+    getStoreFirstName() {
+      return this.$store.state.firstName
+    },
+    
+    getStoreUserID() {
+      return this.$store.state.userID
+    },
+    
+    getStoreReturning() {
+      return this.$store.state.returning
+    }
+  },
+  
+  watch: {
+    getStoreFirstTime(val) {
+      this.firstTime = val
+    },
+    
+    getStoreFirstName(val) {
+      this.firstName = val
+    },
+    
+    getStoreUserID(val) {
+      this.userID = val
+    },
+    
+    getStoreReturning(val) {
+      this.returning = val
+    }
   },
   
   methods: {
-    
-    async loggedIn(res) {
-      // console.log('logged in!!')
-      const userData = decodeCredential(res.credential);
-      const usrImgUrl = userData.picture;
-      this.emitter.emit('usrImgUrl', usrImgUrl);
-      const result = await userLoginGoogle(userData);
-      console.log(result)
-      this.userID = result.value._id;
-      this.firstName = result.value.given_name;
-      this.$store.commit('update_userID', this.userID);
-      if (!result.lastErrorObject.updatedExisting) {
-        this.firstTime = true
-        console.log('first time')
-      } else if (!result.value.waiverAgreed) {
-        this.firstTime = true;
-        console.log('never agreed to waiver')
-      } else {
-        console.log('returning');
-        this.returning = true
-      }
-      // 100491673276750515389
-    },
     
     agreeToWaiver() {
       if (this.agreeBool) {
         agreeToWaiver(this.userID);
         this.firstTime = false;
-        this.returning = true
+        this.$store.commit('update_firstTime', this.firstTime);
+        this.firstWelcome = true;
+        // this.returning = true
       }
     }
   }

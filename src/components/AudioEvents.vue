@@ -131,12 +131,12 @@ export default {
     AddAudioEvent, AudioPlayer
   },
   
-  created() {
+  async created() {
+    if (this.$store.state.userID === undefined) {
+      this.$router.push('/')
+    }
       
-    getAllAudioEventMetadata()
-      .then(aa => {
-        this.allAudioEvents = aa
-      })
+    this.allAudioEvents = await getAllAudioEventMetadata()
   },
   
   computed: {

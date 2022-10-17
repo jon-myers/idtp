@@ -159,7 +159,8 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
       const query = { _id: ObjectId(JSON.parse(req.query.userID)) };
       try {
         const result = await users.findOne(query);
-        res.send(JSON.stringify(result.name))
+        console.log(query, result)
+        res.send(await JSON.stringify(result.name))
       } catch (err) {
         console.error(err)
       }

@@ -3,13 +3,16 @@ import App from './App.vue';
 import router from './router';
 import { createStore } from 'vuex';
 import vue3GoogleLogin from 'vue3-google-login';
-
+import VueCookies from 'vue-cookies';
 
 const store = createStore({
   state() {
     return {
       _id: '63445d13dc8b9023a09747a6',
-      userID: undefined
+      userID: undefined,
+      firstTime: false,
+      returning: false,
+      firstName: undefined
     }
   },
   mutations: {
@@ -19,6 +22,18 @@ const store = createStore({
     
     update_userID(state, userID) {
       state.userID = userID
+    },
+    
+    update_firstTime(state, firstTime) {
+      state.firstTime = firstTime
+    },
+    
+    update_returning(state, returning) {
+      state.returning = returning
+    },
+    
+    update_firstName(state, firstName) {
+      state.firstName = firstName
     }
   }
 })
@@ -34,4 +49,5 @@ app
   .use(vue3GoogleLogin, {
     clientId: "324767655055-crhq76mdupavvrcedtde986glivug1nm.apps.googleusercontent.com"
   })
+  .use(VueCookies, { expire: '7d' })
   .mount('#app')

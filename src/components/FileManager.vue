@@ -5,10 +5,14 @@
       {{ik}}
     </div>
   </div>
-  <div class='fileInfo' v-for="(piece, i) in allPieces" :key="piece">
+  <div 
+    class='fileInfo' 
+    v-for="(piece, i) in allPieces" 
+    :key="piece"
+    @dblclick='openPieceAlt(piece)'>
     <div class='infoKey' v-for="info in allPieceInfo[i]" :key="info">{{info}}</div>
     <!-- <button @click='openPiece(piece)'>open</button> -->
-    <button @click='openPieceAlt(piece)'>open</button>
+    <!-- <button @click='openPieceAlt(piece)'>open</button> -->
     <!-- <button @click='deletePiece(piece)'>delete</button> -->
   </div>
   <div class='addNewPiece' @click="designNewPiece()">Add new Piece ...</div>
@@ -60,6 +64,9 @@ export default {
   },
 
   async created() {
+    if (this.$store.state.userID === undefined) {
+      this.$router.push('/')
+    }
     this.allPieces = await getAllPieces();
     this.allPieces.forEach(() => {
       this.allPieceInfo.push([
