@@ -628,7 +628,6 @@ const agreeToWaiver = async userID => {
 
 const nameFromUserID = async userID => {
   let out;
-  console.log(userID)
   const request = {
     method: 'GET',
     headers: {

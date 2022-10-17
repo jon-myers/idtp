@@ -176,9 +176,16 @@ export default {
     }
   },
   
+  created() {
+    if (this.$store.state.userID === undefined) {
+      this.$router.push('/')
+    }
+  },
+  
   async mounted() {
+    
     this.raagNames = await getRagaNames();
-    this.raagNames.push('Other (specify)')
+    this.raagNames.push('Other (specify)');
   },
   
   methods: {

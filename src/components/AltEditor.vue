@@ -131,7 +131,10 @@ export default {
     AltTrajSelectPanel
   },
   created() {
-    window.addEventListener('keydown', this.handleKeydown)
+    window.addEventListener('keydown', this.handleKeydown);
+    if (this.$store.state.userID === undefined) {
+      this.$router.push('/')
+    }
   },
   async mounted() {
     this.d3 = d3;
