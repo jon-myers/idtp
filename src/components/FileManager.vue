@@ -5,8 +5,8 @@
       {{ik}}
     </div>
   </div>
-  <div class='fileInfo' v-for="piece in allPieces" :key="piece">
-    <div class='infoKey' v-for="info in pieceInfo(piece)" :key="info">{{info}}</div>
+  <div class='fileInfo' v-for="(piece, i) in allPieces" :key="piece">
+    <div class='infoKey' v-for="info in allPieceInfo[i]" :key="info">{{info}}</div>
     <!-- <button @click='openPiece(piece)'>open</button> -->
     <button @click='openPieceAlt(piece)'>open</button>
     <!-- <button @click='deletePiece(piece)'>delete</button> -->
@@ -26,7 +26,8 @@ import {
   getAllPieces,
   createNewPiece,
   deletePiece,
-  getRaagRule
+  getRaagRule,
+  nameFromUserID
 } from '@/js/serverCalls.js';
 import NewPieceRegistrar from '@/components/NewPieceRegistrar.vue';
 import {
@@ -51,15 +52,27 @@ export default {
       designPieceModal: false,
       getAllPieces: getAllPieces,
       allPieces: undefined,
+      allPieceInfo: []
     }
   },
   components: {
     NewPieceRegistrar
   },
 
-  created() {
-    getAllPieces()
-      .then(ap => this.allPieces = ap)
+  async created() {
+    this.allPieces = await getAllPieces();
+    this.allPieces.forEach(() => {
+      this.allPieceInfo.push([
+        undefined, 
+        undefined, 
+        undefined, 
+        undefined, 
+        undefined
+      ]);
+    });
+    this.allPieces.forEach(async (piece, i) => {
+      this.allPieceInfo[i] = await this.pieceInfo(piece)
+    })
   },
 
   mounted() {
@@ -77,10 +90,12 @@ export default {
         ruleSet: ruleSet
       });
       npi.phrases = [new Phrase({ 
-        trajectories: [new Trajectory({ id: 12, durTot: 5, fundID12: npi.raga.fundamental })],
-      
+        trajectories: [new Trajectory({ 
+          id: 12, 
+          durTot: 5, 
+          fundID12: npi.raga.fundamental 
+        })],  
       })]
-      // console.log(npi);
       this.createNewPiece(npi);
     });
 
@@ -92,13 +107,15 @@ export default {
 
   methods: {
 
-    pieceInfo(p) {
+    async pieceInfo(p) {
       const title = p.title;
       const raga = p.raga.name;
-      const transcriber = p.transcriber;
+      // const transcriber = p.transcriber;
+      let name = undefined;
+      if (p.userID) name = await nameFromUserID(p.userID);
       const dateCreated = this.writeDate(p.dateCreated);
       const dateModified = this.writeDate(p.dateModified);
-      return [title, transcriber, raga, dateCreated, dateModified]
+      return [title, name, raga, dateCreated, dateModified]
     },
 
     writeDate(d) {
@@ -126,6 +143,7 @@ export default {
 
     createNewPiece(obj) {
       const piece = obj ? new Piece(obj) : new Piece;
+      piece.userID = this.$store.state.userID;
       createNewPiece(piece)
         .then(data => {
           this.$store.commit('update_id', data.insertedId);

@@ -86,8 +86,11 @@ app.use((req, res, next) => {
     });
     next();
 });
-
-const uri = "mongodb+srv://jon_myers:tabular0sa@swara.f5cuf.mongodb.net/swara?retryWrites=true&w=majority"
+const settings = 'retryWrites=true&w=majority';
+const webAddress = 'swara.f5cuf.mongodb.net/swara';
+const login = 'srv://jon_myers:tabular0sa';
+const uri = `mongodb+${login}@${webAddress}?${settings}`;
+// const uri = "mongodb+srv://jon_myers:tabular0sa@swara.f5cuf.mongodb.net/swara?retryWrites=true&w=majority"
 
 MongoClient.connect(uri, { useUnifiedTopology: true })
   .then(client => {
@@ -103,6 +106,7 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
     const location = db.collection('location');
     const performanceSections = db.collection('performanceSections');
     const audioRecordings = db.collection('audioRecordings');
+    const users = db.collection('users');
 
     // creates new transcription entry in transcriptions collection
     app.post('/insertNewTranscription', (req, res) => {
@@ -142,12 +146,24 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
         _id: 1,
         performers: 1,
         durTot: 1,
-        raga: 1
+        raga: 1,
+        userID: 1
       }
       const cursor = transcriptions.find().project(projection).toArray()
         .then(result => {
           res.send(JSON.stringify(result))
         })
+    });
+    
+    app.get('/nameFromUserID', async (req, res) => {
+      const query = { _id: ObjectId(JSON.parse(req.query.userID)) };
+      try {
+        const result = await users.findOne(query);
+        res.send(JSON.stringify(result.name))
+      } catch (err) {
+        console.error(err)
+      }
+      
     });
     
     // get all relevent data for audio files
@@ -443,6 +459,31 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
       } catch (err) {
         console.error(err);
         res.status(500).send(err);
+      }
+    })
+    
+    app.post('/userLoginGoogle', async (req, res) => {
+      try {
+        const query = { sub: req.body.sub };
+        const update = { $set: req.body };
+        const options = { upsert: true, returnDocument: 'after' };
+        const result = await users.findOneAndUpdate(query, update, options);
+        res.json(result);
+      } catch (err) {
+        console.error(err)
+      }
+    })
+    
+    app.post('/agreeToWaiver', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.body.userID) };
+        console.log(req.body.userID);
+        const update = { $set: { waiverAgreed: true } };
+        const options = { upsert: true };
+        const result = await users.updateOne(query, update, options);
+        res.json(result)
+      } catch (err) {
+        console.error(err)
       }
     })
     

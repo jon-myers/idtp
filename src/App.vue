@@ -5,6 +5,9 @@
       <router-link class='routerLink' to='/altEditor'><div class='link'>Editor</div></router-link>
       <router-link class='routerLink' to='/audioEvents'><div class='link'>Audio Events</div></router-link>
       <router-link class='routerLink' to='/raagEditor'><div class='link'>Raag Editor</div></router-link>
+      <div class='gap'></div>
+      <img v-if='usrImgUrl' :src='usrImgUrl' class='usrImg'>
+      
   </div>
   <router-view />
 </template>
@@ -20,14 +23,29 @@ export default {
   },
   data() {
     return {
+      usrImgUrl: undefined,
+      navHeight: 40
+      
     }
   },
   mounted() {
+    this.emitter.on('usrImgUrl', usrImgUrl => {
+      this.usrImgUrl = usrImgUrl
+    })
+  },
+  
+  beforeUnmount() {
+    this.emitter.off('usrImgUrl')
   }
 }
 </script>
 
 <style>
+
+.usrImg {
+  width: v-bind(navHeight+'px');
+  height: v-bind(navHeight+'px');
+}
 
 html, body {
   scroll-behavior: smooth;
@@ -78,7 +96,7 @@ body {
 
 .link {
   width: 100px;
-  height: 30px;
+  height: v-bind(navHeight+'px');
   border-right: 1px solid black;
   display: flex;
   align-items: center;
@@ -92,6 +110,10 @@ body {
 a {
   text-decoration: none;
   color: inherit;
+}
+
+.gap {
+  width: 100%
 }
 
 

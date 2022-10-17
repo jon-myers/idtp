@@ -3,6 +3,7 @@ import FileManager from '@/components/FileManager.vue';
 import AudioEvents from '@/components/AudioEvents.vue';
 import RaagEditor from '@/components/RaagEditor.vue';
 import AltEditor from '@/components/AltEditor.vue';
+import LogIn from '@/components/LogIn.vue';
 
 const routes = [
   // {
@@ -29,6 +30,11 @@ const routes = [
     path: '/altEditor',
     name: 'AltEditor',
     component: AltEditor
+  },
+  {
+    path: '/',
+    name: 'LogIn',
+    component: LogIn
   }
 ];
 

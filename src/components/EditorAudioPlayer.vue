@@ -165,7 +165,7 @@ export default {
   watch: {
     async audioSource(newSrc) {
       this.loading = true;
-      this.audioBuffer = await this.getAudio(newSrc, false);
+      this.audioBuffer = await this.getAudio(newSrc, true);
       this.loading = false;
     }
   },
@@ -344,6 +344,7 @@ export default {
       const fetched = await performance.now() - start;
       if (verbose) console.log('fetched: ', fetched / 1000)
       const arrayBuffer = await res.arrayBuffer();
+      console.log(arrayBuffer);
       const midpoint = await performance.now() - start;
       if (verbose) console.log('array buffd: ', midpoint/1000)
       const audioBuffer = await this.ac.decodeAudioData(arrayBuffer);
