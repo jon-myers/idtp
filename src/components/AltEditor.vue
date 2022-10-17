@@ -962,7 +962,7 @@ export default {
         .on('click', dontClick)
         
       // reId all trajs and articulations in following phrases
-      for (let i = this.piece.phrases.length-1; i + 1 > idx; i--) {
+      for (let i = this.piece.phrases.length-1; i > 1 + idx; i--) {
         const thisPhrase = this.piece.phrases[i];
         thisPhrase.trajectories.forEach(traj => {
           const oldId = `p${i-1}t${traj.num}`;
