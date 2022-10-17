@@ -66,7 +66,7 @@ const savePiece = async piece => {
   }
 };
 
-const getAllPieces = async () => {
+const getAllPieces = async userID => {
   let allPieces;
   let request = {
     method: "GET",
@@ -74,7 +74,10 @@ const getAllPieces = async () => {
       "Content-Type": "application/json"
     },
   };
-  await fetch(url + 'getAllTranscriptions', request)
+  const query = '?' + new URLSearchParams({
+    userID: JSON.stringify(userID)
+  });
+  await fetch(url + 'getAllTranscriptions' + query, request)
     .then(response => {
       if (response.ok) {
         return response.json();

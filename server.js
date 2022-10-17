@@ -126,7 +126,11 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
         if (key !== '_id') updateObj[key] = req.body[key]
       });
       updateObj['dateModified'] = new Date();
-      transcriptions.updateOne({ '_id': ObjectId(req.body._id) }, {'$set': updateObj})
+      transcriptions.updateOne({
+        '_id': ObjectId(req.body._id)
+      }, {
+        '$set': updateObj
+      })
         .then(result => {
           console.log('updated transcription')
           result['dateModified'] = updateObj['dateModified']
@@ -136,7 +140,7 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
     });
 
     app.get('/getAllTranscriptions', (req, res) => {
-      console.log('trying to get all transcriptions')
+      const userID = JSON.parse(req.query.userID);
       const projection = {
         title: 1,
         dateCreated: 1,
@@ -147,9 +151,16 @@ MongoClient.connect(uri, { useUnifiedTopology: true })
         performers: 1,
         durTot: 1,
         raga: 1,
-        userID: 1
+        userID: 1,
+        permissions: 1
       }
-      const cursor = transcriptions.find().project(projection).toArray()
+      const query = {
+        '$or': [
+          { 'permissions': 'Public' }, 
+          { 'userID': userID },
+        ]
+      };
+      const cursor = transcriptions.find(query).project(projection).toArray()
         .then(result => {
           res.send(JSON.stringify(result))
         })

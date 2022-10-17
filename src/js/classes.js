@@ -773,7 +773,8 @@ class Piece {
     _id = undefined,
     audioID = undefined,
     audio_DB_ID = undefined,
-    userID = undefined
+    userID = undefined,
+    permissions = undefined
   } = {}) {
     this.phrases = phrases;
     this.raga = raga;
@@ -813,6 +814,7 @@ class Piece {
     this.audioID = audioID;
     this.audio_DB_ID = audio_DB_ID;
     this.userID = userID;
+    this.permissions = permissions;
 
   }
 
@@ -874,7 +876,8 @@ class Piece {
       transcriber: this.transcriber,
       _id: this._id,
       audioID: this.audioID,
-      userID: this.userID
+      userID: this.userID,
+      permissions: this.permissions
     }
   }
 

@@ -6,7 +6,7 @@
     </div>
   </div>
   <div 
-    class='fileInfo' 
+    class='fileInfoRow' 
     v-for="(piece, i) in allPieces" 
     :key="piece"
     @dblclick='openPieceAlt(piece)'>
@@ -51,7 +51,8 @@ export default {
         'Transcriber',
         'Raga',
         'Date Created',
-        'Date Modified'
+        'Date Modified',
+        'Permissions'
       ],
       designPieceModal: false,
       getAllPieces: getAllPieces,
@@ -67,7 +68,7 @@ export default {
     if (this.$store.state.userID === undefined) {
       this.$router.push('/')
     }
-    this.allPieces = await getAllPieces();
+    this.allPieces = await getAllPieces(this.$store.state.userID);
     this.allPieces.forEach(() => {
       this.allPieceInfo.push([
         undefined, 
@@ -117,12 +118,12 @@ export default {
     async pieceInfo(p) {
       const title = p.title;
       const raga = p.raga.name;
-      // const transcriber = p.transcriber;
       let name = undefined;
       if (p.userID) name = await nameFromUserID(p.userID);
       const dateCreated = this.writeDate(p.dateCreated);
       const dateModified = this.writeDate(p.dateModified);
-      return [title, name, raga, dateCreated, dateModified]
+      const permissions = p.permissions;
+      return [title, name, raga, dateCreated, dateModified, permissions]
     },
 
     writeDate(d) {
@@ -162,7 +163,7 @@ export default {
       deletePiece(piece)
         .then(res => {
           if (res.ok) {
-            getAllPieces()
+            getAllPieces(this.$store.state.userID)
               .then(ap => this.allPieces = ap)
           }
         })
@@ -184,7 +185,7 @@ export default {
   width: 100%;
 }
 
-.fileInfo {
+.fileInfoRow {
   width: 100%;
   height: 40px;
   background-color: white;
@@ -193,6 +194,7 @@ export default {
   flex-direction: row;
   align-items: center;
   justify-content: left;
+  cursor: pointer;
 }
 
 .fileInfoKeys {
