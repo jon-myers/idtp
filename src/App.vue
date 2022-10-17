@@ -56,7 +56,13 @@ export default {
       firstName: undefined,
       returning: false,
       firstTime: false,
+<<<<<<< HEAD
       showUserMenu: false  
+=======
+      showUserMenu: false
+      
+      
+>>>>>>> 24d86ccb4190d7c5e02b883ece330154792e55bc
     }
   },
   async mounted() {
@@ -64,8 +70,11 @@ export default {
     if (this.userID === 'undefined') this.userID = undefined;
     this.usrImgUrl = this.$cookies.get('usrImgUrl');
     if (this.usrImgUrl === 'undefined') this.usrImgUrl = undefined;
+<<<<<<< HEAD
     this.firstName = this.$cookies.get('firstName');
     if (this.firstName === 'undefined') this.firstName = undefined;
+=======
+>>>>>>> 24d86ccb4190d7c5e02b883ece330154792e55bc
     if (this.userID) {
       this.$store.commit('update_userID', this.userID);
       this.$store.commit('update_returning', true)
@@ -85,11 +94,17 @@ export default {
       this.usrImgUrl = userData.picture;
       const result = await userLoginGoogle(userData);
       this.userID = result.value._id;
+<<<<<<< HEAD
       
       this.firstName = result.value.given_name;
       this.$cookies.set('userID', this.userID);
       this.$cookies.set('usrImgUrl', this.usrImgUrl);
       this.$cookies.set('firstName', this.firstName);
+=======
+      this.$cookies.set('userID', this.userID);
+      this.$cookies.set('usrImgUrl', this.usrImgUrl);
+      this.firstName = result.value.given_name;
+>>>>>>> 24d86ccb4190d7c5e02b883ece330154792e55bc
       this.$store.commit('update_firstName', this.firstName);
       this.$store.commit('update_userID', this.userID);
       if (!result.lastErrorObject.updatedExisting) {
@@ -121,7 +136,10 @@ export default {
       this.showUserMenu = false;
       this.$cookies.set('userID', undefined);
       this.$cookies.set('usrImgUrl', undefined);
+<<<<<<< HEAD
       this.$cookies.set('firstName', undefined);
+=======
+>>>>>>> 24d86ccb4190d7c5e02b883ece330154792e55bc
       this.$router.push('/')    
     },
     
