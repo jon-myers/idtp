@@ -27,6 +27,7 @@ pnpm-debug.log*
 *.flac
 *.webp
 *.zip
+*.opus
 python/essentia/*.png
 python/visualization_tools/*.png
 credentials
