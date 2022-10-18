@@ -1448,7 +1448,7 @@ export default {
       this.dateModified = new Date(result.dateModified);
     },
     
-    clearAll() {
+    clearAll(regionToo) {
       this.clearSelectedChikari();
       this.clearSelectedTraj();
       this.clearTrajSelectPanel();
@@ -1463,7 +1463,7 @@ export default {
         this.svg.style('cursor', 'auto');
         d3.selectAll(`.newTrajDot`).remove()
       }
-      if (this.regionG) {
+      if (this.regionG && regionToo === undefined) {
         this.regionG.remove();
         this.regionG = undefined;
         this.regionStartTime = 0;
@@ -1761,12 +1761,13 @@ export default {
         if (!this.regionG) {
           this.regionG = this.svg
             .append('g')
+            .classed('regionG', true)
             .attr('clip-path', 'url(#playheadClip)')
-
 
           this.regionG
             .append('rect')
             .classed('region', true)
+            .style('pointer-events', 'none')
             .attr('width', this.regionEndPx - this.regionStartPx)
             .attr('height', rect.height)
             .attr('fill', 'white')
@@ -1875,6 +1876,10 @@ export default {
         .attr('transform', `translate(${start},0)`)
       d3.select('.regionEnd')
         .attr('transform', `translate(${end},0)`)
+        d3.select('.clickableRegionStart')
+          .attr('transform', `translate(${start},0)`)
+        d3.select('.clickableRegionEnd')
+          .attr('transform', `translate(${end},0)`)
     },
 
     async initializePiece() {
@@ -2094,7 +2099,8 @@ export default {
           this.justEnded = false // this just prevents phrase div drag end from 
           // clearing all
         } else {
-          this.clearAll()
+          // console.log('this')
+          this.clearAll(false)
         }
       }
     },
@@ -3641,4 +3647,12 @@ button {
   width: 100%;
   height: 100%;
 }
+
+/* .regionG {
+  pointer-events: none;
+}
+
+.region {
+  pointer-events: none
+} */
 </style>
