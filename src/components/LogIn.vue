@@ -33,6 +33,7 @@ export default {
     this.firstTime = this.$store.state.firstTime;
     this.returning = this.$store.state.returning;
     this.userID = this.$store.state.userID;
+    this.firstName = this.$store.state.firstName;
   },
   
   computed: {

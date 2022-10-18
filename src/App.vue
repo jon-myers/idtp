@@ -68,7 +68,8 @@ export default {
     if (this.firstName === 'undefined') this.firstName = undefined;
     if (this.userID) {
       this.$store.commit('update_userID', this.userID);
-      this.$store.commit('update_returning', true)
+      this.$store.commit('update_returning', true);
+      this.$store.commit('update_firstName', this.firstName);
     } else {
       try {
         const response = await googleOneTap({ autoLogin: false });

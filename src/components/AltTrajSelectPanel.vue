@@ -3,11 +3,24 @@
   <div class='selectionPanel'>
     <div class='selectionRow'>
       <label>Pluck</label>
-      <input type='checkbox' v-model='pluckBool' @change='updateBool'/>
+      <input 
+        v-if='editable' 
+        type='checkbox' 
+        v-model='pluckBool' 
+        @change='updateBool'
+      />
+      <input 
+        v-if='!editable' 
+        type='checkbox' 
+        v-model='pluckBool' 
+        @change='updateBool'
+        disabled='disabled'
+      />
     </div>
     <div class='selectionRow' v-if='showSlope'>
       <label>Slope</label>
       <input 
+        v-if='editable'
         type='range' 
         class='slider'
         v-model='slope'
@@ -16,6 +29,17 @@
         step='0.01'
         @input='updateSlope'
         />
+        <input 
+          v-if='!editable'
+          type='range' 
+          class='slider'
+          v-model='slope'
+          min='0.0'
+          max='3.0'
+          step='0.01'
+          @input='updateSlope'
+          disabled='disabled'
+          />
     </div>
   </div>
   <div class='thumbRow' v-for='odx in 4' :key='odx'>
@@ -60,6 +84,10 @@ export default {
       showSlope: false
     }
   },
+  
+  props: [
+    'editable'
+  ],
 
 
   mounted() {
@@ -71,7 +99,7 @@ export default {
       document.querySelectorAll('.thumb').forEach(t => {
         t.classList.remove('selected')
       })
-      if (newVal) {
+      if (newVal !== undefined) {
         const el = document.querySelector(`#id${newVal}`)
         el.classList.add('selected')
         const slopeIdxs = [2, 3, 4, 5]
@@ -84,7 +112,7 @@ export default {
 
     selectIcon(e) {
       const idx = Number(e.target.id.slice(2));
-      if (this.parentSelected) {
+      if (this.parentSelected && this.editable) {
         const twos = [1, 2, 3, 11];
         const threes = [4, 5, 6];
         if (twos.includes(this.selectedIdx)) {
@@ -192,14 +220,7 @@ export default {
             this.emitter.emit('newTraj', this.selectedIdx);
           }
         }
-      } else {
-        this.selectedIdx = idx;
-        document.querySelectorAll('.thumb').forEach(t => {
-          t.classList.remove('selected')
-        })
-        e.target.classList.add('selected');
-        
-      }
+      } 
     },
     
     updateSlope() {
@@ -233,7 +254,7 @@ export default {
   border-top: 1px solid black;
   margin: 0;
   display: inline-block;
-  cursor: pointer;
+  /* cursor: pointer; */
 }
 
 .right {
