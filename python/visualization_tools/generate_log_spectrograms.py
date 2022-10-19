@@ -7,6 +7,11 @@ from sklearn.preprocessing import normalize
 import gzip, pickle
 from PIL import Image
 
+def replaceZeros(data):
+    min_nonzero = np.min(data[np.nonzero(data)])
+    data[data == 0] = min_nonzero
+    return data
+
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
@@ -48,12 +53,14 @@ cqGen = ess.NSGConstantQ(**params)
 passes = math.ceil(len(audio) / max_samples)
 arrs = []
 for i in range(passes):
+    print(i)
     if i < passes - 1:
         audio_segment = audio[i * max_samples: (i+1) * max_samples]
     else:
         audio_segment = audio[i * max_samples:]
     constantq, _, _ = cqGen(audio_segment)
-    arr = np.log10(np.abs(constantq))
+    abs_constantq = replaceZeros(np.abs(constantq))
+    arr = np.log10(abs_constantq)
     arrs.append(arr)
 
 arr = np.hstack(arrs)

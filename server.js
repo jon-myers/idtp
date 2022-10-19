@@ -408,10 +408,36 @@ MongoClient.connect(uri, {
     app.get('/getNumberOfSpectrograms', async (req, res) => {
       const dir = 'spectrograms/' + req.query.id + '/0';
       try {
+        
         const files = await fs.readdir(dir);
-        res.json(files.length)
+        res.json(files.length)  
       } catch (err) {
-        throw err
+        res.json(undefined)
+        // throw err
+      }
+    })
+    
+    app.post('/makeSpectrograms', async (req, res) => {
+      console.log(req.body.recId, req.body.saEst)
+      
+      const makingSpecs = spawn(
+        'python3', 
+        ['generate_log_spectrograms.py', req.body.recId, req.body.saEst]
+      );
+      try {
+        await makingSpecs.stdout.on('data', data => {
+          console.log(`stdout: ${data}`)
+        });
+        
+        await makingSpecs.stderr.on('data', data => {
+          console.error(`stderr: ${data}`)
+        });
+        await makingSpecs.on('close', (msg) => {
+          console.log(msg)
+          res.json('made the spectrograms')
+        })
+      } catch (err) {
+        throw (err)
       }
     })
 
@@ -504,7 +530,13 @@ MongoClient.connect(uri, {
         update.$set[verString] = req.body.verified;
         update.$set[estString] = req.body.saEstimate;
         const result = await audioEvents.updateOne(query, update);
-        console.log(result)
+        const otherQuery = { _id: ObjectId(req.body.recID) };
+        const otherUpdate = { $set: {
+          saEstimate: req.body.saEstimate,
+          saVerified: req.body.verified
+          }
+        };
+        const otherResult = await audioRecordings.updateOne(otherQuery, otherUpdate)
       } catch (err) {
         console.error(err);
         res.status(500).send(err)

@@ -183,6 +183,7 @@ export default {
   flex-direction: column;
   height: 100%;
   width: 100%;
+  /* user-select: none; */
 }
 
 .fileInfoRow {
@@ -195,7 +196,12 @@ export default {
   align-items: center;
   justify-content: left;
   cursor: pointer;
+  /* pointer-events: none; */
 }
+
+/* .fileInfoRow * {
+  user-select: none
+} */
 
 .fileInfoKeys {
   width: 100%;
@@ -215,6 +221,7 @@ export default {
   width: 150px;
   height: 100%;
   border-right: 1px solid black;
+  user-select: none;
 }
 
 .addNewPiece {

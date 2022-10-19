@@ -289,6 +289,27 @@ const getNumberOfSpectrograms = async id => {
   }  
 };
 
+const makeSpectrograms = async (recId, saEst) => {
+  let out;
+  // console.log('recId: ', recId, '; saEst: ', saEst)
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ recId: recId, saEst: saEst })
+  };
+  try {
+    const res = await fetch(url + 'makeSpectrograms', request);
+    if (res.ok) {
+      out = await res.json();
+      return out
+    }
+  } catch (err) {
+    console.error(err)
+  }
+};
+
 const getRagaNames = async () => {
   // gets all raga names
   let ragas;
@@ -680,3 +701,4 @@ exports.getNumberOfSpectrograms = getNumberOfSpectrograms
 exports.userLoginGoogle = userLoginGoogle
 exports.agreeToWaiver = agreeToWaiver
 exports.nameFromUserID = nameFromUserID
+exports.makeSpectrograms = makeSpectrograms

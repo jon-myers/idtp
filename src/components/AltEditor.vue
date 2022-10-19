@@ -15,6 +15,7 @@
       </div>
       <div class='cbBox' v-if='editable'>
         <button @click='savePiece'>Save</button>
+        <button @click='makeSpectrograms'>Remake Spectrogram</button>
         <span class='savedDate'>
           {{`Saved: ${dateModified ? dateModified.toLocaleString() : ''}`}}
         </span>
@@ -82,6 +83,7 @@ import {
   getAudioRecording,
   getNumberOfSpectrograms,
   savePiece,
+  makeSpectrograms
 } from '@/js/serverCalls.js';
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
 import AltTrajSelectPanel from '@/components/AltTrajSelectPanel.vue';
@@ -375,6 +377,22 @@ export default {
             .call(drag())  
         }          
       }
+    },
+    
+    async makeSpectrograms() {
+      // use call from serverCalls.js to create new spectrograms on the server.
+      const recId = this.piece.audioID;
+      const saEst = this.audioDBDoc.saEstimate;
+      
+      const result = await makeSpectrograms(recId, saEst);
+      console.log(result)
+      
+      // console.log(recId, this.audioDBDoc)
+      // try {
+      // 
+      // } catch (err) {
+      //   console.error(err)
+      // }
     },
     
     dragDotStart(e) {
