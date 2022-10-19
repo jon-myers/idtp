@@ -66,7 +66,7 @@ const savePiece = async piece => {
   }
 };
 
-const getAllPieces = async () => {
+const getAllPieces = async userID => {
   let allPieces;
   let request = {
     method: "GET",
@@ -74,7 +74,10 @@ const getAllPieces = async () => {
       "Content-Type": "application/json"
     },
   };
-  await fetch(url + 'getAllTranscriptions', request)
+  const query = '?' + new URLSearchParams({
+    userID: JSON.stringify(userID)
+  });
+  await fetch(url + 'getAllTranscriptions' + query, request)
     .then(response => {
       if (response.ok) {
         return response.json();
@@ -286,6 +289,27 @@ const getNumberOfSpectrograms = async id => {
   }  
 };
 
+const makeSpectrograms = async (recId, saEst) => {
+  let out;
+  // console.log('recId: ', recId, '; saEst: ', saEst)
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ recId: recId, saEst: saEst })
+  };
+  try {
+    const res = await fetch(url + 'makeSpectrograms', request);
+    if (res.ok) {
+      out = await res.json();
+      return out
+    }
+  } catch (err) {
+    console.error(err)
+  }
+};
+
 const getRagaNames = async () => {
   // gets all raga names
   let ragas;
@@ -373,6 +397,7 @@ const getPerformanceSections = async () => {
 };
 
 const createNewPiece = async obj => {
+  console.log(obj)
   const data = JSON.stringify(obj);
   let out;
   let request = {
@@ -577,6 +602,75 @@ const altUploadFile = async (file, onProgress, parentID, idx) => {
   }
 }
 
+const userLoginGoogle = async userData => {
+  const data = JSON.stringify({
+    sub: userData.sub,
+    picture: userData.picture,
+    email: userData.email,
+    name: userData.name,
+    given_name: userData.given_name,
+    family_name: userData.family_name
+  });
+  let out;
+  let request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: data
+  };
+  try {
+    const response = await fetch(url + 'userLoginGoogle', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const agreeToWaiver = async userID => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userID: userID })
+  };
+  try {
+    const response = await fetch(url + 'agreeToWaiver', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const nameFromUserID = async userID => {
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const response = await fetch(url + 'nameFromUserID?' + new URLSearchParams({
+      userID: JSON.stringify(userID)
+    }), request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
 
 exports.getPiece = getPiece
 exports.savePiece = savePiece
@@ -604,3 +698,7 @@ exports.getRaagRule = getRaagRule
 exports.saveRaagRules = saveRaagRules
 exports.getAudioRecording = getAudioRecording
 exports.getNumberOfSpectrograms = getNumberOfSpectrograms
+exports.userLoginGoogle = userLoginGoogle
+exports.agreeToWaiver = agreeToWaiver
+exports.nameFromUserID = nameFromUserID
+exports.makeSpectrograms = makeSpectrograms

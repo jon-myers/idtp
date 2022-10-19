@@ -5,6 +5,7 @@ from pymongo import MongoClient
 import numpy as np
 import sys, os, pymongo, math
 import soundfile as sf
+import json
 
 def get_peaks(data, num_levels=4, block_size=64):
     obj = {}
@@ -55,18 +56,22 @@ audio_events.update_one(query, update, upsert=True)
 
 wav_path = 'audio/wav/' + file_name + '.wav'
 mp3_path = 'audio/mp3/' + file_name + '.mp3'
+opus_path = 'audio/opus/' + file_name + '.opus'
 sr = 44100
 
 if suffix == 'mp3':
     sf.write(wav_path, audio, sr)
+    os.system(f'ffmpeg -i {file_path + path} -codec:a libopus {opus_path}')
     os.rename(file_path + path, mp3_path)
 elif suffix == 'wav':
     
     os.system(f'ffmpeg -i {file_path + path} -vn -ar 44100 -ac 2 -b:a 192k {mp3_path}')
+    os.system(f'ffmpeg -i {file_path + path} -codec:a libopus {opus_path}')
     os.rename(file_path + path, wav_path)
 else:
     sf.write(wav_path, audio, sr)
     os.system(f'ffmpeg -i {file_path + path} -vn -ar 44100 -ac 2 -b:a 192k {mp3_path}')
+    os.system(f'ffmpeg -i {file_path + path} -codec:a libopus {opus_path}')
     os.remove(file_path + path)
 
 

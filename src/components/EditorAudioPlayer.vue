@@ -165,7 +165,7 @@ export default {
   watch: {
     async audioSource(newSrc) {
       this.loading = true;
-      this.audioBuffer = await this.getAudio(newSrc, false);
+      this.audioBuffer = await this.getAudio(newSrc, true);
       this.loading = false;
     }
   },

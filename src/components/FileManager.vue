@@ -5,10 +5,14 @@
       {{ik}}
     </div>
   </div>
-  <div class='fileInfo' v-for="piece in allPieces" :key="piece">
-    <div class='infoKey' v-for="info in pieceInfo(piece)" :key="info">{{info}}</div>
+  <div 
+    class='fileInfoRow' 
+    v-for="(piece, i) in allPieces" 
+    :key="piece"
+    @dblclick='openPieceAlt(piece)'>
+    <div class='infoKey' v-for="info in allPieceInfo[i]" :key="info">{{info}}</div>
     <!-- <button @click='openPiece(piece)'>open</button> -->
-    <button @click='openPieceAlt(piece)'>open</button>
+    <!-- <button @click='openPieceAlt(piece)'>open</button> -->
     <!-- <button @click='deletePiece(piece)'>delete</button> -->
   </div>
   <div class='addNewPiece' @click="designNewPiece()">Add new Piece ...</div>
@@ -26,7 +30,8 @@ import {
   getAllPieces,
   createNewPiece,
   deletePiece,
-  getRaagRule
+  getRaagRule,
+  nameFromUserID
 } from '@/js/serverCalls.js';
 import NewPieceRegistrar from '@/components/NewPieceRegistrar.vue';
 import {
@@ -46,20 +51,36 @@ export default {
         'Transcriber',
         'Raga',
         'Date Created',
-        'Date Modified'
+        'Date Modified',
+        'Permissions'
       ],
       designPieceModal: false,
       getAllPieces: getAllPieces,
       allPieces: undefined,
+      allPieceInfo: []
     }
   },
   components: {
     NewPieceRegistrar
   },
 
-  created() {
-    getAllPieces()
-      .then(ap => this.allPieces = ap)
+  async created() {
+    if (this.$store.state.userID === undefined) {
+      this.$router.push('/')
+    }
+    this.allPieces = await getAllPieces(this.$store.state.userID);
+    this.allPieces.forEach(() => {
+      this.allPieceInfo.push([
+        undefined, 
+        undefined, 
+        undefined, 
+        undefined, 
+        undefined
+      ]);
+    });
+    this.allPieces.forEach(async (piece, i) => {
+      this.allPieceInfo[i] = await this.pieceInfo(piece)
+    })
   },
 
   mounted() {
@@ -77,10 +98,12 @@ export default {
         ruleSet: ruleSet
       });
       npi.phrases = [new Phrase({ 
-        trajectories: [new Trajectory({ id: 12, durTot: 5, fundID12: npi.raga.fundamental })],
-      
+        trajectories: [new Trajectory({ 
+          id: 12, 
+          durTot: 5, 
+          fundID12: npi.raga.fundamental 
+        })],  
       })]
-      // console.log(npi);
       this.createNewPiece(npi);
     });
 
@@ -92,13 +115,15 @@ export default {
 
   methods: {
 
-    pieceInfo(p) {
+    async pieceInfo(p) {
       const title = p.title;
       const raga = p.raga.name;
-      const transcriber = p.transcriber;
+      let name = undefined;
+      if (p.userID) name = await nameFromUserID(p.userID);
       const dateCreated = this.writeDate(p.dateCreated);
       const dateModified = this.writeDate(p.dateModified);
-      return [title, transcriber, raga, dateCreated, dateModified]
+      const permissions = p.permissions;
+      return [title, name, raga, dateCreated, dateModified, permissions]
     },
 
     writeDate(d) {
@@ -126,6 +151,7 @@ export default {
 
     createNewPiece(obj) {
       const piece = obj ? new Piece(obj) : new Piece;
+      piece.userID = this.$store.state.userID;
       createNewPiece(piece)
         .then(data => {
           this.$store.commit('update_id', data.insertedId);
@@ -137,7 +163,7 @@ export default {
       deletePiece(piece)
         .then(res => {
           if (res.ok) {
-            getAllPieces()
+            getAllPieces(this.$store.state.userID)
               .then(ap => this.allPieces = ap)
           }
         })
@@ -157,9 +183,10 @@ export default {
   flex-direction: column;
   height: 100%;
   width: 100%;
+  /* user-select: none; */
 }
 
-.fileInfo {
+.fileInfoRow {
   width: 100%;
   height: 40px;
   background-color: white;
@@ -168,7 +195,13 @@ export default {
   flex-direction: row;
   align-items: center;
   justify-content: left;
+  cursor: pointer;
+  /* pointer-events: none; */
 }
+
+/* .fileInfoRow * {
+  user-select: none
+} */
 
 .fileInfoKeys {
   width: 100%;
@@ -188,6 +221,7 @@ export default {
   width: 150px;
   height: 100%;
   border-right: 1px solid black;
+  user-select: none;
 }
 
 .addNewPiece {

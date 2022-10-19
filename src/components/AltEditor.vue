@@ -13,8 +13,9 @@
           v-model='spectrogramOpacity'
           >
       </div>
-      <div class='cbBox'>
+      <div class='cbBox' v-if='editable'>
         <button @click='savePiece'>Save</button>
+        <button @click='makeSpectrograms'>Remake Spectrogram</button>
         <span class='savedDate'>
           {{`Saved: ${dateModified ? dateModified.toLocaleString() : ''}`}}
         </span>
@@ -29,7 +30,7 @@
       </div>
       <div class='filler'>
       </div>
-      <AltTrajSelectPanel ref='trajSelectPanel' />
+      <AltTrajSelectPanel ref='trajSelectPanel' :editable='editable'/>
     </div>
   </div>
 </div>
@@ -82,6 +83,7 @@ import {
   getAudioRecording,
   getNumberOfSpectrograms,
   savePiece,
+  makeSpectrograms
 } from '@/js/serverCalls.js';
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
 import AltTrajSelectPanel from '@/components/AltTrajSelectPanel.vue';
@@ -123,7 +125,8 @@ export default {
       setNewTraj: false,
       d3: d3,
       setNewPhraseDiv: false,
-      justEnded: false
+      justEnded: false,
+      editable: false
     }
   },
   components: {
@@ -131,10 +134,12 @@ export default {
     AltTrajSelectPanel
   },
   created() {
-    window.addEventListener('keydown', this.handleKeydown)
+    window.addEventListener('keydown', this.handleKeydown);
+    if (this.$store.state.userID === undefined) {
+      this.$router.push('/')
+    }
   },
   async mounted() {
-    this.d3 = d3;
     window.addEventListener('resize', this.resize);
     this.emitter.on('mutateTraj', newIdx => {
       if (!this.selectedTraj) {
@@ -242,7 +247,8 @@ export default {
 
     const piece = await getPiece(this.$store.state._id);
     if (piece.audioID) {
-      this.audioSource = `https://swara.studio/audio/mp3/${piece.audioID}.mp3`;
+      // this.audioSource = `https://swara.studio/audio/mp3/${piece.audioID}.mp3`;
+      this.audioSource= `https://swara.studio/audio/opus/${piece.audioID}.opus`;
       this.audioDBDoc = await getAudioRecording(piece.audioID)
       this.durTot = this.audioDBDoc.duration;
       // if pieceDurTot is less than this, add slient phrase to make the two 
@@ -255,6 +261,11 @@ export default {
     this.freqMin = fund / 2;
     this.freqMax = fund * 4;
     await this.getPieceFromJson(piece, fund);
+    const c1 = this.$store.state.userID === this.piece.userID;
+    const c2 = this.piece.permissions === 'Publicly Editable';
+    if (c1 || c2) {
+      this.editable = true
+    }
     await this.initializePiece();
     // GETBACK
     // this.$refs.audioPlayer.initializePluckNode();
@@ -361,8 +372,27 @@ export default {
           .attr('r', 4)
           .style('fill', 'purple')
           .style('cursor', 'pointer')
-          .call(drag())
+        if (this.editable) {
+          d3.select(`#dragDot${i}`)
+            .call(drag())  
+        }          
       }
+    },
+    
+    async makeSpectrograms() {
+      // use call from serverCalls.js to create new spectrograms on the server.
+      const recId = this.piece.audioID;
+      const saEst = this.audioDBDoc.saEstimate;
+      
+      const result = await makeSpectrograms(recId, saEst);
+      console.log(result)
+      
+      // console.log(recId, this.audioDBDoc)
+      // try {
+      // 
+      // } catch (err) {
+      //   console.error(err)
+      // }
     },
     
     dragDotStart(e) {
@@ -957,9 +987,13 @@ export default {
         .attr('d', this.playheadLine())
         .style('opacity', '0')
         .attr('transform', `translate(${this.codifiedXR(time)},0)`)
-        .call(drag())    
         .style('cursor', 'pointer')
         .on('click', dontClick)
+      if (this.editable) {
+        d3.select(`#overlay__phraseLine${idx}`)
+          .call(drag())
+      }
+          
         
       // reId all trajs and articulations in following phrases
       for (let i = this.piece.phrases.length-1; i > 1 + idx; i--) {
@@ -1042,10 +1076,11 @@ export default {
               .attr('d', this.playheadLine())
               .style('opacity', '0')
               .attr('transform', `translate(${this.codifiedXR(endTime)},0)`)
-              .call(drag())    
               .style('cursor', 'pointer')
-              
-
+            if (this.editable) {
+              d3.select(`#overlay__phraseLine${i}`)
+                .call(drag())
+            }
           }
         })
       } else {
@@ -1155,7 +1190,6 @@ export default {
                }
              })
            } else if (i + 1 === tempPIdx && tempTIdx === 0) {
-             console.log('next silence');
              const phraseA = this.piece.phrases[i];
              const phraseB = this.piece.phrases[i+1];
              const origDivTime = phraseA.startTime + phraseA.durTot;
@@ -1445,7 +1479,7 @@ export default {
       this.dateModified = new Date(result.dateModified);
     },
     
-    clearAll() {
+    clearAll(regionToo) {
       this.clearSelectedChikari();
       this.clearSelectedTraj();
       this.clearTrajSelectPanel();
@@ -1460,7 +1494,7 @@ export default {
         this.svg.style('cursor', 'auto');
         d3.selectAll(`.newTrajDot`).remove()
       }
-      if (this.regionG) {
+      if (this.regionG && regionToo === undefined) {
         this.regionG.remove();
         this.regionG = undefined;
         this.regionStartTime = 0;
@@ -1476,7 +1510,7 @@ export default {
       } else if (e.key === 'Escape') {
         e.preventDefault();
         this.clearAll()
-      } else if (e.key === 'Backspace') {
+      } else if (e.key === 'Backspace' && this.editable === true) {
 
         if (this.selectedChikariID) {
           const splitArr = this.selectedChikariID.split('_');
@@ -1526,7 +1560,10 @@ export default {
                 .on('drag', this.phraseDivDragDragging(j-1))
                 .on('end', this.phraseDivDragEnd(j-1))
             };
-            d3.select(`#overlay__phraseLine${j-1}`).call(drag())
+            if (this.editable) {
+              d3.select(`#overlay__phraseLine${j-1}`)
+                .call(drag())
+            }  
           }
           // fix chikaris
           Object.keys(phraseB.chikaris).forEach(key => {
@@ -1544,12 +1581,12 @@ export default {
           })
         }
 
-      } else if (e.key === 'c') {
+      } else if (e.key === 'c' && this.editable) {
         this.setChikari = true;
         this.svg.style('cursor', 'cell')
         if (this.setNewTraj) this.setNewTraj = false;
         if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
-      } else if (e.key === 't' && this.setNewTraj === false) {
+      } else if (e.key === 't' && this.setNewTraj === false && this.editable) {
         this.clearSelectedTraj();
         this.clearTrajSelectPanel();
         this.setNewTraj = true;
@@ -1557,7 +1594,7 @@ export default {
         this.trajTimePts = [];
         if (this.setChikari) this.setChikari = false;
         if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
-      } else if (e.key === 'p' && this.setNewPhraseDiv === false) {
+      } else if (e.key === 'p' && this.setNewPhraseDiv === false && this.editable) {
         this.clearSelectedTraj();
         this.clearTrajSelectPanel();
         this.clearSelectedPhraseDiv();
@@ -1758,12 +1795,13 @@ export default {
         if (!this.regionG) {
           this.regionG = this.svg
             .append('g')
+            .classed('regionG', true)
             .attr('clip-path', 'url(#playheadClip)')
-
 
           this.regionG
             .append('rect')
             .classed('region', true)
+            .style('pointer-events', 'none')
             .attr('width', this.regionEndPx - this.regionStartPx)
             .attr('height', rect.height)
             .attr('fill', 'white')
@@ -1872,6 +1910,10 @@ export default {
         .attr('transform', `translate(${start},0)`)
       d3.select('.regionEnd')
         .attr('transform', `translate(${end},0)`)
+        d3.select('.clickableRegionStart')
+          .attr('transform', `translate(${start},0)`)
+        d3.select('.clickableRegionEnd')
+          .attr('transform', `translate(${end},0)`)
     },
 
     async initializePiece() {
@@ -2078,8 +2120,11 @@ export default {
           };        
           d3.select(`#overlay__phraseLine${i}`)
             .attr('id', `overlay__phraseLine${i+1}`)
+          if (this.editable) {
+            d3.select(`#overlay__phraseLine${i}`)
             .on('.drag', null)
             .call(drag())
+          }
           d3.select(`#phraseLine${i}`)
             .attr('id', `phraseLine${i+1}`)          
         }
@@ -2091,7 +2136,7 @@ export default {
           this.justEnded = false // this just prevents phrase div drag end from 
           // clearing all
         } else {
-          this.clearAll()
+          this.clearAll(false)
         }
       }
     },
@@ -2759,7 +2804,7 @@ export default {
 
     handleClickTraj(e) {
       e.stopPropagation();
-      const id = e.target.id.split('__')[1]
+      const id = e.target.id.split('__')[1];
       if (this.selectedTrajID && this.selectedTrajID !== id) {
         d3.select(`#` + this.selectedTrajID)
           .attr('stroke', this.trajColor)
@@ -3275,13 +3320,45 @@ export default {
       }
       // if before and after are silence; combine all three trajs into single
       //silent traj
-      d3.select(`#${trajID}`).remove();
+    d3.select(`#${trajID}`).remove();
       d3.select(`#overlay__${trajID}`).remove();
       d3.select(`#articulations__${trajID}`).remove();
+      
       if (!newTraj) {
+        // for (let i=phrase.trajectories.length-1; i > tIdx; i--) {
+        //   const traj = phrase.trajectories[i];
+        //   const oldId = `p${pIdx}t${traj.num}`;
+        //   const newId = `p${pIdx}t${delAfter ? traj.num - 2 : traj.num-1}`;
+        //   d3.select(`#${oldId}`).attr('id', newId);
+        //   d3.select(`#overlay__${oldId}`).attr('id', `overlay__${newId}`);
+        //   d3.select(`#articulations__${oldId}`)
+        //     .attr('id', `articulations__${newId}`);
+        //   let hOffCt = 0;
+        //   let hOnCt = 0;
+        //   let slideCt = 0;
+        //   Object.keys(traj.articulations).forEach(key => {
+        //     const art = traj.articulations[key];
+        //     if (art.name === 'pluck') {
+        //       d3.select(`#pluck${oldId}`).attr('id', `pluck${newId}`);
+        //     } else if (art.name === 'hammer-off') {
+        //       d3.select(`#hammeroff${oldId}i${hOffCt}`)
+        //         .attr('id', `hammeroff${newId}i${hOffCt}`);
+        //       hOffCt++;
+        //     } else if (art.name === 'hammer-on') {
+        //       d3.select(`#hammeron${oldId}i${hOnCt}`)
+        //         .attr('id', `hammeron${newId}i${hOnCt}`);
+        //       hOnCt++;
+        //     } else if (art.name === 'slide') {
+        //       d3.select(`#slide${oldId}i${slideCt}`)
+        //         .attr('id', `slide${newId}i${slideCt}`);
+        //       slideCt++;
+        //     }
+        //   })
+        // }
+        
         phrase.trajectories.filter(traj => traj.num > tIdx).forEach(traj => {
           const oldId = `p${pIdx}t${traj.num}`;
-          const newId = `p${pIdx}t${traj.num-1}`;
+          const newId = `p${pIdx}t${delAfter ? traj.num - 2 : traj.num-1}`;
           d3.select(`#${oldId}`).attr('id', newId);
           d3.select(`#overlay__${oldId}`).attr('id', `overlay__${newId}`);
           d3.select(`#articulations__${oldId}`)
@@ -3638,4 +3715,12 @@ button {
   width: 100%;
   height: 100%;
 }
+
+/* .regionG {
+  pointer-events: none;
+}
+
+.region {
+  pointer-events: none
+} */
 </style>

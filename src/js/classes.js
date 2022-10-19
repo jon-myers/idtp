@@ -772,7 +772,9 @@ class Piece {
     transcriber = 'Anonymous User',
     _id = undefined,
     audioID = undefined,
-    audio_DB_ID = undefined
+    audio_DB_ID = undefined,
+    userID = undefined,
+    permissions = undefined
   } = {}) {
     this.phrases = phrases;
     this.raga = raga;
@@ -810,7 +812,9 @@ class Piece {
     this.transcriber = transcriber;
     this._id = _id;
     this.audioID = audioID;
-    this.audio_DB_ID = audio_DB_ID
+    this.audio_DB_ID = audio_DB_ID;
+    this.userID = userID;
+    this.permissions = permissions;
 
   }
 
@@ -871,7 +875,9 @@ class Piece {
       location: this.location,
       transcriber: this.transcriber,
       _id: this._id,
-      audioID: this.audioID
+      audioID: this.audioID,
+      userID: this.userID,
+      permissions: this.permissions
     }
   }
 

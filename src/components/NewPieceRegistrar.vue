@@ -39,6 +39,14 @@
           </option>
         </select>
       </div>
+      <div class='formRow'>
+        <label>Permissions</label>
+        <select v-model='permissions'>
+          <option v-for='pType in permissionTypes' :key='pType'>
+            {{pType}}
+          </option>
+        </select>
+      </div>
       <div class='buttonRow'>
         <div class='buttonCol'>
           <button @click="makeNewPiece">submit</button>
@@ -165,6 +173,11 @@ export default {
       showRaagEditor: false,
       rules: undefined,
       savedMsg: 'unsaved',
+      permissionTypes: [
+        'Public',
+        'Private',
+        'Publicly Editable'
+      ],
       rulesTemplate: {
         sa: false,
         re: {
@@ -252,6 +265,7 @@ export default {
         title: this.title,
         transcriber: this.transcriber,
         raga: this.raga,
+        permissions: this.permissions
       }
       if (this.aeIdx && this.recording) {
         const ae = this.allAudioEvents[this.aeIdx];
