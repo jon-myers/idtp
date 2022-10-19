@@ -1,5 +1,6 @@
 // const plt = require('matplotnode');
-const _ = require('lodash');
+// const _ = require('lodash');
+const findLastIndex = require('lodash/findLastIndex')
 
 // import { getRaagRule } from '@/js/serverCalls.js';
 
@@ -486,7 +487,7 @@ class Trajectory {
     });
     const out = x => {
       const starts = getStarts(durArray);
-      const index = _.findLastIndex(starts, s => x >= s);
+      const index = findLastIndex(starts, s => x >= s);
       return outs[index](x)
     };
     return out(x)
@@ -505,7 +506,7 @@ class Trajectory {
     let durArray = da === undefined ? this.durArray : da;
     if (durArray === undefined) durArray = [1 / 3, 1 / 3, 1 / 3];
     const starts = getStarts(durArray);
-    const index = _.findLastIndex(starts, s => x >= s);
+    const index = findLastIndex(starts, s => x >= s);
     return 2 ** logFreqs[index]
   }
 
@@ -514,7 +515,7 @@ class Trajectory {
     let durArray = da === undefined ? this.durArray : da;
     if (durArray === undefined) durArray = [1 / 4, 1 / 4, 1 / 4, 1 / 4];
     const starts = getStarts(durArray);
-    const index = _.findLastIndex(starts, s => x >= s);
+    const index = findLastIndex(starts, s => x >= s);
     return 2 ** logFreqs[index]
   }
 
@@ -523,7 +524,7 @@ class Trajectory {
     let durArray = da === undefined ? this.durArray : da;
     if (durArray === undefined) durArray = [...Array(6)].map((_, i) => i / 6);
     const starts = getStarts(durArray);
-    const index = _.findLastIndex(starts, s => x >= s);
+    const index = findLastIndex(starts, s => x >= s);
     return 2 ** logFreqs[index]
   }
   // eslint-disable-next-line no-unused-vars
@@ -633,7 +634,7 @@ class Phrase {
       return null
     } else {
       const starts = getStarts(this.durArray);
-      const index = _.findLastIndex(starts, s => x >= s);
+      const index = findLastIndex(starts, s => x >= s);
       const innerX = (x - starts[index]) / this.durArray[index];
       const traj = this.trajectories[index];
       return traj.compute(innerX, logScale)

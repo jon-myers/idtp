@@ -51,7 +51,7 @@ const displayTime = dur => {
 }
 
 export default {
-  name: '',
+  name: 'AudioFiles',
   
   data() {
     return {

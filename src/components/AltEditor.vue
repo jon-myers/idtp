@@ -87,7 +87,29 @@ import {
 } from '@/js/serverCalls.js';
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
 import AltTrajSelectPanel from '@/components/AltTrajSelectPanel.vue';
-import * as d3 from 'd3';
+
+// import * as d3 from 'd3';
+
+import { 
+  select as d3Select, 
+  selectAll as d3SelectAll,
+  drag as d3Drag,
+  line as d3Line,
+  create as d3Create,
+  scaleLinear as d3ScaleLinear,
+  zoomIdentity as d3ZoomIdentity,
+  zoom as d3Zoom,
+  zoomTransform as d3ZoomTransform,
+  symbol as d3Symbol,
+  axisTop as d3AxisTop,
+  axisLeft as d3AxisLeft,
+  symbolTriangle as d3SymbolTriangle,
+  symbolX as d3SymbolX,
+  easeQuadInOut as d3EaseQuadInOut,
+  pointers as d3Pointers,
+  mean as d3Mean,
+} from 'd3';
+
 export default {
   name: 'AltEditor',
   data() {
@@ -123,7 +145,6 @@ export default {
       init: true,
       minTrajDur: 0.1,
       setNewTraj: false,
-      d3: d3,
       setNewPhraseDiv: false,
       justEnded: false,
       editable: false
@@ -158,14 +179,14 @@ export default {
         phrase.assignTrajNums();
         this.selectedTraj = newTraj;
         const data = this.makeTrajData(this.selectedTraj, phrase.startTime);
-        d3.select(`#p${pIdx}t${tIdx}`)
+        d3Select(`#p${pIdx}t${tIdx}`)
           .datum(data)
           .attr('d', this.codifiedPhraseLine())
-        d3.select(`#overlay__p${pIdx}t${tIdx}`)
+        d3Select(`#overlay__p${pIdx}t${tIdx}`)
           .datum(data)
           .attr('d', this.codifiedPhraseLine())
       }
-      d3.selectAll('.dragDots').remove();
+      d3SelectAll('.dragDots').remove();
       this.addAllDragDots();
     });
 
@@ -225,14 +246,14 @@ export default {
       this.codifiedAddTraj(newTraj, phrase.startTime);
       this.selectedTraj = newTraj;
       this.selectedTrajID = `p${newTraj.phraseIdx}t${newTraj.num}`;
-      d3.select(`#${this.selectedTrajID}`)
+      d3Select(`#${this.selectedTrajID}`)
         .attr('stroke', this.selectedTrajColor)
-      d3.select(`#overlay__${this.selectedTrajID}`)
+      d3Select(`#overlay__${this.selectedTrajID}`)
         .style('cursor', 'auto')
       this.setNewTraj = false;
       this.trajTimePts = [];
       this.svg.style('cursor', 'auto');
-      d3.selectAll(`.newTrajDot`).remove();
+      d3SelectAll(`.newTrajDot`).remove();
       this.addAllDragDots();
       this.$refs.trajSelectPanel.selectedIdx = this.selectedTraj.id;
       this.$refs.trajSelectPanel.parentSelected = true;
@@ -296,7 +317,7 @@ export default {
           const pIdx = this.selectedTraj.phraseIdx;
           const tIdx = this.selectedTraj.num;
           const phrase = this.piece.phrases[pIdx];
-          const g = d3.select(`#articulations__p${pIdx}t${tIdx}`)
+          const g = d3Select(`#articulations__p${pIdx}t${tIdx}`)
           this.codifiedAddPlucks(this.selectedTraj, phrase.startTime, g)
         }
       } else {
@@ -319,7 +340,7 @@ export default {
 
   watch: {
     spectrogramOpacity(newVal) {
-      d3.selectAll('.spectrogram')
+      d3SelectAll('.spectrogram')
         .style('opacity', newVal)
     },
 
@@ -344,12 +365,12 @@ export default {
   methods: {
 
     addAllDragDots() {
-      d3.selectAll('.dragDots').remove();
+      d3SelectAll('.dragDots').remove();
       const pIdx = this.selectedTraj.phraseIdx;
       // const tIdx = this.selectedTraj.num;
       const phrase = this.piece.phrases[pIdx];
       const drag = () => {
-        return d3.drag()
+        return d3Drag()
           .on('start', this.dragDotStart)
           .on('drag', this.dragDotDragging)
           .on('end', this.dragDotEnd)
@@ -373,7 +394,7 @@ export default {
           .style('fill', 'purple')
           .style('cursor', 'pointer')
         if (this.editable) {
-          d3.select(`#dragDot${i}`)
+          d3Select(`#dragDot${i}`)
             .call(drag())  
         }          
       }
@@ -433,7 +454,7 @@ export default {
       const idx = Number(this.dragIdx);
       const time = this.constrainTime(e, idx);
       const x = this.codifiedXR(time);
-      d3.select(`#dragDot${idx}`)
+      d3Select(`#dragDot${idx}`)
         .attr('cx', x)
         .attr('cy', e.y)
 
@@ -544,7 +565,7 @@ export default {
         }
       }
       const data = this.makeTrajData(traj, phrase.startTime)
-      d3.select(`#transparentPhrase`)
+      d3Select(`#transparentPhrase`)
         .datum(data)
         .attr('d', this.codifiedPhraseLine())
     },
@@ -563,7 +584,7 @@ export default {
       const logSargamLines = this.visibleSargam.map(s => Math.log2(s));
       logFreq = getClosest(logSargamLines, logFreq)
       const y = this.codifiedYR(logFreq)
-      d3.select(`#dragDot${idx}`)
+      d3Select(`#dragDot${idx}`)
         .attr('cx', x)
         .attr('cy', y)
       const visiblePitches = this.piece.raga.getPitches({
@@ -669,11 +690,11 @@ export default {
         }
       }
       const data = this.makeTrajData(traj, phrase.startTime);
-      d3.select(`#transparentPhrase`).remove()
-      d3.select(`#p${pIdx}t${tIdx}`)
+      d3Select(`#transparentPhrase`).remove()
+      d3Select(`#p${pIdx}t${tIdx}`)
         .datum(data)
         .attr('d', this.codifiedPhraseLine())
-      d3.select(`#overlay__p${pIdx}t${tIdx}`)
+      d3Select(`#overlay__p${pIdx}t${tIdx}`)
         .datum(data)
         .attr('d', this.codifiedPhraseLine())
       if (idx === 0) {
@@ -688,11 +709,11 @@ export default {
           prevPhrase.assignPhraseIdx();
 
           const data = this.makeTrajData(newPrevTraj, prevPhrase.startTime);
-          d3.select(`#p${pIdx-1}t${prevPhrase.trajectories.length-1}`)
+          d3Select(`#p${pIdx-1}t${prevPhrase.trajectories.length-1}`)
             .datum(data)
             .attr('d', this.codifiedPhraseLine())
 
-          d3.select(`#overlay__p${pIdx-1}t${prevPhrase.trajectories.length-1}`)
+          d3Select(`#overlay__p${pIdx-1}t${prevPhrase.trajectories.length-1}`)
             .datum(data)
             .attr('d', this.codifiedPhraseLine())
 
@@ -707,10 +728,10 @@ export default {
           phrase.assignTrajNums();
           phrase.assignPhraseIdx();
           const data = this.makeTrajData(newPrevTraj, phrase.startTime);
-          d3.select(`#p${pIdx}t${tIdx-1}`)
+          d3Select(`#p${pIdx}t${tIdx-1}`)
             .datum(data)
             .attr('d', this.codifiedPhraseLine())
-          d3.select(`#overlay__p${pIdx}t${tIdx-1}`)
+          d3Select(`#overlay__p${pIdx}t${tIdx-1}`)
             .datum(data)
             .attr('d', this.codifiedPhraseLine())
           this.moveKrintin(newPrevTraj, phrase.startTime);
@@ -725,16 +746,16 @@ export default {
           phrase.assignTrajNums();
           phrase.assignPhraseIdx();
           const data = this.makeTrajData(nextTraj, phrase.startTime);
-          d3.select(`#p${pIdx}t${tIdx+1}`)
+          d3Select(`#p${pIdx}t${tIdx+1}`)
             .datum(data)
             .attr('d', this.codifiedPhraseLine())
-          d3.select(`#overlay__p${pIdx}t${tIdx+1}`)
+          d3Select(`#overlay__p${pIdx}t${tIdx+1}`)
             .datum(data)
             .attr('d', this.codifiedPhraseLine())
           this.moveKrintin(newNextTraj, phrase.startTime);
           this.moveSlides(newNextTraj, phrase.startTime);
           this.removePlucks(newNextTraj);
-          const g = d3.select(`#articulations__p${pIdx}t${tIdx+1}`);
+          const g = d3Select(`#articulations__p${pIdx}t${tIdx+1}`);
           this.codifiedAddPlucks(newNextTraj, phrase.startTime, g)
         } else {
           if (this.piece.phrases[pIdx + 1]) {
@@ -746,23 +767,23 @@ export default {
             nextPhrase.assignTrajNums();
             nextPhrase.assignPhraseIdx();
             const data = this.makeTrajData(newNextTraj, nextPhrase.startTime);
-            d3.select(`#p${pIdx+1}t${0}`)
+            d3Select(`#p${pIdx+1}t${0}`)
               .datum(data)
               .attr('d', this.codifiedPhraseLine())
-            d3.select(`#overlay__p${pIdx+1}t${0}`)
+            d3Select(`#overlay__p${pIdx+1}t${0}`)
               .datum(data)
               .attr('d', this.codifiedPhraseLine())
             this.moveKrintin(newNextTraj, nextPhrase.startTime)
             this.moveSlides(newNextTraj, nextPhrase.startTime)
             this.removePlucks(newNextTraj);
-            const g = d3.select(`#articulations__p${pIdx+1}t${0}`);
+            const g = d3Select(`#articulations__p${pIdx+1}t${0}`);
             this.codifiedAddPlucks(newNextTraj, nextPhrase.startTime, g);
             this.movePhraseDivs()
           }
         }
       }
       this.removePlucks(traj);
-      const g = d3.select(`#articulations__p${pIdx}t${tIdx}`)
+      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`)
       this.codifiedAddPlucks(traj, phrase.startTime, g);
       const newTraj = this.fixTrajectory(traj)
       this.piece.phrases[pIdx].trajectories[tIdx] = newTraj
@@ -787,9 +808,9 @@ export default {
             _traj.num = newTIdx;
             const oldId = `p${phrase.pieceIdx}t${oldTIdx}`;
             const newId = `p${phrase.pieceIdx}t${newTIdx}`;
-            d3.select(`#${oldId}`).attr('id', newId);
-            d3.select(`#overlay__${oldId}`).attr('id', `overlay__${newId}`);
-            d3.select(`#articulations__${oldId}`)
+            d3Select(`#${oldId}`).attr('id', newId);
+            d3Select(`#overlay__${oldId}`).attr('id', `overlay__${newId}`);
+            d3Select(`#articulations__${oldId}`)
               .attr('id', `articulations__${newId}`);
             let hOffCt = 0;
             let hOnCt = 0;
@@ -797,17 +818,17 @@ export default {
             Object.keys(traj.articulations).forEach(key => {
               const art = traj.articulations[key];
               if (art.name === 'pluck') {
-                d3.select(`#pluck${oldId}`).attr('id', `pluck${newId}`);
+                d3Select(`#pluck${oldId}`).attr('id', `pluck${newId}`);
               } else if (art.name === 'hammer-off') {
-                d3.select(`#hammeroff${oldId}i${hOffCt}`)
+                d3Select(`#hammeroff${oldId}i${hOffCt}`)
                   .attr('id', `hammeroff${newId}i${hOffCt}`);
                 hOffCt++;
               } else if (art.name === 'hammer-on') {
-                d3.select(`#hammeron${oldId}i${hOnCt}`)
+                d3Select(`#hammeron${oldId}i${hOnCt}`)
                   .attr('id', `hammeron${newId}i${hOnCt}`);
                 hOnCt++;
               } else if (art.name === 'slide') {
-                d3.select(`#slide${oldId}i${slideCt}`)
+                d3Select(`#slide${oldId}i${slideCt}`)
                   .attr('id', `slide${newId}i${slideCt}`);
                 slideCt++;
               }
@@ -961,7 +982,7 @@ export default {
       const phrase = this.piece.phrases[idx];
       const time = phrase.startTime + phrase.durTot;
       const drag = () => {
-        return d3.drag()
+        return d3Drag()
           .on('start', this.phraseDivDragStart(idx))
           .on('drag', this.phraseDivDragDragging(idx))
           .on('end', this.phraseDivDragEnd(idx))
@@ -990,7 +1011,7 @@ export default {
         .style('cursor', 'pointer')
         .on('click', dontClick)
       if (this.editable) {
-        d3.select(`#overlay__phraseLine${idx}`)
+        d3Select(`#overlay__phraseLine${idx}`)
           .call(drag())
       }
           
@@ -1010,8 +1031,8 @@ export default {
           const oldDec = (Number(key) % 1).toFixed(2).toString().slice(2);
           const oldId = `p${lastPhrase.pieceIdx}_${oldSec}_${oldDec}`;
           const newId = `p${thisPhrase.pieceIdx}_${oldSec}_${oldDec}`;
-          d3.select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
-          d3.select(`#${oldId}`).attr('id', newId); 
+          d3Select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
+          d3Select(`#${oldId}`).attr('id', newId); 
         })
       }
       //reId all trajs to the right of the new phraseDivLine
@@ -1032,8 +1053,8 @@ export default {
           const newSec = Math.floor(Number(newKey));
           const newDec = (Number(newKey) % 1).toFixed(2).toString().slice(2);
           const newId = `p${nextPhrase.pieceIdx}_${newSec}_${newDec}`;
-          d3.select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
-          d3.select(`#${oldId}`).attr('id', newId);
+          d3Select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
+          d3Select(`#${oldId}`).attr('id', newId);
           nextPhrase.chikaris[newKey] = phrase.chikaris[key];
           delete phrase.chikaris[key];
         }
@@ -1047,13 +1068,13 @@ export default {
       if (this.viewPhrases) {
         this.piece.phrases.forEach((phrase, i) => {
           const endTime = phrase.startTime + phrase.durTot;
-          if (d3.select(`#phraseLine${i}`).node()) {
-            d3.select(`#phraseLine${i}`)
+          if (d3Select(`#phraseLine${i}`).node()) {
+            d3Select(`#phraseLine${i}`)
               .style('opacity', '1')
           } else {
             
             const drag = () => {
-              return d3.drag()
+              return d3Drag()
                 .on('start', this.phraseDivDragStart(i))
                 .on('drag', this.phraseDivDragDragging(i))
                 .on('end', this.phraseDivDragEnd(i))
@@ -1078,14 +1099,14 @@ export default {
               .attr('transform', `translate(${this.codifiedXR(endTime)},0)`)
               .style('cursor', 'pointer')
             if (this.editable) {
-              d3.select(`#overlay__phraseLine${i}`)
+              d3Select(`#overlay__phraseLine${i}`)
                 .call(drag())
             }
           }
         })
       } else {
         this.piece.phrases.forEach((phrase, i) => {
-          d3.select(`#phraseLine${i}`)
+          d3Select(`#phraseLine${i}`)
             .style('opacity', 0)
         })
       }
@@ -1109,7 +1130,7 @@ export default {
     phraseDivDragDragging(i) {
       return e => {
         let time = this.xr().invert(e.sourceEvent.clientX);
-        d3.select(`#transparentPhraseLine${i}`)
+        d3Select(`#transparentPhraseLine${i}`)
           .attr('transform', `translate(${this.codifiedXR(time)},0)`)
       }
     },
@@ -1117,7 +1138,7 @@ export default {
     phraseDivDragEnd(i) {
       return e => {
         this.justEnded = true;
-        d3.select(`#transparentPhraseLine${i}`).remove();
+        d3Select(`#transparentPhraseLine${i}`).remove();
         const time = this.xr().invert(e.sourceEvent.clientX);
         const tempPIdx = this.phraseIdxFromTime(time);
         const tPhrase = this.piece.phrases[tempPIdx];
@@ -1353,20 +1374,20 @@ export default {
               }
             })
           }
-          d3.select(`#phraseLine${i}`)
+          d3Select(`#phraseLine${i}`)
             .attr('transform', `translate(${this.codifiedXR(finalTime)},0)`)
             .attr('stroke', 'red')
-          d3.select(`#overlay__phraseLine${i}`)
+          d3Select(`#overlay__phraseLine${i}`)
             .attr('transform', `translate(${this.codifiedXR(finalTime)},0)`)  
         }  
         if (this.selectedPhraseDivIdx !== phraseA.pieceIdx) {
           this.clearSelectedPhraseDiv();
         }    
         if (!doNormal) {
-          d3.select(`#phraseLine${i}`)
+          d3Select(`#phraseLine${i}`)
             .attr('transform', `translate(${this.codifiedXR(time)},0)`)
             .attr('stroke', 'red')
-          d3.select(`#overlay__phraseLine${i}`)
+          d3Select(`#overlay__phraseLine${i}`)
             .attr('transform', `translate(${this.codifiedXR(time)},0)`)
         }
         this.svg.style('cursor', 'auto');
@@ -1379,7 +1400,7 @@ export default {
     movePhraseDivs() {
       this.piece.phrases.forEach((phrase, i) => {
         const endTime = phrase.startTime + phrase.durTot;
-        d3.select(`#phraseLine${i}`)
+        d3Select(`#phraseLine${i}`)
           .transition().duration(this.transitionTime)
           .attr('transform', `translate(${this.codifiedXR(endTime)},0)`)
       })
@@ -1392,15 +1413,15 @@ export default {
       const newSec = Math.floor(Number(newKey));
       const newDec = (Number(newKey) % 1).toFixed(2).toString().slice(2);
       const newId = `p${newPhrase.pieceIdx}_${newSec}_${newDec}`;
-      d3.select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
-      d3.select(`#${oldId}`).attr('id', newId);  
+      d3Select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
+      d3Select(`#${oldId}`).attr('id', newId);  
     },
     
     reIdAllReps(oldId, newId) {
       // given old and new ids, change the ids of all svg representations 
-      d3.select(`#${oldId}`).attr('id', newId);
-      d3.select(`#overlay__${oldId}`).attr('id', `overlay__${newId}`);
-      d3.select(`#articulations__${oldId}`)
+      d3Select(`#${oldId}`).attr('id', newId);
+      d3Select(`#overlay__${oldId}`).attr('id', `overlay__${newId}`);
+      d3Select(`#articulations__${oldId}`)
         .attr('id', `articulations__${newId}`);
       // since trajs have already been updated, grab via new Id
       const pIdx = Number(newId.split('t')[0].slice(1));
@@ -1413,17 +1434,17 @@ export default {
       Object.keys(traj.articulations).forEach(key => {
         const art = traj.articulations[key];
         if (art.name === 'pluck') {
-          d3.select(`#pluck${oldId}`).attr('id', `pluck${newId}`);
+          d3Select(`#pluck${oldId}`).attr('id', `pluck${newId}`);
         } else if (art.name === 'hammer-off') {
-          d3.select(`#hammeroff${oldId}i${hOffCt}`)
+          d3Select(`#hammeroff${oldId}i${hOffCt}`)
             .attr('id', `hammeroff${newId}i${hOffCt}`);
           hOffCt++;
         } else if (art.name === 'hammer-on') {
-          d3.select(`#hammeron${oldId}i${hOnCt}`)
+          d3Select(`#hammeron${oldId}i${hOnCt}`)
             .attr('id', `hammeron${newId}i${hOnCt}`);
           hOnCt++;
         } else if (art.name === 'slide') {
-          d3.select(`#slide${oldId}i${slideCt}`)
+          d3Select(`#slide${oldId}i${slideCt}`)
             .attr('id', `slide${newId}i${slideCt}`);
           slideCt++;
         }
@@ -1492,7 +1513,7 @@ export default {
         this.setNewTraj = false;
         this.trajTimePts = [];
         this.svg.style('cursor', 'auto');
-        d3.selectAll(`.newTrajDot`).remove()
+        d3SelectAll(`.newTrajDot`).remove()
       }
       if (this.regionG && regionToo === undefined) {
         this.regionG.remove();
@@ -1517,14 +1538,14 @@ export default {
           const pIdx = splitArr[0].slice(1);
           const key = splitArr[1] + '.' + splitArr[2];
           delete this.piece.phrases[pIdx].chikaris[key];
-          d3.select(`#${this.selectedChikariID}`).remove()
-          d3.select(`#circle__${this.selectedChikariID}`).remove()
+          d3Select(`#${this.selectedChikariID}`).remove()
+          d3Select(`#circle__${this.selectedChikariID}`).remove()
           this.selectedChikariID = undefined;
         } else if (this.selectedTrajID) {
           this.deleteTraj(this.selectedTrajID);
           this.selectedTrajID = undefined;
           this.clearTrajSelectPanel();
-          d3.selectAll('.dragDots').remove();
+          d3SelectAll('.dragDots').remove();
         } else if (!(this.selectedPhraseDivIdx === undefined)) {
           const phraseA = this.piece.phrases[this.selectedPhraseDivIdx];
           const initPhraseADur = phraseA.durTot;
@@ -1545,23 +1566,23 @@ export default {
             const newId = `p${phraseA.pieceIdx}t${j + ctA}`;
             this.reIdAllReps(oldId, newId)
           }
-          d3.select(`#phraseLine${this.selectedPhraseDivIdx}`).remove();
-          d3.select(`#overlay__phraseLine${this.selectedPhraseDivIdx}`)
+          d3Select(`#phraseLine${this.selectedPhraseDivIdx}`).remove();
+          d3Select(`#overlay__phraseLine${this.selectedPhraseDivIdx}`)
             .remove();
             const idx = this.selectedPhraseDivIdx;
           for (let j = idx + 1; j < this.piece.phrases.length; j++) {
-            d3.select(`#phraseLine${j}`).attr('id', `phraseLine${j-1}`);
-            d3.select(`#overlay__phraseLine${j}`)
+            d3Select(`#phraseLine${j}`).attr('id', `phraseLine${j-1}`);
+            d3Select(`#overlay__phraseLine${j}`)
               .attr('id', `overlay__phraseLine${j-1}`);
-            d3.select(`#overlay__phraseLine${j-1}`).on('.drag', null);
+            d3Select(`#overlay__phraseLine${j-1}`).on('.drag', null);
             const drag = () => {
-              return d3.drag()
+              return d3Drag()
                 .on('start', this.phraseDivDragStart(j-1))
                 .on('drag', this.phraseDivDragDragging(j-1))
                 .on('end', this.phraseDivDragEnd(j-1))
             };
             if (this.editable) {
-              d3.select(`#overlay__phraseLine${j-1}`)
+              d3Select(`#overlay__phraseLine${j-1}`)
                 .call(drag())
             }  
           }
@@ -1576,8 +1597,8 @@ export default {
             const newSec = Math.floor(Number(newKey));
             const newDec = (Number(newKey) % 1).toFixed(2).toString().slice(2);
             const newId = `p${phraseA.pieceIdx}_${newSec}_${newDec}`;
-            d3.select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
-            d3.select(`#${oldId}`).attr('id', newId);          
+            d3Select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
+            d3Select(`#${oldId}`).attr('id', newId);          
           })
         }
 
@@ -1608,7 +1629,7 @@ export default {
     shrink() {
       const x = this.yAxWidth;
       const y = this.xAxHeight;
-      d3.select('.spectrogram')
+      d3Select('.spectrogram')
         .attr('transform', `translate(${x},${y}) scale(0.5, 1)`)
     },
 
@@ -1687,7 +1708,7 @@ export default {
           const y = this.yr()(Math.log2(this.freqMax));
           const xS = this.xScale;
           const yS = this.yScale
-          d3.select(`.spectrogram.img${i}`)
+          d3Select(`.spectrogram.img${i}`)
             .transition()
             .duration(this.transitionTime)
             .attr('transform', `translate(${x}, ${y}) scale(${xS}, ${yS})`)
@@ -1787,7 +1808,7 @@ export default {
           this.regionEndPx = e.offsetX;
         }
         this.mouseUpUpdateLoop();
-        const regionLine = d3.line()([
+        const regionLine = d3Line()([
           [0, 0],
           [0, rect.height]
         ])
@@ -1819,11 +1840,11 @@ export default {
 
           const rsDrag = () => {
             const dragged = e => {
-              d3.select('.clickableRegionStart')
+              d3Select('.clickableRegionStart')
                 .attr('transform', `translate(${e.x},0)`)
-              d3.select('.regionStart')
+              d3Select('.regionStart')
                 .attr('transform', `translate(${e.x}, 0)`);
-              d3.select('.region')
+              d3Select('.region')
                 .attr('width', this.xr()(this.regionEndTime) - e.x)
                 .attr('transform', `translate(${e.x}, 0)`)
             }
@@ -1832,17 +1853,17 @@ export default {
               this.regionStartTime = this.xr().invert(this.regionStartPx);
               this.updateLoop();
             }
-            return d3.drag()
+            return d3Drag()
               .on('drag', dragged)
               .on('end', dragended)
           };
 
           const reDrag = () => {
             const dragged = e => {
-              d3.select('.clickableRegionEnd')
+              d3Select('.clickableRegionEnd')
                 .attr('transform', `translate(${e.x},0)`)
-              d3.select('.regionEnd').attr('transform', `translate(${e.x}, 0)`);
-              d3.select('.region')
+              d3Select('.regionEnd').attr('transform', `translate(${e.x}, 0)`);
+              d3Select('.region')
                 .attr('width', e.x - this.xr()(this.regionStartTime))
             }
             const dragended = e => {
@@ -1850,7 +1871,7 @@ export default {
               this.regionEndTime = this.xr().invert(this.regionEndPx);
               this.updateLoop();
             }
-            return d3.drag()
+            return d3Drag()
               .on('drag', dragged)
               .on('end', dragended)
           };
@@ -1889,12 +1910,12 @@ export default {
             .style('cursor', 'col-resize')
             .call(reDrag())
         } else {
-          d3.select('.region')
+          d3Select('.region')
             .attr('width', this.regionEndPx - this.regionStartPx)
             .attr('transform', `translate(${this.regionStartPx},0)`)
-          d3.select('.regionStart')
+          d3Select('.regionStart')
             .attr('transform', `translate(${this.regionStartPx},0)`)
-          d3.select('.regionEnd')
+          d3Select('.regionEnd')
             .attr('transform', `translate(${this.regionEndPx},0)`)
         }
       }
@@ -1903,16 +1924,16 @@ export default {
     moveRegion() {
       const start = this.xr()(this.regionStartTime);
       const end = this.xr()(this.regionEndTime);
-      d3.select('.region')
+      d3Select('.region')
         .attr('width', end - start)
         .attr('transform', `translate(${start})`)
-      d3.select('.regionStart')
+      d3Select('.regionStart')
         .attr('transform', `translate(${start},0)`)
-      d3.select('.regionEnd')
+      d3Select('.regionEnd')
         .attr('transform', `translate(${end},0)`)
-        d3.select('.clickableRegionStart')
+        d3Select('.clickableRegionStart')
           .attr('transform', `translate(${start},0)`)
-        d3.select('.clickableRegionEnd')
+        d3Select('.clickableRegionEnd')
           .attr('transform', `translate(${end},0)`)
     },
 
@@ -1922,7 +1943,7 @@ export default {
         high: this.freqMax
       })
       const rect = await this.rect();
-      this.svg = await d3.create('svg')
+      this.svg = await d3Create('svg')
         .classed('noSelect', true)
         .attr('viewBox', [0, 0, rect.width, rect.height - 1])
         .on('click', this.handleClick)
@@ -1935,28 +1956,28 @@ export default {
       this.addMarkers();
       this.gx = this.svg.append('g');
       this.gy = this.svg.append('g');
-      this.x = d3.scaleLinear()
+      this.x = d3ScaleLinear()
         .domain([0, this.durTot])
         .range([this.yAxWidth, rect.width])
-      this.y = d3.scaleLinear()
+      this.y = d3ScaleLinear()
         .domain([Math.log2(this.freqMax), Math.log2(this.freqMin)])
         .range([this.xAxHeight, rect.height])
-      this.z = d3.zoomIdentity;
-      this.zoomX = d3.zoom()
+      this.z = d3ZoomIdentity;
+      this.zoomX = d3Zoom()
         .scaleExtent([1, 1000])
         .translateExtent([
           [0, 0],
           [rect.width, rect.height]
         ]);
-      this.zoomY = d3.zoom().scaleExtent([1, 5]).translateExtent([
+      this.zoomY = d3Zoom().scaleExtent([1, 5]).translateExtent([
         [0, 0],
         [rect.width, rect.height]
       ]);
-      this.tx = () => d3.zoomTransform(this.gx.node());
-      this.ty = () => d3.zoomTransform(this.gy.node());
+      this.tx = () => d3ZoomTransform(this.gx.node());
+      this.ty = () => d3ZoomTransform(this.gy.node());
       this.gx.call(this.zoomX).attr('pointer-events', 'none');
       this.gy.call(this.zoomY).attr('pointer-events', 'none');
-      this.zoom = d3.zoom()
+      this.zoom = d3Zoom()
         .filter(z_ => {
           if (z_.type === 'dblclick') this.handleDblClick(z_);
           return z_.type !== 'mousedown' && z_.type !== 'dblclick' ? z_ : null
@@ -1968,7 +1989,7 @@ export default {
       this.updateTranslateExtent().then(() => {
         this.svgNode = this.svg
           .call(this.zoom)
-          .call(this.zoom.transform, d3.zoomIdentity.scale(this.initXScale))
+          .call(this.zoom.transform, d3ZoomIdentity.scale(this.initXScale))
           .node();
         this.$refs.graph.appendChild(this.svgNode)
       });
@@ -2008,7 +2029,7 @@ export default {
       const pIdx = this.phraseIdxFromTime(time);
       // need to figure out how to handle when click is over a non phrase
       if (this.setChikari) {
-        const sym = d3.symbol().type(d3.symbolX).size(80);
+        const sym = d3Symbol().type(d3SymbolX).size(80);
         const phrase = this.piece.phrases[pIdx];
         const fixedTime = Number((time - phrase.startTime).toFixed(2));
         phrase.chikaris[fixedTime] = new Chikari({
@@ -2113,19 +2134,19 @@ export default {
         //move over names of old phrase divs, from the back forward
         for (let i=this.piece.phrases.length-2; i >= phrase.pieceIdx; i--) {
           const drag = () => {
-            return d3.drag()
+            return d3Drag()
             .on('start', this.phraseDivDragStart(i+1))
             .on('drag', this.phraseDivDragDragging(i+1))
             .on('end', this.phraseDivDragEnd(i+1))
           };        
-          d3.select(`#overlay__phraseLine${i}`)
+          d3Select(`#overlay__phraseLine${i}`)
             .attr('id', `overlay__phraseLine${i+1}`)
           if (this.editable) {
-            d3.select(`#overlay__phraseLine${i}`)
+            d3Select(`#overlay__phraseLine${i}`)
             .on('.drag', null)
             .call(drag())
           }
-          d3.select(`#phraseLine${i}`)
+          d3Select(`#phraseLine${i}`)
             .attr('id', `phraseLine${i+1}`)          
         }
         this.addNewPhraseDiv(phrase.pieceIdx);
@@ -2145,14 +2166,14 @@ export default {
       this.xAxis = (g, scale) => g
         .attr('transform', `translate(0,${this.xAxHeight})`)
         .style('font-size', '13px')
-        .call(d3.axisTop(scale).ticks(10).tickFormat(d => structuredTime(d)))
+        .call(d3AxisTop(scale).ticks(10).tickFormat(d => structuredTime(d)))
         .call(g => g.select('.domain'))
       const yTickLabels = this.getYTickLabels();
       this.yAxis = (g, scale) => g
         .attr('transform', `translate(${this.x(0)},0)`)
         .attr('clip-path', 'url(#yAxisClip)')
         .style('font-size', '14px')
-        .call(d3.axisLeft(scale)
+        .call(d3AxisLeft(scale)
           .tickValues(this.visibleSargam.map(f => Math.log2(f)))
           .tickFormat((_, i) => yTickLabels[i]))
         .call(g => g.select('.domain'))
@@ -2160,7 +2181,7 @@ export default {
 
     slidePhrases(x, y, xS, yS) {      
       this.phraseG.transition().duration(this.transitionTime)
-        .ease(d3.easeQuadInOut)
+        .ease(d3EaseQuadInOut)
         .attr('transform', `translate(${x},${y}) scale(${xS},${yS})`)  
       if (Math.abs(Math.log(xS)) > 0.2) this.resetZoom();
       if (Math.abs(Math.log(yS)) > 0.3) this.resetZoom();
@@ -2241,7 +2262,7 @@ export default {
     removePlucks(traj) {
       const pIdx = traj.phraseIdx;
       const tIdx = traj.num;
-      d3.select(`#pluckp${pIdx}t${tIdx}`).remove()
+      d3Select(`#pluckp${pIdx}t${tIdx}`).remove()
     },
 
     addPlucks(traj, phraseStart, g) {
@@ -2258,7 +2279,7 @@ export default {
             y: y
           }
         });
-        const sym = d3.symbol().type(d3.symbolTriangle).size(20);
+        const sym = d3Symbol().type(d3SymbolTriangle).size(20);
         const x = d => this.xr()(d.x);
         const y = d => this.yr()(d.y);
         g.append('g')
@@ -2319,7 +2340,7 @@ export default {
         });
         const x = d => this.codifiedXR(d.x);
         const y = d => this.codifiedYR(d.y);
-        const sym = d3.symbol().type(d3.symbolTriangle).size(20);
+        const sym = d3Symbol().type(d3SymbolTriangle).size(20);
         g.append('g')
           .classed('articulation', true)
           .classed('pluck', true)
@@ -2338,7 +2359,7 @@ export default {
       if (traj.articulations[0] && traj.articulations[0].name === 'pluck') {
         const x = d => this.xr()(d.x);
         const y = d => this.yr()(d.y); 
-        d3.select(`#pluckp${traj.phraseIdx}t${traj.num}`)
+        d3Select(`#pluckp${traj.phraseIdx}t${traj.num}`)
           .transition()
           .duration(this.transitionTime)
           .attr('transform', d => `translate(${x(d)}, ${y(d)}) rotate(90)`)
@@ -2367,7 +2388,7 @@ export default {
           .classed('articulation', true)
           .classed('hammer-off', true)
           .attr('id', `hammeroffp${traj.phraseIdx}t${traj.num}i${obj.i}`)
-          .attr('d', d3.line()([[-10, 0], [0, 0], [0, 10]]))
+          .attr('d', d3Line()([[-10, 0], [0, 0], [0, 10]]))
           .attr('stroke', 'black')
           .attr('stroke-width', 1.5)
           .attr('fill', 'none')
@@ -2395,7 +2416,7 @@ export default {
           .classed('articulation', true)
           .classed('hammer-on', true)
           .attr('id', `hammeronp${traj.phraseIdx}t${traj.num}i${obj.i}`)
-          .attr('d', d3.line()([[-10, 0], [0, 0], [0, -10]]))
+          .attr('d', d3Line()([[-10, 0], [0, 0], [0, -10]]))
           .attr('stroke', 'black')
           .attr('stroke-width', 1.5)
           .attr('fill', 'none')
@@ -2426,7 +2447,7 @@ export default {
           .classed('articulation', true)
           .classed('hammer-off', true)
           .attr('id', `hammeroffp${traj.phraseIdx}t${traj.num}i${obj.i}`)
-          .attr('d', d3.line()([[-10, 0], [0, 0], [0, 10]]))
+          .attr('d', d3Line()([[-10, 0], [0, 0], [0, 10]]))
           .attr('stroke', 'black')
           .attr('stroke-width', 1.5)
           .attr('fill', 'none')
@@ -2452,7 +2473,7 @@ export default {
           .classed('articulation', true)
           .classed('hammer-on', true)
           .attr('id', `hammeronp${traj.phraseIdx}t${traj.num}i${obj.i}`)
-          .attr('d', d3.line()([[-10, 0], [0, 0], [0, -10]]))
+          .attr('d', d3Line()([[-10, 0], [0, 0], [0, -10]]))
           .attr('stroke', 'black')
           .attr('stroke-width', 1.5)
           .attr('fill', 'none')
@@ -2479,7 +2500,7 @@ export default {
       const x = d => this.codifiedXR(d.x);
       const y = d => this.codifiedYR(d.y);
       hammerOffData.forEach(obj => {
-        d3.select(`#hammeroffp${traj.phraseIdx}t${traj.num}i${obj.i}`)
+        d3Select(`#hammeroffp${traj.phraseIdx}t${traj.num}i${obj.i}`)
           .attr('transform', `translate(${x(obj)},${y(obj)})`)
       });
       // hammer-ons
@@ -2497,7 +2518,7 @@ export default {
       });
 
       hammerOnData.forEach(obj => {
-        d3.select(`#hammeronp${traj.phraseIdx}t${traj.num}i${obj.i}`)
+        d3Select(`#hammeronp${traj.phraseIdx}t${traj.num}i${obj.i}`)
           .attr('transform', `translate(${x(obj)},${y(obj)})`)
       })
     },
@@ -2542,7 +2563,7 @@ export default {
           .classed('articulation', true)
           .classed('slide', true)
           .attr('id', `slidep${traj.phraseIdx}t${traj.num}i${obj.i}`)
-          .attr('d', d3.line()([[0, 0 + yMotion[0]], [0, 0 + yMotion[1]]]))
+          .attr('d', d3Line()([[0, 0 + yMotion[0]], [0, 0 + yMotion[1]]]))
           .attr('stroke', 'black')
           .attr('stroke-width', 1.5)
           .attr('fill', 'none')
@@ -2575,7 +2596,7 @@ export default {
           .classed('articulation', true)
           .classed('slide', true)
           .attr('id', `slidep${traj.phraseIdx}t${traj.num}i${obj.i}`)
-          .attr('d', d3.line()([[0, 0 + yMotion[0]], [0, 0 + yMotion[1]]]))
+          .attr('d', d3Line()([[0, 0 + yMotion[0]], [0, 0 + yMotion[1]]]))
           .attr('stroke', 'black')
           .attr('stroke-width', 1.5)
           .attr('fill', 'none')
@@ -2604,8 +2625,8 @@ export default {
       const y = d => this.codifiedYR(d.y);
       data.forEach(obj => {
         const yMotion = obj.dirUp ? [10, -10] : [-10, 10];
-        d3.select(`#slidep${traj.phraseIdx}t${traj.num}i${obj.i}`)
-          .attr('d', d3.line()([[0, 0 + yMotion[0]], [0, 0 + yMotion[1]]]))
+        d3Select(`#slidep${traj.phraseIdx}t${traj.num}i${obj.i}`)
+          .attr('d', d3Line()([[0, 0 + yMotion[0]], [0, 0 + yMotion[1]]]))
           .attr('transform', `translate(${x(obj)},${y(obj)})`)
       })
     },
@@ -2630,7 +2651,7 @@ export default {
         .attr('markerHeight', markerBoxHeight)
         .attr('orient', 'auto-start-reverse')
         .append('path')
-        .attr('d', d3.line()(arrowPoints))
+        .attr('d', d3Line()(arrowPoints))
         .attr('stroke', 'black')
     },
     
@@ -2641,7 +2662,7 @@ export default {
     },
 
     addChikaris() {
-      const sym = d3.symbol().type(d3.symbolX).size(80);
+      const sym = d3Symbol().type(d3SymbolX).size(80);
       this.piece.phrases.forEach(phrase => {
         Object.keys(phrase.chikaris).forEach(key => {
           const scaledX = Number(key) / phrase.durTot;
@@ -2680,7 +2701,7 @@ export default {
     },
     
     codifiedAddChikari() {
-      const sym = d3.symbol().type(d3.symbolX).size(80);
+      const sym = d3Symbol().type(d3SymbolX).size(80);
       this.piece.phrases.forEach(phrase => {
         Object.keys(phrase.chikaris).forEach(key => {
           const scaledX = Number(key) / phrase.durTot;
@@ -2723,24 +2744,24 @@ export default {
     handleMouseOver(e) {
       if (e.target.id.slice(0, 8) === 'circle__') {
         const id = e.target.id.slice(8)
-        d3.select(`#${id}`)
+        d3Select(`#${id}`)
           .attr('stroke', this.selectedChikariColor)
-        d3.select(`#${e.target.id}`)
+        d3Select(`#${e.target.id}`)
           .style('cursor', 'pointer')
       } else if (e.target.id.slice(0, 9) === 'overlay__') {
         const id = e.target.id.slice(9);
         const pIdx = Number(id.split('t')[0].slice(1));
         const tIdx = Number(id.split('t')[1]);
-        d3.select(`#${id}`)
+        d3Select(`#${id}`)
           .attr('stroke', this.selectedTrajColor)
         if (this.selectedTraj) {
           const c1 = this.selectedTraj.num === tIdx;
           if (!(c1 && this.selectedTraj.phraseIdx === pIdx)) {
-            d3.select(`#${e.target.id}`)
+            d3Select(`#${e.target.id}`)
               .style('cursor', 'pointer')
           }
         } else {
-          d3.select(`#${e.target.id}`)
+          d3Select(`#${e.target.id}`)
             .style('cursor', 'pointer')
         }
       }
@@ -2759,10 +2780,10 @@ export default {
       phrase.assignTrajNums();
       this.selectedTraj = newTraj;
       const data = this.makeTrajData(this.selectedTraj, phrase.startTime);
-      d3.select(`#p${pIdx}t${tIdx}`)
+      d3Select(`#p${pIdx}t${tIdx}`)
         .datum(data)
         .attr('d', this.codifiedPhraseLine())
-      d3.select(`#overlay__p${pIdx}t${tIdx}`)
+      d3Select(`#overlay__p${pIdx}t${tIdx}`)
         .datum(data)
         .attr('d', this.codifiedPhraseLine())
     },
@@ -2771,14 +2792,14 @@ export default {
       if (e.target.id.slice(0, 8) === 'circle__') {
         const id = e.target.id.slice(8)
         if (id !== this.selectedChikariID) {
-          d3.select(`#${id}`)
+          d3Select(`#${id}`)
             .attr('stroke', this.chikariColor)
         }
       }
       if (e.target.id.slice(0, 9) === 'overlay__') {
         const id = e.target.id.slice(9)
         if (id !== this.selectedTrajID) {
-          d3.select(`#${id}`)
+          d3Select(`#${id}`)
             .attr('stroke', this.trajColor)
         }
       }
@@ -2788,11 +2809,11 @@ export default {
       e.stopPropagation();
       const id = e.target.id.split('__')[1];
       if (this.selectedChikariID && this.selectedChikariID !== id) {
-        d3.select('#' + this.selectedChikariID)
+        d3Select('#' + this.selectedChikariID)
           .attr('stroke', this.chikariColor)
       }
       this.selectedChikariID = e.target.id.split('__')[1];
-      d3.select(`#${this.selectedChikariID}`)
+      d3Select(`#${this.selectedChikariID}`)
         .attr('stroke', this.selectedChikariColor)
       if (this.selectedTrajID) {
         this.clearSelectedTraj();
@@ -2806,7 +2827,7 @@ export default {
       e.stopPropagation();
       const id = e.target.id.split('__')[1];
       if (this.selectedTrajID && this.selectedTrajID !== id) {
-        d3.select(`#` + this.selectedTrajID)
+        d3Select(`#` + this.selectedTrajID)
           .attr('stroke', this.trajColor)
       }
       this.selectedTrajID = e.target.id.split('__')[1];
@@ -2822,9 +2843,9 @@ export default {
       } else {
         this.$refs.trajSelectPanel.pluckBool = false
       }
-      d3.select(`#${this.selectedTrajID}`)
+      d3Select(`#${this.selectedTrajID}`)
         .attr('stroke', this.selectedTrajColor)
-      d3.select(`#overlay__${this.selectedTrajID}`)
+      d3Select(`#overlay__${this.selectedTrajID}`)
         .style('cursor', 'auto')
       if (this.selectedChikariID) {
         this.clearSelectedChikari()
@@ -2837,7 +2858,7 @@ export default {
 
     clearSelectedChikari() {
       if (this.selectedChikariID) {
-        d3.select(`#${this.selectedChikariID}`)
+        d3Select(`#${this.selectedChikariID}`)
           .attr('stroke', this.chikariColor)
         this.selectedChikariID = undefined
       }
@@ -2845,7 +2866,7 @@ export default {
     
     clearSelectedPhraseDiv() {  
       if (this.selectedPhraseDivIdx !== undefined) {
-        d3.select(`#phraseLine${this.selectedPhraseDivIdx}`)
+        d3Select(`#phraseLine${this.selectedPhraseDivIdx}`)
           .attr('stroke', 'black')
         this.selectedPhraseDivIdx = undefined
       }
@@ -2853,12 +2874,12 @@ export default {
 
     clearSelectedTraj() {
       if (this.selectedTrajID) {
-        d3.select(`#${this.selectedTrajID}`)
+        d3Select(`#${this.selectedTrajID}`)
           .attr('stroke', this.trajColor)
-        d3.select(`#overlay__${this.selectedTrajID}`)
+        d3Select(`#overlay__${this.selectedTrajID}`)
           .style('cursor', 'pointer')
         this.selectedTrajID = undefined;
-        d3.selectAll('.dragDots').remove();
+        d3SelectAll('.dragDots').remove();
       }
     },
 
@@ -2873,11 +2894,11 @@ export default {
         const y = d => this.yr()(d.y);
         Object.keys(phrase.chikaris).forEach(key => {
           const id = this.idFromKey(key, phrase.pieceIdx);
-          d3.select(`#${id}`)
+          d3Select(`#${id}`)
             .transition()
             .duration(this.transitionTime)
             .attr('transform', d => `translate(${x(d)}, ${y(d)})`)
-          d3.select(`#circle__${id}`)
+          d3Select(`#circle__${id}`)
             .transition()
             .duration(this.transitionTime)
             .attr('cx', d => x(d))
@@ -2896,10 +2917,10 @@ export default {
         const x = d => this.codifiedXR(d.x);
         const y = d => this.codifiedYR(d.y);
         const id = this.idFromKey(key, phrase.pieceIdx);
-        d3.select(`#${id}`)
+        d3Select(`#${id}`)
           .data([dataObj])
           .attr('transform', d => `translate(${x(d)}, ${y(d)})`)
-        d3.select(`#circle__${id}`)
+        d3Select(`#circle__${id}`)
           .data([dataObj])
           .attr('cx', d => x(d))
           .attr('cy', d => y(d))
@@ -2925,7 +2946,7 @@ export default {
       const x = d => this.xr()(d.x);
       const y = d => this.yr()(d.y);
       data.forEach(obj => {
-        d3.select(`#slidep${traj.phraseIdx}t${traj.num}i${obj.i}`)
+        d3Select(`#slidep${traj.phraseIdx}t${traj.num}i${obj.i}`)
           .transition()
           .duration(this.transitionTime)
           .attr('transform', `translate(${x(obj)},${y(obj)})`)
@@ -2951,7 +2972,7 @@ export default {
       const x = d => this.codifiedXR(d.x);
       const y = d => this.codifiedYR(d.y);
       data.forEach(obj => {
-        d3.select(`#slidep${traj.phraseIdx}t${traj.num}i${obj.i}`)
+        d3Select(`#slidep${traj.phraseIdx}t${traj.num}i${obj.i}`)
           .transition().duration(this.transitionTime)
           .attr('transform', `translate(${x(obj)},${y(obj)})`)
       })
@@ -2974,14 +2995,14 @@ export default {
     },
 
     sargamLine(y) {
-      return d3.line()([
+      return d3Line()([
         [0, this.yr()(y)],
         [this.xr()(this.durTot), this.yr()(y)]
       ])
     },
     
     codifiedSargamLine(y) {
-      return d3.line()([
+      return d3Line()([
         [this.codifiedXR(0), this.codifiedYR(y)],
         [this.codifiedXR(this.durTot), this.codifiedYR(y)]
       ])
@@ -3010,7 +3031,7 @@ export default {
     },
 
     playheadLine() {
-      return d3.line()([
+      return d3Line()([
         [0, this.yr()(Math.log2(this.freqMin))],
         [0, this.yr()(Math.log2(this.freqMax)) - this.xAxHeight]
       ])
@@ -3029,7 +3050,7 @@ export default {
     },
 
     redrawPlayhead() {
-      d3.select('.playhead').transition().duration(this.transitionTime)
+      d3Select('.playhead').transition().duration(this.transitionTime)
         .attr('transform', `translate(${this.xr()(this.currentTime)})`)
     },
 
@@ -3054,7 +3075,7 @@ export default {
         this.codifiedXR = this.xr();
         this.codifiedYR = this.yr();
         this.visibleSargam.forEach((s, i) => {
-          d3.select(`.s${i}`)
+          d3Select(`.s${i}`)
             .transition()
             .duration(this.transitionTime)
             .attr('d', this.sargamLine(Math.log2(s)))
@@ -3109,13 +3130,13 @@ export default {
     },
 
     phraseLine() {
-      return d3.line()
+      return d3Line()
         .x(d => this.xr()(d.x))
         .y(d => this.yr()(Math.log2(d.y)))
     },
 
     codifiedPhraseLine() {
-      return d3.line()
+      return d3Line()
         .x(d => this.codifiedXR(d.x))
         .y(d => this.codifiedYR(Math.log2(d.y)))
     },
@@ -3124,10 +3145,10 @@ export default {
       this.piece.phrases.forEach((phrase, pIdx) => {
         phrase.trajectories.forEach((traj, tIdx) => {
           if (traj.id !== 12) {
-            d3.select(`#p${pIdx}t${tIdx}`)
+            d3Select(`#p${pIdx}t${tIdx}`)
               .transition().duration(this.transitionTime)
               .attr("d", this.phraseLine())
-            d3.select(`#overlay__p${pIdx}t${tIdx}`)
+            d3Select(`#overlay__p${pIdx}t${tIdx}`)
               .transition().duration(this.transitionTime)
               .attr('d', this.phraseLine())
             this.movePlucks(traj);
@@ -3176,10 +3197,10 @@ export default {
 
     updateClipPaths() {
       const rect = this.rect();
-      d3.select('#clip>#rect')
+      d3Select('#clip>#rect')
         .attr('width', rect.width - this.yAxWidth)
         .attr('height', rect.height - this.xAxHeight)
-      d3.select('#yAxisClip>#yAxisClipRect')
+      d3Select('#yAxisClip>#yAxisClipRect')
         .attr('height', rect.height - this.xAxHeight)
     },
 
@@ -3207,10 +3228,10 @@ export default {
 
     updateBackgroundColors() {
       const rect = this.rect();
-      d3.select('#behindColor')
+      d3Select('#behindColor')
         .attr('width', rect.width)
         .attr('height', rect.height)
-      d3.select('#backColor')
+      d3Select('#backColor')
         .attr('width', rect.width - this.yAxWidth)
         .attr('height', rect.height - this.xAxHeight - 1)
     },
@@ -3218,8 +3239,8 @@ export default {
     center(e) {
       const rect = this.rect();
       if (e.sourceEvent) {
-        const p = d3.pointers(e, this.svg.node());
-        return [d3.mean(p, d => d[0]), d3.mean(p, d => d[1])];
+        const p = d3Pointers(e, this.svg.node());
+        return [d3Mean(p, d => d[0]), d3Mean(p, d => d[1])];
       }
       return [rect.width / 2, rect.height / 2]
     },
@@ -3234,7 +3255,7 @@ export default {
         if (e.sourceEvent) {
           let deltaX = 0.5 * e.sourceEvent.wheelDeltaX / this.tx().k;
           let deltaY = 0.5 * e.sourceEvent.wheelDeltaY / this.ty().k;
-          d3.select()
+          d3Select()
           this.gx.call(this.zoomX.translateBy, deltaX, 0);
           this.gy.call(this.zoomY.translateBy, 0, deltaY);
         } else {
@@ -3320,18 +3341,18 @@ export default {
       }
       // if before and after are silence; combine all three trajs into single
       //silent traj
-    d3.select(`#${trajID}`).remove();
-      d3.select(`#overlay__${trajID}`).remove();
-      d3.select(`#articulations__${trajID}`).remove();
+    d3Select(`#${trajID}`).remove();
+      d3Select(`#overlay__${trajID}`).remove();
+      d3Select(`#articulations__${trajID}`).remove();
       
       if (!newTraj) {
         // for (let i=phrase.trajectories.length-1; i > tIdx; i--) {
         //   const traj = phrase.trajectories[i];
         //   const oldId = `p${pIdx}t${traj.num}`;
         //   const newId = `p${pIdx}t${delAfter ? traj.num - 2 : traj.num-1}`;
-        //   d3.select(`#${oldId}`).attr('id', newId);
-        //   d3.select(`#overlay__${oldId}`).attr('id', `overlay__${newId}`);
-        //   d3.select(`#articulations__${oldId}`)
+        //   d3Select(`#${oldId}`).attr('id', newId);
+        //   d3Select(`#overlay__${oldId}`).attr('id', `overlay__${newId}`);
+        //   d3Select(`#articulations__${oldId}`)
         //     .attr('id', `articulations__${newId}`);
         //   let hOffCt = 0;
         //   let hOnCt = 0;
@@ -3339,17 +3360,17 @@ export default {
         //   Object.keys(traj.articulations).forEach(key => {
         //     const art = traj.articulations[key];
         //     if (art.name === 'pluck') {
-        //       d3.select(`#pluck${oldId}`).attr('id', `pluck${newId}`);
+        //       d3Select(`#pluck${oldId}`).attr('id', `pluck${newId}`);
         //     } else if (art.name === 'hammer-off') {
-        //       d3.select(`#hammeroff${oldId}i${hOffCt}`)
+        //       d3Select(`#hammeroff${oldId}i${hOffCt}`)
         //         .attr('id', `hammeroff${newId}i${hOffCt}`);
         //       hOffCt++;
         //     } else if (art.name === 'hammer-on') {
-        //       d3.select(`#hammeron${oldId}i${hOnCt}`)
+        //       d3Select(`#hammeron${oldId}i${hOnCt}`)
         //         .attr('id', `hammeron${newId}i${hOnCt}`);
         //       hOnCt++;
         //     } else if (art.name === 'slide') {
-        //       d3.select(`#slide${oldId}i${slideCt}`)
+        //       d3Select(`#slide${oldId}i${slideCt}`)
         //         .attr('id', `slide${newId}i${slideCt}`);
         //       slideCt++;
         //     }
@@ -3359,9 +3380,9 @@ export default {
         phrase.trajectories.filter(traj => traj.num > tIdx).forEach(traj => {
           const oldId = `p${pIdx}t${traj.num}`;
           const newId = `p${pIdx}t${delAfter ? traj.num - 2 : traj.num-1}`;
-          d3.select(`#${oldId}`).attr('id', newId);
-          d3.select(`#overlay__${oldId}`).attr('id', `overlay__${newId}`);
-          d3.select(`#articulations__${oldId}`)
+          d3Select(`#${oldId}`).attr('id', newId);
+          d3Select(`#overlay__${oldId}`).attr('id', `overlay__${newId}`);
+          d3Select(`#articulations__${oldId}`)
             .attr('id', `articulations__${newId}`);
           let hOffCt = 0;
           let hOnCt = 0;
@@ -3369,17 +3390,17 @@ export default {
           Object.keys(traj.articulations).forEach(key => {
             const art = traj.articulations[key];
             if (art.name === 'pluck') {
-              d3.select(`#pluck${oldId}`).attr('id', `pluck${newId}`);
+              d3Select(`#pluck${oldId}`).attr('id', `pluck${newId}`);
             } else if (art.name === 'hammer-off') {
-              d3.select(`#hammeroff${oldId}i${hOffCt}`)
+              d3Select(`#hammeroff${oldId}i${hOffCt}`)
                 .attr('id', `hammeroff${newId}i${hOffCt}`);
               hOffCt++;
             } else if (art.name === 'hammer-on') {
-              d3.select(`#hammeron${oldId}i${hOnCt}`)
+              d3Select(`#hammeron${oldId}i${hOnCt}`)
                 .attr('id', `hammeron${newId}i${hOnCt}`);
               hOnCt++;
             } else if (art.name === 'slide') {
-              d3.select(`#slide${oldId}i${slideCt}`)
+              d3Select(`#slide${oldId}i${slideCt}`)
                 .attr('id', `slide${newId}i${slideCt}`);
               slideCt++;
             }
@@ -3412,9 +3433,9 @@ export default {
       phrase.trajectories.filter(traj => traj.num > tIdx).forEach(traj => {
         const oldId = `p${pIdx}t${traj.num}`;
         const newId = `p${pIdx}t${traj.num-1}`;
-        d3.select(`#${oldId}`).attr('id', newId);
-        d3.select(`#overlay__${oldId}`).attr('id', `overlay__${newId}`);
-        d3.select(`#articulations__${oldId}`)
+        d3Select(`#${oldId}`).attr('id', newId);
+        d3Select(`#overlay__${oldId}`).attr('id', `overlay__${newId}`);
+        d3Select(`#articulations__${oldId}`)
           .attr('id', `articulations__${newId}`);
         let hOffCt = 0;
         let hOnCt = 0;
@@ -3422,17 +3443,17 @@ export default {
         Object.keys(traj.articulations).forEach(key => {
           const art = traj.articulations[key];
           if (art.name === 'pluck') {
-            d3.select(`#pluck${oldId}`).attr('id', `pluck${newId}`);
+            d3Select(`#pluck${oldId}`).attr('id', `pluck${newId}`);
           } else if (art.name === 'hammer-off') {
-            d3.select(`#hammeroff${oldId}i${hOffCt}`)
+            d3Select(`#hammeroff${oldId}i${hOffCt}`)
               .attr('id', `hammeroff${newId}i${hOffCt}`);
             hOffCt++;
           } else if (art.name === 'hammer-on') {
-            d3.select(`#hammeron${oldId}i${hOnCt}`)
+            d3Select(`#hammeron${oldId}i${hOnCt}`)
               .attr('id', `hammeron${newId}i${hOnCt}`);
             hOnCt++;
           } else if (art.name === 'slide') {
-            d3.select(`#slide${oldId}i${slideCt}`)
+            d3Select(`#slide${oldId}i${slideCt}`)
               .attr('id', `slide${newId}i${slideCt}`);
             slideCt++;
           }
@@ -3445,11 +3466,11 @@ export default {
       phrase.trajectories.forEach((traj, tIdx) => {
         if (traj.id !== 12) {
           const data = this.makeTrajData(traj, phrase.startTime);
-          d3.select(`#p${pIdx}t${tIdx}`)
+          d3Select(`#p${pIdx}t${tIdx}`)
             .datum(data)
             .attr('d', this.codifiedPhraseLine())
 
-          d3.select(`#overlay__${pIdx}t${tIdx}`)
+          d3Select(`#overlay__${pIdx}t${tIdx}`)
             .datum(data)
             .attr('d', this.codifiedPhraseLine())
         }
@@ -3478,10 +3499,10 @@ export default {
               y: y
             }
           })
-          d3.select(`#p${pIdx}t${tIdx}`)
+          d3Select(`#p${pIdx}t${tIdx}`)
             .datum(data)
             .attr('d', this.phraseLine())
-          d3.select(`#overlay__${pIdx}t${tIdx}`)
+          d3Select(`#overlay__${pIdx}t${tIdx}`)
             .datum(data)
             .attr('d', this.phraseLine())
         }
@@ -3507,7 +3528,7 @@ export default {
         });
         const x = d => this.xr()(d.x);
         const y = d => this.yr()(d.y); 
-        d3.select(`#pluckp${traj.phraseIdx}t${traj.num}`)
+        d3Select(`#pluckp${traj.phraseIdx}t${traj.num}`)
           .data(pluckData)
           .attr('transform', d => `translate(${x(y)}, ${d(y)}}) rotate(90)`)
       }
@@ -3529,7 +3550,7 @@ export default {
         });
         const x = d => this.codifiedXR(d.x);
         const y = d => this.codifiedYR(d.y);
-        d3.select(`#pluckp${traj.phraseIdx}t${traj.num}`)
+        d3Select(`#pluckp${traj.phraseIdx}t${traj.num}`)
           .data(pluckData)
           .attr('transform', d => `translate(${x(d)}, ${y(d)}) rotate(90)`)
       }
@@ -3552,7 +3573,7 @@ export default {
       const x = d => this.xr()(d.x);
       const y = d => this.yr()(d.y); 
       hammerOffData.forEach(obj => {
-        d3.select(`#hammeroffp${traj.phraseIdx}t${traj.num}i${obj.i}`)
+        d3Select(`#hammeroffp${traj.phraseIdx}t${traj.num}i${obj.i}`)
           .transition()
           .duration(this.transitionTime)
           .attr('transform', `translate(${x(obj)},${y(obj)})`)
@@ -3570,7 +3591,7 @@ export default {
         }
       });
       hammerOnData.forEach(obj => {
-        d3.select(`#hammeronp${traj.phraseIdx}t${traj.num}i${obj.i}`)
+        d3Select(`#hammeronp${traj.phraseIdx}t${traj.num}i${obj.i}`)
           .transition()
           .duration(this.transitionTime)
           .attr('transform', `translate(${x(obj)},${y(obj)})`)
@@ -3594,7 +3615,7 @@ export default {
       const x = d => this.codifiedXR(d.x);
       const y = d => this.codifiedYR(d.y);
       hammerOffData.forEach(obj => {
-        d3.select(`#hammeroffp${traj.phraseIdx}t${traj.num}i${obj.i}`)
+        d3Select(`#hammeroffp${traj.phraseIdx}t${traj.num}i${obj.i}`)
           .transition()
           .duration(this.transitionTime)
           .attr('transform', `translate(${x(obj)},${y(obj)})`)
@@ -3611,7 +3632,7 @@ export default {
         }
       });
       hammerOnData.forEach(obj => {
-        d3.select(`#hammeronp${traj.phraseIdx}t${traj.num}i${obj.i}`)
+        d3Select(`#hammeronp${traj.phraseIdx}t${traj.num}i${obj.i}`)
           .transition()
           .duration(this.transitionTime)
           .attr('transform', `translate(${x(obj)},${y(obj)})`)

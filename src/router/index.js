@@ -1,40 +1,34 @@
 import { createWebHistory, createRouter } from 'vue-router';
-import FileManager from '@/components/FileManager.vue';
-import AudioEvents from '@/components/AudioEvents.vue';
-import RaagEditor from '@/components/RaagEditor.vue';
-import AltEditor from '@/components/AltEditor.vue';
-import LogIn from '@/components/LogIn.vue';
+
+const lazyLoad = view => {
+  return () => import (`@/components/${view}.vue`)
+}
 
 const routes = [
-  // {
-  //   path: '/editor',
-  //   name: 'Editor',
-  //   component: EditorComponent,
-  // },
   {
     path: '/files',
     name: 'Files',
-    component: FileManager
+    component: lazyLoad('FileManager')
   },
   {
     path: '/audioEvents',
     name: 'AudioEvents',
-    component: AudioEvents
+    component: lazyLoad('AudioEvents')
   },
   {
     path: '/raagEditor',
     name: 'RaagEditor',
-    component: RaagEditor
+    component: lazyLoad('RaagEditor')
   },
   {
     path: '/altEditor',
     name: 'AltEditor',
-    component: AltEditor
+    component: lazyLoad('AltEditor')
   },
   {
     path: '/',
     name: 'LogIn',
-    component: LogIn
+    component: lazyLoad('LogIn')
   }
 ];
 
