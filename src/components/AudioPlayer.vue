@@ -131,10 +131,13 @@ export default {
       this.progress = this.audio.currentTime / this.audio.duration;
       const pbi = document.querySelector('.progressBarInner');
       const pbo = document.querySelector('.progressBarOuter');
-      const totWidth = pbo.getBoundingClientRect().width;
-      pbi.style.width = this.progress * totWidth + 'px'
-      this.updateFormattedCurrentTime();
-      this.updateFormattedTimeLeft();
+      if (pbo) {
+        const totWidth = pbo.getBoundingClientRect().width;
+        pbi.style.width = this.progress * totWidth + 'px'
+        this.updateFormattedCurrentTime();
+        this.updateFormattedTimeLeft();
+      }
+      
     };
     this.audio.onended = this.trackEnd
   },

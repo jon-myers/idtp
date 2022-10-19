@@ -46,26 +46,14 @@
                   </span>
                 </div>
               </div>
-              
-              <!-- <div :class='`playCol height${getRaagHeight(audioEvent.recordings[recKey])}`'>
-                  <audio controls :class='`height${getRaagHeight(audioEvent.recordings[recKey])}`'>
-                    <source 
-                      :src='`https://swara.studio/audio/mp3/${audioEvent.recordings[recKey].audioFileId}.mp3`' 
-                      type='audio/mpeg'>
-                  </audio>
-                  
-              </div> -->
-              
             </div>
-          </div>
-          
+          </div>      
         </div>
       </div>
       <div class='addEventRow'>
         <button @click='toggleAddEvent'>Add new Audio Event</button>
       </div>
-    </div>
-    
+    </div>    
     <AddAudioEvent 
       v-if='showAddEvent' 
       class='audioEventPopup' 
@@ -78,16 +66,10 @@
       :saVerified='saVerified'
       :id='audioRecId'
       ref='audioPlayer'/>
-      
-    
-    <!-- <div>
-      <input ref='file' @change='handleFileUpload' type='file'>
-    </div> -->  
   </div>
 </template>
 <script>
 import { getAllAudioEventMetadata } from '@/js/serverCalls.js';
-
 import AddAudioEvent from '@/components/AddAudioEvent.vue';
 import AudioPlayer from '@/components/AudioPlayer.vue';
 const displayTime = dur => {
@@ -147,6 +129,14 @@ export default {
   mounted() {  
   },
   
+  beforeUnmount() {
+    this.$refs.audioPlayer.audio.pause()
+  },
+  
+  unmounted() {
+    
+  },
+  
   methods: {
     
     sendAudioSource(e, _id, aeIdx, recKey) {
@@ -162,8 +152,9 @@ export default {
       this.audioRecId = _id;
       this.audioEventId = this.allAudioEvents[aeIdx]._id;
       this.recIdx = recKey;
-      this.saEstimate = this.allAudioEvents[aeIdx].recordings[recKey].saEstimate;
-      this.saVerified = this.allAudioEvents[aeIdx].recordings[recKey].saVerified;
+      const rec = this.allAudioEvents[aeIdx].recordings[recKey];
+      this.saEstimate = rec.saEstimate;
+      this.saVerified = rec.saVerified;
       this.$refs.audioPlayer.waKey ++;
     },
     
