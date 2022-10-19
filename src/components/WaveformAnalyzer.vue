@@ -55,7 +55,6 @@
 </template>
 <script>
 
-import waveform from '@/assets/waveform.png';
 import { updateSaEstimate, getVerifiedStatus } from '@/js/serverCalls.js';
 
 import * as d3 from 'd3';
@@ -74,7 +73,6 @@ export default {
   
   data() {
     return {
-      waveform: waveform,
       saEstimate: 100,
       saVerified: false,
       fineTune: 0.0,
