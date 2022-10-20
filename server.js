@@ -3,30 +3,12 @@ const fileUpload = require('express-fileupload')
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const morgan = require('morgan');
-const _ = require('lodash');
-const {
-  MongoClient,
-  ObjectId
-} = require('mongodb')
+const { MongoClient, ObjectId } = require('mongodb');
 const app = express();
-const https = require('https');
-const http = require('http');
-const {
-  promises: fs
-} = require('fs');
-const {
-  spawn
-} = require('child_process');
+const { promises: fs } = require('fs');
+const { spawn } = require('child_process');
 const history = require('connect-history-api-fallback');
 const cron = require('node-cron');
-const dot = require('mongo-dot-notation');
-const whitelist = [
-  'https://chaparr.al',
-  'https://www.chaparr.al',
-  'http://localhost:8080',
-  'chaparr.al'
-];
-
 const aggregations = require('./aggregations.js');
 
 const getSuffix = mimetype => {
@@ -46,18 +28,6 @@ const getSuffix = mimetype => {
 cron.schedule('0 0 * * *', () => {
   spawn('python3', ['delete_unlinked_audio.py'])
 })
-
-var corsOptions = {
-  origin: function(origin, callback) {
-    console.log(origin)
-    if (whitelist.indexOf(origin) !== -1) {
-      callback(null, true)
-    } else {
-      callback(new Error(`Not allowed by CORS ${origin}`))
-    }
-  },
-  credentials: true
-}
 
 app.use(fileUpload({
   createParentPath: true
@@ -103,10 +73,9 @@ const login = 'srv://jon_myers:tabular0sa';
 const uri = `mongodb+${login}@${webAddress}?${settings}`;
 // const uri = "mongodb+srv://jon_myers:tabular0sa@swara.f5cuf.mongodb.net/swara?retryWrites=true&w=majority"
 
-MongoClient.connect(uri, {
-    useUnifiedTopology: true
-  })
-  .then(client => {
+const runServer = async () => {
+  try {
+    const client = await MongoClient.connect(uri, { useUnifiedTopology: true });    
     console.log('Connected to Database')
     const db = client.db('swara');
     const transcriptions = db.collection('transcriptions');
@@ -120,41 +89,40 @@ MongoClient.connect(uri, {
     const performanceSections = db.collection('performanceSections');
     const audioRecordings = db.collection('audioRecordings');
     const users = db.collection('users');
-
-    // creates new transcription entry in transcriptions collection
-    app.post('/insertNewTranscription', (req, res) => {
-      console.log(req.body)
-      transcriptions.insertOne(req.body)
-        .then(result => {
-          console.log('inserted new transcription!')
-          console.log(result.insertedId)
-          res.send(JSON.stringify(result))
-        })
-        .catch(error => console.error(error))
+      
+    app.post('/insertNewTranscription', async (req, res) => {
+      // creates new transcription entry in transcriptions collection
+      try {
+        const result = await transcriptions.insertOne(req.body)
+        res.send(JSON.stringify(result));
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
     });
 
-    app.post('/updateTranscription', (req, res) => {
+    app.post('/updateTranscription', async (req, res) => {
+      // updates a transcription
       const updateObj = {};
       Object.keys(req.body).forEach(key => {
         if (key !== '_id') updateObj[key] = req.body[key]
       });
       updateObj['dateModified'] = new Date();
-      transcriptions.updateOne({
-          '_id': ObjectId(req.body._id)
-        }, {
-          '$set': updateObj
-        })
-        .then(result => {
-          console.log('updated transcription')
-          result['dateModified'] = updateObj['dateModified']
-          res.send(JSON.stringify(result))
-        })
-        .catch(error => console.error(error))
+      const query = { '_id': ObjectId(req.body._id) };
+      const update = { '$set': updateObj };
+      try {
+        const result = await transcriptions.updateOne(query, update);
+        result['dateModified'] = updateObj['dateModified']
+        res.send(JSON.stringify(result))
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
     });
 
-    app.get('/getAllTranscriptions', (req, res) => {
+    app.get('/getAllTranscriptions', async (req, res) => {
       const userID = JSON.parse(req.query.userID);
-      const projection = {
+      const proj = {
         title: 1,
         dateCreated: 1,
         dateModified: 1,
@@ -168,42 +136,41 @@ MongoClient.connect(uri, {
         permissions: 1
       }
       const query = {
-        '$or': [{
-            '$or': [{
-                'permissions': 'Public'
-              },
-              {
-                'permissions': 'Publicly Editable'
-              }
+        '$or': [
+          {
+            '$or': [
+              { 'permissions': 'Public' },
+              { 'permissions': 'Publicly Editable' }
             ]
           },
-          {
-            'userID': userID
-          },
+          { 'userID': userID },
         ]
       };
-      const cursor = transcriptions.find(query).project(projection).toArray()
-        .then(result => {
-          res.send(JSON.stringify(result))
-        })
+      try {
+        const result = await transcriptions.find(query).project(proj).toArray();
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
     });
 
     app.get('/nameFromUserID', async (req, res) => {
+      // retrieve a user's name from their associated userID in the users db
       const query = {
         _id: ObjectId(JSON.parse(req.query.userID))
       };
       try {
         const result = await users.findOne(query);
-        console.log(query, result)
         res.send(await JSON.stringify(result.name))
       } catch (err) {
-        console.error(err)
+        console.error(err);
+        res.status(500).send(err);
       }
-
     });
 
-    // get all relevent data for audio files
-    app.get('/getAllAudioFileMetaData', (req, res) => {
+    app.get('/getAllAudioFileMetaData', async (req, res) => {
+      // get all relevent data for audio files
       const projection = {
         raag: 1,
         performers: 1,
@@ -213,223 +180,197 @@ MongoClient.connect(uri, {
         fileNumber: 1,
         year: 1,
       }
-      const cursor = audioFiles.find().project(projection).toArray()
-        .then(result => {
-          res.send(JSON.stringify(result))
-        })
+      try {
+        const result = await audioFiles.find().project(projection).toArray();
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
     });
 
     app.get('/getAllAudioEventMetadata', async (req, res) => {
-      // for now, just get everything, eventually gonna have to thin the herd via aggregation pipeline
+      // retreive metadata for all audio events
       try {
         const result = await audioEvents.find().sort({
           'name': 1
         }).toArray();
         res.json(result)
       } catch (err) {
-        console.error(err)
+        console.error(err);
+        res.status(500).send(err);
       }
     });
 
-    app.post('/getOneTranscription', (req, res) => {
+    app.post('/getOneTranscription', async (req, res) => {
+      // retreive a particular transcription. If _id is 0, return first one.
       if (req.body._id === 0) {
-        console.log('getting for editor')
-        transcriptions.find().sort({
-            "_id": 1
-          }).next()
-          .then(result => {
-            res.send(JSON.stringify(result))
-          })
-      } else {
-        transcriptions.findOne({
-            '_id': ObjectId(req.body._id)
-          })
-          .then(result => {
-            console.log('pulling down another piece')
-            res.send(JSON.stringify(result))
-          })
-      }
-    })
-
-    app.delete('/oneTranscription', (req, res) => {
-      transcriptions.deleteOne({
-          "_id": ObjectId(req.body._id)
-        })
-        .then(result => {
-          res.json('deleted _id ' + req.body._id)
-        })
-        .catch(err => console.error(err))
-    })
-
-
-    app.post('/getAudioDBEntry', (req, res) => {
-      console.log('heres and id: ' + req.body._id)
-      audioFiles.findOne({
-          '_id': ObjectId(req.body._id)
-        })
-        .then(result => {
+        try {
+          const result = await transcriptions.find().sort({ "_id": 1 }).next();
           res.json(result)
-        })
-        .catch(err => {
-          throw err;
-        })
-    })
+        } catch (err) {
+          console.error(err);
+          res.status(500).send(err);
+        }
+      } else {
+        try {
+          const query = { '_id': ObjectId(req.body._id) };
+          const result = await transcriptions.findOne(query);
+          res.send(JSON.stringify(result))
+        } catch (err) {
+          console.error(err);
+          res.status(500).send(err);
+        }  
+      }
+    });
 
-    app.get('/getSortedMusicians', (req, res) => {
+    app.delete('/oneTranscription', async (req, res) => {
+      // delete a particular transcription
+      try {
+        const query = { "_id": ObjectId(req.body._id) };
+        await transcriptions.deleteOne(query);
+        res.json('deleted _id ' + req.body._id);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }    
+    });
+
+    app.post('/getAudioDBEntry', async (req, res) => {
+      // retrieve a particular entry from the audioFiles db
+      try {
+        const query = { '_id': ObjectId(req.body._id) };
+        const result = await audioFiles.findOne(query);
+        res.json(result);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }    
+    });
+
+    app.get('/getSortedMusicians', async (req, res) => {
       //Get all names of all musicians from db, sorted
-      const sorts = {
-        'Last Name': 1,
-        'First Name': 1,
-        'Middle Name': 1
-      };
-      const projection = {
-        'Initial Name': 1,
-        _id: 0
-      };
-      musicians.find().sort(sorts).project(projection).toArray()
-        .then(result => {
-          res.json(result.map(r => r['Initial Name']))
-        })
-        .catch(err => {
-          throw err
-        })
-    })
+      const sorts = { 'Last Name': 1, 'First Name': 1, 'Middle Name': 1};
+      const proj = { 'Initial Name': 1, _id: 0 };
+      try {
+        const result = await musicians.find().sort(sorts).project(proj).toArray();
+        res.json(result.map(r => r['Initial Name']))
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
 
-    app.get('/getGharana', (req, res) => {
+    app.get('/getGharana', async (req, res) => {
       //gets gharana of a particular musician
       const initName = JSON.parse(req.query.initName);
-      const query = {
-        'Initial Name': initName
-      };
-      const projection = {
-        projection: {
-          Gharana: 1,
-          _id: 0
-        }
-      };
-      musicians.findOne(query, projection)
-        .then(result => {
-          res.json(result)
-        })
-        .catch(err => {
-          throw err;
-        })
-    })
+      const query = { 'Initial Name': initName };
+      const projection = { projection: { Gharana: 1, _id: 0 } };
+      try {
+        const result = musicians.findOne(query, projection);
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }    
+    });
 
-    app.get('/getInstruments', (req, res) => {
-      const projection = {
-        name: 1,
-        _id: 0
-      };
-      console.log(req.query)
+    app.get('/getInstruments', async (req, res) => {
+      // get names of all instruments, or instruments  of particular kind (if 
+      // melody is true)
+      const proj = { name: 1, _id: 0 };
       if (req.query.melody) {
-        const query = {
-          'kind': 'melody'
-        }
-        instruments.find(query).project(projection).toArray()
-          .then(result => {
-            res.json(result.map(r => r.name))
-          })
-          .catch(err => {
-            throw err
-          })
+        const query = { 'kind': 'melody' };
+        try {
+          const result = await instruments.find(query).project(proj).toArray();
+          res.json(result.map(r => r.name))
+        } catch (err) {
+          console.error(err);
+          res.status(500).send(err);
+        }        
       } else {
-        instruments.find().project(projection).toArray()
-          .then(result => {
-            res.json(result.map(r => r.name))
-          })
-          .catch(err => {
-            throw err
-          })
+        try {
+          const result = await instruments.find().project(proj).toArray();
+          res.json(result.map(r => r.name))
+        } catch (err) {
+          console.error(err);
+          res.status(500).send(err);
+        }
       }
-    })
+    });
 
-    app.get('/getRagaNames', (req, res) => {
+    app.get('/getRagaNames', async (req, res) => {
       // gets names of all ragas
-      const projection = {
-        'name': 1,
-        _id: 0
-      };
-      const sortRule = {
-        'name': 1
-      };
-      ragas.find().sort(sortRule).project(projection).toArray()
-        .then(result => {
-          res.json(result.map(r => r.name))
-        })
-        .catch(err => {
-          throw err
-        })
-    })
+      const proj = { 'name': 1, _id: 0 };
+      const sortRule = { 'name': 1 };
+      try {
+        const result = await ragas.find().sort(sortRule).project(proj).toArray();
+        res.json(result.map(r => r.name))
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }    
+    });
 
-    app.get('/getLocationObject', (req, res) => {
+    app.get('/getLocationObject', async (req, res) => {
       // gets location object
-      location.findOne({}, {
-          projection: {
-            _id: 0
-          }
-        })
-        .then(result => {
-          res.json(result)
-        })
-        .catch(err => {
-          throw err
-        })
-    })
+      try {
+        const result = await location.findOne({}, { projection: { _id: 0 } });
+        res.json(result);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
 
-    app.get('/getEventTypes', (req, res) => {
-      const projection = {
-        'type': 1,
-        _id: 0
-      };
-      eventTypes.find().project(projection).toArray()
-        .then(result => {
-          res.json(result.map(r => r.type))
-        })
-        .catch(err => {
-          throw err
-        })
-    })
+    app.get('/getEventTypes', async (req, res) => {
+      // retrieve list of all possible event types
+      const projection = { 'type': 1, _id: 0 };
+      try {
+        const result = await eventTypes.find().project(projection).toArray();
+        res.json(result.map(r => r.type))
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }    
+    });
 
-    app.get('/getPerformanceSections', (req, res) => {
-      const projection = {
-        'name': 1,
-        _id: 0
-      };
-      performanceSections.find().project(projection).toArray()
-        .then(result => {
-          res.json(result.map(r => r.name))
-        })
-        .catch(err => {
-          throw err
-        })
-    })
+    app.get('/getPerformanceSections', async (req, res) => {
+      // retrieve list of all possible performance sections
+      const proj = { 'name': 1, _id: 0 };
+      try {
+        const result = await performanceSections.find().project(proj).toArray();
+        res.json(result.map(r => r.name));
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
 
     app.get('/getNumberOfSpectrograms', async (req, res) => {
+      // returns the number of spectrograms that the app needs to load
       const dir = 'spectrograms/' + req.query.id + '/0';
-      try {
-        
+      try {  
         const files = await fs.readdir(dir);
         res.json(files.length)  
       } catch (err) {
-        res.json(undefined)
-        // throw err
+        console.error(err);
+        res.status(500).send(err);
       }
-    })
+    });
     
     app.post('/makeSpectrograms', async (req, res) => {
-      console.log(req.body.recId, req.body.saEst)
-      
+      // generate spectrograms for the given recording ID and tonic estimate  
       const makingSpecs = spawn(
         'python3', 
         ['generate_log_spectrograms.py', req.body.recId, req.body.saEst]
       );
       try {
-        await makingSpecs.stdout.on('data', data => {
+        makingSpecs.stdout.on('data', data => {
           console.log(`stdout: ${data}`)
         });
         
-        await makingSpecs.stderr.on('data', data => {
+        makingSpecs.stderr.on('data', data => {
           console.error(`stderr: ${data}`)
         });
         await makingSpecs.on('close', (msg) => {
@@ -437,7 +378,7 @@ MongoClient.connect(uri, {
           res.json('made the spectrograms')
         })
       } catch (err) {
-        throw (err)
+        console.error (err)
       }
     })
 
@@ -448,7 +389,8 @@ MongoClient.connect(uri, {
         });
         res.json(result)
       } catch (err) {
-        throw err
+        console.error(err);
+        res.status(500).send(err);
       }
     })
 
@@ -459,84 +401,69 @@ MongoClient.connect(uri, {
         });
         res.json(result)
       } catch (err) {
-        throw err
+        console.error(err);
+        res.status(500).send(err);
       }
     })
 
-    app.post('/initializeAudioEvent', (req, res) => {
+    app.post('/initializeAudioEvent', async (req, res) => {
       // Creates a new (empty) AudioEvent mongDB entry, and receives back a 
       // unique _id for use throughout the upload / metadata entry process.
-      audioEvents.insertOne({})
-        .then(result => {
-          res.json(result)
-        })
-        .catch(err => {
-          throw err
-        })
-
-    })
-
-    app.delete('/cleanEmptyDoc', (req, res) => {
-      const query = {
-        _id: ObjectId(req.body._id)
+      try {
+        const result = await audioEvents.insertOne({});
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
       }
-      const projection = {
-        projection: {
-          _id: 0
-        }
-      };
-      audioEvents.findOne(query, projection)
-        .then(result => {
-          if (Object.keys(result).length === 0) {
-            audioEvents.deleteOne(query)
-              .then(output => {
-                res.json(output)
-              })
-              .catch(err => console.error(err))
-          }
-        }).catch(err => console.error(err))
     })
 
-    app.post('/saveAudioMetadata', (req, res) => {
+    app.delete('/cleanEmptyDoc', async (req, res) => {
+      const query = { _id: ObjectId(req.body._id) };
+      const projection = { projection: { _id: 0 } };
+      try {
+        const result = await audioEvents.findOne(query, projection)
+        if (Object.keys(result).length === 0) {
+          const output = await audioEvents.deleteOne(query);
+          res.json(output)
+        }
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }    
+    })
+
+    app.post('/saveAudioMetadata', async (req, res) => {
       const parentId = ObjectId(req.body._id);
       const myUpdates = req.body.updates;
-      const query = {
-        _id: parentId
-      };
-      const update = {
-        $set: myUpdates
-      };
-      const options = {
-        upsert: true
-      };
-      audioEvents.updateOne(query, update, options)
-        .then(result => {
-          res.json(result);
-          aggregations.generateAudioRecordingsDB();
-        })
-        .catch(err => console.error(err))
+      const query = { _id: parentId };
+      const update = { $set: myUpdates };
+      const options = { upsert: true };
+      try {
+        const result = await audioEvents.updateOne(query, update, options);
+        res.json(result);
+        aggregations.generateAudioRecordingsDB();
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }    
     })
 
     app.post('/updateSaEstimate', async (req, res) => {
       try {
         const verString = `recordings.${req.body.recIdx}.saVerified`;
         const estString = `recordings.${req.body.recIdx}.saEstimate`;
-        const query = {
-          _id: ObjectId(req.body.aeID)
-        };
-        const update = {
-          $set: {}
-        };
+        const query = { _id: ObjectId(req.body.aeID) };
+        const update = { $set: {} };
         update.$set[verString] = req.body.verified;
         update.$set[estString] = req.body.saEstimate;
-        const result = await audioEvents.updateOne(query, update);
+        await audioEvents.updateOne(query, update);
         const otherQuery = { _id: ObjectId(req.body.recID) };
-        const otherUpdate = { $set: {
-          saEstimate: req.body.saEstimate,
-          saVerified: req.body.verified
-          }
-        };
-        const otherResult = await audioRecordings.updateOne(otherQuery, otherUpdate)
+        const saEst = req.body.saEstimate;
+        const ver = req.body.verified;
+        const otherUpdate = { $set: { saEstimate: saEst, saVerified: ver } };
+        const oRes = await audioRecordings.updateOne(otherQuery, otherUpdate);
+        res.json(oRes)
       } catch (err) {
         console.error(err);
         res.status(500).send(err)
@@ -545,22 +472,14 @@ MongoClient.connect(uri, {
 
     app.get('/getVerifiedStatus', async (req, res) => {
       try {
-        const query = {
-          _id: ObjectId(req.query.aeID)
-        };
+        const query = { _id: ObjectId(req.query.aeID) };
         const verString = `$recordings.${req.query.recIdx}.saVerified`;
         const estString = `$recordings.${req.query.recIdx}.saEstimate`;
-        const projection = {
-          '_id': 0
-        };
+        const projection = { '_id': 0 };
         projection['saEstimate'] = estString;
         projection['saVerified'] = verString;
-        const options = {
-          projection: projection
-        }
-        // console.log(projection);
+        const options = { projection: projection };
         const result = await audioEvents.findOne(query, options);
-        // console.log(result);
         res.json(result)
       } catch (err) {
         console.error(err);
@@ -570,17 +489,9 @@ MongoClient.connect(uri, {
 
     app.get('/getRaagRule', async (req, res) => {
       try {
-        const query = {
-          name: req.query.name
-        };
-        const projection = {
-          _id: 0,
-          rules: 1,
-          updatedDate: 1
-        };
-        const options = {
-          projection: projection
-        };
+        const query = { name: req.query.name };
+        const projection = { _id: 0, rules: 1, updatedDate: 1 };
+        const options = { projection: projection };
         const result = await ragas.findOne(query, options);
         res.json(result)
       } catch (err) {
@@ -591,23 +502,12 @@ MongoClient.connect(uri, {
 
     app.post('/saveRaagRules', async (req, res) => {
       try {
-        console.log(req.body.name)
-        const query = {
-          name: req.body.name
-        };
-        // const update = dot.flatten(req.body);
-        // console.log(update)
+        const query = { name: req.body.name };
         const update = {
-          $set: {
-            rules: req.body.rules,
-            updatedDate: req.body.date
-          }
+          $set: { rules: req.body.rules, updatedDate: req.body.date }
         };
-        const options = {
-          upsert: true
-        }
+        const options = { upsert: true };
         const result = await ragas.updateOne(query, update, options);
-        console.log(result)
         res.json(result.acknowledged)
       } catch (err) {
         console.error(err);
@@ -617,76 +517,48 @@ MongoClient.connect(uri, {
 
     app.post('/userLoginGoogle', async (req, res) => {
       try {
-        const query = {
-          sub: req.body.sub
-        };
-        const update = {
-          $set: req.body
-        };
-        const options = {
-          upsert: true,
-          returnDocument: 'after'
-        };
+        const query = { sub: req.body.sub };
+        const update = { $set: req.body };
+        const options = { upsert: true, returnDocument: 'after' };
         const result = await users.findOneAndUpdate(query, update, options);
         res.json(result);
       } catch (err) {
-        console.error(err)
+        console.error(err);
+        res.status(500).send(err);
       }
     })
 
     app.post('/agreeToWaiver', async (req, res) => {
       try {
-        const query = {
-          _id: ObjectId(req.body.userID)
-        };
-        console.log(req.body.userID);
-        const update = {
-          $set: {
-            waiverAgreed: true
-          }
-        };
-        const options = {
-          upsert: true
-        };
+        const query = { _id: ObjectId(req.body.userID) };
+        const update = { $set: { waiverAgreed: true } };
+        const options = { upsert: true };
         const result = await users.updateOne(query, update, options);
         res.json(result)
       } catch (err) {
-        console.error(err)
+        console.error(err);
+        res.status(500).send(err);
       }
     })
 
-    // upload files (probably this can be moved out of this mongodb thing)
+    
     app.post('/upload-avatar', async (req, res) => {
+    // upload files, and send back progress, via axios (doesn't work with fetch)
       try {
         if (!req.files) {
-          res.send({
-            status: false,
-            message: 'No file uploaded'
-          });
+          res.send({ status: false, message: 'No file uploaded' });
         } else {
           const parentId = req.body.parentID;
           const idx = req.body.idx;
           const avatar = req.files.avatar;
           const tempString = `recordings.${idx}.audioFileId`;
           const newUniqueId = await ObjectId();
-          const query = {
-            _id: ObjectId(parentId)
-          };
-          const update = {
-            $set: {
-              [tempString]: newUniqueId
-            }
-          };
-          const options = {
-            upsert: true
-          };
-          audioEvents.updateOne(query, update, options)
-            .then(result => console.log(result))
-            .catch(err => console.error(err))
+          const query = { _id: ObjectId(parentId) };
+          const update = { $set: { [tempString]: newUniqueId } };
+          const options = { upsert: true };
+          await audioEvents.updateOne(query, update, options)
           const fileName = newUniqueId + getSuffix(avatar.mimetype);
-
           avatar.mv('./uploads/' + fileName);
-          console.log('in here somewhere')
           const processAudio = spawn('python3', ['process_audio.py', fileName, parentId, idx])
           await processAudio.on('close', () => {
             console.log('python closed, finally')
@@ -701,27 +573,22 @@ MongoClient.connect(uri, {
               }
             });
           });
-          const makeImages = spawn('python3', ['make_images.py', newUniqueId.toString()])
-
+          spawn('python3', ['make_images.py', newUniqueId.toString()])
         }
       } catch (err) {
         console.error(err)
         res.status(500).send(err);
       }
     });
+    app.use('/audio', express.static('audio'))
+    app.use('/peaks', express.static('peaks'))
+    app.use('/spectrograms', express.static('spectrograms'))
+    app.use('/', express.static('dist'))
+    const server = app.listen(3000);
+    server.timeout = 600000;
+  } catch (err) {
+    console.throw(err)
+  }
+}
 
-  })
-  .catch(error => console.error(error))
-
-
-
-
-
-app.use('/audio', express.static('audio'))
-app.use('/peaks', express.static('peaks'))
-app.use('/spectrograms', express.static('spectrograms'))
-app.use('/', express.static('dist'))
-
-
-const server = app.listen(3000);
-server.timeout = 600000;
+runServer();
