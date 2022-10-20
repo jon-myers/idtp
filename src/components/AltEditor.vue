@@ -1634,7 +1634,14 @@ export default {
     },
 
     async addSpectrogram() {
-      this.numSpecs = await getNumberOfSpectrograms(this.piece.audioID);
+      try {
+        console.log('get num of specs')
+        this.numSpecs = await getNumberOfSpectrograms(this.piece.audioID);
+        console.log('got here')
+      } catch (err) {
+        console.error(err)
+      }
+      
       const rect = this.rect();
       const height = rect.height - this.xAxHeight;
       this.imgs = [];
@@ -1950,7 +1957,15 @@ export default {
         .on('mousedown', this.handleMousedown)
         .on('mouseup', this.handleMouseup)
       this.paintBackgroundColors();
-      if (this.piece.audioID) await this.addSpectrogram();
+      if (this.piece.audioID) {
+        console.log('trying')
+        try {
+          await this.addSpectrogram();
+        } catch (err) {
+          console.error(err)
+        }
+        console.log('not getting')
+      }
       this.curWidth = rect.width - this.yAxWidth;
       this.addClipPaths();
       this.addMarkers();
