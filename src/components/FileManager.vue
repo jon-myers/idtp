@@ -11,19 +11,12 @@
     :key="piece"
     @dblclick='openPieceAlt(piece)'>
     <div class='infoKey' v-for="info in allPieceInfo[i]" :key="info">{{info}}</div>
-    <!-- <button @click='openPiece(piece)'>open</button> -->
-    <!-- <button @click='openPieceAlt(piece)'>open</button> -->
-    <!-- <button @click='deletePiece(piece)'>delete</button> -->
   </div>
   <div class='addNewPiece' @click="designNewPiece()">Add new Piece ...</div>
 </div>
 <div v-if="designPieceModal" class='designPieceModal'>
   <NewPieceRegistrar />
 </div>
-
-<!-- <div v-if="designPieceModal" class='designPieceModal'>
-  <NewPieceRegistrar />
-</div> -->
 </template>
 <script>
 import {
@@ -43,7 +36,6 @@ import {
 
 export default {
   name: 'FileManager',
-
   data() {
     return {
       infoKeys: [
@@ -60,6 +52,7 @@ export default {
       allPieceInfo: []
     }
   },
+  
   components: {
     NewPieceRegistrar
   },
@@ -133,15 +126,11 @@ export default {
       const year = date.getFullYear();
       return month + '/' + day + '/' + year
     },
-
-    openPiece(piece) {
-      const _id = piece._id;
-      this.$store.commit('update_id', _id)
-      this.$router.push('/editor')
-    },
     
     openPieceAlt(piece) {
-      this.$store.commit('update_id', piece._id)
+      console.log(piece._id)
+      this.$store.commit('update_id', piece._id);
+      this.$cookies.set('currentPieceId', piece._id);
       this.$router.push('/altEditor')
     },
 
@@ -155,6 +144,7 @@ export default {
       createNewPiece(piece)
         .then(data => {
           this.$store.commit('update_id', data.insertedId);
+          this.$cookies.set('currentPieceId', data.insertedId);
           this.$router.push('/altEditor');
         })
     },

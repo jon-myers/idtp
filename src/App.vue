@@ -70,6 +70,10 @@ export default {
       this.$store.commit('update_userID', this.userID);
       this.$store.commit('update_returning', true);
       this.$store.commit('update_firstName', this.firstName);
+      const pieceId = this.$cookies.get('currentPieceId');
+      if (pieceId !== null) {
+        this.$store.commit('update_id', pieceId)
+      }
     } else {
       try {
         const response = await googleOneTap({ autoLogin: false });
