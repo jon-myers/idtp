@@ -404,16 +404,8 @@ export default {
       // use call from serverCalls.js to create new spectrograms on the server.
       const recId = this.piece.audioID;
       const saEst = this.audioDBDoc.saEstimate;
-      
       const result = await makeSpectrograms(recId, saEst);
       console.log(result)
-      
-      // console.log(recId, this.audioDBDoc)
-      // try {
-      // 
-      // } catch (err) {
-      //   console.error(err)
-      // }
     },
     
     dragDotStart(e) {
@@ -1958,13 +1950,11 @@ export default {
         .on('mouseup', this.handleMouseup)
       this.paintBackgroundColors();
       if (this.piece.audioID) {
-        console.log('trying')
         try {
           await this.addSpectrogram();
         } catch (err) {
           console.error(err)
         }
-        console.log('not getting')
       }
       this.curWidth = rect.width - this.yAxWidth;
       this.addClipPaths();
