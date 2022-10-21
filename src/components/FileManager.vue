@@ -1,21 +1,54 @@
 <template>
-<div class='fileContainer'>
+<div 
+  class='fileContainer' 
+  @contextmenu='handleRightClick'
+  @click='handleClick'
+  ref='fileContainer'
+  >
   <div class='fileInfoKeys'>
-    <div v-for="ik in infoKeys" :key='ik' class='infoKey'>
+    <div 
+      v-for="(ik, idx) in infoKeys" 
+      :key='ik' 
+      :class='`infoKey ${["", "first"][Number(idx === 0)]}`'
+      >
       {{ik}}
     </div>
   </div>
-  <div 
-    class='fileInfoRow' 
-    v-for="(piece, i) in allPieces" 
-    :key="piece"
-    @dblclick='openPieceAlt(piece)'>
-    <div class='infoKey' v-for="info in allPieceInfo[i]" :key="info">{{info}}</div>
+  <div class='fileInfoRowScroller'>
+    <div 
+      class='fileInfoRow' 
+      v-for="(piece, i) in allPieces" 
+      :key="piece"
+      @dblclick='openPieceAlt(piece)'
+      :id='`fir${i}`'>
+      <div 
+        :class='`infoKey ${["", "first"][Number(idx === 0)]}`' 
+        v-for="(info, idx) in allPieceInfo[i]" 
+        :key="info">
+        {{info}}
+      </div>
+    </div>
   </div>
-  <div class='addNewPiece' @click="designNewPiece()">Add new Piece ...</div>
+</div>
+<div class='dropDown closed' ref='dropDown' v-show='showDropDown'>
+  <div 
+    :class='`dropDownRow ${["last", ""][Number(delete_)]}`' 
+    @click='designNewPiece()'>
+    New Transcription
+  </div>
+  <div 
+    v-if='delete_' 
+    :class='`dropDownRow last ${["inactive", ""][Number(deleteActive)]}`'
+    @click='deletePiece'>
+    Delete
+  </div>
 </div>
 <div v-if="designPieceModal" class='designPieceModal'>
-  <NewPieceRegistrar />
+  <NewPieceRegistrar
+    ref='newPieceRegistrar'
+    :modalWidth='modalWidth'
+    :modalHeight='modalHeight'
+   />
 </div>
 </template>
 <script>
@@ -49,7 +82,16 @@ export default {
       designPieceModal: false,
       getAllPieces: getAllPieces,
       allPieces: undefined,
-      allPieceInfo: []
+      allPieceInfo: [],
+      showDropDown: true,
+      dropDownLeft: 200,
+      dropDownTop: 300,
+      dropDownWidth: 200,
+      delete_: true,
+      deleteActive: true,
+      selectedPiece: undefined,
+      modalWidth: 600,
+      modalHeight: 450
     }
   },
   
@@ -58,6 +100,8 @@ export default {
   },
 
   async created() {
+    
+    window.addEventListener('keydown', this.handleKeydown);
     if (this.$store.state.userID === undefined) {
       this.$router.push('/')
     }
@@ -77,15 +121,10 @@ export default {
   },
 
   mounted() {
-
-    this.emitter.on('closeModal', () => {
-      this.designPieceModal = false
-    });
     this.emitter.on('newPieceInfo', async newPieceInfo => {
       const npi = Object.assign({}, newPieceInfo);
       const rsRes = await getRaagRule(npi.raga)
       const ruleSet = rsRes.rules;
-      // console.log('just before: ', ruleSet);
       npi.raga = new Raga({
         name: npi.raga,
         ruleSet: ruleSet
@@ -103,7 +142,8 @@ export default {
   },
   
   beforeUnmount() {
-    this.emitter.off('newPieceInfo')
+    this.emitter.off('newPieceInfo');
+    window.removeEventListener('keydown', this.handleKeydown);
   },
 
   methods: {
@@ -112,7 +152,13 @@ export default {
       const title = p.title;
       const raga = p.raga.name;
       let name = undefined;
-      if (p.userID) name = await nameFromUserID(p.userID);
+      if (p.userID) {
+        if (p.userID === this.$store.state.userID) {
+          name = 'You'
+        } else {
+          name = await nameFromUserID(p.userID);
+        }
+      }
       const dateCreated = this.writeDate(p.dateCreated);
       const dateModified = this.writeDate(p.dateModified);
       const permissions = p.permissions;
@@ -128,13 +174,13 @@ export default {
     },
     
     openPieceAlt(piece) {
-      console.log(piece._id)
       this.$store.commit('update_id', piece._id);
       this.$cookies.set('currentPieceId', piece._id);
       this.$router.push('/altEditor')
     },
 
     designNewPiece() {
+      this.$refs.dropDown.classList.add('closed')
       this.designPieceModal = true
     },
 
@@ -149,20 +195,81 @@ export default {
         })
     },
 
-    deletePiece(piece) {
-      deletePiece(piece)
-        .then(res => {
-          if (res.ok) {
-            getAllPieces(this.$store.state.userID)
-              .then(ap => this.allPieces = ap)
-          }
-        })
+    async deletePiece() {
+      this.$refs.dropDown.classList.add('closed')  
+      const res = await deletePiece(this.selectedPiece);
+      if (res.ok) {
+        this.allPieces = await getAllPieces(this.$store.state.userID)
+      }
     },
-
-
-
-
-
+    
+    handleRightClick(e) {
+      e.preventDefault();
+      this.dropDownLeft = e.clientX;
+      this.dropDownTop = e.clientY;
+      this.modalLeft = e.clientX;
+      this.modalTop = e.clientY;
+      const rect = this.$refs.fileContainer.getBoundingClientRect();
+      if (this.modalLeft + this.modalWidth > rect.width - 20) {
+        this.modalLeft = rect.width - 20 - this.modalWidth
+      }
+      if (this.modalTop + this.modalHeight > rect.height - 20) {
+        this.modalTop = rect.height - 20 - this.modalHeight
+      }
+      this.designPieceModal = false;
+      
+      document.querySelectorAll('.selected').forEach(el => {
+        el.classList.remove('selected')
+      });
+      this.$refs.dropDown.classList.remove('closed');
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      if (el.classList[0] === 'fileInfoRow') {
+        const num = el.id.slice(3);
+        el.classList.add('selected');
+        this.selectedPiece = this.allPieces[num];
+        this.delete_ = true;
+        if (this.allPieces[num].userID === this.$store.state.userID) {
+          this.deleteActive = true
+        } else {
+          this.deleteActive = false
+        }
+      } else if (el.parentNode.classList[0] === 'fileInfoRow') {
+        const num = el.parentNode.id.slice(3);
+        el.parentNode.classList.add('selected');
+        this.selectedPiece = this.allPieces[num];
+        this.delete_ = true;
+        if (this.allPieces[num].userID === this.$store.state.userID) {
+          this.deleteActive = true
+        } else {
+          this.deleteActive = false
+        }
+      } else {
+        this.delete_ = false;
+        this.deleteActive = false;
+      }
+    },
+    
+    closeDropDown() {
+      this.$refs.dropDown.classList.add('closed');
+      document.querySelectorAll('.selected').forEach(el => {
+        el.classList.remove('selected')
+      });
+    },
+    
+    handleClick() {
+      this.designPieceModal = false;
+      this.closeDropDown()
+    },
+    
+    handleKeydown(e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        this.closeDropDown();
+        if (this.designPieceModal) {
+          this.designPieceModal = false
+        }
+      }
+    }
   }
 }
 </script>
@@ -173,31 +280,46 @@ export default {
   flex-direction: column;
   height: 100%;
   width: 100%;
-  /* user-select: none; */
+  background-image: linear-gradient(black, #1e241e);
+  /* overflow-y: scroll; */
+}
+
+.fileInfoRowScroller {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow-y: scroll;
 }
 
 .fileInfoRow {
   width: 100%;
   height: 40px;
-  background-color: white;
-  border-bottom: 1px solid black;
+  min-height: 40px;
+  color: white;
+  border-bottom: 1px solid grey;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: left;
   cursor: pointer;
-  /* pointer-events: none; */
 }
 
-/* .fileInfoRow * {
-  user-select: none
-} */
+.fileInfoRow:hover {
+  background-color: #2b332c
+}
+
+.fileInfoRow.selected {
+  background-color: #2b332c
+}
 
 .fileInfoKeys {
   width: 100%;
   height: 30px;
-  background-color: #6de6f7;
-  border-bottom: 1px solid black;
+  min-height: 30px;
+  background-color: #1e241e;
+  color: white;
+  border-bottom: 1px solid grey;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -210,8 +332,12 @@ export default {
   align-items: center;
   width: 150px;
   height: 100%;
-  border-right: 1px solid black;
+  border-right: 1px solid grey;
   user-select: none;
+}
+
+.infoKey.first {
+  width: 220px;
 }
 
 .addNewPiece {
@@ -227,14 +353,64 @@ export default {
 }
 
 .designPieceModal {
-  width: 650px;
-  height: 500px;
-  background-color: lightgrey;
+  width: v-bind(modalWidth+'px');
+  height: v-bind(modalHeight+'px');
   border: 1px solid black;
   position: fixed;
-  top: calc(50vh - 100px);
-  left: calc(50vw - 175px);
+  left: v-bind(modalLeft+'px');
+  top: v-bind(modalTop+'px');
+}
 
+.dropDown {
+  position: absolute;
+  width: v-bind(dropDownWidth+'px');
+  background-color: black;
+  left: v-bind(dropDownLeft+'px');
+  top: v-bind(dropDownTop+'px');
+  border: 1px solid grey;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  user-select: none;  
+}
+
+.dropDown.closed {
+  visibility: hidden;
+  opacity: 0;
+  transition: visibility 0s 0.15s, opacity 0.15s linear;
+}
+
+.dropDownRow {
+  color: white;
+  border-radius: 5px;
+  height: 20px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: left;
+  padding-left: 8px;
+  margin-left: 8px;
+  margin-right: 8px;
+  margin-top: 6px;
+  width: v-bind(dropDownWidth-24+'px')
+}
+
+.dropDownRow:hover {
+  background-color: blue;
+  cursor: pointer
+}
+
+.dropDownRow.last {
+  margin-bottom: 6px;
+}
+
+.dropDownRow.inactive:hover {
+  background-color: black;
+  cursor: auto;
+}
+
+.dropDownRow.inactive {
+  color: grey;
 }
 
 button {

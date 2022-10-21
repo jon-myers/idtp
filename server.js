@@ -223,6 +223,17 @@ const runServer = async () => {
         }  
       }
     });
+    
+    app.get('/pieceExists', async (req, res) => {
+      const query = { _id: ObjectId(req.query._id) };
+      try {
+        const result = await transcriptions.countDocuments(query) > 0;
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err)
+      }
+    });
 
     app.delete('/oneTranscription', async (req, res) => {
       // delete a particular transcription

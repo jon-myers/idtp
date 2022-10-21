@@ -267,6 +267,7 @@ export default {
     });
 
     const piece = await getPiece(this.$store.state._id);
+    
     if (piece.audioID) {
       // this.audioSource = `https://swara.studio/audio/mp3/${piece.audioID}.mp3`;
       this.audioSource= `https://swara.studio/audio/opus/${piece.audioID}.opus`;

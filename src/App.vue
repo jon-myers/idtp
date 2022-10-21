@@ -40,7 +40,7 @@
 <script>
 import { decodeCredential, googleLogout, googleOneTap } from 'vue3-google-login';
 
-import { userLoginGoogle } from '@/js/serverCalls.js';
+import { userLoginGoogle, pieceExists } from '@/js/serverCalls.js';
 // import Editor from '@/components/Editor.vue'
 
 export default {
@@ -72,7 +72,13 @@ export default {
       this.$store.commit('update_firstName', this.firstName);
       const pieceId = this.$cookies.get('currentPieceId');
       if (pieceId !== null) {
-        this.$store.commit('update_id', pieceId)
+        try {
+          const response = await pieceExists(pieceId);
+          if (response) this.$store.commit('update_id', pieceId)
+        } catch (err) {
+          console.error(err)
+        }
+        
       }
     } else {
       try {

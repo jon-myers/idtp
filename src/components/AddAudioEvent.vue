@@ -115,6 +115,10 @@ export default {
     }
   },
   
+  beforeUnmount() {
+    cleanEmptyDoc(this.uniqueId)
+  },
+  
   async mounted() {
     if (this.extUniqueId === undefined) {
       const idObj = await initializeAudioEvent();

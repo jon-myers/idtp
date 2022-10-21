@@ -5,17 +5,26 @@
         class='audioEventRow' 
         v-for='(audioEvent, aeIdx) in allAudioEvents'
         :key='audioEvent.name'>
-        <div class='audioEventNameRow' @dblclick='toggleDisplay($event, audioEvent, true)'>
+        <div 
+          class='audioEventNameRow' 
+          @dblclick='toggleDisplay($event, audioEvent, true)'
+          >
           <span @click='toggleDisplay($event, audioEvent)'>&#9654;</span>
           <label>{{audioEvent.name}}</label>
           <button @click='openEditWindow(audioEvent._id)'>Edit</button>
         </div>
-        <div :class='`audioRecordingRowOuter height${getHeight(audioEvent)}`' v-show='audioEvent.visible'>
-          <div :class='`audioRecordingRowSpacer height${getHeight(audioEvent)}`'>
+        <div 
+          :class='`audioRecordingRowOuter height${getHeight(audioEvent)}`' 
+          v-show='audioEvent.visible'
+          >
+          <div 
+            :class='`audioRecordingRowSpacer height${getHeight(audioEvent)}`'
+            >
           </div>
           <div class='audioRecordingCol'>
             <div 
-              :class='`audioRecordingRow height${getRaagHeight(audioEvent.recordings[recKey])}`' 
+              :class='`audioRecordingRow 
+                height${getRaagHeight(audioEvent.recordings[recKey])}`' 
               v-for='recKey in Object.keys(audioEvent.recordings)'
               :key='audioEvent.recordings[recKey].audioFileId'
               @dblclick='sendAudioSource($event, audioEvent.recordings[recKey].audioFileId, aeIdx, recKey)'>
@@ -254,9 +263,7 @@ export default {
     getHeight(audioEvent) {
       let ct = 0;
       Object.values(audioEvent.recordings).forEach(rec => {
-        Object.keys(rec.raags).forEach(() => {
-          ct ++
-        })
+        Object.keys(rec.raags).forEach(() => ct ++)
       });
       return ct
     },
