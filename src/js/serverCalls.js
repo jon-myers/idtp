@@ -18,15 +18,31 @@ const getPiece = async id => {
 
   await fetch(url + 'getOneTranscription', request)
     .then(response => {
+      // console.log(response)
       if (response.ok) {
         return response.json()
       }
     }).then(data => {
-      if (data) {
-        piece = data
-      }
+      piece = data;
+      if (!piece) throw 'no piece'
     }).catch(err => console.error(err))
   return piece
+}
+
+const pieceExists = async id => {
+  const request = {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' }
+  };
+  const query = '?' + new URLSearchParams({ _id: id });
+  try {
+    const response = await fetch(url + 'pieceExists' + query, request);
+    let data;
+    if (response.ok) data = await response.json();
+    return data
+  } catch (err) {
+    console.error(err)
+  }
 }
 
 const getAudioDBEntry = async _id => {
@@ -702,3 +718,4 @@ exports.userLoginGoogle = userLoginGoogle
 exports.agreeToWaiver = agreeToWaiver
 exports.nameFromUserID = nameFromUserID
 exports.makeSpectrograms = makeSpectrograms
+exports.pieceExists = pieceExists

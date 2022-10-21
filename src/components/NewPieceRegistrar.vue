@@ -5,16 +5,12 @@
         <label>Title</label>
         <input v-model="title"/>
       </div>
-      <div class="formRow">
-        <label>Transcriber</label>
-        <input v-model="transcriber"/>
-      </div>
       <div class='formRow'>
         <label>Recording</label>
         <div class='formCol'>
           <select v-model='aeIdx'>
             <option 
-              v-for='(ae, i) in allAudioEvents' 
+              v-for='(ae, i) in allEvents' 
               :key='ae.name'
               :value='i'>
               {{ae.name}}
@@ -22,10 +18,10 @@
           </select>
           <select class='c2' v-model='recording' v-if='aeIdx >= 0'>
             <option
-              v-for='(recIdx, i) in Object.keys(allAudioEvents[aeIdx].recordings)'
+              v-for='(recIdx, i) in Object.keys(allEvents[aeIdx].recordings)'
               :key='i'
               :value='recIdx'
-              >{{getShorthand(allAudioEvents[aeIdx].recordings[recIdx])}}</option>
+              >{{getShorthand(allEvents[aeIdx].recordings[recIdx])}}</option>
           </select>
         </div>
       </div>
@@ -50,7 +46,6 @@
       <div class='buttonRow'>
         <div class='buttonCol'>
           <button @click="makeNewPiece">submit</button>
-          <button @click="cancel">cancel</button>
         </div>
       </div>
     </div>
@@ -149,15 +144,17 @@
         <span>{{savedMsg}}</span>
       </div>
     </div>
-    <div class='closeWindow' @click='closeWindow'>
-      <span class='close-x'></span>
-    </div>
   </div>
   
 </template>
 <script>
 
-import { getAllAudioEventMetadata, getRagaNames, getRaagRule, saveRaagRules } from '@/js/serverCalls.js';
+import { 
+  getAllAudioEventMetadata, 
+  getRagaNames, 
+  getRaagRule, 
+  saveRaagRules 
+} from '@/js/serverCalls.js';
 import RaagEditor from '@/components/RaagEditor.vue';
 export default {
   name: 'NewPieceRegistrar',
@@ -166,7 +163,7 @@ export default {
       title: undefined,
       transcriber: undefined,
       raga: undefined,
-      allAudioEvents: undefined,
+      allEvents: undefined,
       aeIdx: undefined,
       recording: undefined,
       raags: undefined,
@@ -205,8 +202,10 @@ export default {
     }
   },
   
+  props: ['modalWidth', 'modalHeight'],
+  
   async mounted() {
-    this.allAudioEvents = await getAllAudioEventMetadata();
+    this.allEvents = await getAllAudioEventMetadata();
     this.raags = await getRagaNames();
     this.rules = this.rulesTemplate;
   },
@@ -218,7 +217,7 @@ export default {
     
     recording(newVal) {
       if (newVal) {
-        const ae = this.allAudioEvents[this.aeIdx];
+        const ae = this.allEvents[this.aeIdx];
         const raags = ae.recordings[newVal].raags;
         const keys = Object.keys(raags);
         if (keys.length === 1) {
@@ -231,7 +230,6 @@ export default {
     },
     
     raga(newVal) {
-      console.log(newVal)
       getRaagRule(newVal).then(rules => {
         if (rules.rules) {
           this.rules = rules.rules;
@@ -243,7 +241,6 @@ export default {
         }
       })
     }
-
   },
   
   components: [
@@ -268,16 +265,13 @@ export default {
         permissions: this.permissions
       }
       if (this.aeIdx && this.recording) {
-        const ae = this.allAudioEvents[this.aeIdx];
+        const ae = this.allEvents[this.aeIdx];
         newPieceInfo.audioID = ae.recordings[this.recording].audioFileId
       }
       this.emitter.emit('newPieceInfo', newPieceInfo);
-      this.emitter.emit('closeModal');
+      this.$parent.designPieceModal = false
     },
-    
-    cancel() {
-      this.emitter.emit('closeModal')
-    },
+  
     
     getShorthand(rec) {
       const out = [];
@@ -291,10 +285,6 @@ export default {
       })
       return out.join('')
     },
-    
-    closeWindow() {
-      this.$parent.designPieceModal = false
-    }
   }
 }
 </script>
@@ -351,10 +341,6 @@ select {
   width: 208px;
 }
 
-/* .c2 {
-  margin-left: 5px;
-} */
-
 .buttonCol {
   display: flex;
   flex-direction: column;
@@ -372,10 +358,7 @@ select {
 
 .raagEditorBox {
   width: 200px;
-  /* height: 200px;
-  min-height: 200px; */
 }
-
 
 .infoRow {
   width: 100%;
@@ -424,6 +407,12 @@ select {
 .outer {
   display: flex;
   flex-direction: row;
+  background-color: #202621;
+  border: 1px solid white;
+  border-radius: 5px;
+  color: white;
+  width: v-bind(modalWidth+'px');
+  height: v-bind(modalHeight+'px')
 }
 
 .raagEditorBox label {
@@ -453,14 +442,19 @@ select {
   cursor: pointer;
 }
 
-.close-x {
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        /* border: 7px solid #f56b00; */
-        background:
-            linear-gradient(45deg, rgba(0,0,0,0) 0%,rgba(0,0,0,0) 43%,#fff 45%,#fff 55%,rgba(0,0,0,0) 57%,rgba(0,0,0,0) 100%),
-            linear-gradient(135deg, rgba(0,0,0,0) 0%,rgba(0,0,0,0) 43%,#fff 45%,#fff 55%, rgba(0,0,0,0) 57%, rgba(0,0,0,0) 100%);
+input {
+  background-color: #2f3830;
+  color: white
+}
+
+select {
+  background-color: #2f3830;
+  color: white
+}
+
+button {
+  background-color: #2f3830;
+  color: white
 }
 
 </style>
