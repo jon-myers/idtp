@@ -3,38 +3,78 @@
   <div class='upperRow'>
     <div class='graph' ref='graph'></div>
     <div class='controlBox'>
-      <div class='cbBox'>
-        <label>Spectrogram Opacity</label>
-        <input 
-          type='range' 
-          min='0.0' 
-          max='1.0' 
-          step='0.01' 
-          v-model='spectrogramOpacity'
-          >
+      <div class='scrollingControlBox'>
+        <div class='cbBox'>
+          <label>Spectrogram Opacity</label>
+          <input 
+            type='range' 
+            min='0.0' 
+            max='1.0' 
+            step='0.01' 
+            v-model='spectrogramOpacity'
+            >
+        </div>
+        <div class='cbBox' v-if='editable'>
+          <button @click='savePiece'>Save</button>
+          <span class='savedDate'>
+            {{`Saved: ${dateModified ? dateModified.toLocaleString() : ''}`}}
+          </span>
+        </div>
+        <div class='cbRow' v-if='editable'>
+          <button @click='makeSpectrograms'>Remake Spectrogram</button>
+        </div>
+        <div class='cbRow'>
+          <label>View Phrases: </label>
+          <input type='checkbox' v-model='viewPhrases' @change='updatePhraseDivs'>
+        </div>
+        <div class='cbRow'>
+          <label>Loop: </label>
+          <input type='checkbox' v-model='loop' @click='updateLoop'>
+        </div>
+        <div class='cbBoxSmall'>
+          <label>Recording Gain</label>
+          <input 
+            type='range' 
+            min='0.0' 
+            max='1.0' 
+            step='0.01' 
+            v-model='recGain'
+            >
+        </div>
+        <div class='cbBoxSmall'>
+          <label>Synthesis Gain</label>
+          <input 
+            type='range' 
+            min='0.0' 
+            max='1.0' 
+            step='0.01' 
+            v-model='synthGain'
+            >
+        </div>
+        <div class='cbBoxSmall'>
+          <label>Synthesis Damping</label>
+          <input 
+            type='range' 
+            min='0.0' 
+            max='1.0' 
+            step='0.01' 
+            v-model='synthDamping'
+            >
+        </div>
       </div>
-      <div class='cbBox' v-if='editable'>
-        <button @click='savePiece'>Save</button>
-        <button @click='makeSpectrograms'>Remake Spectrogram</button>
-        <span class='savedDate'>
-          {{`Saved: ${dateModified ? dateModified.toLocaleString() : ''}`}}
-        </span>
-      </div>
-      <div class='cbRow'>
-        <label>View Phrases: </label>
-        <input type='checkbox' v-model='viewPhrases' @change='updatePhraseDivs'>
-      </div>
-      <div class='cbRow'>
-        <label>Loop: </label>
-        <input type='checkbox' v-model='loop' @click='updateLoop'>
-      </div>
-      <div class='filler'>
-      </div>
+      <!-- <div class='filler'>
+      </div> -->
       <AltTrajSelectPanel ref='trajSelectPanel' :editable='editable'/>
     </div>
   </div>
 </div>
-<EditorAudioPlayer ref='audioPlayer' :audioSource='audioSource' />
+<EditorAudioPlayer 
+  ref='audioPlayer' 
+  :audioSource='audioSource' 
+  :recGain='recGain'
+  :synthGain='synthGain'
+  :synthDamping='synthDamping'
+  />
 </template>
 <script>
 const getClosest = (counts, goal) => {
@@ -147,7 +187,10 @@ export default {
       setNewTraj: false,
       setNewPhraseDiv: false,
       justEnded: false,
-      editable: false
+      editable: false,
+      recGain: 0,
+      synthGain: 0,
+      synthDamping: 0.5
     }
   },
   components: {
@@ -290,9 +333,9 @@ export default {
     }
     await this.initializePiece();
     // GETBACK
-    // this.$refs.audioPlayer.initializePluckNode();
-    // this.$refs.audioPlayer.initializeChikariNodes();
-    // this.$refs.audioPlayer.preSetFirstEnvelope(256);
+    this.$refs.audioPlayer.initializePluckNode();
+    this.$refs.audioPlayer.initializeChikariNodes();
+    this.$refs.audioPlayer.preSetFirstEnvelope(256);
     // end GETBACK
     const silentDur = this.durTot - piece.durTot;
     if (silentDur !== 0) {
@@ -1628,9 +1671,7 @@ export default {
 
     async addSpectrogram() {
       try {
-        console.log('get num of specs')
         this.numSpecs = await getNumberOfSpectrograms(this.piece.audioID);
-        console.log('got here')
       } catch (err) {
         console.error(err)
       }
@@ -3668,6 +3709,18 @@ export default {
   color: white;
 }
 
+.scrollingControlBox {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: top;
+  color: white;
+  background-color: #202621;
+  overflow-y: scroll;
+}
+
 .mainzz {
   display: flex;
   flex-direction: column;
@@ -3698,6 +3751,19 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: space-evenly;
+}
+
+.cbBoxSmall {
+  .cbBox {
+    width: 100%;
+    height: 40px;
+    min-height: 70px;
+    /* border: 1px solid orange; */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-evenly;
+  }
 }
 
 button {
