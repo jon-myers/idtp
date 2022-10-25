@@ -236,7 +236,7 @@ export default {
   methods: {
     // GETBACK
     playChikaris(curPlayTime, now) {
-      const gain = this.chikariGainNode.gain;
+      const gain = this.intChikariGainNode.gain;
       gain.setValueAtTime(0, now);
       gain.linearRampToValueAtTime(1, now + this.slowRamp);
       this.$parent.piece.phrases.forEach(phrase => {
