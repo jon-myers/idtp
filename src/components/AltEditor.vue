@@ -102,6 +102,9 @@ import AltTrajSelectPanel from '@/components/AltTrajSelectPanel.vue';
 
 // import * as d3 from 'd3';
 
+import { detect } from 'detect-browser';
+
+
 import { 
   select as d3Select, 
   selectAll as d3SelectAll,
@@ -280,14 +283,15 @@ export default {
         this.$refs.trajSelectPanel.pluckBool = false
       }
     });
-    console.log('in editor', this.$store.state._id)
     const pieceDoesExist = await pieceExists(this.$store.state._id);
     const id = pieceDoesExist ? this.$store.state._id : '63445d13dc8b9023a09747a6';
     const piece = await getPiece(id);
     
     if (piece.audioID) {
-      // this.audioSource = `https://swara.studio/audio/mp3/${piece.audioID}.mp3`;
-      this.audioSource= `https://swara.studio/audio/opus/${piece.audioID}.opus`;
+      const browser = detect();
+      this.audioSource = browser.name === 'safari' ?
+        `https://swara.studio/audio/mp3/${piece.audioID}.mp3` :
+        `https://swara.studio/audio/opus/${piece.audioID}.opus`;         
       this.audioDBDoc = await getAudioRecording(piece.audioID)
       this.durTot = this.audioDBDoc.duration;
       // if pieceDurTot is less than this, add slient phrase to make the two 

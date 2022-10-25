@@ -104,11 +104,8 @@ import pauseIcon from '@/assets/icons/pause.svg';
 import playIcon from '@/assets/icons/play.svg';
 import shuffleIcon from '@/assets/icons/shuffle.svg';
 import rulerIcon from '@/assets/icons/ruler.svg';
-
-// GETBACK
 import { getStarts, getEnds } from '@/js/classes.js';
 import { AudioWorklet } from "@/audio-worklet";
-// end GETBACK
 
 const structuredTime = dur => {
   const hours = String(Math.floor(dur / 3600));
@@ -166,7 +163,7 @@ export default {
       showControls: false,
       recGain: 1,
       synthGain: 0,
-      synthDamp: 0.4,
+      synthDamp: 0.43,
       valueCurveMinim: 0.001,
     }
   },
@@ -178,7 +175,7 @@ export default {
 
   ],
   mounted() {
-    this.ac = new AudioContext();
+    this.ac = new AudioContext({ sampleRate: 48000 });
     this.gainNode = this.ac.createGain();
     this.gainNode.connect(this.ac.destination);
     this.gainNode.gain.setValueAtTime(Number(this.recGain), this.now());
@@ -206,6 +203,7 @@ export default {
     },
     
     recGain(newGain) {
+      if (this.ac.state === 'suspended') this.ac.resume();
       const currentGain = this.gainNode.gain.value;
       const gain = this.gainNode.gain;
       gain.setValueAtTime(currentGain, this.now());
@@ -213,6 +211,7 @@ export default {
     },
     
     synthGain(newGain) {
+      if (this.ac.state === 'suspended') this.ac.resume();
       const currentGain = this.synthGainNode.gain.value;
       const gain = this.synthGainNode.gain;
       gain.setValueAtTime(currentGain, this.now());
@@ -220,6 +219,7 @@ export default {
     },
     
     synthDamp(newVal) {
+      if (this.ac.state === 'suspended') this.ac.resume();
       const currentDamp = this.pluckNode.cutoff.value;
       const cutoff = this.pluckNode.cutoff;
       cutoff.setValueAtTime(currentDamp, this.now());
@@ -227,6 +227,7 @@ export default {
     },
 
     chikariGain(newVal) {
+      if (this.ac.state === 'suspended') this.ac.resume();
       const currentGain = this.chikariGainNode.gain.value;
       const gain = this.chikariGainNode.gain;
       gain.setValueAtTime(currentGain, this.now());
@@ -376,7 +377,6 @@ export default {
           envelope[i] = traj.compute(i/(valueCt-1));
           lpEnvelope[i] = traj.compute(i/(valueCt-1)) * (2 ** 3);
         }
-        console.log(startTime, endTime - startTime)
         freq.setValueCurveAtTime(envelope, startTime, endTime - startTime);
         lpFreq.setValueCurveAtTime(lpEnvelope, startTime, endTime - startTime);
       }
@@ -403,7 +403,7 @@ export default {
       this.otherNode.freq0 = this.otherNode.parameters.get('freq0');
       this.otherNode.freq1 = this.otherNode.parameters.get('freq1');
       this.otherNode.cutoff = this.otherNode.parameters.get('Cutoff');
-      this.otherNode.cutoff.setValueAtTime(0.3, this.now());
+      this.otherNode.cutoff.setValueAtTime(0.5, this.now());
       this.otherNode.connect(this.intChikariGainNode, 0);
       this.otherNode.connect(this.intChikariGainNode, 1);
       this.intChikariGainNode.connect(this.chikariGainNode);
@@ -430,17 +430,22 @@ export default {
     
     
     async getAudio(filepath, verbose) {
-      const start = await performance.now();
-      const res = await fetch(filepath);
-      const fetched = await performance.now() - start;
-      if (verbose) console.log('fetched: ', fetched / 1000)
-      const arrayBuffer = await res.arrayBuffer();
-      const midpoint = await performance.now() - start;
-      if (verbose) console.log('array buffd: ', midpoint/1000)
-      const audioBuffer = await this.ac.decodeAudioData(arrayBuffer);
-      const endpoint = await performance.now() - start;
-      if (verbose) console.log('done: ', endpoint/1000)
-      return audioBuffer
+      try {
+        const start = await performance.now();
+        const res = await fetch(filepath);
+        const fetched = await performance.now() - start;
+        if (verbose) console.log('fetched: ', fetched / 1000)
+        const arrayBuffer = await res.arrayBuffer();
+        const midpoint = await performance.now() - start;
+        if (verbose) console.log('array buffd: ', midpoint/1000)
+        const audioBuffer = await this.ac.decodeAudioData(arrayBuffer);
+        const endpoint = await performance.now() - start;
+        if (verbose) console.log('done: ', endpoint/1000)
+        return audioBuffer
+      } catch (err) {
+        console.log(err);
+      }
+      
     },
     
     back_15() {
