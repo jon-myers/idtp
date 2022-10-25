@@ -31,36 +31,7 @@
           <label>Loop: </label>
           <input type='checkbox' v-model='loop' @click='updateLoop'>
         </div>
-        <div class='cbBoxSmall'>
-          <label>Recording Gain</label>
-          <input 
-            type='range' 
-            min='0.0' 
-            max='1.0' 
-            step='0.01' 
-            v-model='recGain'
-            >
-        </div>
-        <div class='cbBoxSmall'>
-          <label>Synthesis Gain</label>
-          <input 
-            type='range' 
-            min='0.0' 
-            max='1.0' 
-            step='0.01' 
-            v-model='synthGain'
-            >
-        </div>
-        <div class='cbBoxSmall'>
-          <label>Synthesis Damping</label>
-          <input 
-            type='range' 
-            min='0.0' 
-            max='1.0' 
-            step='0.01' 
-            v-model='synthDamping'
-            >
-        </div>
+        
       </div>
       <!-- <div class='filler'>
       </div> -->
@@ -123,7 +94,8 @@ import {
   getAudioRecording,
   getNumberOfSpectrograms,
   savePiece,
-  makeSpectrograms
+  makeSpectrograms,
+  pieceExists
 } from '@/js/serverCalls.js';
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
 import AltTrajSelectPanel from '@/components/AltTrajSelectPanel.vue';
@@ -308,8 +280,10 @@ export default {
         this.$refs.trajSelectPanel.pluckBool = false
       }
     });
-
-    const piece = await getPiece(this.$store.state._id);
+    console.log('in editor', this.$store.state._id)
+    const pieceDoesExist = await pieceExists(this.$store.state._id);
+    const id = pieceDoesExist ? this.$store.state._id : '63445d13dc8b9023a09747a6';
+    const piece = await getPiece(id);
     
     if (piece.audioID) {
       // this.audioSource = `https://swara.studio/audio/mp3/${piece.audioID}.mp3`;
@@ -323,6 +297,7 @@ export default {
     }
     this.initXScale = this.durTot / this.initViewDur;
     let fund = 246;
+    if (this.audioDBDoc.saEstimate) fund = 2 * this.audioDBDoc.saEstimate;
     this.freqMin = fund / 2;
     this.freqMax = fund * 4;
     await this.getPieceFromJson(piece, fund);
@@ -1821,11 +1796,17 @@ export default {
     },
 
     phraseIdxFromTime(time) {
-      return this.piece.phrases.filter(phrase => {
+      const filtered = this.piece.phrases.filter(phrase => {
         const a = time >= phrase.startTime;
         const b = time < phrase.startTime + phrase.durTot;
         return a && b
-      })[0].pieceIdx
+      });
+      return filtered[0].pieceIdx
+      // return this.piece.phrases.filter(phrase => {
+      //   const a = time >= phrase.startTime;
+      //   const b = time < phrase.startTime + phrase.durTot;
+      //   return a && b
+      // })[0].pieceIdx
     },
 
     handleMousedown(e) {
@@ -3754,16 +3735,13 @@ export default {
 }
 
 .cbBoxSmall {
-  .cbBox {
-    width: 100%;
-    height: 40px;
-    min-height: 70px;
-    /* border: 1px solid orange; */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-evenly;
-  }
+  width: 100%;
+  height: 40px;
+  min-height: 70px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
 }
 
 button {

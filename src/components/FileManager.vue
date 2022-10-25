@@ -175,6 +175,7 @@ export default {
     
     openPieceAlt(piece) {
       this.$store.commit('update_id', piece._id);
+      console.log('this always happens: ' + piece._id)
       this.$cookies.set('currentPieceId', piece._id);
       this.$router.push('/altEditor')
     },

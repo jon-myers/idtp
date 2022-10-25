@@ -40,7 +40,7 @@
 <script>
 import { decodeCredential, googleLogout, googleOneTap } from 'vue3-google-login';
 
-import { userLoginGoogle, pieceExists } from '@/js/serverCalls.js';
+import { userLoginGoogle } from '@/js/serverCalls.js';
 // import Editor from '@/components/Editor.vue'
 
 export default {
@@ -71,15 +71,7 @@ export default {
       this.$store.commit('update_returning', true);
       this.$store.commit('update_firstName', this.firstName);
       const pieceId = this.$cookies.get('currentPieceId');
-      if (pieceId !== null) {
-        try {
-          const response = await pieceExists(pieceId);
-          if (response) this.$store.commit('update_id', pieceId)
-        } catch (err) {
-          console.error(err)
-        }
-        
-      }
+      this.$store.commit('update_id', pieceId); //just for now
     } else {
       try {
         const response = await googleOneTap({ autoLogin: false });

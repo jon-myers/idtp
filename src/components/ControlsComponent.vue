@@ -239,9 +239,6 @@ export default {
   justify-content: center;
   align-items: center;
 }
-.param {
-
-}
 
 .taller {
   height: 140px;
@@ -285,12 +282,14 @@ button {
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
   -webkit-appearance: none;
+  appearance: none;
   margin: 0;
 }
 
 /* Firefox */
 input[type=number] {
   -moz-appearance: textfield;
+  appearance: none
 }
 
 .inputRow {

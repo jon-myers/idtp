@@ -44,10 +44,52 @@
         </div>
         <div class='recInfo right'>
           <div class='rulerBox'>
-            <img :src='icons.ruler' @click='toggleWaveform' />
+            <img :src='icons.ruler' @click='toggleControls' />
           </div>
         </div>
       </div>
+    </div>
+    <div class='synthControls' v-if='showControls'>
+      <div class='cbBoxSmall'>
+          <label>Recording Gain</label>
+          <input 
+            type='range' 
+            min='0.0' 
+            max='1.0' 
+            step='0.01' 
+            v-model='recGain'
+            >
+        </div>
+        <div class='cbBoxSmall'>
+          <label>Synthesis Gain</label>
+          <input 
+            type='range' 
+            min='0.0' 
+            max='1.0' 
+            step='0.01' 
+            v-model='synthGain'
+            >
+        </div>
+        <div class='cbBoxSmall'>
+          <label>Synthesis Damping</label>
+          <input 
+            type='range' 
+            min='0.0' 
+            max='1.0' 
+            step='0.01' 
+            v-model='synthDamp'
+            >
+        </div>
+        <div class='cbBoxSmall'>
+          <label>Chikari Gain</label>
+          <input 
+            type='range' 
+            min='0.0' 
+            max='1.0' 
+            step='0.01' 
+            v-model='chikariGain'
+            >
+        </div>
     </div>
   </div>
 </template>
@@ -120,7 +162,12 @@ export default {
       bufferSourceNodes: [],
       // synthGain: 1,
       chikariGain: 0,
-      lagTime: 0.1
+      lagTime: 0.1,
+      showControls: false,
+      recGain: 1,
+      synthGain: 0,
+      synthDamp: 0.4,
+      valueCurveMinim: 0.001,
     }
   },
   props: [
@@ -128,44 +175,27 @@ export default {
     'saEstimate',
     'saVerified',
     'id',
-    'recGain',
-    'synthGain',
-    'synthDamping'
+
   ],
   mounted() {
     this.ac = new AudioContext();
     this.gainNode = this.ac.createGain();
     this.gainNode.connect(this.ac.destination);
     this.gainNode.gain.setValueAtTime(Number(this.recGain), this.now());
-    // GETBACK
-    this.masterSynthGainNode = this.ac.createGain();
-    this.masterSynthGainNode.gain.setValueAtTime(Number(this.synthGain), this.now())
     this.synthGainNode = this.ac.createGain();
-    this.synthGainNode.connect(this.masterSynthGainNode);
-    this.chikariMasterGainNode = this.ac.createGain();
-    this.chikariMasterGainNode.connect(this.masterSynthGainNode);
-    this.chikariMasterGainNode.gain.setValueAtTime(this.chikariGain, this.now())
-    this.masterSynthGainNode.connect(this.ac.destination);    
-    this.ac.audioWorklet.addModule(
-      AudioWorklet(new URL("@/audioWorklets/karplusStrong.worklet.js", import.meta.url))
-    );
-    this.ac.audioWorklet.addModule(
-      AudioWorklet(new URL("@/audioWorklets/chikaris.worklet.js", import.meta.url))
-    );
-    // end GETBACK  
-    // this.initializePluckNode() this gets triggered in parent
-    this.audio = new Audio();
-    this.audio.ontimeupdate = () => {
-      this.progress = this.audio.currentTime / this.audio.duration;
-      const pbi = document.querySelector('.progressBarInner');
-      const pbo = document.querySelector('.progressBarOuter');
-      const totWidth = pbo.getBoundingClientRect().width;
-      pbi.style.width = this.progress * totWidth + 'px'
-      this.updateFormattedCurrentTime();
-      this.updateFormattedTimeLeft();
-      this.$parent.currentTime = this.audio.currentTime
-    };
-    this.audio.onended = this.trackEnd
+    this.synthGainNode.gain.setValueAtTime(Number(this.synthGain), this.now())
+    this.intSynthGainNode = this.ac.createGain();
+    this.intSynthGainNode.connect(this.synthGainNode);
+    this.chikariGainNode = this.ac.createGain();
+    this.chikariGainNode.connect(this.ac.destination);
+    this.chikariGainNode.gain.setValueAtTime(this.chikariGain, this.now())
+    this.synthGainNode.connect(this.ac.destination);
+    const ksURL = new URL('@/audioWorklets/karplusStrong.worklet.js', 
+      import.meta.url);
+    const cURL = new URL('@/audioWorklets/chikaris.worklet.js', 
+      import.meta.url);
+    this.ac.audioWorklet.addModule(AudioWorklet(ksURL));
+    this.ac.audioWorklet.addModule(AudioWorklet(cURL));
   },
   
   watch: {
@@ -177,30 +207,41 @@ export default {
     
     recGain(newGain) {
       const currentGain = this.gainNode.gain.value;
-      this.gainNode.gain.setValueAtTime(currentGain, this.now());
-      this.gainNode.gain.linearRampToValueAtTime(newGain,  this.now() + this.lagTime)
+      const gain = this.gainNode.gain;
+      gain.setValueAtTime(currentGain, this.now());
+      gain.linearRampToValueAtTime(newGain,  this.now() + this.lagTime)
     },
     
     synthGain(newGain) {
-      const currentGain = this.masterSynthGainNode.gain.value;
-      this.masterSynthGainNode.gain.setValueAtTime(currentGain, this.now());
-      this.masterSynthGainNode.gain.linearRampToValueAtTime(newGain, this.now() + this.lagTime);
+      const currentGain = this.synthGainNode.gain.value;
+      const gain = this.synthGainNode.gain;
+      gain.setValueAtTime(currentGain, this.now());
+      gain.linearRampToValueAtTime(newGain, this.now() + this.lagTime);
     },
     
-    synthDamping(newVal) {
+    synthDamp(newVal) {
       const currentDamp = this.pluckNode.cutoff.value;
-      this.pluckNode.cutoff.setValueAtTime(currentDamp, this.now());
-      this.pluckNode.cutoff.linearRampToValueAtTime(newVal, this.now() + this.lagTime);
+      const cutoff = this.pluckNode.cutoff;
+      cutoff.setValueAtTime(currentDamp, this.now());
+      cutoff.linearRampToValueAtTime(newVal, this.now() + this.lagTime);
+    },
+
+    chikariGain(newVal) {
+      const currentGain = this.chikariGainNode.gain.value;
+      const gain = this.chikariGainNode.gain;
+      gain.setValueAtTime(currentGain, this.now());
+      gain.linearRampToValueAtTime(newVal, this.now() + this.lagTime);
     }
   },
   methods: {
     // GETBACK
-    playChikaris(playHeadLoc, now) {
-      this.chikarisGainNode.gain.setValueAtTime(0, now);
-      this.chikarisGainNode.gain.linearRampToValueAtTime(1, now + this.slowRamp);
+    playChikaris(curPlayTime, now) {
+      const gain = this.chikariGainNode.gain;
+      gain.setValueAtTime(0, now);
+      gain.linearRampToValueAtTime(1, now + this.slowRamp);
       this.$parent.piece.phrases.forEach(phrase => {
         Object.keys(phrase.chikaris).forEach(key => {
-          const time = now + phrase.startTime + Number(key) - Number(playHeadLoc);
+          const time = now + phrase.startTime + Number(key) - curPlayTime;
           if (time >= this.now()) {
             this.sendNoiseBurst(time, 0.01, this.otherNode, 0.025, 0.2)            
           }
@@ -215,63 +256,85 @@ export default {
       })
     },
     
-    playTrajs(playHeadLoc=0, now) {
-      const allTrajs = this.$parent.piece.phrases.map(p => p.trajectories).flat();
+    playTrajs(curPlayTime=0, now) {
+      const phrases = this.$parent.piece.phrases;
+      const allTrajs = phrases.map(p => p.trajectories).flat();
       const allStarts = getStarts(allTrajs.map(t => t.durTot));
       const allEnds = getEnds(allTrajs.map(t => t.durTot));
-      const startIdx = allStarts.findIndex(s => s >= playHeadLoc);
-      this.synthGainNode.gain.setValueAtTime(0, now);
-      this.synthGainNode.gain.linearRampToValueAtTime(1, now + this.slowRamp);
+      const startIdx = allStarts.findIndex(s => s >= curPlayTime);
+      const gain = this.intSynthGainNode.gain;
+      gain.setValueAtTime(0, now);
+      gain.linearRampToValueAtTime(1, now + this.slowRamp);
       allTrajs.slice(startIdx).forEach((traj, i_) => {
         const i = i_ + startIdx;
-        this.playArticulations(traj, now + Number(allStarts[i]) - Number(playHeadLoc));
-        if (traj.id === 12) {
-          if (i_ !== 0 && allTrajs[i-1].id !== 12 ) {
-            //
-          }
-        } else {
-          if (i_ === 0 || allTrajs[i-1].id === 12) {
-            //
-           }
-          this.playTraj(traj, now + allStarts[i] - playHeadLoc, now + allEnds[i] - playHeadLoc, 512, i === 0)
-        }
-        if (i === allTrajs.length - 1) {
-          //
+        this.playArticulations(traj, now + Number(allStarts[i]) - curPlayTime);
+        if (traj.id !== 12) {
+          const startTime = now + allStarts[i] - curPlayTime;
+          const endTime = now + allEnds[i] - curPlayTime;
+          this.playTraj(traj, startTime, endTime, 512, i === 0)
         }
       })
     },
     
     playArticulations(traj, startTime) {
       //plucks
+      const arts = traj.articulations;
       if (traj.id !== 12) {
-        const keys = Object.keys(traj.articulations);
-        const plucks = keys.filter(key => traj.articulations[key].name === 'pluck');
-        const hammerOffs = keys.filter(key => traj.articulations[key].name === 'hammer-off');
-        const hammerOns = keys.filter(key => traj.articulations[key].name === 'hammer-on');
-        const slides = keys.filter(key => traj.articulations[key].name === 'slide');
+        const keys = Object.keys(arts);
+        const plucks = keys.filter(key => arts[key].name === 'pluck');
+        const hammerOffs = keys.filter(key => arts[key].name === 'hammer-off');
+        const hammerOns = keys.filter(key => arts[key].name === 'hammer-on');
+        const slides = keys.filter(key => arts[key].name === 'slide');
     
         plucks.forEach(time => {
-            this.sendNoiseBurst(Number(startTime) + Number(time) * Number(traj.durTot), 0.01, this.pluckNode, 0.05, 1)
+          const when = Number(startTime) + Number(time) * Number(traj.durTot);
+          this.sendNoiseBurst(when, 0.01, this.pluckNode, 0.05, 1)
         });
         hammerOffs.forEach(time => {
-          this.sendNoiseBurst(Number(startTime) + Number(time) * Number(traj.durTot), 0.01, this.pluckNode, 0.05, 0.5)
+          const when = Number(startTime) + Number(time) * Number(traj.durTot);
+          this.sendNoiseBurst(when, 0.01, this.pluckNode, 0.05, 0.5)
         });
         hammerOns.forEach(time => {
-          this.sendNoiseBurst(Number(startTime) + Number(time) * Number(traj.durTot), 0.01, this.pluckNode, 0.05, 0.3)
+          const when = Number(startTime) + Number(time) * Number(traj.durTot);
+          this.sendNoiseBurst(when, 0.01, this.pluckNode, 0.05, 0.3)
         });
         slides.forEach(time => {
-          this.sendNoiseBurst(Number(startTime) + Number(time) * Number(traj.durTot), 0.01, this.pluckNode, 0.05, 0.1)
+          const when = Number(startTime) + Number(time) * Number(traj.durTot);
+          this.sendNoiseBurst(when, 0.01, this.pluckNode, 0.05, 0.1)
         })
+      }
+    },
+
+    createCurveVals(start, duration) { 
+      // time in transcription, not this.ac
+      const env = new Float32Array(Math.round(duration * this.valueCurveMinim));
+      const computeTimes = env.map((_, i) => this.valueCurveMinim * i + start);
+      const allTrajs = this.piece.phrases.map(p => p.trajectories).flat();
+      const allStarts = getStarts(allTrajs.map(t => t.durTot));
+      const computedVals = [];
+      let lastVal = this.piece.raga.fundamental;
+      for (let i = 0; i < computeTimes.length; i++) {
+        const time = computeTimes[i];
+        const traj = allTrajs[allStarts.findIndex(s => s >= time)];
+        const trajX = (time - traj.startTime) / traj.durTot;
+        let val;
+        if (traj.id === 12) {
+          val = lastVal
+        } else {
+          val = traj.compute(trajX);
+          lastVal = val;
+        }
+        computedVals.push(val);
       }
     },
     
     sendNoiseBurst(when, dur, where, attack=0.05, amp=1) {
-      const bufferSize = this.ac.sampleRate * dur;
-      const noiseBuffer = this.ac.createBuffer(1, bufferSize, this.ac.sampleRate);
+      const bufSize = this.ac.sampleRate * dur;
+      const noiseBuffer = this.ac.createBuffer(1, bufSize, this.ac.sampleRate);
       const attackSize = this.ac.sampleRate * attack;
       const output = noiseBuffer.getChannelData(0);
       let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0
-      for (let i = 0; i < bufferSize; i++) {
+      for (let i = 0; i < bufSize; i++) {
         const white = Math.random() * 2 - 1;
         b0 = 0.99886 * b0 + white * 0.0555179;
         b1 = 0.99332 * b1 + white * 0.0750759;
@@ -285,7 +348,7 @@ export default {
       for (let i = 0; i < attackSize; i++) {
         output[i] *= i / attackSize
       }
-      for (let i = 0; i < bufferSize; i++) {
+      for (let i = 0; i < bufSize; i++) {
         output[i] *= amp
       }
       const bufferSourceNode = this.ac.createBufferSource();
@@ -297,10 +360,15 @@ export default {
     
     
     playTraj(traj, startTime, endTime, valueCt, first=false) {
-      if (first) {        
+      const freq = this.pluckNode.frequency;
+      const lpFreq = this.lowPassNode.frequency;
+      if (first) {      
+
         const offset = startTime < this.now() ? this.now() - startTime : 0;
-        this.pluckNode.frequency.setValueCurveAtTime(this.firstEnvelope, startTime + offset, endTime - (startTime + offset));
-        this.lowPassNode.frequency.setValueCurveAtTime(this.firstLPEnvelope, startTime + offset, endTime - (startTime + offset));
+        const start = startTime + offset;
+        const end = endTime - start;
+        freq.setValueCurveAtTime(this.firstEnvelope, start, end);
+        lpFreq.setValueCurveAtTime(this.firstLPEnvelope, start, end);
       } else {
         const envelope = new Float32Array(valueCt);
         const lpEnvelope = new Float32Array(valueCt);
@@ -308,14 +376,16 @@ export default {
           envelope[i] = traj.compute(i/(valueCt-1));
           lpEnvelope[i] = traj.compute(i/(valueCt-1)) * (2 ** 3);
         }
-        this.pluckNode.frequency.setValueCurveAtTime(envelope, startTime, endTime - startTime);
-        this.lowPassNode.frequency.setValueCurveAtTime(lpEnvelope, startTime, endTime - startTime);
+        console.log(startTime, endTime - startTime)
+        freq.setValueCurveAtTime(envelope, startTime, endTime - startTime);
+        lpFreq.setValueCurveAtTime(lpEnvelope, startTime, endTime - startTime);
       }
     
     },
     
     preSetFirstEnvelope(valueCt) {
-      const traj = this.$parent.piece.phrases.map(p => p.trajectories).flat()[0];
+      const phrases = this.$parent.piece.phrases;
+      const traj = phrases.map(p => p.trajectories).flat()[0];
       this.firstEnvelope = new Float32Array(valueCt);
       this.firstLPEnvelope = new Float32Array(valueCt);
       for (let i = 0; i < valueCt; i ++) {
@@ -325,26 +395,22 @@ export default {
     },
     
     initializeChikariNodes() {
-      if (this.chikarisGainNode) this.chikarisGainNode.disconnect();
-      this.chikarisGainNode = this.ac.createGain();
+      if (this.intChikariGainNode) this.intChikariGainNode.disconnect();
+      this.intChikariGainNode = this.ac.createGain();
       if (this.chikariNodes) this.chikariNodes.forEach(cn => cn.disconnect());
-      this.otherNode = new AudioWorkletNode(this.ac, 'chikaris', { numberOfInputs: 1, numberOfOutputs: 4 });
+      const options = { numberOfInputs: 1, numberOfOutputs: 2 };
+      this.otherNode = new AudioWorkletNode(this.ac, 'chikaris', options);
       this.otherNode.freq0 = this.otherNode.parameters.get('freq0');
       this.otherNode.freq1 = this.otherNode.parameters.get('freq1');
-      this.otherNode.freq2 = this.otherNode.parameters.get('freq2');
-      this.otherNode.freq3 = this.otherNode.parameters.get('freq3');
       this.otherNode.cutoff = this.otherNode.parameters.get('Cutoff');
-      this.otherNode.cutoff.setValueAtTime(0.6, this.now());
-      this.otherNode.connect(this.chikarisGainNode, 0);
-      this.otherNode.connect(this.chikarisGainNode, 1);
-      this.otherNode.connect(this.chikarisGainNode, 2);
-      this.otherNode.connect(this.chikarisGainNode, 3);
-      this.chikarisGainNode.connect(this.chikariMasterGainNode);
+      this.otherNode.cutoff.setValueAtTime(0.3, this.now());
+      this.otherNode.connect(this.intChikariGainNode, 0);
+      this.otherNode.connect(this.intChikariGainNode, 1);
+      this.intChikariGainNode.connect(this.chikariGainNode);
       const raga = this.$parent.piece.raga;
-      this.otherNode.freq0.setValueAtTime(raga.chikariPitches[0].frequency, this.now());
-      this.otherNode.freq1.setValueAtTime(raga.chikariPitches[1].frequency, this.now());
-      this.otherNode.freq2.setValueAtTime(raga.chikariPitches[2].frequency, this.now());
-      this.otherNode.freq3.setValueAtTime(raga.chikariPitches[3].frequency, this.now());
+      const freqs = raga.chikariPitches.map(p => p.frequency);
+      this.otherNode.freq0.setValueAtTime(freqs[0], this.now());
+      this.otherNode.freq1.setValueAtTime(freqs[1], this.now());
     },
     
     initializePluckNode() {
@@ -355,10 +421,10 @@ export default {
       this.lowPassNode.type = 'lowpass';
       const fund = this.$parent.piece.raga.fundamental;
       this.lowPassNode.frequency.setValueAtTime(fund * (2**3), this.now());
-      this.pluckNode.connect(this.lowPassNode).connect(this.synthGainNode);
+      this.pluckNode.connect(this.lowPassNode).connect(this.intSynthGainNode);
       this.pluckNode.frequency = this.pluckNode.parameters.get('Frequency');
       this.pluckNode.cutoff = this.pluckNode.parameters.get('Cutoff');
-      this.pluckNode.cutoff.setValueAtTime(Number(this.synthDamping), this.now());
+      this.pluckNode.cutoff.setValueAtTime(Number(this.synthDamp), this.now());
     },
     // end GETBACK
     
@@ -378,19 +444,34 @@ export default {
     },
     
     back_15() {
-      this.audio.currentTime = this.audio.currentTime - 15
+      let newTime = this.getCurrentTime() - 15;
+      if (newTime < 0) newTime = 0;
+      if (!this.playing) {
+        this.pausedAt = newTime;
+        this.$parent.currentTime = newTime;
+        this.$parent.redrawPlayhead();
+        this.updateProgress();
+      } else {
+        this.stop();
+        this.pausedAt = newTime;
+        this.play();
+      }      
     },
     
     forward_15() {
-      this.audio.currentTime = this.audio.currentTime + 15
-    },
-    
-    trackEnd() {
-      if (this.looping) {
-        this.audio.currentTime = 0;
-        this.audio.play();
+      let newTime = this.getCurrentTime() + 15;
+      if (newTime > this.audioBuffer.duration) {
+        newTime = this.audioBuffer.duration
+      }
+      if (!this.playing) {
+        this.pausedAt = newTime;
+        this.$parent.currentTime = newTime;
+        this.$parent.redrawPlayhead();
+        this.updateProgress();
       } else {
-        this.$parent.nextTrack(this.shuffling, false)
+        this.stop();
+        this.pausedAt = newTime;
+        this.play();
       }
     },
     
@@ -429,7 +510,7 @@ export default {
     pause() {
       const elapsed = this.now() - this.startedAt;
       this.stop();
-      this.pausedAt = this.loop ? this.loopTime : elapsed;    
+      this.pausedAt = this.loop ? this.loopTime : elapsed; 
     },
     
     getCurrentTime() {
@@ -489,8 +570,8 @@ export default {
         this.$parent.startAnimationFrame();
         this.startPlayCursorAnimation();
         // GETBACK
-        this.playTrajs(this.audio.currentTime, this.now());
-        this.playChikaris(this.audio.currentTime, this.now());
+        this.playTrajs(this.getCurrentTime(), this.now());
+        this.playChikaris(this.getCurrentTime(), this.now());
         // end GETBACK
       } else {
         this.pause();
@@ -509,22 +590,22 @@ export default {
     cancelPlayTrajs() {
       this.pluckNode.frequency.cancelScheduledValues(this.now());
       this.lowPassNode.frequency.cancelScheduledValues(this.now());
-      this.synthGainNode.gain.cancelScheduledValues(this.now());
-      this.synthGainNode.gain.setValueAtTime(1, this.now());
-      this.synthGainNode.gain.linearRampToValueAtTime(0, this.now() + this.slowRamp);
-      this.chikarisGainNode.gain.setValueAtTime(1, this.now());
-      this.chikarisGainNode.gain.linearRampToValueAtTime(0, this.now() + this.slowRamp);
+      this.intSynthGainNode.gain.cancelScheduledValues(this.now());
+      this.intSynthGainNode.gain.setValueAtTime(1, this.now());
+      const rampEnd = this.now() + this.slowRamp;
+      this.intSynthGainNode.gain.linearRampToValueAtTime(0, rampEnd);
+      this.intChikariGainNode.gain.setValueAtTime(1, this.now());
+      this.intChikariGainNode.gain.linearRampToValueAtTime(0, rampEnd);
     },
     // end GETBACK
     
-    toggleWaveform(e) {
+    toggleControls(e) {
       const cl = e.target.classList;
-      cl.toggle('showWaveform');
-      this.showWaveform = this.showWaveform ? false: true;
+      cl.toggle('showControls');
+      this.showControls = this.showControls ? false: true;
     },
     
     goToBeginning() {
-      this.audio.currentTime = 0;
       if (!this.playing) {
         this.pausedAt = 0;
         this.updateProgress()
@@ -615,13 +696,18 @@ export default {
     handleCircleMouseUp(e) {
       if (this.circleDragging) {
         const bb = this.$refs.pbOuter.getBoundingClientRect();
-        const ct = this.audio.currentTime;
-        const dur = this.audio.duration;
+        const ct = this.getCurrentTime();
+        const dur = this.audioBuffer.duration;
         const newTime = ct + dur * (e.clientX - this.dragStart) / bb.width;
-        if (this.audio.fastSeek) {
-          this.audio.fastSeek(newTime)
+        if (!this.playing) {
+          this.pausedAt = newTime;
+          this.$parent.currentTime = this.pausedAt;
+          this.$parent.redrawPlayhead();
+          this.updateProgress();
         } else {
-          this.audio.currentTime = newTime
+          this.stop();
+          this.pausedAt = newTime;
+          this.play();
         }
         const pc = document.querySelector('.progressCircle');
         pc.style.right = '-7px';
@@ -655,7 +741,7 @@ export default {
   display: flex;
   flex-direction: column;
   border-top: 1px solid black;
-  pointer-events: auto;
+  /* pointer-events: auto; */
 }
 
 .progressBarOuter {
@@ -867,7 +953,7 @@ export default {
   position: absolute;
   left: 0;
   bottom: 0;
-  pointer-events: none;
+  /* pointer-events: none; */
   z-index: 1
 }
 
@@ -881,7 +967,7 @@ export default {
   position: absolute;
   bottom: 0px;
   right: -25px;
-  pointer-events: none;
+  /* pointer-events: none; */
   overflow: hidden;
 }
 
@@ -906,6 +992,23 @@ export default {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+.synthControls {
+  position: absolute;
+  right: 0px;
+  bottom: 100px;
+  background-color: #202621;
+  width: 200px;
+  height: 200px;
+  border-bottom: 1px solid black;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+  justify-content: space-evenly;
+  align-items: center
+
 }
 
 /* WaveformAnalyzer {
