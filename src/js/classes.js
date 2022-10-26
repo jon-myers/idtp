@@ -1031,27 +1031,38 @@ get tarafs() {
 }
 
 get chikariPitches() {
-  const templates = {
-    'Yaman': [
-      new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
-      new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
-      new Pitch({ swara: 'p', oct: 0, fundamental: this.fundamental }),
-      new Pitch({ swara: 'p', oct: 0, fundamental: this.fundamental })
-    ],
-    'Bageshri': [
-      new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
-      new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
-      new Pitch({ swara: 'd', oct: 0, raised: true, fundamental: this.fundamental }),
-      new Pitch({ swara: 'm', oct: 0, raised: false, fundamental: this.fundamental })
-    ],
-    'Jaijaivanti': [
-      new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
-      new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
-      new Pitch({ swara: 'p', oct: 0, fundamental: this.fundamental }),
-      new Pitch({ swara: 'g', oct: 0, raised: true, fundamental: this.fundamental })
-    ]
-  };
-  return templates[this.name]
+  // const templates = {
+  //   'Yaman': [
+  //     new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
+  //     new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
+  //     new Pitch({ swara: 'p', oct: 0, fundamental: this.fundamental }),
+  //     new Pitch({ swara: 'p', oct: 0, fundamental: this.fundamental })
+  //   ],
+  //   'Bageshri': [
+  //     new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
+  //     new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
+  //     new Pitch({ swara: 'd', oct: 0, raised: true, fundamental: this.fundamental }),
+  //     new Pitch({ swara: 'm', oct: 0, raised: false, fundamental: this.fundamental })
+  //   ],
+  //   'Jaijaivanti': [
+  //     new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
+  //     new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
+  //     new Pitch({ swara: 'p', oct: 0, fundamental: this.fundamental }),
+  //     new Pitch({ swara: 'g', oct: 0, raised: true, fundamental: this.fundamental })
+  //   ],
+  //   'Hemant': [
+  //     new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
+  //     new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
+  //     new Pitch({ swara: 'd', oct: 0, raised: true, fundamental: this.fundamental }),
+  //     new Pitch({ swara: 'm', oct: 0, raised: false, fundamental: this.fundamental })
+  //   ],
+  // };
+  // return templates[this.name]
+
+  return [
+    new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
+    new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
+  ]
 }
 
 getFrequencies({

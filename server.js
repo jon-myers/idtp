@@ -316,7 +316,8 @@ const runServer = async () => {
       const sortRule = { 'name': 1 };
       try {
         const result = await ragas.find().sort(sortRule).project(proj).toArray();
-        res.json(result.map(r => r.name))
+        const names = await result.map(r => r.name);
+        res.json(names)
       } catch (err) {
         console.error(err);
         res.status(500).send(err);

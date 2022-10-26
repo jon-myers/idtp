@@ -3,38 +3,49 @@
   <div class='upperRow'>
     <div class='graph' ref='graph'></div>
     <div class='controlBox'>
-      <div class='cbBox'>
-        <label>Spectrogram Opacity</label>
-        <input 
-          type='range' 
-          min='0.0' 
-          max='1.0' 
-          step='0.01' 
-          v-model='spectrogramOpacity'
-          >
+      <div class='scrollingControlBox'>
+        <div class='cbBox'>
+          <label>Spectrogram Opacity</label>
+          <input 
+            type='range' 
+            min='0.0' 
+            max='1.0' 
+            step='0.01' 
+            v-model='spectrogramOpacity'
+            >
+        </div>
+        <div class='cbBox' v-if='editable'>
+          <button @click='savePiece'>Save</button>
+          <span class='savedDate'>
+            {{`Saved: ${dateModified ? dateModified.toLocaleString() : ''}`}}
+          </span>
+        </div>
+        <div class='cbRow' v-if='editable'>
+          <button @click='makeSpectrograms'>Remake Spectrogram</button>
+        </div>
+        <div class='cbRow'>
+          <label>View Phrases: </label>
+          <input type='checkbox' v-model='viewPhrases' @change='updatePhraseDivs'>
+        </div>
+        <div class='cbRow'>
+          <label>Loop: </label>
+          <input type='checkbox' v-model='loop' @click='updateLoop'>
+        </div>
+        
       </div>
-      <div class='cbBox' v-if='editable'>
-        <button @click='savePiece'>Save</button>
-        <button @click='makeSpectrograms'>Remake Spectrogram</button>
-        <span class='savedDate'>
-          {{`Saved: ${dateModified ? dateModified.toLocaleString() : ''}`}}
-        </span>
-      </div>
-      <div class='cbRow'>
-        <label>View Phrases: </label>
-        <input type='checkbox' v-model='viewPhrases' @change='updatePhraseDivs'>
-      </div>
-      <div class='cbRow'>
-        <label>Loop: </label>
-        <input type='checkbox' v-model='loop' @click='updateLoop'>
-      </div>
-      <div class='filler'>
-      </div>
+      <!-- <div class='filler'>
+      </div> -->
       <AltTrajSelectPanel ref='trajSelectPanel' :editable='editable'/>
     </div>
   </div>
 </div>
-<EditorAudioPlayer ref='audioPlayer' :audioSource='audioSource' />
+<EditorAudioPlayer 
+  ref='audioPlayer' 
+  :audioSource='audioSource' 
+  :recGain='recGain'
+  :synthGain='synthGain'
+  :synthDamping='synthDamping'
+  />
 </template>
 <script>
 const getClosest = (counts, goal) => {
@@ -83,12 +94,16 @@ import {
   getAudioRecording,
   getNumberOfSpectrograms,
   savePiece,
-  makeSpectrograms
+  makeSpectrograms,
+  pieceExists
 } from '@/js/serverCalls.js';
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
 import AltTrajSelectPanel from '@/components/AltTrajSelectPanel.vue';
 
 // import * as d3 from 'd3';
+
+import { detect } from 'detect-browser';
+
 
 import { 
   select as d3Select, 
@@ -147,7 +162,10 @@ export default {
       setNewTraj: false,
       setNewPhraseDiv: false,
       justEnded: false,
-      editable: false
+      editable: false,
+      recGain: 0,
+      synthGain: 0,
+      synthDamping: 0.5
     }
   },
   components: {
@@ -265,12 +283,15 @@ export default {
         this.$refs.trajSelectPanel.pluckBool = false
       }
     });
-
-    const piece = await getPiece(this.$store.state._id);
+    const pieceDoesExist = await pieceExists(this.$store.state._id);
+    const id = pieceDoesExist ? this.$store.state._id : '63445d13dc8b9023a09747a6';
+    const piece = await getPiece(id);
     
     if (piece.audioID) {
-      // this.audioSource = `https://swara.studio/audio/mp3/${piece.audioID}.mp3`;
-      this.audioSource= `https://swara.studio/audio/opus/${piece.audioID}.opus`;
+      const browser = detect();
+      this.audioSource = browser.name === 'safari' ?
+        `https://swara.studio/audio/mp3/${piece.audioID}.mp3` :
+        `https://swara.studio/audio/opus/${piece.audioID}.opus`;         
       this.audioDBDoc = await getAudioRecording(piece.audioID)
       this.durTot = this.audioDBDoc.duration;
       // if pieceDurTot is less than this, add slient phrase to make the two 
@@ -280,6 +301,7 @@ export default {
     }
     this.initXScale = this.durTot / this.initViewDur;
     let fund = 246;
+    if (this.audioDBDoc.saEstimate) fund = 2 * this.audioDBDoc.saEstimate;
     this.freqMin = fund / 2;
     this.freqMax = fund * 4;
     await this.getPieceFromJson(piece, fund);
@@ -290,9 +312,9 @@ export default {
     }
     await this.initializePiece();
     // GETBACK
-    // this.$refs.audioPlayer.initializePluckNode();
-    // this.$refs.audioPlayer.initializeChikariNodes();
-    // this.$refs.audioPlayer.preSetFirstEnvelope(256);
+    this.$refs.audioPlayer.initializePluckNode();
+    this.$refs.audioPlayer.initializeChikariNodes();
+    this.$refs.audioPlayer.preSetFirstEnvelope(256);
     // end GETBACK
     const silentDur = this.durTot - piece.durTot;
     if (silentDur !== 0) {
@@ -1628,9 +1650,7 @@ export default {
 
     async addSpectrogram() {
       try {
-        console.log('get num of specs')
         this.numSpecs = await getNumberOfSpectrograms(this.piece.audioID);
-        console.log('got here')
       } catch (err) {
         console.error(err)
       }
@@ -1780,11 +1800,17 @@ export default {
     },
 
     phraseIdxFromTime(time) {
-      return this.piece.phrases.filter(phrase => {
+      const filtered = this.piece.phrases.filter(phrase => {
         const a = time >= phrase.startTime;
         const b = time < phrase.startTime + phrase.durTot;
         return a && b
-      })[0].pieceIdx
+      });
+      return filtered[0].pieceIdx
+      // return this.piece.phrases.filter(phrase => {
+      //   const a = time >= phrase.startTime;
+      //   const b = time < phrase.startTime + phrase.durTot;
+      //   return a && b
+      // })[0].pieceIdx
     },
 
     handleMousedown(e) {
@@ -3668,6 +3694,18 @@ export default {
   color: white;
 }
 
+.scrollingControlBox {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: top;
+  color: white;
+  background-color: #202621;
+  overflow-y: scroll;
+}
+
 .mainzz {
   display: flex;
   flex-direction: column;
@@ -3694,6 +3732,16 @@ export default {
   height: 70px;
   min-height: 70px;
   /* border: 1px solid orange; */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
+.cbBoxSmall {
+  width: 100%;
+  height: 40px;
+  min-height: 70px;
   display: flex;
   flex-direction: column;
   align-items: center;

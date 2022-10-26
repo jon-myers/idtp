@@ -2,7 +2,7 @@
   <div class='main'>
     <div class='bigInfoRow'>
       <div class='bigInfoCol'>
-        <select v-model='selectedRaag' @input='handleSelection'>
+        <select v-model='selectedRaag'>
           <option v-for='(name, i) in raagNames' :key='i'>{{name}}</option>
         </select>
         <input 
@@ -188,11 +188,10 @@ export default {
     this.raagNames.push('Other (specify)');
   },
   
-  methods: {
-    
-    handleSelection() {
-      this.$nextTick(async () => {
-        const rules = await getRaagRule(this.selectedRaag);
+  watch: {
+    async selectedRaag(newVal) {
+      try {
+        const rules = await getRaagRule(newVal);
         if (rules.rules) {
           this.rules = rules.rules;
           const date = new Date(rules.updatedDate);
@@ -201,8 +200,29 @@ export default {
           this.rules = this.rulesTemplate;
           this.savedMsg = 'unsaved'
         }
-      })
-    },
+      } catch (err) {
+        console.error(err)
+      }
+      
+    }
+  },
+  
+  methods: {
+    
+    // handleSelection() {
+    //   this.$nextTick(async () => {
+    //     console.log(this.selectedRaag)
+    //     const rules = await getRaagRule(this.selectedRaag);
+    //     if (rules.rules) {
+    //       this.rules = rules.rules;
+    //       const date = new Date(rules.updatedDate);
+    //       this.savedMsg = 'Saved: ' + date.toLocaleString();
+    //     } else {
+    //       this.rules = this.rulesTemplate;
+    //       this.savedMsg = 'unsaved'
+    //     }
+    //   })
+    // },
     
     async save() {
       const date = new Date();

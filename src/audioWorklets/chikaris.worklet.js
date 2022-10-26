@@ -8,26 +8,26 @@ class Processor extends AudioWorkletProcessor {
                 name: 'freq0',
                 defaultValue: 110,
                 minValue: 50,
-                maxValue: 1000,
+                maxValue: 2000,
             },
             {
                 name: 'freq1',
                 defaultValue: 110,
                 minValue: 50,
-                maxValue: 1000,
+                maxValue: 2000,
             },
-            {
-                name: 'freq2',
-                defaultValue: 110,
-                minValue: 50,
-                maxValue: 1000,
-            },
-            {
-                name: 'freq3',
-                defaultValue: 110,
-                minValue: 50,
-                maxValue: 1000,
-            },
+            // {
+            //     name: 'freq2',
+            //     defaultValue: 110,
+            //     minValue: 50,
+            //     maxValue: 1000,
+            // },
+            // {
+            //     name: 'freq3',
+            //     defaultValue: 110,
+            //     minValue: 50,
+            //     maxValue: 1000,
+            // },
             {
                 name: 'Cutoff',
                 defaultValue: 0.5,
@@ -44,11 +44,12 @@ class Processor extends AudioWorkletProcessor {
     process(inputs, outputs, params) {
         let freq0 = params['freq0'][0];
         let freq1 = params['freq1'][0];
-        let freq2 = params['freq2'][0];
-        let freq3 = params['freq3'][0];
+        // let freq2 = params['freq2'][0];
+        // let freq3 = params['freq3'][0];
         const cutoff = params['Cutoff'][0];
 
-        setDelayTime(1/freq0, 1/freq1, 1/freq2, 1/freq3);
+        // setDelayTime(1/freq0, 1/freq1, 1/freq2, 1/freq3);
+        setDelayTime(1/freq0, 1/freq1);
 
         const out = outputs[0][0];
         const input = inputs[0][0];
@@ -66,18 +67,18 @@ class Processor extends AudioWorkletProcessor {
             
             initDelayInput(input ? input[i] : 0)
             let x1 = initDelayOutput(1);
-            let x2 = initDelayOutput(2);
-            let x3 = initDelayOutput(3);
+            // let x2 = initDelayOutput(2);
+            // let x3 = initDelayOutput(3);
             
             x0 += filter(delayOutput(0), cutoff, 0);
             x1 += filter(delayOutput(1), cutoff, 1);
-            x2 += filter(delayOutput(2), cutoff, 2);
-            x3 += filter(delayOutput(3), cutoff, 3);
-            delayInput(x0, x1, x2, x3);
+            // x2 += filter(delayOutput(2), cutoff, 2);
+            // x3 += filter(delayOutput(3), cutoff, 3);
+            delayInput(x0, x1);
             outputs[0][0][i] = AMP * x0;
             outputs[1][0][i] = AMP * x1;
-            outputs[2][0][i] = AMP * x2;
-            outputs[3][0][i] = AMP * x3;
+            // outputs[2][0][i] = AMP * x2;
+            // outputs[3][0][i] = AMP * x3;
             // eslint-disable-next-line no-undef
             // t += 1 / sampleRate;
         }
@@ -94,57 +95,60 @@ registerProcessor('chikaris', Processor);
 
 const delay0 = Array(2048).fill(0);
 const delay1 = Array(2048).fill(0);
-const delay2 = Array(2048).fill(0);
-const delay3 = Array(2048).fill(0);
+// const delay2 = Array(2048).fill(0);
+// const delay3 = Array(2048).fill(0);
 
-let readPtr0 = 0, readPtr1 = 0, readPtr2 = 0, readPtr3 = 0;
-let writePtr0 = 0, writePtr1 = 0, writePtr2 = 0, writePtr3 = 0;
+let readPtr0 = 0, readPtr1 = 0
+// , readPtr2 = 0, readPtr3 = 0;
+let writePtr0 = 0, writePtr1 = 0
+// , writePtr2 = 0, writePtr3 = 0;
 
 // const initDelay1 = new Float32Array(2048);
 // const initDelay2 = new Float32Array(2048);
 // const initDelay3 = new Float32Array(2048);
 
 const initDelay1 = Array(2048).fill(0);
-const initDelay2 = Array(2048).fill(0);
-const initDelay3 = Array(2048).fill(0);
+// const initDelay2 = Array(2048).fill(0);
+// const initDelay3 = Array(2048).fill(0);
 
 const del = 2 ** -8;
 const initDelDur1 = del; // must be less than 0.0464
-const initDelDur2 = 2 * del // must be less than 0.0464
-const initDelDur3 = 3 * del; // must be less than 0.0464
+// const initDelDur2 = 2 * del // must be less than 0.0464
+// const initDelDur3 = 3 * del; // must be less than 0.0464
 // eslint-disable-next-line no-undef
 let initWritePtr1 = (initDelDur1 * sampleRate) & 2047;
 // eslint-disable-next-line no-undef
-let initWritePtr2 = (initDelDur2 * sampleRate) & 2047;
+// let initWritePtr2 = (initDelDur2 * sampleRate) & 2047;
 // eslint-disable-next-line no-undef
-let initWritePtr3 = (initDelDur3 * sampleRate) & 2047;
-let initReadPtr1 = 0, initReadPtr2 = 0, initReadPtr3 = 0;
+// let initWritePtr3 = (initDelDur3 * sampleRate) & 2047;
+let initReadPtr1 = 0
+// , initReadPtr2 = 0, initReadPtr3 = 0;
 
 
-function setDelayTime(time0, time1, time2, time3) {
+function setDelayTime(time0, time1) {
     // eslint-disable-next-line no-undef
     writePtr0 = (readPtr0 + time0 * sampleRate) & 2047;
     // eslint-disable-next-line no-undef
     writePtr1 = (readPtr1 + time1 * sampleRate) & 2047;
     // eslint-disable-next-line no-undef
-    writePtr2 = (readPtr2 + time2 * sampleRate) & 2047;
-    // eslint-disable-next-line no-undef
-    writePtr3 = (readPtr3 + time3 * sampleRate) & 2047;
+    // writePtr2 = (readPtr2 + time2 * sampleRate) & 2047;
+    // // eslint-disable-next-line no-undef
+    // writePtr3 = (readPtr3 + time3 * sampleRate) & 2047;
 }
 
-function delayInput(x0, x1, x2, x3) {
+function delayInput(x0, x1) {
     delay0[writePtr0] = x0;
     delay1[writePtr1] = x1;
-    delay2[writePtr2] = x2;
-    delay3[writePtr3] = x3;
+    // delay2[writePtr2] = x2;
+    // delay3[writePtr3] = x3;
     readPtr0 = (readPtr0 + 1) & 2047;
     writePtr0 = (writePtr0 + 1) & 2047;
     readPtr1 = (readPtr1 + 1) & 2047;
     writePtr1 = (writePtr1 + 1) & 2047;
-    readPtr2 = (readPtr2 + 1) & 2047;
-    writePtr2 = (writePtr2 + 1) & 2047;
-    readPtr3 = (readPtr3 + 1) & 2047;
-    writePtr3 = (writePtr3 + 1) & 2047;
+    // readPtr2 = (readPtr2 + 1) & 2047;
+    // writePtr2 = (writePtr2 + 1) & 2047;
+    // readPtr3 = (readPtr3 + 1) & 2047;
+    // writePtr3 = (writePtr3 + 1) & 2047;
 }
 
 function initDelayInput(x) {
@@ -152,21 +156,21 @@ function initDelayInput(x) {
   initReadPtr1 = (initReadPtr1 + 1) & 2047;
   initWritePtr1 = (initWritePtr1 + 1) & 2047;
   
-  initDelay2[initWritePtr2] = x;
-  initReadPtr2 = (initReadPtr2 + 1) & 2047;
-  initWritePtr2 = (initWritePtr2 + 1) & 2047;
+//   initDelay2[initWritePtr2] = x;
+//   initReadPtr2 = (initReadPtr2 + 1) & 2047;
+//   initWritePtr2 = (initWritePtr2 + 1) & 2047;
   
-  initDelay3[initWritePtr3] = x;
-  initReadPtr3 = (initReadPtr3 + 1) & 2047;
-  initWritePtr3 = (initWritePtr3 + 1) & 2047;
+//   initDelay3[initWritePtr3] = x;
+//   initReadPtr3 = (initReadPtr3 + 1) & 2047;
+//   initWritePtr3 = (initWritePtr3 + 1) & 2047;
 }
 
 function delayOutput(i) {
-    return [delay0[readPtr0], delay1[readPtr1], delay2[readPtr2], delay3[readPtr3]][i];
+    return [delay0[readPtr0], delay1[readPtr1]][i];
 }
 
 function initDelayOutput(i) {
-  return [initDelay1[initReadPtr1], initDelay2[initReadPtr2], initDelay3[initReadPtr3]][i-1]
+  return [initDelay1[initReadPtr1]][i-1]
 }
 
 let y1 = [0, 0, 0, 0];
