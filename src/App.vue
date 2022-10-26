@@ -90,21 +90,18 @@ export default {
           const redirURL = window.location.href;
           const userData = await handleGoogleAuthCode(response.code, redirURL);
           await this.loggedIn(userData);
-        } catch (err) {
-          console.error(err)
-        }
-        
+        } catch (error) {
+          console.error();
+        } 
       }
     }
   },
   
   methods: {
     async loggedIn(userData) {
-      // const userData = decodeCredential(res.credential);
       this.usrImgUrl = userData.picture;
       const result = await userLoginGoogle(userData);
-      this.userID = result.value._id;
-      
+      this.userID = result.value._id;    
       this.firstName = result.value.given_name;
       this.$cookies.set('userID', this.userID);
       this.$cookies.set('usrImgUrl', this.usrImgUrl);
@@ -155,7 +152,8 @@ export default {
           console.error(err);
           try {
             const response = await googleAuthCodeLogin();
-            const userData = await handleGoogleAuthCode(response.code);
+            const reURL = window.location.href;
+            const userData = await handleGoogleAuthCode(response.code, reURL);
             await this.loggedIn(userData);
           } catch (err) {
             console.error(err)

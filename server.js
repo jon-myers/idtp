@@ -226,9 +226,9 @@ const runServer = async () => {
       }
     });
     
-    app.get('/pieceExists', async (req, res) => {
-      const query = { _id: ObjectId(req.query._id) };
+    app.get('/pieceExists', async (req, res) => { 
       try {
+        const query = { _id: ObjectId(req.query._id) };
         const result = await transcriptions.countDocuments(query) > 0;
         res.json(result)
       } catch (err) {
@@ -556,15 +556,16 @@ const runServer = async () => {
     })
 
     app.post('/handleGoogleAuthCode', async (req, res) => {
-      let url = req.body.redirectURL;
-      url = url.slice(0, url.length-1);
-      console.log(url)
-      const OAuthClient = new OAuth2Client({
-        clientId: "324767655055-crhq76mdupavvrcedtde986glivug1nm.apps.googleusercontent.com",
-        clientSecret: "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",
-        redirectUri: url
-      });
+      
       try {
+        let url = req.body.redirectURL;
+        url = url.slice(0, url.length-1);
+        console.log(url)
+        const OAuthClient = new OAuth2Client({
+          clientId: "324767655055-crhq76mdupavvrcedtde986glivug1nm.apps.googleusercontent.com",
+          clientSecret: "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",
+          redirectUri: url
+        });
         let { tokens } = await OAuthClient.getToken(req.body.authCode);
         OAuthClient.setCredentials({ access_token: tokens.access_token });
         const userinfo = await OAuthClient.request({
