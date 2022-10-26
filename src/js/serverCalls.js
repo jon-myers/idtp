@@ -687,6 +687,28 @@ const nameFromUserID = async userID => {
   }
 }
 
+const handleGoogleAuthCode = async (code, redirectURL) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ 
+      authCode: code,
+      redirectURL: redirectURL
+    })
+  };
+  try {
+    const response = await fetch(url + 'handleGoogleAuthCode', request);
+    if (response.ok) {
+      out = await response.json()
+    } return out
+  } catch (err) {
+    console.error(err)
+  }
+} 
+
 
 exports.getPiece = getPiece
 exports.savePiece = savePiece
@@ -719,3 +741,4 @@ exports.agreeToWaiver = agreeToWaiver
 exports.nameFromUserID = nameFromUserID
 exports.makeSpectrograms = makeSpectrograms
 exports.pieceExists = pieceExists
+exports.handleGoogleAuthCode = handleGoogleAuthCode

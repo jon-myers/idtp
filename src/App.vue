@@ -19,6 +19,7 @@
           v-if='usrImgUrl' 
           :src='usrImgUrl' 
           class='usrImg'
+          referrerpolicy="no-referrer"
           > 
       </div> 
   </div>
@@ -38,11 +39,16 @@
 </template>
 
 <script>
-import { decodeCredential, googleLogout, googleOneTap } from 'vue3-google-login';
-
-import { userLoginGoogle } from '@/js/serverCalls.js';
+import { 
+  decodeCredential, 
+  googleLogout, 
+  googleOneTap, 
+  googleAuthCodeLogin 
+} from 'vue3-google-login';
+// import { detect } from 'detect-browser';
+import { userLoginGoogle, handleGoogleAuthCode } from '@/js/serverCalls.js';
 // import Editor from '@/components/Editor.vue'
-
+// const browser = detect();
 export default {
   name: 'App',
   components: {
@@ -75,16 +81,26 @@ export default {
     } else {
       try {
         const response = await googleOneTap({ autoLogin: false });
-        await this.loggedIn(response);
+          const userData = decodeCredential(response.credential);
+          await this.loggedIn(userData);     
       } catch (err) {
-        console.error(err)
+        console.error(err);
+        try {
+          const response = await googleAuthCodeLogin();
+          const redirURL = window.location.href;
+          const userData = await handleGoogleAuthCode(response.code, redirURL);
+          await this.loggedIn(userData);
+        } catch (err) {
+          console.error(err)
+        }
+        
       }
     }
   },
   
   methods: {
-    async loggedIn(res) {
-      const userData = decodeCredential(res.credential);
+    async loggedIn(userData) {
+      // const userData = decodeCredential(res.credential);
       this.usrImgUrl = userData.picture;
       const result = await userLoginGoogle(userData);
       this.userID = result.value._id;
@@ -133,9 +149,17 @@ export default {
       if (this.$store.state.userID === undefined) {
         try {
           const response = await googleOneTap({ autoLogin: false });
-          await this.loggedIn(response);
+          const userData = decodeCredential(response.credential);
+          await this.loggedIn(userData);     
         } catch (err) {
-          console.error(err)
+          console.error(err);
+          try {
+            const response = await googleAuthCodeLogin();
+            const userData = await handleGoogleAuthCode(response.code);
+            await this.loggedIn(userData);
+          } catch (err) {
+            console.error(err)
+          }
         }
       }
     },
