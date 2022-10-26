@@ -31,3 +31,6 @@ pnpm-debug.log*
 python/essentia/*.png
 python/visualization_tools/*.png
 credentials
+
+#Electron-builder output
+/dist_electron
