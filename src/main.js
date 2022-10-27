@@ -12,7 +12,9 @@ const store = createStore({
       userID: undefined,
       firstTime: false,
       returning: false,
-      firstName: undefined
+      firstName: undefined,
+      name: undefined,
+      lastName: undefined
     }
   },
   mutations: {
@@ -34,6 +36,14 @@ const store = createStore({
     
     update_firstName(state, firstName) {
       state.firstName = firstName
+    },
+
+    update_name(state, name) {
+      state.name = name
+    },
+
+    update_lastName(state, lastName) {
+      state.lastName = lastName
     }
   }
 })

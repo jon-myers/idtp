@@ -12,6 +12,12 @@
       :class='`infoKey ${["", "first"][Number(idx === 0)]}`'
       >
       {{ik}}
+      <span 
+        :class='`sorter ${["", "selected"][Number(selectedSort === idx)]}`' 
+        :ref='`s${idx}`' 
+        @click='toggleSort(idx)'>
+      {{['&#9650;', '&#9660;'][(sorts[idx] + 1) / 2]}}
+      </span>
     </div>
   </div>
   <div class='fileInfoRowScroller'>
@@ -64,7 +70,7 @@ import {
   createNewPiece,
   deletePiece,
   getRaagRule,
-  nameFromUserID
+  // nameFromUserID
 } from '@/js/serverCalls.js';
 import NewPieceRegistrar from '@/components/NewPieceRegistrar.vue';
 import {
@@ -87,7 +93,6 @@ export default {
         'Permissions'
       ],
       designPieceModal: false,
-      getAllPieces: getAllPieces,
       allPieces: undefined,
       allPieceInfo: [],
       showDropDown: true,
@@ -99,7 +104,17 @@ export default {
       deleteActive: true,
       selectedPiece: undefined,
       modalWidth: 600,
-      modalHeight: 450
+      modalHeight: 450,
+      sorts: [1, 1, 1, 1, 1, 1],
+      selectedSort: 0,
+      sortKeyNames: [
+        'title', 
+        'transcriber',
+        'raga',
+        'dateCreated',
+        'dateModified',
+        'permissions'
+      ]
     }
   },
   
@@ -113,7 +128,10 @@ export default {
     if (this.$store.state.userID === undefined) {
       this.$router.push('/')
     }
-    this.allPieces = await getAllPieces(this.$store.state.userID);
+    const id = this.$store.state.userID;
+    const sortKey = this.sortKeyNames[this.selectedSort];
+    const sortDir = this.sorts[this.selectedSort];
+    this.allPieces = await getAllPieces(id, sortKey, sortDir);
     this.allPieces.forEach(() => {
       this.allPieceInfo.push([
         undefined, 
@@ -124,7 +142,7 @@ export default {
       ]);
     });
     this.allPieces.forEach(async (piece, i) => {
-      this.allPieceInfo[i] = await this.pieceInfo(piece)
+      this.allPieceInfo[i] = this.pieceInfo(piece)
     })
   },
 
@@ -156,7 +174,20 @@ export default {
 
   methods: {
 
-    async pieceInfo(p) {
+    async toggleSort(idx) {
+      if (this.sorts[idx] === 1) {
+        this.sorts[idx] = -1;
+      } else {
+        this.sorts[idx] = 1;
+      }
+      this.selectedSort = idx;
+      await this.updateSort();
+      this.selectedSort = undefined;
+      await this.$nextTick()
+      this.selectedSort = idx;
+    },
+
+    pieceInfo(p) {
       const title = p.title;
       const raga = p.raga.name;
       let name = undefined;
@@ -164,7 +195,7 @@ export default {
         if (p.userID === this.$store.state.userID) {
           name = 'You'
         } else {
-          name = await nameFromUserID(p.userID);
+          name = p.name;
         }
       }
       const dateCreated = this.writeDate(p.dateCreated);
@@ -199,6 +230,9 @@ export default {
     createNewPiece(obj) {
       const piece = obj ? new Piece(obj) : new Piece;
       piece.userID = this.$store.state.userID;
+      piece.lastName = this.$store.state.lastName;
+      piece.name = this.$store.state.name;
+      piece.firstName = this.$store.state.firstName;
       createNewPiece(piece)
         .then(data => {
           this.$store.commit('update_id', data.insertedId);
@@ -211,8 +245,21 @@ export default {
       this.$refs.dropDown.classList.add('closed')  
       const res = await deletePiece(this.selectedPiece);
       if (res.ok) {
-        this.allPieces = await getAllPieces(this.$store.state.userID)
+        const id = this.$store.state.userID;
+        const sortKey = this.sortKeyNames[this.selectedSort];
+        const sortDir = this.sorts[this.selectedSort];
+        this.allPieces = await getAllPieces(id, sortKey, sortDir);
       }
+    },
+
+    async updateSort() {
+      const id = this.$store.state.userID;
+      const sortKey = this.sortKeyNames[this.selectedSort];
+      const sortDir = this.sorts[this.selectedSort];
+      this.allPieces = await getAllPieces(id, sortKey, sortDir);
+      this.allPieces.forEach(async (piece, i) => {
+        this.allPieceInfo[i] = this.pieceInfo(piece)
+      })
     },
     
     handleRightClick(e) {
@@ -431,5 +478,14 @@ export default {
 button {
   margin-left: 20px;
   cursor: pointer;
+}
+
+.sorter {
+  cursor: pointer;
+  color: black
+}
+
+.sorter.selected {
+  color: white
 }
 </style>

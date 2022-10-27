@@ -775,6 +775,9 @@ class Piece {
     audioID = undefined,
     audio_DB_ID = undefined,
     userID = undefined,
+    name = undefined,
+    familyName = undefined,
+    givenName = undefined,
     permissions = undefined
   } = {}) {
     this.phrases = phrases;
@@ -816,6 +819,9 @@ class Piece {
     this.audio_DB_ID = audio_DB_ID;
     this.userID = userID;
     this.permissions = permissions;
+    this.name = name;
+    this.familyName = familyName;
+    this.givenName = givenName;
 
   }
 
@@ -878,7 +884,10 @@ class Piece {
       _id: this._id,
       audioID: this.audioID,
       userID: this.userID,
-      permissions: this.permissions
+      permissions: this.permissions,
+      name: this.name,
+      familyName: this.familyName,
+      givenName: this.givenName
     }
   }
 
