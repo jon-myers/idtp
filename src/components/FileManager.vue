@@ -13,7 +13,7 @@
       >
       {{ik}}
       <span 
-        :class='`sorter ${["", "selected"][Number(selectedSort === idx)]}`' 
+        :class='`sorter ${["", "selectedTriangle"][Number(selectedSort === idx)]}`' 
         :ref='`s${idx}`' 
         @click='toggleSort(idx)'>
       {{['&#9650;', '&#9660;'][(sorts[idx] + 1) / 2]}}
@@ -182,9 +182,6 @@ export default {
       }
       this.selectedSort = idx;
       await this.updateSort();
-      this.selectedSort = undefined;
-      await this.$nextTick()
-      this.selectedSort = idx;
     },
 
     pieceInfo(p) {
@@ -485,7 +482,7 @@ button {
   color: black
 }
 
-.sorter.selected {
+.sorter.selectedTriangle {
   color: white
 }
 </style>
