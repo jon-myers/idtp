@@ -323,6 +323,10 @@ export default {
         const storedId = this.$store.state._id;
         pieceDoesExist = await pieceExists(storedId);
         const id = pieceDoesExist ? storedId : '63445d13dc8b9023a09747a6';
+        this.$router.push({ 
+          name: 'EditorComponent',
+          query: { 'id': id }
+        })
         piece = await getPiece(id);
       }
       
