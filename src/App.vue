@@ -27,7 +27,7 @@
     <div class='userMenuRow' @click='logIn'>
       <span>Log in</span>
     </div>
-    <div class='userMenuRow' @click='logOut'>
+    <div class='userMenuRow last' @click='logOut'>
       <span>Log out</span>
     </div>
   </div>
@@ -62,7 +62,8 @@ export default {
       firstName: undefined,
       returning: false,
       firstTime: false,
-      showUserMenu: false  
+      showUserMenu: false,
+      userMenuWidth: 200
     }
   },
   async mounted() {
@@ -92,7 +93,9 @@ export default {
           await this.loggedIn(userData);
         } catch (error) {
           console.error();
-        } 
+        } finally {
+          console.log('got to the finally')
+        }
       }
     }
   },
@@ -260,30 +263,42 @@ a {
 }
 
 #userMenu {
-  width: 200px;
+  width: v-bind(userMenuWidth + 'px');
   /* height: 150px; */
-  background-color: lightgrey;
+  background-color: black;
   position: fixed;
   right: 1px;
-  border-left: 1px solid black;
-  border-bottom: 1px solid black;
-  border-right: 1px solid black;
+  border: 1px solid grey;
   top: v-bind(navHeight+1+'px');
   border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
 }
 
 .userMenuRow {
-  width: 100%;
-  height: 40px;
+  width: v-bind(userMenuWidth-24+'px');
+  height: 20px;
   display: flex;
   flex-direction: row;
-  align-items: left;
+  align-items: center;
   justify-content: left;
-  cursor: pointer
+  /* cursor: pointer; */
+  color: white;
+  padding-left: 8px;
+  margin-left: 8px;
+  margin-right: 8px;
+  margin-top: 6px;
+  border-radius: 5px;
+}
+
+.userMenuRow.last {
+  margin-bottom: 6px;
 }
 
 .userMenuRow:hover {
-  background-color: lightblue
+  background-color: blue;
+  cursor: pointer;
 }
 
 .routerViewContainer {

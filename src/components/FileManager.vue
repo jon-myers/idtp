@@ -37,9 +37,16 @@
     New Transcription
   </div>
   <div 
+    v-if="open_"
+    class='dropDownRow' 
+    @click='openPieceAlt(piece)'
+    >
+    Open Transcription
+  </div>
+  <div 
     v-if='delete_' 
     :class='`dropDownRow last ${["inactive", ""][Number(deleteActive)]}`'
-    @click='deletePiece'>
+    @click='`${[undefined, "deletePiece"][Number(delete_)]}`'>
     Delete
   </div>
 </div>
@@ -88,6 +95,7 @@ export default {
       dropDownTop: 300,
       dropDownWidth: 200,
       delete_: true,
+      open_: true,
       deleteActive: true,
       selectedPiece: undefined,
       modalWidth: 600,
@@ -174,6 +182,9 @@ export default {
     },
     
     openPieceAlt(piece) {
+      if (piece === undefined) {
+        piece = this.selectedPiece
+      }
       this.$store.commit('update_id', piece._id);
       console.log('this always happens: ' + piece._id)
       this.$cookies.set('currentPieceId', piece._id);
@@ -229,6 +240,7 @@ export default {
         el.classList.add('selected');
         this.selectedPiece = this.allPieces[num];
         this.delete_ = true;
+        this.open_ = true;
         if (this.allPieces[num].userID === this.$store.state.userID) {
           this.deleteActive = true
         } else {
@@ -239,6 +251,7 @@ export default {
         el.parentNode.classList.add('selected');
         this.selectedPiece = this.allPieces[num];
         this.delete_ = true;
+        this.open_ = true
         if (this.allPieces[num].userID === this.$store.state.userID) {
           this.deleteActive = true
         } else {
@@ -246,6 +259,7 @@ export default {
         }
       } else {
         this.delete_ = false;
+        this.open_ = false
         this.deleteActive = false;
       }
     },
