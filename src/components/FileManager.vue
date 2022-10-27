@@ -214,9 +214,11 @@ export default {
         piece = this.selectedPiece
       }
       this.$store.commit('update_id', piece._id);
-      console.log('this always happens: ' + piece._id)
       this.$cookies.set('currentPieceId', piece._id);
-      this.$router.push('/altEditor')
+      this.$router.push({
+        name: 'EditorComponent',
+        query: { 'id': piece._id }
+      })
     },
 
     designNewPiece() {
@@ -234,7 +236,10 @@ export default {
         .then(data => {
           this.$store.commit('update_id', data.insertedId);
           this.$cookies.set('currentPieceId', data.insertedId);
-          this.$router.push('/altEditor');
+          this.$router.push({ 
+            name: 'EditorComponent', 
+            query: { 'id': data.insertedID }
+          })
         })
     },
 
