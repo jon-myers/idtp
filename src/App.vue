@@ -73,10 +73,16 @@ export default {
     if (this.usrImgUrl === 'undefined') this.usrImgUrl = undefined;
     this.firstName = this.$cookies.get('firstName');
     if (this.firstName === 'undefined') this.firstName = undefined;
+    this.lastName = this.$cookies.get('lastName');
+    if (this.lastName === 'undefined') this.lastName = undefined;
+    this.name = this.$cookies.get('name');
+    if (this.name === 'undefined') this.name = undefined;
     if (this.userID) {
       this.$store.commit('update_userID', this.userID);
       this.$store.commit('update_returning', true);
       this.$store.commit('update_firstName', this.firstName);
+      this.$store.commit('update_lastName', this.lastName);
+      this.$store.commit('update_name', this.name);
       const pieceId = this.$cookies.get('currentPieceId');
       this.$store.commit('update_id', pieceId); //just for now
     } else {
@@ -109,7 +115,11 @@ export default {
       this.$cookies.set('userID', this.userID);
       this.$cookies.set('usrImgUrl', this.usrImgUrl);
       this.$cookies.set('firstName', this.firstName);
+      this.$cookies.set('lastName', result.value.family_name);
+      this.$cookies.set('name', result.value.name);
       this.$store.commit('update_firstName', this.firstName);
+      this.$store.commit('update_lastName', result.value.family_name);
+      this.$store.commit('update_name', result.value.name);
       this.$store.commit('update_userID', this.userID);
       if (!result.lastErrorObject.updatedExisting) {
         this.firstTime = true;
@@ -137,10 +147,14 @@ export default {
       this.$store.commit('update_firstTime', false);
       this.$store.commit('update_returning', false);
       this.$store.commit('update_firstName', undefined);
+      this.$store.commit('update_lastName', undefined);
+      this.$store.commit('update_name', undefined);
       this.showUserMenu = false;
       this.$cookies.set('userID', undefined);
       this.$cookies.set('usrImgUrl', undefined);
       this.$cookies.set('firstName', undefined);
+      this.$cookies.set('lastName', undefined);
+      this.$cookies.set('name', undefined);
       this.$router.push('/')    
     },
     

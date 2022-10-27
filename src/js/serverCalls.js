@@ -82,7 +82,13 @@ const savePiece = async piece => {
   }
 };
 
-const getAllPieces = async userID => {
+const getAllPieces = async (userID, sortKey, sortDir) => {
+  if (sortKey === undefined) {
+    sortKey = 'title'
+  }
+  if (sortDir === undefined) {
+    sortDir = '1'
+  }
   let allPieces;
   let request = {
     method: "GET",
@@ -91,7 +97,9 @@ const getAllPieces = async userID => {
     },
   };
   const query = '?' + new URLSearchParams({
-    userID: JSON.stringify(userID)
+    userID: JSON.stringify(userID),
+    sortKey: JSON.stringify(sortKey),
+    sortDir: JSON.stringify(sortDir)
   });
   await fetch(url + 'getAllTranscriptions' + query, request)
     .then(response => {

@@ -124,6 +124,8 @@ const runServer = async () => {
 
     app.get('/getAllTranscriptions', async (req, res) => {
       const userID = JSON.parse(req.query.userID);
+      const sortKey = JSON.parse(req.query.sortKey);
+      const sortDir = JSON.parse(req.query.sortDir);
       const proj = {
         title: 1,
         dateCreated: 1,
@@ -135,7 +137,10 @@ const runServer = async () => {
         durTot: 1,
         raga: 1,
         userID: 1,
-        permissions: 1
+        permissions: 1,
+        name: 1,
+        family_name: 1,
+        given_name: 1
       }
       const query = {
         '$or': [
@@ -148,8 +153,17 @@ const runServer = async () => {
           { 'userID': userID },
         ]
       };
+      const sort = {};
+      sort[sortKey] = sortDir;
+
+      
       try {
-        const result = await transcriptions.find(query).project(proj).toArray();
+        const result = await transcriptions
+          .find(query)
+          .collation({ 'locale': 'en' })
+          .sort(sort)
+          .project(proj)
+          .toArray();
         res.json(result)
       } catch (err) {
         console.error(err);
