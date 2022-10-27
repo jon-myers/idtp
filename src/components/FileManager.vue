@@ -109,7 +109,7 @@ export default {
       selectedSort: 0,
       sortKeyNames: [
         'title', 
-        'transcriber',
+        'family_name',
         'raga',
         'dateCreated',
         'dateModified',
