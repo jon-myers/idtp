@@ -4,7 +4,7 @@
       <router-link class='routerLink' to='/files/'>
         <div class='link'>Files</div>
       </router-link>
-      <router-link class='routerLink' to='/altEditor'>
+      <router-link class='routerLink' to='/editor'>
         <div class='link'>Editor</div>
       </router-link>
       <router-link class='routerLink' to='/audioEvents'>

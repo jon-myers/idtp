@@ -21,9 +21,9 @@ const routes = [
     component: lazyLoad('RaagEditor')
   },
   {
-    path: '/altEditor',
-    name: 'AltEditor',
-    component: lazyLoad('AltEditor')
+    path: '/editor',
+    name: 'EditorComponent',
+    component: lazyLoad('EditorComponent')
   },
   {
     path: '/',
