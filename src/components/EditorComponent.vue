@@ -283,55 +283,6 @@ export default {
         this.$refs.trajSelectPanel.pluckBool = false
       }
     });
-    const pieceDoesExist = await pieceExists(this.$store.state._id);
-    const id = pieceDoesExist ? this.$store.state._id : '63445d13dc8b9023a09747a6';
-    const piece = await getPiece(id);
-    
-    if (piece.audioID) {
-      const browser = detect();
-      this.audioSource = browser.name === 'safari' ?
-        `https://swara.studio/audio/mp3/${piece.audioID}.mp3` :
-        `https://swara.studio/audio/opus/${piece.audioID}.opus`;         
-      this.audioDBDoc = await getAudioRecording(piece.audioID)
-      this.durTot = this.audioDBDoc.duration;
-      // if pieceDurTot is less than this, add slient phrase to make the two 
-      // the same
-    } else {
-      this.durTot = piece.durTot;
-    }
-    this.initXScale = this.durTot / this.initViewDur;
-    let fund = 246;
-    if (this.audioDBDoc.saEstimate) fund = 2 * this.audioDBDoc.saEstimate;
-    this.freqMin = fund / 2;
-    this.freqMax = fund * 4;
-    await this.getPieceFromJson(piece, fund);
-    const c1 = this.$store.state.userID === this.piece.userID;
-    const c2 = this.piece.permissions === 'Publicly Editable';
-    if (c1 || c2) {
-      this.editable = true
-    }
-    await this.initializePiece();
-    // GETBACK
-    this.$refs.audioPlayer.initializePluckNode();
-    this.$refs.audioPlayer.initializeChikariNodes();
-    this.$refs.audioPlayer.preSetFirstEnvelope(256);
-    // end GETBACK
-    const silentDur = this.durTot - piece.durTot;
-    if (silentDur !== 0) {
-      const silentTraj = new Trajectory({
-        id: 12,
-        pitches: [],
-        durTot: silentDur,
-        fundID12: this.piece.raga.fundamental
-      });
-      const silentPhrase = new Phrase({
-        trajectories: [silentTraj],
-        durTot: silentDur,
-      });
-      this.piece.phrases.push(silentPhrase);
-      this.piece.durArrayFromPhrases();
-      this.piece.updateStartTimes();
-    }
 
     this.emitter.on('pluckBool', pluckBool => {
       if (pluckBool) {
@@ -350,6 +301,85 @@ export default {
         }
       }
     });
+
+    try {
+      // if there's a query id, 1. check if exists, 2. if so, load it, else:
+      // send some sort of message that entered piece didn't exist and go to files.
+      // check if stored piece esists. if so, load it, else: load default piece.
+      // push the id to router. 
+      let piece, pieceDoesExist;
+      const queryId = this.$route.query.id;
+      if (queryId) {
+        pieceDoesExist = await pieceExists(queryId);
+        if (pieceDoesExist) {
+          piece = await getPiece(queryId);
+
+        } else {
+          await this.$router.push({ name: 'Files' });
+          throw 'IDTP logger: Piece does not exist, or you do not have \
+          permission to view.'
+        }
+      } else {
+        const storedId = this.$store.state._id;
+        pieceDoesExist = await pieceExists(storedId);
+        const id = pieceDoesExist ? storedId : '63445d13dc8b9023a09747a6';
+        piece = await getPiece(id);
+      }
+      
+      if (piece.audioID) {
+        const browser = detect();
+        this.audioSource = browser.name === 'safari' ?
+          `https://swara.studio/audio/mp3/${piece.audioID}.mp3` :
+          `https://swara.studio/audio/opus/${piece.audioID}.opus`;         
+        this.audioDBDoc = await getAudioRecording(piece.audioID)
+        this.durTot = this.audioDBDoc.duration;
+        // if pieceDurTot is less than this, add slient phrase to make the two 
+        // the same
+      } else {
+        this.durTot = piece.durTot;
+      }
+      this.initXScale = this.durTot / this.initViewDur;
+      let fund = 246;
+      if (this.audioDBDoc.saEstimate) fund = 2 * this.audioDBDoc.saEstimate;
+      this.freqMin = fund / 2;
+      this.freqMax = fund * 4;
+      await this.getPieceFromJson(piece, fund);
+      const c1 = this.$store.state.userID === this.piece.userID;
+      const c2 = this.piece.permissions === 'Publicly Editable';
+      const c3 = this.piece.permissions === 'Private';
+      if (c1 || c2) {
+        this.editable = true
+      }
+      if (!c1 && c3) {
+        await this.$router.push({ name: 'Files' });
+          throw 'IDTP logger: Piece does not exist, or you do not have \
+          permission to view.'
+      }
+      await this.initializePiece();
+      // GETBACK
+      this.$refs.audioPlayer.initializePluckNode();
+      this.$refs.audioPlayer.initializeChikariNodes();
+      this.$refs.audioPlayer.preSetFirstEnvelope(256);
+      // end GETBACK
+      const silentDur = this.durTot - piece.durTot;
+      if (silentDur !== 0) {
+        const silentTraj = new Trajectory({
+          id: 12,
+          pitches: [],
+          durTot: silentDur,
+          fundID12: this.piece.raga.fundamental
+        });
+        const silentPhrase = new Phrase({
+          trajectories: [silentTraj],
+          durTot: silentDur,
+        });
+        this.piece.phrases.push(silentPhrase);
+        this.piece.durArrayFromPhrases();
+        this.piece.updateStartTimes();
+      }
+    } catch (err) {
+      console.error(err)
+    } 
   },
 
 
@@ -386,6 +416,7 @@ export default {
   },
 
   methods: {
+
 
     addAllDragDots() {
       d3SelectAll('.dragDots').remove();
