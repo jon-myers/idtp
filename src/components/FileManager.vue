@@ -36,7 +36,7 @@
     </div>
   </div>
 </div>
-<div class='dropDown closed' ref='dropDown' v-show='showDropDown'>
+<div class='dropDown closed' ref='dropDown'>
   <div 
     :class='`dropDownRow ${["last", ""][Number(delete_)]}`' 
     @click='designNewPiece()'>
@@ -52,7 +52,7 @@
   <div 
     v-if='delete_' 
     :class='`dropDownRow last ${["inactive", ""][Number(deleteActive)]}`'
-    @click='`${[undefined, "deletePiece"][Number(delete_)]}`'>
+    @click='deletePiece'>
     Delete
   </div>
 </div>
@@ -95,9 +95,10 @@ export default {
       designPieceModal: false,
       allPieces: undefined,
       allPieceInfo: [],
-      showDropDown: true,
       dropDownLeft: 200,
       dropDownTop: 300,
+      modalLeft: 200,
+      modalTop: 200,
       dropDownWidth: 200,
       delete_: true,
       open_: true,
@@ -146,7 +147,12 @@ export default {
     })
   },
 
-  mounted() {
+  async mounted() {
+
+    if (this.$route.query.aeName && this.$route.query.afName) {
+      this.designNewPiece();
+    }
+  
     this.emitter.on('newPieceInfo', async newPieceInfo => {
       const npi = Object.assign({}, newPieceInfo);
       const rsRes = await getRaagRule(npi.raga)
@@ -244,13 +250,15 @@ export default {
     },
 
     async deletePiece() {
-      this.$refs.dropDown.classList.add('closed')  
-      const res = await deletePiece(this.selectedPiece);
-      if (res.ok) {
-        const id = this.$store.state.userID;
-        const sortKey = this.sortKeyNames[this.selectedSort];
-        const sortDir = this.sorts[this.selectedSort];
-        this.allPieces = await getAllPieces(id, sortKey, sortDir);
+      if (this.delete_) {
+        this.$refs.dropDown.classList.add('closed')  
+        const res = await deletePiece(this.selectedPiece);
+        if (res.ok) {
+          const id = this.$store.state.userID;
+          const sortKey = this.sortKeyNames[this.selectedSort];
+          const sortDir = this.sorts[this.selectedSort];
+          this.allPieces = await getAllPieces(id, sortKey, sortDir);
+        } 
       }
     },
 
@@ -276,6 +284,14 @@ export default {
       }
       if (this.modalTop + this.modalHeight > rect.height - 20) {
         this.modalTop = rect.height - 20 - this.modalHeight
+      }
+      if (this.dropDownLeft + this.dropDownWidth > rect.width - 20) {
+        this.dropDownLeft = rect.width - 20 - this.dropDownWidth
+      }
+      const dropDownRect = this.$refs.dropDown.getBoundingClientRect();
+      const dropDownHeight = dropDownRect.height;
+      if (this.dropDownTop + dropDownHeight > rect.height - 20) {
+        this.dropDownTop = rect.height - 20 - dropDownHeight
       }
       this.designPieceModal = false;
       

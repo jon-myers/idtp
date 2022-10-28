@@ -1,5 +1,5 @@
 <template>
-  <div class='mainq' ref='main'>
+  <div class='mainq' ref='main' @contextmenu='handleRightClick'>
     <div 
       class='player' 
       @mouseover='hoverTrigger(true)' 
@@ -303,9 +303,6 @@ export default {
         // const pbi = document.querySelector('.progressBarInner');
         // pbi.style.width = "v-bind(progress*100+'vw')"
       }
-      
-      
-      
     },
     
     handleCircleMouseMove(e) {
@@ -319,9 +316,11 @@ export default {
         const pboBox = pbo.getBoundingClientRect()
         pbi.style.width = pboBox.width * this.progress - diff + 'px';
       }
-    }
-    
-       
+    },
+
+    handleRightClick(e) {
+      e.preventDefault();
+    },
   }
 }
 </script>
