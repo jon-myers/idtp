@@ -208,6 +208,17 @@ export default {
     this.allEvents = await getAllAudioEventMetadata();
     this.raags = await getRagaNames();
     this.rules = this.rulesTemplate;
+    if (this.$route.query.aeName) {
+      const allNames = this.allEvents.map(obj => obj.name);
+      this.aeIdx = allNames.indexOf(JSON.parse(this.$route.query.aeName));
+      const recs = this.allEvents[this.aeIdx].recordings;
+      const allRecNames = await Object.keys(recs).map(key => {
+        const rec = recs[key];
+        return this.getShorthand(rec)
+      });
+      this.recording = allRecNames.indexOf(JSON.parse(this.$route.query.afName));
+      this.raga = Object.keys(recs[this.recording].raags)[0]
+     }
   },
   
   watch: {

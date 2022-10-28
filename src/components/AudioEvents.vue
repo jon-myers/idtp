@@ -1,66 +1,65 @@
 <template>
-  <div class='main'>
-    <div class='fileContainer' ref='fileContainer'>
+  <div class='main' @click='handleClick'>
+    <div 
+      class='fileContainer' 
+      ref='fileContainer' 
+      @contextmenu='handleRightClick'>
       <div 
         class='audioEventRow' 
-        v-for='(audioEvent, aeIdx) in allAudioEvents'
-        :key='audioEvent.name'>
+        v-for='(ae, aeIdx) in allAudioEvents'
+        :key='ae.name'>
         <div 
-          class='audioEventNameRow' 
-          @dblclick='toggleDisplay($event, audioEvent, true)'
+          class='audioEventNameRow'
+          :id='`ae${aeIdx}`'
+          @dblclick='toggleDisplay($event, ae, true)'
           >
-          <span @click='toggleDisplay($event, audioEvent)'>&#9654;</span>
-          <label>{{audioEvent.name}}</label>
-          <button @click='openEditWindow(audioEvent._id)'>Edit</button>
+          
+          <span @click='toggleDisplay($event, ae)'>&#9654;</span>
+          <label>{{ae.name}}</label>
         </div>
         <div 
-          :class='`audioRecordingRowOuter height${getHeight(audioEvent)}`' 
-          v-show='audioEvent.visible'
+          :class='`audioRecordingRowOuter height${getHeight(ae)}`' 
+          v-show='ae.visible'
           >
           <div 
-            :class='`audioRecordingRowSpacer height${getHeight(audioEvent)}`'
+            :class='`audioRecordingRowSpacer height${getHeight(ae)}`'
             >
           </div>
           <div class='audioRecordingCol'>
             <div 
-              :class='`audioRecordingRow 
-                height${getRaagHeight(audioEvent.recordings[recKey])}`' 
-              v-for='recKey in Object.keys(audioEvent.recordings)'
-              :key='audioEvent.recordings[recKey].audioFileId'
-              @dblclick='sendAudioSource($event, audioEvent.recordings[recKey].audioFileId, aeIdx, recKey)'>
+              :class='`audioRecordingRow height${raagHt(ae, recKey)}`' 
+              v-for='recKey in Object.keys(ae.recordings)'
+              :id='`arr${aeIdx}_${recKey}`'
+              :key='ae.recordings[recKey].audioFileId'
+              @dblclick='sendAudioSource($event, ae, aeIdx, recKey)'>
               <span class='recordingNum'>{{`${Number(recKey)+1}. `}}</span>
-              <div :class='`soloist height${getRaagHeight(audioEvent.recordings[recKey])}`'>
+              <div :class='`soloist height${raagHt(ae, recKey)}`'>
                 <span>
-                  {{getSoloist(audioEvent.recordings[recKey])}}
+                  {{getSoloist(ae.recordings[recKey])}}
                 </span>
-              </div>
-              
-              <div :class='`raagNameCol height${getRaagHeight(audioEvent.recordings[recKey])}`'>
+              </div> 
+              <div :class='`raagNameCol height${raagHt(ae, recKey)}`'>
                 <div 
                   class='raagName' 
-                  v-for='raag in getRaags(audioEvent.recordings[recKey])'
+                  v-for='raag in getRaags(ae.recordings[recKey])'
                   :key='raag'>
                   <span>{{raag}}
                   </span>
                 </div>
               </div>
-              
-              <div :class='`performanceSectionCol height${getRaagHeight(audioEvent.recordings[recKey])}`'>
+              <div :class='`performanceSectionCol height${raagHt(ae, recKey)}`'>
                 <div 
                   class='performanceSections' 
-                  v-for='raag in getRaags(audioEvent.recordings[recKey])'
+                  v-for='raag in getRaags(ae.recordings[recKey])'
                   :key='raag'>
                   <span>
-                    {{getPSecs(audioEvent.recordings[recKey].raags[raag])}}
+                    {{getPSecs(ae.recordings[recKey].raags[raag])}}
                   </span>
                 </div>
               </div>
             </div>
           </div>      
         </div>
-      </div>
-      <div class='addEventRow'>
-        <button @click='toggleAddEvent'>Add new Audio Event</button>
       </div>
     </div>    
     <AddAudioEvent 
@@ -76,6 +75,25 @@
       :id='audioRecId'
       ref='audioPlayer'/>
   </div>
+  <div class='dropDown closed' ref='dropDown'>
+    <div 
+      :class='`dropDownRow`'
+      @click='toggleAddEvent'>
+      Add Audio Event
+    </div>
+    <div 
+      :class='`dropDownRow ${["", "inactive"][Number(!clickedAE)]}`' 
+      @click='handleEditAEClick'>
+      <!-- '`${[undefined, "handleEditAEClick"][Number(clickedAE)]}`'> -->
+      Edit Audio Event
+    </div>
+    <div
+      :class='`dropDownRow last ${["", "inactive"][Number(!clickedAF)]}`'
+      @click='handleNewTranscriptionClick'>
+      New Transcription
+    </div>
+  </div>
+  
 </template>
 <script>
 import { getAllAudioEventMetadata } from '@/js/serverCalls.js';
@@ -115,7 +133,14 @@ export default {
       playing: [0, 0],
       saEstimate: undefined,
       saVerified: undefined,
-      audioRecId: undefined
+      audioRecId: undefined,
+      dropDownWidth: 180,
+      clickedAE: false,
+      dropDownLeft: 200,
+      dropdownTop: 300,
+      selectedAE: undefined,
+      clickedAF: false,
+      selectedAF: false
     }
   },
   components: {
@@ -123,6 +148,7 @@ export default {
   },
   
   async created() {
+    window.addEventListener('keydown', this.handleKeydown);
     if (this.$store.state.userID === undefined) {
       this.$router.push('/')
     }
@@ -135,7 +161,8 @@ export default {
     
   },
   
-  mounted() {  
+  mounted() { 
+    
   },
   
   beforeUnmount() {
@@ -143,12 +170,107 @@ export default {
   },
   
   unmounted() {
-    
+    window.removeEventListener('keydown', this.handleKeydown);
   },
   
   methods: {
+
+    getShorthand(rec) {
+      const out = [];
+      const raagNames = Object.keys(rec.raags);
+      raagNames.forEach(rn => {
+        out.push(rn, ' - ');
+        const pSecs = Object.keys(rec.raags[rn]['performance sections']);
+        pSecs.forEach((pSec, i) => {
+          out.push(pSec, i !== pSecs.length - 1 ? ', ' : '; ');
+        })
+      })
+      return out.join('')
+    },
+
+    handleNewTranscriptionClick() {
+      this.$refs.dropDown.classList.add('closed');
+      const aeName = this.selectedAE.name;
+      const afName = this.getShorthand(this.selectedAF);
+      this.$router.push({
+        name: 'Files',
+        query: {
+          aeName: JSON.stringify(aeName),
+          afName: JSON.stringify(afName)
+        }
+      })
+      this.clickedAE = false;
+      this.clickedAF = false
+    },
+
+    handleClick() {
+      if (!this.$refs.dropDown.classList.contains('closed')) {
+        this.$refs.dropDown.classList.add('closed');
+        this.clickedAE = false;
+        this.clickedAF = false
+      }
+    },
+
+    handleKeydown(e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        this.$refs.dropDown.classList.add('closed');
+        this.clickedAE = false;
+        this.clickedAF = false
+      }
+    },
+
+    handleEditAEClick() {
+      if (this.clickedAE) {
+      this.openEditWindow(this.selectedAE._id);
+      this.$refs.dropDown.classList.add('closed');
+      this.clickedAE = false;
+      this.clickedAF = false
+      }
+    },
+
+    handleRightClick(e) {
+      e.preventDefault();
+      if (!this.$refs.dropDown.classList.contains('closed')) {
+        this.$refs.dropDown.classList.add('closed');
+      } else {
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      if (el.classList[0] === 'audioEventNameRow') {
+        this.selectedAE = this.allAudioEvents[el.id.slice(2)];
+        this.clickedAE = true;
+        this.clickedAF = false;
+        this.selectedAF = undefined;
+      } else if (el.classList[0] === 'audioRecordingRow') {
+        const splits = el.id.split('_');
+        const id = splits[0].slice(3);
+        this.selectedAE = this.allAudioEvents[id];
+        const selectedAFIdx = splits[1];
+        this.selectedAF = this.selectedAE.recordings[selectedAFIdx];
+        this.clickedAE = true;
+        this.clickedAF = true
+      } else {
+        this.clickedAE = false;
+        this.clickedAF = false;
+        this.selectedAE = undefined;
+        this.selectedAF = undefined;
+      }
+      this.dropDownLeft = e.clientX;
+      this.dropDownTop = e.clientY;
+      const rect = this.$refs.fileContainer.getBoundingClientRect();
+      if (this.dropDownLeft + this.dropDownWidth > rect.width - 20) {
+        this.dropDownLeft = rect.width - this.dropDownWidth - 20
+      }
+      const dropDownRect = this.$refs.dropDown.getBoundingClientRect();
+      const dropDownHeight = dropDownRect.height;
+      if (this.dropDownTop + dropDownHeight > rect.height - 20) {
+        this.dropDownTop = rect.height - dropDownHeight - 20
+      }
+      this.$refs.dropDown.classList.remove('closed')  
+      }
+    },
     
-    sendAudioSource(e, _id, aeIdx, recKey) {
+    sendAudioSource(e, audioEvent, aeIdx, recKey) {
+      const _id = audioEvent.recordings[recKey].audioFileId;
       this.playing = [aeIdx, recKey]
       const playing = document.querySelector('.playing');
       if (playing) playing.classList.remove('playing');
@@ -196,14 +318,16 @@ export default {
         }  
       } else {
         newAeIdx = Math.floor(Math.random() * this.allAudioEvents.length);
-        const numRecs = Object.keys(this.allAudioEvents[newAeIdx].recordings).length;
+        const recs = this.allAudioEvents[newAeIdx].recordings;
+        const numRecs = Object.keys(recs).length;
         newRecKey = Math.floor(Math.random() * numRecs);
       }
-      
-      const _id = this.allAudioEvents[newAeIdx].recordings[Number(newRecKey)].audioFileId;
+      const theseRecs = this.allAudioEvents[newAeIdx].recordings;
+      const _id = theseRecs[Number(newRecKey)].audioFileId;
       this.audioSource = `https://swara.studio/audio/mp3/${_id}.mp3`;
       const newAEElem = this.$refs.fileContainer.children[newAeIdx];
-      const newRecElem = newAEElem.children[1].children[1].children[Number(newRecKey)];
+      const grandChildren = newAEElem.children[1].children[1];
+      const newRecElem = grandChildren.children[Number(newRecKey)];
       newRecElem.classList.add('playing')
       const aeRow = this.$refs.fileContainer.children[newAeIdx].children[0];
       aeRow.classList.add('selected');
@@ -268,7 +392,8 @@ export default {
       return ct
     },
     
-    getRaagHeight(rec) {
+    raagHt(audioEvent, recKey) {
+      const rec = audioEvent.recordings[recKey];
       return Object.keys(rec.raags).length
     },
     
@@ -293,12 +418,13 @@ export default {
 .fileContainer {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 50px);
+  height: calc(100vh - 140px);
   width: 100%;
   background-color: black;
   background-image: linear-gradient(black, #1e241e);
   color: white;
   user-select: none;
+  overflow-y: scroll;
 }
 
 button {
@@ -341,7 +467,7 @@ button {
 
 .audioEventNameRow > label {
   margin-left: 20px;
-  width: 500px;
+  /* width: 500px; */
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -418,6 +544,9 @@ button {
   border-right: 1px dotted grey;
   /* margin-left: 10px; */
   scrollbar-width: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .raagName::-webkit-scrollbar {
@@ -547,13 +676,63 @@ button {
   pointer-events: none
 }
 
-
-
 button {
   background-color: #2f3830;
   color: white;
   cursor: pointer;
   /* border-radius: 8px; */
+}
+
+.dropDown {
+  position: absolute;
+  width: v-bind(dropDownWidth+'px');
+  background-color: black;
+  left: v-bind(dropDownLeft+'px');
+  top: v-bind(dropDownTop+'px');
+  border: 1px solid grey;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+.dropDown.closed {
+  visibility: hidden;
+  opacity: 0;
+  transition: visibility 0s 0.15s, opacity 0.15s linear;
+}
+
+.dropDownRow {
+  color: white;
+  border-radius: 5px;
+  height: 20px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: left;
+  padding-left: 8px;
+  margin-left: 8px;
+  margin-right: 8px;
+  margin-top: 6px;
+  width: v-bind(dropDownWidth-24+'px')
+}
+
+.dropDownRow:hover {
+  background-color: blue;
+  cursor: pointer
+}
+
+.dropDownRow.last {
+  margin-bottom: 6px;
+}
+
+.dropDownRow.inactive:hover {
+  background-color: black;
+  cursor: auto;
+}
+
+.dropDownRow.inactive {
+  color: grey;
 }
 
 </style>
