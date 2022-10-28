@@ -158,7 +158,7 @@ export default {
       phraseLabelHeight: 30,
       loop: false,
       init: true,
-      minTrajDur: 0.1,
+      minTrajDur: 0.05,
       setNewTraj: false,
       setNewPhraseDiv: false,
       justEnded: false,
@@ -2139,7 +2139,16 @@ export default {
         this.svg.style('cursor', 'auto');
       } else if (this.setNewTraj) {
         const logSargamLines = this.visibleSargam.map(s => Math.log2(s));
-        let logFreq = this.yr().invert(e.clientY - this.xAxHeight);
+        const navHeight = this.$parent.$parent.navHeight;
+        let logFreq = this.yr().invert(e.clientY - navHeight);
+
+        
+        console.log(e.target)
+        console.log(e.clientX, e.clientY)
+        console.log(e.clientY - this.xAxHeight)
+        console.log(logFreq)
+        console.log(logSargamLines)
+        console.log('')
         logFreq = getClosest(logSargamLines, logFreq);
         const phrase = this.piece.phrases[pIdx];
         const tIdx = this.trajIdxFromTime(phrase, time);

@@ -403,7 +403,7 @@ export default {
       this.otherNode.freq0 = this.otherNode.parameters.get('freq0');
       this.otherNode.freq1 = this.otherNode.parameters.get('freq1');
       this.otherNode.cutoff = this.otherNode.parameters.get('Cutoff');
-      this.otherNode.cutoff.setValueAtTime(0.5, this.now());
+      this.otherNode.cutoff.setValueAtTime(0.7, this.now());
       this.otherNode.connect(this.intChikariGainNode, 0);
       this.otherNode.connect(this.intChikariGainNode, 1);
       this.intChikariGainNode.connect(this.chikariGainNode);
