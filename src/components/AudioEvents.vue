@@ -3,55 +3,53 @@
     <div class='fileContainer' ref='fileContainer'>
       <div 
         class='audioEventRow' 
-        v-for='(audioEvent, aeIdx) in allAudioEvents'
-        :key='audioEvent.name'>
+        v-for='(ae, aeIdx) in allAudioEvents'
+        :key='ae.name'>
         <div 
           class='audioEventNameRow' 
-          @dblclick='toggleDisplay($event, audioEvent, true)'
+          @dblclick='toggleDisplay($event, ae, true)'
           >
-          <span @click='toggleDisplay($event, audioEvent)'>&#9654;</span>
-          <label>{{audioEvent.name}}</label>
-          <button @click='openEditWindow(audioEvent._id)'>Edit</button>
+          <span @click='toggleDisplay($event, ae)'>&#9654;</span>
+          <label>{{ae.name}}</label>
+          <button @click='openEditWindow(ae._id)'>Edit</button>
         </div>
         <div 
-          :class='`audioRecordingRowOuter height${getHeight(audioEvent)}`' 
-          v-show='audioEvent.visible'
+          :class='`audioRecordingRowOuter height${getHeight(ae)}`' 
+          v-show='ae.visible'
           >
           <div 
-            :class='`audioRecordingRowSpacer height${getHeight(audioEvent)}`'
+            :class='`audioRecordingRowSpacer height${getHeight(ae)}`'
             >
           </div>
           <div class='audioRecordingCol'>
             <div 
               :class='`audioRecordingRow 
-                height${getRaagHeight(audioEvent.recordings[recKey])}`' 
-              v-for='recKey in Object.keys(audioEvent.recordings)'
-              :key='audioEvent.recordings[recKey].audioFileId'
-              @dblclick='sendAudioSource($event, audioEvent.recordings[recKey].audioFileId, aeIdx, recKey)'>
+                height${raagHt(ae, recKey)}`' 
+              v-for='recKey in Object.keys(ae.recordings)'
+              :key='ae.recordings[recKey].audioFileId'
+              @dblclick='sendAudioSource($event, ae, aeIdx, recKey)'>
               <span class='recordingNum'>{{`${Number(recKey)+1}. `}}</span>
-              <div :class='`soloist height${getRaagHeight(audioEvent.recordings[recKey])}`'>
+              <div :class='`soloist height${raagHt(ae, recKey)}`'>
                 <span>
-                  {{getSoloist(audioEvent.recordings[recKey])}}
+                  {{getSoloist(ae.recordings[recKey])}}
                 </span>
-              </div>
-              
-              <div :class='`raagNameCol height${getRaagHeight(audioEvent.recordings[recKey])}`'>
+              </div> 
+              <div :class='`raagNameCol height${raagHt(ae, recKey)}`'>
                 <div 
                   class='raagName' 
-                  v-for='raag in getRaags(audioEvent.recordings[recKey])'
+                  v-for='raag in getRaags(ae.recordings[recKey])'
                   :key='raag'>
                   <span>{{raag}}
                   </span>
                 </div>
               </div>
-              
-              <div :class='`performanceSectionCol height${getRaagHeight(audioEvent.recordings[recKey])}`'>
+              <div :class='`performanceSectionCol height${raagHt(ae, recKey)}`'>
                 <div 
                   class='performanceSections' 
-                  v-for='raag in getRaags(audioEvent.recordings[recKey])'
+                  v-for='raag in getRaags(ae.recordings[recKey])'
                   :key='raag'>
                   <span>
-                    {{getPSecs(audioEvent.recordings[recKey].raags[raag])}}
+                    {{getPSecs(ae.recordings[recKey].raags[raag])}}
                   </span>
                 </div>
               </div>
@@ -148,7 +146,8 @@ export default {
   
   methods: {
     
-    sendAudioSource(e, _id, aeIdx, recKey) {
+    sendAudioSource(e, audioEvent, aeIdx, recKey) {
+      const _id = audioEvent.recordings[recKey].audioFileId;
       this.playing = [aeIdx, recKey]
       const playing = document.querySelector('.playing');
       if (playing) playing.classList.remove('playing');
@@ -196,14 +195,16 @@ export default {
         }  
       } else {
         newAeIdx = Math.floor(Math.random() * this.allAudioEvents.length);
-        const numRecs = Object.keys(this.allAudioEvents[newAeIdx].recordings).length;
+        const recs = this.allAudioEvents[newAeIdx].recordings;
+        const numRecs = Object.keys(recs).length;
         newRecKey = Math.floor(Math.random() * numRecs);
       }
-      
-      const _id = this.allAudioEvents[newAeIdx].recordings[Number(newRecKey)].audioFileId;
+      const theseRecs = this.allAudioEvents[newAeIdx].recordings;
+      const _id = theseRecs[Number(newRecKey)].audioFileId;
       this.audioSource = `https://swara.studio/audio/mp3/${_id}.mp3`;
       const newAEElem = this.$refs.fileContainer.children[newAeIdx];
-      const newRecElem = newAEElem.children[1].children[1].children[Number(newRecKey)];
+      const grandChildren = newAEElem.children[1].children[1];
+      const newRecElem = grandChildren.children[Number(newRecKey)];
       newRecElem.classList.add('playing')
       const aeRow = this.$refs.fileContainer.children[newAeIdx].children[0];
       aeRow.classList.add('selected');
@@ -268,7 +269,8 @@ export default {
       return ct
     },
     
-    getRaagHeight(rec) {
+    raagHt(audioEvent, recKey) {
+      const rec = audioEvent.recordings[recKey];
       return Object.keys(rec.raags).length
     },
     
