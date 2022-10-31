@@ -9,7 +9,9 @@
           <label>Event Type: </label>
           <div class='eventTypeCol'>
             <select v-model='selectedEventType'>
-              <option v-for='option in eventTypes' :key='option'>{{option}}</option>
+              <option v-for='option in eventTypes' :key='option'>
+                {{option}}
+              </option>
             </select>
             <input type='text' v-if='addEventTypeVisibility'>
           </div>
@@ -27,8 +29,12 @@
     </div>
     <div class='inputPair three'>
       <label class='big'>Recording {{selectedRecording}}</label>
-      <button :disabled='leftIsDisabled' @click='decrementSelectedRecording'>&lt;</button>
-      <button :disabled='rightIsDisabled' @click='incrementSelectedRecording'>&gt;</button>
+      <button :disabled='leftIsDisabled' @click='decrementSelectedRecording'>
+        &lt;
+      </button>
+      <button :disabled='rightIsDisabled' @click='incrementSelectedRecording'>
+        &gt;
+      </button>
     </div>
     <AddAudioFile 
       v-for='(recording, idx) in Number(numRecordings)' 
@@ -168,7 +174,7 @@ export default {
       //test this, then send it up to the cloud!!
     },
     
-    makeUpdateList() {
+    makeUpdates() {
       // translate AllRecsObj into mongo update syntax
       const allRecsObj = this.makeAllRecsObj();
       const updates = {};
@@ -185,7 +191,7 @@ export default {
     
     async saveMetadata() {
       console.log('saving')
-      const saveMsg = await saveAudioMetadata(this.uniqueId, this.makeUpdateList())
+      const saveMsg = await saveAudioMetadata(this.uniqueId, this.makeUpdates())
       console.log(saveMsg)
     },
     
@@ -225,9 +231,10 @@ export default {
               
               const raagElem = recElem.$refs[raagString][0];
               raagElem.selectedRaag = raagName;
-              raagElem.numSections = Object.keys(raag['performance sections']).length;
+              const pSecs = raag['performance sections'];
+              raagElem.numSections = Object.keys(pSecs).length;
               this.$nextTick(() => {
-                Object.keys(raag['performance sections']).forEach((pSecName, pIdx) => {
+                Object.keys(pSecs).forEach((pSecName, pIdx) => {
                   raagElem.selectedPSections[pIdx] = pSecName;
                   const pSec = raag['performance sections'][pSecName];
                   const start = structuredTime(pSec.start);

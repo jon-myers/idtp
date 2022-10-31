@@ -3,46 +3,76 @@
     <div class='topRow'>
       <label>Select File:</label>
       <input type='file' ref='file'>
-      <button class='uploadButton' @click='handleFileUpload' v-if='uploadDone === processingDone'>Upload</button>
+      <button 
+        class='uploadButton' 
+        @click='handleFileUpload' 
+        v-if='uploadDone === processingDone'>
+        Upload
+      </button>
       <div class='progressContainer' v-if='!uploadDone'>
         <div class='progress'></div>
       </div>
       <label v-if='uploadDone && !processingDone'>Processing ...</label>
-      <audio controls v-if='processingDone' ref='audio' @canplaythrough='loaded'>
-        <source :src='`https://swara.studio/audio/mp3/${audioFileId}.mp3`' type='audio/mpeg'>
+      <audio 
+        controls 
+        v-if='processingDone' 
+        ref='audio' 
+        @canplaythrough='loaded'>
+        <source 
+          :src='`https://swara.studio/audio/mp3/${audioFileId}.mp3`' 
+          type='audio/mpeg'>
       </audio>
     </div>
     <div class='topRow'>
       <label>Number of Performers: </label>
       <select v-model='numPerformers' class='small'>
-        <option v-for='(_, num) in Array.from({length: 6})' :key='num'>{{num+1}}</option>
+        <option v-for='(_, num) in Array.from({length: 6})' :key='num'>
+          {{num+1}}
+        </option>
       </select>
       <label v-if='audioLoaded'>duration: {{displayDuration}}</label>
     </div>
     <div class='topRow'>
       <label>Musician: </label>
-      <div class='inputCol' v-for='(_, x) in Array.from({length: Number(numPerformers)})' :key='x'>
+      <div 
+        class='inputCol' 
+        v-for='(_, x) in Array.from({length: Number(numPerformers)})' 
+        :key='x'>
         <select v-model='selectedMusicians[x]' @change='updateMusicians(x)'>
           <option v-for='name in allMusicians' :key='name'>{{name}}</option>
         </select>
-        <input type='text' v-if='addMusicianVisibilty[x]' v-model='newAddedMusicians[x]'>
+        <input 
+          type='text' 
+          v-if='addMusicianVisibilty[x]' 
+          v-model='newAddedMusicians[x]'>
       </div>
       
       
     </div>
     <div class='topRow'>
       <label>Instrument:</label>
-      <div class='inputCol' v-for='(_, x) in Array.from({length: Number(numPerformers)})' :key='x'>
-        <select v-model='selectedInstruments[x]' @change='updateOtherInstruments(x)'>
+      <div 
+        class='inputCol' 
+        v-for='(_, x) in Array.from({length: Number(numPerformers)})' 
+        :key='x'>
+        <select 
+          v-model='selectedInstruments[x]' 
+          @change='updateOtherInstruments(x)'>
           <option v-for='name in allInstruments' :key='name'>{{name}}</option>
         </select>
-        <input type='text' v-if='addOtherInstrumentVisibility[x]' v-model='newAddedInstruments[x]'>
+        <input 
+          type='text' 
+          v-if='addOtherInstrumentVisibility[x]' 
+          v-model='newAddedInstruments[x]'>
       </div>  
     </div>
     
     <div class='topRow'>
       <label>Role: </label>
-      <div class='inputCol' v-for='(_, x) in Array.from({length: Number(numPerformers)})' :key='x'>
+      <div 
+        class='inputCol' 
+        v-for='(_, x) in Array.from({length: Number(numPerformers)})' 
+        :key='x'>
         <select v-model='selectedRoles[x]'>
           <option v-for='role in possibleRoles' :key='role'>{{role}}</option>
         </select>
@@ -106,8 +136,12 @@
     </div>
     <div class='topRow big'>
       <label>Raag {{selectedRaag}}</label>
-      <button :disabled='leftIsDisabled' @click='decrementSelectedRaag'>&lt;</button>
-      <button :disabled='rightIsDisabled' @click='incrementSelectedRaag'>&gt;</button>
+      <button :disabled='leftIsDisabled' @click='decrementSelectedRaag'>
+        &lt;
+      </button>
+      <button :disabled='rightIsDisabled' @click='incrementSelectedRaag'>
+        &gt;
+      </button>
       <label class='normal'>Timings: </label>
       <div class='timingCol'>
         <div class='timingRow timings'>
@@ -123,14 +157,14 @@
             type='text' 
             inputmode='numeric'
             v-model='raagTimings[Number(selectedRaag)-1].start.minutes'
-            @change='leadingZeros($event, Number(selectedRaag)-1, "start", "minutes")'
+            @change='leadingZeros($event, selectedRaag, "start", "minutes")'
             maxlength='2'>
           <span>:</span>
           <input 
             type='text' 
             inputmode='numeric'
             v-model='raagTimings[Number(selectedRaag)-1].start.seconds'
-            @change='leadingZeros($event, Number(selectedRaag)-1, "start", "seconds")'
+            @change='leadingZeros($event, selectedRaag, "start", "seconds")'
             maxlength='2'>
         </div>
         <div class='timingRow timings'>
@@ -146,14 +180,14 @@
             type='text' 
             inputmode='numeric'
             v-model='raagTimings[Number(selectedRaag)-1].end.minutes'
-            @change='leadingZeros($event, Number(selectedRaag)-1, "end", "minutes")'
+            @change='leadingZeros($event, selectedRaag, "end", "minutes")'
             maxlength='2'>
           <span>:</span>
           <input 
             type='text' 
             inputmode='numeric'
             v-model='raagTimings[Number(selectedRaag)-1].end.seconds'
-            @change='leadingZeros($event, Number(selectedRaag)-1, "end", "seconds")'
+            @change='leadingZeros($event, selectedRaag, "end", "seconds")'
             maxlength='2'>
         </div>
       </div>
@@ -186,16 +220,16 @@ export default {
     return {
       allMusicians: undefined,
       selectedMusician: undefined,
-      selectedMusicians: [undefined, undefined, undefined, undefined, undefined, undefined],
-      selectedInstruments: [undefined, undefined, undefined, undefined, undefined, undefined],
-      selectedRoles: [undefined, undefined, undefined, undefined, undefined, undefined],
+      selectedMusicians: Array(6).fill(undefined),
+      selectedInstruments: Array(6).fill(undefined),
+      selectedRoles: Array(6).fill(undefined),
       // addMusicianVisibility: false,
-      addMusicianVisibilty: [false, false, false, false, false, false],
-      addOtherInstrumentVisibility: [false, false, false, false, false, false],
-      newAddedMusicians: [undefined, undefined, undefined, undefined, undefined, undefined],
-      newAddedInstruments: [undefined, undefined, undefined, undefined, undefined, undefined],
-      gharana: [undefined, undefined, undefined, undefined, undefined, undefined],
-      newAddedGharanas: [undefined, undefined, undefined, undefined, undefined, undefined],
+      addMusicianVisibilty: Array(6).fill(false),
+      addOtherInstrumentVisibility: Array(6).fill(false),
+      newAddedMusicians: Array(6).fill(undefined),
+      newAddedInstruments: Array(6).fill(undefined),
+      gharana: Array(6).fill(undefined),
+      newAddedGharanas: Array(6).fill(undefined),
       ragaNames: undefined,
       melodyInstruments: undefined,
       addMelodyInstrument: false,
@@ -313,8 +347,11 @@ export default {
     },
   
     getCities() {
-      if (this.selectedContinent && this.location && this.location[this.selectedContinent][this.selectedCountry]) {
-        const cities = this.location[this.selectedContinent][this.selectedCountry];
+      const sCont = this.selectedContinent;
+      const loc = this.location;
+      const sCoun = this.selectedCountry;
+      if (sCont && loc && loc[sCont][sCoun]) {
+        const cities = loc[sCont][sCoun];
         return cities.concat(['Unknown', 'Other (specify)'])
       } else {
         return ['Unknown', 'Other (specify)']
@@ -324,9 +361,9 @@ export default {
     getYears() {
       const stop = (new Date()).getFullYear();
       const start = 1903;
-      const outputArr = Array.from({length: stop - start + 1}, (_, i) => start + i);
-      outputArr.push('Unknown')
-      return outputArr
+      const out = Array.from({length: stop - start + 1}, (_, i) => start + i);
+      out.push('Unknown')
+      return out
     },
   
     possibleDays() {
@@ -371,6 +408,7 @@ export default {
   methods: {
     
     leadingZeros(input, secNum, position, timeType) {
+      secNum = Number(secNum) - 1;
       if(!isNaN(input.target.value) && input.target.value.length === 1) {
         input.target.value = '0' + input.target.value;
       }
@@ -525,7 +563,10 @@ export default {
     },
     
     getSeconds(obj) {
-      return Number(obj.hours) * 3600 + Number(obj.minutes) * 60 + Number(obj.seconds)
+      const hrs = Number(obj.hours) * 3600;
+      const mins = Number(obj.minutes) * 60;
+      const secs = Number(obj.seconds);
+      return hrs + mins + secs
     }
   }
 }

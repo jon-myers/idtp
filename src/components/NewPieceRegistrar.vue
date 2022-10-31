@@ -216,7 +216,8 @@ export default {
         const rec = recs[key];
         return this.getShorthand(rec)
       });
-      this.recording = allRecNames.indexOf(JSON.parse(this.$route.query.afName));
+      const parsed = JSON.parse(this.$route.query.afName);
+      this.recording = allRecNames.indexOf(parsed);
       this.raga = Object.keys(recs[this.recording].raags)[0]
      }
   },

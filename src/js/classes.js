@@ -78,8 +78,6 @@ class Pitch {
           this.swara = sargamLetters.indexOf(swara.toLowerCase())
         }
       }
-
-
     } else if (typeof(swara) === 'number') {
       if (swara < 0 || swara > this.sargam.length - 1) {
         throw new SyntaxError(`invalid swara number: ${swara}`)
@@ -97,8 +95,6 @@ class Pitch {
     } else {
       this.oct = oct
     }
-
-
 
     if (typeof(fundamental) != 'number') {
       throw new SyntaxError(`invalid fundamental type, must be float: ${fundamental}`)
@@ -123,6 +119,8 @@ class Pitch {
     }
     return s
   }
+
+
 
   toJSON() {
     return {
