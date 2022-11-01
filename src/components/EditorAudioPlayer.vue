@@ -363,13 +363,14 @@ export default {
     playTraj(traj, startTime, endTime, valueCt, first=false) {
       const freq = this.pluckNode.frequency;
       const lpFreq = this.lowPassNode.frequency;
+      const verySmall = 0.000000000001;
       if (first) {      
 
         const offset = startTime < this.now() ? this.now() - startTime : 0;
         const start = startTime + offset;
-        const end = endTime - start;
-        freq.setValueCurveAtTime(this.firstEnvelope, start, end);
-        lpFreq.setValueCurveAtTime(this.firstLPEnvelope, start, end);
+        const duration = endTime - start - verySmall;
+        freq.setValueCurveAtTime(this.firstEnvelope, start, duration);
+        lpFreq.setValueCurveAtTime(this.firstLPEnvelope, start, duration);
       } else {
         const envelope = new Float32Array(valueCt);
         const lpEnvelope = new Float32Array(valueCt);
@@ -377,8 +378,9 @@ export default {
           envelope[i] = traj.compute(i/(valueCt-1));
           lpEnvelope[i] = traj.compute(i/(valueCt-1)) * (2 ** 3);
         }
-        freq.setValueCurveAtTime(envelope, startTime, endTime - startTime);
-        lpFreq.setValueCurveAtTime(lpEnvelope, startTime, endTime - startTime);
+        const duration = endTime - startTime - verySmall;
+        freq.setValueCurveAtTime(envelope, startTime, duration);
+        lpFreq.setValueCurveAtTime(lpEnvelope, startTime, duration);
       }
     
     },

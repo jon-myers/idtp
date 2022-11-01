@@ -3302,7 +3302,6 @@ export default {
         .call(this.yAxis, this.yr());
 
       if (this.init) {
-        console.log('this happens')
         this.movePhrases();
         this.init = false;
         this.codifiedXScale = this.tx().k;
