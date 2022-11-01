@@ -25,11 +25,18 @@
         </div>
         <div class='cbRow'>
           <label>View Phrases: </label>
-          <input type='checkbox' v-model='viewPhrases' @change='updatePhraseDivs'>
+          <input 
+            type='checkbox' 
+            v-model='viewPhrases' 
+            @change='updatePhraseDivs'>
         </div>
         <div class='cbRow'>
           <label>Loop: </label>
           <input type='checkbox' v-model='loop' @click='updateLoop'>
+        </div>
+        <div class='cbRow'>
+          <label>Show Sargam: </label>
+          <input type='checkbox' v-model='showSargam'>
         </div>
         
       </div>
@@ -104,6 +111,10 @@ import AltTrajSelectPanel from '@/components/AltTrajSelectPanel.vue';
 
 import { detect } from 'detect-browser';
 
+const getStarts = durArray => {
+  const cumsum = (sum => value => sum += value)(0);
+  return [0].concat(durArray.slice(0, durArray.length - 1)).map(cumsum)
+}
 
 import { 
   select as d3Select, 
@@ -165,7 +176,8 @@ export default {
       editable: false,
       recGain: 0,
       synthGain: 0,
-      synthDamping: 0.5
+      synthDamping: 0.5,
+      showSargam: false
     }
   },
   components: {
@@ -211,12 +223,8 @@ export default {
     this.emitter.on('newTraj', idx => {
       this.trajTimePts.sort((a, b) => a.time - b.time);
       const logSargamLines = this.visibleSargam.map(s => Math.log2(s));
-      const visiblePitches = this.piece.raga.getPitches({
-        low: this.freqMin,
-        high: this.freqMax
-      });
       const pitches = this.trajTimePts.map(ttp => {
-        return visiblePitches[logSargamLines.indexOf(ttp.logFreq)]
+        return this.visiblePitches[logSargamLines.indexOf(ttp.logFreq)]
       });
       const ttp = this.trajTimePts;
       const durTot = ttp[ttp.length - 1].time - ttp[0].time;
@@ -415,12 +423,170 @@ export default {
         this.$refs.audioPlayer.loopStart = undefined;
         this.$refs.audioPlayer.loopEnd = undefined;
       }
+    },
+
+    showSargam(newVal) {
+      if (newVal) {
+        d3SelectAll('.sargamLabels')
+          .style('opacity', '1')
+      } else {
+        d3SelectAll('.sargamLabels')
+          .style('opacity', '0')
+      }
     }
 
   },
 
   methods: {
 
+    codifiedAddSargamLabels() { // this 
+      const allTrajs = this.piece.phrases.map(p => p.trajectories).flat();
+      const allPitches = [];
+      // I need pitches and timings
+      let lastPitch = { logFreq: undefined, time: undefined };
+      let trajStart = 0;
+      allTrajs.forEach(t => {
+        if (t.id !== 12) {
+          const durs = t.durArray.map(d => d * t.durTot);
+          let timePts = getStarts(durs);
+          timePts.push(t.durTot);
+          timePts = timePts.map(tp => trajStart + tp);
+          timePts.forEach((tp, i) => {
+            const logFreq = t.logFreqs[i];
+            const cLF = lastPitch.logFreq === logFreq;
+            const cT = lastPitch.time === tp;
+            if (!(cLF || (cLF && cT))) {
+              allPitches.push({ 
+                logFreq: logFreq, 
+                time: tp, 
+                pitch: t.pitches[i] 
+              });
+            }
+            lastPitch.logFreq = logFreq;
+            lastPitch.time = tp;
+          })
+        }
+        trajStart += t.durTot;
+      });
+      const sargamLabels = this.phraseG.append('g')
+        .classed('sargamLabels', true)
+        .style('opacity', Number(this.showSargam));
+      const phraseDivs = this.piece.phrases.map(p => p.startTime + p.durTot);
+      const pwr = 10 ** 5;
+      const roundedPDs = phraseDivs.map(p => Math.round(p * pwr) / pwr);
+      allPitches.forEach((p, pIdx) => {
+        const lastP = allPitches[pIdx - 1];
+        const nextP = allPitches[pIdx + 1];
+        const lastHigher = lastP ? lastP.logFreq > p.logFreq : true;
+        const nextHigher = nextP ? nextP.logFreq > p.logFreq: true;
+        let pos;
+        if (lastHigher && nextHigher) {
+          pos = 0; // top
+        } else if (!lastHigher && !nextHigher) {
+          pos = 1; // bottom
+        } else if (lastHigher && !nextHigher) {
+          pos = 3; // bottom left
+        } else if (!lastHigher && nextHigher) {
+          pos = 2; // top left
+        }
+        if (roundedPDs.includes(Math.round(p.time * pwr) / pwr)) {
+          if (nextHigher) {
+            pos = 5
+          } else {
+            pos = 4
+          }
+        }
+        const positions = [
+          { x: 0, y: 12 },
+          { x: 0, y: -12 },
+          { x: -5, y: -12 },
+          { x: -5, y: 12 },
+          { x: 5, y: -12 },
+          { x: 5, y: 12}
+        ]
+        const x = this.codifiedXR(p.time);
+        const y = this.codifiedYR(p.logFreq);
+        sargamLabels.append('text')
+          .attr('x', x + positions[pos].x)
+          .attr('y', y + positions[pos].y)
+          .attr('text-anchor', 'middle')
+          .attr('dominant-baseline', 'middle')
+          .attr('font-size', 14)
+          .attr('fill', 'black')
+          .text(p.pitch.octavedSargamLetter)
+      })
+    },
+
+    addSargamLabels() { // this 
+      console.log('add sargam labels')
+      const allTrajs = this.piece.phrases.map(p => p.trajectories).flat();
+      const allPitches = [];
+      // I need pitches and timings
+      let lastPitch = { logFreq: undefined, time: undefined };
+      let trajStart = 0;
+      allTrajs.forEach(t => {
+        if (t.id !== 12) {
+          const durs = t.durArray.map(d => d * t.durTot);
+          let timePts = getStarts(durs);
+          timePts.push(t.durTot);
+          timePts = timePts.map(tp => trajStart + tp);
+          timePts.forEach((tp, i) => {
+            const logFreq = t.logFreqs[i];
+            const cLF = lastPitch.logFreq === logFreq;
+            const cT = lastPitch.time === tp;
+            if (!(cLF || (cLF && cT))) {
+              allPitches.push({ 
+                logFreq: logFreq, 
+                time: tp, 
+                pitch: t.pitches[i] 
+              });
+            }
+            lastPitch.logFreq = logFreq;
+            lastPitch.time = tp;
+          })
+        }
+        trajStart += t.durTot;
+      });
+      const sargamLabels = this.phraseG.append('g')
+        .classed('sargamLabels', true)
+        .style('opacity', Number(this.showSargam))
+      allPitches.forEach((p, pIdx) => {
+        const lastP = allPitches[pIdx - 1];
+        const nextP = allPitches[pIdx + 1];
+        const lastHigher = lastP ? lastP.logFreq > p.logFreq : true;
+        const nextHigher = nextP ? nextP.logFreq > p.logFreq: true;
+        let pos;
+        if (lastHigher && nextHigher) {
+          pos = 0; // top
+        } else if (!lastHigher && !nextHigher) {
+          pos = 1; // bottom
+        } else if (lastHigher && !nextHigher) {
+          pos = 3; // bottom left
+        } else if (!lastHigher && nextHigher) {
+          pos = 2; // top left
+        }
+        const positions = [
+          { x: 0, y: 12 },
+          { x: 0, y: -12 },
+          { x: -5, y: -12 },
+          { x: -5, y: 12 }
+        ]
+        const x = this.xr()(p.time);
+        const y = this.yr()(p.logFreq);
+        console.log(p.time, x, p.logFreq, y)
+        
+
+        sargamLabels.append('text')
+          .attr('x', x + positions[pos].x)
+          .attr('y', y + positions[pos].y)
+          .attr('text-anchor', 'middle')
+          .attr('dominant-baseline', 'middle')
+          .attr('font-size', 14)
+          .attr('fill', 'black')
+          .text(p.pitch.octavedSargamLetter)
+
+      })
+    },
 
     addAllDragDots() {
       d3SelectAll('.dragDots').remove();
@@ -637,11 +803,7 @@ export default {
       d3Select(`#dragDot${idx}`)
         .attr('cx', x)
         .attr('cy', y)
-      const visiblePitches = this.piece.raga.getPitches({
-        low: this.freqMin,
-        high: this.freqMax
-      });
-      const newPitch = visiblePitches[logSargamLines.indexOf(logFreq)]
+      const newPitch = this.visiblePitches[logSargamLines.indexOf(logFreq)]
 
       if (traj.logFreqs[idx]) {
         traj.logFreqs[idx] = logFreq;
@@ -2003,6 +2165,10 @@ export default {
         low: this.freqMin,
         high: this.freqMax
       })
+      this.visiblePitches = this.piece.raga.getPitches({
+        low: this.freqMin,
+        high: this.freqMax
+      })
       const rect = await this.rect();
       this.svg = await d3Create('svg')
         .classed('noSelect', true)
@@ -2060,6 +2226,7 @@ export default {
           .node();
         this.$refs.graph.appendChild(this.svgNode)
       });
+
     },
     
     handleDblClick(z) {
@@ -2141,14 +2308,6 @@ export default {
         const logSargamLines = this.visibleSargam.map(s => Math.log2(s));
         const navHeight = this.$parent.$parent.navHeight;
         let logFreq = this.yr().invert(e.clientY - navHeight);
-
-        
-        console.log(e.target)
-        console.log(e.clientX, e.clientY)
-        console.log(e.clientY - this.xAxHeight)
-        console.log(logFreq)
-        console.log(logSargamLines)
-        console.log('')
         logFreq = getClosest(logSargamLines, logFreq);
         const phrase = this.piece.phrases[pIdx];
         const tIdx = this.trajIdxFromTime(phrase, time);
@@ -2316,6 +2475,7 @@ export default {
       });
       this.addChikaris();
       this.addPlayhead();
+      // this.addSargamLabels();
     },
 
     addArticulations(traj, phraseStart) {
@@ -3142,6 +3302,7 @@ export default {
         .call(this.yAxis, this.yr());
 
       if (this.init) {
+        console.log('this happens')
         this.movePhrases();
         this.init = false;
         this.codifiedXScale = this.tx().k;
@@ -3157,6 +3318,7 @@ export default {
             .attr('d', this.sargamLine(Math.log2(s)))
         });
         this.updatePhraseDivs();
+        this.codifiedAddSargamLabels();
       } else {
         this.slidePhrases(
           this.xr()(this.codifiedXOffset),
@@ -3170,6 +3332,7 @@ export default {
       this.redrawPlayhead();
       // this.movePhraseDivs();
       this.moveRegion();
+      // this.codifiedAddSargamLabels();
     },
 
     resetZoom() {
@@ -3184,17 +3347,20 @@ export default {
       this.codifiedAddPhrases();
       this.phraseG.selectAll('.phraseDiv').remove();
       this.updatePhraseDivs();
+      this.codifiedAddSargamLabels();
       selects.remove();  
     },
     
     codifiedAddPhrases() {
       this.addSargamLines(true);
+      
       this.piece.phrases.forEach(phrase => {
         phrase.trajectories.forEach(traj => {
           if (traj.id !== 12) this.codifiedAddTraj(traj, phrase.startTime)
         });
       })
-      this.codifiedAddChikari()
+      this.codifiedAddChikari();
+      // this.codifiedAddSargamLabels();
     },
 
     xr() {
@@ -3352,14 +3518,15 @@ export default {
     },
 
     getYTickLabels() {
-      const saCondition = s => {
-        return Math.abs(Math.log2(s / this.piece.raga.fundamental) % 1) === 0
-      };
-      const totPitches = this.piece.raga.sargamLetters.length;
-      const idxOfFirst = totPitches - this.visibleSargam.findIndex(saCondition);
-      const yTickLabels = this.visibleSargam.map((v, i) => {
-        return this.piece.raga.sargamLetters[(idxOfFirst + i) % totPitches]
-      });
+      // const saCondition = s => {
+      //   return Math.abs(Math.log2(s / this.piece.raga.fundamental) % 1) === 0
+      // };
+      // const totPitches = this.piece.raga.sargamLetters.length;
+      // const idxOfFirst = totPitches - this.visibleSargam.findIndex(saCondition);
+      // const yTickLabels = this.visibleSargam.map((v, i) => {
+      //   return this.piece.raga.sargamLetters[(idxOfFirst + i) % totPitches]
+      // });
+      const yTickLabels = this.visiblePitches.map(p => p.octavedSargamLetter)
       return yTickLabels
     },
 
@@ -3833,6 +4000,10 @@ button {
 .filler {
   width: 100%;
   height: 100%;
+}
+
+.hidden {
+  opacity: 0 !important;
 }
 
 /* .regionG {
