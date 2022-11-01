@@ -3539,6 +3539,24 @@ export default {
     loopAnimationFrame() {
       this.requestId = undefined;
       this.currentTime = this.$refs.audioPlayer.getCurrentTime();
+      // const el = this.phraseG.node();
+      // const consolidated = el.transform.baseVal.consolidate();
+      // let currentScroll = 0;
+      // if (consolidated) currentScroll = -consolidated.matrix.e;
+      const currentStartTime = this.xr().invert(30);
+      const currentEndTime = currentStartTime + this.durTot / this.tx().k;
+      // const width = this.rect().width;
+      // const currentEndTime = this.codifiedXR.invert(currentScroll + width);
+      if (this.currentTime > currentEndTime) {
+        // const timeSpan = this.durTot / this.tx().k;
+        // const timeOffset = timeSpan * 0.8;
+        const delta = (this.rect().width - this.yAxWidth) * 0.8 / this.tx().k;
+
+        this.gx.call(this.zoomX.translateBy, -delta, 0);
+        this.redraw()
+      }
+
+
       this.redrawPlayhead();
       this.startAnimationFrame();
     },
