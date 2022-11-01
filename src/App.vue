@@ -131,7 +131,13 @@ export default {
         this.$router.push('/');
       } else {
         this.returning = true
-        this.$store.commit('update_returning', this.returning)
+        this.$store.commit('update_returning', this.returning);
+        if (this.$store.state.query) {
+          this.$router.push({
+            name: 'EditorComponent',
+            query: this.$store.state.query
+          })
+        }
       }
     },
     

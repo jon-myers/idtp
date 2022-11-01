@@ -187,6 +187,9 @@ export default {
   created() {
     window.addEventListener('keydown', this.handleKeydown);
     if (this.$store.state.userID === undefined) {
+      if (this.$route.query) {
+        this.$store.commit('update_query', this.$route.query)
+      }
       this.$router.push('/')
     }
   },

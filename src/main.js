@@ -14,7 +14,8 @@ const store = createStore({
       returning: false,
       firstName: undefined,
       name: undefined,
-      lastName: undefined
+      lastName: undefined,
+      query: undefined,
     }
   },
   mutations: {
@@ -44,6 +45,10 @@ const store = createStore({
 
     update_lastName(state, lastName) {
       state.lastName = lastName
+    },
+
+    update_query(state, query) {
+      state.query = query
     }
   }
 })
