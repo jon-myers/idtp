@@ -114,8 +114,24 @@ class Pitch {
 
   get sargamLetter() {
     let s = this.sargam[this.swara].slice(0,1);
-    if (this.swara !== 0 && this.swara !== 4 && this.raised === false) {
-      s = s + '\u0332'
+    if (this.raised) {
+      s = s.toUpperCase()
+    }
+    // this is gilding the lily, for now, just lowercase/ uppercase is better
+    // if (this.swara !== 0 && this.swara !== 4 && this.raised === false) {
+    //   s = s + '\u0332'
+    // }
+    return s
+  }
+
+  get octavedSargamLetter() {
+    let s = this.sargamLetter;
+    if (this.oct === -1) {
+      s = s + '\u0323'
+    } else if (this.oct === 1) {
+      s = s + '\u0307'
+    } else if (this.oct === 2) {
+      s = s + '\u07F3'
     }
     return s
   }
