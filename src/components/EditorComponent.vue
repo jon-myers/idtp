@@ -3543,13 +3543,13 @@ export default {
       this.requestId = undefined;
       this.currentTime = this.$refs.audioPlayer.getCurrentTime();
 
-      // const currentStartTime = this.xr().invert(30);
-      // const currentEndTime = currentStartTime + this.durTot / this.tx().k;
-      // if (this.currentTime > currentEndTime) {
-      //   const delta = (this.rect().width - this.yAxWidth) * 0.8 / this.tx().k;
-      //   this.gx.call(this.zoomX.translateBy, -delta, 0);
-      //   this.redraw()
-      // }
+      const currentStartTime = this.xr().invert(30);
+      const currentEndTime = currentStartTime + this.durTot / this.tx().k;
+      if (this.currentTime > currentEndTime) {
+        const delta = (this.rect().width - this.yAxWidth) * 0.8 / this.tx().k;
+        this.gx.call(this.zoomX.translateBy, -delta, 0);
+        this.redraw()
+      }
 
 
       this.redrawPlayhead();
