@@ -48,6 +48,7 @@
         </div>
         <div class='inputRow button'>
           <button @click='saveSaEstimate'>Save</button>
+          <button @click='generateSpectrogram'>Make Spectrogram</button>
         </div>
       </div>
     </div>
@@ -55,7 +56,11 @@
 </template>
 <script>
 
-import { updateSaEstimate, getVerifiedStatus } from '@/js/serverCalls.js';
+import { 
+  updateSaEstimate, 
+  getVerifiedStatus, 
+  makeSpectrograms 
+  } from '@/js/serverCalls.js';
 
 import * as d3 from 'd3';
 // import AudioSVGWaveform from 'audio-waveform-svg-path';
@@ -149,6 +154,12 @@ export default {
   ],
   
   methods: {
+
+    async generateSpectrogram() {
+      const id = this.$parent.$parent.audioRecId;
+      const result = await makeSpectrograms(id, this.saEstimate);
+      console.log(result)
+    },
     
     zoom(bool) {
       const factor = 1.2;
