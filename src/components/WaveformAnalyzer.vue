@@ -500,5 +500,9 @@ svg {
   width: 2500px;
 }
 
+button {
+  cursor: pointer
+}
+
 
 </style>
