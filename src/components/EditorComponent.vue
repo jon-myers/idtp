@@ -177,7 +177,8 @@ export default {
       recGain: 0,
       synthGain: 0,
       synthDamping: 0.5,
-      showSargam: false
+      showSargam: false,
+      rangeOffset: 0.1
     }
   },
   components: {
@@ -356,8 +357,8 @@ export default {
       this.initXScale = this.durTot / this.initViewDur;
       let fund = 246;
       if (this.audioDBDoc.saEstimate) fund = 2 * this.audioDBDoc.saEstimate;
-      this.freqMin = fund / 2;
-      this.freqMax = fund * 4;
+      this.freqMin = 2 ** (Math.log2(fund / 2) - this.rangeOffset);
+      this.freqMax = 2 ** (Math.log2(fund * 4) + this.rangeOffset);
       await this.getPieceFromJson(piece, fund);
       const c1 = this.$store.state.userID === this.piece.userID;
       const c2 = this.piece.permissions === 'Publicly Editable';
@@ -2247,7 +2248,6 @@ export default {
           this.$refs.audioPlayer.pausedAt = time;
           this.$refs.audioPlayer.play();
         }
-        this.$refs.audioPlayer.audio.currentTime = time;
         this.redrawPlayhead()
       }
     },
@@ -3542,22 +3542,14 @@ export default {
     loopAnimationFrame() {
       this.requestId = undefined;
       this.currentTime = this.$refs.audioPlayer.getCurrentTime();
-      // const el = this.phraseG.node();
-      // const consolidated = el.transform.baseVal.consolidate();
-      // let currentScroll = 0;
-      // if (consolidated) currentScroll = -consolidated.matrix.e;
-      const currentStartTime = this.xr().invert(30);
-      const currentEndTime = currentStartTime + this.durTot / this.tx().k;
-      // const width = this.rect().width;
-      // const currentEndTime = this.codifiedXR.invert(currentScroll + width);
-      if (this.currentTime > currentEndTime) {
-        // const timeSpan = this.durTot / this.tx().k;
-        // const timeOffset = timeSpan * 0.8;
-        const delta = (this.rect().width - this.yAxWidth) * 0.8 / this.tx().k;
 
-        this.gx.call(this.zoomX.translateBy, -delta, 0);
-        this.redraw()
-      }
+      // const currentStartTime = this.xr().invert(30);
+      // const currentEndTime = currentStartTime + this.durTot / this.tx().k;
+      // if (this.currentTime > currentEndTime) {
+      //   const delta = (this.rect().width - this.yAxWidth) * 0.8 / this.tx().k;
+      //   this.gx.call(this.zoomX.translateBy, -delta, 0);
+      //   this.redraw()
+      // }
 
 
       this.redrawPlayhead();

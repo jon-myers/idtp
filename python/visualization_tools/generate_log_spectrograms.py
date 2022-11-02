@@ -40,10 +40,11 @@ full_path = path_to_audio + '/wav/' + file_id + '.wav'
 loader = ess.EasyLoader(filename = full_path, replayGain=0, startTime=0)
 audio = loader()
 octaves = 3
+offset = 0.1
 params = {
           'inputSize': audio.size,
-          'minFrequency': sa,
-          'maxFrequency': (2 ** octaves) * sa,
+          'minFrequency': 2 ** (np.log2(sa) - offset),
+          'maxFrequency': 2 ** (np.log2((2 ** octaves) * sa) + offset),
           'binsPerOctave': 72,
           'windowSizeFactor': 1,
           'gamma': 20
@@ -52,6 +53,7 @@ cqGen = ess.NSGConstantQ(**params)
 
 passes = math.ceil(len(audio) / max_samples)
 arrs = []
+print(file_id)
 for i in range(passes):
     print(i)
     if i < passes - 1:

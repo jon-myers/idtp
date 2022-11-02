@@ -487,7 +487,7 @@ export default {
     },
     
     play() {
-      let offset = this.pausedAt;
+      const offset = this.pausedAt;
       this.startingDelta = this.pausedAt;
       this.sourceNode = this.ac.createBufferSource();
       this.sourceNode.connect(this.gainNode);

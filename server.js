@@ -123,41 +123,42 @@ const runServer = async () => {
     });
 
     app.get('/getAllTranscriptions', async (req, res) => {
-      const userID = JSON.parse(req.query.userID);
-      const sortKey = JSON.parse(req.query.sortKey);
-      const sortDir = JSON.parse(req.query.sortDir);
-      const proj = {
-        title: 1,
-        dateCreated: 1,
-        dateModified: 1,
-        location: 1,
-        transcriber: 1,
-        _id: 1,
-        performers: 1,
-        durTot: 1,
-        raga: 1,
-        userID: 1,
-        permissions: 1,
-        name: 1,
-        family_name: 1,
-        given_name: 1
-      }
-      const query = {
-        '$or': [
-          {
-            '$or': [
-              { 'permissions': 'Public' },
-              { 'permissions': 'Publicly Editable' }
-            ]
-          },
-          { 'userID': userID },
-        ]
-      };
-      const sort = {};
-      sort[sortKey] = sortDir;
-
-      
       try {
+        const userID = JSON.parse(req.query.userID);
+        const sortKey = JSON.parse(req.query.sortKey);
+        const sortDir = JSON.parse(req.query.sortDir);
+        const proj = {
+          title: 1,
+          dateCreated: 1,
+          dateModified: 1,
+          location: 1,
+          transcriber: 1,
+          _id: 1,
+          performers: 1,
+          durTot: 1,
+          raga: 1,
+          userID: 1,
+          permissions: 1,
+          name: 1,
+          family_name: 1,
+          given_name: 1
+        }
+        const query = {
+          '$or': [
+            {
+              '$or': [
+                { 'permissions': 'Public' },
+                { 'permissions': 'Publicly Editable' }
+              ]
+            },
+            { 'userID': userID },
+          ]
+        };
+        const sort = {};
+        sort[sortKey] = sortDir;
+
+        
+      
         const result = await transcriptions
           .find(query)
           .collation({ 'locale': 'en' })
