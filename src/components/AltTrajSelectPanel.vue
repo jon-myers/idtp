@@ -54,18 +54,18 @@
 </div>
 </template>
 <script>
-import url1 from '@/assets/thumbnails/1.png';
-import url2 from '@/assets/thumbnails/2.png';
-import url3 from '@/assets/thumbnails/3.png';
-import url4 from '@/assets/thumbnails/4.png';
-import url5 from '@/assets/thumbnails/5.png';
-import url6 from '@/assets/thumbnails/6.png';
-import url7 from '@/assets/thumbnails/7.png';
-import url8 from '@/assets/thumbnails/8.png';
-import url9 from '@/assets/thumbnails/9.png';
-import url10 from '@/assets/thumbnails/10.png';
-import url11 from '@/assets/thumbnails/11.png';
-import url12 from '@/assets/thumbnails/12.png';
+import t1 from '@/assets/thumbnails/1.png';
+import t2 from '@/assets/thumbnails/2.png';
+import t3 from '@/assets/thumbnails/3.png';
+import t4 from '@/assets/thumbnails/4.png';
+import t5 from '@/assets/thumbnails/5.png';
+import t6 from '@/assets/thumbnails/6.png';
+import t7 from '@/assets/thumbnails/7.png';
+import t8 from '@/assets/thumbnails/8.png';
+import t9 from '@/assets/thumbnails/9.png';
+import t10 from '@/assets/thumbnails/10.png';
+import t11 from '@/assets/thumbnails/11.png';
+import t12 from '@/assets/thumbnails/12.png';
 
 // import { Articulation } from '@/js/classes.js';
 
@@ -74,7 +74,7 @@ export default {
 
   data() {
     return {
-      urls: [url1, url2, url3, url4, url5, url6, url7, url8, url9, url10, url11, url12],
+      urls: [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12],
       pluckBool: true,
       intraTrajDursBool: false,
       selectedIcon: undefined,
@@ -172,7 +172,8 @@ export default {
           const sortedTimePts = timePts.slice().sort((a, b) => a.time - b.time);
           const logFreqs = sortedTimePts.map(tp => tp.logFreq);
           const lfDiffs = logFreqs.slice(1).map((x, i) => x - logFreqs[i]);
-          if (lfDiffs[0] < 0 && lfDiffs[1] < 0 && lfDiffs[2] === 0) options.push(8)
+          const c = lfDiffs[0] < 0 && lfDiffs[1] < 0 && lfDiffs[2] === 0
+          if (c) options.push(8)
           if (options.includes(idx)) {
             this.selectedIdx = idx;
             e.target.classList.add('selected');
@@ -182,10 +183,9 @@ export default {
           const options = [6];
           const sortedTimePts = timePts.slice().sort((a, b) => a.time - b.time);
           const logFreqs = sortedTimePts.map(tp => tp.logFreq);
-          const lfDiffs = logFreqs.slice(1).map((x, i) => x - logFreqs[i]);
-          if (lfDiffs[0] < 0 && lfDiffs[1] < 0 && lfDiffs[2] > 0 && lfDiffs[3] === 0) {
-            options.push(9)
-          }
+          const lDif = logFreqs.slice(1).map((x, i) => x - logFreqs[i]);
+          const c = lDif[0] < 0 && lDif[1] < 0 && lDif[2] > 0 && lDif[3] === 0;
+          if (c) options.push(9);
           if (options.includes(idx)) {
             this.selectedIdx = idx;
             e.target.classList.add('selected');

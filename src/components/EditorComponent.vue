@@ -234,11 +234,14 @@ export default {
       const durTot = ttp[ttp.length - 1].time - ttp[0].time;
       const times = this.trajTimePts.map(ttp => ttp.time);
       const durArray = times.slice(1).map((x, i) => (x - times[i]) / durTot);
+      let articulations;
+      if (this.$refs.trajSelectPanel.pluckBool === false) articulations = {};
       const newTraj = new Trajectory({
         id: idx,
         pitches: pitches,
         durTot: durTot,
-        durArray: durArray
+        durArray: durArray,
+        articulations: articulations
       });
       const pIdx = this.trajTimePts[0].pIdx;
       const tIdx = this.trajTimePts[0].tIdx;
