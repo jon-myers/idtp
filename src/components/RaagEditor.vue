@@ -314,11 +314,22 @@ label.small {
 
 select {
   width: 250px;
+  background-color: #1e241e;
 }
 
+input {
+  color: black;
+}
 
 button.right {
   margin-left: 10px;
+}
+
+.main {
+  background-image: linear-gradient(black, #1e241e);
+  height: 100%;
+  color: white;
+  user-select: none;
 }
 
 

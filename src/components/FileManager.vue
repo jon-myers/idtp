@@ -361,6 +361,7 @@ export default {
   height: 100%;
   width: 100%;
   background-image: linear-gradient(black, #1e241e);
+  border-top: 1px solid grey;
   /* overflow-y: scroll; */
 }
 

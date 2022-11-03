@@ -722,6 +722,6 @@ input {
 }
 
 .mainInner {
-  color: white
+  color: white;
 }
 </style>

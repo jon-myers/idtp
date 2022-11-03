@@ -21,6 +21,11 @@
           class='usrImg'
           referrerpolicy="no-referrer"
           > 
+        <img 
+          v-else
+          :src='defaultUsrImgUrl'
+          class='usrImg'
+          >
       </div> 
   </div>
   <div id='userMenu' v-if='showUserMenu'>
@@ -47,6 +52,8 @@ import {
 } from 'vue3-google-login';
 // import { detect } from 'detect-browser';
 import { userLoginGoogle, handleGoogleAuthCode } from '@/js/serverCalls.js';
+
+import defaultUsrImgUrl from '@/assets/icons/user_head.svg';
 // import Editor from '@/components/Editor.vue'
 // const browser = detect();
 export default {
@@ -63,7 +70,8 @@ export default {
       returning: false,
       firstTime: false,
       showUserMenu: false,
-      userMenuWidth: 200
+      userMenuWidth: 200,
+      defaultUsrImgUrl: defaultUsrImgUrl,
     }
   },
   async mounted() {
@@ -197,6 +205,7 @@ export default {
 .usrImg {
   width: 100%;
   height: 100%;
+  border-radius: 4px;
   /* cursor: pointer;
   border-left: 1px solid black;
   border-right: 1px solid black; */
@@ -208,8 +217,9 @@ export default {
   min-width: v-bind(navHeight+'px');
   min-height: v-bind(navHeight+'px');
   cursor: pointer;
-  border-left: 1px solid black;
-  border-right: 1px solid black;
+  border-radius: 4px;
+  /* border-left: 1px solid black; */
+  /* border-right: 1px solid black; */
 }
 
 html, body {
@@ -239,38 +249,47 @@ body {
 }
 
 .routerBox {
-  width: 100px;
+  /* width: 100px; */
   height: 50px;
-  border: 1px solid black;
+  /* border: 1px solid black; */
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: black;
+  /* padding-left: 20px;
+  padding-right: 20px; */
 }
 
 .routerLink {
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: black;
+  color: white;
+  border-radius: 4px;
+  padding-left: 10px;
+  padding-right: 10px;
 }
 
 #nav {
   display: flex;
   flex-direction: row;
   text-align: center;
-  border-bottom: 1px solid black;
+  /* border-bottom: 1px solid black; */
+  background-color: black;
 }
 
 .link {
   width: 100px;
   height: v-bind(navHeight+'px');
-  border-right: 1px solid black;
+  /* border-right: 1px solid black; */
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .active{
-  background-color: #E09540;
+  background-color: #242424;
 }
 
 a {

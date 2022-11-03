@@ -425,6 +425,7 @@ export default {
   color: white;
   user-select: none;
   overflow-y: scroll;
+  border-top: 1px solid grey;
 }
 
 button {
