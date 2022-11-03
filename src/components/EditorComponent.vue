@@ -15,7 +15,10 @@
             >
         </div>
         <div class='cbBox' v-if='editable'>
-          <button @click='savePiece'>Save</button>
+          <div class='buttonRow'>
+            <button @click='savePiece'>Save</button>
+            <button @click='resetZoom'>Reset Zoom</button>
+          </div>  
           <span class='savedDate'>
             {{`Saved: ${dateModified ? dateModified.toLocaleString() : ''}`}}
           </span>
@@ -2420,8 +2423,8 @@ export default {
         .call(g => g.select('.domain'))
     },
 
-    slidePhrases(x, y, xS, yS) {      
-      this.phraseG.transition().duration(this.transitionTime)
+    slidePhrases(x, y, xS, yS, tTime) {  
+      this.phraseG.transition().duration(tTime)
         .ease(d3EaseQuadInOut)
         .attr('transform', `translate(${x},${y}) scale(${xS},${yS})`)  
       if (Math.abs(Math.log(xS)) > 0.2) this.resetZoom();
@@ -3329,7 +3332,8 @@ export default {
           this.xr()(this.codifiedXOffset),
           this.yr()(this.codifiedYOffset),
           this.tx().k / this.codifiedXScale,
-          this.ty().k / this.codifiedYScale
+          this.ty().k / this.codifiedYScale,
+          this.transitionTime
         )
       }
 
@@ -3353,7 +3357,14 @@ export default {
       this.phraseG.selectAll('.phraseDiv').remove();
       this.updatePhraseDivs();
       this.codifiedAddSargamLabels();
-      selects.remove();  
+      selects.remove();
+      this.slidePhrases(
+        this.xr()(this.codifiedXOffset),
+        this.yr()(this.codifiedYOffset),
+        this.tx().k / this.codifiedXScale,
+        this.ty().k / this.codifiedYScale,
+        0
+      )
     },
     
     codifiedAddPhrases() {
@@ -4019,6 +4030,14 @@ button {
 
 .hidden {
   opacity: 0 !important;
+}
+
+.buttonRow {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-evenly;
 }
 
 /* .regionG {
