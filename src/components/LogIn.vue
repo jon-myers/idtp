@@ -1,10 +1,12 @@
 <template>
   <div class='main'>
-    <div class='waiver' v-if='firstTime || returning || firstWelcome'>
-      <div v-if='firstTime'>{{waiver}}</div>
-      <input type='checkbox' @change='agreeToWaiver' v-model='agreeBool' v-if='firstTime'>
-      <div v-if='returning'>{{`Welcome back, ${firstName}!`}}</div>
-      <div v-if='firstWelcome'>{{`Welcome, ${firstName}!`}}</div>
+    <div class='waiverContainer'>
+      <div class='waiver' v-if='firstTime || returning || firstWelcome'>
+        <div v-if='firstTime'>{{waiver}}</div>
+        <input type='checkbox' @change='agreeToWaiver' v-model='agreeBool' v-if='firstTime'>
+        <div v-if='returning'>{{`Welcome back, ${firstName}!`}}</div>
+        <div v-if='firstWelcome'>{{`Welcome, ${firstName}!`}}</div>
+      </div>
     </div>
   </div>
 </template>
@@ -92,12 +94,21 @@ export default {
 .waiver {
   width: 350px;
   /* height: 200px; */
-  border: 1px solid black;
-  border-top: none;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  align-items: bottom;
+  justify-content: bottom;
+  color: white;
+}
+
+.waiverContainer {
+  width: 100%;
+  height: 40%;
+  display: flex;
+  flex-direction: column;
+  justify-content: bottom;
   align-items: center;
-  justify-content: top;
 }
 
 .main {
@@ -105,6 +116,8 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  height: 100%;
+  background-image: linear-gradient(black, #1e241e);
 }
 
 </style>
