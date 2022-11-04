@@ -353,7 +353,8 @@ export default {
         this.audioSource = browser.name === 'safari' ?
           `https://swara.studio/audio/mp3/${piece.audioID}.mp3` :
           `https://swara.studio/audio/opus/${piece.audioID}.opus`;         
-        this.audioDBDoc = await getAudioRecording(piece.audioID)
+        this.audioDBDoc = await getAudioRecording(piece.audioID);
+        this.$refs.audioPlayer.parentLoaded();
         this.durTot = this.audioDBDoc.duration;
         // if pieceDurTot is less than this, add slient phrase to make the two 
         // the same

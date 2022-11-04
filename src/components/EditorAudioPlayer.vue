@@ -22,7 +22,18 @@
         <div class='timeLeft'>{{'-'+formattedTimeLeft}}</div>
       </div>
       <div class='controlsContainer'>
-        <div class='recInfo left'>
+        <div class='spacer'>
+          <div class='innerSpacer'></div>
+          <div class='recInfo left'>
+            <!-- <span>{{pieceTitle}}</span> -->
+            <div 
+              class='span' 
+ 
+              >
+              {{performers.join(', ')}}
+            </div>
+            <div class='span'>{{raags.join('; ')}}</div>
+          </div>
         </div>
         <div class='controlFlexer'>
           <div class='controlBox' v-if='!loading'>
@@ -165,6 +176,11 @@ export default {
       synthGain: 0,
       synthDamp: 0.43,
       valueCurveMinim: 0.001,
+      pieceTitle: undefined,
+      performers: [],
+      raags: [],
+      playerHeight: 100,
+
     }
   },
   props: [
@@ -193,6 +209,10 @@ export default {
       import.meta.url);
     this.ac.audioWorklet.addModule(AudioWorklet(ksURL));
     this.ac.audioWorklet.addModule(AudioWorklet(cURL));
+    if (this.$parent.audioDBDoc) {
+      this.gatherRecInfo();
+    }
+    
   },
   
   watch: {
@@ -235,7 +255,32 @@ export default {
     }
   },
   methods: {
-    // GETBACK
+
+    parentLoaded() {
+     this.gatherRecInfo();
+    },
+    
+    gatherRecInfo() {
+      const obj = this.$parent.audioDBDoc;
+      const keys = Object.keys(obj.musicians).sort((a, b) => {
+        return this.getRoleRank(obj.musicians[a]) - this.getRoleRank(obj.musicians[b]);
+      });
+      this.performers = keys;
+      const raags = Object.keys(obj.raags);
+      const pSecs = raags.map(raag => {
+        const localPSecs = Object.keys(obj.raags[raag]['performance sections']);
+        return localPSecs.join(', ')
+      });
+      this.raags = raags.map((raag, i) => {
+        return `${raag}: ${pSecs[i]}`
+      })
+    },
+
+    getRoleRank(musician) {
+      const roles = ['Soloist', 'Percussionist', 'Accompanist', 'Drone'];
+      return roles.indexOf(musician.role);
+    },
+
     playChikaris(curPlayTime, now) {
       const gain = this.intChikariGainNode.gain;
       gain.setValueAtTime(0, now);
@@ -741,7 +786,7 @@ export default {
 .player {
   position: absolute;
   width: 100%;
-  height: 100px;
+  height: v-bind(playerHeight+'px');
   left: 0px;
   bottom: 0px;
   background-color: black;
@@ -794,6 +839,7 @@ export default {
   height: 100%;
   display: flex;
   flex-direction: row;
+  justify-content: bottom;
 }
 
 .recInfo {
@@ -802,6 +848,42 @@ export default {
   height: 100%;
   background-color: black;
 }
+
+.recInfo.left {
+  height: calc(100% - 20px);
+  color: white;
+  /* border: 1px solid grey; */
+  display: flex;
+  flex-direction: column;
+  align-items: left;
+  justify-content: left;
+  overflow: hidden;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+
+
+.span {
+  white-space: nowrap;
+  display: inline;
+  /* flex-direction: row; */
+  /* padding-left: 20px; */
+  /* padding-right: 20px; */
+  /* justify-content: left; */
+  /* align-items: left; */
+  width: calc(100% - 40px);
+  text-align: left;
+  overflow-x: scroll;
+  height: 40px;
+  scrollbar-width: none;
+}
+
+.span::-webkit-scrollbar {
+  display: none;
+}
+
+
 
 .right {
   display: flex;
@@ -1016,6 +1098,19 @@ export default {
   justify-content: space-evenly;
   align-items: center
 
+}
+
+.spacer {
+  display: flex;
+  flex-direction: column;
+  align-items: bottom;
+  justify-content: bottom;
+  height: 100%;
+  width: 300px;
+}
+
+.innerSpacer {
+  height: 100%;
 }
 
 /* WaveformAnalyzer {
