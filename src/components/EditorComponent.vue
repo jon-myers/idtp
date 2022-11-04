@@ -2005,6 +2005,7 @@ export default {
       this.updateBackgroundColors();
       this.updateClipPaths();
       this.redraw();
+      this.resetZoom();
     },
 
     phraseIdxFromTime(time) {
