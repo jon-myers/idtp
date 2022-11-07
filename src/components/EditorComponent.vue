@@ -363,7 +363,7 @@ export default {
       }
       this.initXScale = this.durTot / this.initViewDur;
       let fund = 246;
-      if (this.audioDBDoc.saEstimate) fund = 2 * this.audioDBDoc.saEstimate;
+      if (this.audioDBDoc && this.audioDBDoc.saEstimate) fund = 2 * this.audioDBDoc.saEstimate;
       this.freqMin = 2 ** (Math.log2(fund / 2) - this.rangeOffset);
       this.freqMax = 2 ** (Math.log2(fund * 4) + this.rangeOffset);
       await this.getPieceFromJson(piece, fund);
