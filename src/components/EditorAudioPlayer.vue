@@ -100,7 +100,6 @@
     <div class='tuningControls' v-if='showTuning'>
       <div class='buttons'>
         <button @click='resetTunings'>Reset</button>
-        <button>Save</button>
       </div>
       <div 
         :class='`tuningBox \
