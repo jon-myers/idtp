@@ -1,111 +1,157 @@
 <template>
-  <div class='mainq' ref='main'>
-    <div 
-      class='player' 
-      @mouseover='hoverTrigger(true)' 
-      @mouseleave='hoverTrigger(false)'
-      @mousemove='handleCircleMouseMove'
-      @mouseup='handleCircleMouseUp'>
-      <div class='progressBarOuter' @click='handleProgressClick' ref='pbOuter'>
-        <div class='progressBarInner'>
-          <div :class='`currentTime tooLeft`'>
-            {{formattedCurrentTime}}
+  <div class="mainq" ref="main">
+    <div
+      class="player"
+      @mouseover="hoverTrigger(true)"
+      @mouseleave="hoverTrigger(false)"
+      @mousemove="handleCircleMouseMove"
+      @mouseup="handleCircleMouseUp"
+    >
+      <div class="progressBarOuter" @click="handleProgressClick" ref="pbOuter">
+        <div class="progressBarInner">
+          <div :class="`currentTime tooLeft`">
+            {{ formattedCurrentTime }}
           </div>
-          <div 
-            class='progressCircle' 
-            @mousedown='handleCircleMouseDown'         
-            >
-            <div class='invisibleProgressCircle'>
-            </div>
+          <div class="progressCircle" @mousedown="handleCircleMouseDown">
+            <div class="invisibleProgressCircle"></div>
           </div>
         </div>
-        <div class='timeLeft'>{{'-'+formattedTimeLeft}}</div>
+        <div class="timeLeft">{{ '-' + formattedTimeLeft }}</div>
       </div>
-      <div class='controlsContainer'>
-        <div class='spacer'>
-          <div class='innerSpacer'></div>
-          <div class='recInfo left'>
+      <div class="controlsContainer">
+        <div class="spacer">
+          <div class="innerSpacer"></div>
+          <div class="recInfo left">
             <!-- <span>{{pieceTitle}}</span> -->
-            <div 
-              class='span' 
- 
-              >
-              {{performers.join(', ')}}
+            <div class="span">
+              {{ performers.join(', ') }}
             </div>
-            <div class='span'>{{raags.join('; ')}}</div>
+            <div class="span">{{ raags.join('; ') }}</div>
           </div>
         </div>
-        <div class='controlFlexer'>
-          <div class='controlBox' v-if='!loading'>
-            <img :src='icons.back_15' @click='back_15'/>
-            <img :src='icons.beginning' @click='goToBeginning'/>
-            <div class='playCircle' @click='togglePlay'>
-              <img 
-                ref='playImg' 
-                :src='[icons.play, icons.pause][Number(this.playing)]'
-                />
+        <div class="controlFlexer">
+          <div class="controlBox" v-if="!loading">
+            <img :src="icons.back_15" @click="back_15" />
+            <img :src="icons.beginning" @click="goToBeginning" />
+            <div class="playCircle" @click="togglePlay">
+              <img
+                ref="playImg"
+                :src="[icons.play, icons.pause][Number(this.playing)]"
+              />
             </div>
-            <img :src='icons.end' @click='trackEnd'/>
-            <img :src='icons.forward_15' @click='forward_15' class='icon'/>
+            <img :src="icons.end" @click="trackEnd" />
+            <img :src="icons.forward_15" @click="forward_15" class="icon" />
           </div>
-          <div class='loadingSymbol' v-else>
-            <div class='loader'>
-            </div>
+          <div class="loadingSymbol" v-else>
+            <div class="loader"></div>
           </div>
         </div>
-        <div class='recInfo right'>
-          <div class='rulerBox'>
-            <img :src='icons.ruler' @click='toggleControls' />
+        <div class="recInfo right">
+          <div class="rulerBox">
+            <img
+              :src="tuningForkIcon"
+              @click="toggleTuning"
+              class="tuningFork"
+              ref="tuningImg"
+            />
+          </div>
+          <div class="rulerBox">
+            <img :src="icons.ruler" @click="toggleControls" ref="controlsImg" />
           </div>
         </div>
       </div>
     </div>
-    <div class='synthControls' v-if='showControls'>
-      <div class='cbBoxSmall'>
-          <label>Recording Gain</label>
-          <input 
-            type='range' 
-            min='0.0' 
-            max='1.0' 
-            step='0.01' 
-            v-model='recGain'
-            >
+    <div class="synthControls" v-if="showControls">
+      <div class="cbBoxSmall">
+        <label>Recording Gain</label>
+        <input type="range" min="0.0" max="1.0" step="0.01" v-model="recGain" />
+      </div>
+      <div class="cbBoxSmall">
+        <label>Synthesis Gain</label>
+        <input
+          type="range"
+          min="0.0"
+          max="1.0"
+          step="0.01"
+          v-model="synthGain"
+        />
+      </div>
+      <div class="cbBoxSmall">
+        <label>Synthesis Damping</label>
+        <input
+          type="range"
+          min="0.0"
+          max="1.0"
+          step="0.01"
+          v-model="synthDamp"
+        />
+      </div>
+      <div class="cbBoxSmall">
+        <label>Chikari Gain</label>
+        <input
+          type="range"
+          min="0.0"
+          max="1.0"
+          step="0.01"
+          v-model="chikariGain"
+        />
+      </div>
+    </div>
+    <div class='tuningControls' v-if='showTuning'>
+      <div class='buttons'>
+        <button @click='resetTunings'>Reset</button>
+        <button>Save</button>
+      </div>
+      <div 
+        :class='`tuningBox \
+          ${["", "last"][Number(sIdx === sargam.length-1)]} \
+          ${["", "first"][Number(sIdx === 0)]}
+        `' 
+        v-for='(s, sIdx) in sargam' 
+        :key='s'>
+        <div class='sargamLetter'>
+          {{s}}
         </div>
-        <div class='cbBoxSmall'>
-          <label>Synthesis Gain</label>
-          <input 
-            type='range' 
-            min='0.0' 
-            max='1.0' 
-            step='0.01' 
-            v-model='synthGain'
-            >
+        <div class='sliders'>
+          <div class='paddingCol'></div>
+          <div class='leftSliderCol' v-if='sIdx !== 0'>
+            <div class='label'></div>
+            <div class='centsTickLabels'>
+              <div class='centsLabel'>+50&#162;-</div>
+              <div class='centsLabel'>0&#162;-</div>
+              <div class='centsLabel'>-50&#162;-</div>
+            </div>
+          </div>
+          <div class='sliderCol' v-if='sIdx !== 0'>
+            <div class='label'>Tune</div>
+            <input 
+              type='range' 
+              min='-50' 
+              max='50' 
+              step='1' 
+              v-model='centDevs[sIdx]'
+              @input='updateTuning(sIdx)'
+              @change='instantiateTuning'
+            />
+          </div>
+          <div class='sliderCol'>
+            <div class='label'>Gain</div>
+            <input 
+              type='range' 
+              orient='vertical' 
+              min='0' 
+              max='1' 
+              step='0.01'
+              v-model='tuningGains[sIdx]'
+              @input='updateTuningGain(sIdx)'
+            />
+          </div>
         </div>
-        <div class='cbBoxSmall'>
-          <label>Synthesis Damping</label>
-          <input 
-            type='range' 
-            min='0.0' 
-            max='1.0' 
-            step='0.01' 
-            v-model='synthDamp'
-            >
-        </div>
-        <div class='cbBoxSmall'>
-          <label>Chikari Gain</label>
-          <input 
-            type='range' 
-            min='0.0' 
-            max='1.0' 
-            step='0.01' 
-            v-model='chikariGain'
-            >
-        </div>
+      </div>
     </div>
   </div>
 </template>
 <script>
-
 import beginningIcon from '@/assets/icons/beginning.svg';
 import endIcon from '@/assets/icons/end.svg';
 import loopIcon from '@/assets/icons/loop.svg';
@@ -116,20 +162,21 @@ import playIcon from '@/assets/icons/play.svg';
 import shuffleIcon from '@/assets/icons/shuffle.svg';
 import rulerIcon from '@/assets/icons/ruler.svg';
 import { getStarts, getEnds } from '@/js/classes.js';
-import { AudioWorklet } from "@/audio-worklet";
+import { AudioWorklet } from '@/audio-worklet';
+import tuningForkIcon from '@/assets/icons/tuning_fork.png';
 
-const structuredTime = dur => {
+const structuredTime = (dur) => {
   const hours = String(Math.floor(dur / 3600));
   const minutes = leadingZeros(Math.floor((dur % 3600) / 60));
   const seconds = leadingZeros(Math.round(dur % 60));
-  return { hours: hours, minutes: minutes, seconds: seconds }
+  return { hours: hours, minutes: minutes, seconds: seconds };
 };
 
-const leadingZeros = int => {
+const leadingZeros = (int) => {
   if (int < 10) {
-    return '0'+int
+    return '0' + int;
   } else {
-    return String(int)
+    return String(int);
   }
 };
 
@@ -143,7 +190,7 @@ export default {
       shuffling: false,
       showWaveform: false,
       audio: {
-        paused: false
+        paused: false,
       },
       icons: {
         beginning: beginningIcon,
@@ -154,7 +201,7 @@ export default {
         shuffle: shuffleIcon,
         ruler: rulerIcon,
         back_15: back_15,
-        forward_15: forward_15
+        forward_15: forward_15,
       },
       circleDragging: false,
       formattedCurrentTime: '00:00',
@@ -180,56 +227,81 @@ export default {
       performers: [],
       raags: [],
       playerHeight: 100,
-
-    }
+      tuningForkIcon: tuningForkIcon,
+      showTuning: false,
+      sargam: [],
+      centDevs: [],
+      tuningGains: [],
+      sargamLetterHeight: 30,
+      tuningControlHeight: 200,
+      tuningLabelHeight: 20,
+      tuningGainFactor: 0.25
+    };
   },
-  props: [
-    'audioSource', 
-    'saEstimate',
-    'saVerified',
-    'id',
-
-  ],
+  props: ['audioSource', 'saEstimate', 'saVerified', 'id'],
   mounted() {
     this.ac = new AudioContext({ sampleRate: 48000 });
     this.gainNode = this.ac.createGain();
     this.gainNode.connect(this.ac.destination);
     this.gainNode.gain.setValueAtTime(Number(this.recGain), this.now());
     this.synthGainNode = this.ac.createGain();
-    this.synthGainNode.gain.setValueAtTime(Number(this.synthGain), this.now())
+    this.synthGainNode.gain.setValueAtTime(Number(this.synthGain), this.now());
     this.intSynthGainNode = this.ac.createGain();
     this.intSynthGainNode.connect(this.synthGainNode);
     this.chikariGainNode = this.ac.createGain();
     this.chikariGainNode.connect(this.ac.destination);
-    this.chikariGainNode.gain.setValueAtTime(this.chikariGain, this.now())
+    this.chikariGainNode.gain.setValueAtTime(this.chikariGain, this.now());
     this.synthGainNode.connect(this.ac.destination);
-    const ksURL = new URL('@/audioWorklets/karplusStrong.worklet.js', 
-      import.meta.url);
-    const cURL = new URL('@/audioWorklets/chikaris.worklet.js', 
-      import.meta.url);
+    const ksURL = new URL(
+      '@/audioWorklets/karplusStrong.worklet.js',
+      import.meta.url
+    );
+    const cURL = new URL(
+      '@/audioWorklets/chikaris.worklet.js',
+      import.meta.url
+    );
     this.ac.audioWorklet.addModule(AudioWorklet(ksURL));
     this.ac.audioWorklet.addModule(AudioWorklet(cURL));
-    if (this.$parent.audioDBDoc) {
-      this.gatherRecInfo();
+    if (this.$parent.audioDBDoc && this.$parent.piece) {
+      this.gatherInfo();
     }
     
   },
-  
+
+  beforeUnmount() {
+    this.tuningGains.forEach((_, i) => {
+      this.tuningGains[i] = 0;
+      this.updateTuningGain(i)
+    });
+    const curGain = this.gainNode.gain.value;
+    this.gainNode.gain.setValueAtTime(curGain, this.now());
+    const endTime = this.now() + this.lagTime;
+    this.gainNode.gain.linearRampToValueAtTime(0, endTime);
+    const curSynthGain = this.synthGainNode.gain.value;
+    this.synthGainNode.gain.setValueAtTime(curSynthGain, this.now());
+    this.synthGainNode.gain.linearRampToValueAtTime(0, endTime);
+    const curChikariGain = this.chikariGainNode.gain.value;
+    this.chikariGainNode.gain.setValueAtTime(curChikariGain, this.now());
+    this.chikariGainNode.gain.linearRampToValueAtTime(0, endTime);
+    setTimeout(() => this.ac.close(), this.lagTime * 1000);
+    this.$parent.stopAnimationFrame();
+  },
+
   watch: {
     async audioSource(newSrc) {
       this.loading = true;
       this.audioBuffer = await this.getAudio(newSrc, false);
       this.loading = false;
     },
-    
+
     recGain(newGain) {
       if (this.ac.state === 'suspended') this.ac.resume();
       const currentGain = this.gainNode.gain.value;
       const gain = this.gainNode.gain;
       gain.setValueAtTime(currentGain, this.now());
-      gain.linearRampToValueAtTime(newGain,  this.now() + this.lagTime)
+      gain.linearRampToValueAtTime(newGain, this.now() + this.lagTime);
     },
-    
+
     synthGain(newGain) {
       if (this.ac.state === 'suspended') this.ac.resume();
       const currentGain = this.synthGainNode.gain.value;
@@ -237,7 +309,7 @@ export default {
       gain.setValueAtTime(currentGain, this.now());
       gain.linearRampToValueAtTime(newGain, this.now() + this.lagTime);
     },
-    
+
     synthDamp(newVal) {
       if (this.ac.state === 'suspended') this.ac.resume();
       const currentDamp = this.pluckNode.cutoff.value;
@@ -252,28 +324,112 @@ export default {
       const gain = this.chikariGainNode.gain;
       gain.setValueAtTime(currentGain, this.now());
       gain.linearRampToValueAtTime(newVal, this.now() + this.lagTime);
-    }
+    },
   },
   methods: {
 
-    parentLoaded() {
-     this.gatherRecInfo();
+    resetTunings() {
+      this.centDevs = this.centDevs.map(() => 0);
+      const ratios = this.initFreqs.map(if_ => if_ / this.raga.fundamental);
+      this.raga.ratios = ratios;
+      this.$parent.updateSargamLines();
+      this.instantiateTuning();
+      this.tuningSines.forEach((oscNode, i) => {
+        const curVal = oscNode.frequency.value;
+        oscNode.frequency.setValueAtTime(curVal, this.now());
+        const newVal = this.raga.fundamental * this.raga.ratios[i];
+        oscNode.frequency.setValueAtTime(newVal, this.now() + this.lagTime);
+      })
+    },
+
+    updateTuningGain(sIdx) {
+      if (this.ac.suspended) this.ac.resume();
+      const gainNode = this.tuningGainNodes[sIdx];
+      const curGain = gainNode.gain.value;
+      gainNode.gain.setValueAtTime(curGain, this.now());
+      const endTime = this.now() + this.lagTime;
+      const newGain = this.tuningGains[sIdx];
+      gainNode.gain.linearRampToValueAtTime(newGain, endTime);
+    },
+
+    updateTuning(sIdx) {
+      const oscNode = this.tuningSines[sIdx];
+      const curFreq = oscNode.frequency.value;
+      oscNode.frequency.setValueAtTime(curFreq, this.now());
+      const endTime = this.now() + this.lagTime;
+      const initFreq = this.initFreqs[sIdx];
+      const newFreq = initFreq * 2 ** (this.centDevs[sIdx] / 1200);
+      const newRatio = newFreq / this.raga.fundamental;
+      this.raga.ratios[sIdx] = newRatio;
+      oscNode.frequency.linearRampToValueAtTime(newFreq, endTime);
+      this.$parent.updateSargamLines();
+    },
+
+    instantiateTuning() {
+      
+      this.$parent.piece.realignPitches();
+      this.$parent.resetZoom();
+    },
+
+    makeTuningSines() {
+      this.tuningGainNodes = [...Array(this.sargam.length)].map(() => {
+        return this.ac.createGain()
+      });
+      this.tuningSines = [...Array(this.sargam.length)].map(() => {
+          return this.ac.createOscillator()
+      });
+      this.tuningMasterGainNode = this.ac.createGain();
+      this.tuningMasterGainNode.connect(this.ac.destination);
+      this.tuningMasterGainNode.gain.setValueAtTime(0.25, this.now());
+      this.tuningGainNodes.forEach((gainNode, i) => {
+        gainNode.connect(this.tuningMasterGainNode);
+        gainNode.gain.setValueAtTime(0, this.now());
+        const osc = this.tuningSines[i];
+        osc.frequency.setValueAtTime(this.currentFreqs[i], this.now());
+        osc.connect(gainNode);
+        osc.start();
+      });
     },
     
-    gatherRecInfo() {
+    parentLoaded() {
+      this.gatherInfo();
+      this.makeTuningSines();
+    },
+
+    gatherInfo() {
       const obj = this.$parent.audioDBDoc;
       const keys = Object.keys(obj.musicians).sort((a, b) => {
-        return this.getRoleRank(obj.musicians[a]) - this.getRoleRank(obj.musicians[b]);
+        return (
+          this.getRoleRank(obj.musicians[a]) -
+          this.getRoleRank(obj.musicians[b])
+        );
       });
       this.performers = keys;
       const raags = Object.keys(obj.raags);
-      const pSecs = raags.map(raag => {
+      const pSecs = raags.map((raag) => {
         const localPSecs = Object.keys(obj.raags[raag]['performance sections']);
-        return localPSecs.join(', ')
+        return localPSecs.join(', ');
       });
       this.raags = raags.map((raag, i) => {
-        return `${raag}: ${pSecs[i]}`
+        return `${raag}: ${pSecs[i]}`;
+      });
+      this.raga = this.$parent.piece.raga;
+      this.ruleSet = this.$parent.piece.raga.ruleSet;
+
+
+      this.ETRatios = this.raga.setRatios(this.ruleSet); // equal temperement
+      this.initFreqs = this.ETRatios.map(ratio => {
+        return this.raga.fundamental * ratio
       })
+      this.currentFreqs = this.raga.ratios.map(ratio => {
+        return this.raga.fundamental * ratio
+      })
+      this.sargam = this.raga.sargamLetters;
+      this.centDevs = this.currentFreqs.map((cf, i) => {
+        return 1200 * Math.log2(cf / this.initFreqs[i]);
+      })
+      // this.centDevs = [...Array(this.sargam.length)].fill(0);
+      this.tuningGains = [...Array(this.sargam.length)].fill(0);
     },
 
     getRoleRank(musician) {
@@ -285,29 +441,29 @@ export default {
       const gain = this.intChikariGainNode.gain;
       gain.setValueAtTime(0, now);
       gain.linearRampToValueAtTime(1, now + this.slowRamp);
-      this.$parent.piece.phrases.forEach(phrase => {
-        Object.keys(phrase.chikaris).forEach(key => {
+      this.$parent.piece.phrases.forEach((phrase) => {
+        Object.keys(phrase.chikaris).forEach((key) => {
           const time = now + phrase.startTime + Number(key) - curPlayTime;
           if (time >= this.now()) {
-            this.sendNoiseBurst(time, 0.01, this.otherNode, 0.025, 0.2)            
+            this.sendNoiseBurst(time, 0.01, this.otherNode, 0.025, 0.2);
           }
-        })        
-      })
+        });
+      });
     },
-    
+
     cancelBursts() {
-      this.bufferSourceNodes.forEach(buf => {
-        buf.stop()
-        buf.disconnect()
-      })
+      this.bufferSourceNodes.forEach((buf) => {
+        buf.stop();
+        buf.disconnect();
+      });
     },
-    
-    playTrajs(curPlayTime=0, now) {
+
+    playTrajs(curPlayTime = 0, now) {
       const phrases = this.$parent.piece.phrases;
-      const allTrajs = phrases.map(p => p.trajectories).flat();
-      const allStarts = getStarts(allTrajs.map(t => t.durTot));
-      const allEnds = getEnds(allTrajs.map(t => t.durTot));
-      const startIdx = allStarts.findIndex(s => s >= curPlayTime);
+      const allTrajs = phrases.map((p) => p.trajectories).flat();
+      const allStarts = getStarts(allTrajs.map((t) => t.durTot));
+      const allEnds = getEnds(allTrajs.map((t) => t.durTot));
+      const startIdx = allStarts.findIndex((s) => s >= curPlayTime);
       const gain = this.intSynthGainNode.gain;
       gain.setValueAtTime(0, now);
       gain.linearRampToValueAtTime(1, now + this.slowRamp);
@@ -317,55 +473,57 @@ export default {
         if (traj.id !== 12) {
           const startTime = now + allStarts[i] - curPlayTime;
           const endTime = now + allEnds[i] - curPlayTime;
-          this.playTraj(traj, startTime, endTime, 512, i === 0)
+          this.playTraj(traj, startTime, endTime, 512, i === 0);
         }
-      })
+      });
     },
-    
+
     playArticulations(traj, startTime) {
       //plucks
       const arts = traj.articulations;
       if (traj.id !== 12) {
         const keys = Object.keys(arts);
-        const plucks = keys.filter(key => arts[key].name === 'pluck');
-        const hammerOffs = keys.filter(key => arts[key].name === 'hammer-off');
-        const hammerOns = keys.filter(key => arts[key].name === 'hammer-on');
-        const slides = keys.filter(key => arts[key].name === 'slide');
-    
-        plucks.forEach(time => {
+        const plucks = keys.filter((key) => arts[key].name === 'pluck');
+        const hammerOffs = keys.filter(
+          (key) => arts[key].name === 'hammer-off'
+        );
+        const hammerOns = keys.filter((key) => arts[key].name === 'hammer-on');
+        const slides = keys.filter((key) => arts[key].name === 'slide');
+
+        plucks.forEach((time) => {
           const when = Number(startTime) + Number(time) * Number(traj.durTot);
-          this.sendNoiseBurst(when, 0.01, this.pluckNode, 0.05, 1)
+          this.sendNoiseBurst(when, 0.01, this.pluckNode, 0.05, 1);
         });
-        hammerOffs.forEach(time => {
+        hammerOffs.forEach((time) => {
           const when = Number(startTime) + Number(time) * Number(traj.durTot);
-          this.sendNoiseBurst(when, 0.01, this.pluckNode, 0.05, 0.5)
+          this.sendNoiseBurst(when, 0.01, this.pluckNode, 0.05, 0.5);
         });
-        hammerOns.forEach(time => {
+        hammerOns.forEach((time) => {
           const when = Number(startTime) + Number(time) * Number(traj.durTot);
-          this.sendNoiseBurst(when, 0.01, this.pluckNode, 0.05, 0.3)
+          this.sendNoiseBurst(when, 0.01, this.pluckNode, 0.05, 0.3);
         });
-        slides.forEach(time => {
+        slides.forEach((time) => {
           const when = Number(startTime) + Number(time) * Number(traj.durTot);
-          this.sendNoiseBurst(when, 0.01, this.pluckNode, 0.05, 0.1)
-        })
+          this.sendNoiseBurst(when, 0.01, this.pluckNode, 0.05, 0.1);
+        });
       }
     },
 
-    createCurveVals(start, duration) { 
+    createCurveVals(start, duration) {
       // time in transcription, not this.ac
       const env = new Float32Array(Math.round(duration * this.valueCurveMinim));
       const computeTimes = env.map((_, i) => this.valueCurveMinim * i + start);
-      const allTrajs = this.piece.phrases.map(p => p.trajectories).flat();
-      const allStarts = getStarts(allTrajs.map(t => t.durTot));
+      const allTrajs = this.piece.phrases.map((p) => p.trajectories).flat();
+      const allStarts = getStarts(allTrajs.map((t) => t.durTot));
       const computedVals = [];
       let lastVal = this.piece.raga.fundamental;
       for (let i = 0; i < computeTimes.length; i++) {
         const time = computeTimes[i];
-        const traj = allTrajs[allStarts.findIndex(s => s >= time)];
+        const traj = allTrajs[allStarts.findIndex((s) => s >= time)];
         const trajX = (time - traj.startTime) / traj.durTot;
         let val;
         if (traj.id === 12) {
-          val = lastVal
+          val = lastVal;
         } else {
           val = traj.compute(trajX);
           lastVal = val;
@@ -373,29 +531,35 @@ export default {
         computedVals.push(val);
       }
     },
-    
-    sendNoiseBurst(when, dur, where, attack=0.05, amp=1) {
+
+    sendNoiseBurst(when, dur, where, attack = 0.05, amp = 1) {
       const bufSize = this.ac.sampleRate * dur;
       const noiseBuffer = this.ac.createBuffer(1, bufSize, this.ac.sampleRate);
       const attackSize = this.ac.sampleRate * attack;
       const output = noiseBuffer.getChannelData(0);
-      let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0
+      let b0 = 0,
+        b1 = 0,
+        b2 = 0,
+        b3 = 0,
+        b4 = 0,
+        b5 = 0,
+        b6 = 0;
       for (let i = 0; i < bufSize; i++) {
         const white = Math.random() * 2 - 1;
         b0 = 0.99886 * b0 + white * 0.0555179;
         b1 = 0.99332 * b1 + white * 0.0750759;
-        b2 = 0.96900 * b2 + white * 0.1538520;
-        b3 = 0.86650 * b3 + white * 0.3104856;
-        b4 = 0.55000 * b4 + white * 0.5329522;
-        b5 = -0.7616 * b5 - white * 0.0168980;
+        b2 = 0.969 * b2 + white * 0.153852;
+        b3 = 0.8665 * b3 + white * 0.3104856;
+        b4 = 0.55 * b4 + white * 0.5329522;
+        b5 = -0.7616 * b5 - white * 0.016898;
         output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
-        b6 = white * 0.115926
+        b6 = white * 0.115926;
       }
       for (let i = 0; i < attackSize; i++) {
-        output[i] *= i / attackSize
+        output[i] *= i / attackSize;
       }
       for (let i = 0; i < bufSize; i++) {
-        output[i] *= amp
+        output[i] *= amp;
       }
       const bufferSourceNode = this.ac.createBufferSource();
       this.bufferSourceNodes.push(bufferSourceNode);
@@ -403,14 +567,12 @@ export default {
       bufferSourceNode.buffer = noiseBuffer;
       bufferSourceNode.start(when);
     },
-    
-    
-    playTraj(traj, startTime, endTime, valueCt, first=false) {
+
+    playTraj(traj, startTime, endTime, valueCt, first = false) {
       const freq = this.pluckNode.frequency;
       const lpFreq = this.lowPassNode.frequency;
       const verySmall = 0.000000000001;
-      if (first) {      
-
+      if (first) {
         const offset = startTime < this.now() ? this.now() - startTime : 0;
         const start = startTime + offset;
         const duration = endTime - start - verySmall;
@@ -419,32 +581,31 @@ export default {
       } else {
         const envelope = new Float32Array(valueCt);
         const lpEnvelope = new Float32Array(valueCt);
-        for (let i = 0; i < valueCt; i ++) {
-          envelope[i] = traj.compute(i/(valueCt-1));
-          lpEnvelope[i] = traj.compute(i/(valueCt-1)) * (2 ** 3);
+        for (let i = 0; i < valueCt; i++) {
+          envelope[i] = traj.compute(i / (valueCt - 1));
+          lpEnvelope[i] = traj.compute(i / (valueCt - 1)) * 2 ** 3;
         }
         const duration = endTime - startTime - verySmall;
         freq.setValueCurveAtTime(envelope, startTime, duration);
         lpFreq.setValueCurveAtTime(lpEnvelope, startTime, duration);
       }
-    
     },
-    
+
     preSetFirstEnvelope(valueCt) {
       const phrases = this.$parent.piece.phrases;
-      const traj = phrases.map(p => p.trajectories).flat()[0];
+      const traj = phrases.map((p) => p.trajectories).flat()[0];
       this.firstEnvelope = new Float32Array(valueCt);
       this.firstLPEnvelope = new Float32Array(valueCt);
-      for (let i = 0; i < valueCt; i ++) {
-        this.firstEnvelope[i] = traj.compute(i/(valueCt-1));
-        this.firstLPEnvelope[i] = traj.compute(i/(valueCt-1)) * (2 ** 3);
+      for (let i = 0; i < valueCt; i++) {
+        this.firstEnvelope[i] = traj.compute(i / (valueCt - 1));
+        this.firstLPEnvelope[i] = traj.compute(i / (valueCt - 1)) * 2 ** 3;
       }
     },
-    
+
     initializeChikariNodes() {
       if (this.intChikariGainNode) this.intChikariGainNode.disconnect();
       this.intChikariGainNode = this.ac.createGain();
-      if (this.chikariNodes) this.chikariNodes.forEach(cn => cn.disconnect());
+      if (this.chikariNodes) this.chikariNodes.forEach((cn) => cn.disconnect());
       const options = { numberOfInputs: 1, numberOfOutputs: 2 };
       this.otherNode = new AudioWorkletNode(this.ac, 'chikaris', options);
       this.otherNode.freq0 = this.otherNode.parameters.get('freq0');
@@ -455,11 +616,11 @@ export default {
       this.otherNode.connect(this.intChikariGainNode, 1);
       this.intChikariGainNode.connect(this.chikariGainNode);
       const raga = this.$parent.piece.raga;
-      const freqs = raga.chikariPitches.map(p => p.frequency);
+      const freqs = raga.chikariPitches.map((p) => p.frequency);
       this.otherNode.freq0.setValueAtTime(freqs[0], this.now());
       this.otherNode.freq1.setValueAtTime(freqs[1], this.now());
     },
-    
+
     initializePluckNode() {
       if (this.pluckNode) this.pluckNode.disconnect();
       if (this.lowPassNode) this.lowPassNode.disconnect();
@@ -467,34 +628,32 @@ export default {
       this.lowPassNode = this.ac.createBiquadFilter();
       this.lowPassNode.type = 'lowpass';
       const fund = this.$parent.piece.raga.fundamental;
-      this.lowPassNode.frequency.setValueAtTime(fund * (2**3), this.now());
+      this.lowPassNode.frequency.setValueAtTime(fund * 2 ** 3, this.now());
       this.pluckNode.connect(this.lowPassNode).connect(this.intSynthGainNode);
       this.pluckNode.frequency = this.pluckNode.parameters.get('Frequency');
       this.pluckNode.cutoff = this.pluckNode.parameters.get('Cutoff');
       this.pluckNode.cutoff.setValueAtTime(Number(this.synthDamp), this.now());
     },
     // end GETBACK
-    
-    
+
     async getAudio(filepath, verbose) {
       try {
         const start = await performance.now();
         const res = await fetch(filepath);
-        const fetched = await performance.now() - start;
-        if (verbose) console.log('fetched: ', fetched / 1000)
+        const fetched = (await performance.now()) - start;
+        if (verbose) console.log('fetched: ', fetched / 1000);
         const arrayBuffer = await res.arrayBuffer();
-        const midpoint = await performance.now() - start;
-        if (verbose) console.log('array buffd: ', midpoint/1000)
+        const midpoint = (await performance.now()) - start;
+        if (verbose) console.log('array buffd: ', midpoint / 1000);
         const audioBuffer = await this.ac.decodeAudioData(arrayBuffer);
-        const endpoint = await performance.now() - start;
-        if (verbose) console.log('done: ', endpoint/1000)
-        return audioBuffer
+        const endpoint = (await performance.now()) - start;
+        if (verbose) console.log('done: ', endpoint / 1000);
+        return audioBuffer;
       } catch (err) {
         console.log(err);
       }
-      
     },
-    
+
     back_15() {
       let newTime = this.getCurrentTime() - 15;
       if (newTime < 0) newTime = 0;
@@ -507,13 +666,13 @@ export default {
         this.stop();
         this.pausedAt = newTime;
         this.play();
-      }      
+      }
     },
-    
+
     forward_15() {
       let newTime = this.getCurrentTime() + 15;
       if (newTime > this.audioBuffer.duration) {
-        newTime = this.audioBuffer.duration
+        newTime = this.audioBuffer.duration;
       }
       if (!this.playing) {
         this.pausedAt = newTime;
@@ -526,11 +685,11 @@ export default {
         this.play();
       }
     },
-    
+
     now() {
-      return this.ac.currentTime
+      return this.ac.currentTime;
     },
-    
+
     play() {
       const offset = this.pausedAt;
       this.startingDelta = this.pausedAt;
@@ -545,60 +704,61 @@ export default {
       }
       this.startedAt = this.now() - offset;
       this.pausedAt = 0;
-      this.playing = true;    
+      this.playing = true;
     },
-    
+
     stop() {
       if (this.sourceNode) {
         this.sourceNode.disconnect();
         this.sourceNode.stop(this.now());
-        this.sourceNode = null
+        this.sourceNode = null;
       }
       this.pausedAt = 0;
       this.startedAt = 0;
       this.playing = false;
     },
-    
+
     pause() {
       const elapsed = this.now() - this.startedAt;
       this.stop();
-      this.pausedAt = this.loop ? this.loopTime : elapsed; 
+      this.pausedAt = this.loop ? this.loopTime : elapsed;
     },
-    
+
     getCurrentTime() {
       if (this.pausedAt) {
-        return this.pausedAt
+        return this.pausedAt;
       } else if (this.playing) {
-        if (this.loop && (this.startingDelta < this.loopEnd)) {
+        if (this.loop && this.startingDelta < this.loopEnd) {
           const dur = this.loopEnd - this.loopStart;
           const realTime = this.now() - this.startedAt;
           this.loopTime = realTime;
           if (realTime > this.loopEnd) {
-            this.loopTime = this.loopStart + (realTime - this.loopStart) % dur;
+            this.loopTime =
+              this.loopStart + ((realTime - this.loopStart) % dur);
           }
-          return this.loopTime
+          return this.loopTime;
         } else {
-          return this.now() - this.startedAt
-        }        
+          return this.now() - this.startedAt;
+        }
       } else {
-        return 0
+        return 0;
       }
     },
-    
+
     startPlayCursorAnimation() {
       if (!this.requestId) {
-        this.requestId = window.requestAnimationFrame(this.loopPlayAnimation)
+        this.requestId = window.requestAnimationFrame(this.loopPlayAnimation);
       }
     },
-    
+
     updateProgress() {
       this.progress = this.getCurrentTime() / this.audioBuffer.duration;
       const pbi = document.querySelector('.progressBarInner');
       const pbo = document.querySelector('.progressBarOuter');
       const totWidth = pbo.getBoundingClientRect().width;
-      pbi.style.width = this.progress * totWidth + 'px'
+      pbi.style.width = this.progress * totWidth + 'px';
     },
-    
+
     loopPlayAnimation() {
       this.requestId = undefined;
       this.updateProgress();
@@ -607,17 +767,17 @@ export default {
       this.$parent.currentTime = this.getCurrentTime();
       this.startPlayCursorAnimation();
     },
-    
+
     stopPlayCursorAnimation() {
       if (this.requestId) {
         window.cancelAnimationFrame(this.requestId);
-        this.requestId = undefined
+        this.requestId = undefined;
       }
     },
 
     togglePlay() {
       if (!this.playing) {
-        this.play()
+        this.play();
         this.$refs.playImg.classList.add('playing');
         this.$parent.startAnimationFrame();
         this.startPlayCursorAnimation();
@@ -637,7 +797,7 @@ export default {
         // end GETBACK
       }
     },
-    
+
     // GETBACK
     cancelPlayTrajs() {
       this.pluckNode.frequency.cancelScheduledValues(this.now());
@@ -650,68 +810,90 @@ export default {
       this.intChikariGainNode.gain.linearRampToValueAtTime(0, rampEnd);
     },
     // end GETBACK
-    
+
     toggleControls(e) {
       const cl = e.target.classList;
       cl.toggle('showControls');
-      this.showControls = this.showControls ? false: true;
+      this.showControls = this.showControls ? false : true;
+      if (this.showTuning) {
+        this.showTuning = false;
+        this.$refs.tuningImg.classList.remove('showTuning');
+      }
     },
-    
+
+    toggleTuning(e) {
+      const cl = e.target.classList;
+      cl.toggle('showTuning');
+      if (this.showTuning) {
+        this.showTuning = false;
+        this.tuningGains.forEach((_, i) => {
+          this.tuningGains[i] = 0;
+          this.updateTuningGain(i)
+        })
+      } else {
+        this.showTuning = true
+      }
+      if (this.showControls) {
+        this.showControls = false;
+        this.$refs.controlsImg.classList.remove('showControls');
+      }
+    },
+
     goToBeginning() {
       if (!this.playing) {
         this.pausedAt = 0;
-        this.updateProgress()
+        this.updateProgress();
       } else {
         this.stop();
         this.pausedAt = 0;
         this.play();
-        this.updateProgress()
+        this.updateProgress();
       }
       this.$parent.currentTime = 0;
       this.$parent.redrawPlayhead();
     },
-    
+
     handleProgressClick(e) {
       const bb = this.$refs.pbOuter.getBoundingClientRect();
       if (!this.playing) {
-        this.pausedAt = this.audioBuffer.duration * e.clientX / bb.width;
+        this.pausedAt = (this.audioBuffer.duration * e.clientX) / bb.width;
         this.$parent.currentTime = this.pausedAt;
         this.$parent.redrawPlayhead();
         this.updateProgress();
       } else {
         this.stop();
-        this.pausedAt = this.audioBuffer.duration * e.clientX / bb.width;
+        this.pausedAt = (this.audioBuffer.duration * e.clientX) / bb.width;
         this.play();
       }
     },
-    
+
     tooLeftLimit() {
       if (this.$refs.pbOuter && this.progress) {
         const bb = this.$refs.pbOuter.getBoundingClientRect();
-        return this.progress < 35 / bb.width
+        return this.progress < 35 / bb.width;
       } else {
-        return true
-      }  
+        return true;
+      }
     },
-    
+
     tooRightLimit() {
       if (this.$refs.pbOuter && this.progress) {
         const bb = this.$refs.pbOuter.getBoundingClientRect();
-        return this.progress >= 1 - (90 / bb.width)
+        return this.progress >= 1 - 90 / bb.width;
       } else {
-        return false
+        return false;
       }
     },
-    
+
     updateFormattedCurrentTime() {
       const st = structuredTime(this.getCurrentTime());
       const ms = st.minutes + ':' + st.seconds;
-      this.formattedCurrentTime = st.hours !== 0 ? ms : st.hours + ':' + ms;      
+      this.formattedCurrentTime = st.hours !== 0 ? ms : st.hours + ':' + ms;
     },
-    
+
     updateFormattedTimeLeft() {
       if (isNaN(this.audioBuffer.duration)) {
-        return '00:00'
+        return '00:00';
       } else {
         const buf = this.audioBuffer;
         const ut = Number(buf.duration) - Number(this.getCurrentTime());
@@ -720,37 +902,38 @@ export default {
         this.formattedTimeLeft = st.hours !== 0 ? ms : st.hours + ':' + ms;
       }
     },
-    
+
     hoverTrigger(bool) {
       const classes_ = [
-        '.currentTime', 
-        '.progressCircle', 
-        '.timeLeft', 
-        '.invisibleProgressCircle'];
-      const cls = classes_.map(cl => document.querySelector(cl).classList);
+        '.currentTime',
+        '.progressCircle',
+        '.timeLeft',
+        '.invisibleProgressCircle',
+      ];
+      const cls = classes_.map((cl) => document.querySelector(cl).classList);
       if (bool) {
-        cls.forEach(cl => {
-          if (!cl.contains('hovering')) cl.add('hovering')
-        })
+        cls.forEach((cl) => {
+          if (!cl.contains('hovering')) cl.add('hovering');
+        });
       } else {
-        cls.forEach(cl => {
-          if (cl.contains('hovering')) cl.remove('hovering')
-        })
+        cls.forEach((cl) => {
+          if (cl.contains('hovering')) cl.remove('hovering');
+        });
       }
     },
-    
+
     handleCircleMouseDown(e) {
       this.circleDragging = true;
       this.dragStart = e.clientX;
-      this.$refs.main.classList.toggle('hovering')
+      this.$refs.main.classList.toggle('hovering');
     },
-    
+
     handleCircleMouseUp(e) {
       if (this.circleDragging) {
         const bb = this.$refs.pbOuter.getBoundingClientRect();
         const ct = this.getCurrentTime();
         const dur = this.audioBuffer.duration;
-        const newTime = ct + dur * (e.clientX - this.dragStart) / bb.width;
+        const newTime = ct + (dur * (e.clientX - this.dragStart)) / bb.width;
         if (!this.playing) {
           this.pausedAt = newTime;
           this.$parent.currentTime = this.pausedAt;
@@ -765,28 +948,27 @@ export default {
         pc.style.right = '-7px';
         this.circleDragging = false;
         this.$refs.main.classList.toggle('hovering');
-      }  
+      }
     },
-    
+
     handleCircleMouseMove(e) {
       if (this.circleDragging) {
         const diff = this.dragStart - e.clientX;
         const pbi = document.querySelector('.progressBarInner');
         const pbo = document.querySelector('.progressBarOuter');
-        const pboBox = pbo.getBoundingClientRect()
+        const pboBox = pbo.getBoundingClientRect();
         pbi.style.width = pboBox.width * this.progress - diff + 'px';
       }
-    }       
-  }
-}
+    },
+  },
+};
 </script>
 
 <style scoped>
-
 .player {
   position: absolute;
   width: 100%;
-  height: v-bind(playerHeight+'px');
+  height: v-bind(playerHeight + 'px');
   left: 0px;
   bottom: 0px;
   background-color: black;
@@ -804,7 +986,7 @@ export default {
 }
 
 .progressBarOuter:hover {
-  cursor: pointer
+  cursor: pointer;
 }
 
 .progressBarInner {
@@ -815,7 +997,7 @@ export default {
 }
 
 .progressBarInner:hover {
-  cursor: pointer
+  cursor: pointer;
 }
 
 .progressCircle {
@@ -827,7 +1009,7 @@ export default {
   right: -7px;
   top: -4px;
   opacity: 0;
-  transition: opacity 0.25s 
+  transition: opacity 0.25s;
 }
 
 .progressCircle:hover {
@@ -862,8 +1044,6 @@ export default {
   padding-right: 20px;
 }
 
-
-
 .span {
   white-space: nowrap;
   display: inline;
@@ -882,8 +1062,6 @@ export default {
 .span::-webkit-scrollbar {
   display: none;
 }
-
-
 
 .right {
   display: flex;
@@ -908,13 +1086,18 @@ export default {
 }
 
 .rulerBox > img:hover {
-  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg) 
-          brightness(94%) contrast(97%);
+  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg)
+    brightness(94%) contrast(97%);
 }
 
 .rulerBox > .showWaveform {
-  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) 
-          brightness(97%) contrast(97%);
+  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg)
+    brightness(97%) contrast(97%);
+}
+
+.rulerBox > .showControls {
+  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg)
+    brightness(94%) contrast(97%);
 }
 
 .controlFlexer {
@@ -951,23 +1134,22 @@ export default {
   height: 30px;
   width: 30px;
   cursor: pointer;
-  filter: brightness(400%)
+  filter: brightness(400%);
 }
 
-
 .controlBox > img:hover {
-  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg) 
-          brightness(94%) contrast(97%);
+  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg)
+    brightness(94%) contrast(97%);
 }
 
 .controlBox > .looping {
-  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) 
-          brightness(97%) contrast(97%);
+  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg)
+    brightness(97%) contrast(97%);
 }
 
 .controlBox > .shuffling {
-  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) 
-          brightness(97%) contrast(97%);
+  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg)
+    brightness(97%) contrast(97%);
 }
 
 .playCircle > img {
@@ -991,11 +1173,11 @@ export default {
 }
 
 .playCircle:hover {
-  background-color: #4f4f4f
+  background-color: #4f4f4f;
 }
 
 .playCircle > img {
-  filter: brightness(400%)
+  filter: brightness(400%);
 }
 
 .currentTime {
@@ -1007,7 +1189,7 @@ export default {
   height: 20px;
   text-align: center;
   opacity: 0;
-  transition: opacity 0.25s
+  transition: opacity 0.25s;
 }
 
 .timeLeft {
@@ -1025,8 +1207,6 @@ export default {
   opacity: 1;
 }
 
-
-
 .tooLeft {
   left: 10px;
 }
@@ -1043,11 +1223,11 @@ export default {
   left: 0;
   bottom: 0;
   /* pointer-events: none; */
-  z-index: 1
+  z-index: 1;
 }
 
 .main.hovering {
-  cursor: pointer
+  cursor: pointer;
 }
 
 .invisibleProgressCircle {
@@ -1079,14 +1259,18 @@ export default {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .synthControls {
   position: absolute;
   right: 0px;
-  bottom: 100px;
+  bottom: v-bind(playerHeight + 'px');
   background-color: #202621;
   width: 200px;
   height: 200px;
@@ -1096,8 +1280,22 @@ export default {
   flex-direction: column;
   pointer-events: auto;
   justify-content: space-evenly;
-  align-items: center
+  align-items: center;
+}
 
+.tuningControls {
+  position: absolute;
+  right: 0px;
+  bottom: v-bind(playerHeight + 'px');
+  background-color: #202621;
+  width: 1000px;
+  height: v-bind(tuningControlHeight+'px');
+  border-bottom: 1px solid black;
+  color: white;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-evenly;
 }
 
 .spacer {
@@ -1113,10 +1311,112 @@ export default {
   height: 100%;
 }
 
+.rulerBox > .tuningFork {
+  filter: invert(100%) sepia(100%) saturate(0%) hue-rotate(288deg)
+    brightness(102%) contrast(102%);
+}
+
+.rulerBox > .showTuning {
+  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg)
+    brightness(94%) contrast(97%);
+}
+
+.tuningBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.tuningBox.last {
+  margin-right: 10px;
+}
+
+.tuningBox.first {
+  min-width: 45px;
+  width: 45px;
+}
+
+.sliders {
+  height: v-bind(tuningControlHeight - sargamLetterHeight + 'px');
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
+.sargamLetter {
+  height: v-bind(sargamLetterHeight + 'px');
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.label {
+  height: v-bind(tuningLabelHeight + 'px');
+  font-size: 13px;
+}
+
+.sliderCol > input {
+  width: 12px;
+  height: v-bind(tuningControlHeight - sargamLetterHeight - tuningLabelHeight - 10 + 'px');
+  -webkit-appearance: slider-vertical;
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+.leftSliderCol {
+  width: 35px;
+}
+
+.sliderCol {
+  min-width: 30px;
+}
+
+
+
+.centsTickLabels {
+  display: flex;
+  flex-direction: column;
+  align-items: right;
+  justify-content: space-between;
+  height: v-bind(tuningControlHeight - sargamLetterHeight - tuningLabelHeight - 10 + 'px');
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+.paddingCol {
+  min-width: 10px;
+  max-width: 10px;
+  width: 10px;
+}
+
+.centsLabel {
+  text-align: right;
+  font-size: 12px;
+}
+
+.buttons {
+  width: 80px;
+  min-width: 80px;
+  height: 100%;
+  /* background-color: red; */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
+.buttons > button {
+  cursor: pointer;
+} 
+
+
+
 /* WaveformAnalyzer {
   position: absolute;
   left: 0px;
   bottom: 100px;
 } */
-
 </style>

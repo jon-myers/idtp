@@ -354,7 +354,7 @@ export default {
           `https://swara.studio/audio/mp3/${piece.audioID}.mp3` :
           `https://swara.studio/audio/opus/${piece.audioID}.opus`;         
         this.audioDBDoc = await getAudioRecording(piece.audioID);
-        this.$refs.audioPlayer.parentLoaded();
+        
         this.durTot = this.audioDBDoc.duration;
         // if pieceDurTot is less than this, add slient phrase to make the two 
         // the same
@@ -379,6 +379,7 @@ export default {
           permission to view.'
       }
       await this.initializePiece();
+      this.$refs.audioPlayer.parentLoaded();
       // GETBACK
       this.$refs.audioPlayer.initializePluckNode();
       this.$refs.audioPlayer.initializeChikariNodes();
@@ -1954,6 +1955,8 @@ export default {
         phrase.trajectories.forEach(traj => {
           traj.pitches = traj.pitches.map(pitch => {
             pitch.fundamental = piece.raga.fundamental;
+            // convert to pitch ratio format
+            pitch.ratios = piece.raga.stratifiedRatios;
             return new Pitch(pitch)
           });
           const artKeys = Object.keys(traj.articulations);
@@ -3277,6 +3280,20 @@ export default {
       })
     },
 
+    updateSargamLines() {
+      this.visibleSargam = this.piece.raga.getFrequencies({
+        low: this.freqMin,
+        high: this.freqMax
+      })
+      this.visibleSargam.forEach((s, i) => {
+        d3Select('.sargamLine.s' + i)
+          .attr('d', this.codifiedSargamLine(Math.log2(s)))
+      });
+      this.redraw();
+
+
+    },
+
     playheadLine() {
       return d3Line()([
         [0, this.yr()(Math.log2(this.freqMin))],
@@ -3536,14 +3553,6 @@ export default {
     },
 
     getYTickLabels() {
-      // const saCondition = s => {
-      //   return Math.abs(Math.log2(s / this.piece.raga.fundamental) % 1) === 0
-      // };
-      // const totPitches = this.piece.raga.sargamLetters.length;
-      // const idxOfFirst = totPitches - this.visibleSargam.findIndex(saCondition);
-      // const yTickLabels = this.visibleSargam.map((v, i) => {
-      //   return this.piece.raga.sargamLetters[(idxOfFirst + i) % totPitches]
-      // });
       const yTickLabels = this.visiblePitches.map(p => p.octavedSargamLetter)
       return yTickLabels
     },
