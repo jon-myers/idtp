@@ -672,6 +672,7 @@ export default {
       this.capture = new AudioWorkletNode(this.ac, 'captureAudio', options);
       this.capture.bufferSize = this.capture.parameters.get('BufferSize');
       this.capture.active = this.capture.parameters.get('Active');
+      this.capture.cancel = this.capture.parameters.get('Cancel');
       if (this.intSynthGainNode) {
         this.intSynthGainNode.connect(this.capture, 0, 0)
       }
@@ -681,25 +682,22 @@ export default {
       this.capture.port.onmessage = e => {
 
         
-        if (e.data === 'starting') {
-          console.log(`starting at ${this.now()}`)
-        } else {
-        console.log(`got message at ${this.now()}`)
-        const synthArr = new Float32Array(e.data[0]);
-        const sr = this.ac.sampleRate;
-        const synthBuffer = this.ac.createBuffer(1, synthArr.length, sr);
-        synthBuffer.copyToChannel(synthArr, 0);
-        const chikArr = new Float32Array(e.data[1]);
-        const chikBuffer = this.ac.createBuffer(1, chikArr.length, sr);
-        chikBuffer.copyToChannel(chikArr, 0);
-        const offset = this.now() - this.endRecTime;
-        this.synthLoopSource.buffer = synthBuffer;
-        this.synthLoopSource.start(this.now(), offset);
-        this.synthLoopSource.playing = true;
-        this.chikLoopSource.buffer = chikBuffer;
-        this.chikLoopSource.start(this.now(), offset);
-        this.chikLoopSource.playing = true;
-        }        
+        
+      const synthArr = new Float32Array(e.data[0]);
+      const sr = this.ac.sampleRate;
+      const synthBuffer = this.ac.createBuffer(1, synthArr.length, sr);
+      synthBuffer.copyToChannel(synthArr, 0);
+      const chikArr = new Float32Array(e.data[1]);
+      const chikBuffer = this.ac.createBuffer(1, chikArr.length, sr);
+      chikBuffer.copyToChannel(chikArr, 0);
+      const offset = this.now() - this.endRecTime;
+      this.synthLoopSource.buffer = synthBuffer;
+      this.synthLoopSource.start(this.now(), offset);
+      this.synthLoopSource.playing = true;
+      this.chikLoopSource.buffer = chikBuffer;
+      this.chikLoopSource.start(this.now(), offset);
+      this.chikLoopSource.playing = true;
+             
       }
     },
 
@@ -764,7 +762,7 @@ export default {
       this.sourceNode.connect(this.gainNode);
       this.sourceNode.buffer = this.audioBuffer;
       this.sourceNode.start(this.now(), offset);
-      if (this.loop && this.loopStart && this.loopEnd) {
+      if (this.loop && this.loopStart && this.pausedAt < this.loopEnd) {
         this.sourceNode.loop = this.loop;
         this.sourceNode.loopStart = this.loopStart;
         this.sourceNode.loopEnd = this.loopEnd;
@@ -783,10 +781,8 @@ export default {
         const startRecTime = this.now() + this.loopStart - offset;
         const duration = this.loopEnd - this.loopStart;
         this.endRecTime = startRecTime + duration;
-        console.log(`rec ends at ${this.endRecTime}`)
         const bufSize = duration * this.ac.sampleRate;
         this.capture.bufferSize.setValueAtTime(bufSize, this.now());
-        console.log(`settingcapture active at ${this.now()} for time ${startRecTime}`)
         this.capture.active.setValueAtTime(1, startRecTime);
         this.capture.active.setValueAtTime(0, this.endRecTime);
         const curGain = this.intSynthGainNode.gain.value;
@@ -838,7 +834,11 @@ export default {
             .connect(this.chikLoopGainNode)
             .connect(this.chikariGainNode);
         }
-
+      }
+      if (this.capture.active.value === 1) {
+        this.capture.active.setValueAtTime(0, this.now());
+        this.capture.cancel.setValueAtTime(1, this.now());
+        this.capture.cancel.setValueAtTime(0, this.now() + 0.1);
       }
       this.pausedAt = 0;
       this.startedAt = 0;

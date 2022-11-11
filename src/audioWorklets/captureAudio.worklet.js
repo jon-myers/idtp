@@ -13,36 +13,46 @@ class Processor extends AudioWorkletProcessor {
                 defaultValue: 0,
                 minValue: 0,
                 maxValue: 1,
+            },
+            {
+                name: 'Cancel',
+                defaultValue: 0,
+                minValue: 0,
+                maxValue: 1
             }
         ]
     }
-
-    
 
     process(inputs, _, params) {
         
         let outputBufferSize = params['BufferSize'][0];
         let active = params['Active'][0];
+        let cancel = params['Cancel'][0];
         if (this.lastActiveVal !== active) {
-            console.log(`active: ${active}`);
-            console.log(`fullSize: ${outputBufferSize}`);
-            console.log(`bytesWritten: ${this._bytesWritten}`);
             this.lastActiveVal = active;
+        }
+
+        if (cancel === 1) {
+            this.on = false;
+            this.initBuffer();
+            this.first = true;
         }
 
        
         if (this.switch && active === 0) {
-            console.log('switched off');
             this.switch = false;
         }
         if (this.first && active === 1) {
-            this.port.postMessage('starting');
             this.first = false;
             this.switch = true;
             this.on = true;
         }
         if (this.on) {
             this.append(inputs[0][0], inputs[1][0], outputBufferSize);
+        }
+        if (cancel === 1) {
+            this.on = false;
+            this.initBuffer();
         }
         return true;
     }
@@ -76,6 +86,19 @@ class Processor extends AudioWorkletProcessor {
         this.switch = false;
         this.lastActiveVal = 0;
         this.on = false;  
+        this.port.onmessage = (e) => {
+            if (e.data === 'logEverything') {
+                this.logEverything();
+            }
+        }
+    }
+
+    logEverything() {
+        console.log('bytes written: ' + this._bytesWritten);
+        console.log('buffer size: ' + this.bufferSize);
+        console.log('first: ' + this.first);
+        console.log('switch: ' + this.switch);
+        console.log('on: ' + this.on);
     }
 
     initBuffer() {
@@ -114,7 +137,6 @@ class Processor extends AudioWorkletProcessor {
     }
 
     flush(fullSize) {
-        console.log('flush')
         const strBuf = this.fadeBufEdges(this._stringBuffer.slice(0, fullSize));
         const chikBuf = this.fadeBufEdges(this._chikBuffer.slice(0, fullSize));
         this.port.postMessage([strBuf, chikBuf])
