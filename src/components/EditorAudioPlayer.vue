@@ -220,7 +220,7 @@ export default {
       showControls: false,
       recGain: 1,
       synthGain: 0,
-      synthDamp: 0.43,
+      synthDamp: 0.5,
       valueCurveMinim: 0.001,
       pieceTitle: undefined,
       performers: [],
@@ -259,11 +259,20 @@ export default {
       '@/audioWorklets/chikaris.worklet.js',
       import.meta.url
     );
+    const caURL = new URL(
+      '@/audioWorklets/captureAudio.worklet.js',
+      import.meta.url
+    );
     this.ac.audioWorklet.addModule(AudioWorklet(ksURL));
     this.ac.audioWorklet.addModule(AudioWorklet(cURL));
+    this.ac.audioWorklet.addModule(AudioWorklet(caURL));
     if (this.$parent.audioDBDoc && this.$parent.piece) {
       this.gatherInfo();
     }
+
+    this.synthLoopBufSourceNode = this.ac.createBufferSource();
+    this.synthLoopBufSourceNode.loop = true;
+
     
   },
 
@@ -326,6 +335,7 @@ export default {
     },
   },
   methods: {
+
 
     resetTunings() {
       this.centDevs = this.centDevs.map(() => 0);
@@ -450,10 +460,15 @@ export default {
       });
     },
 
-    cancelBursts() {
+    cancelBursts(when) {
+      if (when === undefined) when = this.now();
+      let timeLag = when - this.now();
+      if (timeLag < 0) timeLag = 0;
       this.bufferSourceNodes.forEach((buf) => {
-        buf.stop();
-        buf.disconnect();
+        buf.stop(when);
+        buf.onended = () => {
+          buf.disconnect();
+        }
       });
     },
 
@@ -635,6 +650,57 @@ export default {
     },
     // end GETBACK
 
+    initializeBufferRecorder() {
+      // the buffer source node
+      this.synthLoopSource = this.ac.createBufferSource();
+      this.synthLoopSource.loop = true;
+      this.synthLoopGainNode = this.ac.createGain();
+      this.synthLoopGainNode.gain.setValueAtTime(1, this.now());
+      this.synthLoopSource
+        .connect(this.synthLoopGainNode)
+        .connect(this.synthGainNode);
+
+      this.chikLoopSource = this.ac.createBufferSource();
+      this.chikLoopSource.loop = true;
+      this.chikLoopGainNode = this.ac.createGain();
+      this.chikLoopGainNode.gain.setValueAtTime(1, this.now());
+      this.chikLoopSource
+        .connect(this.chikLoopGainNode)
+        .connect(this.chikariGainNode);
+      // the recorder
+      const options = { numberOfInputs: 2, numberOfOutputs: 0 };
+      this.capture = new AudioWorkletNode(this.ac, 'captureAudio', options);
+      this.capture.bufferSize = this.capture.parameters.get('BufferSize');
+      this.capture.active = this.capture.parameters.get('Active');
+      this.capture.cancel = this.capture.parameters.get('Cancel');
+      if (this.intSynthGainNode) {
+        this.intSynthGainNode.connect(this.capture, 0, 0)
+      }
+      if (this.intChikariGainNode) {
+        this.intChikariGainNode.connect(this.capture, 0, 1)
+      }
+      this.capture.port.onmessage = e => {
+
+        
+        
+      const synthArr = new Float32Array(e.data[0]);
+      const sr = this.ac.sampleRate;
+      const synthBuffer = this.ac.createBuffer(1, synthArr.length, sr);
+      synthBuffer.copyToChannel(synthArr, 0);
+      const chikArr = new Float32Array(e.data[1]);
+      const chikBuffer = this.ac.createBuffer(1, chikArr.length, sr);
+      chikBuffer.copyToChannel(chikArr, 0);
+      const offset = this.now() - this.endRecTime;
+      this.synthLoopSource.buffer = synthBuffer;
+      this.synthLoopSource.start(this.now(), offset);
+      this.synthLoopSource.playing = true;
+      this.chikLoopSource.buffer = chikBuffer;
+      this.chikLoopSource.start(this.now(), offset);
+      this.chikLoopSource.playing = true;
+             
+      }
+    },
+
     async getAudio(filepath, verbose) {
       try {
         const start = await performance.now();
@@ -696,10 +762,40 @@ export default {
       this.sourceNode.connect(this.gainNode);
       this.sourceNode.buffer = this.audioBuffer;
       this.sourceNode.start(this.now(), offset);
-      if (this.loop && this.loopStart && this.loopEnd) {
+      if (this.loop && this.loopStart && this.pausedAt < this.loopEnd) {
         this.sourceNode.loop = this.loop;
         this.sourceNode.loopStart = this.loopStart;
         this.sourceNode.loopEnd = this.loopEnd;
+        if (this.pausedAt > this.loopStart) {
+          console.error("Can't loop a recording that starts after the loop \
+          start point.")
+          this.cancelPlayTrajs();
+          this.cancelBursts();
+          this.bufferSourceNodes = [];
+          const curGain = this.intSynthGainNode.gain.value;
+          this.intSynthGainNode.gain.setValueAtTime(curGain, this.now());
+          const endTime = this.now() + this.lagTime;
+          this.intSynthGainNode.gain.setValueAtTime(0, endTime);
+
+        } else {
+        const startRecTime = this.now() + this.loopStart - offset;
+        const duration = this.loopEnd - this.loopStart;
+        this.endRecTime = startRecTime + duration;
+        const bufSize = duration * this.ac.sampleRate;
+        this.capture.bufferSize.setValueAtTime(bufSize, this.now());
+        this.capture.active.setValueAtTime(1, startRecTime);
+        this.capture.active.setValueAtTime(0, this.endRecTime);
+        const curGain = this.intSynthGainNode.gain.value;
+        this.intSynthGainNode.gain.setValueAtTime(curGain, this.endRecTime);
+        this.intSynthGainNode.gain.setValueAtTime(0, this.endRecTime + this.lagTime);
+        this.synthLoopGainNode.gain.setValueAtTime(1, this.endRecTime);
+        // the following synth stuff needs to be cancelled ...
+        this.cancelPlayTrajs(this.endRecTime + this.lagTime);
+        this.cancelBursts(this.endRecTime + this.lagTime);
+        this.bufferSourceNodes = [];
+
+        }
+        
       }
       this.startedAt = this.now() - offset;
       this.pausedAt = 0;
@@ -711,6 +807,38 @@ export default {
         this.sourceNode.disconnect();
         this.sourceNode.stop(this.now());
         this.sourceNode = null;
+      }
+      if (this.synthLoopSource.playing) {
+        const curSynthGain = this.synthLoopGainNode.gain.value;
+        this.synthLoopGainNode.gain.setValueAtTime(curSynthGain, this.now());
+        const endTime = this.now() + this.lagTime;
+        this.synthLoopGainNode.gain.linearRampToValueAtTime(0, endTime)
+        this.synthLoopSource.stop(this.now() + this.lagTime);
+        this.synthLoopSource.onended = () => {
+          this.synthLoopSource.disconnect();
+          this.synthLoopSource = this.ac.createBufferSource();
+          this.synthLoopSource.loop = true;
+          this.synthLoopSource
+            .connect(this.synthLoopGainNode)
+            .connect(this.synthGainNode);
+        }
+        const curChikGain = this.chikLoopGainNode.gain.value;
+        this.chikLoopGainNode.gain.setValueAtTime(curChikGain, this.now());
+        this.chikLoopGainNode.gain.linearRampToValueAtTime(0, endTime)
+        this.chikLoopSource.stop(this.now() + this.lagTime);
+        this.chikLoopSource.onended = () => {
+          this.chikLoopSource.disconnect();
+          this.chikLoopSource = this.ac.createBufferSource();
+          this.chikLoopSource.loop = true;
+          this.chikLoopSource
+            .connect(this.chikLoopGainNode)
+            .connect(this.chikariGainNode);
+        }
+      }
+      if (this.capture.active.value === 1) {
+        this.capture.active.setValueAtTime(0, this.now());
+        this.capture.cancel.setValueAtTime(1, this.now());
+        this.capture.cancel.setValueAtTime(0, this.now() + 0.1);
       }
       this.pausedAt = 0;
       this.startedAt = 0;
@@ -798,14 +926,17 @@ export default {
     },
 
     // GETBACK
-    cancelPlayTrajs() {
-      this.pluckNode.frequency.cancelScheduledValues(this.now());
-      this.lowPassNode.frequency.cancelScheduledValues(this.now());
-      this.intSynthGainNode.gain.cancelScheduledValues(this.now());
-      this.intSynthGainNode.gain.setValueAtTime(1, this.now());
-      const rampEnd = this.now() + this.slowRamp;
+    cancelPlayTrajs(when) {
+      if (when === undefined) when = this.now();
+      this.pluckNode.frequency.cancelScheduledValues(when);
+      this.lowPassNode.frequency.cancelScheduledValues(when);
+      this.intSynthGainNode.gain.cancelScheduledValues(when);
+      const curSynthGain = this.intSynthGainNode.gain.value;
+      this.intSynthGainNode.gain.setValueAtTime(curSynthGain, when);
+      const rampEnd = when + this.slowRamp;
       this.intSynthGainNode.gain.linearRampToValueAtTime(0, rampEnd);
-      this.intChikariGainNode.gain.setValueAtTime(1, this.now());
+      const curChikGain = this.intChikariGainNode.gain.value;
+      this.intChikariGainNode.gain.setValueAtTime(curChikGain, when);
       this.intChikariGainNode.gain.linearRampToValueAtTime(0, rampEnd);
     },
     // end GETBACK

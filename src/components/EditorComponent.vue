@@ -383,6 +383,7 @@ export default {
       // GETBACK
       this.$refs.audioPlayer.initializePluckNode();
       this.$refs.audioPlayer.initializeChikariNodes();
+      this.$refs.audioPlayer.initializeBufferRecorder();
       this.$refs.audioPlayer.preSetFirstEnvelope(256);
       // end GETBACK
       const silentDur = this.durTot - piece.durTot;
