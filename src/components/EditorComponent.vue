@@ -1,7 +1,18 @@
 <template>
 <div class='mainzz'>
   <div class='upperRow'>
-    <div class='graph' ref='graph'></div>
+    <div class='graphContainer'>
+      <div class='graph' ref='graph'></div>
+      <div class='scrollXContainer'>
+        <div class='leftNotch'></div>
+        <div class='scrollX'></div>
+      </div>
+    </div>
+    <div class='scrollYContainer'>
+      <div class='topNotch'></div>
+      <div class='scrollY' ref='scrollY'></div>
+      <div class='bottomNotch'></div>
+    </div>
     <div class='controlBox'>
       <div class='scrollingControlBox'>
         <div class='cbBox'>
@@ -181,7 +192,12 @@ export default {
       synthGain: 0,
       synthDamping: 0.5,
       showSargam: false,
-      rangeOffset: 0.1
+      rangeOffset: 0.1,
+      scrollYWidth: 20,
+      scrollXHeight: 20,
+      yScaleLims: [1, 5],
+      editorHeight: 600,
+      scrollYHeight: 600 - 30 - 20, // this is janky, but it works
     }
   },
   components: {
@@ -2176,6 +2192,25 @@ export default {
           .attr('transform', `translate(${end},0)`)
     },
 
+    getScrollYDraggerHeight() {
+
+      const scale = this.ty ? this.ty().k : this.initYScale;
+      return this.scrollYHeight * 1 / scale
+    },
+
+    transformScrollYDragger() {
+      const height = this.getScrollYDraggerHeight();
+      const vertRange = this.scrollYHeight - 1 - height;
+      const deltaY = this.getScrollYDraggerTranslate() * vertRange;
+      d3Select('.scrollYDragger')
+        .attr('height', height)
+        .attr('transform', `translate(2,${deltaY})`)
+    },
+
+    getScrollYDraggerTranslate() {
+      return - (this.yr()(Math.log2(this.freqMax)) - 30) / (this.ty().k * 550 -550 + 1)
+    },
+
     async initializePiece() {
       this.visibleSargam = this.piece.raga.getFrequencies({
         low: this.freqMin,
@@ -2185,6 +2220,27 @@ export default {
         low: this.freqMin,
         high: this.freqMax
       })
+      // console.log(this.xAxisHeight, this.scrollXHeight, this.editorHeight)
+      const notchesHeight = this.xAxHeight + this.scrollXHeight;
+      this.scrollYHeight = this.editorHeight - notchesHeight;
+      this.scrollY = d3Create('svg')
+        .attr('viewBox', [0, 0, this.scrollYWidth, this.scrollYHeight])
+      this.scrollY.append('rect')
+        .attr('fill', 'lightgrey')
+        .attr('width', this.scrollYWidth)
+        .attr('height', this.scrollYHeight)
+
+      this.scrollY.append('rect')
+        .classed('scrollYDragger', true)
+        .attr('fill', 'grey')
+        .attr('width', this.scrollYWidth - 4)
+        .attr('rx', 6)
+        .attr('ry', 6)
+        .attr('height', this.getScrollYDraggerHeight())
+        .attr('transform', `translate(2,40)`)
+
+
+      this.$refs.scrollY.appendChild(this.scrollY.node())
       const rect = await this.rect();
       this.svg = await d3Create('svg')
         .classed('noSelect', true)
@@ -2218,7 +2274,7 @@ export default {
           [0, 0],
           [rect.width, rect.height]
         ]);
-      this.zoomY = d3Zoom().scaleExtent([1, 5]).translateExtent([
+      this.zoomY = d3Zoom().scaleExtent(this.yScaleLims).translateExtent([
         [0, 0],
         [rect.width, rect.height]
       ]);
@@ -3550,7 +3606,8 @@ export default {
         doY && this.gy.call(this.zoomY.scaleBy, k, point);
       }
       this.z = t;
-      this.redraw()
+      this.redraw();
+      this.transformScrollYDragger();
     },
 
     getYTickLabels() {
@@ -3925,15 +3982,75 @@ export default {
 
 <style scoped>
 .graph {
-  width: calc(100% - v-bind(controlBoxWidth+1+'px'));
+  width: calc(100% - 1px);
+  height: calc(100% - v-bind(scrollXHeight + 'px'));
+  border-right: 1px solid black;
+  /* border-bottom: 1px solid black; */
+}
+
+.graphContainer {
+  width: calc(100% - v-bind(controlBoxWidth + scrollYWidth + 2 + 'px'));
   height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.scrollYContainer {
+  width: v-bind(scrollYWidth+'px');
+  background-color: white;
+  border-right: 1px solid black;
+  border-bottom: 1px solid black;
+  height: calc(100%-1px);
+  display: flex;
+  flex-direction: column;
+}
+
+.topNotch {
+  width: 100%;
+  height: v-bind(xAxHeight - 0.5 +'px');
+  min-height: v-bind(xAxHeight - 0.5 +'px');
+  border-bottom: 1px solid black;
+  background-color: grey;
+}
+
+.scrollY {
+  width: 100%;
+  height: v-bind(scrollYHeight-1.5 + 'px');
+}
+
+.bottomNotch {
+  width: 100%;
+  height: v-bind(scrollXHeight - 1 + 'px');
+  min-height: v-bind(scrollXHeight - 1 + 'px');
+  border-top: 1px solid black;
+  background-color: grey;
+}
+
+.scrollXContainer {
+  height: v-bind(scrollXHeight - 1 + 'px');
+  width: calc(100% - 1px);
   border-bottom: 1px solid black;
   border-right: 1px solid black;
+  background-color: white;
+  display: flex;
+  flex-direction: row;
+}
+
+.leftNotch {
+  width: v-bind(yAxWidth - 0.5 + 'px');
+  min-width: v-bind(yAxWidth - 0.5 + 'px');
+  border-right: 1px solid black;
+  background-color: grey
+}
+
+.scrollX {
+  width: 100%;
+  height: 100%;
 }
 
 .controlBox {
   width: v-bind(controlBoxWidth+'px');
-  height: 100%;
+  height: calc(100% - 1px);
   border-bottom: 1px solid black;
   background-color: #202621;
   display: flex;
@@ -3967,7 +4084,7 @@ export default {
   display: flex;
   flex-direction: row;
   width: 100%;
-  height: 600px;
+  height: v-bind(editorHeight+'px');
 }
 
 .lower {
