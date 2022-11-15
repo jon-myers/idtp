@@ -505,6 +505,7 @@ export default {
       this.scrollX = d3Create('svg')
         .attr('viewBox', [0, 0, this.scrollXWidth, this.scrollXHeight-1])
       this.scrollX.append('rect')
+        .classed('scrollXRect', true)
         .attr('fill', 'lightgrey')
         .attr('width', this.scrollXWidth)
         .attr('height', this.scrollXHeight)
@@ -2088,8 +2089,23 @@ export default {
       this.y.range([this.xAxHeight, rect.height])
       this.updateBackgroundColors();
       this.updateClipPaths();
+      this.resizeScrollX();
       this.redraw();
       this.resetZoom();
+    },
+
+    resizeScrollX() {
+      this.scrollXWidth = this.rect().width - this.yAxWidth;
+      this.scrollX
+        .attr('viewBox', [0, 0, this.scrollXWidth, this.scrollXHeight-1])
+      d3Select('.scrollXRect')
+        .attr('width', this.scrollXWidth)
+      const width = this.getScrollXDraggerWidth();
+      const horRange = this.scrollXWidth - 1 - width;
+      const deltaX = this.getScrollXDraggerTranslate() * horRange;
+      d3Select('.scrollXDragger')
+        .attr('width', width)
+        .attr('transform', `translate(${deltaX}, 2)`)
     },
 
     phraseIdxFromTime(time) {
