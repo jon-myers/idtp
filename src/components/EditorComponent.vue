@@ -1,7 +1,18 @@
 <template>
 <div class='mainzz'>
   <div class='upperRow'>
-    <div class='graph' ref='graph'></div>
+    <div class='graphContainer'>
+      <div class='graph' ref='graph'></div>
+      <div class='scrollXContainer'>
+        <div class='leftNotch'></div>
+        <div class='scrollX' ref='scrollX'></div>
+      </div>
+    </div>
+    <div class='scrollYContainer'>
+      <div class='topNotch'></div>
+      <div class='scrollY' ref='scrollY'></div>
+      <div class='bottomNotch'></div>
+    </div>
     <div class='controlBox'>
       <div class='scrollingControlBox'>
         <div class='cbBox'>
@@ -181,7 +192,13 @@ export default {
       synthGain: 0,
       synthDamping: 0.5,
       showSargam: false,
-      rangeOffset: 0.1
+      rangeOffset: 0.1,
+      scrollYWidth: 20,
+      scrollXHeight: 20,
+      yScaleLims: [1, 5],
+      editorHeight: 600,
+      scrollYHeight: 600 - 30 - 20, // this is janky, but it works
+      initYOffset: 0
     }
   },
   components: {
@@ -363,7 +380,9 @@ export default {
       }
       this.initXScale = this.durTot / this.initViewDur;
       let fund = 246;
-      if (this.audioDBDoc && this.audioDBDoc.saEstimate) fund = 2 * this.audioDBDoc.saEstimate;
+      if (this.audioDBDoc && this.audioDBDoc.saEstimate) {
+        fund = 2 * this.audioDBDoc.saEstimate;
+      }
       this.freqMin = 2 ** (Math.log2(fund / 2) - this.rangeOffset);
       this.freqMax = 2 ** (Math.log2(fund * 4) + this.rangeOffset);
       await this.getPieceFromJson(piece, fund);
@@ -451,6 +470,66 @@ export default {
   },
 
   methods: {
+    
+    setScrollY() {
+      const notchesHeight = this.xAxHeight + this.scrollXHeight;
+      this.scrollYHeight = this.editorHeight - notchesHeight;
+      this.scrollY = d3Create('svg')
+        .attr('viewBox', [0, 0, this.scrollYWidth, this.scrollYHeight])
+      this.scrollY.append('rect')
+        .attr('fill', 'lightgrey')
+        .attr('width', this.scrollYWidth)
+        .attr('height', this.scrollYHeight)
+
+      const vertDrag = d3Drag()
+        .on('start', this.scrollYDragStart)
+        .on('drag', this.scrollYDragging)
+        .on('end', this.scrollYDragEnd)
+        
+      const height = this.getScrollYDraggerHeight();
+      this.scrollY.append('rect')
+        .classed('scrollYDragger', true)
+        .attr('fill', 'grey')
+        .attr('width', this.scrollYWidth - 4)
+        .attr('rx', 6)
+        .attr('ry', 6)
+        .attr('height', height)
+        .attr('transform', `translate(2,${this.scrollYHeight - height - 1})`)
+        .call(vertDrag)
+
+      this.$refs.scrollY.appendChild(this.scrollY.node())
+    },
+
+    setScrollX() {
+      this.scrollXWidth = this.rect().width - this.yAxWidth;
+      this.scrollX = d3Create('svg')
+        .attr('viewBox', [0, 0, this.scrollXWidth, this.scrollXHeight-1])
+      this.scrollX.append('rect')
+        .attr('fill', 'lightgrey')
+        .attr('width', this.scrollXWidth)
+        .attr('height', this.scrollXHeight)
+
+      const horDrag = d3Drag()
+        .on('start', this.scrollXDragStart)
+        .on('drag', this.scrollXDragging)
+        .on('end', this.scrollXDragEnd)
+
+      this.scrollX.append('rect')
+        .classed('scrollXDragger', true)
+        .attr('fill', 'grey')
+        .attr('width', this.getScrollXDraggerWidth())
+        .attr('height', this.scrollXHeight - 4)
+        .attr('rx', 6)
+        .attr('ry', 6)
+        .attr('transform', 'translate(0, 2)')
+        .call(horDrag)
+
+      this.$refs.scrollX.appendChild(this.scrollX.node())
+
+    },
+
+    
+
 
     codifiedAddSargamLabels() { // this 
       const allTrajs = this.piece.phrases.map(p => p.trajectories).flat();
@@ -1159,7 +1238,8 @@ export default {
           if (nextTraj.durArray && nextTraj.durArray.length > 1) {
             let nextTrajTimes = [0, ...nextTraj.durArray.map(cumsum())];
             nextTrajTimes = nextTrajTimes.map(a => {
-              return a * nextTraj.durTot + phrase.startTime + nextTraj.startTime
+              const st = phrase.startTime + traj.startTime;
+              return a * nextTraj.durTot + st
             });
             nextEnd = nextTrajTimes[1]
           } else {
@@ -2176,6 +2256,48 @@ export default {
           .attr('transform', `translate(${end},0)`)
     },
 
+    getScrollYDraggerHeight() {
+
+      const scale = this.ty ? this.ty().k : this.initYScale;
+      return this.scrollYHeight * 1 / scale
+    },
+
+    getScrollXDraggerWidth() {
+      const scale = this.tx ? this.tx().k : this.initXScale;
+      let width = this.scrollXWidth / scale;
+      return width < 20 ? 20 : width
+    },
+
+    transformScrollYDragger() {
+      const height = this.getScrollYDraggerHeight();
+      const vertRange = this.scrollYHeight - 1 - height;
+      const deltaY = this.getScrollYDraggerTranslate() * vertRange;
+      d3Select('.scrollYDragger')
+        .attr('height', height)
+        .attr('transform', `translate(2,${deltaY})`)
+    },
+
+    transformScrollXDragger() {
+      const width = this.getScrollXDraggerWidth();
+      const horRange = this.scrollXWidth - 1 - width;
+      const deltaX = this.getScrollXDraggerTranslate() * horRange;
+      d3Select('.scrollXDragger')
+        .attr('width', width)
+        .attr('transform', `translate(${deltaX},2)`)
+    },
+
+    getScrollYDraggerTranslate() {
+      const height = this.rect().height - this.xAxHeight;
+      const offset = - (this.yr()(Math.log2(this.freqMax)) - this.xAxHeight);
+      return offset / (this.ty().k * height - height + 1)
+    },
+
+    getScrollXDraggerTranslate() {
+      const offset = - (this.xr()(0) - this.yAxWidth);
+      const width = this.rect().width - this.yAxWidth;
+      return offset / (this.tx().k * width - width);
+    },
+
     async initializePiece() {
       this.visibleSargam = this.piece.raga.getFrequencies({
         low: this.freqMin,
@@ -2185,13 +2307,19 @@ export default {
         low: this.freqMin,
         high: this.freqMax
       })
+
+      this.setScrollY();
+      this.setScrollX();
       const rect = await this.rect();
       this.svg = await d3Create('svg')
         .classed('noSelect', true)
-        .attr('viewBox', [0, 0, rect.width, rect.height - 1])
+        .attr('viewBox', [0, 0, rect.width, rect.height])
         .on('click', this.handleClick)
         .on('mousedown', this.handleMousedown)
         .on('mouseup', this.handleMouseup)
+        .style('border-bottom', '1px solid black')
+
+      
       this.paintBackgroundColors();
       if (this.piece.audioID) {
         try {
@@ -2218,7 +2346,7 @@ export default {
           [0, 0],
           [rect.width, rect.height]
         ]);
-      this.zoomY = d3Zoom().scaleExtent([1, 5]).translateExtent([
+      this.zoomY = d3Zoom().scaleExtent(this.yScaleLims).translateExtent([
         [0, 0],
         [rect.width, rect.height]
       ]);
@@ -2410,6 +2538,83 @@ export default {
           this.clearAll(false)
         }
       }
+    },
+
+    scrollYDragStart(e) {
+      const elem = d3Select('.scrollYDragger');
+      const transform = elem.attr('transform');
+
+      this.initYOffset = transform.split(',')[1];
+      const end = this.initYOffset.length - 1;
+      this.initYOffset = Number(this.initYOffset.slice(0, end));
+      this.initYOffset = e.y - this.initYOffset; 
+    },
+
+    getScrollYVal(scrollProp) {
+      const scrollYMin = this.zoomY.translateExtent()[0][1];
+      const graphHeight = this.rect().height - 30;
+      const k = this.ty().k;
+      const scrollYExtent = (graphHeight * k - graphHeight) / k;
+      const scrollY = scrollYMin + scrollProp * scrollYExtent;
+      return scrollY
+    },
+
+    scrollYDragging(e) {
+      let y = e.y - this.initYOffset;
+      if (y < 0) y = 0;
+      const maxY = this.scrollYHeight - this.getScrollYDraggerHeight();
+      if (y > maxY) y = maxY;
+      const scrollProp = y / maxY;
+      const scrollY = this.getScrollYVal(scrollProp);
+      this.gy.call(this.zoomY.translateTo, 0, scrollY, [0, 0]);
+      this.redraw();
+
+      d3Select('.scrollYDragger')
+        .attr('transform', `translate(2, ${y})`)
+    },
+
+    scrollYDragEnd(e) {
+      let y = e.y - this.initYOffset;
+      if (y < 0) y = 0;
+      const maxY = this.scrollYHeight - this.getScrollYDraggerHeight();
+      if (y > maxY) y = maxY;
+      d3Select('.scrollYDragger')
+        .attr('transform', `translate(2, ${y})`)
+    },
+
+    scrollXDragStart(e) {
+      const elem = d3Select('.scrollXDragger');
+      const transform = elem.attr('transform');
+      this.initXOffset = transform.split(',')[0];
+      this.initXOffset = Number(this.initXOffset.slice(10));
+      this.initXOffset = e.x - this.initXOffset; 
+    },
+
+    getScrollXVal(scrollProp) {
+      const scrollXMin = this.zoomX.translateExtent()[0][0];
+      const graphWidth = this.rect().width - 30;
+      const k = this.tx().k;
+      const scrollXExtent = (graphWidth * k - graphWidth) / k;
+      const scrollX = scrollXMin + scrollProp * scrollXExtent;
+      return scrollX
+    },
+
+    scrollXDragging(e) {
+      let x = e.x - this.initXOffset;
+      if (x < 0) x = 0;
+      const maxX = this.scrollXWidth - this.getScrollXDraggerWidth();
+      if (x > maxX) x = maxX;
+      const scrollProp = x / maxX;
+      const scrollX = this.getScrollXVal(scrollProp);
+      this.gx.call(this.zoomX.translateTo, scrollX, 0, [0, 0]);
+      this.redraw();
+
+      d3Select('.scrollXDragger')
+        .attr('transform', `translate(${x}, 2)`)
+    },
+
+    scrollXDragEnd() {
+      console.log('drag end')
     },
 
     makeAxes() {
@@ -3533,7 +3738,6 @@ export default {
         if (e.sourceEvent) {
           let deltaX = 0.5 * e.sourceEvent.wheelDeltaX / this.tx().k;
           let deltaY = 0.5 * e.sourceEvent.wheelDeltaY / this.ty().k;
-          d3Select()
           this.gx.call(this.zoomX.translateBy, deltaX, 0);
           this.gy.call(this.zoomY.translateBy, 0, deltaY);
         } else {
@@ -3550,7 +3754,9 @@ export default {
         doY && this.gy.call(this.zoomY.scaleBy, k, point);
       }
       this.z = t;
-      this.redraw()
+      this.redraw();
+      this.transformScrollYDragger();
+      this.transformScrollXDragger();
     },
 
     getYTickLabels() {
@@ -3925,15 +4131,76 @@ export default {
 
 <style scoped>
 .graph {
-  width: calc(100% - v-bind(controlBoxWidth+1+'px'));
+  width: calc(100% - 1px);
+  height: calc(100% - v-bind(scrollXHeight + 'px'));
+  border-right: 1px solid black;
+  /* border-bottom: 1px solid black; */
+}
+
+.graphContainer {
+  width: calc(100% - v-bind(controlBoxWidth + scrollYWidth + 2 + 'px'));
   height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.scrollYContainer {
+  width: v-bind(scrollYWidth+'px');
+  background-color: white;
+  border-right: 1px solid black;
+  border-bottom: 1px solid black;
+  height: calc(100%-1px);
+  display: flex;
+  flex-direction: column;
+}
+
+.topNotch {
+  width: 100%;
+  height: v-bind(xAxHeight - 0.5 +'px');
+  min-height: v-bind(xAxHeight - 0.5 +'px');
+  border-bottom: 1px solid black;
+  background-color: grey;
+}
+
+.scrollY {
+  width: 100%;
+  height: v-bind(scrollYHeight-1.5 + 'px');
+}
+
+.bottomNotch {
+  width: 100%;
+  height: v-bind(scrollXHeight - 1 + 'px');
+  min-height: v-bind(scrollXHeight - 1 + 'px');
+  border-top: 1px solid black;
+  background-color: grey;
+}
+
+.scrollXContainer {
+  height: v-bind(scrollXHeight - 1 + 'px');
+  min-height: v-bind(scrollXHeight - 1 + 'px');
+  width: calc(100% - 1px);
   border-bottom: 1px solid black;
   border-right: 1px solid black;
+  background-color: white;
+  display: flex;
+  flex-direction: row;
+}
+
+.leftNotch {
+  width: v-bind(yAxWidth - 0.5 + 'px');
+  min-width: v-bind(yAxWidth - 0.5 + 'px');
+  border-right: 1px solid black;
+  background-color: grey
+}
+
+.scrollX {
+  width: 100%;
+  height: 100%;
 }
 
 .controlBox {
   width: v-bind(controlBoxWidth+'px');
-  height: 100%;
+  height: calc(100% - 1px);
   border-bottom: 1px solid black;
   background-color: #202621;
   display: flex;
@@ -3967,7 +4234,7 @@ export default {
   display: flex;
   flex-direction: row;
   width: 100%;
-  height: 600px;
+  height: v-bind(editorHeight+'px');
 }
 
 .lower {
