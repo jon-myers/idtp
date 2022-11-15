@@ -2083,7 +2083,7 @@ export default {
     resize() {
       const rect = this.rect();
       this.svg
-        .attr('viewBox', [0, 0, rect.width, rect.height - 1])
+        .attr('viewBox', [0, 0, rect.width, rect.height])
 
       this.x.range([this.yAxWidth, rect.width])
       this.y.range([this.xAxHeight, rect.height])
