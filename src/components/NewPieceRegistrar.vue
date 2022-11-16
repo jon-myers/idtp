@@ -8,20 +8,26 @@
       <div class='formRow'>
         <label>Recording</label>
         <div class='formCol'>
-          <select v-model='aeIdx'>
+          <select v-model='aeIdx' ref='audioEvent'>
             <option 
               v-for='(ae, i) in allEvents' 
               :key='ae.name'
-              :value='i'>
+              :value='i'
+            >
               {{ae.name}}
             </option>
           </select>
-          <select class='c2' v-model='recording' v-if='aeIdx >= 0'>
+          <select 
+            class='c2' 
+            v-model='recording' 
+            v-if='aeIdx >= 0' 
+            ref='audioRec'
+          >
             <option
               v-for='(recIdx, i) in Object.keys(allEvents[aeIdx].recordings)'
               :key='i'
               :value='recIdx'
-              >{{getShorthand(allEvents[aeIdx].recordings[recIdx])}}</option>
+            >{{getShorthand(allEvents[aeIdx].recordings[recIdx])}}</option>
           </select>
         </div>
       </div>
@@ -29,7 +35,7 @@
         <label>Raga
           <input type='checkbox' v-model='showRaagEditor'>
         </label>
-        <select v-model='raga'>
+        <select v-model='raga' ref='raga'>
           <option v-for='raag in raags' :key='raag'>
             {{raag}}
           </option>
@@ -170,6 +176,9 @@ export default {
       showRaagEditor: false,
       rules: undefined,
       savedMsg: 'unsaved',
+      passedInData: undefined,
+      permissions: 'Public',
+      cloning: false,
       permissionTypes: [
         'Public',
         'Private',
@@ -202,12 +211,15 @@ export default {
     }
   },
   
-  props: ['modalWidth', 'modalHeight'],
+  props: ['modalWidth', 'modalHeight', 'dataObj'],
   
   async mounted() {
     this.allEvents = await getAllAudioEventMetadata();
     this.raags = await getRagaNames();
     this.rules = this.rulesTemplate;
+    if (this.dataObj) { // this is exclusively for cloning
+      this.clonePiece(this.dataObj)
+    }
     if (this.$route.query.aeName) {
       const allNames = this.allEvents.map(obj => obj.name);
       this.aeIdx = allNames.indexOf(JSON.parse(this.$route.query.aeName));
@@ -252,6 +264,11 @@ export default {
           this.savedMsg = 'unsaved';
         }
       })
+    },
+
+    dataObj(newObj) {
+      this.passedInData = JSON.parse(newObj);
+
     }
   },
   
@@ -260,6 +277,32 @@ export default {
   ],
   
   methods: {
+
+    async clonePiece() {
+      this.cloning = true;
+      
+      try {
+        this.passedInData = JSON.parse(this.dataObj);
+        this.title = this.passedInData.title;
+        this.aeIdx = this.allEvents.findIndex(ae => {
+          return ae.name === this.passedInData.audioEvent
+        });
+        const recs = this.allEvents[this.aeIdx].recordings;
+        const allRecNames = await Object.keys(recs).map(key => {
+          const rec = recs[key];
+          return this.getShorthand(rec)
+        });
+        const rec = this.getShorthand(this.passedInData.audioRecording);
+        this.recording = allRecNames.indexOf(rec);
+        this.raga = this.passedInData.raga.name;
+        this.$refs.audioEvent.disabled = true;
+        this.$refs.audioRec.disabled = true;
+        this.$refs.raga.disabled = true;
+      } catch (err) {
+        console.log(err)
+      }
+      
+    },
     
     async save() {
       const date = new Date();
@@ -270,18 +313,35 @@ export default {
     },
     
     makeNewPiece() {
-      const newPieceInfo = {
-        title: this.title,
-        transcriber: this.transcriber,
-        raga: this.raga,
-        permissions: this.permissions
-      }
-      if (this.aeIdx && this.recording) {
+      if (this.cloning) {
         const ae = this.allEvents[this.aeIdx];
-        newPieceInfo.audioID = ae.recordings[this.recording].audioFileId
+        const newPieceInfo = {
+          title: this.title,
+          transcriber: this.passedInData.transcriber,
+          raga: this.passedInData.raga,
+          permissions: this.permissions,
+          audioID: ae.recordings[this.recording].audioFileId,
+          clone: true,
+          origID: this.passedInData.origID
+        };
+        this.emitter.emit('newPieceInfo', newPieceInfo);
+        
+      } else {
+        const newPieceInfo = {
+          title: this.title,
+          transcriber: this.transcriber,
+          raga: this.raga,
+          permissions: this.permissions,
+          clone: false
+        };
+        if (this.aeIdx && this.recording) {
+          const ae = this.allEvents[this.aeIdx];
+          newPieceInfo.audioID = ae.recordings[this.recording].audioFileId
+        }
+        this.emitter.emit('newPieceInfo', newPieceInfo);
+        this.$parent.designPieceModal = false
       }
-      this.emitter.emit('newPieceInfo', newPieceInfo);
-      this.$parent.designPieceModal = false
+      
     },
   
     

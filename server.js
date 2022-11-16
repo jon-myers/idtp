@@ -141,7 +141,8 @@ const runServer = async () => {
           permissions: 1,
           name: 1,
           family_name: 1,
-          given_name: 1
+          given_name: 1,
+          audioID: 1
         }
         const query = {
           '$or': [
@@ -156,9 +157,6 @@ const runServer = async () => {
         };
         const sort = {};
         sort[sortKey] = sortDir;
-
-        
-      
         const result = await transcriptions
           .find(query)
           .collation({ 'locale': 'en' })
@@ -590,6 +588,25 @@ const runServer = async () => {
       } catch (err) {
         console.error(err);
         res.status(500).send(err);
+      }
+    })
+
+    app.post('/cloneTranscription', async (req, res) => {
+      try {
+
+        const query = { _id: ObjectId(req.body.id) };
+        console.log(query)
+        const copy = await transcriptions.findOne(query);
+        console.log(copy)
+        copy._id = new ObjectId();
+        copy.title = req.body.title;
+        copy.userID = req.body.newOwner;
+        copy.permissions = req.body.permissions;
+        const result = await transcriptions.insertOne(copy);
+        res.json(result);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send
       }
     })
 

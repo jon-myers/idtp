@@ -1,68 +1,73 @@
 <template>
-<div 
-  class='fileContainer' 
-  @contextmenu='handleRightClick'
-  @click='handleClick'
-  ref='fileContainer'
+  <div
+    class="fileContainer"
+    @contextmenu="handleRightClick"
+    @click="handleClick"
+    ref="fileContainer"
   >
-  <div class='fileInfoKeys'>
-    <div 
-      v-for="(ik, idx) in infoKeys" 
-      :key='ik' 
-      :class='`infoKey ${["", "first"][Number(idx === 0)]}`'
+    <div class="fileInfoKeys">
+      <div
+        v-for="(ik, idx) in infoKeys"
+        :key="ik"
+        :class="`infoKey ${['', 'first'][Number(idx === 0)]}`"
       >
-      {{ik}}
-      <span 
-        :class='`sorter ${["", "selectedTriangle"][Number(selectedSort === idx)]}`' 
-        :ref='`s${idx}`' 
-        @click='toggleSort(idx)'>
-      {{['&#9650;', '&#9660;'][(sorts[idx] + 1) / 2]}}
-      </span>
+        {{ ik }}
+        <span
+          :class="`sorter ${['', 'selectedTri'][Number(selectedSort === idx)]}`"
+          :ref="`s${idx}`"
+          @click="toggleSort(idx)"
+        >
+          {{ ['&#9650;', '&#9660;'][(sorts[idx] + 1) / 2] }}
+        </span>
+      </div>
     </div>
-  </div>
-  <div class='fileInfoRowScroller'>
-    <div 
-      class='fileInfoRow' 
-      v-for="(piece, i) in allPieces" 
-      :key="piece"
-      @dblclick='openPieceAlt(piece)'
-      :id='`fir${i}`'>
-      <div 
-        :class='`infoKey ${["", "first"][Number(idx === 0)]}`' 
-        v-for="(info, idx) in allPieceInfo[i]" 
-        :key="info">
-        {{info}}
+    <div class="fileInfoRowScroller">
+      <div
+        class="fileInfoRow"
+        v-for="(piece, i) in allPieces"
+        :key="piece"
+        @dblclick="openPieceAlt(piece)"
+        :id="`fir${i}`"
+      >
+        <div
+          :class="`infoKey ${['', 'first'][Number(idx === 0)]}`"
+          v-for="(info, idx) in allPieceInfo[i]"
+          :key="info"
+        >
+          {{ info }}
+        </div>
       </div>
     </div>
   </div>
-</div>
-<div class='dropDown closed' ref='dropDown'>
-  <div 
-    :class='`dropDownRow ${["last", ""][Number(delete_)]}`' 
-    @click='designNewPiece()'>
-    New Transcription
-  </div>
-  <div 
-    v-if="open_"
-    class='dropDownRow' 
-    @click='openPieceAlt(piece)'
+  <div class="dropDown closed" ref="dropDown">
+    <div
+      :class="`dropDownRow ${['last', ''][Number(delete_)]}`"
+      @click="designNewPiece()"
     >
-    Open Transcription
+      New Transcription
+    </div>
+    <div v-if="open_" class="dropDownRow" @click="openPieceAlt(piece)">
+      Open Transcription
+    </div>
+    <div class="dropDownRow" @click="clonePiece(piece)">
+      Clone Transcription
+    </div>
+    <div
+      v-if="delete_"
+      :class="`dropDownRow last ${['inactive', ''][Number(deleteActive)]}`"
+      @click="deletePiece"
+    >
+      Delete Transcription
+    </div>
   </div>
-  <div 
-    v-if='delete_' 
-    :class='`dropDownRow last ${["inactive", ""][Number(deleteActive)]}`'
-    @click='deletePiece'>
-    Delete
+  <div v-if="designPieceModal" class="designPieceModal">
+    <NewPieceRegistrar
+      ref="newPieceRegistrar"
+      :modalWidth="modalWidth"
+      :modalHeight="modalHeight"
+      :dataObj='passedInDataObj'
+    />
   </div>
-</div>
-<div v-if="designPieceModal" class='designPieceModal'>
-  <NewPieceRegistrar
-    ref='newPieceRegistrar'
-    :modalWidth='modalWidth'
-    :modalHeight='modalHeight'
-   />
-</div>
 </template>
 <script>
 import {
@@ -70,15 +75,13 @@ import {
   createNewPiece,
   deletePiece,
   getRaagRule,
+  getAudioRecording,
+  getAudioEvent,
+  cloneTranscription
   // nameFromUserID
 } from '@/js/serverCalls.js';
 import NewPieceRegistrar from '@/components/NewPieceRegistrar.vue';
-import {
-  Raga,
-  Piece, 
-  Trajectory,
-  Phrase
-} from '@/js/classes.js';
+import { Raga, Piece, Trajectory, Phrase } from '@/js/classes.js';
 
 export default {
   name: 'FileManager',
@@ -90,7 +93,7 @@ export default {
         'Raga',
         'Date Created',
         'Date Modified',
-        'Permissions'
+        'Permissions',
       ],
       designPieceModal: false,
       allPieces: undefined,
@@ -109,25 +112,25 @@ export default {
       sorts: [1, 1, 1, 1, 1, 1],
       selectedSort: 0,
       sortKeyNames: [
-        'title', 
+        'title',
         'family_name',
         'raga',
         'dateCreated',
         'dateModified',
-        'permissions'
-      ]
-    }
+        'permissions',
+      ],
+      passedInDataObj: undefined,
+    };
   },
-  
+
   components: {
-    NewPieceRegistrar
+    NewPieceRegistrar,
   },
 
   async created() {
-    
     window.addEventListener('keydown', this.handleKeydown);
     if (this.$store.state.userID === undefined) {
-      this.$router.push('/')
+      this.$router.push('/');
     }
     const id = this.$store.state.userID;
     const sortKey = this.sortKeyNames[this.selectedSort];
@@ -135,51 +138,69 @@ export default {
     this.allPieces = await getAllPieces(id, sortKey, sortDir);
     this.allPieces.forEach(() => {
       this.allPieceInfo.push([
-        undefined, 
-        undefined, 
-        undefined, 
-        undefined, 
-        undefined
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
       ]);
     });
     this.allPieces.forEach(async (piece, i) => {
-      this.allPieceInfo[i] = this.pieceInfo(piece)
-    })
+      this.allPieceInfo[i] = this.pieceInfo(piece);
+    });
   },
 
   async mounted() {
-
     if (this.$route.query.aeName && this.$route.query.afName) {
       this.designNewPiece();
     }
-  
-    this.emitter.on('newPieceInfo', async newPieceInfo => {
-      const npi = Object.assign({}, newPieceInfo);
-      const rsRes = await getRaagRule(npi.raga)
-      const ruleSet = rsRes.rules;
-      npi.raga = new Raga({
-        name: npi.raga,
-        ruleSet: ruleSet
-      });
-      npi.phrases = [new Phrase({ 
-        trajectories: [new Trajectory({ 
-          id: 12, 
-          durTot: 5, 
-          fundID12: npi.raga.fundamental 
-        })],  
-      })]
-      this.createNewPiece(npi);
-    });
 
+    this.emitter.on('newPieceInfo', async (newPieceInfo) => {
+      try {
+        if (newPieceInfo.clone) {
+          const id = newPieceInfo.origID;
+          const title = newPieceInfo.title;
+          const perm = newPieceInfo.permissions;
+          const newOwner = this.$store.state.userID;
+          const result = await cloneTranscription(id, title, newOwner, perm);
+          this.$router.push({
+            name: 'EditorComponent',
+            query: { id: result.insertedId },
+          });
+        } else {
+          const npi = Object.assign({}, newPieceInfo);
+          delete npi.clone
+          const rsRes = await getRaagRule(npi.raga);
+          const ruleSet = rsRes.rules;
+          npi.raga = new Raga({
+            name: npi.raga,
+            ruleSet: ruleSet,
+          });
+          npi.phrases = [
+            new Phrase({
+              trajectories: [
+                new Trajectory({
+                  id: 12,
+                  durTot: 5,
+                  fundID12: npi.raga.fundamental,
+                }),
+              ],
+            }),
+          ];
+          this.createNewPiece(npi);
+        }
+      } catch (err) {
+        console.log(err);
+      }
+    });
   },
-  
+
   beforeUnmount() {
     this.emitter.off('newPieceInfo');
     window.removeEventListener('keydown', this.handleKeydown);
   },
 
   methods: {
-
     async toggleSort(idx) {
       if (this.sorts[idx] === 1) {
         this.sorts[idx] = -1;
@@ -196,7 +217,7 @@ export default {
       let name = undefined;
       if (p.userID) {
         if (p.userID === this.$store.state.userID) {
-          name = 'You'
+          name = 'You';
         } else {
           name = p.name;
         }
@@ -204,61 +225,99 @@ export default {
       const dateCreated = this.writeDate(p.dateCreated);
       const dateModified = this.writeDate(p.dateModified);
       const permissions = p.permissions;
-      return [title, name, raga, dateCreated, dateModified, permissions]
+      return [title, name, raga, dateCreated, dateModified, permissions];
     },
 
     writeDate(d) {
-      const date = new Date(d)
+      const date = new Date(d);
       const month = date.getMonth() + 1;
       const day = date.getDate();
       const year = date.getFullYear();
-      return month + '/' + day + '/' + year
+      return month + '/' + day + '/' + year;
     },
-    
+
     openPieceAlt(piece) {
       if (piece === undefined) {
-        piece = this.selectedPiece
+        piece = this.selectedPiece;
       }
       this.$store.commit('update_id', piece._id);
       this.$cookies.set('currentPieceId', piece._id);
       this.$router.push({
         name: 'EditorComponent',
-        query: { 'id': piece._id }
-      })
+        query: { id: piece._id },
+      });
     },
 
     designNewPiece() {
-      this.$refs.dropDown.classList.add('closed')
-      this.designPieceModal = true
+      this.$refs.dropDown.classList.add('closed');
+      this.designPieceModal = true;
     },
 
     createNewPiece(obj) {
-      const piece = obj ? new Piece(obj) : new Piece;
+      const piece = obj ? new Piece(obj) : new Piece();
       piece.userID = this.$store.state.userID;
       piece.lastName = this.$store.state.lastName;
       piece.name = this.$store.state.name;
       piece.firstName = this.$store.state.firstName;
-      createNewPiece(piece)
-        .then(data => {
-          this.$store.commit('update_id', data.insertedId);
-          this.$cookies.set('currentPieceId', data.insertedId);
-          this.$router.push({ 
-            name: 'EditorComponent', 
-            query: { 'id': data.insertedID }
-          })
-        })
+      createNewPiece(piece).then((data) => {
+        this.$store.commit('update_id', data.insertedId);
+        this.$cookies.set('currentPieceId', data.insertedId);
+        this.$router.push({
+          name: 'EditorComponent',
+          query: { id: data.insertedID },
+        });
+      });
+    },
+
+    async clonePiece(piece) {
+      if (piece === undefined) piece = this.selectedPiece;
+      try {
+        const audioRecording = await getAudioRecording(piece.audioID);
+        const audioEvent = await getAudioEvent(audioRecording.parentID);
+        this.passedInDataObj = JSON.stringify({
+          title: piece.title + ' (clone)',
+          raga: piece.raga,
+          audioEvent: audioEvent.name,
+          audioRecording: audioRecording,
+          origID: piece._id,
+        });
+        this.designPieceModal = true;
+      } catch (err) {
+        console.log(err);
+      }
+      
+      // open up new piece registrar modal
+      // pass in piece info
+      // this.passedInDataObj = {
+      //   title: piece.title + ' (copy)',
+      //   raga: piece.raga.name,
+      //   audioEvent: piece.audioEvent,
+      // }
+      // this.designPieceModal = true;
+
+      // try {
+      //   const result = await cloneTranscription(piece._id, newName);
+      //   console.log(result)
+      // } catch (err) {
+      //   console.log(err);
+      // }
+      
+      // console.log(piece)
     },
 
     async deletePiece() {
       if (this.delete_) {
-        this.$refs.dropDown.classList.add('closed')  
+        this.$refs.dropDown.classList.add('closed');
         const res = await deletePiece(this.selectedPiece);
         if (res.ok) {
           const id = this.$store.state.userID;
           const sortKey = this.sortKeyNames[this.selectedSort];
           const sortDir = this.sorts[this.selectedSort];
           this.allPieces = await getAllPieces(id, sortKey, sortDir);
-        } 
+          this.allPieces.forEach( (piece, i) => {
+            this.allPieceInfo[i] = this.pieceInfo(piece);
+          });
+        }
       }
     },
 
@@ -268,10 +327,10 @@ export default {
       const sortDir = this.sorts[this.selectedSort];
       this.allPieces = await getAllPieces(id, sortKey, sortDir);
       this.allPieces.forEach(async (piece, i) => {
-        this.allPieceInfo[i] = this.pieceInfo(piece)
-      })
+        this.allPieceInfo[i] = this.pieceInfo(piece);
+      });
     },
-    
+
     handleRightClick(e) {
       e.preventDefault();
       this.dropDownLeft = e.clientX;
@@ -280,23 +339,23 @@ export default {
       this.modalTop = e.clientY;
       const rect = this.$refs.fileContainer.getBoundingClientRect();
       if (this.modalLeft + this.modalWidth > rect.width - 20) {
-        this.modalLeft = rect.width - 20 - this.modalWidth
+        this.modalLeft = rect.width - 20 - this.modalWidth;
       }
       if (this.modalTop + this.modalHeight > rect.height - 20) {
-        this.modalTop = rect.height - 20 - this.modalHeight
+        this.modalTop = rect.height - 20 - this.modalHeight;
       }
       if (this.dropDownLeft + this.dropDownWidth > rect.width - 20) {
-        this.dropDownLeft = rect.width - 20 - this.dropDownWidth
+        this.dropDownLeft = rect.width - 20 - this.dropDownWidth;
       }
       const dropDownRect = this.$refs.dropDown.getBoundingClientRect();
       const dropDownHeight = dropDownRect.height;
       if (this.dropDownTop + dropDownHeight > rect.height - 20) {
-        this.dropDownTop = rect.height - 20 - dropDownHeight
+        this.dropDownTop = rect.height - 20 - dropDownHeight;
       }
       this.designPieceModal = false;
-      
-      document.querySelectorAll('.selected').forEach(el => {
-        el.classList.remove('selected')
+
+      document.querySelectorAll('.selected').forEach((el) => {
+        el.classList.remove('selected');
       });
       this.$refs.dropDown.classList.remove('closed');
       const el = document.elementFromPoint(e.clientX, e.clientY);
@@ -307,51 +366,51 @@ export default {
         this.delete_ = true;
         this.open_ = true;
         if (this.allPieces[num].userID === this.$store.state.userID) {
-          this.deleteActive = true
+          this.deleteActive = true;
         } else {
-          this.deleteActive = false
+          this.deleteActive = false;
         }
       } else if (el.parentNode.classList[0] === 'fileInfoRow') {
         const num = el.parentNode.id.slice(3);
         el.parentNode.classList.add('selected');
         this.selectedPiece = this.allPieces[num];
         this.delete_ = true;
-        this.open_ = true
+        this.open_ = true;
         if (this.allPieces[num].userID === this.$store.state.userID) {
-          this.deleteActive = true
+          this.deleteActive = true;
         } else {
-          this.deleteActive = false
+          this.deleteActive = false;
         }
       } else {
         this.delete_ = false;
-        this.open_ = false
+        this.open_ = false;
         this.deleteActive = false;
       }
     },
-    
+
     closeDropDown() {
       this.$refs.dropDown.classList.add('closed');
-      document.querySelectorAll('.selected').forEach(el => {
-        el.classList.remove('selected')
+      document.querySelectorAll('.selected').forEach((el) => {
+        el.classList.remove('selected');
       });
     },
-    
+
     handleClick() {
       this.designPieceModal = false;
-      this.closeDropDown()
+      this.closeDropDown();
     },
-    
+
     handleKeydown(e) {
       if (e.key === 'Escape') {
         e.preventDefault();
         this.closeDropDown();
         if (this.designPieceModal) {
-          this.designPieceModal = false
+          this.designPieceModal = false;
         }
       }
-    }
-  }
-}
+    },
+  },
+};
 </script>
 
 <style scoped>
@@ -387,11 +446,11 @@ export default {
 }
 
 .fileInfoRow:hover {
-  background-color: #2b332c
+  background-color: #2b332c;
 }
 
 .fileInfoRow.selected {
-  background-color: #2b332c
+  background-color: #2b332c;
 }
 
 .fileInfoKeys {
@@ -434,25 +493,25 @@ export default {
 }
 
 .designPieceModal {
-  width: v-bind(modalWidth+'px');
-  height: v-bind(modalHeight+'px');
+  width: v-bind(modalWidth + 'px');
+  height: v-bind(modalHeight + 'px');
   border: 1px solid black;
   position: fixed;
-  left: v-bind(modalLeft+'px');
-  top: v-bind(modalTop+'px');
+  left: v-bind(modalLeft + 'px');
+  top: v-bind(modalTop + 'px');
 }
 
 .dropDown {
   position: absolute;
-  width: v-bind(dropDownWidth+'px');
+  width: v-bind(dropDownWidth + 'px');
   background-color: black;
-  left: v-bind(dropDownLeft+'px');
-  top: v-bind(dropDownTop+'px');
+  left: v-bind(dropDownLeft + 'px');
+  top: v-bind(dropDownTop + 'px');
   border: 1px solid grey;
   border-radius: 5px;
   display: flex;
   flex-direction: column;
-  user-select: none;  
+  user-select: none;
 }
 
 .dropDown.closed {
@@ -473,12 +532,12 @@ export default {
   margin-left: 8px;
   margin-right: 8px;
   margin-top: 6px;
-  width: v-bind(dropDownWidth-24+'px')
+  width: v-bind(dropDownWidth-24 + 'px');
 }
 
 .dropDownRow:hover {
   background-color: blue;
-  cursor: pointer
+  cursor: pointer;
 }
 
 .dropDownRow.last {
@@ -501,10 +560,10 @@ button {
 
 .sorter {
   cursor: pointer;
-  color: black
+  color: black;
 }
 
-.sorter.selectedTriangle {
-  color: white
+.sorter.selectedTri {
+  color: white;
 }
 </style>

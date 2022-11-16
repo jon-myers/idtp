@@ -27,7 +27,8 @@ export default {
         / or pedagogical purposes. If agreed, check box.',
       agreeBool: false,
       firstName: undefined,
-      userID: undefined
+      userID: undefined,
+      firstWelcome: undefined
     }
   },
   

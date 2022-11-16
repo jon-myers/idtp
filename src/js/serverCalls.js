@@ -715,7 +715,32 @@ const handleGoogleAuthCode = async (code, redirectURL) => {
   } catch (err) {
     console.error(err)
   }
-} 
+}
+
+const cloneTranscription = async (id, title, newOwner, permissions) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      id: id, 
+      title: title, 
+      newOwner: newOwner, 
+      permissions: permissions 
+    })
+  };
+  try {
+    const response = await fetch(url + 'cloneTranscription', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
 
 
 exports.getPiece = getPiece
@@ -750,3 +775,4 @@ exports.nameFromUserID = nameFromUserID
 exports.makeSpectrograms = makeSpectrograms
 exports.pieceExists = pieceExists
 exports.handleGoogleAuthCode = handleGoogleAuthCode
+exports.cloneTranscription = cloneTranscription
