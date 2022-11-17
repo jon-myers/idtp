@@ -589,7 +589,7 @@ class Phrase {
     durTot = undefined,
     durArray = undefined,
     chikaris = {},
-    connected = undefined,
+    // connected = undefined,
     raga = undefined,
     startTime = undefined
   } = {}) {
@@ -622,19 +622,19 @@ class Phrase {
     }
     this.chikaris = chikaris;
 
-    if (connected === undefined) {
-      if (this.trajectories.length < 2) {
-        this.connected = undefined
-      } else {
-        const arr = Array.from({
-          length: this.trajectories.length - 1
-        });
-        const a = this.trajectories;
-        this.connected = arr.map((_, i) => a[i].compute(1) === a[i + 1].compute(0))
-      }
-    } else {
-      this.connected = connected
-    }
+    // if (connected === undefined) {
+    //   if (this.trajectories.length < 2) {
+    //     this.connected = undefined
+    //   } else {
+    //     const arr = Array.from({
+    //       length: this.trajectories.length - 1
+    //     });
+    //     const a = this.trajectories;
+    //     this.connected = arr.map((_, i) => a[i].compute(1) === a[i + 1].compute(0))
+    //   }
+    // } else {
+    //   this.connected = connected
+    // }
 
     this.assignStartTimes();
     this.assignTrajNums();
@@ -686,9 +686,52 @@ class Phrase {
     })
   }
 
+  consolidateSilentTrajs() {
+    // within phrase, if there are ever two or more silent trajectories in a 
+    // row, consolidate them into one.
+    let chain = false;
+    let start = undefined;
+    const delIdxs = [];
+    this.trajectories.forEach((traj, i) => {
+      if (traj.id === 12) {
+        if (chain === false) {
+          start = i;
+          chain = true
+        }
+        if (i === this.trajectories.length - 1) {
+          const extraDur = this.trajectories
+            .slice(start+1)
+            .map(t => t.durTot)
+            .reduce((a, b) => a + b, 0);
+          this.trajectories[start].durTot += extraDur;
+          const dIdxs = [...Array(this.trajectories.length - start - 1)]
+            .map((_, i) => i + start + 1);
+          delIdxs.push(...dIdxs)
+        }
+      } else {
+        if (chain === true) {
+          const extraDur = this.trajectories
+            .slice(start+1, i)
+            .map(t => t.durTot)
+            .reduce((a, b) => a + b, 0);
+          const dIdxs = [...Array(i - (start+1))].map((_, i) => i + start + 1);
+          this.trajectories[start].durTot += extraDur;
+          delIdxs.push(...dIdxs);
+          chain = false;
+          start = undefined;
+        }
+      }
+    });
+    const newTrajs = this.trajectories.filter(traj => !delIdxs.includes(traj.num));
+    this.trajectories = newTrajs;
+    this.durArrayFromTrajectories();
+    this.assignStartTimes();
+    this.assignTrajNums();
+  }
+
   get swara() {
     const swara = [];
-    this.trajectories.forEach((traj, trajIdx) => {
+    this.trajectories.forEach(traj => {
       if (traj.id !== 12) {
         if (traj.durArray.length === traj.pitches.length - 1) {
           traj.pitches.slice(0, traj.pitches.length - 1).forEach((pitch, i) => {
@@ -697,12 +740,13 @@ class Phrase {
             obj.time = this.startTime + traj.startTime + getStarts(traj.durArray)[i] * traj.durTot;
             swara.push(obj)
           });
-          if (!this.connected || !this.connected[trajIdx]) {
-            const obj = {};
-            obj.pitch = traj.pitches[traj.pitches.length - 1];
-            obj.time = this.startTime + traj.startTime + traj.durTot - 0.05;
-            swara.push(obj)
-          }
+          // if (!this.connected || !this.connected[trajIdx]) {
+          //   console.log('does this ever happen?')
+          //   const obj = {};
+          //   obj.pitch = traj.pitches[traj.pitches.length - 1];
+          //   obj.time = this.startTime + traj.startTime + traj.durTot - 0.05;
+          //   swara.push(obj)
+          // }
         } else {
           traj.pitches.forEach((pitch, i) => {
             const obj = {};
@@ -722,7 +766,7 @@ class Phrase {
     obj.durTot = this.durTot;
     obj.durArray = this.durArray;
     obj.chikaris = this.chikaris;
-    obj.connected = this.connected;
+    // obj.connected = this.connected;
     obj.raga = this.raga;
     obj.startTime = this.startTime;
     return obj;
@@ -734,7 +778,7 @@ class Phrase {
       durTot: this.durTot,
       durArray: this.durArray,
       chikaris: this.chikaris,
-      connected: this.connected,
+      // connected: this.connected,
       raga: this.raga,
       startTime: this.startTime
     }
