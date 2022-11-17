@@ -1321,7 +1321,7 @@ export default {
         .attr('id', `phraseLine${idx}`)
         .attr('stroke', 'black')
         .attr('stroke-width', '2px')
-        .attr('d', this.playheadLine())
+        .attr('d', this.playheadLine(true))
         .style('opacity', this.viewPhrases ? '1' : '0')
         .attr('transform', `translate(${this.codifiedXR(time)},0)`);
       this.phraseG
@@ -1329,7 +1329,7 @@ export default {
         .attr('id', `overlay__phraseLine${idx}`)
         .attr('stroke', 'black')
         .attr('stroke-width', '10px')
-        .attr('d', this.playheadLine())
+        .attr('d', this.playheadLine(true))
         .style('opacity', '0')
         .attr('transform', `translate(${this.codifiedXR(time)},0)`)
         .style('cursor', 'pointer')
@@ -1820,6 +1820,9 @@ export default {
     },
 
     async savePiece() {
+      this.piece.phrases.forEach(phrase => {
+        phrase.consolidateSilentTrajs()
+      });
       this.cleanPhrases();
       const result = await savePiece(this.piece);
       this.dateModified = new Date(result.dateModified);
@@ -2086,6 +2089,9 @@ export default {
       this.piece = new Piece(piece);
       this.dateModified = new Date(this.piece.dateModified);
       this.fixTrajs();
+      this.piece.phrases.forEach(phrase => {
+        phrase.consolidateSilentTrajs()
+      })
     },
 
     fixTrajs() {
@@ -3535,12 +3541,20 @@ export default {
 
     },
 
-    playheadLine() {
-      return d3Line()([
-        [0, this.yr()(Math.log2(this.freqMin))],
-        [0, this.yr()(Math.log2(this.freqMax)) - this.xAxHeight]
-      ])
+    playheadLine(codified) {
+      if (codified) {
+        return d3Line()([
+          [0, this.codifiedYR(Math.log2(this.freqMin))],
+          [0, this.codifiedYR(Math.log2(this.freqMax)) - this.xAxHeight]
+        ])
+      } else {
+        return d3Line()([
+          [0, this.yr()(Math.log2(this.freqMin))],
+          [0, this.yr()(Math.log2(this.freqMax)) - this.xAxHeight]
+        ])
+      }
     },
+
 
     addPlayhead() {
       this.svg
