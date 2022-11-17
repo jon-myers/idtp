@@ -406,7 +406,7 @@ export default {
       this.$refs.audioPlayer.preSetFirstEnvelope(256);
       // end GETBACK
       const silentDur = this.durTot - piece.durTot;
-      if (silentDur !== 0) {
+      if (silentDur >= 0.00001) {
         const silentTraj = new Trajectory({
           id: 12,
           pitches: [],
@@ -1303,7 +1303,7 @@ export default {
         .attr('id', `phraseLine${idx}`)
         .attr('stroke', 'black')
         .attr('stroke-width', '2px')
-        .attr('d', this.playheadLine())
+        .attr('d', this.playheadLine(true))
         .style('opacity', this.viewPhrases ? '1' : '0')
         .attr('transform', `translate(${this.codifiedXR(time)},0)`);
       this.phraseG
@@ -1311,7 +1311,7 @@ export default {
         .attr('id', `overlay__phraseLine${idx}`)
         .attr('stroke', 'black')
         .attr('stroke-width', '10px')
-        .attr('d', this.playheadLine())
+        .attr('d', this.playheadLine(true))
         .style('opacity', '0')
         .attr('transform', `translate(${this.codifiedXR(time)},0)`)
         .style('cursor', 'pointer')
@@ -3516,12 +3516,20 @@ export default {
 
     },
 
-    playheadLine() {
-      return d3Line()([
-        [0, this.yr()(Math.log2(this.freqMin))],
-        [0, this.yr()(Math.log2(this.freqMax)) - this.xAxHeight]
-      ])
+    playheadLine(codified) {
+      if (codified) {
+        return d3Line()([
+          [0, this.codifiedYR(Math.log2(this.freqMin))],
+          [0, this.codifiedYR(Math.log2(this.freqMax)) - this.xAxHeight]
+        ])
+      } else {
+        return d3Line()([
+          [0, this.yr()(Math.log2(this.freqMin))],
+          [0, this.yr()(Math.log2(this.freqMax)) - this.xAxHeight]
+        ])
+      }
     },
+
 
     addPlayhead() {
       this.svg
