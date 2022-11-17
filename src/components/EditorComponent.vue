@@ -1802,6 +1802,9 @@ export default {
     },
 
     async savePiece() {
+      this.piece.phrases.forEach(phrase => {
+        phrase.consolidateSilentTrajs()
+      });
       const result = await savePiece(this.piece);
       this.dateModified = new Date(result.dateModified);
     },
@@ -2067,6 +2070,9 @@ export default {
       this.piece = new Piece(piece);
       this.dateModified = new Date(this.piece.dateModified);
       this.fixTrajs();
+      this.piece.phrases.forEach(phrase => {
+        phrase.consolidateSilentTrajs()
+      })
     },
 
     fixTrajs() {
