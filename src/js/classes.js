@@ -136,8 +136,6 @@ class Pitch {
     return s
   }
 
-
-
   toJSON() {
     return {
       swara: this.swara,

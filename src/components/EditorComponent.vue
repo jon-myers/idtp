@@ -406,7 +406,7 @@ export default {
       this.$refs.audioPlayer.preSetFirstEnvelope(256);
       // end GETBACK
       const silentDur = this.durTot - piece.durTot;
-      if (silentDur !== 0) {
+      if (silentDur >= 0.00001) {
         const silentTraj = new Trajectory({
           id: 12,
           pitches: [],
@@ -470,6 +470,24 @@ export default {
   },
 
   methods: {
+
+    cleanPhrases() {
+      // if a phrase is shorter than some very small number, delete it.
+      const realPhrases = this.piece.phrases.filter(phrase => {
+        return phrase.durTot > 0.0000001
+      });
+
+      this.piece.phrases = realPhrases;
+      this.piece.durTotFromPhrases();
+      this.piece.durArrayFromPhrases();
+      this.piece.updateStartTimes();
+
+      this.resetZoom();
+
+
+
+
+  },
     
     setScrollY() {
       const notchesHeight = this.xAxHeight + this.scrollXHeight;
@@ -1802,6 +1820,7 @@ export default {
     },
 
     async savePiece() {
+      this.cleanPhrases();
       const result = await savePiece(this.piece);
       this.dateModified = new Date(result.dateModified);
     },
