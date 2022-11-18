@@ -276,7 +276,7 @@ export default {
       } else if (startsEqual) { // if replaces left side of silent traj
         silentTraj.durTot = silentTraj.durTot - durTot;
         phrase.trajectories.splice(tIdx, 0, newTraj);
-        phrase.reset();phrase.reset();
+        phrase.reset();
       } else if (endsEqual) { // if replaces right side of silent traj
         silentTraj.durTot = durTot - silentTraj.durTot;
         phrase.trajectories.splice(tIdx + 1, 0, newTraj);
@@ -2529,29 +2529,58 @@ export default {
           }
         }
       } else if (this.setNewPhraseDiv) {
+        //get trajectory at time
+        const phrase = this.piece.phrases[pIdx];
+        const tIdx = this.trajIdxFromTime(phrase, time);
+        const traj = phrase.trajectories[tIdx];
+        if (traj.id === 12) {
+          // make current traj durTot such that it ends at current time, and 
+          // make new traj start at current time, update the phrase to reflect
+          // and reset zoom ? Or ... do I have to manually rename all the 
+          // following trajs if there are any?
+          const firstTrajDur = time - (phrase.startTime + traj.startTime);
+          const secondTrajDur = traj.durTot - firstTrajDur;
+          traj.durTot = firstTrajDur;
+          const newTraj = new Trajectory({
+            id: 12,
+            durTot: secondTrajDur,
+            pitches: [],
+            fundID12: this.piece.raga.fundamental
+          });
+          phrase.trajectories.splice(tIdx + 1, 0, newTraj);
+          phrase.reset();
+        }
+        // right here, I need to reid all the following trajectories
+        for (let i = phrase.trajectories.length-1; i >= tIdx+2; i--) {
+          const thisTraj = phrase.trajectories[i];
+          const oldId = `p${phrase.pieceIdx}t${thisTraj.num-1}`;
+          const newId = `p${phrase.pieceIdx}t${thisTraj.num}`;
+          this.reIdAllReps(oldId, newId);
+        }
+
         const possibleTimes = this.possibleTrajDivs();
         const finalTime = getClosest(possibleTimes, time);
         const ftIdx = possibleTimes.indexOf(finalTime);
         const ptPerP = this.piece.phrases.map(p => p.trajectories.length - 1);
         const lims = [0, ...ptPerP.map(cumsum()).slice(0, ptPerP.length-1)];
-        const pIdx = lims.findLastIndex(lim => ftIdx >= lim);
-        const start = lims[pIdx];
+        const pIdx_ = lims.findLastIndex(lim => ftIdx >= lim);
+        const start = lims[pIdx_];
         const trajIdx = ftIdx - start;
-        const phrase = this.piece.phrases[pIdx];
-        const end = phrase.trajectories.length - (trajIdx + 1);
-        const newTrajs = phrase.trajectories.splice(trajIdx+1, end);
-        phrase.durTotFromTrajectories();
-        phrase.durArrayFromTrajectories();
+        const phrase_ = this.piece.phrases[pIdx_];
+        const end = phrase_.trajectories.length - (trajIdx + 1);
+        const newTrajs = phrase_.trajectories.splice(trajIdx+1, end);
+        phrase_.durTotFromTrajectories();
+        phrase_.durArrayFromTrajectories();
         const newPhrase = new Phrase({
           trajectories: newTrajs,
-          raga: phrase.raga
+          raga: phrase_.raga
         })
-        this.piece.phrases.splice(phrase.pieceIdx+1, 0, newPhrase);
+        this.piece.phrases.splice(phrase_.pieceIdx+1, 0, newPhrase);
         this.piece.durTotFromPhrases();
         this.piece.durArrayFromPhrases();
         this.piece.updateStartTimes();
-        //move over names of old phrase divs, from the back forward
-        for (let i=this.piece.phrases.length-2; i >= phrase.pieceIdx; i--) {
+        //move over names of old phrase_ divs, from the back forward
+        for (let i=this.piece.phrases.length-2; i >= phrase_.pieceIdx; i--) {
           const drag = () => {
             return d3Drag()
             .on('start', this.phraseDivDragStart(i+1))
@@ -2568,7 +2597,7 @@ export default {
           d3Select(`#phraseLine${i}`)
             .attr('id', `phraseLine${i+1}`)          
         }
-        this.addNewPhraseDiv(phrase.pieceIdx);
+        this.addNewPhraseDiv(phrase_.pieceIdx);
         this.setNewPhraseDiv = false;
         this.svg.style('cursor', 'auto');        
       } else {
