@@ -3561,6 +3561,10 @@ export default {
         low: this.freqMin,
         high: this.freqMax
       })
+      this.visiblePitches = this.piece.raga.getPitches({
+        low: this.freqMin,
+        high: this.freqMax
+      })
       this.visibleSargam.forEach((s, i) => {
         d3Select('.sargamLine.s' + i)
           .attr('d', this.codifiedSargamLine(Math.log2(s)))
