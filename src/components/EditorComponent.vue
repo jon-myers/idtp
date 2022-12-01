@@ -682,7 +682,6 @@ export default {
         ]
         const x = this.xr()(p.time);
         const y = this.yr()(p.logFreq);
-        console.log(p.time, x, p.logFreq, y)
         
 
         sargamLabels.append('text')
@@ -819,10 +818,10 @@ export default {
           phrase.startTime += delta;
           // update the chikari times
           Object.keys(phrase.chikaris).forEach(key => {
-            const newKey = Number(key) - delta;
+            const newKey = (Math.round(100 * (Number(key) - delta)) / 100).toString();
             if (newKey !== key) {
-              delete phrase.chikaris[key];
               phrase.chikaris[newKey] = phrase.chikaris[key];
+              delete phrase.chikaris[key];
             }
           })
         } else {
@@ -896,10 +895,10 @@ export default {
             phrase.assignStartTimes();
             // move chikaris in next phrase
             Object.keys(nextPhrase.chikaris).forEach(key => {
-              const newKey = Number(key) - delta;
+              const newKey = (Math.round(100 * (Number(key) - delta)) / 100).toString();
               if (newKey !== key) {
-                delete nextPhrase.chikaris[key];
                 nextPhrase.chikaris[newKey] = nextPhrase.chikaris[key];
+                delete nextPhrase.chikaris[key];
               }
             })
           }
@@ -912,6 +911,7 @@ export default {
     },
     
     dragDotEnd(e) {
+      let resetRequired = false;
       const idx = Number(this.dragIdx);
       const time = this.constrainTime(e, idx);
       const x = this.codifiedXR(time);
@@ -938,6 +938,7 @@ export default {
         traj.durArray = newDurArray;
       } else if (idx === 0) {
         if (tIdx === 0) {
+          resetRequired = true;
           
           const prevPhrase = this.piece.phrases[pIdx - 1];
           const pTrajs = prevPhrase.trajectories;
@@ -964,12 +965,26 @@ export default {
           phrase.durArrayFromTrajectories();
           // update the chikari times
           Object.keys(phrase.chikaris).forEach(key => {
-            const newKey = Number(key) - delta;
+            const newKey = (Math.round(100 * (Number(key) - delta)) / 100).toString();
             if (newKey !== key) {
-              delete phrase.chikaris[key];
               phrase.chikaris[newKey] = phrase.chikaris[key];
+              delete phrase.chikaris[key];
+            }
+            if (Number(newKey) < 0) {
+              const prevPhraseNewKey = (prevPhrase.durTot + Number(newKey)).toFixed(2);
+              prevPhrase.chikaris[prevPhraseNewKey] = phrase.chikaris[newKey];
+              delete phrase.chikaris[newKey];
             }
           })
+          // for each chikari in prevPhrase, if it is now in the next phrase, move it
+          Object.keys(prevPhrase.chikaris).forEach(key => {
+            if (Number(key) > prevPhrase.durTot) {
+              const newKey = (Number(key) - prevPhrase.durTot).toFixed(2);
+              phrase.chikaris[newKey] = prevPhrase.chikaris[key];
+              delete prevPhrase.chikaris[key]
+            }
+          })
+
         } else {
           const prevTraj = phrase.trajectories[tIdx - 1];
           const initTime = phrase.startTime + traj.startTime;
@@ -1016,6 +1031,7 @@ export default {
           phrase.durArrayFromTrajectories();
         } else {
           if (this.piece.phrases[pIdx + 1]) {
+            resetRequired = true;
             const nextPhrase = this.piece.phrases[pIdx + 1];
             const nextTraj = nextPhrase.trajectories[0];
             const initTime = phrase.startTime + traj.startTime + traj.durTot;
@@ -1031,10 +1047,23 @@ export default {
             }
             traj.durTot += delta;
             Object.keys(nextPhrase.chikaris).forEach(key => {
-              const newKey = Number(key) - delta;
+              const newKey = (Math.round(100 * (Number(key) - delta)) / 100).toString();
               if (newKey !== key) {
-                delete nextPhrase.chikaris[key];
                 nextPhrase.chikaris[newKey] = nextPhrase.chikaris[key];
+                delete nextPhrase.chikaris[key];
+              }
+              if (Number(newKey) < 0) {
+                const phraseNewKey = (phrase.durTot + Number(newKey)).toFixed(2);
+                phrase.chikaris[phraseNewKey] = nextPhrase.chikaris[newKey];
+                delete nextPhrase.chikaris[newKey];
+              }
+            })
+            // for each chikari in prevPhrase, if it is now in the next phrase, move it
+            Object.keys(phrase.chikaris).forEach(key => {
+              if (Number(key) > phrase.durTot) {
+                const newKey = (Number(key) - phrase.durTot).toFixed(2);
+                nextPhrase.chikaris[newKey] = phrase.chikaris[key];
+                delete phrase.chikaris[key]
               }
             })
           }
@@ -1146,7 +1175,8 @@ export default {
       this.moveKrintin(this.selectedTraj, phrase.startTime);
       this.moveSlides(this.selectedTraj, phrase.startTime);
       this.cleanEmptyTrajs(phrase);
-      this.moveChikaris(phrase)
+      this.moveChikaris(phrase);
+      if (resetRequired) this.resetZoom();
     },
     
     cleanEmptyTrajs(phrase) {
