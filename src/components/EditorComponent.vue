@@ -894,6 +894,14 @@ export default {
             phrase.durTotFromTrajectories();
             phrase.durArrayFromTrajectories();
             phrase.assignStartTimes();
+            // move chikaris in next phrase
+            Object.keys(nextPhrase.chikaris).forEach(key => {
+              const newKey = Number(key) - delta;
+              if (newKey !== key) {
+                delete nextPhrase.chikaris[key];
+                nextPhrase.chikaris[newKey] = nextPhrase.chikaris[key];
+              }
+            })
           }
         }
       }
@@ -1022,6 +1030,13 @@ export default {
               nextPhrase.durArrayFromTrajectories();
             }
             traj.durTot += delta;
+            Object.keys(nextPhrase.chikaris).forEach(key => {
+              const newKey = Number(key) - delta;
+              if (newKey !== key) {
+                delete nextPhrase.chikaris[key];
+                nextPhrase.chikaris[newKey] = nextPhrase.chikaris[key];
+              }
+            })
           }
         }
       }
