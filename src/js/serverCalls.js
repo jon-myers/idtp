@@ -45,6 +45,44 @@ const pieceExists = async id => {
   }
 }
 
+const excelData = async id => {
+  const request = {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' }
+  };
+  const query = '?' + new URLSearchParams({ _id: id });
+  try {
+    const response = await fetch(url + 'excelData' + query, request);
+    let data;
+    if (response.ok) data = await response.blob();
+    const a = document.createElement('a');
+    a.href = window.URL.createObjectURL(data);
+    a.download = 'data.xlsx';
+    a.click();
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const jsonData = async id => {
+  const request = {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' }
+  };
+  const query = '?' + new URLSearchParams({ _id: id });
+  try {
+    const response = await fetch(url + 'jsonData' + query, request);
+    let data;
+    if (response.ok) data = await response.blob();
+    const a = document.createElement('a');
+    a.href = window.URL.createObjectURL(data);
+    a.download = 'data.json';
+    a.click();
+  } catch (err) {
+    console.error(err)
+  }
+}
+
 const getAudioDBEntry = async _id => {
   let request = {
     method: 'POST',
@@ -776,3 +814,5 @@ exports.makeSpectrograms = makeSpectrograms
 exports.pieceExists = pieceExists
 exports.handleGoogleAuthCode = handleGoogleAuthCode
 exports.cloneTranscription = cloneTranscription
+exports.excelData = excelData
+exports.jsonData = jsonData

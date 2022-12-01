@@ -610,6 +610,58 @@ const runServer = async () => {
       }
     })
 
+    app.get('/excelData', async (req, res) => {
+      const id = req.query._id;
+      const argvs = [
+        'make_excel.py',
+        id,
+        `data/json/${id}.json`,
+        `data/excel/${id}.xlsx`
+      ];
+      try {
+        const pythonScript = spawn('python3', argvs);
+        pythonScript.stdout.on('data', data => {
+          console.log(`stdout: ${data}`)
+        });
+        
+        pythonScript.stderr.on('data', data => {
+          console.error(`stderr: ${data}`)
+        });
+        await pythonScript.on('close', () => {
+          res.download(`data/excel/${id}.xlsx`);
+        }) 
+      } catch (err) {
+        console.error(err);
+        res.status(500).send
+      }
+    })
+
+    app.get('/jsonData', async (req, res) => {
+      const id = req.query._id;
+      const argvs = [
+        'make_excel.py',
+        id,
+        `data/json/${id}.json`,
+        `data/excel/${id}.xlsx`
+      ];
+      try {
+        const pythonScript = spawn('python3', argvs);
+        pythonScript.stdout.on('data', data => {
+          console.log(`stdout: ${data}`)
+        });
+        
+        pythonScript.stderr.on('data', data => {
+          console.error(`stderr: ${data}`)
+        });
+        await pythonScript.on('close', () => {
+          res.download(`data/json/${id}.json`);
+        }) 
+      } catch (err) {
+        console.error(err);
+        res.status(500).send
+      }
+    })
+
     
     app.post('/upload-avatar', async (req, res) => {
     // upload files, and send back progress, via axios (doesn't work with fetch)

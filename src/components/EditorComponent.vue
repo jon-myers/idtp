@@ -116,7 +116,8 @@ import {
   getNumberOfSpectrograms,
   savePiece,
   makeSpectrograms,
-  pieceExists
+  pieceExists,
+  
 } from '@/js/serverCalls.js';
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
 import AltTrajSelectPanel from '@/components/AltTrajSelectPanel.vue';
@@ -198,7 +199,7 @@ export default {
       yScaleLims: [1, 5],
       editorHeight: 600,
       scrollYHeight: 600 - 30 - 20, // this is janky, but it works
-      initYOffset: 0
+      initYOffset: 0,
     }
   },
   components: {
@@ -483,11 +484,8 @@ export default {
       this.piece.updateStartTimes();
 
       this.resetZoom();
+    },
 
-
-
-
-  },
     
     setScrollY() {
       const notchesHeight = this.xAxHeight + this.scrollXHeight;

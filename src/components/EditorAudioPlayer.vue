@@ -49,7 +49,15 @@
         <div class="recInfo right">
           <div class="rulerBox">
             <img
-              :src="tuningForkIcon"
+              :src="icons.download"
+              @click="toggleDownloads"
+              class="downloadImg"
+              ref="downloadImg"
+            />
+          </div>
+          <div class="rulerBox">
+            <img
+              :src="icons.tuningFork"
               @click="toggleTuning"
               class="tuningFork"
               ref="tuningImg"
@@ -96,6 +104,33 @@
           v-model="chikariGain"
         />
       </div>
+    </div>
+    <div class='downloads' v-if='showDownloads'>
+      <label>Data</label>
+      <fieldset class='dataRadioButtons'>
+        <div class='dataChoice'>
+          <input 
+            type='radio' 
+            id='dataChoice1' 
+            name='dataType' 
+            value='json'
+            v-model='dataChoice'
+            />
+          <label for='dataChoice1'>json</label>
+        </div>
+        <div class='dataChoice'>
+          <input 
+            type='radio' 
+            id='dataChoice2' 
+            name='dataType' 
+            value='xlsx'
+            v-model='dataChoice'
+            />
+          <label for='dataChoice2'>xlsx</label>
+        </div>
+      </fieldset>
+      <button @click='handleDownload'>Download</button>
+
     </div>
     <div class='tuningControls' v-if='showTuning'>
       <div class='buttons'>
@@ -163,6 +198,8 @@ import rulerIcon from '@/assets/icons/ruler.svg';
 import { getStarts, getEnds } from '@/js/classes.js';
 import { AudioWorklet } from '@/audio-worklet';
 import tuningForkIcon from '@/assets/icons/tuning_fork.png';
+import downloadIcon from '@/assets/icons/download.svg';
+import { excelData, jsonData } from '@/js/serverCalls.js';
 
 const structuredTime = (dur) => {
   const hours = String(Math.floor(dur / 3600));
@@ -201,6 +238,8 @@ export default {
         ruler: rulerIcon,
         back_15: back_15,
         forward_15: forward_15,
+        download: downloadIcon,
+        tuningFork: tuningForkIcon
       },
       circleDragging: false,
       formattedCurrentTime: '00:00',
@@ -226,15 +265,16 @@ export default {
       performers: [],
       raags: [],
       playerHeight: 100,
-      tuningForkIcon: tuningForkIcon,
       showTuning: false,
+      showDownloads: false,
       sargam: [],
       centDevs: [],
       tuningGains: [],
       sargamLetterHeight: 30,
       tuningControlHeight: 200,
       tuningLabelHeight: 20,
-      tuningGainFactor: 0.25
+      tuningGainFactor: 0.25,
+      dataChoice: 'xlsx'
     };
   },
   props: ['audioSource', 'saEstimate', 'saVerified', 'id'],
@@ -949,6 +989,10 @@ export default {
         this.showTuning = false;
         this.$refs.tuningImg.classList.remove('showTuning');
       }
+      if (this.showDownloads) {
+        this.showDownloads = false;
+        this.$refs.downloadImg.classList.remove('showDownloads')
+      }
     },
 
     toggleTuning(e) {
@@ -966,6 +1010,24 @@ export default {
       if (this.showControls) {
         this.showControls = false;
         this.$refs.controlsImg.classList.remove('showControls');
+      }
+      if (this.showDownloads) {
+        this.showDownloads = false;
+        this.$refs.downloadImg.classList.remove('showDownloads')
+      }
+    },
+
+    toggleDownloads(e) {
+      const cl = e.target.classList;
+      cl.toggle('showDownloads');
+      this.showDownloads = this.showDownloads ? false : true;
+      if (this.showControls) {
+        this.showControls = false;
+        this.$refs.controlsImg.classList.remove('showControls');
+      }
+      if (this.showTuning) {
+        this.showTuning = false;
+        this.$refs.tuningImg.classList.remove('showTuning');
       }
     },
 
@@ -1090,6 +1152,14 @@ export default {
         pbi.style.width = pboBox.width * this.progress - diff + 'px';
       }
     },
+
+    handleDownload() {
+      if (this.dataChoice === 'xlsx') {
+        excelData(this.$parent.piece._id)
+      } else if (this.dataChoice === 'json') {
+        jsonData(this.$parent.piece._id)
+      }
+    }
   },
 };
 </script>
@@ -1428,6 +1498,21 @@ export default {
   justify-content: space-evenly;
 }
 
+.downloads {
+  position: absolute;
+  right: 0px;
+  bottom: v-bind(playerHeight + 'px');
+  background-color: #202621;
+  width: 200px;
+  height: 200px;
+  border-bottom: 1px solid black;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
 .spacer {
   display: flex;
   flex-direction: column;
@@ -1447,6 +1532,11 @@ export default {
 }
 
 .rulerBox > .showTuning {
+  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg)
+    brightness(94%) contrast(97%);
+}
+
+.rulerBox > .showDownloads {
   filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg)
     brightness(94%) contrast(97%);
 }
@@ -1538,10 +1628,29 @@ export default {
   justify-content: space-evenly;
 }
 
-.buttons > button {
-  cursor: pointer;
-} 
 
+
+button {
+  cursor: pointer
+}
+
+.dataChoice {
+  display: flex;
+  flex-direction: column;
+  width: 80px;
+  height: 100%;
+}
+
+.dataRadioButtons {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-evenly;
+  width: 100%;
+  padding: 0px;
+  border: 0px;
+  margin: 0px;
+}
 
 
 /* WaveformAnalyzer {

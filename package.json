@@ -15,6 +15,7 @@
     "deployNodemonConfig": "rsync -a ./nodemon.json root@137.184.90.119:nodemon.json",
     "deployProcessAudio": "rsync -a ./python/new_process_audio.py root@137.184.90.119:process_audio.py",
     "deployServer": "rsync -a ./server.js root@137.184.90.119:server.js",
+    "deployMakeExcel": "rsync -a ./python/cleanJson/make_excel.py root@137.184.90.119:make_excel.py",
     "electron:build": "vue-cli-service electron:build",
     "electron:serve": "vue-cli-service electron:serve",
     "postinstall": "electron-builder install-app-deps",
