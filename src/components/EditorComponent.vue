@@ -817,6 +817,14 @@ export default {
           }
           traj.durTot -= delta;
           phrase.startTime += delta;
+          // update the chikari times
+          Object.keys(phrase.chikaris).forEach(key => {
+            const newKey = Number(key) - delta;
+            if (newKey !== key) {
+              delete phrase.chikaris[key];
+              phrase.chikaris[newKey] = phrase.chikaris[key];
+            }
+          })
         } else {
           const prevTraj = phrase.trajectories[tIdx - 1];
           const initTime = phrase.startTime + traj.startTime;
@@ -899,8 +907,6 @@ export default {
       const idx = Number(this.dragIdx);
       const time = this.constrainTime(e, idx);
       const x = this.codifiedXR(time);
-
-
       const traj = this.selectedTraj;
       const phrase = this.piece.phrases[traj.phraseIdx];
       const pIdx = traj.phraseIdx;
@@ -924,6 +930,7 @@ export default {
         traj.durArray = newDurArray;
       } else if (idx === 0) {
         if (tIdx === 0) {
+          
           const prevPhrase = this.piece.phrases[pIdx - 1];
           const pTrajs = prevPhrase.trajectories;
           const prevTraj = pTrajs[pTrajs.length - 1];
@@ -947,6 +954,14 @@ export default {
           phrase.startTime += delta;
           phrase.durTotFromTrajectories();
           phrase.durArrayFromTrajectories();
+          // update the chikari times
+          Object.keys(phrase.chikaris).forEach(key => {
+            const newKey = Number(key) - delta;
+            if (newKey !== key) {
+              delete phrase.chikaris[key];
+              phrase.chikaris[newKey] = phrase.chikaris[key];
+            }
+          })
         } else {
           const prevTraj = phrase.trajectories[tIdx - 1];
           const initTime = phrase.startTime + traj.startTime;
@@ -1020,6 +1035,7 @@ export default {
         .attr('d', this.codifiedPhraseLine())
       if (idx === 0) {
         if (tIdx === 0) {
+          
           const prevPhrase = this.piece.phrases[pIdx - 1];
           const pTrajs = prevPhrase.trajectories;
           const prevTraj = pTrajs[pTrajs.length - 1];
