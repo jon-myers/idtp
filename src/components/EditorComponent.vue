@@ -467,7 +467,6 @@ export default {
           .style('opacity', '0')
       }
     }
-
   },
 
   methods: {
@@ -477,12 +476,11 @@ export default {
       const realPhrases = this.piece.phrases.filter(phrase => {
         return phrase.durTot > 0.0000001
       });
-
       this.piece.phrases = realPhrases;
       this.piece.durTotFromPhrases();
       this.piece.durArrayFromPhrases();
       this.piece.updateStartTimes();
-
+      this.removeAccidentalSilentTrajs()
       this.resetZoom();
     },
 
@@ -542,11 +540,7 @@ export default {
         .call(horDrag)
 
       this.$refs.scrollX.appendChild(this.scrollX.node())
-
     },
-
-    
-
 
     codifiedAddSargamLabels() { // this 
       const allTrajs = this.piece.phrases.map(p => p.trajectories).flat();
@@ -682,8 +676,6 @@ export default {
         ]
         const x = this.xr()(p.time);
         const y = this.yr()(p.logFreq);
-        
-
         sargamLabels.append('text')
           .attr('x', x + positions[pos].x)
           .attr('y', y + positions[pos].y)
@@ -692,7 +684,6 @@ export default {
           .attr('font-size', 14)
           .attr('fill', 'black')
           .text(p.pitch.octavedSargamLetter)
-
       })
     },
 
@@ -707,7 +698,6 @@ export default {
           .on('drag', this.dragDotDragging)
           .on('end', this.dragDotEnd)
       };
-      
       const dragDotsG = this.phraseG.append('g').classed('dragDots', true);
       let times = [0, ...this.selectedTraj.durArray.map(cumsum())];
       const phraseStart = phrase.startTime;
@@ -781,7 +771,6 @@ export default {
       d3Select(`#dragDot${idx}`)
         .attr('cx', x)
         .attr('cy', e.y)
-
       const traj = this.selectedTraj;
       const tIdx = traj.num;
       const pIdx = traj.phraseIdx;
@@ -804,7 +793,6 @@ export default {
           if (prevTraj.durArray && prevTraj.durArray.length > 1) {
             prevTraj.durArray = this.newDurArrayZ(prevTraj, delta)
           }
-
           prevTraj.durTot += delta;
           if (traj.durArray.length > 1) {
             const initPortionA = traj.durArray[0] * traj.durTot;
@@ -844,7 +832,6 @@ export default {
           traj.startTime += delta;
         }
         // if previous traj of this phrase
-
       } else if (idx === traj.durArray.length) {
         if (tIdx < phrase.trajectories.length - 1) {
           const nextTraj = phrase.trajectories[tIdx + 1];
@@ -927,7 +914,6 @@ export default {
         .attr('cx', x)
         .attr('cy', y)
       const newPitch = this.visiblePitches[logSargamLines.indexOf(logFreq)]
-
       if (traj.logFreqs[idx]) {
         traj.logFreqs[idx] = logFreq;
         traj.pitches[idx] = newPitch
@@ -939,7 +925,6 @@ export default {
       } else if (idx === 0) {
         if (tIdx === 0) {
           resetRequired = true;
-          
           const prevPhrase = this.piece.phrases[pIdx - 1];
           const pTrajs = prevPhrase.trajectories;
           const prevTraj = pTrajs[pTrajs.length - 1];
@@ -984,7 +969,6 @@ export default {
               delete prevPhrase.chikaris[key]
             }
           })
-
         } else {
           const prevTraj = phrase.trajectories[tIdx - 1];
           const initTime = phrase.startTime + traj.startTime;
@@ -1079,7 +1063,6 @@ export default {
         .attr('d', this.codifiedPhraseLine())
       if (idx === 0) {
         if (tIdx === 0) {
-          
           const prevPhrase = this.piece.phrases[pIdx - 1];
           const pTrajs = prevPhrase.trajectories;
           const prevTraj = pTrajs[pTrajs.length - 1];
@@ -1088,16 +1071,13 @@ export default {
           prevPhrase.assignStartTimes();
           prevPhrase.assignTrajNums();
           prevPhrase.assignPhraseIdx();
-
           const data = this.makeTrajData(newPrevTraj, prevPhrase.startTime);
           d3Select(`#p${pIdx-1}t${prevPhrase.trajectories.length-1}`)
             .datum(data)
             .attr('d', this.codifiedPhraseLine())
-
           d3Select(`#overlay__p${pIdx-1}t${prevPhrase.trajectories.length-1}`)
             .datum(data)
             .attr('d', this.codifiedPhraseLine())
-
           this.moveKrintin(newPrevTraj, phrase.startTime);
           this.moveSlides(newPrevTraj, phrase.startTime);
           this.movePhraseDivs();
@@ -1215,7 +1195,6 @@ export default {
                 slideCt++;
               }
             })
-            
           })
         }
       })
@@ -1369,8 +1348,7 @@ export default {
           .on('start', this.phraseDivDragStart(idx))
           .on('drag', this.phraseDivDragDragging(idx))
           .on('end', this.phraseDivDragEnd(idx))
-      };
-      
+      }; 
       const dontClick = e => {
         e.stopPropagation();
         console.log('clicking')
@@ -1396,9 +1374,7 @@ export default {
       if (this.editable) {
         d3Select(`#overlay__phraseLine${idx}`)
           .call(drag())
-      }
-          
-        
+      } 
       // reId all trajs and articulations in following phrases
       for (let i = this.piece.phrases.length-1; i > 1 + idx; i--) {
         const thisPhrase = this.piece.phrases[i];
@@ -1442,9 +1418,6 @@ export default {
           delete phrase.chikaris[key];
         }
       })
-      
-      // reId all chikaris
-      
     },
 
     updatePhraseDivs() {
@@ -1454,8 +1427,7 @@ export default {
           if (d3Select(`#phraseLine${i}`).node()) {
             d3Select(`#phraseLine${i}`)
               .style('opacity', '1')
-          } else {
-            
+          } else {           
             const drag = () => {
               return d3Drag()
                 .on('start', this.phraseDivDragStart(i))
@@ -1655,8 +1627,7 @@ export default {
         if (doNormal) {
           const possibleTimes = this.possibleTrajDivs(i);
           const finalTime = getClosest(possibleTimes, time);
-          const ftIdx = possibleTimes.indexOf(finalTime);
-          
+          const ftIdx = possibleTimes.indexOf(finalTime);          
           let pIdx, tIdx;
           const lenA = phraseA.trajectories.length;
           if (ftIdx < lenA) {
@@ -1854,7 +1825,6 @@ export default {
         });
         return divs
       }
-      
     },
     
     mouseUpUpdateLoop() {
@@ -1907,8 +1877,7 @@ export default {
         this.regionG = undefined;
         this.regionStartTime = 0;
         this.regionEndTime = this.durTot;
-        this.mouseUpUpdateLoop();
-        
+        this.mouseUpUpdateLoop();  
       }
     },
 
@@ -1919,7 +1888,6 @@ export default {
         e.preventDefault();
         this.clearAll()
       } else if (e.key === 'Backspace' && this.editable === true) {
-
         if (this.selectedChikariID) {
           const splitArr = this.selectedChikariID.split('_');
           const pIdx = splitArr[0].slice(1);
@@ -1988,7 +1956,6 @@ export default {
             d3Select(`#${oldId}`).attr('id', newId);          
           })
         }
-
       } else if (e.key === 'c' && this.editable) {
         this.setChikari = true;
         this.svg.style('cursor', 'cell')
@@ -2025,8 +1992,7 @@ export default {
         this.numSpecs = await getNumberOfSpectrograms(this.piece.audioID);
       } catch (err) {
         console.error(err)
-      }
-      
+      }      
       const rect = this.rect();
       const height = rect.height - this.xAxHeight;
       this.imgs = [];
@@ -2108,7 +2074,6 @@ export default {
       }
     },
 
-
     async getPieceFromJson(piece, fundamental) {
       if (fundamental) piece.raga.fundamental = fundamental;
       const rsRes = await getRaagRule(piece.raga.name);
@@ -2168,7 +2133,6 @@ export default {
       const rect = this.rect();
       this.svg
         .attr('viewBox', [0, 0, rect.width, rect.height])
-
       this.x.range([this.yAxWidth, rect.width])
       this.y.range([this.xAxHeight, rect.height])
       this.updateBackgroundColors();
@@ -2199,11 +2163,6 @@ export default {
         return a && b
       });
       return filtered[0].pieceIdx
-      // return this.piece.phrases.filter(phrase => {
-      //   const a = time >= phrase.startTime;
-      //   const b = time < phrase.startTime + phrase.durTot;
-      //   return a && b
-      // })[0].pieceIdx
     },
 
     handleMousedown(e) {
@@ -2230,14 +2189,12 @@ export default {
         const regionLine = d3Line()([
           [0, 0],
           [0, rect.height]
-        ])
-
+        ]);
         if (!this.regionG) {
           this.regionG = this.svg
             .append('g')
             .classed('regionG', true)
-            .attr('clip-path', 'url(#playheadClip)')
-
+            .attr('clip-path', 'url(#playheadClip)');
           this.regionG
             .append('rect')
             .classed('region', true)
@@ -2246,8 +2203,7 @@ export default {
             .attr('height', rect.height)
             .attr('fill', 'white')
             .attr('opacity', '0.4')
-            .attr('transform', `translate(${this.regionStartPx},0)`)
-
+            .attr('transform', `translate(${this.regionStartPx},0)`);
           this.regionG
             .append('path')
             .classed('regionStart', true)
@@ -2255,8 +2211,7 @@ export default {
             .attr('stroke', 'grey')
             .attr('opacity', '0.6')
             .attr('stroke-width', 1)
-            .attr('transform', `translate(${this.regionStartPx},0)`)
-
+            .attr('transform', `translate(${this.regionStartPx},0)`);
           const rsDrag = () => {
             const dragged = e => {
               d3Select('.clickableRegionStart')
@@ -2294,10 +2249,7 @@ export default {
               .on('drag', dragged)
               .on('end', dragended)
           };
-
-
-
-
+          
           this.regionG
             .append('path')
             .classed('clickableRegionStart', true)
@@ -4266,6 +4218,56 @@ export default {
           .attr('transform', `translate(${x(obj)},${y(obj)})`)
       })
     },
+
+
+// apparently there's lots of bugs here, beware!
+    removeAccidentalSilentTrajs() {
+      // remove all silent trajs that are shorter than a very small threshold
+      let ct = 0;
+      this.piece.phrases.forEach((phrase, pIdx) => {
+        phrase.trajectories.forEach((traj, tIdx) => {
+          if (traj.id === 12 && traj.durTot < 0.01) {
+            
+            ct += 1
+            if (tIdx === phrase.trajectories.length - 1) {
+              // ones at the end of a phrase
+              
+              const splicedTraj = phrase.trajectories.splice(tIdx, 1)[0];
+              phrase.trajectories[tIdx-1].durTot += splicedTraj.durTot;
+              phrase.durTotFromTrajectories();
+              phrase.durArrayFromTrajectories();
+            } else if (tIdx !== 0) {
+              // ones in the middle of a phrase
+              const splicedTraj = phrase.trajectories.splice(tIdx, 1)[0];
+              phrase.trajectories[tIdx-1].durTot += splicedTraj.durTot;
+              phrase.durTotFromTrajectories();
+              phrase.durArrayFromTrajectories();
+              phrase.assignStartTimes();
+              phrase.assignTrajNums();
+              for (let i = tIdx; i < phrase.trajectories.length; i++) {
+                const oldId = `p${pIdx}t${i+1}`;
+                const newId = `p${pIdx}t${i}`;
+                this.reIdAllReps(oldId, newId);
+              }
+            } else {
+              // ones at the beginning of a phrase
+              const splicedTraj = phrase.trajectories.splice(tIdx, 1)[0];
+              phrase.trajectories[tIdx].durTot += splicedTraj.durTot;
+              phrase.durTotFromTrajectories();
+              phrase.durArrayFromTrajectories();
+              phrase.assignStartTimes();
+              phrase.assignTrajNums();
+              for (let i = 0; i < phrase.trajectories.length; i++) {
+                const oldId = `p${pIdx}t${i+1}`;
+                const newId = `p${pIdx}t${i}`;
+                this.reIdAllReps(oldId, newId);
+              }
+            }
+          }
+        })
+      });
+      console.log(`removed ${ct} silent trajs`)
+    }
   }
 }
 </script>
