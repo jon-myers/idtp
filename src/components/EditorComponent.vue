@@ -2672,7 +2672,6 @@ export default {
     scrollYDragStart(e) {
       const elem = d3Select('.scrollYDragger');
       const transform = elem.attr('transform');
-
       this.initYOffset = transform.split(',')[1];
       const end = this.initYOffset.length - 1;
       this.initYOffset = Number(this.initYOffset.slice(0, end));
