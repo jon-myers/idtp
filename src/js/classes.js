@@ -1232,8 +1232,6 @@ getFrequencies({
   return freqs;
 }
 
-
-
 get sargamNames() {
   const names = [];
   const sargam = Object.keys(this.ruleSet);
