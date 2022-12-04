@@ -200,6 +200,7 @@ export default {
       editorHeight: 600,
       scrollYHeight: 600 - 30 - 20, // this is janky, but it works
       initYOffset: 0,
+      setNewSeries: false,
     }
   },
   components: {
@@ -279,7 +280,7 @@ export default {
         phrase.trajectories.splice(tIdx, 0, newTraj);
         phrase.reset();
       } else if (endsEqual) { // if replaces right side of silent traj
-        silentTraj.durTot = durTot - silentTraj.durTot;
+        silentTraj.durTot = silentTraj.durTot - durTot;
         phrase.trajectories.splice(tIdx + 1, 0, newTraj);
         phrase.reset();
       } else { // if replaces internal portion of silent traj
@@ -308,6 +309,7 @@ export default {
       this.trajTimePts = [];
       this.svg.style('cursor', 'auto');
       d3SelectAll(`.newTrajDot`).remove();
+      
       this.addAllDragDots();
       this.$refs.trajSelectPanel.selectedIdx = this.selectedTraj.id;
       this.$refs.trajSelectPanel.parentSelected = true;
@@ -1856,6 +1858,115 @@ export default {
       const result = await savePiece(this.piece);
       this.dateModified = new Date(result.dateModified);
     },
+
+    addFixedTraj() {
+      this.trajTimePts.sort((a, b) => a.time - b.time);
+      const logSargamLines = this.visibleSargam.map(s => Math.log2(s));
+      const lf = this.trajTimePts[0].logFreq;
+      const pitch = this.visiblePitches[logSargamLines.indexOf(lf)];
+      const pitchJSON = pitch.toJSON();
+      pitchJSON.fundamental = this.piece.raga.fundamental;
+      const endPitch = new Pitch(pitchJSON)
+      // const endPitch = new Pitch(pitch.)
+      const pitches = [pitch, endPitch];
+      const durTot = this.trajTimePts[1].time - this.trajTimePts[0].time;
+      const newTraj = new Trajectory({
+        pitches: pitches,
+        durTot: durTot,
+        durArray: [1],
+        articulations: undefined
+      });
+      const times = this.trajTimePts.map(t => t.time);
+      const pIdx = this.trajTimePts[0].pIdx;
+      const tIdx = this.trajTimePts[0].tIdx;
+      const phrase = this.piece.phrases[pIdx];
+      const silentTraj = phrase.trajectories[tIdx];
+      const st = phrase.startTime + silentTraj.startTime;
+      const startsEqual = times[0] === st;
+      const endsEqual = times[times.length - 1] === st + silentTraj.durTot;
+      if (startsEqual && endsEqual) { // if taking up entire silent traj
+        phrase.trajectories[tIdx] = newTraj;
+        phrase.reset();
+        this.codifiedAddTraj(newTraj, phrase.startTime);
+        this.selectedTraj = newTraj;
+        this.selectedTrajID = `p${newTraj.phraseIdx}t${newTraj.num}`;
+        d3Select(`#${this.selectedTrajID}`)
+          .attr('stroke', this.selectedTrajColor)
+        d3Select(`#overlay__${this.selectedTrajID}`)
+          .style('cursor', 'auto')
+        this.setNewSeries = false;
+        this.trajTimePts = [];
+        this.svg.style('cursor', 'auto');
+        d3SelectAll('.newSeriesDot').remove();
+        this.addAllDragDots();
+        this.$refs.trajSelectPanel.selectedIdx = this.selectedTraj.id;
+        this.$refs.trajSelectPanel.parentSelected = true;
+        this.$refs.trajSelectPanel.slope = Math.log2(this.selectedTraj.slope);
+        const c1 = this.selectedTraj.articulations[0];
+        if (c1 && this.selectedTraj.articulations[0].name === 'pluck') {
+          this.$refs.trajSelectPanel.pluckBool = true
+        } else {
+          this.$refs.trajSelectPanel.pluckBool = false
+        } 
+      } else if (endsEqual) {
+        silentTraj.durTot = silentTraj.durTot - durTot;
+        phrase.trajectories.splice(tIdx + 1, 0, newTraj);
+        phrase.reset();
+        this.codifiedAddTraj(newTraj, phrase.startTime);
+        this.selectedTraj = newTraj;
+        this.selectedTrajID = `p${newTraj.phraseIdx}t${newTraj.num}`;
+        d3Select(`#${this.selectedTrajID}`)
+          .attr('stroke', this.selectedTrajColor)
+        d3Select(`#overlay__${this.selectedTrajID}`)
+          .style('cursor', 'auto')
+        this.setNewSeries = false;
+        this.trajTimePts = [];
+        this.svg.style('cursor', 'auto');
+        d3SelectAll('.newSeriesDot').remove();
+        this.addAllDragDots();
+        this.$refs.trajSelectPanel.selectedIdx = this.selectedTraj.id;
+        this.$refs.trajSelectPanel.parentSelected = true;
+        this.$refs.trajSelectPanel.slope = Math.log2(this.selectedTraj.slope);
+        const c1 = this.selectedTraj.articulations[0];
+        if (c1 && this.selectedTraj.articulations[0].name === 'pluck') {
+          this.$refs.trajSelectPanel.pluckBool = true
+        } else {
+          this.$refs.trajSelectPanel.pluckBool = false
+        } 
+      } else {
+        if (startsEqual) {
+          silentTraj.durTot = silentTraj.durTot - durTot;
+          phrase.trajectories.splice(tIdx, 0, newTraj);
+          phrase.reset();
+          this.trajTimePts[1].tIdx += 1;
+        } else {
+          const firstDur = times[0] - st;
+          const lastDur = st + silentTraj.durTot - times[times.length - 1];
+          silentTraj.durTot = firstDur;
+          const lastSilentTraj = new Trajectory({
+            id: 12,
+            pitches: [],
+            durTot: lastDur,
+            fundID12: this.piece.raga.fundamental
+          });
+          phrase.trajectories.splice(tIdx + 1, 0, newTraj);
+          phrase.trajectories.splice(tIdx + 2, 0, lastSilentTraj);
+          phrase.reset();
+          this.trajTimePts[1].tIdx += 2;
+        }
+        this.codifiedAddTraj(newTraj, phrase.startTime);
+        this.trajTimePts.splice(0, 1);
+        d3SelectAll('.newSeriesDot').remove();
+        this.phraseG 
+          .append('circle')
+          .classed('newSeriesDot', true)
+          .attr('cx', this.codifiedXR(this.trajTimePts[0].time))
+          .attr('cy', this.codifiedYR(this.trajTimePts[0].logFreq))
+          .attr('r', 4)
+          .style('fill', 'darkorange')
+        
+      }
+    },
     
     clearAll(regionToo) {
       this.clearSelectedChikari();
@@ -1872,6 +1983,11 @@ export default {
         this.svg.style('cursor', 'auto');
         d3SelectAll(`.newTrajDot`).remove()
       }
+      if (this.setNewSeries) {
+        this.setNewSeries = false;
+        d3SelectAll('.newSeriesDot').remove();
+      }
+      if (this.setNewPhrase) this.setNewPhrase = false;
       if (this.regionG && regionToo === undefined) {
         this.regionG.remove();
         this.regionG = undefined;
@@ -1886,7 +2002,8 @@ export default {
         this.$refs.audioPlayer.togglePlay()
       } else if (e.key === 'Escape') {
         e.preventDefault();
-        this.clearAll()
+        this.clearAll();
+        this.svg.style('cursor', 'auto');
       } else if (e.key === 'Backspace' && this.editable === true) {
         if (this.selectedChikariID) {
           const splitArr = this.selectedChikariID.split('_');
@@ -1961,6 +2078,7 @@ export default {
         this.svg.style('cursor', 'cell')
         if (this.setNewTraj) this.setNewTraj = false;
         if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
+        if (this.setNewSeries) this.setNewSeries = false;
       } else if (e.key === 't' && this.setNewTraj === false && this.editable) {
         this.clearSelectedTraj();
         this.clearTrajSelectPanel();
@@ -1969,14 +2087,26 @@ export default {
         this.trajTimePts = [];
         if (this.setChikari) this.setChikari = false;
         if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
+        if (this.setNewSeries) this.setNewSeries = false;
       } else if (e.key === 'p' && this.setNewPhraseDiv === false && this.editable) {
         this.clearSelectedTraj();
         this.clearTrajSelectPanel();
         this.clearSelectedPhraseDiv();
         if (this.setChikari) this.setChikari = false;
         if (this.setNewTraj) this.setNewTraj = false;
+        if (this.setNewSeries) this.setNewSeries = false;
         this.setNewPhraseDiv = true;
         this.svg.style('cursor', 's-resize');
+      } else if (e.key === 's' && this.setNewSeries === false && this.editable) {
+        this.setNewSeries = true;
+        this.clearSelectedTraj();
+        this.clearTrajSelectPanel();
+        this.clearSelectedPhraseDiv();
+        if (this.setChikari) this.setChikari = false;
+        if (this.setNewTraj) this.setNewTraj = false;
+        if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
+        this.svg.style('cursor', 'crosshair');
+        this.trajTimePts = [];
       }
     },
 
@@ -2537,6 +2667,40 @@ export default {
               pIdx: pIdx,
               tIdx: tIdx
             })
+          }
+        }
+      } else if (this.setNewSeries) {
+        const logSargamLines = this.visibleSargam.map(s => Math.log2(s));
+        const navHeight = this.$parent.$parent.navHeight;
+        let logFreq = this.yr().invert(e.clientY - navHeight);
+        logFreq = getClosest(logSargamLines, logFreq);
+        const phrase = this.piece.phrases[pIdx];
+        const tIdx = this.trajIdxFromTime(phrase, time);
+        const traj = phrase.trajectories[tIdx];
+        let snappedTime = time;
+        const st = phrase.startTime + traj.startTime;
+        const et = st + traj.durTot;
+        if (time - st < this.minTrajDur) {
+          snappedTime = st
+        } else if (et - time < this.minTrajDur) {
+          snappedTime = et
+        }
+        if (traj.id === 12) {
+          this.phraseG  
+            .append('circle')
+            .classed('newSeriesDot', true)
+            .attr('cx', this.codifiedXR(time))
+            .attr('cy', this.codifiedYR(logFreq))
+            .attr('r', 4)
+            .style('fill', 'darkorange')
+          this.trajTimePts.push({
+            time: snappedTime,
+            logFreq: logFreq,
+            pIdx: pIdx,
+            tIdx: tIdx
+          })
+          if (this.trajTimePts.length > 1) {
+            this.addFixedTraj();
           }
         }
       } else if (this.setNewPhraseDiv) {
