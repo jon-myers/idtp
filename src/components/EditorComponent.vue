@@ -2724,14 +2724,15 @@ export default {
           });
           phrase.trajectories.splice(tIdx + 1, 0, newTraj);
           phrase.reset();
+          // right here, I need to reid all the following trajectories
+          for (let i = phrase.trajectories.length-1; i >= tIdx+2; i--) {
+            const thisTraj = phrase.trajectories[i];
+            const oldId = `p${phrase.pieceIdx}t${thisTraj.num-1}`;
+            const newId = `p${phrase.pieceIdx}t${thisTraj.num}`;
+            this.reIdAllReps(oldId, newId);
+          }
         }
-        // right here, I need to reid all the following trajectories
-        for (let i = phrase.trajectories.length-1; i >= tIdx+2; i--) {
-          const thisTraj = phrase.trajectories[i];
-          const oldId = `p${phrase.pieceIdx}t${thisTraj.num-1}`;
-          const newId = `p${phrase.pieceIdx}t${thisTraj.num}`;
-          this.reIdAllReps(oldId, newId);
-        }
+        
 
         const possibleTimes = this.possibleTrajDivs();
         const finalTime = getClosest(possibleTimes, time);
