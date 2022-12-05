@@ -2685,7 +2685,7 @@ export default {
         } else if (et - time < this.minTrajDur) {
           snappedTime = et
         }
-        if (traj.id === 12) {
+        if (traj.id === 12 && (this.trajTimePts.length === 0 || this.trajTimePts[0].tIdx === tIdx)) {
           this.phraseG  
             .append('circle')
             .classed('newSeriesDot', true)
