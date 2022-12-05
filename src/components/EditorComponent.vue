@@ -1963,7 +1963,7 @@ export default {
           .attr('cx', this.codifiedXR(this.trajTimePts[0].time))
           .attr('cy', this.codifiedYR(this.trajTimePts[0].logFreq))
           .attr('r', 4)
-          .style('fill', 'darkorange')
+          .style('fill', '#7300e6')
         
       }
     },
@@ -2692,7 +2692,7 @@ export default {
             .attr('cx', this.codifiedXR(time))
             .attr('cy', this.codifiedYR(logFreq))
             .attr('r', 4)
-            .style('fill', 'darkorange')
+            .style('fill', '#7300e6')
           this.trajTimePts.push({
             time: snappedTime,
             logFreq: logFreq,
