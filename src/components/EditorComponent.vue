@@ -1358,6 +1358,7 @@ export default {
       this.phraseG
         .append('path')
         .attr('id', `phraseLine${idx}`)
+        .classed('phraseDiv', true)
         .attr('stroke', 'black')
         .attr('stroke-width', '2px')
         .attr('d', this.playheadLine(true))
@@ -1366,6 +1367,7 @@ export default {
       this.phraseG
         .append('path')
         .attr('id', `overlay__phraseLine${idx}`)
+        .classed('phraseDiv', true)
         .attr('stroke', 'black')
         .attr('stroke-width', '10px')
         .attr('d', this.playheadLine(true))
