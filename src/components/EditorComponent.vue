@@ -4436,7 +4436,7 @@ export default {
     __generateTestPhrase(time, ascending, durTot) {
       console.log(time, ascending)
       let totalDuration = 0;
-      const trajectories = this.visiblePitches.map(p => {
+      const trajectories = this.visiblePitches.reverse().map(p => {
         const traj = new Trajectory({
           id: 0,
           durTot: durTot,
