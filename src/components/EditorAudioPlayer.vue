@@ -630,6 +630,9 @@ export default {
         const offset = startTime < this.now() ? this.now() - startTime : 0;
         const start = startTime + offset;
         const duration = endTime - start - verySmall;
+        if (duration < 0) {
+          console.log(duration, traj)
+        }
         freq.setValueCurveAtTime(this.firstEnvelope, start, duration);
         lpFreq.setValueCurveAtTime(this.firstLPEnvelope, start, duration);
       } else {
@@ -640,6 +643,9 @@ export default {
           lpEnvelope[i] = traj.compute(i / (valueCt - 1)) * 2 ** 3;
         }
         const duration = endTime - startTime - verySmall;
+        if (duration < 0) {
+          console.log(duration, traj)
+        }
         freq.setValueCurveAtTime(envelope, startTime, duration);
         lpFreq.setValueCurveAtTime(lpEnvelope, startTime, duration);
       }
@@ -668,7 +674,12 @@ export default {
       this.otherNode.cutoff.setValueAtTime(0.7, this.now());
       this.otherNode.connect(this.intChikariGainNode, 0);
       this.otherNode.connect(this.intChikariGainNode, 1);
-      this.intChikariGainNode.connect(this.chikariGainNode);
+      this.chikariDCOffsetNode = this.ac.createBiquadFilter();
+      this.chikariDCOffsetNode.type = 'highpass';
+      this.chikariDCOffsetNode.frequency.setValueAtTime(5, this.now());
+      this.intChikariGainNode
+        .connect(this.chikariDCOffsetNode)
+        .connect(this.chikariGainNode);
       const raga = this.$parent.piece.raga;
       const freqs = raga.chikariPitches.map((p) => p.frequency);
       this.otherNode.freq0.setValueAtTime(freqs[0], this.now());
@@ -679,11 +690,17 @@ export default {
       if (this.pluckNode) this.pluckNode.disconnect();
       if (this.lowPassNode) this.lowPassNode.disconnect();
       this.pluckNode = new AudioWorkletNode(this.ac, 'karplusStrong');
+      this.pluckDCOffsetNode = this.ac.createBiquadFilter();
+      this.pluckDCOffsetNode.type = 'highpass';
+      this.pluckDCOffsetNode.frequency.setValueAtTime(5, this.now());
       this.lowPassNode = this.ac.createBiquadFilter();
       this.lowPassNode.type = 'lowpass';
       const fund = this.$parent.piece.raga.fundamental;
       this.lowPassNode.frequency.setValueAtTime(fund * 2 ** 3, this.now());
-      this.pluckNode.connect(this.lowPassNode).connect(this.intSynthGainNode);
+      this.pluckNode
+        .connect(this.pluckDCOffsetNode)
+        .connect(this.lowPassNode)
+        .connect(this.intSynthGainNode);
       this.pluckNode.frequency = this.pluckNode.parameters.get('Frequency');
       this.pluckNode.cutoff = this.pluckNode.parameters.get('Cutoff');
       this.pluckNode.cutoff.setValueAtTime(Number(this.synthDamp), this.now());

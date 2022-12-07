@@ -3853,14 +3853,12 @@ export default {
     
     codifiedAddPhrases() {
       this.addSargamLines(true);
-      
       this.piece.phrases.forEach(phrase => {
         phrase.trajectories.forEach(traj => {
           if (traj.id !== 12) this.codifiedAddTraj(traj, phrase.startTime)
         });
       })
       this.codifiedAddChikari();
-      // this.codifiedAddSargamLabels();
     },
 
     xr() {
@@ -4433,6 +4431,40 @@ export default {
         })
       });
       console.log(`removed ${ct} silent trajs`)
+    },
+
+    __generateTestPhrase(time, ascending, durTot) {
+      console.log(time, ascending)
+      let totalDuration = 0;
+      const trajectories = this.visiblePitches.map(p => {
+        const traj = new Trajectory({
+          id: 0,
+          durTot: durTot,
+          durArray: [1],
+          pitches: [p, new Pitch(p.toJSON())]
+        });
+        totalDuration += durTot;
+        return traj
+      });
+      const rest = new Trajectory({
+        id: 12,
+        durTot: durTot,
+        durArray: [1],
+        fundID12: this.piece.raga.fundamental
+      })
+      trajectories.splice(0, 0, rest);
+      totalDuration += durTot;
+      const phrase = new Phrase({
+        trajectories: trajectories,
+        durTot: totalDuration
+      })
+      this.piece.phrases.splice(0, 0, phrase);
+      const lastPhrase = this.piece.phrases[this.piece.phrases.length-1];
+      const lastTrajs = lastPhrase.trajectories;
+      lastTrajs[lastTrajs.length - 1].durTot -= totalDuration;
+      lastPhrase.reset();
+      this.piece.durArrayFromPhrases();
+      this.resetZoom();
     }
   }
 }
