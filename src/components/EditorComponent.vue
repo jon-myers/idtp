@@ -4394,10 +4394,11 @@ export default {
             
             ct += 1
             if (tIdx === phrase.trajectories.length - 1) {
-              // ones at the end of a phrase
-              
+              // ones at the end of a phrase             
               const splicedTraj = phrase.trajectories.splice(tIdx, 1)[0];
-              phrase.trajectories[tIdx-1].durTot += splicedTraj.durTot;
+              if (splicedTraj && phrase.trajectories[tIdx-1]) {
+                phrase.trajectories[tIdx-1].durTot += splicedTraj.durTot;
+              }     
               phrase.durTotFromTrajectories();
               phrase.durArrayFromTrajectories();
             } else if (tIdx !== 0) {
