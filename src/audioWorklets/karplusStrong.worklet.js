@@ -7,7 +7,7 @@ class Processor extends AudioWorkletProcessor {
                 name: 'Frequency',
                 defaultValue: 110,
                 minValue: 50,
-                maxValue: 1000,
+                maxValue: 2000,
             },
             {
                 name: 'Cutoff',
