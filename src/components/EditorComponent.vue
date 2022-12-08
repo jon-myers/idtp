@@ -840,21 +840,23 @@ export default {
           const initTime = phrase.startTime + traj.startTime + traj.durTot;
           const delta = time - initTime;
           if (nextTraj.durArray && nextTraj.durArray.length > 1) {
-            nextTraj.durArray = this.newDurArrayA(nextTraj, delta)
+            nextTraj.durArray = this.newDurArrayA(nextTraj, delta);
           }
           nextTraj.durTot -= delta;
           nextTraj.startTime += delta;
-          phrase.durArrayFromTrajectories();
+          
           if (traj.durArray.length > 1) {
-            const tda = traj.durArray;
-            const initPortionZ = tda[tda.length - 1] * traj.durTot;
-            const newDurTot = traj.durTot + delta;
-            const newPropZ = (initPortionZ + delta) / newDurTot;
-            let newDurArray = tda.map(i => i * traj.durTot / newDurTot);
-            newDurArray[newDurArray.length - 1] = newPropZ;
-            traj.durArray = newDurArray;
+            // const tda = traj.durArray;
+            // const initPortionZ = tda[tda.length - 1] * traj.durTot;
+            // const newDurTot = traj.durTot + delta;
+            // const newPropZ = (initPortionZ + delta) / newDurTot;
+            // let newDurArray = tda.map(i => i * traj.durTot / newDurTot);
+            // newDurArray[newDurArray.length - 1] = newPropZ;
+            // traj.durArray = newDurArray;
+            traj.durArray = this.newDurArrayZ(traj, delta)
           }
           traj.durTot += delta;
+          phrase.durArrayFromTrajectories();
         } else {
           if (this.piece.phrases[pIdx + 1]) {
             const nextPhrase = this.piece.phrases[pIdx + 1];
@@ -1297,7 +1299,7 @@ export default {
           if (nextTraj.durArray && nextTraj.durArray.length > 1) {
             let nextTrajTimes = [0, ...nextTraj.durArray.map(cumsum())];
             nextTrajTimes = nextTrajTimes.map(a => {
-              const st = phrase.startTime + traj.startTime;
+              const st = phrase.startTime + nextTraj.startTime;
               return a * nextTraj.durTot + st
             });
             nextEnd = nextTrajTimes[1]
