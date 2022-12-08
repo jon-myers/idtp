@@ -587,6 +587,7 @@ export default {
     },
 
     sendNoiseBurst(when, dur, where, attack = 0.05, amp = 1) {
+      amp *= 2;
       const bufSize = this.ac.sampleRate * dur;
       const noiseBuffer = this.ac.createBuffer(1, bufSize, this.ac.sampleRate);
       const attackSize = this.ac.sampleRate * attack;
