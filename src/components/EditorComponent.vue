@@ -2291,10 +2291,17 @@ export default {
         .attr('transform', `translate(${deltaX}, 2)`)
     },
 
-    phraseIdxFromTime(time) {
+    phraseIdxFromTime(time, rounded=false) {
+      if (rounded) time = Math.round(time * 1000) / 1000;
       const filtered = this.piece.phrases.filter(phrase => {
-        const a = time >= phrase.startTime;
-        const b = time < phrase.startTime + phrase.durTot;
+        let st = phrase.startTime;
+        let et = st + phrase.durTot;
+        if (rounded) {
+          st = Math.round(st * 1000) / 1000;
+          et = Math.round(et * 1000) / 1000;
+        }
+        const a = time >= st;
+        const b = time < et;
         return a && b
       });
       return filtered[0].pieceIdx
@@ -2887,6 +2894,22 @@ export default {
           this.$refs.audioPlayer.play();
         }
         this.redrawPlayhead()
+    },
+
+    moveToNextPhrase() {
+      const time = this.xr().invert(this.yAxWidth);
+      const curPhrase = this.phraseIdxFromTime(time, true);
+      if (this.piece.phrases[curPhrase+1]) {
+        this.moveToPhrase(curPhrase+1);
+      }
+    },
+
+    moveToPrevPhrase() {
+      const time = this.xr().invert(this.yAxWidth);
+      const curPhrase = this.phraseIdxFromTime(time, true);
+      if (this.piece.phrases[curPhrase-1]) {
+        this.moveToPhrase(curPhrase-1);
+      }
     },
 
     makeAxes() {
