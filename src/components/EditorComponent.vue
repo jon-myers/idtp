@@ -2188,7 +2188,8 @@ export default {
                   .attr('width', unscaledWidth)
                   .attr('height', height)
                   .attr('transform', `translate(${x},${y}) scale(${xS},${yS})`)
-                  .style('opacity', this.spectrogramOpacity)
+                  .style('opacity', this.spectrogramOpacity);
+                this.redrawSpectrogram()
               });
             } else {
               console.log('not all loaded')
