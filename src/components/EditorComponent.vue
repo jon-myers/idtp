@@ -201,6 +201,7 @@ export default {
       scrollYHeight: 600 - 30 - 20, // this is janky, but it works
       initYOffset: 0,
       setNewSeries: false,
+      shifted: false,
     }
   },
   components: {
@@ -209,6 +210,7 @@ export default {
   },
   created() {
     window.addEventListener('keydown', this.handleKeydown);
+    window.addEventListener('keyup', this.handleKeyup);
     if (this.$store.state.userID === undefined) {
       if (this.$route.query) {
         this.$store.commit('update_query', this.$route.query)
@@ -433,6 +435,7 @@ export default {
   unmounted() {
     window.removeEventListener('resize', this.resize);
     window.removeEventListener('keydown', this.handleKeydown);
+    window.removeEventListener('keyup', this.handleKeyup);
     this.emitter.off('pluckBool');
     this.emitter.off('mutateTraj');
     this.emitter.off('newTraj');
@@ -2001,6 +2004,10 @@ export default {
       }
     },
 
+    handleKeyup(e) {
+      if (e.key === 'Shift') this.shifted = false
+    },
+
     handleKeydown(e) {
       if (e.key === ' ') {
         this.$refs.audioPlayer.togglePlay()
@@ -2111,7 +2118,13 @@ export default {
         if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
         this.svg.style('cursor', 'crosshair');
         this.trajTimePts = [];
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        this.shifted ? this.moveToPrevPhrase() : this.moveToNextPhrase();
+      } else if (e.key === 'Shift') {
+        this.shifted = true;
       }
+      // console.log(e.key)
     },
 
     shrink() {
