@@ -201,6 +201,7 @@ export default {
       scrollYHeight: 600 - 30 - 20, // this is janky, but it works
       initYOffset: 0,
       setNewSeries: false,
+      shifted: false,
     }
   },
   components: {
@@ -209,6 +210,7 @@ export default {
   },
   created() {
     window.addEventListener('keydown', this.handleKeydown);
+    window.addEventListener('keyup', this.handleKeyup);
     if (this.$store.state.userID === undefined) {
       if (this.$route.query) {
         this.$store.commit('update_query', this.$route.query)
@@ -433,6 +435,7 @@ export default {
   unmounted() {
     window.removeEventListener('resize', this.resize);
     window.removeEventListener('keydown', this.handleKeydown);
+    window.removeEventListener('keyup', this.handleKeyup);
     this.emitter.off('pluckBool');
     this.emitter.off('mutateTraj');
     this.emitter.off('newTraj');
@@ -2001,6 +2004,10 @@ export default {
       }
     },
 
+    handleKeyup(e) {
+      if (e.key === 'Shift') this.shifted = false
+    },
+
     handleKeydown(e) {
       if (e.key === ' ') {
         this.$refs.audioPlayer.togglePlay()
@@ -2111,7 +2118,13 @@ export default {
         if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
         this.svg.style('cursor', 'crosshair');
         this.trajTimePts = [];
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        this.shifted ? this.moveToPrevPhrase() : this.moveToNextPhrase();
+      } else if (e.key === 'Shift') {
+        this.shifted = true;
       }
+      // console.log(e.key)
     },
 
     shrink() {
@@ -2291,10 +2304,17 @@ export default {
         .attr('transform', `translate(${deltaX}, 2)`)
     },
 
-    phraseIdxFromTime(time) {
+    phraseIdxFromTime(time, rounded=false) {
+      if (rounded) time = Math.round(time * 1000) / 1000;
       const filtered = this.piece.phrases.filter(phrase => {
-        const a = time >= phrase.startTime;
-        const b = time < phrase.startTime + phrase.durTot;
+        let st = phrase.startTime;
+        let et = st + phrase.durTot;
+        if (rounded) {
+          st = Math.round(st * 1000) / 1000;
+          et = Math.round(et * 1000) / 1000;
+        }
+        const a = time >= st;
+        const b = time < et;
         return a && b
       });
       return filtered[0].pieceIdx
@@ -2865,6 +2885,48 @@ export default {
 
     scrollXDragEnd() {
       console.log('drag end')
+    },
+
+    moveToPhrase(pIdx) {
+      // move scroll
+      const offsetDurTot = this.piece.durTot * (1 - 1 / this.tx().k);
+      const time = this.piece.phrases[pIdx].startTime;
+      const scrollX = this.getScrollXVal(time / offsetDurTot);
+      this.gx.call(this.zoomX.translateTo, scrollX, 0, [0, 0]);
+      this.redraw();
+      //move playhead
+      this.currentTime = time;
+      if (!this.$refs.audioPlayer.playing) {
+        this.$refs.audioPlayer.pausedAt = time;
+        this.$refs.audioPlayer.updateProgress();
+        this.$refs.audioPlayer.updateFormattedCurrentTime();
+        this.$refs.audioPlayer.updateFormattedTimeLeft();
+      } else {
+        this.$refs.audioPlayer.stop();
+        this.$refs.audioPlayer.pausedAt = time;
+        this.$refs.audioPlayer.play();
+      }
+      this.redrawPlayhead();
+      const query = this.$route.query;
+      this.$router.push({ query: { id: query.id, pIdx: pIdx.toString() } });
+
+      
+    },
+
+    moveToNextPhrase() {
+      const time = this.xr().invert(this.yAxWidth);
+      const curPhrase = this.phraseIdxFromTime(time, true);
+      if (this.piece.phrases[curPhrase+1]) {
+        this.moveToPhrase(curPhrase+1);
+      }
+    },
+
+    moveToPrevPhrase() {
+      const time = this.xr().invert(this.yAxWidth);
+      const curPhrase = this.phraseIdxFromTime(time, true);
+      if (this.piece.phrases[curPhrase-1]) {
+        this.moveToPhrase(curPhrase-1);
+      }
     },
 
     makeAxes() {
