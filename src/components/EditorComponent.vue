@@ -2867,6 +2867,28 @@ export default {
       console.log('drag end')
     },
 
+    moveToPhrase(pIdx) {
+      // move scroll
+      const offsetDurTot = this.piece.durTot * (1 - 1 / this.tx().k);
+      const time = this.piece.phrases[pIdx].startTime;
+      const scrollX = this.getScrollXVal(time / offsetDurTot);
+      this.gx.call(this.zoomX.translateTo, scrollX, 0, [0, 0]);
+      this.redraw();
+      //move playhead
+      this.currentTime = time;
+        if (!this.$refs.audioPlayer.playing) {
+          this.$refs.audioPlayer.pausedAt = time;
+          this.$refs.audioPlayer.updateProgress();
+          this.$refs.audioPlayer.updateFormattedCurrentTime();
+          this.$refs.audioPlayer.updateFormattedTimeLeft();
+        } else {
+          this.$refs.audioPlayer.stop();
+          this.$refs.audioPlayer.pausedAt = time;
+          this.$refs.audioPlayer.play();
+        }
+        this.redrawPlayhead()
+    },
+
     makeAxes() {
       this.xAxis = (g, scale) => g
         .attr('transform', `translate(0,${this.xAxHeight})`)
