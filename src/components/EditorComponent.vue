@@ -2249,7 +2249,8 @@ export default {
       this.fixTrajs();
       this.piece.phrases.forEach(phrase => {
         phrase.consolidateSilentTrajs()
-      })
+      });
+      this.piece.durArrayFromPhrases();
     },
 
     fixTrajs() {
