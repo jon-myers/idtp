@@ -2896,17 +2896,21 @@ export default {
       this.redraw();
       //move playhead
       this.currentTime = time;
-        if (!this.$refs.audioPlayer.playing) {
-          this.$refs.audioPlayer.pausedAt = time;
-          this.$refs.audioPlayer.updateProgress();
-          this.$refs.audioPlayer.updateFormattedCurrentTime();
-          this.$refs.audioPlayer.updateFormattedTimeLeft();
-        } else {
-          this.$refs.audioPlayer.stop();
-          this.$refs.audioPlayer.pausedAt = time;
-          this.$refs.audioPlayer.play();
-        }
-        this.redrawPlayhead()
+      if (!this.$refs.audioPlayer.playing) {
+        this.$refs.audioPlayer.pausedAt = time;
+        this.$refs.audioPlayer.updateProgress();
+        this.$refs.audioPlayer.updateFormattedCurrentTime();
+        this.$refs.audioPlayer.updateFormattedTimeLeft();
+      } else {
+        this.$refs.audioPlayer.stop();
+        this.$refs.audioPlayer.pausedAt = time;
+        this.$refs.audioPlayer.play();
+      }
+      this.redrawPlayhead();
+      const query = this.$route.query;
+      this.$router.push({ query: { id: query.id, pIdx: pIdx.toString() } });
+
+      
     },
 
     moveToNextPhrase() {
