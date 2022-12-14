@@ -4008,6 +4008,8 @@ export default {
         .attr('height', rect.height - this.xAxHeight)
       d3Select('#yAxisClip>#yAxisClipRect')
         .attr('height', rect.height - this.xAxHeight)
+      d3Select('#playheadClip>#playheadClipRect')
+        .attr('width', rect.width - this.yAxWidth)
     },
 
     rect() {
