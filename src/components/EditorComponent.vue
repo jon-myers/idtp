@@ -197,7 +197,7 @@ export default {
       scrollYWidth: 20,
       scrollXHeight: 20,
       yScaleLims: [1, 5],
-      editorHeight: 600,
+      editorHeight: 700,
       scrollYHeight: 600 - 30 - 20, // this is janky, but it works
       initYOffset: 0,
       setNewSeries: false,
@@ -343,6 +343,11 @@ export default {
       }
     });
 
+    this.emitter.on('vibObj', vibObj => {
+      this.selectedTraj.vibObj = vibObj;
+      this.resetZoom();
+    });
+
     try {
       // if there's a query id, 1. check if exists, 2. if so, load it, else:
       // send some sort of message that entered piece didn't exist and go to files.
@@ -440,6 +445,7 @@ export default {
     this.emitter.off('pluckBool');
     this.emitter.off('mutateTraj');
     this.emitter.off('newTraj');
+    this.emitter.off('vibObj');
   },
 
   watch: {

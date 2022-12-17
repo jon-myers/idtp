@@ -16,6 +16,20 @@
         @change='updateBool'
         disabled='disabled'
       />
+      <label v-if='showVibObj' class='spaceLeft'>Start Up</label>
+      <input
+        v-if='editable && showVibObj'
+        type='checkbox'
+        v-model='initUp'
+        @change='updateVibObj'
+      />
+      <input
+        v-if='!editable && showVibObj'
+        type='checkbox'
+        v-model='initUp'
+        @change='updateVibObj'
+        disabled='disabled'
+      />
     </div>
     <div class='selectionRow' v-if='showSlope'>
       <label>Slope</label>
@@ -40,6 +54,78 @@
           @input='updateSlope'
           disabled='disabled'
           />
+    </div>
+    <div class='selectionRow' v-if='showVibObj'>
+      <label>Periods</label>
+      <input
+        v-if='editable'
+        type='range'
+        class='slider'
+        v-model='periods'
+        min='1'
+        max='20'
+        step='0.5'
+        @input='updateVibObj'
+      />
+      <input
+        v-if='!editable'
+        type='range'
+        class='slider'
+        v-model='periods'
+        min='1'
+        max='20'
+        step='0.5'
+        @input='updateVibObj'
+        disabled='disabled'
+      />
+    </div>
+    <div class='selectionRow' v-if='showVibObj'>
+      <label>Extent</label>
+      <input
+        v-if='editable'
+        type='range'
+        class='slider'
+        v-model='extent'
+        min='0'
+        max='0.1'
+        step='0.005'
+        @input='updateVibObj'
+      />
+      <input
+        v-if='!editable'
+        type='range'
+        class='slider'
+        v-model='periods'
+        min='0'
+        max='0.5'
+        step='0.01'
+        @input='updateVibObj'
+        disabled='disabled'
+      />
+    </div>
+    <div class='selectionRow' v-if='showVibObj'>
+      <label>Offset</label>
+      <input
+        v-if='editable'
+        type='range'
+        class='slider'
+        v-model='offset'
+        min='-1.0'
+        max='1.0'
+        step='0.01'
+        @input='updateVibObj'
+      />
+      <input
+        v-if='!editable'
+        type='range'
+        class='slider'
+        v-model='periods'
+        min='-1.0'
+        max='1.0'
+        step='0.01'
+        @input='updateVibObj'
+        disabled='disabled'
+      />
     </div>
   </div>
   <div class='thumbRow' v-for='odx in 5' :key='odx'>
@@ -82,7 +168,12 @@ export default {
       selectedIdx: undefined,
       parentSelected: false,
       slope: 1,
-      showSlope: false
+      showSlope: false,
+      showVibObj: false,
+      periods: 8,
+      offset: 0,
+      initUp: true,
+      extent: 0.05,
     }
   },
   
@@ -108,6 +199,7 @@ export default {
         el.classList.add('selected')
         const slopeIdxs = [2, 3, 4, 5]
         this.showSlope = slopeIdxs.includes(this.selectedIdx);
+        this.showVibObj = this.selectedIdx === 13;
       }
     }
   },
@@ -250,6 +342,17 @@ export default {
         this.emitter.emit('pluckBool', this.pluckBool)
       }
     },
+
+    updateVibObj() {
+      console.log('updating vibObj')
+      const vibObj = {
+        periods: this.periods,
+        vertOffset: this.extent * this.offset,
+        initUp: this.initUp,
+        extent: this.extent,
+      };
+      this.emitter.emit('vibObj', vibObj);
+    },
   }
 }
 </script>
@@ -258,7 +361,7 @@ export default {
 
 .selectionPanel {
   width: 100%;
-  height: 60px;
+  height: 100px;
   border-top: 1px solid black;
   display: flex;
   flex-direction: column;
@@ -305,5 +408,9 @@ label {
   flex-direction: row;
   align-items: center;
   justify-content: left;
+}
+
+.spaceLeft {
+  margin-left: 10px;
 }
 </style>
