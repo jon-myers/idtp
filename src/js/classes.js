@@ -200,7 +200,8 @@ class Trajectory {
     articulations = undefined,
     num = undefined,
     name = undefined,
-    fundID12 = undefined
+    fundID12 = undefined,
+    vibObj = undefined
   } = {}) {
     if (typeof(id) === 'number' && Number.isInteger(id)) {
       this.id = id
@@ -236,6 +237,16 @@ class Trajectory {
     } else {
       throw new SyntaxError(`invalid slope type, must be number: ${slope}`)
     }
+    if (vibObj === undefined) {
+      this.vibObj = {
+        periods: 8,
+        vertOffset: 0,
+        initUp: true,
+        extent: 0.05
+      }
+    } else {
+      this.vibObj = vibObj
+    }
 
     this.articulations = articulations === undefined ? {
       0: new Articulation({
@@ -253,7 +264,7 @@ class Trajectory {
     this.name = name;
     this.name = this.name_;
     this.ids = [];
-    for (let i = 0; i < 13; i++) {
+    for (let i = 0; i < 14; i++) {
       if (i !== 11) {
         this.ids.push(this[`id${i}`].bind(this))
       } else {
@@ -261,18 +272,6 @@ class Trajectory {
       }
     }
     this.fundID12 = fundID12;
-    // 'Fixed',
-    // 'Bend: Simple',
-    // 'Bend: Sloped Start',
-    // 'Bend: Sloped End',
-    // 'Bend: Ladle',
-    // 'Bend: Reverse Ladle',
-    // 'Bend: Yoyo',
-    // 'Krintin',
-    // 'Krintin Slide',
-    // 'Krintin Slide Hammer',
-    // 'Spiffy Krintin Slide Hammer',
-    // 'Slide'
     this.structuredNames = {
       fixed: 0,
       bend: {
@@ -290,7 +289,8 @@ class Trajectory {
         'spiffy krintin slide hammer': 10
       },
       slide: 11,
-      silent: 12
+      silent: 12,
+      vibrato: 13
     }
 
     // adding proper articulations here, although it feels like it could be
@@ -388,7 +388,8 @@ class Trajectory {
       'Krintin Slide Hammer',
       'Spiffy Krintin Slide Hammer',
       'Slide',
-      'Silent'
+      'Silent',
+      'Vibrato'
     ];
     return names[this.id]
   }
@@ -558,6 +559,36 @@ class Trajectory {
     return this.fundID12
   }
 
+  id13(x) {
+    // vib object includes: periods, vertOffset, initUp, extent
+    
+    const periods = this.vibObj.periods;
+    let vertOffset = this.vibObj.vertOffset;
+    const initUp = this.vibObj.initUp;
+    const extent = this.vibObj.extent;
+    if (Math.abs(vertOffset) > extent / 2) {
+      vertOffset = Math.sign(vertOffset) * extent / 2;
+    }
+    let out = Math.cos(x * 2 * Math.PI * periods + initUp * Math.PI);
+    if (x < 1 / (2 * periods)) {
+      const start = this.logFreqs[0];
+      const end = Math.log2(this.id13(1 / (2 * periods)));
+      const middle = (end + start) / 2;
+      const ext = Math.abs(end - start) / 2;
+      out = out * ext + middle;
+      return 2 ** out
+    } else if (x > 1 - 1 / (2 * periods)) {
+      const start = Math.log2(this.id13(1 - 1 / (2 * periods)));
+      const end = this.logFreqs[0];
+      const middle = (end + start) / 2;
+      const ext = Math.abs(end - start) / 2;
+      out = out * ext + middle;
+      return 2 ** out
+    } else {
+      return 2 ** (out * extent / 2 + vertOffset + this.logFreqs[0])
+    }
+  }
+
 
 
   toJSON() {
@@ -571,7 +602,8 @@ class Trajectory {
       startTime: this.startTime,
       num: this.num,
       name: this.name,
-      fundID12: this.fundID12
+      fundID12: this.fundID12,
+      vibObj: this.vibObj,
     }
   }
 

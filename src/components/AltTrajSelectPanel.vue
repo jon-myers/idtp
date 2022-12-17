@@ -42,7 +42,7 @@
           />
     </div>
   </div>
-  <div class='thumbRow' v-for='odx in 4' :key='odx'>
+  <div class='thumbRow' v-for='odx in 5' :key='odx'>
     <img 
       :class='["thumb", idx === 3 ? "right" : "" ]' 
       v-for='idx in 3' 
@@ -66,6 +66,7 @@ import t9 from '@/assets/thumbnails/9.png';
 import t10 from '@/assets/thumbnails/10.png';
 import t11 from '@/assets/thumbnails/11.png';
 import t12 from '@/assets/thumbnails/12.png';
+import t13 from '@/assets/thumbnails/13.png';
 
 // import { Articulation } from '@/js/classes.js';
 
@@ -74,7 +75,7 @@ export default {
 
   data() {
     return {
-      urls: [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12],
+      urls: [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13],
       pluckBool: true,
       intraTrajDursBool: false,
       selectedIcon: undefined,
@@ -100,6 +101,9 @@ export default {
         t.classList.remove('selected')
       })
       if (newVal !== undefined) {
+        if (newVal >= 12) {
+          newVal -= 1;
+        }
         const el = document.querySelector(`#id${newVal}`)
         el.classList.add('selected')
         const slopeIdxs = [2, 3, 4, 5]
@@ -111,9 +115,13 @@ export default {
   methods: {
 
     selectIcon(e) {
-      const idx = Number(e.target.id.slice(2));
+      let idx = Number(e.target.id.slice(2));
+      if (idx >= 12) {
+        idx += 1;
+      }
       if (this.parentSelected && this.editable) {
-        const twos = [1, 2, 3, 11];
+        const fixed = [0, 13];
+        const twos = [1, 2, 3];
         const threes = [4, 5, 6];
         if (twos.includes(this.selectedIdx)) {
           if (idx !== this.selectedIdx && twos.includes(idx)) {
@@ -144,12 +152,21 @@ export default {
               e.target.classList.add('selected');
             }
           }
+        } else if (fixed.includes(this.selectedIdx)) {
+          if (idx !== this.selectedIdx && fixed.includes(idx)) {
+            this.selectedIdx = idx;
+            this.emitter.emit('mutateTraj', this.selectedIdx);
+            document.querySelectorAll('.thumb').forEach(t => {
+              t.classList.remove('selected')
+            })
+            e.target.classList.add('selected');
+          }
         }
       } else if (this.$parent.setNewTraj) {
         const timePts = this.$parent.trajTimePts;
         if (timePts.length === 2) {
           const options = [1, 2, 3];
-          if (timePts[0].logFreq === timePts[1].logFreq) options.push(0)
+          if (timePts[0].logFreq === timePts[1].logFreq) options.push(0, 13)
           if (options.includes(idx)) {
             this.selectedIdx = idx;
             e.target.classList.add('selected');

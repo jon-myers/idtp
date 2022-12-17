@@ -249,6 +249,7 @@ export default {
     });
 
     this.emitter.on('newTraj', idx => {
+      console.log(idx)
       this.trajTimePts.sort((a, b) => a.time - b.time);
       const logSargamLines = this.visibleSargam.map(s => Math.log2(s));
       const pitches = this.trajTimePts.map(ttp => {
@@ -560,7 +561,7 @@ export default {
           timePts.push(t.durTot);
           timePts = timePts.map(tp => trajStart + tp);
           timePts.forEach((tp, i) => {
-            const logFreq = t.logFreqs[i];
+            const logFreq = t.logFreqs[i] ? t.logFreqs[i] : t.logFreqs[i-1];
             const cLF = lastPitch.logFreq === logFreq;
             const cT = lastPitch.time === tp;
             if (!(cLF || (cLF && cT))) {
@@ -4533,6 +4534,42 @@ export default {
       lastTrajs[lastTrajs.length - 1].durTot -= totalDuration;
       lastPhrase.reset();
       this.piece.durArrayFromPhrases();
+      this.resetZoom();
+    },
+
+    __generateTestTraj() {
+      // for adding vibrato, id 13
+      const durTot = 2;
+      const pitches = [this.visiblePitches[8]];
+      const vibObj = {
+        periods: 5.5,
+        vertOffset: 0.02,
+        initUp: false,
+        extent: 0.03,
+      };
+      const rest1DurTot = 1;
+      const rest1 = new Trajectory({
+        id: 12,
+        durTot: rest1DurTot,
+        durArray: [1],
+        fundID12: this.piece.raga.fundamental
+      });
+      const traj = new Trajectory({
+        id: 13,
+        durTot: durTot,
+        durArray: [1],
+        pitches: pitches,
+        vibObj: vibObj
+      });
+      const rest2DurTot = this.piece.phrases[0].durTot - durTot - rest1DurTot;
+      const rest2 = new Trajectory({
+        id: 12,
+        durTot: rest2DurTot,
+        durArray: [1],
+        fundID12: this.piece.raga.fundamental
+      });
+      this.piece.phrases[0].trajectories = [rest1, traj, rest2];
+      this.piece.phrases[0].reset();
       this.resetZoom();
     }
   }
