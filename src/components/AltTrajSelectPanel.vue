@@ -87,7 +87,7 @@
         class='slider'
         v-model='extent'
         min='0'
-        max='0.1'
+        max='0.2'
         step='0.005'
         @input='updateVibObj'
       />
@@ -344,7 +344,6 @@ export default {
     },
 
     updateVibObj() {
-      console.log('updating vibObj')
       const vibObj = {
         periods: this.periods,
         vertOffset: this.extent * this.offset,

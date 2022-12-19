@@ -345,7 +345,18 @@ export default {
 
     this.emitter.on('vibObj', vibObj => {
       this.selectedTraj.vibObj = vibObj;
-      this.resetZoom();
+      const phrase = this.piece.phrases[this.selectedTraj.phraseIdx];
+      const data = this.makeTrajData(this.selectedTraj, phrase.startTime);
+      const pIdx = this.selectedTraj.phraseIdx;
+      const tIdx = this.selectedTraj.num;
+      d3Select(`#p${pIdx}t${tIdx}`)
+        .datum(data)
+        .attr('d', this.codifiedPhraseLine())
+      d3Select(`#overlay__p${pIdx}t${tIdx}`)
+        .datum(data)
+        .attr('d', this.codifiedPhraseLine())
+
+      // this.resetZoom();
     });
 
     try {
@@ -3921,7 +3932,11 @@ export default {
         this.tx().k / this.codifiedXScale,
         this.ty().k / this.codifiedYScale,
         0
-      )
+      );
+      if (this.selectedTraj && this.selectedTrajID) {
+        d3Select(`#${this.selectedTrajID}`)
+          .attr('stroke', this.selectedTrajColor)
+      }
     },
     
     codifiedAddPhrases() {
