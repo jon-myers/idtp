@@ -16,6 +16,20 @@
         @change='updateBool'
         disabled='disabled'
       />
+      <label v-if='showVibObj' class='spaceLeft'>Start Up</label>
+      <input
+        v-if='editable && showVibObj'
+        type='checkbox'
+        v-model='initUp'
+        @change='updateVibObj'
+      />
+      <input
+        v-if='!editable && showVibObj'
+        type='checkbox'
+        v-model='initUp'
+        @change='updateVibObj'
+        disabled='disabled'
+      />
     </div>
     <div class='selectionRow' v-if='showSlope'>
       <label>Slope</label>
@@ -41,8 +55,80 @@
           disabled='disabled'
           />
     </div>
+    <div class='selectionRow' v-if='showVibObj'>
+      <label>Periods</label>
+      <input
+        v-if='editable'
+        type='range'
+        class='slider'
+        v-model='periods'
+        min='1'
+        max='20'
+        step='0.5'
+        @input='updateVibObj'
+      />
+      <input
+        v-if='!editable'
+        type='range'
+        class='slider'
+        v-model='periods'
+        min='1'
+        max='20'
+        step='0.5'
+        @input='updateVibObj'
+        disabled='disabled'
+      />
+    </div>
+    <div class='selectionRow' v-if='showVibObj'>
+      <label>Extent</label>
+      <input
+        v-if='editable'
+        type='range'
+        class='slider'
+        v-model='extent'
+        min='0'
+        max='0.2'
+        step='0.005'
+        @input='updateVibObj'
+      />
+      <input
+        v-if='!editable'
+        type='range'
+        class='slider'
+        v-model='periods'
+        min='0'
+        max='0.5'
+        step='0.01'
+        @input='updateVibObj'
+        disabled='disabled'
+      />
+    </div>
+    <div class='selectionRow' v-if='showVibObj'>
+      <label>Offset</label>
+      <input
+        v-if='editable'
+        type='range'
+        class='slider'
+        v-model='offset'
+        min='-1.0'
+        max='1.0'
+        step='0.01'
+        @input='updateVibObj'
+      />
+      <input
+        v-if='!editable'
+        type='range'
+        class='slider'
+        v-model='periods'
+        min='-1.0'
+        max='1.0'
+        step='0.01'
+        @input='updateVibObj'
+        disabled='disabled'
+      />
+    </div>
   </div>
-  <div class='thumbRow' v-for='odx in 4' :key='odx'>
+  <div class='thumbRow' v-for='odx in 5' :key='odx'>
     <img 
       :class='["thumb", idx === 3 ? "right" : "" ]' 
       v-for='idx in 3' 
@@ -66,6 +152,7 @@ import t9 from '@/assets/thumbnails/9.png';
 import t10 from '@/assets/thumbnails/10.png';
 import t11 from '@/assets/thumbnails/11.png';
 import t12 from '@/assets/thumbnails/12.png';
+import t13 from '@/assets/thumbnails/13.png';
 
 // import { Articulation } from '@/js/classes.js';
 
@@ -74,14 +161,19 @@ export default {
 
   data() {
     return {
-      urls: [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12],
+      urls: [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13],
       pluckBool: true,
       intraTrajDursBool: false,
       selectedIcon: undefined,
       selectedIdx: undefined,
       parentSelected: false,
       slope: 1,
-      showSlope: false
+      showSlope: false,
+      showVibObj: false,
+      periods: 8,
+      offset: 0,
+      initUp: true,
+      extent: 0.05,
     }
   },
   
@@ -100,10 +192,14 @@ export default {
         t.classList.remove('selected')
       })
       if (newVal !== undefined) {
+        if (newVal >= 12) {
+          newVal -= 1;
+        }
         const el = document.querySelector(`#id${newVal}`)
         el.classList.add('selected')
         const slopeIdxs = [2, 3, 4, 5]
         this.showSlope = slopeIdxs.includes(this.selectedIdx);
+        this.showVibObj = this.selectedIdx === 13;
       }
     }
   },
@@ -111,9 +207,13 @@ export default {
   methods: {
 
     selectIcon(e) {
-      const idx = Number(e.target.id.slice(2));
+      let idx = Number(e.target.id.slice(2));
+      if (idx >= 12) {
+        idx += 1;
+      }
       if (this.parentSelected && this.editable) {
-        const twos = [1, 2, 3, 11];
+        const fixed = [0, 13];
+        const twos = [1, 2, 3];
         const threes = [4, 5, 6];
         if (twos.includes(this.selectedIdx)) {
           if (idx !== this.selectedIdx && twos.includes(idx)) {
@@ -144,12 +244,21 @@ export default {
               e.target.classList.add('selected');
             }
           }
+        } else if (fixed.includes(this.selectedIdx)) {
+          if (idx !== this.selectedIdx && fixed.includes(idx)) {
+            this.selectedIdx = idx;
+            this.emitter.emit('mutateTraj', this.selectedIdx);
+            document.querySelectorAll('.thumb').forEach(t => {
+              t.classList.remove('selected')
+            })
+            e.target.classList.add('selected');
+          }
         }
       } else if (this.$parent.setNewTraj) {
         const timePts = this.$parent.trajTimePts;
         if (timePts.length === 2) {
           const options = [1, 2, 3];
-          if (timePts[0].logFreq === timePts[1].logFreq) options.push(0)
+          if (timePts[0].logFreq === timePts[1].logFreq) options.push(0, 13)
           if (options.includes(idx)) {
             this.selectedIdx = idx;
             e.target.classList.add('selected');
@@ -233,6 +342,16 @@ export default {
         this.emitter.emit('pluckBool', this.pluckBool)
       }
     },
+
+    updateVibObj() {
+      const vibObj = {
+        periods: this.periods,
+        vertOffset: this.extent * this.offset,
+        initUp: this.initUp,
+        extent: this.extent,
+      };
+      this.emitter.emit('vibObj', vibObj);
+    },
   }
 }
 </script>
@@ -241,7 +360,7 @@ export default {
 
 .selectionPanel {
   width: 100%;
-  height: 60px;
+  height: 100px;
   border-top: 1px solid black;
   display: flex;
   flex-direction: column;
@@ -288,5 +407,9 @@ label {
   flex-direction: row;
   align-items: center;
   justify-content: left;
+}
+
+.spaceLeft {
+  margin-left: 10px;
 }
 </style>

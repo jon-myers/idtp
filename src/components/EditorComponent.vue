@@ -197,7 +197,7 @@ export default {
       scrollYWidth: 20,
       scrollXHeight: 20,
       yScaleLims: [1, 5],
-      editorHeight: 600,
+      editorHeight: 700,
       scrollYHeight: 600 - 30 - 20, // this is janky, but it works
       initYOffset: 0,
       setNewSeries: false,
@@ -249,6 +249,7 @@ export default {
     });
 
     this.emitter.on('newTraj', idx => {
+      console.log(idx)
       this.trajTimePts.sort((a, b) => a.time - b.time);
       const logSargamLines = this.visibleSargam.map(s => Math.log2(s));
       const pitches = this.trajTimePts.map(ttp => {
@@ -340,6 +341,22 @@ export default {
           this.removePlucks(this.selectedTraj)
         }
       }
+    });
+
+    this.emitter.on('vibObj', vibObj => {
+      this.selectedTraj.vibObj = vibObj;
+      const phrase = this.piece.phrases[this.selectedTraj.phraseIdx];
+      const data = this.makeTrajData(this.selectedTraj, phrase.startTime);
+      const pIdx = this.selectedTraj.phraseIdx;
+      const tIdx = this.selectedTraj.num;
+      d3Select(`#p${pIdx}t${tIdx}`)
+        .datum(data)
+        .attr('d', this.codifiedPhraseLine())
+      d3Select(`#overlay__p${pIdx}t${tIdx}`)
+        .datum(data)
+        .attr('d', this.codifiedPhraseLine())
+
+      // this.resetZoom();
     });
 
     try {
@@ -439,6 +456,7 @@ export default {
     this.emitter.off('pluckBool');
     this.emitter.off('mutateTraj');
     this.emitter.off('newTraj');
+    this.emitter.off('vibObj');
   },
 
   watch: {
@@ -560,7 +578,7 @@ export default {
           timePts.push(t.durTot);
           timePts = timePts.map(tp => trajStart + tp);
           timePts.forEach((tp, i) => {
-            const logFreq = t.logFreqs[i];
+            const logFreq = t.logFreqs[i] ? t.logFreqs[i] : t.logFreqs[i-1];
             const cLF = lastPitch.logFreq === logFreq;
             const cT = lastPitch.time === tp;
             if (!(cLF || (cLF && cT))) {
@@ -3914,7 +3932,11 @@ export default {
         this.tx().k / this.codifiedXScale,
         this.ty().k / this.codifiedYScale,
         0
-      )
+      );
+      if (this.selectedTraj && this.selectedTrajID) {
+        d3Select(`#${this.selectedTrajID}`)
+          .attr('stroke', this.selectedTrajColor)
+      }
     },
     
     codifiedAddPhrases() {
@@ -4533,6 +4555,42 @@ export default {
       lastTrajs[lastTrajs.length - 1].durTot -= totalDuration;
       lastPhrase.reset();
       this.piece.durArrayFromPhrases();
+      this.resetZoom();
+    },
+
+    __generateTestTraj() {
+      // for adding vibrato, id 13
+      const durTot = 2;
+      const pitches = [this.visiblePitches[8]];
+      const vibObj = {
+        periods: 5.5,
+        vertOffset: 0.02,
+        initUp: false,
+        extent: 0.03,
+      };
+      const rest1DurTot = 1;
+      const rest1 = new Trajectory({
+        id: 12,
+        durTot: rest1DurTot,
+        durArray: [1],
+        fundID12: this.piece.raga.fundamental
+      });
+      const traj = new Trajectory({
+        id: 13,
+        durTot: durTot,
+        durArray: [1],
+        pitches: pitches,
+        vibObj: vibObj
+      });
+      const rest2DurTot = this.piece.phrases[0].durTot - durTot - rest1DurTot;
+      const rest2 = new Trajectory({
+        id: 12,
+        durTot: rest2DurTot,
+        durArray: [1],
+        fundID12: this.piece.raga.fundamental
+      });
+      this.piece.phrases[0].trajectories = [rest1, traj, rest2];
+      this.piece.phrases[0].reset();
       this.resetZoom();
     }
   }
