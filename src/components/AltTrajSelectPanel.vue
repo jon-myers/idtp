@@ -270,6 +270,7 @@ export default {
           const logFreqs = sortedTimePts.map(tp => tp.logFreq);
           const lfDiffs = logFreqs.slice(1).map((x, i) => x - logFreqs[i]);
           if (lfDiffs[0] < 0 && lfDiffs[1] === 0) options.push(7)
+          if (lfDiffs[0] > 0 && lfDiffs[1] === 0) options.push(7)
           if (lfDiffs[1] === 0) options.push(11)
           if (options.includes(idx)) {
             this.selectedIdx = idx;

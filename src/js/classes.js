@@ -311,8 +311,9 @@ class Trajectory {
     } else if (this.id === 7) {
       if (this.durArray === undefined) this.durArray = [0.2, 0.8];
       const starts = getStarts(this.durArray);
+      console.log(this.logFreqs)
       this.articulations[starts[1]] = new Articulation({
-        name: 'hammer-off'
+        name: this.logFreqs[1] >= this.logFreqs[0] ? 'hammer-on' : 'hammer-off'
       });
     } else if (this.id === 8) {
       if (this.durArray === undefined) this.durArray = [1 / 3, 1 / 3, 1 / 3];
