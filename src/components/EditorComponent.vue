@@ -249,7 +249,6 @@ export default {
     });
 
     this.emitter.on('newTraj', idx => {
-      console.log(idx)
       this.trajTimePts.sort((a, b) => a.time - b.time);
       const logSargamLines = this.visibleSargam.map(s => Math.log2(s));
       const pitches = this.trajTimePts.map(ttp => {
@@ -339,6 +338,18 @@ export default {
         if (this.selectedTraj.articulations[0]) {
           delete this.selectedTraj.articulations[0];
           this.removePlucks(this.selectedTraj)
+        }
+      }
+    });
+
+    this.emitter.on('dampen', dampen => {
+      if (dampen) {
+        this.selectedTraj.articulations['1.00'] = new Articulation({
+          name: 'dampen',
+        })
+      } else {
+        if (this.selectedTraj.articulations['1.00']) {
+          delete this.selectedTraj.articulations['1.00'];
         }
       }
     });
@@ -457,6 +468,7 @@ export default {
     this.emitter.off('mutateTraj');
     this.emitter.off('newTraj');
     this.emitter.off('vibObj');
+    this.emitter.off('dampen');
   },
 
   watch: {
@@ -4592,6 +4604,15 @@ export default {
       this.piece.phrases[0].trajectories = [rest1, traj, rest2];
       this.piece.phrases[0].reset();
       this.resetZoom();
+    },
+
+    __addDampener() {
+      // to selected traj
+      if (this.selectedTraj) {
+        this.selectedTraj.articulations['1.00'] = new Articulation({
+          name: 'dampen'
+        })
+      }
     }
   }
 }

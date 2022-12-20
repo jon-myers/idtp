@@ -147,7 +147,7 @@ class Pitch {
 }
 
 class Articulation {
-  // pluck, hammer-off, hammer-on, slide, pluck
+  // pluck, hammer-off, hammer-on, slide, pluck, dampen
   constructor({
     name = 'pluck',
     stroke = undefined

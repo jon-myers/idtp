@@ -16,7 +16,21 @@
         @change='updateBool'
         disabled='disabled'
       />
-      <label v-if='showVibObj' class='spaceLeft'>Start Up</label>
+      <label class='spaceLeft'>Dampen</label>
+      <input 
+        v-if='editable' 
+        type='checkbox' 
+        v-model='dampen' 
+        @change='updateDampen'
+      />
+      <input 
+        v-if='!editable' 
+        type='checkbox' 
+        v-model='dampen' 
+        @change='updateDampen'
+        disabled='disabled'
+      />
+      <label v-if='showVibObj' class='spaceLeft'>Up</label>
       <input
         v-if='editable && showVibObj'
         type='checkbox'
@@ -174,6 +188,7 @@ export default {
       offset: 0,
       initUp: true,
       extent: 0.05,
+      dampen: false
     }
   },
   
@@ -341,6 +356,12 @@ export default {
     updateBool() {
       if (this.parentSelected) {
         this.emitter.emit('pluckBool', this.pluckBool)
+      }
+    },
+
+    updateDampen() {
+      if (this.parentSelected) {
+        this.emitter.emit('dampen', this.dampen)
       }
     },
 
