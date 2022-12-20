@@ -570,8 +570,8 @@ export default {
           const when = Number(startTime) + Number(time) * Number(traj.durTot);
           const curVal = this.pluckNode.cutoff.value;
           this.pluckNode.cutoff.setValueAtTime(curVal, when);
-          this.pluckNode.cutoff.linearRampToValueAtTime(0, when + this.lagTime);
-          this.pluckNode.cutoff.linearRampToValueAtTime(curVal, when + 2 * this.lagTime);
+          this.pluckNode.cutoff.linearRampToValueAtTime(0, when + 2 * this.lagTime);
+          this.pluckNode.cutoff.linearRampToValueAtTime(curVal, when + 4 * this.lagTime);
         })
       }
     },
