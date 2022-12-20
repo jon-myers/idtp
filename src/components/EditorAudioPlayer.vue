@@ -548,6 +548,7 @@ export default {
         );
         const hammerOns = keys.filter((key) => arts[key].name === 'hammer-on');
         const slides = keys.filter((key) => arts[key].name === 'slide');
+        const dampens = keys.filter(key => arts[key].name === 'dampen');
 
         plucks.forEach((time) => {
           const when = Number(startTime) + Number(time) * Number(traj.durTot);
@@ -565,6 +566,13 @@ export default {
           const when = Number(startTime) + Number(time) * Number(traj.durTot);
           this.sendNoiseBurst(when, 0.01, this.pluckNode, 0.05, 0.1);
         });
+        dampens.forEach(time => {
+          const when = Number(startTime) + Number(time) * Number(traj.durTot);
+          const curVal = this.pluckNode.cutoff.value;
+          this.pluckNode.cutoff.setValueAtTime(curVal, when);
+          this.pluckNode.cutoff.linearRampToValueAtTime(0, when + 2 * this.lagTime);
+          this.pluckNode.cutoff.linearRampToValueAtTime(curVal, when + 4 * this.lagTime);
+        })
       }
     },
 

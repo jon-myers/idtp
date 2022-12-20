@@ -249,7 +249,6 @@ export default {
     });
 
     this.emitter.on('newTraj', idx => {
-      console.log(idx)
       this.trajTimePts.sort((a, b) => a.time - b.time);
       const logSargamLines = this.visibleSargam.map(s => Math.log2(s));
       const pitches = this.trajTimePts.map(ttp => {
@@ -260,7 +259,15 @@ export default {
       const times = this.trajTimePts.map(ttp => ttp.time);
       const durArray = times.slice(1).map((x, i) => (x - times[i]) / durTot);
       let articulations;
-      if (this.$refs.trajSelectPanel.pluckBool === false) articulations = {};
+      if (this.$refs.trajSelectPanel.pluckBool === false) {
+        articulations = {};
+      } else {
+        articulations = { '0': new Articulation({ name: 'pluck' }) }
+      }
+      if (this.$refs.trajSelectPanel.dampen === true) {
+        // if (!articulations) articulations = {};
+        articulations['1.00'] = new Articulation({ name: 'dampen' })
+      }
       const newTraj = new Trajectory({
         id: idx,
         pitches: pitches,
@@ -308,6 +315,8 @@ export default {
         .attr('stroke', this.selectedTrajColor)
       d3Select(`#overlay__${this.selectedTrajID}`)
         .style('cursor', 'auto')
+      d3Select(`#dampen${this.selectedTrajID}`)
+        .attr('stroke', this.selectedTrajColor)
       this.setNewTraj = false;
       this.trajTimePts = [];
       this.svg.style('cursor', 'auto');
@@ -340,6 +349,27 @@ export default {
           delete this.selectedTraj.articulations[0];
           this.removePlucks(this.selectedTraj)
         }
+      }
+    });
+
+    this.emitter.on('dampen', dampen => {
+      const pIdx = this.selectedTraj.phraseIdx;
+      const tIdx = this.selectedTraj.num;
+      if (dampen) {
+        this.selectedTraj.articulations['1.00'] = new Articulation({
+          name: 'dampen',
+        });
+        const phrase = this.piece.phrases[pIdx];
+        const g = d3Select(`#articulations__p${pIdx}t${tIdx}`);
+        this.codifiedAddDampener(this.selectedTraj, phrase.startTime, g);
+        d3Select(`#dampen${this.selectedTrajID}`)
+          .attr('stroke', this.selectedTrajColor)
+
+      } else {
+        if (this.selectedTraj.articulations['1.00']) {
+          delete this.selectedTraj.articulations['1.00'];
+        }
+        d3Select(`#dampenp${pIdx}t${tIdx}`).remove();
       }
     });
 
@@ -457,6 +487,7 @@ export default {
     this.emitter.off('mutateTraj');
     this.emitter.off('newTraj');
     this.emitter.off('vibObj');
+    this.emitter.off('dampen');
   },
 
   watch: {
@@ -1140,6 +1171,7 @@ export default {
             .attr('d', this.codifiedPhraseLine())
           this.moveKrintin(newNextTraj, phrase.startTime);
           this.moveSlides(newNextTraj, phrase.startTime);
+          this.codifiedRedrawDampener(newNextTraj, phrase.startTime);
           this.removePlucks(newNextTraj);
           const g = d3Select(`#articulations__p${pIdx}t${tIdx+1}`);
           this.codifiedAddPlucks(newNextTraj, phrase.startTime, g)
@@ -1161,6 +1193,7 @@ export default {
               .attr('d', this.codifiedPhraseLine())
             this.moveKrintin(newNextTraj, nextPhrase.startTime)
             this.moveSlides(newNextTraj, nextPhrase.startTime)
+            this.codifiedRedrawDampener(newNextTraj, nextPhrase.startTime)
             this.removePlucks(newNextTraj);
             const g = d3Select(`#articulations__p${pIdx+1}t${0}`);
             this.codifiedAddPlucks(newNextTraj, nextPhrase.startTime, g);
@@ -1179,6 +1212,7 @@ export default {
       this.selectedTraj = newTraj;
       this.moveKrintin(this.selectedTraj, phrase.startTime);
       this.moveSlides(this.selectedTraj, phrase.startTime);
+      this.codifiedRedrawDampener(this.selectedTraj, phrase.startTime);
       this.cleanEmptyTrajs(phrase);
       this.moveChikaris(phrase);
       if (resetRequired) this.resetZoom();
@@ -1247,10 +1281,15 @@ export default {
       // so that articulations are in the right place according to new durArray;
       const trajObj = traj.toJSON();
       const c1 = traj.articulations[0];
+      const c2 = traj.articulations['1.00'];
       const pluckExists = c1 && traj.articulations[0].name === 'pluck';
+      const dampenExists = c2 && traj.articulations['1.00'].name === 'dampen';
       delete trajObj.articulations;
       const newTraj = new Trajectory(trajObj);
       if (!pluckExists) delete newTraj.articulations[0];
+      if (dampenExists) newTraj.articulations['1.00'] = new Articulation({
+        name: 'dampen',
+      })
       return newTraj
     },
 
@@ -1919,6 +1958,8 @@ export default {
           .attr('stroke', this.selectedTrajColor)
         d3Select(`#overlay__${this.selectedTrajID}`)
           .style('cursor', 'auto')
+        d3Select(`#dampen${this.selectedTrajID}`)
+          .attr('fill', this.selectedTrajColor)
         this.setNewSeries = false;
         this.trajTimePts = [];
         this.svg.style('cursor', 'auto');
@@ -1944,6 +1985,8 @@ export default {
           .attr('stroke', this.selectedTrajColor)
         d3Select(`#overlay__${this.selectedTrajID}`)
           .style('cursor', 'auto')
+        d3Select(`#dampen${this.selectedTrajID}`)
+          .attr('fill', this.selectedTrajColor)
         this.setNewSeries = false;
         this.trajTimePts = [];
         this.svg.style('cursor', 'auto');
@@ -3035,6 +3078,7 @@ export default {
       this.addPlucks(traj, phraseStart, g)
       this.addKrintin(traj, phraseStart, g)
       this.addSlide(traj, phraseStart, g)
+      this.addDampener(traj, phraseStart, g)
     },
 
     codifiedAddArticulations(traj, phraseStart) {
@@ -3043,6 +3087,7 @@ export default {
       this.codifiedAddPlucks(traj, phraseStart, g);
       this.codifiedAddKrintin(traj, phraseStart, g);
       this.codifiedAddSlide(traj, phraseStart, g);
+      this.codifiedAddDampener(traj, phraseStart, g);
 
     },
 
@@ -3541,6 +3586,8 @@ export default {
         const tIdx = Number(id.split('t')[1]);
         d3Select(`#${id}`)
           .attr('stroke', this.selectedTrajColor)
+        d3Select(`#dampenp${pIdx}t${tIdx}`)
+          .attr('stroke', this.selectedTrajColor)
         if (this.selectedTraj) {
           const c1 = this.selectedTraj.num === tIdx;
           if (!(c1 && this.selectedTraj.phraseIdx === pIdx)) {
@@ -3588,6 +3635,8 @@ export default {
         if (id !== this.selectedTrajID) {
           d3Select(`#${id}`)
             .attr('stroke', this.trajColor)
+          d3Select(`#dampen${id}`)
+            .attr('stroke', this.trajColor)
         }
       }
     },
@@ -3616,6 +3665,8 @@ export default {
       if (this.selectedTrajID && this.selectedTrajID !== id) {
         d3Select(`#` + this.selectedTrajID)
           .attr('stroke', this.trajColor)
+        d3Select(`#dampen` + this.selectedTrajID)
+          .attr('stroke', this.trajColor)
       }
       this.selectedTrajID = e.target.id.split('__')[1];
       const pIdx = this.selectedTrajID.split('t')[0].slice(1);
@@ -3625,15 +3676,23 @@ export default {
       this.$refs.trajSelectPanel.parentSelected = true;
       this.$refs.trajSelectPanel.slope = Math.log2(this.selectedTraj.slope);
       const c1 = this.selectedTraj.articulations[0];
+      const c2 = this.selectedTraj.articulations['1.00'];
       if (c1 && this.selectedTraj.articulations[0].name === 'pluck') {
         this.$refs.trajSelectPanel.pluckBool = true
       } else {
         this.$refs.trajSelectPanel.pluckBool = false
       }
+      if (c2 && c2.name === 'dampen') {
+        this.$refs.trajSelectPanel.dampen = true
+      } else {
+        this.$refs.trajSelectPanel.dampen = false
+      }
       d3Select(`#${this.selectedTrajID}`)
         .attr('stroke', this.selectedTrajColor)
       d3Select(`#overlay__${this.selectedTrajID}`)
         .style('cursor', 'auto')
+      d3Select(`#dampen${this.selectedTrajID}`)
+        .attr('stroke', this.selectedTrajColor)
       if (this.selectedChikariID) {
         this.clearSelectedChikari()
       }
@@ -3665,6 +3724,8 @@ export default {
           .attr('stroke', this.trajColor)
         d3Select(`#overlay__${this.selectedTrajID}`)
           .style('cursor', 'pointer')
+        d3Select(`#dampen${this.selectedTrajID}`)
+          .attr('stroke', this.trajColor);
         this.selectedTrajID = undefined;
         d3SelectAll('.dragDots').remove();
       }
@@ -3738,6 +3799,44 @@ export default {
           .duration(this.transitionTime)
           .attr('transform', `translate(${x(obj)},${y(obj)})`)
       })
+    },
+
+    redrawDampener(traj, phraseStart) {
+      const keys = Object.keys(traj.articulations);
+      const dampenKeys = keys.filter(key => {
+        return traj.articulations[key].name === 'dampen'
+      });
+      dampenKeys.forEach(() => {
+        const x = d => this.xr()(d.x);
+        const y = d => this.yr()(d.y);
+        const obj = {
+          x: phraseStart + traj.startTime + traj.durTot,
+          y: traj.compute(1, true)
+        };
+        d3Select(`#dampenp${traj.phraseIdx}t${traj.num}`)
+          .transition()
+          .duration(this.transitionTime)
+          .attr('transform', `translate(${x(obj)},${y(obj)})`)
+      });
+    },
+
+    codifiedRedrawDampener(traj, phraseStart) {
+      const keys = Object.keys(traj.articulations);
+      const dampenKeys = keys.filter(key => {
+        return traj.articulations[key].name === 'dampen'
+      });
+      dampenKeys.forEach(() => {
+        const x = d => this.codifiedXR(d.x);
+        const y = d => this.codifiedYR(d.y);
+        const obj = {
+          x: phraseStart + traj.startTime + traj.durTot,
+          y: traj.compute(1, true)
+        };
+        d3Select(`#dampenp${traj.phraseIdx}t${traj.num}`)
+          .transition()
+          .duration(this.transitionTime)
+          .attr('transform', `translate(${x(obj)},${y(obj)})`)
+      });
     },
 
     codifiedRedrawSlide(traj, phraseStart) {
@@ -3982,6 +4081,7 @@ export default {
             this.movePlucks(traj);
             this.redrawKrintin(traj, phrase.startTime);
             this.redrawSlide(traj, phrase.startTime);
+            this.redrawDampener(traj, phrase.startTime);
           }
         })
       });
@@ -4296,6 +4396,7 @@ export default {
     },
 
     codifiedRedrawPhrase(pIdx) {
+      console.log('redrawing phrase', pIdx);
       const phrase = this.piece.phrases[pIdx]
       phrase.trajectories.forEach((traj, tIdx) => {
         if (traj.id !== 12) {
@@ -4311,38 +4412,7 @@ export default {
         this.codifiedRedrawPlucks(traj, phrase.startTime)
         this.codifiedRedrawKrintin(traj, phrase.startTime)
         this.codifiedRedrawSlide(traj, phrase.startTime)
-      })
-    },
-
-    redrawPhrase(pIdx) {
-      const timePts = Math.round(this.durTot / this.minDrawDur);
-      const drawTimes = linSpace(0, this.durTot, timePts);
-      const phrase = this.piece.phrases[pIdx]
-      phrase.trajectories.forEach((traj, tIdx) => {
-        if (traj.id !== 12) {
-          const st = phrase.startTime + traj.startTime;
-          const end = st + traj.durTot;
-          const fltr = t => t >= st && t < end;
-          const mp = t => (t - st) / traj.durTot;
-          const trajDrawTimes = drawTimes.filter(fltr);
-          const trajDrawXs = trajDrawTimes.map(mp);
-          const trajDrawYs = trajDrawXs.map(x => traj.compute(x));
-          const data = trajDrawYs.map((y, i) => {
-            return {
-              x: trajDrawTimes[i],
-              y: y
-            }
-          })
-          d3Select(`#p${pIdx}t${tIdx}`)
-            .datum(data)
-            .attr('d', this.phraseLine())
-          d3Select(`#overlay__${pIdx}t${tIdx}`)
-            .datum(data)
-            .attr('d', this.phraseLine())
-        }
-        this.redrawPlucks(traj, phrase.startTime)
-        this.redrawKrintin(traj, phrase.startTime)
-        this.redrawSlide(traj, phrase.startTime)
+        this.codifiedRedrawDampener(traj, phrase.startTime)
       })
     },
 
@@ -4522,6 +4592,58 @@ export default {
         })
       });
       console.log(`removed ${ct} silent trajs`)
+    },
+
+    addDampener(traj, phraseStart, g) {
+      const keys = Object.keys(traj.articulations);
+      const dampenKeys = keys.filter(key => {
+        return traj.articulations[key].name === 'dampen'
+      });
+      dampenKeys.forEach(() => {
+        const x = d => {
+          const out = this.xr()(d.x);
+          return out
+        }
+        const y = d => this.yr()(d.y)
+        const obj = {
+          x: phraseStart + traj.startTime + traj.durTot,
+          y: traj.compute(1, true)
+        };
+        g.append('path')
+          .classed('articulation', true)
+          .classed('dampen', true)
+          .attr('id', `dampenp${traj.phraseIdx}t${traj.num}`)
+          .attr('d', d3Line()([[-2, -8], [0, -8], [0, 8], [-2, 8]]))
+          .attr('stroke', this.trajColor)
+          .attr('stroke-width', '3px')
+          .attr('stroke-linejoin', 'round')
+          .attr('stroke-linecap', 'round')
+          .attr('fill', 'none')
+          .data([obj])
+          .attr('transform', d => `translate(${x(d)},${y(d)})`)
+      })
+    },
+
+    codifiedAddDampener(traj, phraseStart, g) {
+      const keys = Object.keys(traj.articulations);
+      const dampenKeys = keys.filter(key => {
+        return traj.articulations[key].name === 'dampen'
+      });
+      dampenKeys.forEach(() => {
+        const x = this.codifiedXR(phraseStart + traj.startTime + traj.durTot)
+        const y = this.codifiedYR(traj.compute(1, true))
+        g.append('path')
+          .classed('articulation', true)
+          .classed('dampen', true)
+          .attr('id', `dampenp${traj.phraseIdx}t${traj.num}`)
+          .attr('d', d3Line()([[-2, -8], [0, -8], [0, 8], [-2, 8]]))
+          .attr('stroke', this.trajColor)
+          .attr('stroke-width', '3px')
+          .attr('stroke-linejoin', 'round')
+          .attr('stroke-linecap', 'round')
+          .attr('fill', 'none')
+          .attr('transform', `translate(${x},${y})`)
+      })
     },
 
     __generateTestPhrase(time, ascending, durTot) {
