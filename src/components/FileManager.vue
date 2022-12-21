@@ -306,7 +306,7 @@ export default {
     },
 
     async deletePiece() {
-      if (this.delete_) {
+      if (this.delete_ && this.$store.state.userID === this.selectedPiece.userID) {
         this.$refs.dropDown.classList.add('closed');
         const res = await deletePiece(this.selectedPiece);
         if (res.ok) {
