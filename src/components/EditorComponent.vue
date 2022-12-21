@@ -278,21 +278,38 @@ export default {
       const pIdx = this.trajTimePts[0].pIdx;
       const tIdx = this.trajTimePts[0].tIdx;
       const phrase = this.piece.phrases[pIdx];
+      const trajs = phrase.trajectories;
       const silentTraj = phrase.trajectories[tIdx];
       const st = phrase.startTime + silentTraj.startTime
       const startsEqual = times[0] === st;
       const endsEqual = times[times.length - 1] === st + silentTraj.durTot;
       if (startsEqual && endsEqual) { // if replaces entire silent traj
-        phrase.trajectories[tIdx] = newTraj;
+        trajs[tIdx] = newTraj;
         phrase.reset();
       } else if (startsEqual) { // if replaces left side of silent traj
         silentTraj.durTot = silentTraj.durTot - durTot;
-        phrase.trajectories.splice(tIdx, 0, newTraj);
+        trajs.splice(tIdx, 0, newTraj);
         phrase.reset();
+        const followingTrajs = trajs.slice(tIdx + 1, trajs.length);
+        followingTrajs.reverse().forEach(traj => {
+          if (traj.id !== 12) {
+            const oldId = `p${pIdx}t${traj.num - 1}`;
+            const newId = `p${pIdx}t${traj.num}`;
+            this.reIdAllReps(oldId, newId);
+          }
+        })
       } else if (endsEqual) { // if replaces right side of silent traj
         silentTraj.durTot = silentTraj.durTot - durTot;
         phrase.trajectories.splice(tIdx + 1, 0, newTraj);
         phrase.reset();
+        const followingTrajs = trajs.slice(tIdx + 1, trajs.length);
+        followingTrajs.reverse().forEach(traj => {
+          if (traj.id !== 12) {
+            const oldId = `p${pIdx}t${traj.num - 1}`;
+            const newId = `p${pIdx}t${traj.num}`;
+            this.reIdAllReps(oldId, newId);
+          }
+        })
       } else { // if replaces internal portion of silent traj
         const firstDur = times[0] - st;
         const lastDur = (st + silentTraj.durTot) - times[times.length - 1];
@@ -306,6 +323,14 @@ export default {
         phrase.trajectories.splice(tIdx + 1, 0, newTraj);
         phrase.trajectories.splice(tIdx + 2, 0, lastSilentTraj);
         phrase.reset();
+        const followingTrajs = trajs.slice(tIdx + 2, trajs.length);
+        followingTrajs.reverse().forEach(traj => {
+          if (traj.id !== 12) {
+            const oldId = `p${pIdx}t${traj.num - 2}`;
+            const newId = `p${pIdx}t${traj.num}`;
+            this.reIdAllReps(oldId, newId);
+          }
+        })
       }
       //
       this.codifiedAddTraj(newTraj, phrase.startTime);
@@ -1867,6 +1892,8 @@ export default {
           d3Select(`#slide${oldId}i${slideCt}`)
             .attr('id', `slide${newId}i${slideCt}`);
           slideCt++;
+        } else if (art.name === 'dampen') {
+          d3Select(`#dampen${oldId}`).attr('id', `dampen${newId}`);
         }
       })
     },
@@ -2031,8 +2058,7 @@ export default {
           .attr('cx', this.codifiedXR(this.trajTimePts[0].time))
           .attr('cy', this.codifiedYR(this.trajTimePts[0].logFreq))
           .attr('r', 4)
-          .style('fill', '#7300e6')
-        
+          .style('fill', '#7300e6') 
       }
     },
     
