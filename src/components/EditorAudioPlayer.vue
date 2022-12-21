@@ -572,7 +572,7 @@ export default {
           this.pluckNode.cutoff.setValueAtTime(curVal, when);
           this.pluckNode.cutoff.linearRampToValueAtTime(0, when + 1 * this.lagTime);
           this.pluckNode.cutoff.setValueAtTime(0, when + this.lagTime + 0.05)
-          this.pluckNode.cutoff.linearRampToValueAtTime(curVal, when + this.lagTime + 1.1);
+          this.pluckNode.cutoff.linearRampToValueAtTime(curVal, when + this.lagTime + 0.1);
         })
       }
     },
