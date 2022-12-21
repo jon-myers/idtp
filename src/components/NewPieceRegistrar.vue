@@ -306,7 +306,7 @@ export default {
     
     async save() {
       const date = new Date();
-      const res = await saveRaagRules(this.selectedRaag, this.rules, date);
+      const res = await saveRaagRules(this.raga, this.rules, date);
       if (res) {
         this.savedMsg = 'Saved: ' + date.toLocaleString()
       }
