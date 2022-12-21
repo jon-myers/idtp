@@ -2089,6 +2089,8 @@ export default {
         this.regionEndTime = this.durTot;
         this.mouseUpUpdateLoop();  
       }
+      this.$refs.trajSelectPanel.showVibObj = false;
+      this.$refs.trajSelectPanel.showSlope = false;
     },
 
     handleKeyup(e) {
