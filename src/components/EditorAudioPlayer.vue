@@ -312,7 +312,7 @@ export default {
         this.moduleCt++;
         if (this.moduleCt === 3) {
           this.modsLoaded = true;
-          if (!this.inited) this.initAll();
+          if (!this.inited && this.$parent.piece) this.initAll();
         }
        });
     this.ac.audioWorklet.addModule(AudioWorklet(cURL))
@@ -320,7 +320,7 @@ export default {
         this.moduleCt++;
         if (this.moduleCt === 3) {
           this.modsLoaded = true;
-          if (!this.inited) this.initAll();
+          if (!this.inited && this.$parent.piece) this.initAll();
         }
        });
     this.ac.audioWorklet.addModule(AudioWorklet(caURL))
@@ -328,7 +328,7 @@ export default {
         this.moduleCt++;
         if (this.moduleCt === 3) {
           this.modsLoaded = true;
-          if (!this.inited) this.initAll();
+          if (!this.inited && this.$parent.piece) this.initAll();
         }
        });
     if (this.$parent.audioDBDoc && this.$parent.piece) this.gatherInfo();
