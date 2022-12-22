@@ -49,7 +49,7 @@
     <div v-if="open_" class="dropDownRow" @click="openPieceAlt(piece)">
       Open Transcription
     </div>
-    <div class="dropDownRow" @click="clonePiece(piece)">
+    <div class="dropDownRow" @click="clonePiece(piece)" v-if='open_'>
       Clone Transcription
     </div>
     <div
