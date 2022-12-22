@@ -532,7 +532,7 @@ export default {
         if (traj.id !== 12) {
           const startTime = now + allStarts[i] - curPlayTime;
           const endTime = now + allEnds[i] - curPlayTime;
-          this.playTraj(traj, startTime, endTime, 512, i === 0);
+          this.playTraj(traj, startTime, endTime, 64, i === 0);
         }
       });
     },
@@ -1003,6 +1003,7 @@ export default {
       this.pluckNode.frequency.cancelScheduledValues(when);
       this.lowPassNode.frequency.cancelScheduledValues(when);
       this.intSynthGainNode.gain.cancelScheduledValues(when);
+      this.pluckNode.cutoff.cancelScheduledValues(when);
       const curSynthGain = this.intSynthGainNode.gain.value;
       this.intSynthGainNode.gain.setValueAtTime(curSynthGain, when);
       const rampEnd = when + this.slowRamp;
@@ -1010,6 +1011,9 @@ export default {
       const curChikGain = this.intChikariGainNode.gain.value;
       this.intChikariGainNode.gain.setValueAtTime(curChikGain, when);
       this.intChikariGainNode.gain.linearRampToValueAtTime(0, rampEnd);
+      const curCutoff = this.pluckNode.cutoff.value;
+      this.pluckNode.cutoff.setValueAtTime(curCutoff, when);
+      this.pluckNode.cutoff.linearRampToValueAtTime(this.synthDamp, rampEnd);
     },
     // end GETBACK
 
