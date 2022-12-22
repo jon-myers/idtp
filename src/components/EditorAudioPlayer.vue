@@ -638,6 +638,8 @@ export default {
     },
 
     playTraj(traj, startTime, endTime, valueCt, first = false) {
+      const valueDur = 0.02;
+      valueCt = Math.round((endTime - startTime) / valueDur);
       const freq = this.pluckNode.frequency;
       const lpFreq = this.lowPassNode.frequency;
       const verySmall = 0.000000000001;
