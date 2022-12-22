@@ -459,7 +459,6 @@ const getPerformanceSections = async () => {
 };
 
 const createNewPiece = async obj => {
-  console.log(obj)
   const data = JSON.stringify(obj);
   let out;
   let request = {

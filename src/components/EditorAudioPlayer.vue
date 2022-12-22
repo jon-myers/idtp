@@ -70,7 +70,7 @@
       </div>
     </div>
     <div class="synthControls" v-if="showControls">
-      <div class="cbBoxSmall">
+      <div class="cbBoxSmall" v-if='!noAudio'>
         <label>Recording Gain</label>
         <input type="range" min="0.0" max="1.0" step="0.01" v-model="recGain" />
       </div>
@@ -274,7 +274,10 @@ export default {
       tuningControlHeight: 200,
       tuningLabelHeight: 20,
       tuningGainFactor: 0.25,
-      dataChoice: 'xlsx'
+      dataChoice: 'xlsx',
+      noAudio: false,
+      inited: false,
+      modsLoaded: false,
     };
   },
   props: ['audioSource', 'saEstimate', 'saVerified', 'id'],
@@ -303,17 +306,34 @@ export default {
       '@/audioWorklets/captureAudio.worklet.js',
       import.meta.url
     );
-    this.ac.audioWorklet.addModule(AudioWorklet(ksURL));
-    this.ac.audioWorklet.addModule(AudioWorklet(cURL));
-    this.ac.audioWorklet.addModule(AudioWorklet(caURL));
-    if (this.$parent.audioDBDoc && this.$parent.piece) {
-      this.gatherInfo();
-    }
-
+    this.moduleCt = 0;
+    this.ac.audioWorklet.addModule(AudioWorklet(ksURL))
+      .then(() => {
+        this.moduleCt++;
+        if (this.moduleCt === 3) {
+          this.modsLoaded = true;
+          if (!this.inited && this.$parent.piece) this.initAll();
+        }
+       });
+    this.ac.audioWorklet.addModule(AudioWorklet(cURL))
+      .then(() => {
+        this.moduleCt++;
+        if (this.moduleCt === 3) {
+          this.modsLoaded = true;
+          if (!this.inited && this.$parent.piece) this.initAll();
+        }
+       });
+    this.ac.audioWorklet.addModule(AudioWorklet(caURL))
+      .then(() => {
+        this.moduleCt++;
+        if (this.moduleCt === 3) {
+          this.modsLoaded = true;
+          if (!this.inited && this.$parent.piece) this.initAll();
+        }
+       });
+    if (this.$parent.audioDBDoc && this.$parent.piece) this.gatherInfo();
     this.synthLoopBufSourceNode = this.ac.createBufferSource();
-    this.synthLoopBufSourceNode.loop = true;
-
-    
+    this.synthLoopBufSourceNode.loop = true; 
   },
 
   beforeUnmount() {
@@ -448,29 +468,47 @@ export default {
     parentLoaded() {
       this.gatherInfo();
       this.makeTuningSines();
+      if (this.$parent.piece) {
+        if (!this.$parent.piece.audioID && !this.$parent.piece.audio_DB_ID) {
+          this.loading = false;
+          this.noAudio = true;
+          this.synthGain = 1;
+          this.chikariGain = 1;
+          this.recGain = 0;
+          if (this.modsLoaded && !this.inited) this.initAll()
+        }
+      }
+    },
+
+    initAll() {
+      this.initializePluckNode();
+      this.initializeChikariNodes();
+      this.initializeBufferRecorder();
+      this.preSetFirstEnvelope(256);
+      this.inited = true
     },
 
     gatherInfo() {
       const obj = this.$parent.audioDBDoc;
-      const keys = Object.keys(obj.musicians).sort((a, b) => {
-        return (
-          this.getRoleRank(obj.musicians[a]) -
-          this.getRoleRank(obj.musicians[b])
-        );
-      });
-      this.performers = keys;
-      const raags = Object.keys(obj.raags);
-      const pSecs = raags.map((raag) => {
-        const localPSecs = Object.keys(obj.raags[raag]['performance sections']);
-        return localPSecs.join(', ');
-      });
-      this.raags = raags.map((raag, i) => {
-        return `${raag}: ${pSecs[i]}`;
-      });
+      if (obj) {
+        const keys = Object.keys(obj.musicians).sort((a, b) => {
+          return (
+            this.getRoleRank(obj.musicians[a]) -
+            this.getRoleRank(obj.musicians[b])
+          );
+        });
+        this.performers = keys;
+        const raags = Object.keys(obj.raags);
+        const pSecs = raags.map((raag) => {
+          const localPSecs = Object.keys(obj.raags[raag]['performance sections']);
+          return localPSecs.join(', ');
+        });
+        this.raags = raags.map((raag, i) => {
+          return `${raag}: ${pSecs[i]}`;
+        });
+      }
       this.raga = this.$parent.piece.raga;
       this.ruleSet = this.$parent.piece.raga.ruleSet;
-
-
       this.ETRatios = this.raga.setRatios(this.ruleSet); // equal temperement
       this.initFreqs = this.ETRatios.map(ratio => {
         return this.raga.fundamental * ratio
@@ -953,7 +991,11 @@ export default {
     },
 
     updateProgress() {
-      this.progress = this.getCurrentTime() / this.audioBuffer.duration;
+      if (this.noAudio) {
+        this.progress = this.getCurrentTime() / this.$parent.piece.durTot;
+      } else {
+        this.progress = this.getCurrentTime() / this.audioBuffer.duration;
+      }
       const pbi = document.querySelector('.progressBarInner');
       const pbo = document.querySelector('.progressBarOuter');
       const totWidth = pbo.getBoundingClientRect().width;
@@ -1122,11 +1164,17 @@ export default {
     },
 
     updateFormattedTimeLeft() {
-      if (isNaN(this.audioBuffer.duration)) {
+      if (this.audioBuffer && isNaN(this.audioBuffer.duration)) {
         return '00:00';
       } else {
-        const buf = this.audioBuffer;
-        const ut = Number(buf.duration) - Number(this.getCurrentTime());
+        let ut;
+        if (!this.noAudio) {
+          const buf = this.audioBuffer;
+          ut = Number(buf.duration) - Number(this.getCurrentTime());
+        } else {
+          ut = Number(this.$parent.piece.durTot) - Number(this.getCurrentTime());
+        }
+        
         const st = structuredTime(ut);
         const ms = st.minutes + ':' + st.seconds;
         this.formattedTimeLeft = st.hours !== 0 ? ms : st.hours + ':' + ms;

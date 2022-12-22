@@ -176,12 +176,19 @@ export default {
             name: npi.raga,
             ruleSet: ruleSet,
           });
+          let durTot;
+          if (npi.audioID) {
+            const audioDBDoc = await getAudioRecording(npi.audioID);
+            durTot = audioDBDoc.duration;
+          } else {
+            durTot = 60;
+          }
           npi.phrases = [
             new Phrase({
               trajectories: [
                 new Trajectory({
                   id: 12,
-                  durTot: 5,
+                  durTot: durTot,
                   fundID12: npi.raga.fundamental,
                 }),
               ],
