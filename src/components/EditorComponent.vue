@@ -453,7 +453,7 @@ export default {
         this.audioDBDoc = await getAudioRecording(piece.audioID);
         
         this.durTot = this.audioDBDoc.duration;
-        // if pieceDurTot is less than this, add slient phrase to make the two 
+        // if pieceDurTot is less than this, add silent phrase to make the two 
         // the same
       } else {
         this.durTot = piece.durTot;
