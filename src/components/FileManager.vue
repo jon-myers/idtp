@@ -176,12 +176,13 @@ export default {
             name: npi.raga,
             ruleSet: ruleSet,
           });
+          const durTot = npi.audioID ? 5 : 60;
           npi.phrases = [
             new Phrase({
               trajectories: [
                 new Trajectory({
                   id: 12,
-                  durTot: 5,
+                  durTot: durTot,
                   fundID12: npi.raga.fundamental,
                 }),
               ],

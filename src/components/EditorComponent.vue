@@ -357,6 +357,9 @@ export default {
       } else {
         this.$refs.trajSelectPanel.pluckBool = false
       }
+      if (!this.audioDBDoc) {
+        this.extendDurTot();
+      }
     });
 
     this.emitter.on('pluckBool', pluckBool => {
@@ -477,10 +480,10 @@ export default {
       await this.initializePiece();
       this.$refs.audioPlayer.parentLoaded();
       // GETBACK
-      this.$refs.audioPlayer.initializePluckNode();
-      this.$refs.audioPlayer.initializeChikariNodes();
-      this.$refs.audioPlayer.initializeBufferRecorder();
-      this.$refs.audioPlayer.preSetFirstEnvelope(256);
+      if (this.audioDBDoc) {
+        this.$refs.audioPlayer.initAll();
+      }
+    
       // end GETBACK
       const silentDur = this.durTot - piece.durTot;
       if (silentDur >= 0.00001) {
@@ -548,7 +551,52 @@ export default {
     }
   },
 
+
   methods: {
+
+    extendDurTot(dur=10) {
+      // if no audio (!this.audioDBDoc), call this after each new traj is added,
+      // if necessary, extend audio such that it is dur beyond end of last traj.
+      const allTrajs = this.piece.phrases
+                        .map(p => p.trajectories)
+                        .flat()
+                        .filter(t => t.id !== 12);
+      const lastTraj = allTrajs[allTrajs.length - 1];
+      const allSilences = this.piece.phrases
+                        .map(p => p.trajectories)
+                        .flat()
+                        .filter(t => t.id === 12);
+      const lastSilence = allSilences[allSilences.length - 1];
+      const lastPhrase = this.piece.phrases[this.piece.phrases.length - 1];
+      const phraseStart = this.piece.phrases[lastTraj.phraseIdx].startTime;
+      const lastTrajEnd = phraseStart + lastTraj.startTime + lastTraj.durTot;
+      if (lastTrajEnd > this.piece.durTot - dur) {
+        // if silence after lastTraj, extend it
+        const samePhrase = lastSilence.phraseIdx === lastTraj.phraseIdx;
+        const c1 = samePhrase && lastSilence.num > lastTraj.num;
+        const c2 = lastSilence.phraseIdx > lastTraj.phraseIdx;
+        const extraTime = lastTrajEnd + dur - this.piece.durTot;
+        if (c1 || c2) {
+          lastSilence.durTot += extraTime;
+          lastPhrase.reset();
+        } else {
+          const newTraj = new Trajectory({
+            id: 12,
+            pitches: [],
+            durTot: extraTime,
+            fundID12: this.piece.raga.fundamental
+          });
+          lastPhrase.trajectories.push(newTraj);
+          lastPhrase.reset();
+        }
+        this.piece.durTotFromPhrases();
+        this.durTot = this.piece.durTot;
+        this.x.domain([0, this.durTot]);
+        this.resetZoom();
+        this.redraw();
+      }
+      // console.log(lastTraj, dur)
+    },
 
     cleanPhrases() {
       // if a phrase is shorter than some very small number, delete it.
