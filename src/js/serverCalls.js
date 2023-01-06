@@ -754,6 +754,7 @@ const handleGoogleAuthCode = async (code, redirectURL) => {
   }
 }
 
+
 const cloneTranscription = async (id, title, newOwner, permissions) => {
   let out;
   const request = {
