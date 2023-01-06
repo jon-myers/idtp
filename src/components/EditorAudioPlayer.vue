@@ -203,6 +203,8 @@ import { excelData, jsonData } from '@/js/serverCalls.js';
 
 const pitchShiftURL = new URL('@/workers/pitchShift.js', import.meta.url);
 
+const pitchShiftURL = new URL('@/workers/pitchShift.js', import.meta.url);
+
 const structuredTime = dur => {
   const hours = String(Math.floor(dur / 3600));
   const minutes = leadingZeros(Math.floor((dur % 3600) / 60));
@@ -1239,28 +1241,9 @@ export default {
         const pboBox = pbo.getBoundingClientRect();
         pbi.style.width = pboBox.width * this.progress - diff + 'px';
       }
-    },
-
-    handleDownload() {
-      if (this.dataChoice === 'xlsx') {
-        excelData(this.$parent.piece._id)
-      } else if (this.dataChoice === 'json') {
-        jsonData(this.$parent.piece._id)
-      }
-    },
-
-    initiateWorker() {
-      this.pitchShiftWorker = new Worker(pitchShiftURL);
-      this.pitchShiftWorker.onmessage = e => {
-        console.log(e.data);
-      }
-    },
-    
-    sendBufer() {
-      this.pitchShiftWorker.postMessage(this.audioBuffer.getChannelData(0));
-    },
-  },
-};
+    }       
+  }
+}
 </script>
 
 <style scoped>
