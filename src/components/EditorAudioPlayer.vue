@@ -201,7 +201,9 @@ import tuningForkIcon from '@/assets/icons/tuning_fork.png';
 import downloadIcon from '@/assets/icons/download.svg';
 import { excelData, jsonData } from '@/js/serverCalls.js';
 
-const structuredTime = (dur) => {
+const pitchShiftURL = new URL('@/workers/pitchShift.js', import.meta.url);
+
+const structuredTime = dur => {
   const hours = String(Math.floor(dur / 3600));
   const minutes = leadingZeros(Math.floor((dur % 3600) / 60));
   const seconds = leadingZeros(Math.round(dur % 60));
@@ -1245,7 +1247,18 @@ export default {
       } else if (this.dataChoice === 'json') {
         jsonData(this.$parent.piece._id)
       }
-    }
+    },
+
+    initiateWorker() {
+      this.pitchShiftWorker = new Worker(pitchShiftURL);
+      this.pitchShiftWorker.onmessage = e => {
+        console.log(e.data);
+      }
+    },
+    
+    sendBufer() {
+      this.pitchShiftWorker.postMessage(this.audioBuffer.getChannelData(0));
+    },
   },
 };
 </script>
