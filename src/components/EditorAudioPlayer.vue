@@ -107,6 +107,8 @@ import rulerIcon from '@/assets/icons/ruler.svg';
 import { getStarts, getEnds } from '@/js/classes.js';
 import { AudioWorklet } from "@/audio-worklet";
 
+const pitchShiftURL = new URL('@/workers/pitchShift.js', import.meta.url);
+
 const structuredTime = dur => {
   const hours = String(Math.floor(dur / 3600));
   const minutes = leadingZeros(Math.floor((dur % 3600) / 60));
@@ -731,7 +733,18 @@ export default {
         const pboBox = pbo.getBoundingClientRect()
         pbi.style.width = pboBox.width * this.progress - diff + 'px';
       }
-    }       
+    },
+
+    initiateWorker() {
+      this.pitchShiftWorker = new Worker(pitchShiftURL);
+      this.pitchShiftWorker.onmessage = e => {
+        console.log(e.data);
+      }
+    },
+    
+    sendBufer() {
+      this.pitchShiftWorker.postMessage(this.audioBuffer.getChannelData(0));
+    },
   }
 }
 </script>
