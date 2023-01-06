@@ -197,8 +197,8 @@ export default {
       scrollYWidth: 20,
       scrollXHeight: 20,
       yScaleLims: [1, 5],
-      editorHeight: 700,
-      scrollYHeight: 600 - 30 - 20, // this is janky, but it works
+      editorHeight: 600,
+      scrollYHeight: 600 - 30 - 20, // this is bad, just a placeholder anyway
       initYOffset: 0,
       setNewSeries: false,
       shifted: false,

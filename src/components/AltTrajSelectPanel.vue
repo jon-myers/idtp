@@ -144,11 +144,11 @@
   </div>
   <div class='thumbRow' v-for='odx in 5' :key='odx'>
     <img 
-      :class='["thumb", idx === 3 ? "right" : "" ]' 
-      v-for='idx in 3' 
-      :src="urls[3 * (odx-1) + (idx-1)]" 
+      :class='["thumb", idx === 4 ? "right" : "" ]' 
+      v-for='idx in 4' 
+      :src="urls[4 * (odx-1) + (idx-1)]" 
       :key='idx' 
-      :id='"id" + ((idx-1) + 3*(odx-1))' 
+      :id='"id" + ((idx-1) + 4*(odx-1))' 
       @click='selectIcon' />
   </div>
 </div>
@@ -390,7 +390,7 @@ export default {
 }
 
 .thumb {
-  width: calc((100% - 2px) / 3);
+  width: calc((100% - 3px) / 4);
   border-right: 1px solid black;
   border-top: 1px solid black;
   margin: 0;
