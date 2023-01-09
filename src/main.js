@@ -4,6 +4,7 @@ import router from './router';
 import { createStore } from 'vuex';
 import vue3GoogleLogin from 'vue3-google-login';
 import VueCookies from 'vue-cookies';
+import LoadScript from "vue-plugin-load-script";
 
 const store = createStore({
   state() {
@@ -65,4 +66,5 @@ app
     clientId: "324767655055-crhq76mdupavvrcedtde986glivug1nm.apps.googleusercontent.com"
   })
   .use(VueCookies, { expire: '7d' })
+  .use(LoadScript)
   .mount('#app')

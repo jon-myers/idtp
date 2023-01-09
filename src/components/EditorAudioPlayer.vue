@@ -307,6 +307,10 @@ export default {
       '@/audioWorklets/captureAudio.worklet.js',
       import.meta.url
     );
+    const pvURL = new URL(
+      '@/audioWorklets/phaseVocode.worklet.js',
+      import.meta.url
+    );
     this.moduleCt = 0;
     this.ac.audioWorklet.addModule(AudioWorklet(ksURL))
       .then(() => {
@@ -332,6 +336,10 @@ export default {
           if (!this.inited && this.$parent.piece) this.initAll();
         }
        });
+    this.ac.audioWorklet.addModule(AudioWorklet(pvURL))
+       .then(() => {
+          console.log('loaded this one too')
+       })
     if (this.$parent.audioDBDoc && this.$parent.piece) this.gatherInfo();
     this.synthLoopBufSourceNode = this.ac.createBufferSource();
     this.synthLoopBufSourceNode.loop = true; 
