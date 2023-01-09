@@ -200,6 +200,7 @@ import { AudioWorklet } from '@/audio-worklet';
 import tuningForkIcon from '@/assets/icons/tuning_fork.png';
 import downloadIcon from '@/assets/icons/download.svg';
 import { excelData, jsonData } from '@/js/serverCalls.js';
+const pitchShiftURL = new URL('@/workers/pitchShift.js', import.meta.url);
 
 const structuredTime = (dur) => {
   const hours = String(Math.floor(dur / 3600));
@@ -485,6 +486,7 @@ export default {
       this.initializeChikariNodes();
       this.initializeBufferRecorder();
       this.preSetFirstEnvelope(256);
+      this.initPitchShift();
       this.inited = true
     },
 
@@ -1245,6 +1247,14 @@ export default {
       } else if (this.dataChoice === 'json') {
         jsonData(this.$parent.piece._id)
       }
+    },
+
+    initPitchShift() {
+      this.pitchShiftWorker = new Worker(pitchShiftURL, { type: 'module' });
+    },
+
+    sendBuffer() {
+      this.pitchShiftWorker.postMessage(this.audioBuffer.getChannelData(0));
     }
   },
 };
@@ -1668,6 +1678,7 @@ export default {
   width: 12px;
   height: v-bind(tuningControlHeight - sargamLetterHeight - tuningLabelHeight - 10 + 'px');
   -webkit-appearance: slider-vertical;
+  appearance: slide-vertical;
   margin-top: 5px;
   margin-bottom: 5px;
 }

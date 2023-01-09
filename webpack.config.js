@@ -11,5 +11,10 @@ module.exports = {
         }
       }
     ]
-  }
+  },
+  loaders: [
+    {
+      test: /\.js$/, loader: "webpack-strip-assert"
+    }
+  ]
 };
