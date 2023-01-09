@@ -248,6 +248,7 @@ export default {
         piece = this.selectedPiece;
       }
       this.$store.commit('update_id', piece._id);
+      console.log('this is where it should be happening?')
       this.$cookies.set('currentPieceId', piece._id);
       this.$router.push({
         name: 'EditorComponent',
