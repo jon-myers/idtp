@@ -92,7 +92,7 @@ export default {
       this.$store.commit('update_lastName', this.lastName);
       this.$store.commit('update_name', this.name);
       const pieceId = this.$cookies.get('currentPieceId');
-      this.$store.commit('update_id', pieceId); //just for now
+      if (pieceId !== null) this.$store.commit('update_id', pieceId); //just for now
     } else {
       try {
         const response = await googleOneTap({ autoLogin: false });

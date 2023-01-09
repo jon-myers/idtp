@@ -1,5 +1,5 @@
 const url = 'https://swara.studio/';
-const axios = require('axios');
+import axios from 'axios';
 
 // import { Piece } from './classes.js';
 
@@ -637,7 +637,7 @@ const saveRaagRules = async (name, rules, date) => {
 }
 
 
-const altUploadFile = async (file, onProgress, parentID, idx) => {
+const uploadFile = async (file, onProgress, parentID, idx) => {
   const formData = new FormData();
   formData.append('avatar', file);
   formData.append('parentID', parentID);
@@ -781,38 +781,76 @@ const cloneTranscription = async (id, title, newOwner, permissions) => {
 }
 
 
-exports.getPiece = getPiece
-exports.savePiece = savePiece
-exports.getAllPieces = getAllPieces
-exports.createNewPiece = createNewPiece
-exports.deletePiece = deletePiece
-exports.getAudioDBEntry = getAudioDBEntry
-exports.getAllAudioFileMetaData = getAllAudioFileMetaData
-exports.uploadFile = altUploadFile
-exports.getSortedMusicians = getSortedMusicians
-exports.getEventTypes = getEventTypes
-exports.getGharana = getGharana
-exports.getRagaNames = getRagaNames
-exports.getInstruments = getInstruments
-exports.getLocationObject = getLocationObject
-exports.getPerformanceSections = getPerformanceSections
-exports.initializeAudioEvent = initializeAudioEvent
-exports.cleanEmptyDoc = cleanEmptyDoc
-exports.saveAudioMetadata = saveAudioMetadata
-exports.getAllAudioEventMetadata = getAllAudioEventMetadata
-exports.getAudioEvent = getAudioEvent
-exports.updateSaEstimate = updateSaEstimate
-exports.getVerifiedStatus = getVerifiedStatus
-exports.getRaagRule = getRaagRule
-exports.saveRaagRules = saveRaagRules
-exports.getAudioRecording = getAudioRecording
-exports.getNumberOfSpectrograms = getNumberOfSpectrograms
-exports.userLoginGoogle = userLoginGoogle
-exports.agreeToWaiver = agreeToWaiver
-exports.nameFromUserID = nameFromUserID
-exports.makeSpectrograms = makeSpectrograms
-exports.pieceExists = pieceExists
-exports.handleGoogleAuthCode = handleGoogleAuthCode
-exports.cloneTranscription = cloneTranscription
-exports.excelData = excelData
-exports.jsonData = jsonData
+export { 
+  getPiece,
+  savePiece,
+  getAllPieces,
+  createNewPiece,
+  deletePiece,
+  getAudioDBEntry,
+  getAllAudioFileMetaData,
+  uploadFile,
+  getSortedMusicians,
+  getEventTypes,
+  getGharana,
+  getRagaNames,
+  getInstruments,
+  getLocationObject,
+  getPerformanceSections,
+  initializeAudioEvent,
+  cleanEmptyDoc,
+  saveAudioMetadata,
+  getAllAudioEventMetadata,
+  getAudioEvent,
+  updateSaEstimate,
+  getVerifiedStatus,
+  getRaagRule,
+  saveRaagRules,
+  getAudioRecording,
+  getNumberOfSpectrograms,
+  userLoginGoogle,
+  agreeToWaiver,
+  nameFromUserID,
+  makeSpectrograms,
+  pieceExists,
+  handleGoogleAuthCode,
+  cloneTranscription,
+  excelData,
+  jsonData
+}
+
+// exports.getPiece = getPiece
+// exports.savePiece = savePiece
+// exports.getAllPieces = getAllPieces
+// exports.createNewPiece = createNewPiece
+// exports.deletePiece = deletePiece
+// exports.getAudioDBEntry = getAudioDBEntry
+// exports.getAllAudioFileMetaData = getAllAudioFileMetaData
+// exports.uploadFile = altUploadFile
+// exports.getSortedMusicians = getSortedMusicians
+// exports.getEventTypes = getEventTypes
+// exports.getGharana = getGharana
+// exports.getRagaNames = getRagaNames
+// exports.getInstruments = getInstruments
+// exports.getLocationObject = getLocationObject
+// exports.getPerformanceSections = getPerformanceSections
+// exports.initializeAudioEvent = initializeAudioEvent
+// exports.cleanEmptyDoc = cleanEmptyDoc
+// exports.saveAudioMetadata = saveAudioMetadata
+// exports.getAllAudioEventMetadata = getAllAudioEventMetadata
+// exports.getAudioEvent = getAudioEvent
+// exports.updateSaEstimate = updateSaEstimate
+// exports.getVerifiedStatus = getVerifiedStatus
+// exports.getRaagRule = getRaagRule
+// exports.saveRaagRules = saveRaagRules
+// exports.getAudioRecording = getAudioRecording
+// exports.getNumberOfSpectrograms = getNumberOfSpectrograms
+// exports.userLoginGoogle = userLoginGoogle
+// exports.agreeToWaiver = agreeToWaiver
+// exports.nameFromUserID = nameFromUserID
+// exports.makeSpectrograms = makeSpectrograms
+// exports.pieceExists = pieceExists
+// exports.handleGoogleAuthCode = handleGoogleAuthCode
+// exports.cloneTranscription = cloneTranscription
+// exports.excelData = excelData
+// exports.jsonData = jsonData

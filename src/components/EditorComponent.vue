@@ -4815,7 +4815,7 @@ export default {
   background-color: white;
   border-right: 1px solid black;
   border-bottom: 1px solid black;
-  height: calc(100%-1px);
+  height: calc(100% - 1px);
   display: flex;
   flex-direction: column;
 }

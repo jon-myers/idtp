@@ -1,6 +1,6 @@
 // const plt = require('matplotnode');
 // const _ = require('lodash');
-const findLastIndex = require('lodash/findLastIndex')
+import findLastIndex from 'lodash/findLastIndex';
 
 // import { getRaagRule } from '@/js/serverCalls.js';
 
@@ -1298,17 +1298,27 @@ toJSON() {
 }
 }
 
+export { 
+  Pitch,
+  Trajectory,
+  Phrase,
+  Piece,
+  Articulation,
+  Chikari,
+  Raga,
+  getStarts,
+  getEnds
+}
 
-
-exports.Pitch = Pitch
-exports.Trajectory = Trajectory
-exports.Phrase = Phrase
-exports.Piece = Piece
-exports.Articulation = Articulation
-exports.Chikari = Chikari
-exports.Raga = Raga
-exports.getStarts = getStarts
-exports.getEnds = getEnds
+// exports.Pitch = Pitch
+// exports.Trajectory = Trajectory
+// exports.Phrase = Phrase
+// exports.Piece = Piece
+// exports.Articulation = Articulation
+// exports.Chikari = Chikari
+// exports.Raga = Raga
+// exports.getStarts = getStarts
+// exports.getEnds = getEnds
 
 
 /////////

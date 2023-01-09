@@ -200,6 +200,9 @@ import { AudioWorklet } from '@/audio-worklet';
 import tuningForkIcon from '@/assets/icons/tuning_fork.png';
 import downloadIcon from '@/assets/icons/download.svg';
 import { excelData, jsonData } from '@/js/serverCalls.js';
+import ksURL from '@/audioWorklets/karplusStrong.worklet.js?url';
+import cURL from '@/audioWorklets/chikaris.worklet.js?url';
+import caURL from '@/audioWorklets/captureAudio.worklet.js?url';
 
 const structuredTime = (dur) => {
   const hours = String(Math.floor(dur / 3600));
@@ -294,18 +297,6 @@ export default {
     this.chikariGainNode.connect(this.ac.destination);
     this.chikariGainNode.gain.setValueAtTime(this.chikariGain, this.now());
     this.synthGainNode.connect(this.ac.destination);
-    const ksURL = new URL(
-      '@/audioWorklets/karplusStrong.worklet.js',
-      import.meta.url
-    );
-    const cURL = new URL(
-      '@/audioWorklets/chikaris.worklet.js',
-      import.meta.url
-    );
-    const caURL = new URL(
-      '@/audioWorklets/captureAudio.worklet.js',
-      import.meta.url
-    );
     this.moduleCt = 0;
     this.ac.audioWorklet.addModule(AudioWorklet(ksURL))
       .then(() => {
@@ -314,7 +305,10 @@ export default {
           this.modsLoaded = true;
           if (!this.inited && this.$parent.piece) this.initAll();
         }
-       });
+       })
+      .catch((err) => {
+        console.log(err);
+      });
     this.ac.audioWorklet.addModule(AudioWorklet(cURL))
       .then(() => {
         this.moduleCt++;
@@ -322,7 +316,10 @@ export default {
           this.modsLoaded = true;
           if (!this.inited && this.$parent.piece) this.initAll();
         }
-       });
+      })
+      .catch((err) => {
+        console.log(err);
+      });
     this.ac.audioWorklet.addModule(AudioWorklet(caURL))
       .then(() => {
         this.moduleCt++;
@@ -330,7 +327,10 @@ export default {
           this.modsLoaded = true;
           if (!this.inited && this.$parent.piece) this.initAll();
         }
-       });
+       })
+      .catch((err) => {
+        console.log(err);
+      });
     if (this.$parent.audioDBDoc && this.$parent.piece) this.gatherInfo();
     this.synthLoopBufSourceNode = this.ac.createBufferSource();
     this.synthLoopBufSourceNode.loop = true; 
@@ -1668,6 +1668,7 @@ export default {
   width: 12px;
   height: v-bind(tuningControlHeight - sargamLetterHeight - tuningLabelHeight - 10 + 'px');
   -webkit-appearance: slider-vertical;
+  appearance: slider-vertical;
   margin-top: 5px;
   margin-bottom: 5px;
 }

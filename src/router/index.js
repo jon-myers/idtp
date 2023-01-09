@@ -1,34 +1,30 @@
 import { createWebHistory, createRouter } from 'vue-router';
 
-const lazyLoad = view => {
-  return () => import (`@/components/${view}.vue`)
-}
-
 const routes = [
   {
     path: '/files',
     name: 'Files',
-    component: lazyLoad('FileManager')
+    component: () => import('@/components/FileManager.vue')
   },
   {
     path: '/audioEvents',
     name: 'AudioEvents',
-    component: lazyLoad('AudioEvents')
+    component: () => import('@/components/AudioEvents.vue')
   },
   {
     path: '/raagEditor',
     name: 'RaagEditor',
-    component: lazyLoad('RaagEditor')
+    component: () => import('@/components/RaagEditor.vue')
   },
   {
     path: '/editor',
     name: 'EditorComponent',
-    component: lazyLoad('EditorComponent')
+    component: () => import('@/components/EditorComponent.vue')
   },
   {
     path: '/',
     name: 'LogIn',
-    component: lazyLoad('LogIn')
+    component: () => import('@/components/LogIn.vue')
   }
 ];
 
