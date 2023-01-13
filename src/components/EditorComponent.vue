@@ -2286,7 +2286,7 @@ export default {
         this.setNewSeries = true;
         this.clearSelectedTraj();
         this.clearTrajSelectPanel();
-        this.clearSelectedPhraseDiv();
+        this.clearSselectedPhraseDiv();
         if (this.setChikari) this.setChikari = false;
         if (this.setNewTraj) {
           d3SelectAll('.newTrajDot').remove();
