@@ -56,7 +56,10 @@
       </div>
       <!-- <div class='filler'>
       </div> -->
-      <TrajSelectPanel ref='trajSelectPanel' :editable='editable'/>
+      <TrajSelectPanel 
+        ref='trajSelectPanel' 
+        :editable='editable' 
+        :ctrlBoxWidth='controlBoxWidth' />
     </div>
   </div>
 </div>
@@ -2267,7 +2270,10 @@ export default {
           this.setNewSeries = false;
           d3SelectAll('.newSeriesDot').remove();
         }
-      } else if (e.key === 'p' && this.setNewPhraseDiv === false && this.editable) {
+      } else if ( e.key === 'p' && 
+                  this.setNewPhraseDiv === false && 
+                  this.editable && 
+                  !this.selectedTraj) {
         this.clearSelectedTraj();
         this.clearTrajSelectPanel();
         this.clearSelectedPhraseDiv();
@@ -2300,6 +2306,22 @@ export default {
         this.shifted ? this.moveToPrevPhrase() : this.moveToNextPhrase();
       } else if (e.key === 'Shift') {
         this.shifted = true;
+      }
+      if (this.setNewTraj || this.selectedTraj) {
+        const keyNums = this.$refs.trajSelectPanel.keyNums;
+        if (keyNums.includes(e.key)) {
+          this.$refs.trajSelectPanel.selectIcon(keyNums.indexOf(e.key))
+        }
+      }
+      if (this.selectedTraj) {
+        const tsp = this.$refs.trajSelectPanel;
+        if (e.key === 'p') { 
+          tsp.pluckBool = !tsp.pluckBool;
+          tsp.updateBool();
+        } else if (e.key === 'd') {
+          tsp.dampen = !tsp.dampen;
+          tsp.updateDampen();
+        }
       }
     },
 
@@ -3853,6 +3875,7 @@ export default {
         d3Select(`#dampen${this.selectedTrajID}`)
           .attr('stroke', this.trajColor);
         this.selectedTrajID = undefined;
+        this.selectedTraj = undefined;
         d3SelectAll('.dragDots').remove();
       }
     },
