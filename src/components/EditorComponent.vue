@@ -56,7 +56,7 @@
       </div>
       <!-- <div class='filler'>
       </div> -->
-      <AltTrajSelectPanel ref='trajSelectPanel' :editable='editable'/>
+      <TrajSelectPanel ref='trajSelectPanel' :editable='editable'/>
     </div>
   </div>
 </div>
@@ -120,7 +120,7 @@ import {
   
 } from '@/js/serverCalls.js';
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
-import AltTrajSelectPanel from '@/components/AltTrajSelectPanel.vue';
+import TrajSelectPanel from '@/components/TrajSelectPanel.vue';
 
 // import * as d3 from 'd3';
 
@@ -208,7 +208,7 @@ export default {
   },
   components: {
     EditorAudioPlayer,
-    AltTrajSelectPanel
+    TrajSelectPanel
   },
   created() {
     window.addEventListener('keydown', this.handleKeydown);

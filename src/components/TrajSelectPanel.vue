@@ -171,7 +171,7 @@ import t13 from '@/assets/thumbnails/13.png';
 // import { Articulation } from '@/js/classes.js';
 
 export default {
-  name: 'AltTrajSelectPanel',
+  name: 'TrajSelectPanel',
 
   data() {
     return {
