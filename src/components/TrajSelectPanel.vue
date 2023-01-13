@@ -142,14 +142,21 @@
       />
     </div>
   </div>
-  <div class='thumbRow' v-for='odx in 5' :key='odx'>
-    <img 
-      :class='["thumb", idx === 4 ? "right" : "" ]' 
-      v-for='idx in 4' 
-      :src="urls[4 * (odx-1) + (idx-1)]" 
-      :key='idx' 
-      :id='"id" + ((idx-1) + 4*(odx-1))' 
-      @click='selectIcon' />
+  <div class='thumbRow' v-for='odx in 4' :key='odx'>
+    <div :class='["imgContainer", idx === 4 ? "right" : ""]' v-for='idx in 4' >
+      <img
+        v-if='urls[4 * (odx-1) + (idx-1)] !== undefined'
+        :class='["thumb", idx === 4 ? "right" : "" ]' 
+        :src="urls[4 * (odx-1) + (idx-1)]" 
+        :key='idx' 
+        :id='"id" + ((idx-1) + 4 *(odx-1))' 
+        @click='selectIcon'>
+      <div 
+        class='keyNum'
+        v-if='urls[4 * (odx-1) + (idx-1)] !== undefined'
+        
+        >{{ keyNums[4 * (odx-1) + (idx-1)] }}</div>
+    </div>
   </div>
 </div>
 </template>
@@ -171,11 +178,12 @@ import t13 from '@/assets/thumbnails/13.png';
 // import { Articulation } from '@/js/classes.js';
 
 export default {
-  name: 'AltTrajSelectPanel',
+  name: 'TrajSelectPanel',
 
   data() {
     return {
       urls: [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13],
+      keyNums: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'e'],
       pluckBool: true,
       intraTrajDursBool: false,
       selectedIcon: undefined,
@@ -193,7 +201,8 @@ export default {
   },
   
   props: [
-    'editable'
+    'editable',
+    'ctrlBoxWidth',
   ],
 
 
@@ -222,10 +231,17 @@ export default {
   methods: {
 
     selectIcon(e) {
-      let idx = Number(e.target.id.slice(2));
+      let idx;
+      if (e instanceof PointerEvent) {
+        idx = Number(e.target.id.slice(2));
+      } else {
+        idx = Number(e)
+      }
+      const selectId = '#id' + idx;
       if (idx >= 12) {
         idx += 1;
       }
+      console.log(selectId, idx)
       if (this.parentSelected && this.editable) {
         const fixed = [0, 13];
         const twos = [1, 2, 3];
@@ -237,7 +253,8 @@ export default {
             document.querySelectorAll('.thumb').forEach(t => {
               t.classList.remove('selected')
             })
-            e.target.classList.add('selected');
+            document.querySelector(selectId).classList.add('selected')
+            // e.target.classList.add('selected');
           }
         } else if (threes.includes(this.selectedIdx)) {
           if (idx !== this.selectedIdx && threes.includes(idx)) {
@@ -248,7 +265,8 @@ export default {
                 document.querySelectorAll('.thumb').forEach(t => {
                   t.classList.remove('selected')
                 })
-                e.target.classList.add('selected');
+                // e.target.classList.add('selected');
+                document.querySelector(selectId).classList.add('selected')
               }
             } else {
               this.selectedIdx = idx;
@@ -256,7 +274,8 @@ export default {
               document.querySelectorAll('.thumb').forEach(t => {
                 t.classList.remove('selected')
               })
-              e.target.classList.add('selected');
+              // e.target.classList.add('selected');
+              document.querySelector(selectId).classList.add('selected')
             }
           }
         } else if (fixed.includes(this.selectedIdx)) {
@@ -266,17 +285,20 @@ export default {
             document.querySelectorAll('.thumb').forEach(t => {
               t.classList.remove('selected')
             })
-            e.target.classList.add('selected');
+            // e.target.classList.add('selected');
+            document.querySelector(selectId).classList.add('selected')
           }
         }
       } else if (this.$parent.setNewTraj) {
+        console.log('here', idx)
         const timePts = this.$parent.trajTimePts;
         if (timePts.length === 2) {
           const options = [1, 2, 3];
           if (timePts[0].logFreq === timePts[1].logFreq) options.push(0, 13)
           if (options.includes(idx)) {
             this.selectedIdx = idx;
-            e.target.classList.add('selected');
+            // e.target.classList.add('selected');
+            document.querySelector(selectId).classList.add('selected')
             this.emitter.emit('newTraj', this.selectedIdx);
           }
         } else if (timePts.length === 3) {
@@ -289,7 +311,8 @@ export default {
           if (lfDiffs[1] === 0) options.push(11)
           if (options.includes(idx)) {
             this.selectedIdx = idx;
-            e.target.classList.add('selected');
+            // e.target.classList.add('selected');
+            document.querySelector(selectId).classList.add('selected')
             this.emitter.emit('newTraj', this.selectedIdx);
           }
         } else if (timePts.length === 4) {
@@ -301,7 +324,8 @@ export default {
           if (c) options.push(8)
           if (options.includes(idx)) {
             this.selectedIdx = idx;
-            e.target.classList.add('selected');
+            // e.target.classList.add('selected');
+            document.querySelector(selectId).classList.add('selected')
             this.emitter.emit('newTraj', this.selectedIdx);
           }
         } else if (timePts.length === 5) {
@@ -313,14 +337,16 @@ export default {
           if (c) options.push(9);
           if (options.includes(idx)) {
             this.selectedIdx = idx;
-            e.target.classList.add('selected');
+            // e.target.classList.add('selected');
+            document.querySelector(selectId).classList.add('selected')
             this.emitter.emit('newTraj', this.selectedIdx);
           }
         } else if (timePts.length === 6) {
           const options = [6];
           if (options.includes(idx)) {
             this.selectedIdx = idx;
-            e.target.classList.add('selected');
+            // e.target.classList.add('selected');
+            document.querySelector(selectId).classList.add('selected')
             this.emitter.emit('newTraj', this.selectedIdx);
           }
         } else if (timePts.length === 7) {
@@ -341,7 +367,8 @@ export default {
           }
           if (options.includes(idx)) {
             this.selectedIdx = idx;
-            e.target.classList.add('selected');
+            // e.target.classList.add('selected');
+            document.querySelector(selectId).classList.add('selected')
             this.emitter.emit('newTraj', this.selectedIdx);
           }
         }
@@ -381,7 +408,7 @@ export default {
 <style scoped>
 
 .selectionPanel {
-  width: 100%;
+  width: v-bind(ctrlBoxWidth + 'px');
   height: 100px;
   border-top: 1px solid black;
   display: flex;
@@ -389,12 +416,24 @@ export default {
   justify-content: space-evenly;
 }
 
+.imgContainer {
+  width: v-bind((ctrlBoxWidth - 3) / 4 + 'px');
+  height: v-bind((ctrlBoxWidth - 3) / 4 + 'px');
+  border-right: 1px solid black;
+  border-top: 1px solid black;
+  margin: 0px;
+  position: relative;
+  /* display: inline-block */
+}
+
 .thumb {
-  width: calc((100% - 3px) / 4);
+  width: 100%;
+  height: 100%;
+  /* width: calc((100% - 3px) / 4);
   border-right: 1px solid black;
   border-top: 1px solid black;
   margin: 0;
-  display: inline-block;
+  display: inline-block; */
   /* cursor: pointer; */
 }
 
@@ -433,5 +472,18 @@ label {
 
 .spaceLeft {
   margin-left: 10px;
+}
+
+.keyNum {
+  /* display: inline-block; */
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  z-index: 1;
+  color: black;
+  width: 15px;
+  height: 15px;
+  text-align: center;
+  font-size: 13px;
 }
 </style>

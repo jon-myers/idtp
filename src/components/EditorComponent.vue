@@ -56,7 +56,10 @@
       </div>
       <!-- <div class='filler'>
       </div> -->
-      <AltTrajSelectPanel ref='trajSelectPanel' :editable='editable'/>
+      <TrajSelectPanel 
+        ref='trajSelectPanel' 
+        :editable='editable' 
+        :ctrlBoxWidth='controlBoxWidth' />
     </div>
   </div>
 </div>
@@ -120,7 +123,7 @@ import {
   
 } from '@/js/serverCalls.js';
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
-import AltTrajSelectPanel from '@/components/AltTrajSelectPanel.vue';
+import TrajSelectPanel from '@/components/TrajSelectPanel.vue';
 
 // import * as d3 from 'd3';
 
@@ -208,7 +211,7 @@ export default {
   },
   components: {
     EditorAudioPlayer,
-    AltTrajSelectPanel
+    TrajSelectPanel
   },
   created() {
     window.addEventListener('keydown', this.handleKeydown);
@@ -2267,7 +2270,10 @@ export default {
           this.setNewSeries = false;
           d3SelectAll('.newSeriesDot').remove();
         }
-      } else if (e.key === 'p' && this.setNewPhraseDiv === false && this.editable) {
+      } else if ( e.key === 'p' && 
+                  this.setNewPhraseDiv === false && 
+                  this.editable && 
+                  !this.selectedTraj) {
         this.clearSelectedTraj();
         this.clearTrajSelectPanel();
         this.clearSelectedPhraseDiv();
@@ -2286,7 +2292,7 @@ export default {
         this.setNewSeries = true;
         this.clearSelectedTraj();
         this.clearTrajSelectPanel();
-        this.clearSselectedPhraseDiv();
+        this.clearSelectedPhraseDiv();
         if (this.setChikari) this.setChikari = false;
         if (this.setNewTraj) {
           d3SelectAll('.newTrajDot').remove();
@@ -2301,7 +2307,22 @@ export default {
       } else if (e.key === 'Shift') {
         this.shifted = true;
       }
-      // console.log(e.key)
+      if (this.setNewTraj || this.selectedTraj) {
+        const keyNums = this.$refs.trajSelectPanel.keyNums;
+        if (keyNums.includes(e.key)) {
+          this.$refs.trajSelectPanel.selectIcon(keyNums.indexOf(e.key))
+        }
+      }
+      if (this.selectedTraj) {
+        const tsp = this.$refs.trajSelectPanel;
+        if (e.key === 'p') { 
+          tsp.pluckBool = !tsp.pluckBool;
+          tsp.updateBool();
+        } else if (e.key === 'd') {
+          tsp.dampen = !tsp.dampen;
+          tsp.updateDampen();
+        }
+      }
     },
 
     shrink() {
@@ -3784,6 +3805,17 @@ export default {
         d3Select(`#dampen` + this.selectedTrajID)
           .attr('stroke', this.trajColor)
       }
+      if (this.setNewSeries) {
+        this.setNewSeries = false;
+        d3SelectAll('.newSeriesDot').remove();
+      }
+      if (this.setNewTraj) {
+        this.setNewTraj = false;
+        d3SelectAll('.newTrajDot').remove();
+      }
+      if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
+      if (this.setChikari) this.setChikari = false;
+      this.svg.style('cursor', 'default');
       this.selectedTrajID = e.target.id.split('__')[1];
       const pIdx = this.selectedTrajID.split('t')[0].slice(1);
       const tIdx = this.selectedTrajID.split('t')[1];
@@ -3843,6 +3875,7 @@ export default {
         d3Select(`#dampen${this.selectedTrajID}`)
           .attr('stroke', this.trajColor);
         this.selectedTrajID = undefined;
+        this.selectedTraj = undefined;
         d3SelectAll('.dragDots').remove();
       }
     },
