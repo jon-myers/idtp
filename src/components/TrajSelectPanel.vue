@@ -241,7 +241,6 @@ export default {
       if (idx >= 12) {
         idx += 1;
       }
-      console.log(selectId, idx)
       if (this.parentSelected && this.editable) {
         const fixed = [0, 13];
         const twos = [1, 2, 3];
@@ -290,7 +289,6 @@ export default {
           }
         }
       } else if (this.$parent.setNewTraj) {
-        console.log('here', idx)
         const timePts = this.$parent.trajTimePts;
         if (timePts.length === 2) {
           const options = [1, 2, 3];
