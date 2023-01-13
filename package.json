@@ -31,6 +31,7 @@
     "d3": "^7.6.1",
     "detect-browser": "^5.3.0",
     "electron-builder": "^23.0.2",
+    "fft.js": "^4.0.4",
     "fs": "^0.0.1-security",
     "jpickle": "^0.4.1",
     "mitt": "^3.0.0",

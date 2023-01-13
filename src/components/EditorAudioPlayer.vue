@@ -203,6 +203,7 @@ import { excelData, jsonData } from '@/js/serverCalls.js';
 import ksURL from '@/audioWorklets/karplusStrong.worklet.js?url';
 import cURL from '@/audioWorklets/chikaris.worklet.js?url';
 import caURL from '@/audioWorklets/captureAudio.worklet.js?url';
+import pvURL from '@/audioWorklets/phaseVocoder.worklet.js?url';
 
 const structuredTime = (dur) => {
   const hours = String(Math.floor(dur / 3600));
@@ -715,6 +716,21 @@ export default {
         this.firstEnvelope[i] = traj.compute(i / (valueCt - 1));
         this.firstLPEnvelope[i] = traj.compute(i / (valueCt - 1)) * 2 ** 3;
       }
+    },
+
+    async initializePhaseVocoder() {
+      await this.ac.audioWorklet.addModule(AudioWorklet(pvURL));
+      this.pvNode = new AudioWorkletNode(this.ac, 'PhaseVocoderProcessor');
+      this.pvNode.pitchFactor = this.pvNode.parameters.get('pitchFactor');
+      const pf = this.centsToPitchFactor(100);
+      this.pvNode.pitchFactor.setValueAtTime(pf, this.now());
+      this.synthGainNode.disconnect(this.ac.destination);
+      this.synthGainNode.connect(this.pvNode).connect(this.ac.destination);
+
+    },
+
+    centsToPitchFactor(cz) {
+      return 2 ** (cz / 1200);
     },
 
     initializeChikariNodes() {
