@@ -202,6 +202,8 @@ export default {
       initYOffset: 0,
       setNewSeries: false,
       shifted: false,
+      regionStartTime: undefined,
+      regionEndTime: undefined,
     }
   },
   components: {
@@ -548,7 +550,27 @@ export default {
         d3SelectAll('.sargamLabels')
           .style('opacity', '0')
       }
-    }
+    },
+
+    regionStartTime(newVal) {
+      if (this.loop) {
+        this.$refs.audioPlayer.loopStart = newVal;
+        if (this.$refs.audioPlayer.sourceNode) {
+          this.$refs.audioPlayer.sourceNode.loopStart = newVal;
+        }
+      }
+    },
+
+    regionEndTime(newVal) {
+      if (this.loop) {
+        this.$refs.audioPlayer.loopEnd = newVal;
+        if (this.$refs.audioPlayer.sourceNode) {
+          this.$refs.audioPlayer.sourceNode.loopEnd = newVal;
+        }
+      }
+    },
+
+
   },
 
 
