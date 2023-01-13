@@ -2286,7 +2286,7 @@ export default {
         this.setNewSeries = true;
         this.clearSelectedTraj();
         this.clearTrajSelectPanel();
-        this.clearSselectedPhraseDiv();
+        this.clearSelectedPhraseDiv();
         if (this.setChikari) this.setChikari = false;
         if (this.setNewTraj) {
           d3SelectAll('.newTrajDot').remove();
@@ -2301,7 +2301,6 @@ export default {
       } else if (e.key === 'Shift') {
         this.shifted = true;
       }
-      // console.log(e.key)
     },
 
     shrink() {
@@ -3784,6 +3783,17 @@ export default {
         d3Select(`#dampen` + this.selectedTrajID)
           .attr('stroke', this.trajColor)
       }
+      if (this.setNewSeries) {
+        this.setNewSeries = false;
+        d3SelectAll('.newSeriesDot').remove();
+      }
+      if (this.setNewTraj) {
+        this.setNewTraj = false;
+        d3SelectAll('.newTrajDot').remove();
+      }
+      if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
+      if (this.setChikari) this.setChikari = false;
+      this.svg.style('cursor', 'default');
       this.selectedTrajID = e.target.id.split('__')[1];
       const pIdx = this.selectedTrajID.split('t')[0].slice(1);
       const tIdx = this.selectedTrajID.split('t')[1];
