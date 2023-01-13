@@ -2246,9 +2246,15 @@ export default {
       } else if (e.key === 'c' && this.editable) {
         this.setChikari = true;
         this.svg.style('cursor', 'cell')
-        if (this.setNewTraj) this.setNewTraj = false;
+        if (this.setNewTraj) {
+          d3SelectAll('.newTrajDot').remove();
+          this.setNewTraj = false;
+        }
         if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
-        if (this.setNewSeries) this.setNewSeries = false;
+        if (this.setNewSeries) {
+          this.setNewSeries = false;
+          d3SelectAll('.newSeriesDot').remove();
+        }
       } else if (e.key === 't' && this.setNewTraj === false && this.editable) {
         this.clearSelectedTraj();
         this.clearTrajSelectPanel();
@@ -2257,14 +2263,23 @@ export default {
         this.trajTimePts = [];
         if (this.setChikari) this.setChikari = false;
         if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
-        if (this.setNewSeries) this.setNewSeries = false;
+        if (this.setNewSeries) {
+          this.setNewSeries = false;
+          d3SelectAll('.newSeriesDot').remove();
+        }
       } else if (e.key === 'p' && this.setNewPhraseDiv === false && this.editable) {
         this.clearSelectedTraj();
         this.clearTrajSelectPanel();
         this.clearSelectedPhraseDiv();
         if (this.setChikari) this.setChikari = false;
-        if (this.setNewTraj) this.setNewTraj = false;
-        if (this.setNewSeries) this.setNewSeries = false;
+        if (this.setNewTraj) {
+          d3SelectAll('.newTrajDot').remove();
+          this.setNewTraj = false;
+        }
+        if (this.setNewSeries) {
+          this.setNewSeries = false;
+          d3SelectAll('.newSeriesDot').remove();
+        }
         this.setNewPhraseDiv = true;
         this.svg.style('cursor', 's-resize');
       } else if (e.key === 's' && this.setNewSeries === false && this.editable) {
@@ -2273,7 +2288,10 @@ export default {
         this.clearTrajSelectPanel();
         this.clearSelectedPhraseDiv();
         if (this.setChikari) this.setChikari = false;
-        if (this.setNewTraj) this.setNewTraj = false;
+        if (this.setNewTraj) {
+          d3SelectAll('.newTrajDot').remove();
+          this.setNewTraj = false;
+        }
         if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
         this.svg.style('cursor', 'crosshair');
         this.trajTimePts = [];
