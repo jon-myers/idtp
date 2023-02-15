@@ -207,6 +207,8 @@ export default {
       shifted: false,
       regionStartTime: undefined,
       regionEndTime: undefined,
+      scrollDragColor: '#9c9c9c',
+      scrollDragColorHover: '#AAAAAA'
     }
   },
   components: {
@@ -675,6 +677,8 @@ export default {
         .attr('fill', 'lightgrey')
         .attr('width', this.scrollXWidth)
         .attr('height', this.scrollXHeight)
+        .on('click', this.scrollXClick)
+        .style('cursor', 'pointer')
 
       const horDrag = d3Drag()
         .on('start', this.scrollXDragStart)
@@ -683,15 +687,48 @@ export default {
 
       this.scrollX.append('rect')
         .classed('scrollXDragger', true)
-        .attr('fill', 'grey')
+        .attr('fill', this.scrollDragColor)
         .attr('width', this.getScrollXDraggerWidth())
         .attr('height', this.scrollXHeight - 4)
         .attr('rx', 6)
         .attr('ry', 6)
         .attr('transform', 'translate(0, 2)')
         .call(horDrag)
+        .on('mouseover', () => {
+          console.log('mouse over')
+          d3Select('.scrollXDragger').attr('fill', this.scrollDragColorHover)
+        })
+        .on('mouseout', () => {
+          d3Select('.scrollXDragger').attr('fill', this.scrollDragColor)
+        })
+        .style('cursor', 'pointer')
+
 
       this.$refs.scrollX.appendChild(this.scrollX.node())
+    },
+
+    scrollXClick(e) {
+      const x = e.offsetX;
+      console.log(x);
+      const xDragger = this.scrollX.select('.scrollXDragger');
+      const xDraggerXVal = xDragger.node().transform.baseVal[0].matrix.e;
+      const width = this.getScrollXDraggerWidth();
+      const horRange = this.scrollXWidth - width - 1;
+      let deltaX;
+      if (x < xDraggerXVal) {
+        console.log('scroll Left')
+        deltaX = xDraggerXVal - width;
+        if (deltaX < 0) deltaX = 0;
+      } else {
+        console.log('scroll right')
+        deltaX = xDraggerXVal + width;
+        if (deltaX > horRange) deltaX = horRange;
+      }
+      const xProp = deltaX / horRange;
+      const scrollXVal = this.getScrollXVal(xProp);
+      this.gx.call(this.zoomX.translateTo, scrollXVal, 0, [0, 0]);
+      this.redraw();
+      xDragger.attr('transform', `translate(${deltaX}, 2)`)
     },
 
     codifiedAddSargamLabels() { // this 
