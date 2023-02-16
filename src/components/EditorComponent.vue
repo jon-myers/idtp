@@ -2375,6 +2375,10 @@ export default {
         this.shifted ? this.moveToPrevPhrase() : this.moveToNextPhrase();
       } else if (e.key === 'Shift') {
         this.shifted = true;
+      } else if (e.key === '[') {
+        this.moveToPrevPhrase()
+      } else if (e.key === ']') {
+        this.moveToNextPhrase()
       }
       if (this.setNewTraj || this.selectedTraj) {
         const keyNums = this.$refs.trajSelectPanel.keyNums;
