@@ -166,7 +166,7 @@ export default {
       axisColor: '#c4b18b',
       yAxWidth: 30,
       xAxHeight: 30,
-      minDrawDur: 0.005, //this could be smaller, potentially
+      minDrawDur: 0.025, //this could be smaller, potentially
       initViewDur: 20,
       initYScale: 2,
       initXScale: 1,
@@ -3239,10 +3239,14 @@ export default {
           if (traj.id !== 12) {
             const st = phrase.startTime + traj.startTime;
             const end = st + traj.durTot;
-            const fltr = t => t >= st && t < end;
-            const mp = t => (t - st) / traj.durTot;
-            const trajDrawTimes = drawTimes.filter(fltr);
-            const trajDrawXs = trajDrawTimes.map(mp);
+            // const fltr = t => t >= st && t < end;
+            // const mp = t => (t - st) / traj.durTot;
+            // const trajDrawTimes = drawTimes.filter(fltr);
+            // const trajDrawXs = trajDrawTimes.map(mp);
+
+            const numTimePts = Math.round(traj.durTot / this.minDrawDur);
+            const trajDrawXs = linSpace(0, 1, numTimePts);
+            const trajDrawTimes = trajDrawXs.map(x => st + x * traj.durTot);
             const trajDrawYs = trajDrawXs.map(x => traj.compute(x));
             const data = trajDrawYs.map((y, i) => {
               return {
