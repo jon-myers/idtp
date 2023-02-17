@@ -480,15 +480,19 @@ const runServer = async () => {
       try {
         const verString = `recordings.${req.body.recIdx}.saVerified`;
         const estString = `recordings.${req.body.recIdx}.saEstimate`;
+        const octString = `recordings.${req.body.recIdx}.octOffset`;
         const query = { _id: ObjectId(req.body.aeID) };
         const update = { $set: {} };
         update.$set[verString] = req.body.verified;
         update.$set[estString] = req.body.saEstimate;
+        update.$set[octString] = req.body.octOffset;
         await audioEvents.updateOne(query, update);
         const otherQuery = { _id: ObjectId(req.body.recID) };
         const saEst = req.body.saEstimate;
         const ver = req.body.verified;
-        const otherUpdate = { $set: { saEstimate: saEst, saVerified: ver } };
+        const oct = req.body.octOffset;
+        const setting = { saEstimate: saEst, saVerified: ver, octOffset: oct };
+        const otherUpdate = { $set: setting };
         const oRes = await audioRecordings.updateOne(otherQuery, otherUpdate);
         res.json(oRes)
       } catch (err) {
@@ -502,9 +506,11 @@ const runServer = async () => {
         const query = { _id: ObjectId(req.query.aeID) };
         const verString = `$recordings.${req.query.recIdx}.saVerified`;
         const estString = `$recordings.${req.query.recIdx}.saEstimate`;
+        const octOffset = `$recordings.${req.query.recIdx}.octOffset`;
         const projection = { '_id': 0 };
         projection['saEstimate'] = estString;
         projection['saVerified'] = verString;
+        projection['octOffset'] = octOffset;
         const options = { projection: projection };
         const result = await audioEvents.findOne(query, options);
         res.json(result)

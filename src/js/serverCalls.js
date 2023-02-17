@@ -564,7 +564,7 @@ const saveAudioMetadata = async (_id, updates) => {
   }
 }
 
-const updateSaEstimate = async (recID, aeID, recIdx, saEstimate, verified) => {
+const updateSaEstimate = async (recID, aeID, recIdx, saEstimate, verified, octOffset) => {
   const request = {
     method: 'POST',
     headers: {
@@ -575,7 +575,8 @@ const updateSaEstimate = async (recID, aeID, recIdx, saEstimate, verified) => {
       'aeID': aeID,
       'recIdx': recIdx,
       'saEstimate': saEstimate,
-      'verified': verified
+      'verified': verified,
+      'octOffset': octOffset
     }),
   };
   let out;

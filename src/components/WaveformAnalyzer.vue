@@ -11,7 +11,7 @@
       <div class='saVerifierCol'>
         <div class='inputRow'>
           <label class='saLabel'>Sa:</label>
-          <span>{{`${saEstimate.toFixed()} hz.`}}</span>
+          <span>{{`${(saEstimate * 2 ** Number(octOffset)).toFixed()} hz.`}}</span>
           <label>Verified:</label>
           <input type='checkbox' v-model='saVerified' class='checkBox'>
           <!-- <input type='text' v-model='saEstimate' class='saEst'> -->
@@ -45,6 +45,10 @@
             step='0.01'
             v-model='sineVol'
             @input='updateVol'>
+        </div>
+        <div class='inputRow'>
+          <label>Oct offset</label>
+          <input type='number' v-model='octOffset' min='-1' max='1' class='octOffset'>
         </div>
         <div class='inputRow button'>
           <button @click='saveSaEstimate'>Save</button>
@@ -88,6 +92,7 @@ export default {
       waveformWidth: 1500,
       waveformHeight: 160,
       selectedChart: 0,
+      octOffset: 0
     }
   },
   
@@ -105,7 +110,8 @@ export default {
     if (aeElem.audioEventId && aeElem.recIdx) {
       const response = await getVerifiedStatus(aeElem.audioEventId, aeElem.recIdx);
       this.saEstimate = response.saEstimate;
-      this.saVerified = response.saVerified
+      this.saVerified = response.saVerified;
+      this.octOffset = response.octOffset;
       // if (this.initSaEstimate) {
         // this.saEstimate = this.initSaEstimate;
       const cur = this.oscNode.frequency.value
@@ -157,7 +163,7 @@ export default {
 
     async generateSpectrogram() {
       const id = this.$parent.$parent.audioRecId;
-      const result = await makeSpectrograms(id, this.saEstimate);
+      const result = await makeSpectrograms(id, this.saEstimate * 2 ** this.octOffset);
       console.log(result)
     },
     
@@ -221,8 +227,7 @@ export default {
       const recID = this.$parent.id;
       const aeID = this.$parent.$parent.audioEventId;
       const recIdx = this.$parent.$parent.playing[1];
-      
-      updateSaEstimate(recID, aeID, recIdx, this.saEstimate, this.saVerified)
+      updateSaEstimate(recID, aeID, recIdx, this.saEstimate, this.saVerified, this.octOffset)
     },
     
     
@@ -396,7 +401,7 @@ export default {
 
 .mainz {
   width: 100%;
-  height: 160px;
+  height: 200px;
   /* background-color: pink; */
   position: absolute;
   left: 0px;
@@ -457,6 +462,10 @@ export default {
 
 input {
   margin-left: 10px;
+}
+
+.octOffset {
+  width: 30px;
 }
 
 .inputRow {

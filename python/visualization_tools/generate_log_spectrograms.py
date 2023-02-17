@@ -81,6 +81,10 @@ if not os.path.exists(folder_path):
     os.mkdir(folder_path)
 for i, array in enumerate(obj):
     subfolder_path = folder_path + '/' + str(i)
+    # delete all files in folder
+    for the_file in os.listdir(subfolder_path):
+        os.remove(os.path.join(subfolder_path, the_file))
+    
     if not os.path.exists(subfolder_path):
         os.mkdir(subfolder_path)
     for j in range(math.ceil(np.shape(array)[1] / max_size)):

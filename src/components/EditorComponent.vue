@@ -468,7 +468,7 @@ export default {
       this.initXScale = this.durTot / this.initViewDur;
       let fund = 246;
       if (this.audioDBDoc && this.audioDBDoc.saEstimate) {
-        fund = 2 * this.audioDBDoc.saEstimate;
+        fund = 2 * this.audioDBDoc.saEstimate * 2 ** this.audioDBDoc.octOffset;
       }
       this.freqMin = 2 ** (Math.log2(fund / 2) - this.rangeOffset);
       this.freqMax = 2 ** (Math.log2(fund * 4) + this.rangeOffset);
@@ -947,7 +947,8 @@ export default {
       // use call from serverCalls.js to create new spectrograms on the server.
       const recId = this.piece.audioID;
       const saEst = this.audioDBDoc.saEstimate;
-      const result = await makeSpectrograms(recId, saEst);
+      const octOffset = this.audioDBDoc.octOffset;
+      const result = await makeSpectrograms(recId, saEst * 2 ** Number(octOffset));
       console.log(result)
     },
     
