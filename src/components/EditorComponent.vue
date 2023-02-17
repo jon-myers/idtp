@@ -358,6 +358,13 @@ export default {
       this.$refs.trajSelectPanel.selectedIdx = this.selectedTraj.id;
       this.$refs.trajSelectPanel.parentSelected = true;
       this.$refs.trajSelectPanel.slope = Math.log2(this.selectedTraj.slope);
+      if (this.selectedTraj.vibObj) {
+        this.$refs.trajSelectPanel.extent = this.selectedTraj.vibObj.extent;
+        this.$refs.trajSelectPanel.initUp = this.selectedTraj.vibObj.initUp;
+        this.$refs.trajSelectPanel.periods = this.selectedTraj.vibObj.periods;
+        this.$refs.trajSelectPanel.offset = this.selectedTraj.vibObj.vertOffset;
+      }
+      
       const c1 = this.selectedTraj.articulations[0];
       if (c1 && this.selectedTraj.articulations[0].name === 'pluck') {
         this.$refs.trajSelectPanel.pluckBool = true
