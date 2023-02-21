@@ -39,6 +39,7 @@
     "npyz": "^0.4.2",
     "path-browserify": "^1.0.1",
     "process": "^0.11.10",
+    "rubberband-web": "^0.2.1",
     "stream-browserify": "^3.0.0",
     "vue": "^3.2.13",
     "vue-cookies": "^1.8.1",

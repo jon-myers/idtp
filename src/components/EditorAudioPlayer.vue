@@ -104,6 +104,17 @@
           v-model="chikariGain"
         />
       </div>
+      <div class='cbBoxSmall'>
+        <label>Pitch Shift ({{transposition}}&#162;)</label>
+        <input 
+          type='range' 
+          min='-200' 
+          max='200' 
+          step='1' 
+          v-model='transposition'
+          />
+      </div>
+
     </div>
     <div class='downloads' v-if='showDownloads'>
       <label>Data</label>
@@ -203,6 +214,8 @@ import { excelData, jsonData } from '@/js/serverCalls.js';
 import ksURL from '@/audioWorklets/karplusStrong.worklet.js?url';
 import cURL from '@/audioWorklets/chikaris.worklet.js?url';
 import caURL from '@/audioWorklets/captureAudio.worklet.js?url';
+import rubberBandUrl from '@/audioWorklets/rubberband-processor.js?url';
+import { createRubberBandNode } from 'rubberband-web';
 
 const structuredTime = (dur) => {
   const hours = String(Math.floor(dur / 3600));
@@ -281,13 +294,15 @@ export default {
       noAudio: false,
       inited: false,
       modsLoaded: false,
+      transposition: 0
     };
   },
   props: ['audioSource', 'saEstimate', 'saVerified', 'id'],
-  mounted() {
+  async mounted() {
     this.ac = new AudioContext({ sampleRate: 48000 });
     this.gainNode = this.ac.createGain();
-    this.gainNode.connect(this.ac.destination);
+    // this.summingNode = this.ac.createGain();
+
     this.gainNode.gain.setValueAtTime(Number(this.recGain), this.now());
     this.synthGainNode = this.ac.createGain();
     this.synthGainNode.gain.setValueAtTime(Number(this.synthGain), this.now());
@@ -298,6 +313,9 @@ export default {
     this.chikariGainNode.gain.setValueAtTime(this.chikariGain, this.now());
     this.synthGainNode.connect(this.ac.destination);
     this.moduleCt = 0;
+    this.rubberBandNode = await createRubberBandNode(this.ac, rubberBandUrl);
+    this.gainNode.connect(this.rubberBandNode);
+    this.rubberBandNode.connect(this.ac.destination);
     this.ac.audioWorklet.addModule(AudioWorklet(ksURL))
       .then(() => {
         this.moduleCt++;
@@ -398,6 +416,25 @@ export default {
       gain.setValueAtTime(currentGain, this.now());
       gain.linearRampToValueAtTime(newVal, this.now() + this.lagTime);
     },
+
+    transposition(cents) {
+      const newVal = 2 ** (cents / 1200);
+      this.rubberBandNode.setPitch(newVal);
+      this.preSetFirstEnvelope(256);
+      this.cancelPlayTrajs(this.now(), false);
+      this.playTrajs(this.getCurrentTime(), this.now());
+      const raga = this.$parent.piece.raga;
+      const freqs = raga.chikariPitches.map((p) => p.frequency);
+      const transp = 2 ** (this.transposition / 1200);
+      const curFreq0 = this.otherNode.freq0.value;
+      const curFreq1 = this.otherNode.freq1.value;
+      this.otherNode.freq0.setValueAtTime(curFreq0, this.now());
+      this.otherNode.freq1.setValueAtTime(curFreq1, this.now());
+      const endTime = this.now() + this.lagTime;
+      this.otherNode.freq0.linearRampToValueAtTime(freqs[0] * transp, endTime);
+      this.otherNode.freq1.linearRampToValueAtTime(freqs[1] * transp, endTime);
+
+    }
   },
   methods: {
 
@@ -693,9 +730,10 @@ export default {
       } else {
         const envelope = new Float32Array(valueCt);
         const lpEnvelope = new Float32Array(valueCt);
+        const transp = 2 ** (this.transposition / 1200);
         for (let i = 0; i < valueCt; i++) {
-          envelope[i] = traj.compute(i / (valueCt - 1));
-          lpEnvelope[i] = traj.compute(i / (valueCt - 1)) * 2 ** 3;
+          envelope[i] = transp * traj.compute(i / (valueCt - 1));
+          lpEnvelope[i] = transp * traj.compute(i / (valueCt - 1)) * 2 ** 3;
         }
         const duration = endTime - startTime - verySmall;
         if (duration < 0) {
@@ -711,9 +749,11 @@ export default {
       const traj = phrases.map((p) => p.trajectories).flat()[0];
       this.firstEnvelope = new Float32Array(valueCt);
       this.firstLPEnvelope = new Float32Array(valueCt);
+      const transp = 2 ** (this.transposition / 1200);
       for (let i = 0; i < valueCt; i++) {
-        this.firstEnvelope[i] = traj.compute(i / (valueCt - 1));
-        this.firstLPEnvelope[i] = traj.compute(i / (valueCt - 1)) * 2 ** 3;
+        const x = i / (valueCt - 1);
+        this.firstEnvelope[i] = transp * traj.compute(x);
+        this.firstLPEnvelope[i] = transp * traj.compute(x) * 2 ** 3;
       }
     },
 
@@ -737,8 +777,9 @@ export default {
         .connect(this.chikariGainNode);
       const raga = this.$parent.piece.raga;
       const freqs = raga.chikariPitches.map((p) => p.frequency);
-      this.otherNode.freq0.setValueAtTime(freqs[0], this.now());
-      this.otherNode.freq1.setValueAtTime(freqs[1], this.now());
+      const transp = 2 ** (this.transposition / 1200);
+      this.otherNode.freq0.setValueAtTime(freqs[0] * transp, this.now());
+      this.otherNode.freq1.setValueAtTime(freqs[1] * transp, this.now());
     },
 
     initializePluckNode() {
@@ -1024,42 +1065,39 @@ export default {
         this.$refs.playImg.classList.add('playing');
         this.$parent.startAnimationFrame();
         this.startPlayCursorAnimation();
-        // GETBACK
         this.playTrajs(this.getCurrentTime(), this.now());
         this.playChikaris(this.getCurrentTime(), this.now());
-        // end GETBACK
       } else {
         this.pause();
         this.$refs.playImg.classList.remove('playing');
         this.$parent.stopAnimationFrame();
         this.stopPlayCursorAnimation();
-        // GETBACK
         this.cancelPlayTrajs();
         this.cancelBursts();
         this.bufferSourceNodes = [];
-        // end GETBACK
       }
     },
 
-    // GETBACK
-    cancelPlayTrajs(when) {
+    cancelPlayTrajs(when, mute=true) {
       if (when === undefined) when = this.now();
       this.pluckNode.frequency.cancelScheduledValues(when);
       this.lowPassNode.frequency.cancelScheduledValues(when);
       this.intSynthGainNode.gain.cancelScheduledValues(when);
       this.pluckNode.cutoff.cancelScheduledValues(when);
-      const curSynthGain = this.intSynthGainNode.gain.value;
-      this.intSynthGainNode.gain.setValueAtTime(curSynthGain, when);
       const rampEnd = when + this.slowRamp;
-      this.intSynthGainNode.gain.linearRampToValueAtTime(0, rampEnd);
-      const curChikGain = this.intChikariGainNode.gain.value;
-      this.intChikariGainNode.gain.setValueAtTime(curChikGain, when);
-      this.intChikariGainNode.gain.linearRampToValueAtTime(0, rampEnd);
+      if (mute) {
+        const curSynthGain = this.intSynthGainNode.gain.value;
+        this.intSynthGainNode.gain.setValueAtTime(curSynthGain, when);
+        
+        this.intSynthGainNode.gain.linearRampToValueAtTime(0, rampEnd);
+        const curChikGain = this.intChikariGainNode.gain.value;
+        this.intChikariGainNode.gain.setValueAtTime(curChikGain, when);
+        this.intChikariGainNode.gain.linearRampToValueAtTime(0, rampEnd);
+      }
       const curCutoff = this.pluckNode.cutoff.value;
       this.pluckNode.cutoff.setValueAtTime(curCutoff, when);
       this.pluckNode.cutoff.linearRampToValueAtTime(this.synthDamp, rampEnd);
     },
-    // end GETBACK
 
     toggleControls(e) {
       const cl = e.target.classList;
@@ -1558,12 +1596,12 @@ export default {
   right: 0px;
   bottom: v-bind(playerHeight + 'px');
   background-color: #202621;
-  width: 200px;
-  height: 200px;
+  width: 350px;
+  height: 150px;
   border-bottom: 1px solid black;
   color: white;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   pointer-events: auto;
   justify-content: space-evenly;
   align-items: center;
@@ -1739,6 +1777,27 @@ button {
   margin: 0px;
 }
 
+.cbBoxSmall {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  /* width */
+}
+
+.cbBoxSmall > input {
+  width: 30px;
+  height: 100px;
+  appearance: slider-vertical;
+}
+
+.cbBoxSmall > label {
+  padding-top: 5px;
+  height: 50px;
+  width: 70px;
+  font-size: 13px;
+}
 
 /* WaveformAnalyzer {
   position: absolute;
