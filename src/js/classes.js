@@ -126,12 +126,14 @@ class Pitch {
 
   get octavedSargamLetter() {
     let s = this.sargamLetter;
-    if (this.oct === -1) {
+    if (this.oct === -2) {
+      s = s + '\u0324'
+    } else if (this.oct === -1) {
       s = s + '\u0323'
     } else if (this.oct === 1) {
       s = s + '\u0307'
     } else if (this.oct === 2) {
-      s = s + '\u07F3'
+      s = s + '\u0308'
     }
     return s
   }
