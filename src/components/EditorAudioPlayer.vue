@@ -105,7 +105,7 @@
         />
       </div>
       <div class='cbBoxSmall'>
-        <label>Transposition ({{transposition}}&#162;)</label>
+        <label>Pitch Bend ({{transposition}}&#162;)</label>
         <input 
           type='range' 
           min='-200' 
@@ -1596,12 +1596,12 @@ export default {
   right: 0px;
   bottom: v-bind(playerHeight + 'px');
   background-color: #202621;
-  width: 200px;
-  height: 250px;
+  width: 350px;
+  height: 150px;
   border-bottom: 1px solid black;
   color: white;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   pointer-events: auto;
   justify-content: space-evenly;
   align-items: center;
@@ -1777,6 +1777,27 @@ button {
   margin: 0px;
 }
 
+.cbBoxSmall {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  /* width */
+}
+
+.cbBoxSmall > input {
+  width: 30px;
+  height: 100px;
+  appearance: slider-vertical;
+}
+
+.cbBoxSmall > label {
+  padding-top: 5px;
+  height: 50px;
+  width: 70px;
+  font-size: 13px;
+}
 
 /* WaveformAnalyzer {
   position: absolute;
