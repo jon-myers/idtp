@@ -52,6 +52,20 @@
     <div class="dropDownRow" @click="clonePiece(piece)" v-if='open_'>
       Clone Transcription
     </div>
+    <div 
+      :class="`dropDownRow ${['inactive', ''][Number(deleteActive)]}`" 
+      @click='editTitle(piece)' 
+      v-if='open_'
+    >
+      Edit Title
+    </div>
+    <div 
+      :class="`dropDownRow ${['inactive', ''][Number(deleteActive)]}`" 
+      @click='editPermissions(piece)' 
+      v-if='open_'
+    >
+      Edit Permissions
+    </div>
     <div
       v-if="delete_"
       :class="`dropDownRow last ${['inactive', ''][Number(deleteActive)]}`"
@@ -68,6 +82,15 @@
       :dataObj='passedInDataObj'
     />
   </div>
+  <div v-if='editTitleModal' class='titleModal'>
+    <div class='modalRow'>
+      <input type='text' v-model='editingTitle' />
+    </div>
+    <div class='modalRow'>
+      <button @click='saveTitle'>Save</button>
+      <button @click='cancelTitle'>Cancel</button>
+    </div>
+  </div>
 </template>
 <script>
 import {
@@ -77,8 +100,8 @@ import {
   getRaagRule,
   getAudioRecording,
   getAudioEvent,
-  cloneTranscription
-  // nameFromUserID
+  cloneTranscription,
+  updateTranscriptionTitle,
 } from '@/js/serverCalls.js';
 import NewPieceRegistrar from '@/components/NewPieceRegistrar.vue';
 import { Raga, Piece, Trajectory, Phrase } from '@/js/classes.js';
@@ -109,6 +132,8 @@ export default {
       selectedPiece: undefined,
       modalWidth: 600,
       modalHeight: 450,
+      editModalWidth: 500,
+      editModalHeight: 100,
       sorts: [1, 1, 1, 1, 1, 1],
       selectedSort: 0,
       sortKeyNames: [
@@ -120,6 +145,8 @@ export default {
         'permissions',
       ],
       passedInDataObj: undefined,
+      editTitleModal: false,
+      editingTitle: undefined
     };
   },
 
@@ -405,16 +432,37 @@ export default {
 
     handleClick() {
       this.designPieceModal = false;
+      this.editTitleModal = false;
       this.closeDropDown();
+    },
+
+    cancelTitle() {
+      this.editTitleModal = false;
+    },
+
+    async saveTitle() {
+      const result = await updateTranscriptionTitle(this.selectedPiece._id, this.editingTitle);
+      await this.updateSort();
+      this.editTitleModal = false;
+
+    },
+
+    editTitle(piece) {
+      if (piece === undefined) {
+        piece = this.selectedPiece;
+      }
+      this.editTitleModal = true;
+      this.closeDropDown();
+      this.editingTitle = piece.title;
     },
 
     handleKeydown(e) {
       if (e.key === 'Escape') {
         e.preventDefault();
         this.closeDropDown();
-        if (this.designPieceModal) {
-          this.designPieceModal = false;
-        }
+        this.designPieceModal = false;
+        this.editTitleModal = false;
+        
       }
     },
   },
@@ -507,6 +555,33 @@ export default {
   position: fixed;
   left: v-bind(modalLeft + 'px');
   top: v-bind(modalTop + 'px');
+}
+
+.titleModal {
+  width: v-bind(editModalWidth + 'px');
+  height: v-bind(editModalHeight + 'px');
+  border: 1px solid black;
+  position: fixed;
+  left: v-bind(modalLeft + 'px');
+  top: v-bind(modalTop + 'px');
+  background-color: lightgrey;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
+.modalRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
+.modalRow > input {
+  width: 100%;
+  margin-left: 20px;
+  margin-right: 20px;
 }
 
 .dropDown {

@@ -501,6 +501,18 @@ const runServer = async () => {
       }
     })
 
+    app.post('/updateTranscriptionTitle', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.body.id) };
+        const update = { $set: { title: req.body.title} };
+        const result = await transcriptions.updateOne(query, update);
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err)
+      }
+    })
+
     app.get('/getVerifiedStatus', async (req, res) => {
       try {
         const query = { _id: ObjectId(req.query.aeID) };

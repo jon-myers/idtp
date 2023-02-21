@@ -755,6 +755,28 @@ const handleGoogleAuthCode = async (code, redirectURL) => {
   }
 }
 
+const updateTranscriptionTitle = async (id, title) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      id: id, 
+      title: title
+    })
+  };
+  try {
+    const response = await fetch(url + 'updateTranscriptionTitle', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
 
 const cloneTranscription = async (id, title, newOwner, permissions) => {
   let out;
@@ -817,7 +839,8 @@ export {
   handleGoogleAuthCode,
   cloneTranscription,
   excelData,
-  jsonData
+  jsonData,
+  updateTranscriptionTitle
 }
 
 // exports.getPiece = getPiece
