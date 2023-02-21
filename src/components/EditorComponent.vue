@@ -2786,7 +2786,6 @@ export default {
     },
 
     async initializePiece() {
-      console.log(this.piece.raga)
       this.visibleSargam = this.piece.raga.getFrequencies({
         low: this.freqMin,
         high: this.freqMax
