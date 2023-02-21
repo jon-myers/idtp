@@ -72,7 +72,13 @@
     <div class="synthControls" v-if="showControls">
       <div class="cbBoxSmall" v-if='!noAudio'>
         <label>Recording Gain</label>
-        <input type="range" min="0.0" max="1.0" step="0.01" v-model="recGain" />
+        <input 
+          type="range" 
+          min="0.0" 
+          max="1.0" 
+          step="0.01" 
+          v-model="recGain" 
+          orient='vertical'/>
       </div>
       <div class="cbBoxSmall">
         <label>Synthesis Gain</label>
@@ -82,6 +88,7 @@
           max="1.0"
           step="0.01"
           v-model="synthGain"
+          orient='vertical'
         />
       </div>
       <div class="cbBoxSmall">
@@ -92,6 +99,7 @@
           max="1.0"
           step="0.01"
           v-model="synthDamp"
+          orient='vertical'
         />
       </div>
       <div class="cbBoxSmall">
@@ -102,9 +110,10 @@
           max="1.0"
           step="0.01"
           v-model="chikariGain"
+          orient='vertical'
         />
       </div>
-      <div class='cbBoxSmall'>
+      <div class='cbBoxSmall' v-if='transposable'>
         <label>Pitch Shift ({{transposition}}&#162;)</label>
         <input 
           type='range' 
@@ -112,6 +121,7 @@
           max='200' 
           step='1' 
           v-model='transposition'
+          orient='vertical'
           />
       </div>
 
@@ -216,6 +226,8 @@ import cURL from '@/audioWorklets/chikaris.worklet.js?url';
 import caURL from '@/audioWorklets/captureAudio.worklet.js?url';
 import rubberBandUrl from '@/audioWorklets/rubberband-processor.js?url';
 import { createRubberBandNode } from 'rubberband-web';
+import { detect } from 'detect-browser';
+
 
 const structuredTime = (dur) => {
   const hours = String(Math.floor(dur / 3600));
@@ -294,15 +306,14 @@ export default {
       noAudio: false,
       inited: false,
       modsLoaded: false,
-      transposition: 0
+      transposition: 0,
+      transposable: false,
     };
   },
   props: ['audioSource', 'saEstimate', 'saVerified', 'id'],
   async mounted() {
     this.ac = new AudioContext({ sampleRate: 48000 });
     this.gainNode = this.ac.createGain();
-    // this.summingNode = this.ac.createGain();
-
     this.gainNode.gain.setValueAtTime(Number(this.recGain), this.now());
     this.synthGainNode = this.ac.createGain();
     this.synthGainNode.gain.setValueAtTime(Number(this.synthGain), this.now());
@@ -313,9 +324,20 @@ export default {
     this.chikariGainNode.gain.setValueAtTime(this.chikariGain, this.now());
     this.synthGainNode.connect(this.ac.destination);
     this.moduleCt = 0;
-    this.rubberBandNode = await createRubberBandNode(this.ac, rubberBandUrl);
-    this.gainNode.connect(this.rubberBandNode);
-    this.rubberBandNode.connect(this.ac.destination);
+
+    this.browser = detect();
+    console.log(this.browser)
+    if (this.browser.name !== 'safari' && this.browser.name !== 'firefox') {
+      this.transposable = true;
+      this.rubberBandNode = await createRubberBandNode(this.ac, rubberBandUrl);
+      this.rubberBandNode.setHighQuality(true);
+      this.gainNode.connect(this.rubberBandNode);
+      this.rubberBandNode.connect(this.ac.destination);
+    } else {
+      this.gainNode.connect(this.ac.destination);
+    }
+
+
     this.ac.audioWorklet.addModule(AudioWorklet(ksURL))
       .then(() => {
         this.moduleCt++;
@@ -1707,6 +1729,7 @@ export default {
   height: v-bind(tuningControlHeight - sargamLetterHeight - tuningLabelHeight - 10 + 'px');
   -webkit-appearance: slider-vertical;
   appearance: slider-vertical;
+  -moz-appearance: slider-vertical;
   margin-top: 5px;
   margin-bottom: 5px;
 }
@@ -1789,7 +1812,9 @@ button {
 .cbBoxSmall > input {
   width: 30px;
   height: 100px;
+  -webkit-appearance: slider-vertical;
   appearance: slider-vertical;
+  -moz-appearance: slider-vertical;
 }
 
 .cbBoxSmall > label {
