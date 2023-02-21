@@ -1249,6 +1249,7 @@ getFrequencies({
   low = 100,
   high = 800
 } = {}) {
+  console.log('doing this')
   // returns all oct instances of raga's pitches that are between low and high
   const baseFreqs = this.ratios.map(r => r * this.fundamental);
   const freqs = [];

@@ -203,6 +203,7 @@ import { excelData, jsonData } from '@/js/serverCalls.js';
 import ksURL from '@/audioWorklets/karplusStrong.worklet.js?url';
 import cURL from '@/audioWorklets/chikaris.worklet.js?url';
 import caURL from '@/audioWorklets/captureAudio.worklet.js?url';
+import { createRubberBandRealtimeNode } from 'rubberband-web';
 
 const structuredTime = (dur) => {
   const hours = String(Math.floor(dur / 3600));
@@ -284,19 +285,24 @@ export default {
     };
   },
   props: ['audioSource', 'saEstimate', 'saVerified', 'id'],
-  mounted() {
+  async mounted() {
     this.ac = new AudioContext({ sampleRate: 48000 });
     this.gainNode = this.ac.createGain();
-    this.gainNode.connect(this.ac.destination);
+    this.summingNode = this.ac.createGain();
+    this.gainNode.connect(this.summingNode);
     this.gainNode.gain.setValueAtTime(Number(this.recGain), this.now());
     this.synthGainNode = this.ac.createGain();
     this.synthGainNode.gain.setValueAtTime(Number(this.synthGain), this.now());
     this.intSynthGainNode = this.ac.createGain();
     this.intSynthGainNode.connect(this.synthGainNode);
     this.chikariGainNode = this.ac.createGain();
-    this.chikariGainNode.connect(this.ac.destination);
+    this.chikariGainNode.connect(this.ac.summingNode);
     this.chikariGainNode.gain.setValueAtTime(this.chikariGain, this.now());
-    this.synthGainNode.connect(this.ac.destination);
+    this.synthGainNode.connect(this.ac.summingNode);
+
+    this.rubberBandNode = await createRubberBandRealtimeNode(this.ac, '@/audioWorklets/rubberband-processor.js')
+
+    this.summingNode.connect(this.ac.destination);
     this.moduleCt = 0;
     this.ac.audioWorklet.addModule(AudioWorklet(ksURL))
       .then(() => {
