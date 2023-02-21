@@ -23,7 +23,9 @@ const generateAudioRecordingsDB = async () => {
         'location': '$recordings.v.location', 
         'musicians': '$recordings.v.musicians', 
         'raags': '$recordings.v.raags', 
-        'parentID': '$parentID'
+        'parentID': '$parentID',
+        'octOffset': '$recordings.v.octOffset',
+
       }
     }, {
       '$out': 'audioRecordings'
