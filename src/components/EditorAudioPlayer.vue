@@ -105,7 +105,7 @@
         />
       </div>
       <div class='cbBoxSmall'>
-        <label>Pitch Bend ({{transposition}}&#162;)</label>
+        <label>Pitch Shift ({{transposition}}&#162;)</label>
         <input 
           type='range' 
           min='-200' 
