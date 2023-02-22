@@ -52,6 +52,23 @@
     <div class="dropDownRow" @click="clonePiece(piece)" v-if='open_'>
       Clone Transcription
     </div>
+    <div 
+      :class="`dropDownRow ${['inactive', ''][Number(deleteActive)]}`" 
+      @click='editTitle(piece)' 
+      v-if='open_'
+    >
+      Edit Title
+    </div>
+    <div 
+      :class="`dropDownRow ${['inactive', ''][Number(deleteActive)]}`" 
+      @click='editPermissions(piece)' 
+      v-if='open_'
+    >
+      Edit Permissions
+    </div>
+    <div class='dropDownRow' @click='copyLink' v-if='open_'>
+      Copy Link
+    </div>
     <div
       v-if="delete_"
       :class="`dropDownRow last ${['inactive', ''][Number(deleteActive)]}`"
@@ -68,6 +85,28 @@
       :dataObj='passedInDataObj'
     />
   </div>
+  <div v-if='editTitleModal' class='titleModal'>
+    <div class='modalRow'>
+      <input type='text' v-model='editingTitle' />
+    </div>
+    <div class='modalRow'>
+      <button @click='saveTitle'>Save</button>
+      <button @click='cancelTitle'>Cancel</button>
+    </div>
+  </div>
+  <div v-if='editPermissionsModal' class='permissionsModal'>
+    <div class='modalRow'>
+      <select v-model='editingPermissions'>
+        <option value='Private'>Private</option>
+        <option value='Public'>Public</option>
+        <option value='Publically Editable'>Publically Editable</option>
+      </select>
+    </div>
+    <div class='modalRow'>
+      <button @click='savePermissions'>Save</button>
+      <button @click='cancelPermissions'>Cancel</button>
+    </div>
+  </div>
 </template>
 <script>
 import {
@@ -77,8 +116,9 @@ import {
   getRaagRule,
   getAudioRecording,
   getAudioEvent,
-  cloneTranscription
-  // nameFromUserID
+  cloneTranscription,
+  updateTranscriptionTitle,
+  updateTranscriptionPermissions,
 } from '@/js/serverCalls.js';
 import NewPieceRegistrar from '@/components/NewPieceRegistrar.vue';
 import { Raga, Piece, Trajectory, Phrase } from '@/js/classes.js';
@@ -109,6 +149,10 @@ export default {
       selectedPiece: undefined,
       modalWidth: 600,
       modalHeight: 450,
+      titleModalWidth: 500,
+      titleModalHeight: 100,
+      permissionsModalWidth: 300,
+      permissionsModalHeight: 100,
       sorts: [1, 1, 1, 1, 1, 1],
       selectedSort: 0,
       sortKeyNames: [
@@ -120,6 +164,10 @@ export default {
         'permissions',
       ],
       passedInDataObj: undefined,
+      editTitleModal: false,
+      editPermissionsModal: false,
+      editingTitle: undefined,
+      editingPermissions: undefined,
     };
   },
 
@@ -277,6 +325,13 @@ export default {
       });
     },
 
+    copyLink() {
+      const piece = this.selectedPiece;
+      const url = window.location.origin + '/editor?id=' + piece._id;
+      navigator.clipboard.writeText(url);
+      this.closeDropDown();
+    },
+
     async clonePiece(piece) {
       if (piece === undefined) piece = this.selectedPiece;
       try {
@@ -405,16 +460,57 @@ export default {
 
     handleClick() {
       this.designPieceModal = false;
+      this.editTitleModal = false;
+      this.editPermissionsModal = false;
       this.closeDropDown();
+    },
+
+    cancelTitle() {
+      this.editTitleModal = false;
+    },
+
+    cancelPermissions() {
+      this.editPermissionsModal = false;
+    },
+
+    async saveTitle() {
+      const result = await updateTranscriptionTitle(this.selectedPiece._id, this.editingTitle);
+      await this.updateSort();
+      this.editTitleModal = false;
+    },
+
+    async savePermissions() {
+      const result = await updateTranscriptionPermissions(this.selectedPiece._id, this.editingPermissions);
+      await this.updateSort();
+      this.editPermissionsModal = false;
+    },
+
+    editTitle(piece) {
+      if (piece === undefined) {
+        piece = this.selectedPiece;
+      }
+      this.editTitleModal = true;
+      this.closeDropDown();
+      this.editingTitle = piece.title;
+    },
+
+    editPermissions(piece) {
+      if (piece === undefined) {
+        piece = this.selectedPiece;
+      }
+      this.editPermissionsModal = true;
+      this.closeDropDown();
+      this.editingPermissions = piece.permissions;
     },
 
     handleKeydown(e) {
       if (e.key === 'Escape') {
         e.preventDefault();
         this.closeDropDown();
-        if (this.designPieceModal) {
-          this.designPieceModal = false;
-        }
+        this.designPieceModal = false;
+        this.editTitleModal = false;
+        this.editPermissionsModal = false;
+        
       }
     },
   },
@@ -507,6 +603,47 @@ export default {
   position: fixed;
   left: v-bind(modalLeft + 'px');
   top: v-bind(modalTop + 'px');
+}
+
+.titleModal {
+  width: v-bind(titleModalWidth + 'px');
+  height: v-bind(titleModalHeight + 'px');
+  border: 1px solid black;
+  position: fixed;
+  left: v-bind(modalLeft + 'px');
+  top: v-bind(modalTop + 'px');
+  background-color: lightgrey;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
+.permissionsModal {
+  width: v-bind(permissionsModalWidth + 'px');
+  height: v-bind(permissionsModalHeight + 'px');
+  border: 1px solid black;
+  position: fixed;
+  left: v-bind(modalLeft + 'px');
+  top: v-bind(modalTop + 'px');
+  background-color: lightgrey;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
+.modalRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
+.modalRow > input {
+  width: 100%;
+  margin-left: 20px;
+  margin-right: 20px;
 }
 
 .dropDown {
