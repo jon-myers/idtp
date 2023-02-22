@@ -66,6 +66,9 @@
     >
       Edit Permissions
     </div>
+    <div class='dropDownRow' @click='copyLink' v-if='open_'>
+      Copy Link
+    </div>
     <div
       v-if="delete_"
       :class="`dropDownRow last ${['inactive', ''][Number(deleteActive)]}`"
@@ -320,6 +323,13 @@ export default {
           query: { id: data.insertedID },
         });
       });
+    },
+
+    copyLink() {
+      const piece = this.selectedPiece;
+      const url = window.location.origin + '/editor?id=' + piece._id;
+      navigator.clipboard.writeText(url);
+      this.closeDropDown();
     },
 
     async clonePiece(piece) {
