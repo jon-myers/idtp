@@ -778,6 +778,29 @@ const updateTranscriptionTitle = async (id, title) => {
   }
 }
 
+const updateTranscriptionPermissions = async (id, permissions) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      id: id,
+      permissions: permissions
+    })
+  };
+  try {
+    const response = await fetch(url + 'updateTranscriptionPermissions', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
 const cloneTranscription = async (id, title, newOwner, permissions) => {
   let out;
   const request = {
@@ -840,7 +863,8 @@ export {
   cloneTranscription,
   excelData,
   jsonData,
-  updateTranscriptionTitle
+  updateTranscriptionTitle,
+  updateTranscriptionPermissions
 }
 
 // exports.getPiece = getPiece

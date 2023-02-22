@@ -91,6 +91,19 @@
       <button @click='cancelTitle'>Cancel</button>
     </div>
   </div>
+  <div v-if='editPermissionsModal' class='permissionsModal'>
+    <div class='modalRow'>
+      <select v-model='editingPermissions'>
+        <option value='Private'>Private</option>
+        <option value='Public'>Public</option>
+        <option value='Publically Editable'>Publically Editable</option>
+      </select>
+    </div>
+    <div class='modalRow'>
+      <button @click='savePermissions'>Save</button>
+      <button @click='cancelPermissions'>Cancel</button>
+    </div>
+  </div>
 </template>
 <script>
 import {
@@ -102,6 +115,7 @@ import {
   getAudioEvent,
   cloneTranscription,
   updateTranscriptionTitle,
+  updateTranscriptionPermissions,
 } from '@/js/serverCalls.js';
 import NewPieceRegistrar from '@/components/NewPieceRegistrar.vue';
 import { Raga, Piece, Trajectory, Phrase } from '@/js/classes.js';
@@ -132,8 +146,10 @@ export default {
       selectedPiece: undefined,
       modalWidth: 600,
       modalHeight: 450,
-      editModalWidth: 500,
-      editModalHeight: 100,
+      titleModalWidth: 500,
+      titleModalHeight: 100,
+      permissionsModalWidth: 300,
+      permissionsModalHeight: 100,
       sorts: [1, 1, 1, 1, 1, 1],
       selectedSort: 0,
       sortKeyNames: [
@@ -146,7 +162,9 @@ export default {
       ],
       passedInDataObj: undefined,
       editTitleModal: false,
-      editingTitle: undefined
+      editPermissionsModal: false,
+      editingTitle: undefined,
+      editingPermissions: undefined,
     };
   },
 
@@ -433,6 +451,7 @@ export default {
     handleClick() {
       this.designPieceModal = false;
       this.editTitleModal = false;
+      this.editPermissionsModal = false;
       this.closeDropDown();
     },
 
@@ -440,11 +459,20 @@ export default {
       this.editTitleModal = false;
     },
 
+    cancelPermissions() {
+      this.editPermissionsModal = false;
+    },
+
     async saveTitle() {
       const result = await updateTranscriptionTitle(this.selectedPiece._id, this.editingTitle);
       await this.updateSort();
       this.editTitleModal = false;
+    },
 
+    async savePermissions() {
+      const result = await updateTranscriptionPermissions(this.selectedPiece._id, this.editingPermissions);
+      await this.updateSort();
+      this.editPermissionsModal = false;
     },
 
     editTitle(piece) {
@@ -456,12 +484,22 @@ export default {
       this.editingTitle = piece.title;
     },
 
+    editPermissions(piece) {
+      if (piece === undefined) {
+        piece = this.selectedPiece;
+      }
+      this.editPermissionsModal = true;
+      this.closeDropDown();
+      this.editingPermissions = piece.permissions;
+    },
+
     handleKeydown(e) {
       if (e.key === 'Escape') {
         e.preventDefault();
         this.closeDropDown();
         this.designPieceModal = false;
         this.editTitleModal = false;
+        this.editPermissionsModal = false;
         
       }
     },
@@ -558,8 +596,22 @@ export default {
 }
 
 .titleModal {
-  width: v-bind(editModalWidth + 'px');
-  height: v-bind(editModalHeight + 'px');
+  width: v-bind(titleModalWidth + 'px');
+  height: v-bind(titleModalHeight + 'px');
+  border: 1px solid black;
+  position: fixed;
+  left: v-bind(modalLeft + 'px');
+  top: v-bind(modalTop + 'px');
+  background-color: lightgrey;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
+.permissionsModal {
+  width: v-bind(permissionsModalWidth + 'px');
+  height: v-bind(permissionsModalHeight + 'px');
   border: 1px solid black;
   position: fixed;
   left: v-bind(modalLeft + 'px');
