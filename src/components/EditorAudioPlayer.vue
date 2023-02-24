@@ -443,8 +443,10 @@ export default {
       const newVal = 2 ** (cents / 1200);
       this.rubberBandNode.setPitch(newVal);
       this.preSetFirstEnvelope(256);
-      this.cancelPlayTrajs(this.now(), false);
-      this.playTrajs(this.getCurrentTime(), this.now());
+      if (this.playing) {
+        this.cancelPlayTrajs(this.now(), false);
+        this.playTrajs(this.getCurrentTime(), this.now());
+      }
       const raga = this.$parent.piece.raga;
       const freqs = raga.chikariPitches.map((p) => p.frequency);
       const transp = 2 ** (this.transposition / 1200);
@@ -455,7 +457,6 @@ export default {
       const endTime = this.now() + this.lagTime;
       this.otherNode.freq0.linearRampToValueAtTime(freqs[0] * transp, endTime);
       this.otherNode.freq1.linearRampToValueAtTime(freqs[1] * transp, endTime);
-
     }
   },
   methods: {
