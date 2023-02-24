@@ -331,9 +331,7 @@ export default {
   width: 50px;
 }
 
-.recLabel {
-  /* text-align: center; */
-}
+
 
 label {
   padding-right: 5px;
