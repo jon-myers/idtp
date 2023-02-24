@@ -4,12 +4,18 @@
     <div class='graphContainer'>
       <div class='graph' ref='graph'></div>
       <div class='scrollXContainer'>
-        <div class='leftNotch'></div>
+        <div class='leftNotch'>
+          <div class='leftNotchZoomer left' @click='horizontalZoomOut'>-</div>
+          <div class='leftNotchZoomer' @click='horizontalZoomIn'>+</div>
+        </div>
         <div class='scrollX' ref='scrollX'></div>
       </div>
     </div>
     <div class='scrollYContainer'>
-      <div class='topNotch'></div>
+      <div class='topNotch'>
+        <div class='topNotchZoomer top' @click='verticalZoomIn'>+</div>
+        <div class='topNotchZoomer' @click='verticalZoomOut'>-</div>
+      </div>
       <div class='scrollY' ref='scrollY'></div>
       <div class='bottomNotch'></div>
     </div>
@@ -4164,8 +4170,6 @@ export default {
           .attr('d', this.codifiedSargamLine(Math.log2(s)))
       });
       this.redraw();
-
-
     },
 
     playheadLine(codified) {
@@ -4181,7 +4185,6 @@ export default {
         ])
       }
     },
-
 
     addPlayhead() {
       this.svg
@@ -4437,6 +4440,30 @@ export default {
       this.z = t;
       this.redraw();
       this.transformScrollYDragger();
+      this.transformScrollXDragger();
+    },
+
+    verticalZoomIn() {
+      this.gy.call(this.zoomY.scaleBy, 1.1, [this.yAxWidth, this.rect().height / 2]);
+      this.redraw();
+      this.transformScrollYDragger();
+    },
+
+    verticalZoomOut() {
+      this.gy.call(this.zoomY.scaleBy, 1/1.1, [this.yAxWidth, this.rect().height / 2]);
+      this.redraw();
+      this.transformScrollYDragger();
+    },
+
+    horizontalZoomIn() {
+      this.gx.call(this.zoomX.scaleBy, 1.1, [this.rect().width / 2, this.xAxHeight]);
+      this.redraw();
+      this.transformScrollXDragger();
+    },
+
+    horizontalZoomOut() {
+      this.gx.call(this.zoomX.scaleBy, 1/1.1, [this.rect().width / 2, this.xAxHeight]);
+      this.redraw();
       this.transformScrollXDragger();
     },
 
@@ -4984,6 +5011,29 @@ export default {
   min-height: v-bind(xAxHeight - 0.5 +'px');
   border-bottom: 1px solid black;
   background-color: grey;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.topNotchZoomer {
+  width: 100%;
+  height: v-bind((xAxHeight - 1.5)/2 +'px');
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  background-color: v-bind(scrollDragColor)
+}
+
+.topNotchZoomer:hover {
+  background-color: v-bind(scrollDragColorHover);
+  cursor: pointer;
+}
+
+.topNotchZoomer.top {
+  border-bottom: 1px solid black;
 }
 
 .scrollY {
@@ -5014,7 +5064,30 @@ export default {
   width: v-bind(yAxWidth - 0.5 + 'px');
   min-width: v-bind(yAxWidth - 0.5 + 'px');
   border-right: 1px solid black;
-  background-color: grey
+  background-color: grey;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
+.leftNotchZoomer {
+  width: v-bind((yAxWidth - 1.5)/2 + 'px');
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: v-bind(scrollDragColor);
+}
+
+.leftNotchZoomer.left {
+  border-right: 1px solid black;
+}
+
+.leftNotchZoomer:hover {
+  background-color: v-bind(scrollDragColorHover);
+  cursor: pointer;
 }
 
 .scrollX {
