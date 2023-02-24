@@ -1619,7 +1619,7 @@ export default {
   bottom: v-bind(playerHeight + 'px');
   background-color: #202621;
   width: 350px;
-  height: 150px;
+  height: 200px;
   border-bottom: 1px solid black;
   color: white;
   display: flex;
@@ -1811,7 +1811,7 @@ button {
 
 .cbBoxSmall > input {
   width: 30px;
-  height: 100px;
+  height: 150px;
   -webkit-appearance: slider-vertical;
   appearance: slider-vertical;
   -moz-appearance: slider-vertical;
