@@ -407,7 +407,7 @@ export default {
 
 .selectionPanel {
   width: v-bind(ctrlBoxWidth + 'px');
-  height: 100px;
+  height: 140px;
   border-top: 1px solid black;
   display: flex;
   flex-direction: column;

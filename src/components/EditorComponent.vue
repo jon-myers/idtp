@@ -21,47 +21,30 @@
     </div>
     <div class='controlBox'>
       <div class='scrollingControlBox'>
-        <div class='cbBox'>
-          <label>Spectrogram Opacity</label>
-          <input 
-            type='range' 
-            min='0.0' 
-            max='1.0' 
-            step='0.01' 
-            v-model='spectrogramOpacity'
-            >
+        <div class='cbRow'>
+          <label>Spectrogram</label>
+          <input type='checkbox' @change='toggleSpectrogram'>
         </div>
-        <div class='cbBox' v-if='editable'>
-          <div class='buttonRow'>
-            <button @click='savePiece'>Save</button>
-            <button @click='resetZoom'>Reset Zoom</button>
-          </div>  
+        <div class='cbRow'>
+          <label>Loop</label>
+          <input type='checkbox' v-model='loop' @click='updateLoop'>
+        </div>
+        <div class='cbRow'>
+          <label>Sargam</label>
+          <input type='checkbox' v-model='showSargam'>
+        </div>
+        <div class='cbRow'>
+          <button @click='resetZoom'>Reset Zoom</button>
+        </div>
+        <div class='cbRow'>
+          <button @click='savePiece'>Save</button>
+        </div>
+        <div class='cbRow'>
           <span class='savedDate'>
             {{`Saved: ${dateModified ? dateModified.toLocaleString() : ''}`}}
           </span>
         </div>
-        <div class='cbRow' v-if='editable'>
-          <button @click='makeSpectrograms'>Remake Spectrogram</button>
-        </div>
-        <div class='cbRow'>
-          <label>View Phrases: </label>
-          <input 
-            type='checkbox' 
-            v-model='viewPhrases' 
-            @change='updatePhraseDivs'>
-        </div>
-        <div class='cbRow'>
-          <label>Loop: </label>
-          <input type='checkbox' v-model='loop' @click='updateLoop'>
-        </div>
-        <div class='cbRow'>
-          <label>Show Sargam: </label>
-          <input type='checkbox' v-model='showSargam'>
-        </div>
-        
       </div>
-      <!-- <div class='filler'>
-      </div> -->
       <TrajSelectPanel 
         ref='trajSelectPanel' 
         :editable='editable' 
@@ -593,6 +576,14 @@ export default {
 
 
   methods: {
+
+    toggleSpectrogram() {
+      if (this.spectrogramOpacity === 0) {
+        this.spectrogramOpacity = 1;
+      } else {
+        this.spectrogramOpacity = 0;
+      }
+    },
 
     extendDurTot(dur=10) {
       // if no audio (!this.audioDBDoc), call this after each new traj is added,
@@ -5116,7 +5107,7 @@ export default {
   justify-content: top;
   color: white;
   background-color: #202621;
-  overflow-y: scroll;
+  /* overflow-y: scroll; */
 }
 
 .mainzz {
@@ -5140,33 +5131,22 @@ export default {
   background-color: black;
 }
 
-.cbBox {
-  width: 100%;
-  height: 70px;
-  min-height: 70px;
-  /* border: 1px solid orange; */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-evenly;
-}
-
-.cbBoxSmall {
-  width: 100%;
-  height: 40px;
-  min-height: 70px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-evenly;
-}
-
 button {
-  cursor: pointer
+  cursor: pointer;
+  background-color: v-bind(scrollDragColor);
+  border-radius: 5px;
+  border: 0px;
 }
 
+button:hover {
+  background-color: v-bind(scrollDragColorHover);
+}
 .savedDate {
-  font-size: 13px
+  font-size: 13px;
+  width: 150px;
+  text-align: right;
+  padding: 0px;
+  padding-top: 10px;
 }
 
 .cbRow {
@@ -5176,7 +5156,18 @@ button {
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: center;
+  justify-content: right;
+  margin-right: 20px;
+}
+
+.cbRow > label {
+  width: 100px;
+  text-align: right;
+  margin-right: 5px;
+}
+
+.cbRow > input:hover {
+  cursor: pointer;
 }
 
 .noSelect {
