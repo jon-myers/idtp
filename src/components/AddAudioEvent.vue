@@ -183,6 +183,7 @@ export default {
         updates[`recordings.${key}.date`] = allRecsObj[key]['date'];
         updates[`recordings.${key}.location`] = allRecsObj[key]['location'];
         updates[`recordings.${key}.raags`] = allRecsObj[key]['raags'];
+        updates[`recordings.${key}.octOffset`] = 0;
       });
       updates['name'] = this.eventName;
       updates['event type'] = this.selectedEventType

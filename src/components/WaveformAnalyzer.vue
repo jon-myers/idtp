@@ -175,11 +175,17 @@ export default {
     },
     
     async newChart() {
-      const response = await fetch(`https://swara.studio/peaks/${this.$parent.id}.json`);
-      this.peaks = await response.json();
-      this.charts = await this.chartsFromPeaks();
-      this.calculateChartWidthLims();
-      this.setChart(this.selectedChart);
+      try {
+        const response = await fetch(`https://swara.studio/peaks/${this.$parent.id}.json`);
+        this.peaks = await response.json();
+        this.charts = await this.chartsFromPeaks();
+        this.calculateChartWidthLims();
+        this.setChart(this.selectedChart);
+      } catch (err) {
+        console.log(err)
+      }
+      
+      
     },
     
     _getLims() {
