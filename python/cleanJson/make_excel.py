@@ -3,8 +3,10 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 from bson import json_util
 
-link = 'mongodb+srv://jon_myers:tabular0sa@swara.f5cuf.mongodb.net/test'
-client = MongoClient(link)
+username = os.environ.get('USER_NAME')
+password = os.environ.get('PASSWORD')
+query = "mongodb+srv://" + username + ":" + password + "@swara.f5cuf.mongodb.net/?retryWrites=true&w=majority"
+client = MongoClient(query)
 transcriptions = client['swara']['transcriptions']
 query = {'_id': ObjectId(sys.argv[1])}
 data = transcriptions.find_one(query)

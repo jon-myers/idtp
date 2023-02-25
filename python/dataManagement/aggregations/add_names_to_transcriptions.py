@@ -1,8 +1,10 @@
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import os
-link = 'mongodb+srv://jon_myers:tabular0sa@swara.f5cuf.mongodb.net/test'
-client = MongoClient(link)
+username = os.environ.get('USER_NAME')
+password = os.environ.get('PASSWORD')
+query = "mongodb+srv://" + username + ":" + password + "@swara.f5cuf.mongodb.net/?retryWrites=true&w=majority"
+client = MongoClient(query)
 users = client['swara']['users']
 project = {'name': 1, 'family_name': 1, 'given_name': 1}
 result = users.find(projection=project)

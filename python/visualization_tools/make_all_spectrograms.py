@@ -1,10 +1,10 @@
 import os 
-# import matplotlib.pyplot as plt
-# import essentia.standard as ess
-# import numpy as np
 from pymongo import MongoClient
+username = os.environ.get('USER_NAME')
+password = os.environ.get('PASSWORD')
+query = "mongodb+srv://" + username + ":" + password + "@swara.f5cuf.mongodb.net/?retryWrites=true&w=majority"
 
-client = MongoClient('mongodb+srv://jon_myers:tabular0sa@swara.f5cuf.mongodb.net/test')
+client = MongoClient(query)
 audioEvents = client['swara']['audioEvents']
 
 findQuery = {''}

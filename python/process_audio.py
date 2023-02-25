@@ -24,7 +24,9 @@ def get_peaks(data, num_levels=4, block_size=64):
         obj[size] = peaks[0].tolist()
     return obj
 
-query = "mongodb+srv://jon_myers:tabular0sa@swara.f5cuf.mongodb.net/?retryWrites=true&w=majority"
+username = os.environ.get('USER_NAME')
+password = os.environ.get('PASSWORD')
+query = "mongodb+srv://" + username + ":" + password + "@swara.f5cuf.mongodb.net/?retryWrites=true&w=majority"
 client = pymongo.MongoClient(query, server_api=ServerApi('1'))
 db = client.swara
 audio_events = db.audioEvents

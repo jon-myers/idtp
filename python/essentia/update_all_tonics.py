@@ -1,10 +1,13 @@
-import essentia, os 
+import os 
 # import matplotlib.pyplot as plt
 import essentia.standard as ess
 import numpy as np
 from pymongo import MongoClient
 
-client = MongoClient('mongodb+srv://jon_myers:tabular0sa@swara.f5cuf.mongodb.net/test')
+username = os.environ.get('USER_NAME')
+password = os.environ.get('PASSWORD')
+query = "mongodb+srv://" + username + ":" + password + "@swara.f5cuf.mongodb.net/?retryWrites=true&w=majority"
+client = MongoClient(query)
 audioEvents = client['swara']['audioEvents']
 
 findQuery = {''}
@@ -29,28 +32,3 @@ for audioEvent in result:
         update = { "$set": { "recordings." + key + '.saEstimate': tonic } }
         audioEvents.update_one(query, update)
         print(key)
-        
-        
-# print(result)
-# ids = [str(i) for i in result.next()['all']]
-# print(ids)
-
-
-
-
-
-
-
-
-# 
-# 
-# 
-# 
-# 
-# dur = 60
-# startTime = np.random.randint(120, 1800)
-# endTime = dur + startTime
-# loader = ess.EasyLoader(filename='../audio/Hamir_alap_original.wav', startTime=startTime, endTime=endTime)
-# audio = loader()
-# tonic = ess.TonicIndianArtMusic(maxTonicFrequency=200)(audio)
-# 

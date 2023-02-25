@@ -11,6 +11,7 @@ const history = require('connect-history-api-fallback');
 const cron = require('node-cron');
 const aggregations = require('./aggregations.js');
 const { OAuth2Client } = require('google-auth-library');
+require('dotenv').config();
 
 
 const getSuffix = mimetype => {
@@ -71,9 +72,10 @@ app.use((req, res, next) => {
 });
 const settings = 'retryWrites=true&w=majority';
 const webAddress = 'swara.f5cuf.mongodb.net/swara';
-const login = 'srv://jon_myers:tabular0sa';
+const password = process.env.PASSWORD;
+const username = process.env.USER_NAME;
+const login = `srv://${username}:${password}`;
 const uri = `mongodb+${login}@${webAddress}?${settings}`;
-// const uri = "mongodb+srv://jon_myers:tabular0sa@swara.f5cuf.mongodb.net/swara?retryWrites=true&w=majority"
 
 const runServer = async () => {
   try {
@@ -738,7 +740,7 @@ const runServer = async () => {
     const server = app.listen(3000);
     server.timeout = 600000;
   } catch (err) {
-    console.throw(err)
+    console.error(err)
   }
 }
 

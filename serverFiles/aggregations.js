@@ -31,9 +31,15 @@ const generateAudioRecordingsDB = async () => {
       '$out': 'audioRecordings'
     }
   ];
+  const webAddress = 'swara.f5cuf.mongodb.net/swara';
+  const password = process.env.PASSWORD;
+  const username = process.env.USER_NAME;
+  const login = `srv://${username}:${password}`;
+  const uri = `mongodb+${login}@${webAddress}`;
+
 
   const client = await mongodb.MongoClient.connect(
-    'mongodb+srv://jon_myers:tabular0sa@swara.f5cuf.mongodb.net/test',
+    uri,
     { useNewUrlParser: true, useUnifiedTopology: true }
   );
   const coll = client.db('swara').collection('audioEvents');
