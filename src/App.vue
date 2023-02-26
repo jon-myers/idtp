@@ -271,6 +271,10 @@ body {
   padding-right: 10px;
 }
 
+.routerLink:hover {
+  background-color: #242424;
+}
+
 #nav {
   display: flex;
   flex-direction: row;
@@ -288,7 +292,7 @@ body {
   justify-content: center;
 }
 
-.active{
+.active {
   background-color: #242424;
 }
 

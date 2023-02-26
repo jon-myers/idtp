@@ -626,7 +626,6 @@ export default {
         this.resetZoom();
         this.redraw();
       }
-      // console.log(lastTraj, dur)
     },
 
     cleanPhrases() {
@@ -709,7 +708,6 @@ export default {
         .attr('transform', 'translate(0, 2)')
         .call(horDrag)
         .on('mouseover', () => {
-          console.log('mouse over')
           d3Select('.scrollXDragger').attr('fill', this.scrollDragColorHover)
         })
         .on('mouseout', () => {
@@ -729,11 +727,9 @@ export default {
       const horRange = this.scrollXWidth - width - 1;
       let deltaX;
       if (x < xDraggerXVal) {
-        console.log('scroll Left')
         deltaX = xDraggerXVal - width;
         if (deltaX < 0) deltaX = 0;
       } else {
-        console.log('scroll right')
         deltaX = xDraggerXVal + width;
         if (deltaX > horRange) deltaX = horRange;
       }
@@ -752,11 +748,9 @@ export default {
       const vertRange = this.scrollYHeight - height - 1;
       let deltaY;
       if (y < yDraggerYVal) {
-        console.log('scroll up')
         deltaY = yDraggerYVal - height;
         if (deltaY < 0) deltaY = 0;
       } else {
-        console.log('scroll down')
         deltaY = yDraggerYVal + height;
         if (deltaY > vertRange) deltaY = vertRange;
       }
@@ -846,7 +840,6 @@ export default {
     },
 
     addSargamLabels() { // this 
-      console.log('add sargam labels')
       const allTrajs = this.piece.phrases.map(p => p.trajectories).flat();
       const allPitches = [];
       // I need pitches and timings
@@ -1587,7 +1580,6 @@ export default {
       }; 
       const dontClick = e => {
         e.stopPropagation();
-        console.log('clicking')
       }
       this.phraseG
         .append('path')
@@ -3160,10 +3152,6 @@ export default {
         .attr('transform', `translate(${x}, 2)`)
     },
 
-    scrollXDragEnd() {
-      console.log('drag end')
-    },
-
     moveToPhrase(pIdx) {
       // move scroll
       const offsetDurTot = this.piece.durTot * (1 - 1 / this.tx().k);
@@ -4648,7 +4636,6 @@ export default {
     },
 
     codifiedRedrawPhrase(pIdx) {
-      console.log('redrawing phrase', pIdx);
       const phrase = this.piece.phrases[pIdx]
       phrase.trajectories.forEach((traj, tIdx) => {
         if (traj.id !== 12) {
