@@ -127,7 +127,7 @@ export default {
   
   async mounted() {
     if (this.extUniqueId === undefined) {
-      const idObj = await initializeAudioEvent();
+      const idObj = await initializeAudioEvent(this.$parent.userID);
       this.uniqueId = idObj.insertedId
     } else {
       this.uniqueId = this.extUniqueId
@@ -154,6 +154,7 @@ export default {
     closeWindow() {
       this.$parent.showAddEvent = false;
       this.$parent.editingId = undefined;
+      this.$parent.reset();
       cleanEmptyDoc(this.uniqueId)
     },
     

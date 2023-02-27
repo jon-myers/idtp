@@ -188,6 +188,10 @@ export default {
   
   methods: {
 
+    async reset() {
+      this.allAudioEvents = await getAllAudioEventMetadata()
+    },
+
     getShorthand(rec) {
       const out = [];
       const raagNames = Object.keys(rec.raags);

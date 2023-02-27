@@ -493,8 +493,12 @@ const runServer = async () => {
     app.post('/initializeAudioEvent', async (req, res) => {
       // Creates a new (empty) AudioEvent mongDB entry, and receives back a 
       // unique _id for use throughout the upload / metadata entry process.
+      const userID = req.body.userID;
       try {
-        const result = await audioEvents.insertOne({});
+        const result = await audioEvents.insertOne({ 
+          userID: userID,
+          permissions: "Public", 
+        });
         res.json(result)
       } catch (err) {
         console.error(err);

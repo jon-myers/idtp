@@ -526,12 +526,15 @@ const deleteAudioEvent = async aeID => {
   }
 }
 
-const initializeAudioEvent = async () => {
+const initializeAudioEvent = async userID => {
   const request = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
-    }
+    },
+    body: JSON.stringify({
+      'userID': userID
+    })
   };
   let out;
   try {
