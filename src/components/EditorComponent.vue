@@ -1649,7 +1649,17 @@ export default {
           nextPhrase.chikaris[newKey] = phrase.chikaris[key];
           delete phrase.chikaris[key];
         }
-      })
+      });
+      const realIdx = idx + 1;
+      this.piece.sectionStarts = this.piece.sectionStarts.map(i => {
+        if (i >= realIdx) {
+          return i + 1;
+        } else {
+          return i;
+        }
+      });
+      this.phraseG.selectAll('.phraseDiv').remove();
+      this.updatePhraseDivs();
     },
 
     updatePhraseDivs() {
@@ -2320,6 +2330,17 @@ export default {
             d3Select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
             d3Select(`#${oldId}`).attr('id', newId);          
           })
+          // if selectedPhraseDivIdx - 1 is less than any of the items in piece.sectionStarts, 
+          // then subtract one from those items in piece.sectionStarts
+          this.piece.sectionStarts = this.piece.sectionStarts.map((item) => {
+            if (item > this.selectedPhraseDivIdx + 1) {
+              return item - 1;
+            } else {
+              return item;
+            }
+          })
+          this.selectedPhraseDivIdx = undefined;
+
         }
       } else if (e.key === 'c' && this.editable) {
         this.setChikari = true;
@@ -3036,8 +3057,6 @@ export default {
             this.reIdAllReps(oldId, newId);
           }
         }
-        
-
         const possibleTimes = this.possibleTrajDivs();
         const finalTime = getClosest(possibleTimes, time);
         const ftIdx = possibleTimes.indexOf(finalTime);
