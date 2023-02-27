@@ -492,13 +492,39 @@ const deletePiece = async piece => {
       '_id': piece._id
     })
   };
-  await fetch(url + "oneTranscription", request)
-    .then(response => {
-      out = response
-    })
-    .catch(err => console.error(err))
+  try {
+    const response = await fetch(url + 'oneTranscription', request);
+    if (response.ok) {
+      out = await response.json();
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
   return out
 };
+
+const deleteAudioEvent = async aeID => {
+  let out;
+  let request = {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      '_id': aeID
+    })
+  };
+  try {
+    const response = await fetch(url + 'deleteAudioEvent', request);
+    if (response.ok) {
+      out = await response.json();
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
 
 const initializeAudioEvent = async () => {
   const request = {
@@ -833,6 +859,7 @@ export {
   getAllPieces,
   createNewPiece,
   deletePiece,
+  deleteAudioEvent,
   getAudioDBEntry,
   getAllAudioFileMetaData,
   uploadFile,
@@ -866,39 +893,3 @@ export {
   updateTranscriptionTitle,
   updateTranscriptionPermissions
 }
-
-// exports.getPiece = getPiece
-// exports.savePiece = savePiece
-// exports.getAllPieces = getAllPieces
-// exports.createNewPiece = createNewPiece
-// exports.deletePiece = deletePiece
-// exports.getAudioDBEntry = getAudioDBEntry
-// exports.getAllAudioFileMetaData = getAllAudioFileMetaData
-// exports.uploadFile = altUploadFile
-// exports.getSortedMusicians = getSortedMusicians
-// exports.getEventTypes = getEventTypes
-// exports.getGharana = getGharana
-// exports.getRagaNames = getRagaNames
-// exports.getInstruments = getInstruments
-// exports.getLocationObject = getLocationObject
-// exports.getPerformanceSections = getPerformanceSections
-// exports.initializeAudioEvent = initializeAudioEvent
-// exports.cleanEmptyDoc = cleanEmptyDoc
-// exports.saveAudioMetadata = saveAudioMetadata
-// exports.getAllAudioEventMetadata = getAllAudioEventMetadata
-// exports.getAudioEvent = getAudioEvent
-// exports.updateSaEstimate = updateSaEstimate
-// exports.getVerifiedStatus = getVerifiedStatus
-// exports.getRaagRule = getRaagRule
-// exports.saveRaagRules = saveRaagRules
-// exports.getAudioRecording = getAudioRecording
-// exports.getNumberOfSpectrograms = getNumberOfSpectrograms
-// exports.userLoginGoogle = userLoginGoogle
-// exports.agreeToWaiver = agreeToWaiver
-// exports.nameFromUserID = nameFromUserID
-// exports.makeSpectrograms = makeSpectrograms
-// exports.pieceExists = pieceExists
-// exports.handleGoogleAuthCode = handleGoogleAuthCode
-// exports.cloneTranscription = cloneTranscription
-// exports.excelData = excelData
-// exports.jsonData = jsonData
