@@ -1580,13 +1580,15 @@ export default {
       }; 
       const dontClick = e => {
         e.stopPropagation();
-      }
+      };
+      const realPhraseStartIdx = idx + 1;
+      const sectionDiv = this.piece.sectionStarts.includes(realPhraseStartIdx);
       this.phraseG
         .append('path')
         .attr('id', `phraseLine${idx}`)
         .classed('phraseDiv', true)
         .attr('stroke', 'black')
-        .attr('stroke-width', '2px')
+        .attr('stroke-width', sectionDiv ? '3px' : '2px')
         .attr('d', this.playheadLine(true))
         .style('opacity', this.viewPhrases ? '1' : '0')
         .attr('transform', `translate(${this.codifiedXR(time)},0)`);
@@ -1664,12 +1666,13 @@ export default {
                 .on('drag', this.phraseDivDragDragging(i))
                 .on('end', this.phraseDivDragEnd(i))
             }
+            const sectionDiv = this.piece.sectionStarts.includes(i + 1);
             this.phraseG
               .append('path')
               .classed('phraseDiv', true)
               .attr('id', `phraseLine${i}`)
               .attr('stroke', 'black')
-              .attr('stroke-width', '2px')
+              .attr('stroke-width', sectionDiv ? '3px' : '2px')
               .attr('d', this.playheadLine())
               .style('opacity', '1')
               .attr('transform', `translate(${this.codifiedXR(endTime)},0)`)
@@ -1975,9 +1978,17 @@ export default {
             .attr('transform', `translate(${this.codifiedXR(time)},0)`)
         }
         this.svg.style('cursor', 'auto');
-        this.selectedPhraseDivIdx = i;      
+        this.selectedPhraseDivIdx = i;
+        const realPhraseStartIdx = i + 1;
+        if (this.piece.sectionStarts.includes(realPhraseStartIdx)) {
+          this.$refs.trajSelectPanel.phraseDivType = 'section';
+        } else {
+          this.$refs.trajSelectPanel.phraseDivType = 'phrase';
+        }
         this.clearSelectedTraj();
-        this.clearSelectedChikari();        
+        this.clearSelectedChikari();
+        this.clearTrajSelectPanel();
+        this.$refs.trajSelectPanel.showPhraseRadio = true;  
       }
     },
     
@@ -2228,8 +2239,6 @@ export default {
         this.regionEndTime = this.durTot;
         this.mouseUpUpdateLoop();  
       }
-      this.$refs.trajSelectPanel.showVibObj = false;
-      this.$refs.trajSelectPanel.showSlope = false;
     },
 
     handleKeyup(e) {
@@ -2336,6 +2345,7 @@ export default {
           this.setNewSeries = false;
           d3SelectAll('.newSeriesDot').remove();
         }
+        this.$refs.trajSelectPanel.showTrajChecks = true;
       } else if ( e.key === 'p' && 
                   this.setNewPhraseDiv === false && 
                   this.editable && 
@@ -3918,6 +3928,7 @@ export default {
         this.clearSelectedPhraseDiv()
       }
       this.addAllDragDots();
+      this.$refs.trajSelectPanel.showTrajChecks = true;
     },
 
     clearSelectedChikari() {
@@ -3932,7 +3943,8 @@ export default {
       if (this.selectedPhraseDivIdx !== undefined) {
         d3Select(`#phraseLine${this.selectedPhraseDivIdx}`)
           .attr('stroke', 'black')
-        this.selectedPhraseDivIdx = undefined
+        this.selectedPhraseDivIdx = undefined;
+        this.$refs.trajSelectPanel.phraseDivType = undefined;
       }
     },
 
@@ -3952,7 +3964,11 @@ export default {
 
     clearTrajSelectPanel() {
       this.$refs.trajSelectPanel.parentSelected = false;
-      this.$refs.trajSelectPanel.selectedIdx = undefined
+      this.$refs.trajSelectPanel.selectedIdx = undefined;
+      this.$refs.trajSelectPanel.showVibObj = false;
+      this.$refs.trajSelectPanel.showSlope = false;
+      this.$refs.trajSelectPanel.showTrajChecks = false;
+      this.$refs.trajSelectPanel.showPhraseRadio = false;
     },
 
     redrawChikaris() {

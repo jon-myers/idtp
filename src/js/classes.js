@@ -938,7 +938,7 @@ class Piece {
     this.familyName = familyName;
     this.givenName = givenName;
     if (sectionStarts === undefined) {
-      this.sectionStarts = [0]
+      this.sectionStarts = [0];
     } else {
       this.sectionStarts = sectionStarts;
     }
