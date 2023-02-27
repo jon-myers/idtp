@@ -1588,7 +1588,7 @@ export default {
         .attr('id', `phraseLine${idx}`)
         .classed('phraseDiv', true)
         .attr('stroke', 'black')
-        .attr('stroke-width', sectionDiv ? '3px' : '2px')
+        .attr('stroke-width', sectionDiv ? '4px' : '2px')
         .attr('d', this.playheadLine(true))
         .style('opacity', this.viewPhrases ? '1' : '0')
         .attr('transform', `translate(${this.codifiedXR(time)},0)`);
@@ -1682,7 +1682,7 @@ export default {
               .classed('phraseDiv', true)
               .attr('id', `phraseLine${i}`)
               .attr('stroke', 'black')
-              .attr('stroke-width', sectionDiv ? '3px' : '2px')
+              .attr('stroke-width', sectionDiv ? '4px' : '2px')
               .attr('d', this.playheadLine())
               .style('opacity', '1')
               .attr('transform', `translate(${this.codifiedXR(endTime)},0)`)
