@@ -13,6 +13,14 @@ const aggregations = require('./aggregations.js');
 const { OAuth2Client } = require('google-auth-library');
 require('dotenv').config();
 
+async function exists (path) {  
+  try {
+    await fs.access(path)
+    return true
+  } catch {
+    return false
+  }
+}
 
 const getSuffix = mimetype => {
   // TODO add other audio file types
@@ -264,6 +272,53 @@ const runServer = async () => {
       }    
     });
 
+    app.delete('/deleteAudioEvent', async (req, res) => {
+      // delete a particular audio event
+      try {
+        const query = { "_id": ObjectId(req.body._id) };
+        const projection = { 'recordings': 1, '_id': 0 };
+        const result = await audioEvents.findOne(query, projection);
+        const recordings = result.recordings;
+        const idxs = Object.keys(recordings);
+        idxs.forEach(async idx => {
+          const recID = recordings[idx].audioFileId.toString();
+          // remove from peaks folder
+          const peaksPath = 'peaks/' + recID + '.json';
+          const spectrogramsPath = 'spectrograms';
+          const mp3Path = 'audio/mp3/' + recID + '.mp3';
+          const wavPath = 'audio/wav/' + recID + '.wav';
+          const opusPath = 'audio/opus/' + recID + '.opus';
+          const peaksPathExists = await exists(peaksPath);
+          const spectrogramsPathExists = await exists(spectrogramsPath);
+          const mp3PathExists = await exists(mp3Path);
+          const wavPathExists = await exists(wavPath);
+          const opusPathExists = await exists(opusPath);
+          if (peaksPathExists) {
+            fs.unlink(peaksPath)
+          }
+          if (spectrogramsPathExists) {
+            fs.rm(spectrogramsPath, { recursive: true, force: true })
+          }
+          if (mp3PathExists) {
+            fs.unlink(mp3Path)
+          }
+          if (wavPathExists) {
+            fs.unlink(wavPath)
+          }
+          if (opusPathExists) {
+            fs.unlink(opusPath)
+          }
+        })
+        const delResult = await audioEvents.deleteOne(query);
+        console.log(delResult)
+        res.json(delResult);
+        // res.json('not deleted _id ' + req.body._id);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
     app.post('/getAudioDBEntry', async (req, res) => {
       // retrieve a particular entry from the audioFiles db
       try {
@@ -438,8 +493,12 @@ const runServer = async () => {
     app.post('/initializeAudioEvent', async (req, res) => {
       // Creates a new (empty) AudioEvent mongDB entry, and receives back a 
       // unique _id for use throughout the upload / metadata entry process.
+      const userID = req.body.userID;
       try {
-        const result = await audioEvents.insertOne({});
+        const result = await audioEvents.insertOne({ 
+          userID: userID,
+          permissions: "Public", 
+        });
         res.json(result)
       } catch (err) {
         console.error(err);

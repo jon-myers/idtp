@@ -82,13 +82,18 @@
       Add Audio Event
     </div>
     <div 
-      :class='`dropDownRow ${["", "inactive"][Number(!clickedAE)]}`' 
+      :class='`dropDownRow ${toggle[Number(!clickedAE)]}`' 
       @click='handleEditAEClick'>
       <!-- '`${[undefined, "handleEditAEClick"][Number(clickedAE)]}`'> -->
       Edit Audio Event
     </div>
     <div
-      :class='`dropDownRow last ${["", "inactive"][Number(!clickedAF)]}`'
+      :class='`dropDownRow ${toggle[Number(userID !== selectedUserID)]}`'
+      @click='deleteAE'>
+      Delete Audio Event
+    </div>
+    <div
+      :class='`dropDownRow last ${toggle[Number(!clickedAF)]}`'
       @click='handleNewTranscriptionClick'>
       New Transcription
     </div>
@@ -96,7 +101,7 @@
   
 </template>
 <script>
-import { getAllAudioEventMetadata } from '@/js/serverCalls.js';
+import { getAllAudioEventMetadata, deleteAudioEvent } from '@/js/serverCalls.js';
 import AddAudioEvent from '@/components/AddAudioEvent.vue';
 import AudioPlayer from '@/components/AudioPlayer.vue';
 const displayTime = dur => {
@@ -139,8 +144,11 @@ export default {
       dropDownLeft: 200,
       dropdownTop: 300,
       selectedAE: undefined,
+      selectedUserID: undefined,
       clickedAF: false,
-      selectedAF: false
+      selectedAF: false,
+      userID: undefined,
+      toggle: ['', 'inactive']
     }
   },
   components: {
@@ -152,7 +160,7 @@ export default {
     if (this.$store.state.userID === undefined) {
       this.$router.push('/')
     }
-      
+    this.userID = this.$store.state.userID;
     this.allAudioEvents = await getAllAudioEventMetadata()
   },
   
@@ -162,6 +170,11 @@ export default {
   },
   
   mounted() { 
+    // add event listener for keydown, and then remove it in beforeUnmount
+    // also, for 'backspace', if the dropdown is open, close it
+
+
+    
     
   },
   
@@ -174,6 +187,10 @@ export default {
   },
   
   methods: {
+
+    async reset() {
+      this.allAudioEvents = await getAllAudioEventMetadata()
+    },
 
     getShorthand(rec) {
       const out = [];
@@ -237,6 +254,7 @@ export default {
       const el = document.elementFromPoint(e.clientX, e.clientY);
       if (el.classList[0] === 'audioEventNameRow') {
         this.selectedAE = this.allAudioEvents[el.id.slice(2)];
+        this.selectedUserID = this.selectedAE.userID;
         this.clickedAE = true;
         this.clickedAF = false;
         this.selectedAF = undefined;
@@ -402,13 +420,14 @@ export default {
       this.showAddEvent = true
     },
     
-    getAudioUrl() {
-      
+    async deleteAE() {
+      const result = await deleteAudioEvent(this.selectedAE._id);
+      console.log(result);
+      if (result.deletedCount === 1) {
+        this.$refs.dropDown.classList.add('closed');
+        this.allAudioEvents = await getAllAudioEventMetadata()
+      }
     }
-    // getPSecs(rec) {
-    //   rec.
-    // },
-
   }
 }
 </script>
