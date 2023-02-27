@@ -892,7 +892,8 @@ class Piece {
     name = undefined,
     familyName = undefined,
     givenName = undefined,
-    permissions = undefined
+    permissions = undefined,
+    sectionStarts = undefined,
   } = {}) {
     this.phrases = phrases;
     this.raga = raga;
@@ -936,7 +937,11 @@ class Piece {
     this.name = name;
     this.familyName = familyName;
     this.givenName = givenName;
-
+    if (sectionStarts === undefined) {
+      this.sectionStarts = [0]
+    } else {
+      this.sectionStarts = sectionStarts;
+    }
   }
 
   putRagaInPhrase() {
@@ -986,6 +991,18 @@ class Piece {
     this.phrases.forEach(p => p.realignPitches())
   }
 
+  get sections() {
+    const sections = [];
+    this.sectionStarts.forEach((s, i) => {
+      if (i === this.sectionStarts.length - 1) {
+        sections.push(this.phrases.slice(s))
+      } else {
+        sections.push(this.phrases.slice(s, this.sectionStarts[i + 1]))
+      }
+    });
+    return sections
+  }
+
 
   toJSON() {
     return {
@@ -1005,7 +1022,8 @@ class Piece {
       permissions: this.permissions,
       name: this.name,
       familyName: this.familyName,
-      givenName: this.givenName
+      givenName: this.givenName,
+      sectionStarts: this.sectionStarts,
     }
   }
 
