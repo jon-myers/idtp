@@ -1580,13 +1580,15 @@ export default {
       }; 
       const dontClick = e => {
         e.stopPropagation();
-      }
+      };
+      const realPhraseStartIdx = idx + 1;
+      const sectionDiv = this.piece.sectionStarts.includes(realPhraseStartIdx);
       this.phraseG
         .append('path')
         .attr('id', `phraseLine${idx}`)
         .classed('phraseDiv', true)
         .attr('stroke', 'black')
-        .attr('stroke-width', '2px')
+        .attr('stroke-width', sectionDiv ? '3px' : '2px')
         .attr('d', this.playheadLine(true))
         .style('opacity', this.viewPhrases ? '1' : '0')
         .attr('transform', `translate(${this.codifiedXR(time)},0)`);
@@ -1647,7 +1649,17 @@ export default {
           nextPhrase.chikaris[newKey] = phrase.chikaris[key];
           delete phrase.chikaris[key];
         }
-      })
+      });
+      const realIdx = idx + 1;
+      this.piece.sectionStarts = this.piece.sectionStarts.map(i => {
+        if (i >= realIdx) {
+          return i + 1;
+        } else {
+          return i;
+        }
+      });
+      this.phraseG.selectAll('.phraseDiv').remove();
+      this.updatePhraseDivs();
     },
 
     updatePhraseDivs() {
@@ -1664,12 +1676,13 @@ export default {
                 .on('drag', this.phraseDivDragDragging(i))
                 .on('end', this.phraseDivDragEnd(i))
             }
+            const sectionDiv = this.piece.sectionStarts.includes(i + 1);
             this.phraseG
               .append('path')
               .classed('phraseDiv', true)
               .attr('id', `phraseLine${i}`)
               .attr('stroke', 'black')
-              .attr('stroke-width', '2px')
+              .attr('stroke-width', sectionDiv ? '3px' : '2px')
               .attr('d', this.playheadLine())
               .style('opacity', '1')
               .attr('transform', `translate(${this.codifiedXR(endTime)},0)`)
@@ -1975,9 +1988,17 @@ export default {
             .attr('transform', `translate(${this.codifiedXR(time)},0)`)
         }
         this.svg.style('cursor', 'auto');
-        this.selectedPhraseDivIdx = i;      
+        this.selectedPhraseDivIdx = i;
+        const realPhraseStartIdx = i + 1;
+        if (this.piece.sectionStarts.includes(realPhraseStartIdx)) {
+          this.$refs.trajSelectPanel.phraseDivType = 'section';
+        } else {
+          this.$refs.trajSelectPanel.phraseDivType = 'phrase';
+        }
         this.clearSelectedTraj();
-        this.clearSelectedChikari();        
+        this.clearSelectedChikari();
+        this.clearTrajSelectPanel();
+        this.$refs.trajSelectPanel.showPhraseRadio = true;  
       }
     },
     
@@ -2228,8 +2249,6 @@ export default {
         this.regionEndTime = this.durTot;
         this.mouseUpUpdateLoop();  
       }
-      this.$refs.trajSelectPanel.showVibObj = false;
-      this.$refs.trajSelectPanel.showSlope = false;
     },
 
     handleKeyup(e) {
@@ -2311,6 +2330,17 @@ export default {
             d3Select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
             d3Select(`#${oldId}`).attr('id', newId);          
           })
+          // if selectedPhraseDivIdx - 1 is less than any of the items in piece.sectionStarts, 
+          // then subtract one from those items in piece.sectionStarts
+          this.piece.sectionStarts = this.piece.sectionStarts.map((item) => {
+            if (item > this.selectedPhraseDivIdx + 1) {
+              return item - 1;
+            } else {
+              return item;
+            }
+          })
+          this.selectedPhraseDivIdx = undefined;
+
         }
       } else if (e.key === 'c' && this.editable) {
         this.setChikari = true;
@@ -2336,6 +2366,7 @@ export default {
           this.setNewSeries = false;
           d3SelectAll('.newSeriesDot').remove();
         }
+        this.$refs.trajSelectPanel.showTrajChecks = true;
       } else if ( e.key === 'p' && 
                   this.setNewPhraseDiv === false && 
                   this.editable && 
@@ -3026,8 +3057,6 @@ export default {
             this.reIdAllReps(oldId, newId);
           }
         }
-        
-
         const possibleTimes = this.possibleTrajDivs();
         const finalTime = getClosest(possibleTimes, time);
         const ftIdx = possibleTimes.indexOf(finalTime);
@@ -3918,6 +3947,7 @@ export default {
         this.clearSelectedPhraseDiv()
       }
       this.addAllDragDots();
+      this.$refs.trajSelectPanel.showTrajChecks = true;
     },
 
     clearSelectedChikari() {
@@ -3932,7 +3962,8 @@ export default {
       if (this.selectedPhraseDivIdx !== undefined) {
         d3Select(`#phraseLine${this.selectedPhraseDivIdx}`)
           .attr('stroke', 'black')
-        this.selectedPhraseDivIdx = undefined
+        this.selectedPhraseDivIdx = undefined;
+        this.$refs.trajSelectPanel.phraseDivType = undefined;
       }
     },
 
@@ -3952,7 +3983,11 @@ export default {
 
     clearTrajSelectPanel() {
       this.$refs.trajSelectPanel.parentSelected = false;
-      this.$refs.trajSelectPanel.selectedIdx = undefined
+      this.$refs.trajSelectPanel.selectedIdx = undefined;
+      this.$refs.trajSelectPanel.showVibObj = false;
+      this.$refs.trajSelectPanel.showSlope = false;
+      this.$refs.trajSelectPanel.showTrajChecks = false;
+      this.$refs.trajSelectPanel.showPhraseRadio = false;
     },
 
     redrawChikaris() {

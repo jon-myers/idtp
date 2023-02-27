@@ -1,7 +1,7 @@
 <template>
 <div class='main'>
   <div class='selectionPanel'>
-    <div class='selectionRow checks'>
+    <div class='selectionRow checks' v-if='showTrajChecks'>
       <label>Pluck</label>
       <input 
         v-if='editable' 
@@ -17,8 +17,7 @@
         disabled='disabled'
       />
     </div>
-    <div class='selectionRow checks'>
-      
+    <div class='selectionRow checks' v-if='showTrajChecks'>
       <label class='spaceLeft'>Dampen</label>
       <input 
         v-if='editable' 
@@ -33,6 +32,16 @@
         @change='updateDampen'
         disabled='disabled'
       />
+    </div>
+    <div class='radioGroup' v-if='showPhraseRadio'>
+      <div class='selectionRow'>
+        <label>Phrase Division</label>
+        <input type='radio' name='phraseDiv' v-model='phraseDivType' value='phrase'>
+      </div>
+      <div class='selectionRow'>
+        <label>Section Division</label>
+        <input type='radio' name='phraseDiv' v-model='phraseDivType' value='section'>
+      </div>
     </div>
     <div class='selectionRow checks'>
       <label v-if='showVibObj' class='spaceLeft'>Phase</label>
@@ -179,7 +188,7 @@ import t10 from '@/assets/thumbnails/10.png';
 import t11 from '@/assets/thumbnails/11.png';
 import t12 from '@/assets/thumbnails/12.png';
 import t13 from '@/assets/thumbnails/13.png';
-
+import { select as d3Select } from 'd3';
 // import { Articulation } from '@/js/classes.js';
 
 export default {
@@ -201,7 +210,10 @@ export default {
       offset: 0,
       initUp: true,
       extent: 0.05,
-      dampen: false
+      dampen: false,
+      showTrajChecks: false,
+      showPhraseRadio: false,
+      phraseDivType: undefined
     }
   },
   
@@ -229,6 +241,26 @@ export default {
         const slopeIdxs = [2, 3, 4, 5]
         this.showSlope = slopeIdxs.includes(this.selectedIdx);
         this.showVibObj = this.selectedIdx === 13;
+      }
+    },
+
+    phraseDivType(newVal, oldVal) {
+      if (oldVal !== undefined && newVal !== undefined) {
+        const realPhraseStart = this.$parent.selectedPhraseDivIdx + 1;
+        if (newVal === 'phrase' && oldVal == 'section') {
+          const piece = this.$parent.piece;
+          const starts = piece.sectionStarts;
+          piece.sectionStarts = starts.filter(s => s !== realPhraseStart);
+          d3Select(`#phraseLine${realPhraseStart-1}`)
+            .attr('stroke-width', '2px')
+        } else if (newVal === 'section' && oldVal == 'phrase') {
+          const piece = this.$parent.piece;
+          const starts = piece.sectionStarts;
+          piece.sectionStarts = [...starts, realPhraseStart];
+          piece.sectionStarts.sort();
+          d3Select(`#phraseLine${realPhraseStart-1}`)
+            .attr('stroke-width', '3px')
+        }
       }
     }
   },
@@ -481,6 +513,19 @@ label {
   height: 30px;
 }
 
+.radioGroup > .selectionRow {
+  justify-content: right;
+  width: 100%;
+  height: 30px;
+}
+
+.radioGroup > .selectionRow > label {
+  width: 125px;
+}
+
+.radioGroup > .selectionRow > input {
+  margin-right: 10px
+}
 .selectionRow > label {
   margin-right: 5px;
 }
