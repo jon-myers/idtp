@@ -324,9 +324,7 @@ export default {
     this.chikariGainNode.gain.setValueAtTime(this.chikariGain, this.now());
     this.synthGainNode.connect(this.ac.destination);
     this.moduleCt = 0;
-
     this.browser = detect();
-    console.log(this.browser)
     if (this.browser.name !== 'safari' && this.browser.name !== 'firefox') {
       this.transposable = true;
       this.rubberBandNode = await createRubberBandNode(this.ac, rubberBandUrl);
@@ -336,7 +334,6 @@ export default {
     } else {
       this.gainNode.connect(this.ac.destination);
     }
-
 
     this.ac.audioWorklet.addModule(AudioWorklet(ksURL))
       .then(() => {
@@ -902,6 +899,7 @@ export default {
         this.pausedAt = newTime;
         this.$parent.currentTime = newTime;
         this.$parent.movePlayhead();
+        this.$parent.moveShadowPlayhead();
         this.updateProgress();
       } else {
         this.stop();
@@ -919,6 +917,7 @@ export default {
         this.pausedAt = newTime;
         this.$parent.currentTime = newTime;
         this.$parent.movePlayhead();
+        this.$parent.moveShadowPlayhead();
         this.updateProgress();
       } else {
         this.stop();
@@ -1024,7 +1023,15 @@ export default {
     pause() {
       const elapsed = this.now() - this.startedAt;
       this.stop();
-      this.pausedAt = this.loop ? this.loopTime : elapsed;
+      if (this.$parent.playheadReturn) {
+        this.pausedAt = this.startingDelta;
+        this.$parent.currentTime = this.startingDelta;
+        this.$parent.movePlayhead();
+      } else {
+        this.pausedAt = this.loop ? this.loopTime : elapsed;
+        this.$parent.moveShadowPlayhead();
+        // this.startingDelta = this.pausedAt;
+      } 
     },
 
     getCurrentTime() {
@@ -1045,6 +1052,16 @@ export default {
         }
       } else {
         return 0;
+      }
+    },
+
+    getShadowTime() {
+      if (this.pausedAt) {
+        return this.pausedAt
+      } else if (this.playing) {
+        return this.startingDelta
+      } else {
+        return 0
       }
     },
 
@@ -1184,6 +1201,7 @@ export default {
       }
       this.$parent.currentTime = 0;
       this.$parent.movePlayhead();
+      this.$parent.moveShadowPlayhead();
     },
 
     handleProgressClick(e) {
@@ -1192,6 +1210,7 @@ export default {
         this.pausedAt = (this.audioBuffer.duration * e.clientX) / bb.width;
         this.$parent.currentTime = this.pausedAt;
         this.$parent.movePlayhead();
+        this.$parent.moveShadowPlayhead();
         this.updateProgress();
       } else {
         this.stop();
@@ -1277,6 +1296,7 @@ export default {
           this.pausedAt = newTime;
           this.$parent.currentTime = this.pausedAt;
           this.$parent.movePlayhead();
+          this.$parent.moveShadowPlayhead();
           this.updateProgress();
         } else {
           this.stop();
