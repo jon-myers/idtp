@@ -901,7 +901,7 @@ export default {
       if (!this.playing) {
         this.pausedAt = newTime;
         this.$parent.currentTime = newTime;
-        this.$parent.redrawPlayhead();
+        this.$parent.movePlayhead();
         this.updateProgress();
       } else {
         this.stop();
@@ -918,7 +918,7 @@ export default {
       if (!this.playing) {
         this.pausedAt = newTime;
         this.$parent.currentTime = newTime;
-        this.$parent.redrawPlayhead();
+        this.$parent.movePlayhead();
         this.updateProgress();
       } else {
         this.stop();
@@ -1183,7 +1183,7 @@ export default {
         this.updateProgress();
       }
       this.$parent.currentTime = 0;
-      this.$parent.redrawPlayhead();
+      this.$parent.movePlayhead();
     },
 
     handleProgressClick(e) {
@@ -1191,7 +1191,7 @@ export default {
       if (!this.playing) {
         this.pausedAt = (this.audioBuffer.duration * e.clientX) / bb.width;
         this.$parent.currentTime = this.pausedAt;
-        this.$parent.redrawPlayhead();
+        this.$parent.movePlayhead();
         this.updateProgress();
       } else {
         this.stop();
@@ -1276,7 +1276,7 @@ export default {
         if (!this.playing) {
           this.pausedAt = newTime;
           this.$parent.currentTime = this.pausedAt;
-          this.$parent.redrawPlayhead();
+          this.$parent.movePlayhead();
           this.updateProgress();
         } else {
           this.stop();

@@ -284,7 +284,7 @@ const runServer = async () => {
           const recID = recordings[idx].audioFileId.toString();
           // remove from peaks folder
           const peaksPath = 'peaks/' + recID + '.json';
-          const spectrogramsPath = 'spectrograms';
+          const spectrogramsPath = 'spectrograms' + recID;
           const mp3Path = 'audio/mp3/' + recID + '.mp3';
           const wavPath = 'audio/wav/' + recID + '.wav';
           const opusPath = 'audio/opus/' + recID + '.opus';

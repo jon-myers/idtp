@@ -2895,7 +2895,7 @@ export default {
           this.$refs.audioPlayer.pausedAt = time;
           this.$refs.audioPlayer.play();
         }
-        this.redrawPlayhead()
+        this.movePlayhead()
       }
     },
 
@@ -3200,7 +3200,7 @@ export default {
         this.$refs.audioPlayer.pausedAt = time;
         this.$refs.audioPlayer.play();
       }
-      this.redrawPlayhead();
+      this.movePlayhead();
       const query = this.$route.query;
       this.$router.push({ query: { id: query.id, pIdx: pIdx.toString() } });
 
@@ -4212,7 +4212,7 @@ export default {
         .attr('transform', `translate(${this.xr()(this.currentTime)})`)
     },
 
-    redrawPlayhead() {
+    movePlayhead() {
       d3Select('.playhead').transition().duration(this.transitionTime)
         .attr('transform', `translate(${this.xr()(this.currentTime)})`)
     },
@@ -4256,7 +4256,7 @@ export default {
       }
 
       if (this.piece.audioID) await this.redrawSpectrogram();
-      this.redrawPlayhead();
+      this.movePlayhead();
       // this.movePhraseDivs();
       this.moveRegion();
       // this.codifiedAddSargamLabels();
@@ -4506,7 +4506,7 @@ export default {
       }
 
 
-      this.redrawPlayhead();
+      this.movePlayhead();
       this.startAnimationFrame();
     },
 
