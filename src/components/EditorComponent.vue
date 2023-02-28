@@ -5104,7 +5104,8 @@ export default {
 }
 
 .topNotch {
-  width: 100%;
+  width: v-bind(scrollYWidth+'px');
+  min-width: v-bind(scrollYWidth+'px');
   height: v-bind(xAxHeight - 0.5 +'px');
   min-height: v-bind(xAxHeight - 0.5 +'px');
   border-bottom: 1px solid black;
@@ -5116,7 +5117,8 @@ export default {
 }
 
 .topNotchZoomer {
-  width: 100%;
+  width: v-bind(scrollYWidth+'px');
+  min-width: v-bind(scrollYWidth+'px');
   height: v-bind((xAxHeight - 1.5)/2 +'px');
   display: flex;
   flex-direction: row;
@@ -5206,7 +5208,7 @@ export default {
 }
 
 .scrollingControlBox {
-  width: 100%;
+  width: v-bind(controlBoxWidth+'px');
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -5259,12 +5261,12 @@ button:hover {
 .cbRow {
   height: 30px;
   min-height: 30px;
-  width: 100%;
+  width: v-bind(controlBoxWidth - 10 +'px');
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: right;
-  margin-right: 20px;
+  margin-right: 10px;
 }
 
 .cbRow > label {
