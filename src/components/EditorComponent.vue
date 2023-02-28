@@ -23,7 +23,10 @@
       <div class='scrollingControlBox'>
         <div class='cbRow'>
           <label>Spectrogram</label>
-          <input type='checkbox' @change='toggleSpectrogram'>
+          <input 
+            type='checkbox' 
+            @change='toggleSpectrogram'
+            @click='preventSpaceToggle'>
         </div>
         <div class='cbRow'>
           <label>Loop</label>
@@ -31,7 +34,17 @@
         </div>
         <div class='cbRow'>
           <label>Sargam</label>
-          <input type='checkbox' v-model='showSargam'>
+          <input 
+            type='checkbox' 
+            v-model='showSargam' 
+            @click='preventSpaceToggle'>
+        </div>
+        <div class='cbRow'>
+          <label>Playhead Return</label>
+          <input 
+            type='checkbox' 
+            v-model='playheadReturn' 
+            @click='preventSpaceToggle'>
         </div>
         <div class='cbRow'>
           <button @click='resetZoom'>Reset Zoom</button>
@@ -197,7 +210,8 @@ export default {
       regionStartTime: undefined,
       regionEndTime: undefined,
       scrollDragColor: '#9c9c9c',
-      scrollDragColorHover: '#AAAAAA'
+      scrollDragColorHover: '#AAAAAA',
+      playheadReturn: false,
     }
   },
   components: {
@@ -569,6 +583,11 @@ export default {
           this.$refs.audioPlayer.sourceNode.loopEnd = newVal;
         }
       }
+    },
+
+    playheadReturn(newVal) {
+      d3Select('.playheadShadow')
+        .attr('opacity', Number(newVal))
     },
 
 
@@ -2101,6 +2120,10 @@ export default {
       // checking box
     },
 
+    preventSpaceToggle(e) {
+      if (e && e.clientX === 0) e.preventDefault();
+    },
+
     async savePiece() {
       this.piece.phrases.forEach(phrase => {
         phrase.consolidateSilentTrajs()
@@ -2895,7 +2918,8 @@ export default {
           this.$refs.audioPlayer.pausedAt = time;
           this.$refs.audioPlayer.play();
         }
-        this.movePlayhead()
+        this.movePlayhead();
+        this.moveShadowPlayhead();
       }
     },
 
@@ -3201,6 +3225,7 @@ export default {
         this.$refs.audioPlayer.play();
       }
       this.movePlayhead();
+      this.moveShadowPlayhead();
       const query = this.$route.query;
       this.$router.push({ query: { id: query.id, pIdx: pIdx.toString() } });
 
@@ -4210,11 +4235,28 @@ export default {
         .attr('stroke-width', '2px')
         .attr('d', this.playheadLine())
         .attr('transform', `translate(${this.xr()(this.currentTime)})`)
+      
+      this.svg
+        .append('g')
+        .attr('clip-path', 'url(#playheadClip)')
+        .append('path')
+        .classed('playheadShadow', true)
+        .attr('stroke', 'darkgreen')
+        .attr('stroke-width', '1px')
+        .attr('d', this.playheadLine())
+        .attr('transform', `translate(${this.xr()(this.currentTime)})`)
+        .attr('opacity', '0')
     },
 
     movePlayhead() {
       d3Select('.playhead').transition().duration(this.transitionTime)
         .attr('transform', `translate(${this.xr()(this.currentTime)})`)
+    },
+
+    moveShadowPlayhead() {
+      const shadowTime = this.$refs.audioPlayer.getShadowTime();
+      d3Select('.playheadShadow').transition().duration(this.transitionTime)
+        .attr('transform', `translate(${this.xr()(shadowTime)})`)
     },
 
     async redraw() {
@@ -4257,6 +4299,7 @@ export default {
 
       if (this.piece.audioID) await this.redrawSpectrogram();
       this.movePlayhead();
+      this.moveShadowPlayhead();
       // this.movePhraseDivs();
       this.moveRegion();
       // this.codifiedAddSargamLabels();
@@ -5183,7 +5226,7 @@ button:hover {
 }
 
 .cbRow > label {
-  width: 100px;
+  width: 130px;
   text-align: right;
   margin-right: 5px;
 }
@@ -5227,6 +5270,14 @@ button:hover {
   flex-direction: row;
   align-items: center;
   justify-content: space-evenly;
+}
+
+input[type='checkbox'] {
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* .regionG {
