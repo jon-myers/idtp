@@ -206,6 +206,7 @@ export default {
       scrollYHeight: 600 - 30 - 20, // this is bad, just a placeholder anyway
       initYOffset: 0,
       setNewSeries: false,
+      setNewRegion: false,
       shifted: false,
       regionStartTime: undefined,
       regionEndTime: undefined,
@@ -523,7 +524,6 @@ export default {
     } 
   },
 
-
   unmounted() {
     window.removeEventListener('resize', this.resize);
     window.removeEventListener('keydown', this.handleKeydown);
@@ -590,11 +590,41 @@ export default {
         .attr('opacity', Number(newVal))
     },
 
-
+    setNewRegion(newVal) {
+      if (newVal) {
+        this.svg.style('cursor', 'alias');
+      } else {
+        this.svg.style('cursor', 'default');
+      }
+    },
   },
 
 
   methods: {
+
+    setRegionToPhrase(pIdx) {
+      const phrase = this.piece.phrases[pIdx];
+      const startTime = phrase.startTime;
+      const endTime = startTime + phrase.durTot;
+      this.regionStartTime = startTime;
+      this.regionEndTime = endTime;
+      this.regionStartPx = this.xr()(startTime);
+      this.regionEndPx = this.xr()(endTime);
+      this.setUpRegion();
+      this.currentTime = startTime;
+        if (!this.$refs.audioPlayer.playing) {
+          this.$refs.audioPlayer.pausedAt = startTime;
+          this.$refs.audioPlayer.updateProgress();
+          this.$refs.audioPlayer.updateFormattedCurrentTime();
+          this.$refs.audioPlayer.updateFormattedTimeLeft();
+        } else {
+          this.$refs.audioPlayer.stop();
+          this.$refs.audioPlayer.pausedAt = startTime;
+          this.$refs.audioPlayer.play();
+        }
+        this.movePlayhead();
+        this.moveShadowPlayhead();
+    },
 
     toggleSpectrogram() {
       if (this.spectrogramOpacity === 0) {
@@ -2272,6 +2302,7 @@ export default {
         this.regionEndTime = this.durTot;
         this.mouseUpUpdateLoop();  
       }
+      if (this.setNewRegion) this.setNewRegion = false;
     },
 
     handleKeyup(e) {
@@ -2430,6 +2461,10 @@ export default {
         this.moveToPrevPhrase()
       } else if (e.key === ']') {
         this.moveToNextPhrase()
+      } else if (e.key === 'r') {
+        this.clearAll();
+        this.setNewRegion = true;
+
       }
       if (this.setNewTraj || this.selectedTraj) {
         const keyNums = this.$refs.trajSelectPanel.keyNums;
@@ -2652,7 +2687,6 @@ export default {
     },
 
     handleMouseup(e) {
-      const rect = this.rect();
       if (e.offsetY < this.xAxHeight && this.drawingRegion) {
         if (e.offsetX < this.regionStartPx) {
           this.regionEndPx = this.regionStartPx;
@@ -2664,7 +2698,13 @@ export default {
           this.regionEndPx = e.offsetX;
         }
         this.mouseUpUpdateLoop();
-        const regionLine = d3Line()([
+        this.setUpRegion();
+      }
+    },
+
+    setUpRegion() {
+      const rect = this.rect();
+      const regionLine = d3Line()([
           [0, 0],
           [0, rect.height]
         ]);
@@ -2767,7 +2807,6 @@ export default {
           d3Select('.regionEnd')
             .attr('transform', `translate(${this.regionEndPx},0)`)
         }
-      }
     },
 
     moveRegion() {
@@ -3123,6 +3162,9 @@ export default {
         this.addNewPhraseDiv(phrase_.pieceIdx);
         this.setNewPhraseDiv = false;
         this.svg.style('cursor', 'auto');        
+      } else if (this.setNewRegion) {
+        this.setRegionToPhrase(pIdx);
+        this.setNewRegion = false;
       } else {
         if (this.justEnded) {
           this.justEnded = false // this just prevents phrase div drag end from 
