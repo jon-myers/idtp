@@ -264,8 +264,8 @@ const runServer = async () => {
       // delete a particular transcription
       try {
         const query = { "_id": ObjectId(req.body._id) };
-        await transcriptions.deleteOne(query);
-        res.json('deleted _id ' + req.body._id);
+        const result = await transcriptions.deleteOne(query);
+        res.json(result);
       } catch (err) {
         console.error(err);
         res.status(500).send(err);

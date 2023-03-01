@@ -348,31 +348,13 @@ export default {
       } catch (err) {
         console.log(err);
       }
-      
-      // open up new piece registrar modal
-      // pass in piece info
-      // this.passedInDataObj = {
-      //   title: piece.title + ' (copy)',
-      //   raga: piece.raga.name,
-      //   audioEvent: piece.audioEvent,
-      // }
-      // this.designPieceModal = true;
-
-      // try {
-      //   const result = await cloneTranscription(piece._id, newName);
-      //   console.log(result)
-      // } catch (err) {
-      //   console.log(err);
-      // }
-      
-      // console.log(piece)
     },
 
     async deletePiece() {
       if (this.delete_ && this.$store.state.userID === this.selectedPiece.userID) {
         this.$refs.dropDown.classList.add('closed');
         const res = await deletePiece(this.selectedPiece);
-        if (res.ok) {
+        if (res.deletedCount === 1) {
           const id = this.$store.state.userID;
           const sortKey = this.sortKeyNames[this.selectedSort];
           const sortDir = this.sorts[this.selectedSort];
