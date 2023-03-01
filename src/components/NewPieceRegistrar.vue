@@ -334,7 +334,7 @@ export default {
           permissions: this.permissions,
           clone: false
         };
-        if (this.aeIdx && this.recording) {
+        if (this.aeIdx && this.recording !== undefined) {
           const ae = this.allEvents[this.aeIdx];
           newPieceInfo.audioID = ae.recordings[this.recording].audioFileId
         }
