@@ -2598,7 +2598,10 @@ export default {
       piece.raga.ruleSet = rsRes.rules;
       piece.raga = new Raga(piece.raga);
       piece.phrases.forEach(phrase => {
-        phrase.trajectories.forEach(traj => {
+        let pt = phrase.trajectoryGrid ?
+                 phrase.trajectoryGrid[0] : 
+                 phrase.trajectories;
+        pt.forEach(traj => {
           traj.pitches = traj.pitches.map(pitch => {
             pitch.fundamental = piece.raga.fundamental;
             // convert to pitch ratio format
@@ -2616,9 +2619,15 @@ export default {
             traj.fundID12 = piece.raga.fundamental
           }
         });
-        phrase.trajectories = phrase.trajectories.map(traj => {
-          return new Trajectory(traj)
-        });
+        if (phrase.trajectoryGrid) {
+          phrase.trajectoryGrid[0] = pt.map(traj => {
+            return new Trajectory(traj)
+          });
+        } else {
+          phrase.trajectories = pt.map(traj => {
+            return new Trajectory(traj)
+          });
+        }
         const chikariKeys = Object.keys(phrase.chikaris);
         const chikariEntries = chikariKeys.map(key => phrase.chikaris[key]);
         const chikariObj = {};
@@ -4725,7 +4734,11 @@ export default {
             return traj.num !== Number(tIdx)
           }
         });
-        this.piece.phrases[pIdx].trajectories = newTrajs;
+        if (this.piece.phrases[pIdx].trajectoryGrid) {
+          this.piece.phrases[pIdx].trajectoryGrid[0] = newTrajs;
+        } else {
+          this.piece.phrases[pIdx].trajectories = newTrajs;
+        }  
       }
       this.piece.phrases[pIdx].durArrayFromTrajectories();
       this.piece.phrases[pIdx].assignStartTimes();
@@ -5083,7 +5096,11 @@ export default {
         durArray: [1],
         fundID12: this.piece.raga.fundamental
       });
-      this.piece.phrases[0].trajectories = [rest1, traj, rest2];
+      if (this.piece.phrases[0].trajectoryGrid) {
+        this.piece.phrases[0].trajectoryGrid[0] = [rest1, traj, rest2];
+      } else {
+        this.piece.phrases[0].trajectories = [rest1, traj, rest2];
+      }
       this.piece.phrases[0].reset();
       this.resetZoom();
     }

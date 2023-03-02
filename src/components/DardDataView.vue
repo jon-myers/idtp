@@ -142,7 +142,15 @@ export default {
           });
           traj.articulations = artObj;
         });
-        phrase.trajectories = phrase.trajectories.map(traj => new Trajectory(traj));
+        if (phrase.trajectoryGrid) {
+          phrase.trajectoryGrid[0] = phrase.trajectories.map(traj => {
+            new Trajectory(traj)
+          })
+        } else {
+          phrase.trajectories = phrase.trajectories.map(traj => {
+            new Trajectory(traj)
+          });
+        }
       });
       piece.phrases = piece.phrases.map(phrase => new Phrase(phrase));
       const rsRes = await getRaagRule(piece.raga.name);

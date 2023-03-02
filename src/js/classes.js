@@ -412,24 +412,6 @@ class Trajectory {
     return [0].concat(durArray.slice(0, durArray.length - 1)).map(cumsum)
   }
 
-  // returns an object which can be put in to create a new traj
-  getSpawnObj() {
-    const obj = {};
-    obj.id = this.id;
-    obj.pitches = this.pitches;
-    obj.durTot = this.durTot;
-    obj.durArray = this.durArray;
-    obj.slope = this.slope;
-    obj.articulations = this.articulations;
-    obj.num = this.num;
-    obj.name = this.name;
-    obj.fundID12 = this.fundID12;
-    return obj
-  }
-
-
-
-
   // x is always beteen zero and one
 
   id0(x, lf = undefined) { // steady state
@@ -623,12 +605,18 @@ class Phrase {
     chikaris = {},
     // connected = undefined,
     raga = undefined,
-    startTime = undefined
+    startTime = undefined,
+    trajectoryGrid = undefined,
   } = {}) {
 
     this.startTime = startTime;
     this.raga = raga;
-    this.trajectories = trajectories;
+    // this.trajectories = trajectories;
+    if (trajectoryGrid !== undefined) {
+      this.trajectoryGrid = trajectoryGrid;
+    } else {
+      this.trajectoryGrid = [trajectories];
+    }
     if (this.trajectories.length === 0) {
       if (durTot === undefined) {
         this.durTot = 1;
@@ -653,21 +641,6 @@ class Phrase {
       }
     }
     this.chikaris = chikaris;
-
-    // if (connected === undefined) {
-    //   if (this.trajectories.length < 2) {
-    //     this.connected = undefined
-    //   } else {
-    //     const arr = Array.from({
-    //       length: this.trajectories.length - 1
-    //     });
-    //     const a = this.trajectories;
-    //     this.connected = arr.map((_, i) => a[i].compute(1) === a[i + 1].compute(0))
-    //   }
-    // } else {
-    //   this.connected = connected
-    // }
-
     this.assignStartTimes();
     this.assignTrajNums();
   }
@@ -755,10 +728,15 @@ class Phrase {
       }
     });
     const newTrajs = this.trajectories.filter(traj => !delIdxs.includes(traj.num));
-    this.trajectories = newTrajs;
+    // this.trajectories = newTrajs;
+    this.trajectoryGrid[0] = newTrajs;
     this.durArrayFromTrajectories();
     this.assignStartTimes();
     this.assignTrajNums();
+  }
+
+  get trajectories() {
+    return this.trajectoryGrid[0]
   }
 
   get swara() {
@@ -771,14 +749,7 @@ class Phrase {
             obj.pitch = pitch;
             obj.time = this.startTime + traj.startTime + getStarts(traj.durArray)[i] * traj.durTot;
             swara.push(obj)
-          });
-          // if (!this.connected || !this.connected[trajIdx]) {
-          //   console.log('does this ever happen?')
-          //   const obj = {};
-          //   obj.pitch = traj.pitches[traj.pitches.length - 1];
-          //   obj.time = this.startTime + traj.startTime + traj.durTot - 0.05;
-          //   swara.push(obj)
-          // }
+          })
         } else {
           traj.pitches.forEach((pitch, i) => {
             const obj = {};
@@ -792,27 +763,16 @@ class Phrase {
     return swara
   }
 
-  getSpawnObj() {
-    const obj = {};
-    obj.trajectories = this.trajectories;
-    obj.durTot = this.durTot;
-    obj.durArray = this.durArray;
-    obj.chikaris = this.chikaris;
-    // obj.connected = this.connected;
-    obj.raga = this.raga;
-    obj.startTime = this.startTime;
-    return obj;
-  }
-
   toJSON() {
     return {
-      trajectories: this.trajectories,
+      // trajectories: this.trajectories,
       durTot: this.durTot,
       durArray: this.durArray,
       chikaris: this.chikaris,
       // connected: this.connected,
       raga: this.raga,
-      startTime: this.startTime
+      startTime: this.startTime,
+      trajectoryGrid: this.trajectoryGrid
     }
   }
 
@@ -854,7 +814,6 @@ class Phrase {
     this.assignTrajNums();
   }
 }
-
 
 class NoteViewPhrase {
   constructor({
@@ -969,22 +928,6 @@ class Piece {
     this.durTotFromPhrases();
     this.durArray = this.phrases.map(p => p.durTot / this.durTot);
     this.updateStartTimes();
-  }
-
-  getSpawnObj() {
-    const obj = {};
-    obj.phrases = this.phrases;
-    obj.durTot = this.durTot;
-    obj.durArray = this.durArray;
-    obj.raga = this.raga;
-    obj.title = this.title;
-    obj.perofmers = this.performers;
-    obj.dateCreated = this.dateCreated;
-    obj.location = this.location;
-    obj.transcriber = this.transcriber;
-    obj._id = this._id;
-    obj.audioID = this.audioID;
-    return obj
   }
 
   realignPitches() {
