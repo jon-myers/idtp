@@ -10,6 +10,11 @@
         </div>
         <div class='scrollX' ref='scrollX'></div>
       </div>
+      <div 
+        class='instructions' 
+        v-show='showInstructions' 
+        v-html='instructionsText'>
+      </div>
     </div>
     <div class='scrollYContainer'>
       <div class='topNotch'>
@@ -57,6 +62,7 @@
             {{`Saved: ${dateModified ? dateModified.toLocaleString() : ''}`}}
           </span>
         </div>
+        <div class='instructionsIcon' @click='toggleInstructions'>?</div>
       </div>
       <TrajSelectPanel 
         ref='trajSelectPanel' 
@@ -126,6 +132,7 @@ import {
 } from '@/js/serverCalls.js';
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
 import TrajSelectPanel from '@/components/TrajSelectPanel.vue';
+import instructionsText from '@/assets/texts/editor_instructions.html?raw';
 
 // import * as d3 from 'd3';
 
@@ -213,6 +220,8 @@ export default {
       scrollDragColor: '#9c9c9c',
       scrollDragColorHover: '#AAAAAA',
       playheadReturn: false,
+      showInstructions: true,
+      instructionsText: instructionsText,
     }
   },
   components: {
@@ -632,6 +641,10 @@ export default {
       } else {
         this.spectrogramOpacity = 0;
       }
+    },
+
+    toggleInstructions() {
+      this.showInstructions = !this.showInstructions;
     },
 
     extendDurTot(dur=10) {
@@ -5091,6 +5104,7 @@ export default {
   height: 100%;
   display: flex;
   flex-direction: column;
+  position: relative
 }
 
 .scrollYContainer {
@@ -5216,14 +5230,13 @@ export default {
   justify-content: top;
   color: white;
   background-color: #202621;
-  /* overflow-y: scroll; */
+  position: relative;
 }
 
 .mainzz {
   display: flex;
   flex-direction: column;
   min-height: calc(100vh - 31px);
-  /* min-height: 100%; */
   background-color: black;
 }
 
@@ -5324,11 +5337,38 @@ input[type='checkbox'] {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* .regionG {
-  pointer-events: none;
+.instructionsIcon {
+  width: 20px;
+  height: 20px;
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  border: 1px solid white;
+  border-radius: 50%;
+  cursor: pointer;
 }
 
-.region {
-  pointer-events: none
-} */
+.instructionsIcon:hover {
+  background-color: #2C342D;
+}
+
+.instructions {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: calc(100% + v-bind(scrollYWidth - 40 + "px"));
+  height: v-bind(editorHeight - 40 +'px');
+  background-color: #2C342D;
+  color: white;
+  text-align: left;
+  padding: 20px;
+  overflow-y: scroll;
+  display: flex;
+  justify-content: center;
+  font-family: sans-serif;
+  font-size: 16px;
+  line-height: 1.2;
+
+
+}
 </style>
