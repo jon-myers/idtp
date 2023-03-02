@@ -246,11 +246,6 @@ export default {
   justify-content: space-evenly;
 }
 
-.chunkSpan {
-  /* width: 20px; */
-  /* border: 1px solid black; */
-  /* align-items: center; */
-}
 
 
 .chunkSwaraRow {
