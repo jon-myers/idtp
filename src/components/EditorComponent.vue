@@ -220,7 +220,7 @@ export default {
       scrollDragColor: '#9c9c9c',
       scrollDragColorHover: '#AAAAAA',
       playheadReturn: false,
-      showInstructions: true,
+      showInstructions: false,
       instructionsText: instructionsText,
     }
   },
