@@ -697,7 +697,7 @@ const runServer = async () => {
         res.json(result);
       } catch (err) {
         console.error(err);
-        res.status(500).send
+        res.status(500).send(err)
       }
     })
 
@@ -723,7 +723,7 @@ const runServer = async () => {
         }) 
       } catch (err) {
         console.error(err);
-        res.status(500).send
+        res.status(500).send(err)
       }
     })
 
@@ -749,10 +749,34 @@ const runServer = async () => {
         }) 
       } catch (err) {
         console.error(err);
-        res.status(500).send
+        res.status(500).send(err)
       }
     })
 
+    app.get('/getInstrumentation', async (req, res) => {
+      try {
+        const audioID = ObjectId(JSON.parse(req.query.audioID));
+        const query = { _id: audioID };
+        const projection = { projection: { musicians: 1, _id: 0 } };
+        const result = await audioRecordings.findOne(query, projection);
+        const musicians = result.musicians;
+        const keys = Object.keys(musicians);
+        const sortOrder = ['Soloist', 'Accompanist'];
+        const musiciansArr = keys
+          .map(key => musicians[key])
+          .filter(musician => sortOrder.includes(musician.role))
+        const ordering = {};
+        for (let i=0; i<sortOrder.length; i++) {
+          ordering[sortOrder[i]] = i;
+        }
+        musiciansArr.sort((a, b) => ordering[a.role] - ordering[b.role]);
+        const instrumentation = musiciansArr.map(m => m.instrument);
+        res.json(instrumentation);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
     
     app.post('/upload-avatar', async (req, res) => {
     // upload files, and send back progress, via axios (doesn't work with fetch)

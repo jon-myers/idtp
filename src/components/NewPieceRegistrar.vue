@@ -167,7 +167,8 @@ import {
   getRagaNames, 
   getRaagRule, 
   saveRaagRules,
-  getInstruments
+  getInstruments,
+  getInstrumentation
 } from '@/js/serverCalls.js';
 import RaagEditor from '@/components/RaagEditor.vue';
 export default {
@@ -250,7 +251,7 @@ export default {
       this.recording = undefined
     },
     
-    recording(newVal) {
+    async recording(newVal) {
       if (newVal) {
         const ae = this.allEvents[this.aeIdx];
         const raags = ae.recordings[newVal].raags;
@@ -260,7 +261,8 @@ export default {
         } else if (keys.length > 1) {
           this.raga = keys.filter(key => raags[key].start === 0)[0]
         }
-        
+        const audioID = ae.recordings[newVal].audioFileId;
+        this.instrumentation = await getInstrumentation(audioID)
       }
     },
     
@@ -323,7 +325,7 @@ export default {
       }
     },
     
-    makeNewPiece() {
+    async makeNewPiece() {
       if (this.cloning) {
         const ae = this.allEvents[this.aeIdx];
         const newPieceInfo = {
@@ -348,7 +350,7 @@ export default {
         };
         if (this.aeIdx && this.recording !== undefined) {
           const ae = this.allEvents[this.aeIdx];
-          newPieceInfo.audioID = ae.recordings[this.recording].audioFileId
+          newPieceInfo.audioID = ae.recordings[this.recording].audioFileId;
         }
         this.emitter.emit('newPieceInfo', newPieceInfo);
         this.$parent.designPieceModal = false
