@@ -32,9 +32,8 @@
         </div>
       </div>
       <div class="formRow">
-        <label>Raga
-          <input type='checkbox' v-model='showRaagEditor'>
-        </label>
+        <label class='ragaLabel'>Raga</label>
+        <input class='ragaCheck' type='checkbox' v-model='showRaagEditor'>
         <select v-model='raga' ref='raga'>
           <option v-for='raag in raags' :key='raag'>
             {{raag}}
@@ -46,6 +45,14 @@
         <select v-model='permissions'>
           <option v-for='pType in permissionTypes' :key='pType'>
             {{pType}}
+          </option>
+        </select>
+      </div>
+      <div class='formRow'>
+        <label>Instrumentation</label>
+        <select v-model='instrumentation[0]'>
+          <option v-for='inst in instruments' :key='inst'>
+            {{inst}}
           </option>
         </select>
       </div>
@@ -159,7 +166,8 @@ import {
   getAllAudioEventMetadata, 
   getRagaNames, 
   getRaagRule, 
-  saveRaagRules 
+  saveRaagRules,
+  getInstruments
 } from '@/js/serverCalls.js';
 import RaagEditor from '@/components/RaagEditor.vue';
 export default {
@@ -208,7 +216,8 @@ export default {
           raised: false
         }
       },
-      instrumentation: ['Sitar']
+      instrumentation: ['Sitar'],
+      instruments: undefined
     }
   },
   
@@ -232,7 +241,8 @@ export default {
       const parsed = JSON.parse(this.$route.query.afName);
       this.recording = allRecNames.indexOf(parsed);
       this.raga = Object.keys(recs[this.recording].raags)[0]
-     }
+    }
+    this.instruments = await getInstruments();
   },
   
   watch: {
@@ -386,11 +396,25 @@ export default {
 label {
   /* padding-left: 20px;
   padding-right: 20px; */
-  width: 100px;
+  width: 120px;
   display: flex;
   flex-direction: row;
-  justify-content: left;
-  padding-left: 20px;
+  justify-content: right;
+  padding-right: 10px;
+}
+
+.ragaLabel {
+  width: 95px;
+  max-width: 95px;
+  padding-right: 0px;
+  margin-right: 5px;
+}
+
+.ragaCheck {
+  width: 20px;
+  max-width: 20px;
+  margin: 0px;
+  margin-right: 10px;
 }
 
 .formRow input {
