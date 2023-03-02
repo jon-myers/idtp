@@ -141,15 +141,21 @@ export default {
             artObj[key] = new Articulation(artEntries[i]);
           });
           traj.articulations = artObj;
+          if (phrase.instrumentation) {
+            traj.instrumentation = phrase.instrumentation[0];
+          }
         });
         if (phrase.trajectoryGrid) {
           phrase.trajectoryGrid[0] = phrase.trajectories.map(traj => {
-            new Trajectory(traj)
+            return new Trajectory(traj)
           })
         } else {
           phrase.trajectories = phrase.trajectories.map(traj => {
-            new Trajectory(traj)
+            return new Trajectory(traj)
           });
+        };
+        if (piece.instrumentation) {
+          phrase.instrumentation = piece.instrumentation;
         }
       });
       piece.phrases = piece.phrases.map(phrase => new Phrase(phrase));

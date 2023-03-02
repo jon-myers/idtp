@@ -18,7 +18,6 @@ const getEnds = durArray => {
 
 class Pitch {
 
-
   constructor({
     swara = 'sa',
     oct = 0,
@@ -203,7 +202,8 @@ class Trajectory {
     num = undefined,
     name = undefined,
     fundID12 = undefined,
-    vibObj = undefined
+    vibObj = undefined,
+    instrumentation = 'Sitar'
   } = {}) {
     if (typeof(id) === 'number' && Number.isInteger(id)) {
       this.id = id
@@ -274,6 +274,7 @@ class Trajectory {
       }
     }
     this.fundID12 = fundID12;
+    this.instrumentation = instrumentation;
     this.structuredNames = {
       fixed: 0,
       bend: {
@@ -573,8 +574,6 @@ class Trajectory {
     }
   }
 
-
-
   toJSON() {
     return {
       id: this.id,
@@ -588,10 +587,9 @@ class Trajectory {
       name: this.name,
       fundID12: this.fundID12,
       vibObj: this.vibObj,
+      instrumentation: this.instrumentation
     }
   }
-
-
   // skip id 11, same code as id 7, just different articulation
 }
 
@@ -603,10 +601,10 @@ class Phrase {
     durTot = undefined,
     durArray = undefined,
     chikaris = {},
-    // connected = undefined,
     raga = undefined,
     startTime = undefined,
     trajectoryGrid = undefined,
+    instrumentation = ['Sitar']
   } = {}) {
 
     this.startTime = startTime;
@@ -643,6 +641,7 @@ class Phrase {
     this.chikaris = chikaris;
     this.assignStartTimes();
     this.assignTrajNums();
+    this.instrumentation = instrumentation;
   }
 
   assignPhraseIdx() {
@@ -772,7 +771,8 @@ class Phrase {
       // connected: this.connected,
       raga: this.raga,
       startTime: this.startTime,
-      trajectoryGrid: this.trajectoryGrid
+      trajectoryGrid: this.trajectoryGrid,
+      instrumentation: this.instrumentation
     }
   }
 
@@ -832,7 +832,6 @@ class NoteViewPhrase {
 
 class Piece {
 
-
   constructor({
     phrases = [],
     durTot = undefined,
@@ -853,6 +852,7 @@ class Piece {
     givenName = undefined,
     permissions = undefined,
     sectionStarts = undefined,
+    instrumentation = ['Sitar'],
   } = {}) {
     this.phrases = phrases;
     this.raga = raga;
@@ -901,6 +901,7 @@ class Piece {
     } else {
       this.sectionStarts = sectionStarts;
     }
+    this.instrumentation = instrumentation;
   }
 
   putRagaInPhrase() {
@@ -967,6 +968,7 @@ class Piece {
       familyName: this.familyName,
       givenName: this.givenName,
       sectionStarts: this.sectionStarts,
+      instrumentation: this.instrumentation,
     }
   }
 
@@ -1006,259 +1008,259 @@ class Raga {
     ratios = undefined,
   } = {}) {
 
-  this.name = name;
-  this.ruleSet = ruleSet;
-  this.fundamental = fundamental;
-  this.tuning = {
-    sa: 2 ** (0 / 12),
-    re: {
-      lowered: 2 ** (1 / 12),
-      raised: 2 ** (2 / 12)
-    },
-    ga: {
-      lowered: 2 ** (3 / 12),
-      raised: 2 ** (4 / 12)
-    },
-    ma: {
-      lowered: 2 ** (5 / 12),
-      raised: 2 ** (6 / 12)
-    },
-    pa: 2 ** (7 / 12),
-    dha: {
-      lowered: 2 ** (8 / 12),
-      raised: 2 ** (9 / 12)
-    },
-    ni: {
-      lowered: 2 ** (10 / 12),
-      raised: 2 ** (11 / 12)
+    this.name = name;
+    this.ruleSet = ruleSet;
+    this.fundamental = fundamental;
+    this.tuning = {
+      sa: 2 ** (0 / 12),
+      re: {
+        lowered: 2 ** (1 / 12),
+        raised: 2 ** (2 / 12)
+      },
+      ga: {
+        lowered: 2 ** (3 / 12),
+        raised: 2 ** (4 / 12)
+      },
+      ma: {
+        lowered: 2 ** (5 / 12),
+        raised: 2 ** (6 / 12)
+      },
+      pa: 2 ** (7 / 12),
+      dha: {
+        lowered: 2 ** (8 / 12),
+        raised: 2 ** (9 / 12)
+      },
+      ni: {
+        lowered: 2 ** (10 / 12),
+        raised: 2 ** (11 / 12)
+      }
+    };
+    if (ratios === undefined) {
+      this.ratios = this.setRatios(this.ruleSet)
+    } else {
+      this.ratios = ratios
     }
-  };
-  if (ratios === undefined) {
-    this.ratios = this.setRatios(this.ruleSet)
-  } else {
-    this.ratios = ratios
+    
   }
-  
-}
 
-get sargamLetters() {
-  const initSargam = ['sa', 're', 'ga', 'ma', 'pa', 'dha', 'ni'];
-  const sl = [];
-  initSargam.forEach(s => {
-    if (isObject(this.ruleSet[s])) {
-      if (this.ruleSet[s].lowered) sl.push(s.slice(0, 1));
-      if (this.ruleSet[s].raised) sl.push(s.slice(0, 1).toUpperCase());
-    } else if (this.ruleSet[s]) {
-      sl.push(s.slice(0, 1).toUpperCase())
-    }
-  });
-  return sl
-}
-
-setRatios(ruleSet) {
-  const sargam = Object.keys(ruleSet);
-  const ratios = [];
-  sargam.forEach(s => {
-    if (typeof(this.tuning[s]) === 'number' && ruleSet[s]) {
-      ratios.push(this.tuning[s]);
-    } else {
-      if (ruleSet[s].lowered) ratios.push(this.tuning[s].lowered);
-      if (ruleSet[s].raised) ratios.push(this.tuning[s].raised);
-    }
-  })
-  return ratios;
-}
-
-getPitches({ low=100, high=800 } = {}) {
-  const sargam = Object.keys(this.ruleSet);
-  const pitches = [];
-  sargam.forEach(s => {
-    if (typeof(this.ruleSet[s]) === 'boolean' && this.ruleSet[s]) {
-      const freq = this.tuning[s] * this.fundamental;
-      const octsBelow = Math.ceil(Math.log2(low/freq));
-      const octsAbove = Math.floor(Math.log2(high/freq));
-      for (let i = octsBelow; i <= octsAbove; i++) {
-        pitches.push(new Pitch({ 
-          swara: s, 
-          oct: i, 
-          fundamental: this.fundamental,
-          ratios: this.stratifiedRatios,
-         }))
+  get sargamLetters() {
+    const initSargam = ['sa', 're', 'ga', 'ma', 'pa', 'dha', 'ni'];
+    const sl = [];
+    initSargam.forEach(s => {
+      if (isObject(this.ruleSet[s])) {
+        if (this.ruleSet[s].lowered) sl.push(s.slice(0, 1));
+        if (this.ruleSet[s].raised) sl.push(s.slice(0, 1).toUpperCase());
+      } else if (this.ruleSet[s]) {
+        sl.push(s.slice(0, 1).toUpperCase())
       }
-    } else {
-      if (this.ruleSet[s].lowered) {
-        const freq = this.tuning[s].lowered * this.fundamental;
+    });
+    return sl
+  }
+
+  setRatios(ruleSet) {
+    const sargam = Object.keys(ruleSet);
+    const ratios = [];
+    sargam.forEach(s => {
+      if (typeof(this.tuning[s]) === 'number' && ruleSet[s]) {
+        ratios.push(this.tuning[s]);
+      } else {
+        if (ruleSet[s].lowered) ratios.push(this.tuning[s].lowered);
+        if (ruleSet[s].raised) ratios.push(this.tuning[s].raised);
+      }
+    })
+    return ratios;
+  }
+
+  getPitches({ low=100, high=800 } = {}) {
+    const sargam = Object.keys(this.ruleSet);
+    const pitches = [];
+    sargam.forEach(s => {
+      if (typeof(this.ruleSet[s]) === 'boolean' && this.ruleSet[s]) {
+        const freq = this.tuning[s] * this.fundamental;
         const octsBelow = Math.ceil(Math.log2(low/freq));
         const octsAbove = Math.floor(Math.log2(high/freq));
         for (let i = octsBelow; i <= octsAbove; i++) {
           pitches.push(new Pitch({ 
             swara: s, 
             oct: i, 
-            raised: false, 
             fundamental: this.fundamental,
-            ratios: this.stratifiedRatios, 
+            ratios: this.stratifiedRatios,
           }))
         }
-      }
-      if (this.ruleSet[s].raised) {
-        const freq = this.tuning[s].raised * this.fundamental;
-        const octsBelow = Math.ceil(Math.log2(low/freq));
-        const octsAbove = Math.floor(Math.log2(high/freq));
-        for (let i = octsBelow; i <= octsAbove; i++) {
-          pitches.push(new Pitch({ 
-            swara: s, 
-            oct: i, 
-            raised: true, 
-            fundamental: this.fundamental,
-            ratios: this.stratifiedRatios, 
-          }))
+      } else {
+        if (this.ruleSet[s].lowered) {
+          const freq = this.tuning[s].lowered * this.fundamental;
+          const octsBelow = Math.ceil(Math.log2(low/freq));
+          const octsAbove = Math.floor(Math.log2(high/freq));
+          for (let i = octsBelow; i <= octsAbove; i++) {
+            pitches.push(new Pitch({ 
+              swara: s, 
+              oct: i, 
+              raised: false, 
+              fundamental: this.fundamental,
+              ratios: this.stratifiedRatios, 
+            }))
+          }
+        }
+        if (this.ruleSet[s].raised) {
+          const freq = this.tuning[s].raised * this.fundamental;
+          const octsBelow = Math.ceil(Math.log2(low/freq));
+          const octsAbove = Math.floor(Math.log2(high/freq));
+          for (let i = octsBelow; i <= octsAbove; i++) {
+            pitches.push(new Pitch({ 
+              swara: s, 
+              oct: i, 
+              raised: true, 
+              fundamental: this.fundamental,
+              ratios: this.stratifiedRatios, 
+            }))
+          }
         }
       }
-    }
-  });
-  pitches.sort((a, b) => a.frequency - b.frequency)
-  return pitches
-}
+    });
+    pitches.sort((a, b) => a.frequency - b.frequency)
+    return pitches
+  }
 
-get stratifiedRatios() {
-  const sargam = ['sa', 're', 'ga', 'ma', 'pa', 'dha', 'ni'];
-  const ratios = [];
-  let ct = 0;
-  sargam.forEach((s, sIdx) => {
-    if (typeof(this.ruleSet[s]) === 'boolean') {
-      if (this.ruleSet[s]) {
-        ratios.push(this.ratios[ct]);
-        ct++;
+  get stratifiedRatios() {
+    const sargam = ['sa', 're', 'ga', 'ma', 'pa', 'dha', 'ni'];
+    const ratios = [];
+    let ct = 0;
+    sargam.forEach((s, sIdx) => {
+      if (typeof(this.ruleSet[s]) === 'boolean') {
+        if (this.ruleSet[s]) {
+          ratios.push(this.ratios[ct]);
+          ct++;
+        } else {
+          ratios.push(this.tuning[s])
+        }
       } else {
-        ratios.push(this.tuning[s])
-      }
-    } else {
-      ratios.push([]);
-      if (this.ruleSet[s].lowered) {
-        ratios[sIdx].push(this.ratios[ct]);
-        ct++;
-      } else {
-        ratios[sIdx].push(this.tuning[s].lowered)
-      }
-      if (this.ruleSet[s].raised) {
-        ratios[sIdx].push(this.ratios[ct]);
-        ct++;
-      } else {
-        ratios[sIdx].push(this.tuning[s].raised)
-      }
-    } 
-  });
-  return ratios
-}
+        ratios.push([]);
+        if (this.ruleSet[s].lowered) {
+          ratios[sIdx].push(this.ratios[ct]);
+          ct++;
+        } else {
+          ratios[sIdx].push(this.tuning[s].lowered)
+        }
+        if (this.ruleSet[s].raised) {
+          ratios[sIdx].push(this.ratios[ct]);
+          ct++;
+        } else {
+          ratios[sIdx].push(this.tuning[s].raised)
+        }
+      } 
+    });
+    return ratios
+  }
 
 
-get tarafs() {
-  const templates = {
-    'Yaman': [
-      new Pitch({ swara: 'ni', oct: -1, raised: true, fundamental: this.fundamental }), // 1
-      new Pitch({ swara: 'pa', oct: -1, fundamental: this.fundamental }), // 2
-      new Pitch({ swara: 'sa', oct: 0, fundamental: this.fundamental }), // 3
-      new Pitch({ swara: 'sa', oct: 0, fundamental: this.fundamental }), // 4
-      new Pitch({ swara: 're', oct: 0, raised: true, fundamental: this.fundamental }), // 5
-      new Pitch({ swara: 'ga', oct: 0, raised: true, fundamental: this.fundamental }), // 6
-      new Pitch({ swara: 'ma', oct: 0, raised: true, fundamental: this.fundamental }), // 7
-      new Pitch({ swara: 'pa', oct: 0, fundamental: this.fundamental }), // 8
-      new Pitch({ swara: 'dha', oct: 0, raised: true, fundamental: this.fundamental }), // 9
-      new Pitch({ swara: 'ni', oct: 0 , raised: true, fundamental: this.fundamental }), // 10
-      new Pitch({ swara: 'sa', oct: 1, fundamental: this.fundamental }), // 11
-      new Pitch({ swara: 're', oct: 1, raised: true, fundamental: this.fundamental }), // 12
-      new Pitch({ swara: 'ga', oct: 1, raised: true, fundamental: this.fundamental }), // 13
+  get tarafs() {
+    const templates = {
+      'Yaman': [
+        new Pitch({ swara: 'ni', oct: -1, raised: true, fundamental: this.fundamental }), // 1
+        new Pitch({ swara: 'pa', oct: -1, fundamental: this.fundamental }), // 2
+        new Pitch({ swara: 'sa', oct: 0, fundamental: this.fundamental }), // 3
+        new Pitch({ swara: 'sa', oct: 0, fundamental: this.fundamental }), // 4
+        new Pitch({ swara: 're', oct: 0, raised: true, fundamental: this.fundamental }), // 5
+        new Pitch({ swara: 'ga', oct: 0, raised: true, fundamental: this.fundamental }), // 6
+        new Pitch({ swara: 'ma', oct: 0, raised: true, fundamental: this.fundamental }), // 7
+        new Pitch({ swara: 'pa', oct: 0, fundamental: this.fundamental }), // 8
+        new Pitch({ swara: 'dha', oct: 0, raised: true, fundamental: this.fundamental }), // 9
+        new Pitch({ swara: 'ni', oct: 0 , raised: true, fundamental: this.fundamental }), // 10
+        new Pitch({ swara: 'sa', oct: 1, fundamental: this.fundamental }), // 11
+        new Pitch({ swara: 're', oct: 1, raised: true, fundamental: this.fundamental }), // 12
+        new Pitch({ swara: 'ga', oct: 1, raised: true, fundamental: this.fundamental }), // 13
+      ]
+    };
+    return templates[this.name]
+  }
+
+  get chikariPitches() {
+    // const templates = {
+    //   'Yaman': [
+    //     new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
+    //     new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
+    //     new Pitch({ swara: 'p', oct: 0, fundamental: this.fundamental }),
+    //     new Pitch({ swara: 'p', oct: 0, fundamental: this.fundamental })
+    //   ],
+    //   'Bageshri': [
+    //     new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
+    //     new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
+    //     new Pitch({ swara: 'd', oct: 0, raised: true, fundamental: this.fundamental }),
+    //     new Pitch({ swara: 'm', oct: 0, raised: false, fundamental: this.fundamental })
+    //   ],
+    //   'Jaijaivanti': [
+    //     new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
+    //     new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
+    //     new Pitch({ swara: 'p', oct: 0, fundamental: this.fundamental }),
+    //     new Pitch({ swara: 'g', oct: 0, raised: true, fundamental: this.fundamental })
+    //   ],
+    //   'Hemant': [
+    //     new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
+    //     new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
+    //     new Pitch({ swara: 'd', oct: 0, raised: true, fundamental: this.fundamental }),
+    //     new Pitch({ swara: 'm', oct: 0, raised: false, fundamental: this.fundamental })
+    //   ],
+    // };
+    // return templates[this.name]
+
+    return [
+      new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
+      new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
     ]
-  };
-  return templates[this.name]
-}
-
-get chikariPitches() {
-  // const templates = {
-  //   'Yaman': [
-  //     new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
-  //     new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
-  //     new Pitch({ swara: 'p', oct: 0, fundamental: this.fundamental }),
-  //     new Pitch({ swara: 'p', oct: 0, fundamental: this.fundamental })
-  //   ],
-  //   'Bageshri': [
-  //     new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
-  //     new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
-  //     new Pitch({ swara: 'd', oct: 0, raised: true, fundamental: this.fundamental }),
-  //     new Pitch({ swara: 'm', oct: 0, raised: false, fundamental: this.fundamental })
-  //   ],
-  //   'Jaijaivanti': [
-  //     new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
-  //     new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
-  //     new Pitch({ swara: 'p', oct: 0, fundamental: this.fundamental }),
-  //     new Pitch({ swara: 'g', oct: 0, raised: true, fundamental: this.fundamental })
-  //   ],
-  //   'Hemant': [
-  //     new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
-  //     new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
-  //     new Pitch({ swara: 'd', oct: 0, raised: true, fundamental: this.fundamental }),
-  //     new Pitch({ swara: 'm', oct: 0, raised: false, fundamental: this.fundamental })
-  //   ],
-  // };
-  // return templates[this.name]
-
-  return [
-    new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
-    new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
-  ]
-}
-
-getFrequencies({
-  low = 100,
-  high = 800
-} = {}) {
-  // returns all oct instances of raga's pitches that are between low and high
-  const baseFreqs = this.ratios.map(r => r * this.fundamental);
-  const freqs = [];
-  baseFreqs.forEach(f => {
-    const lowExp = Math.ceil(Math.log2(low / f));
-    const highExp = Math.floor(Math.log2(high / f));
-    const range = [...Array(highExp - lowExp + 1).keys()].map(i => i + lowExp);
-    const exps = range.map(r => 2.0 ** r);
-    const additionalFreqs = exps.map(exp => f * exp);
-    freqs.push(...additionalFreqs)
-  });
-  freqs.sort((a, b) => (a - b));
-  return freqs;
-}
-
-get sargamNames() {
-  const names = [];
-  const sargam = Object.keys(this.ruleSet);
-  sargam.forEach(s => {
-    if (typeof(this.ruleSet[s]) === 'object') {
-      const obj = this.ruleSet[s];
-      if (obj.raised) {
-        const str = s.charAt(0).toUpperCase() + s.slice(1);
-        names.push(str)
-      }
-      if (obj.lowered) {
-        const str = s.charAt(0).toLowerCase() + s.slice(1);
-        names.push(str)
-      }
-    } else {
-      if (this.ruleSet[s]) {
-        const str = s.charAt(0).toUpperCase() + s.slice(1);
-        names.push(str)
-      }
-    }
-  });
-  return names
-
-}
-
-toJSON() {
-  return {
-    name: this.name,
-    fundamental: this.fundamental,
-    ratios: this.ratios,
   }
-}
+
+  getFrequencies({
+    low = 100,
+    high = 800
+  } = {}) {
+    // returns all oct instances of raga's pitches that are between low and high
+    const baseFreqs = this.ratios.map(r => r * this.fundamental);
+    const freqs = [];
+    baseFreqs.forEach(f => {
+      const lowExp = Math.ceil(Math.log2(low / f));
+      const highExp = Math.floor(Math.log2(high / f));
+      const range = [...Array(highExp - lowExp + 1).keys()].map(i => i + lowExp);
+      const exps = range.map(r => 2.0 ** r);
+      const additionalFreqs = exps.map(exp => f * exp);
+      freqs.push(...additionalFreqs)
+    });
+    freqs.sort((a, b) => (a - b));
+    return freqs;
+  }
+
+  get sargamNames() {
+    const names = [];
+    const sargam = Object.keys(this.ruleSet);
+    sargam.forEach(s => {
+      if (typeof(this.ruleSet[s]) === 'object') {
+        const obj = this.ruleSet[s];
+        if (obj.raised) {
+          const str = s.charAt(0).toUpperCase() + s.slice(1);
+          names.push(str)
+        }
+        if (obj.lowered) {
+          const str = s.charAt(0).toLowerCase() + s.slice(1);
+          names.push(str)
+        }
+      } else {
+        if (this.ruleSet[s]) {
+          const str = s.charAt(0).toUpperCase() + s.slice(1);
+          names.push(str)
+        }
+      }
+    });
+    return names
+
+  }
+
+  toJSON() {
+    return {
+      name: this.name,
+      fundamental: this.fundamental,
+      ratios: this.ratios,
+    }
+  }
 }
 
 export { 
@@ -1272,16 +1274,3 @@ export {
   getStarts,
   getEnds
 }
-
-// exports.Pitch = Pitch
-// exports.Trajectory = Trajectory
-// exports.Phrase = Phrase
-// exports.Piece = Piece
-// exports.Articulation = Articulation
-// exports.Chikari = Chikari
-// exports.Raga = Raga
-// exports.getStarts = getStarts
-// exports.getEnds = getEnds
-
-
-/////////

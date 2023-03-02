@@ -208,6 +208,7 @@ export default {
           raised: false
         }
       },
+      instrumentation: ['Sitar']
     }
   },
   
@@ -332,7 +333,8 @@ export default {
           transcriber: this.transcriber,
           raga: this.raga,
           permissions: this.permissions,
-          clone: false
+          clone: false,
+          instrumentation: this.instrumentation
         };
         if (this.aeIdx && this.recording !== undefined) {
           const ae = this.allEvents[this.aeIdx];

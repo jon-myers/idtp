@@ -288,16 +288,20 @@ export default {
         // if (!articulations) articulations = {};
         articulations['1.00'] = new Articulation({ name: 'dampen' })
       }
-      const newTraj = new Trajectory({
+      const trajObj = {
         id: idx,
         pitches: pitches,
         durTot: durTot,
         durArray: durArray,
         articulations: articulations
-      });
+      };
       const pIdx = this.trajTimePts[0].pIdx;
       const tIdx = this.trajTimePts[0].tIdx;
       const phrase = this.piece.phrases[pIdx];
+      if (this.piece.instrumentation) {
+        trajObj.instrumentation = this.piece.instrumentation[0];
+      }
+      const newTraj = new Trajectory(trajObj);
       const trajs = phrase.trajectories;
       const silentTraj = phrase.trajectories[tIdx];
       const st = phrase.startTime + silentTraj.startTime
@@ -334,12 +338,16 @@ export default {
         const firstDur = times[0] - st;
         const lastDur = (st + silentTraj.durTot) - times[times.length - 1];
         silentTraj.durTot = firstDur;
-        const lastSilentTraj = new Trajectory({
+        const lstObj = {
           id: 12,
           pitches: [],
           durTot: lastDur,
           fundID12: this.piece.raga.fundamental
-        });
+        };
+        if (this.piece.instrumentation) {
+          lstObj.instrumentation = this.piece.instrumentation[0];
+        }
+        const lastSilentTraj = new Trajectory(lstObj);
         phrase.trajectories.splice(tIdx + 1, 0, newTraj);
         phrase.trajectories.splice(tIdx + 2, 0, lastSilentTraj);
         phrase.reset();
@@ -514,16 +522,24 @@ export default {
       // end GETBACK
       const silentDur = this.durTot - piece.durTot;
       if (silentDur >= 0.00001) {
-        const silentTraj = new Trajectory({
+        const stTrajObj = {
           id: 12,
           pitches: [],
           durTot: silentDur,
           fundID12: this.piece.raga.fundamental
-        });
-        const silentPhrase = new Phrase({
+        };
+        if (this.piece.instrumentation) {
+          stTrajObj.instrumentation = this.piece.instrumentation[0];
+        }
+        const silentTraj = new Trajectory(stTrajObj);
+        const phraseObj = {
           trajectories: [silentTraj],
           durTot: silentDur,
-        });
+        };
+        if (this.piece.instrumentation) {
+          phraseObj.instrumentation = this.piece.instrumentation;
+        }
+        const silentPhrase = new Phrase(phraseObj);
         this.piece.phrases.push(silentPhrase);
         this.piece.durArrayFromPhrases();
         this.piece.updateStartTimes();
@@ -673,12 +689,16 @@ export default {
           lastSilence.durTot += extraTime;
           lastPhrase.reset();
         } else {
-          const newTraj = new Trajectory({
+          const ntObj = {
             id: 12,
             pitches: [],
             durTot: extraTime,
             fundID12: this.piece.raga.fundamental
-          });
+          };
+          if (this.piece.instrumentation) {
+            ntObj.instrumentation = this.piece.instrumentation[0];
+          }
+          const newTraj = new Trajectory(ntObj);
           lastPhrase.trajectories.push(newTraj);
           lastPhrase.reset();
         }
@@ -1830,11 +1850,15 @@ export default {
                doNormal = false;  
                const pATrajs = phraseA.trajectories;        
                const prevTraj = pATrajs[pATrajs.length-1];
-               const newNextTraj = new Trajectory({ 
+               const nntObj = { 
                  id: 12, 
                  durTot: origDivTime - time,
                  fundID12: this.piece.raga.fundamental
-               });
+               };
+               if (this.piece.instrumentation) {
+                nntObj.instrumentation = this.piece.instrumentation[0];
+               }
+               const newNextTraj = new Trajectory(nntObj);
                prevTraj.durTot -= origDivTime - time;
                phraseA.durTotFromTrajectories();
                phraseA.durArrayFromTrajectories();
@@ -1891,11 +1915,15 @@ export default {
                this.piece.updateStartTimes();             
              } else {
                doNormal = false;
-               const newPrevTraj = new Trajectory({
+               const nptObj = {
                  id: 12,
                  durTot: time - origDivTime,
                  fundID12: this.piece.raga.fundamental
-               });
+               };
+                if (this.piece.instrumentation) {
+                  nptObj.instrumentation = this.piece.instrumentation[0];
+                }
+               const newPrevTraj = new Trajectory(nptObj);
                const nextTraj = phraseB.trajectories[0];
                nextTraj.durTot -= time - origDivTime;
                phraseA.trajectories
@@ -2187,12 +2215,16 @@ export default {
       // const endPitch = new Pitch(pitch.)
       const pitches = [pitch, endPitch];
       const durTot = this.trajTimePts[1].time - this.trajTimePts[0].time;
-      const newTraj = new Trajectory({
+      const ntObj = {
         pitches: pitches,
         durTot: durTot,
         durArray: [1],
         articulations: undefined
-      });
+      };
+      if (this.piece.instrumentation) {
+        ntObj.instrumentation = this.piece.instrumentation[0];
+      }
+      const newTraj = new Trajectory(ntObj);
       const times = this.trajTimePts.map(t => t.time);
       const pIdx = this.trajTimePts[0].pIdx;
       const tIdx = this.trajTimePts[0].tIdx;
@@ -2264,12 +2296,16 @@ export default {
           const firstDur = times[0] - st;
           const lastDur = st + silentTraj.durTot - times[times.length - 1];
           silentTraj.durTot = firstDur;
-          const lastSilentTraj = new Trajectory({
+          const lstObj = {
             id: 12,
             pitches: [],
             durTot: lastDur,
             fundID12: this.piece.raga.fundamental
-          });
+          };
+          if (this.piece.instrumentation) {
+            lstObj.instrumentation = this.piece.instrumentation[0];
+          }
+          const lastSilentTraj = new Trajectory(lstObj);
           phrase.trajectories.splice(tIdx + 1, 0, newTraj);
           phrase.trajectories.splice(tIdx + 2, 0, lastSilentTraj);
           phrase.reset();
@@ -2618,6 +2654,9 @@ export default {
           if (traj.id === 12 && traj.fundID12 !== piece.raga.fundamental) {
             traj.fundID12 = piece.raga.fundamental
           }
+          if (piece.instrumentation) {
+            traj.instrumentation = piece.instrumentation[0];
+          }
         });
         if (phrase.trajectoryGrid) {
           phrase.trajectoryGrid[0] = pt.map(traj => {
@@ -2634,7 +2673,10 @@ export default {
         chikariKeys.forEach((key, i) => {
           chikariObj[key] = new Chikari(chikariEntries[i])
         })
-        phrase.chikaris = chikariObj
+        phrase.chikaris = chikariObj;
+        if (piece.instrumentation) {
+          phrase.instrumentation = piece.instrumentation;
+        }
       });
       piece.phrases = piece.phrases.map(phrase => new Phrase(phrase));
       this.piece = new Piece(piece);
@@ -3126,12 +3168,16 @@ export default {
           const firstTrajDur = time - (phrase.startTime + traj.startTime);
           const secondTrajDur = traj.durTot - firstTrajDur;
           traj.durTot = firstTrajDur;
-          const newTraj = new Trajectory({
+          const ntObj = {
             id: 12,
             durTot: secondTrajDur,
             pitches: [],
             fundID12: this.piece.raga.fundamental
-          });
+          };
+          if (this.piece.instrumentation) {
+            ntObj.instrumentation = this.piece.instrumentation[0];
+          }
+          const newTraj = new Trajectory(ntObj);
           phrase.trajectories.splice(tIdx + 1, 0, newTraj);
           phrase.reset();
           // right here, I need to reid all the following trajectories
@@ -3155,10 +3201,14 @@ export default {
         const newTrajs = phrase_.trajectories.splice(trajIdx+1, end);
         phrase_.durTotFromTrajectories();
         phrase_.durArrayFromTrajectories();
-        const newPhrase = new Phrase({
+        const newPhraseObj = {
           trajectories: newTrajs,
           raga: phrase_.raga
-        })
+        };
+        if (this.piece.instrumentation) {
+          newPhraseObj.instrumentation = this.piece.instrumentation;
+        }
+        const newPhrase = new Phrase(newPhraseObj)
         this.piece.phrases.splice(phrase_.pieceIdx+1, 0, newPhrase);
         this.piece.durTotFromPhrases();
         this.piece.durArrayFromPhrases();
@@ -4649,11 +4699,15 @@ export default {
         phrase.trajectories[tIdx - 1].durTot += nextTraj.durTot;
         delAfter = true;
       } else if (!beforeSilent && !afterSilent) {
-        newTraj = new Trajectory({
+        const ntObj = {
           id: 12,
           durTot: traj.durTot,
           fundID12: this.piece.raga.fundamental
-        })
+        };
+        if (this.piece.instrumentation) {
+          ntObj.instrumentation = this.piece.instrumentation[0];
+        }
+        newTraj = new Trajectory(ntObj)
       }
       // if before and after are silence; combine all three trajs into single
       //silent traj
@@ -5035,27 +5089,39 @@ export default {
       console.log(time, ascending)
       let totalDuration = 0;
       const trajectories = this.visiblePitches.map(p => {
-        const traj = new Trajectory({
+        const tObj = {
           id: 0,
           durTot: durTot,
           durArray: [1],
           pitches: [p, new Pitch(p.toJSON())]
-        });
+        };
+        if (this.piece.instrumentation) {
+          tObj.instrumentation = this.piece.instrumentation[0];
+        }
+        const traj = new Trajectory(tObj);
         totalDuration += durTot;
         return traj
       });
-      const rest = new Trajectory({
+      const rObj = {
         id: 12,
         durTot: durTot,
         durArray: [1],
         fundID12: this.piece.raga.fundamental
-      })
+      };
+      if (this.piece.instrumentation) {
+        rObj.instrumentation = this.piece.instrumentation[0];
+      }
+      const rest = new Trajectory(rObj)
       trajectories.splice(0, 0, rest);
       totalDuration += durTot;
-      const phrase = new Phrase({
+      const phraseObj = {
         trajectories: trajectories,
         durTot: totalDuration
-      })
+      };
+      if (this.piece.instrumentation) {
+        phraseObj.instrumentation = this.piece.instrumentation;
+      }
+      const phrase = new Phrase(phraseObj);
       this.piece.phrases.splice(0, 0, phrase);
       const lastPhrase = this.piece.phrases[this.piece.phrases.length-1];
       const lastTrajs = lastPhrase.trajectories;
@@ -5076,26 +5142,38 @@ export default {
         extent: 0.03,
       };
       const rest1DurTot = 1;
-      const rest1 = new Trajectory({
+      const r1Obj = {
         id: 12,
         durTot: rest1DurTot,
         durArray: [1],
         fundID12: this.piece.raga.fundamental
-      });
-      const traj = new Trajectory({
+      };
+      if (this.piece.instrumentation) {
+        r1Obj.instrumentation = this.piece.instrumentation[0];
+      }
+      const rest1 = new Trajectory(r1Obj);
+      const tObj = {
         id: 13,
         durTot: durTot,
         durArray: [1],
         pitches: pitches,
         vibObj: vibObj
-      });
+      };
+      if (this.piece.instrumentation) {
+        tObj.instrumentation = this.piece.instrumentation[0];
+      }
+      const traj = new Trajectory(tObj);
       const rest2DurTot = this.piece.phrases[0].durTot - durTot - rest1DurTot;
-      const rest2 = new Trajectory({
+      const r2Obj = {
         id: 12,
         durTot: rest2DurTot,
         durArray: [1],
         fundID12: this.piece.raga.fundamental
-      });
+      };
+      if (this.piece.instrumentation) {
+        r2Obj.instrumentation = this.piece.instrumentation[0];
+      }
+      const rest2 = new Trajectory(r2Obj);
       if (this.piece.phrases[0].trajectoryGrid) {
         this.piece.phrases[0].trajectoryGrid[0] = [rest1, traj, rest2];
       } else {

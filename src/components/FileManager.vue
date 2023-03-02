@@ -231,15 +231,18 @@ export default {
           } else {
             durTot = 60;
           }
+          const tObj = {
+            id: 12,
+            durTot: durTot,
+            fundID12: npi.raga.fundamental,
+          };
+          if (npi.instrumentation) {
+            tObj.instrumentation = npi.instrumentation[0];
+          }
+          const traj = new Trajectory(tObj);
           npi.phrases = [
             new Phrase({
-              trajectories: [
-                new Trajectory({
-                  id: 12,
-                  durTot: durTot,
-                  fundID12: npi.raga.fundamental,
-                }),
-              ],
+              trajectories: [traj],
             }),
           ];
           this.createNewPiece(npi);
@@ -337,13 +340,17 @@ export default {
       try {
         const audioRecording = await getAudioRecording(piece.audioID);
         const audioEvent = await getAudioEvent(audioRecording.parentID);
-        this.passedInDataObj = JSON.stringify({
+        const dataObj = {
           title: piece.title + ' (clone)',
           raga: piece.raga,
           audioEvent: audioEvent.name,
           audioRecording: audioRecording,
           origID: piece._id,
-        });
+        };
+        if (piece.instrumentation) {
+          dataObj.instrumentation = piece.instrumentation;
+        }
+        this.passedInDataObj = JSON.stringify(dataObj);
         this.designPieceModal = true;
       } catch (err) {
         console.log(err);
