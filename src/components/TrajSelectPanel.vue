@@ -1,6 +1,6 @@
 <template>
 <div class='main'>
-  <div class='selectionPanel'>
+  <div :class='`selectionPanel ${["", "vocal"][Number(vocal)]}`'>
     <div class='selectionRow checks' v-if='showTrajChecks'>
       <label>Pluck</label>
       <input 
@@ -156,20 +156,20 @@
       />
     </div>
   </div>
-  <div class='thumbRow' v-for='odx in 4' :key='odx'>
+  <div class='thumbRow' v-for='odx in Math.ceil(urlsFiltered.length/4)' :key='odx'>
     <div :class='["imgContainer", idx === 4 ? "right" : ""]' v-for='idx in 4' >
       <img
-        v-if='urls[4 * (odx-1) + (idx-1)] !== undefined'
+        v-if='urlsFiltered[4 * (odx-1) + (idx-1)] !== undefined'
         :class='["thumb", idx === 4 ? "right" : "" ]' 
-        :src="urls[4 * (odx-1) + (idx-1)]" 
+        :src="urlsFiltered[4 * (odx-1) + (idx-1)]" 
         :key='idx' 
         :id='"id" + ((idx-1) + 4 *(odx-1))' 
         @click='selectIcon'>
       <div 
         class='keyNum'
-        v-if='urls[4 * (odx-1) + (idx-1)] !== undefined'
+        v-if='urlsFiltered[4 * (odx-1) + (idx-1)] !== undefined'
         
-        >{{ keyNums[4 * (odx-1) + (idx-1)] }}</div>
+        >{{ keyNumsFiltered[4 * (odx-1) + (idx-1)] }}</div>
     </div>
   </div>
 </div>
@@ -213,7 +213,11 @@ export default {
       dampen: false,
       showTrajChecks: false,
       showPhraseRadio: false,
-      phraseDivType: undefined
+      phraseDivType: undefined,
+      trajIdxs: [],
+      urlsFiltered: [],
+      keyNumsFiltered: [],
+      vocal: false,
     }
   },
   
@@ -224,7 +228,8 @@ export default {
 
 
   mounted() {
-
+    // const piece = this.$parent.piece;
+    // this.urlIdxs = piece.possibleTrajs[piece.instrumentation[0]]
   },
   
   watch: {
@@ -233,14 +238,11 @@ export default {
         t.classList.remove('selected')
       })
       if (newVal !== undefined) {
-        if (newVal >= 12) {
-          newVal -= 1;
-        }
         const el = document.querySelector(`#id${newVal}`)
         el.classList.add('selected')
         const slopeIdxs = [2, 3, 4, 5]
-        this.showSlope = slopeIdxs.includes(this.selectedIdx);
-        this.showVibObj = this.selectedIdx === 13;
+        this.showSlope = slopeIdxs.includes(this.trajIdxs[this.selectedIdx]);
+        this.showVibObj = this.trajIdxs[this.selectedIdx] === 12;
       }
     },
 
@@ -262,6 +264,11 @@ export default {
             .attr('stroke-width', '3px')
         }
       }
+    },
+
+    trajIdxs(newVal) {
+      this.urlsFiltered = newVal.map(idx => this.urls[idx]);
+      this.keyNumsFiltered = newVal.map(idx => this.keyNums[idx]);
     }
   },
 
@@ -275,53 +282,62 @@ export default {
         idx = Number(e)
       }
       const selectId = '#id' + idx;
-      if (idx >= 12) {
-        idx += 1;
+      let realIdx = this.trajIdxs[idx];
+      if (realIdx >= 12) {
+        realIdx += 1;
+      }
+      let realSelectedIdx = this.trajIdxs[this.selectedIdx];
+      if (realSelectedIdx >= 12) {
+        realSelectedIdx += 1;
       }
       if (this.parentSelected && this.editable) {
         const fixed = [0, 13];
         const twos = [1, 2, 3];
         const threes = [4, 5, 6];
-        if (twos.includes(this.selectedIdx)) {
-          if (idx !== this.selectedIdx && twos.includes(idx)) {
+        if (twos.includes(this.trajIdxs[this.selectedIdx])) {
+          if (realIdx !== this.trajIdxs[this.selectedIdx] && twos.includes(realIdx)) {
             this.selectedIdx = idx;
-            this.emitter.emit('mutateTraj', this.selectedIdx);
+            let outIdx = this.trajIdxs[this.selectedIdx];
+            if (outIdx >= 12) outIdx += 1;
+            this.emitter.emit('mutateTraj', outIdx);
             document.querySelectorAll('.thumb').forEach(t => {
               t.classList.remove('selected')
             })
             document.querySelector(selectId).classList.add('selected')
-            // e.target.classList.add('selected');
           }
-        } else if (threes.includes(this.selectedIdx)) {
-          if (idx !== this.selectedIdx && threes.includes(idx)) {
-            if (this.selectedIdx === 6) {
+        } else if (threes.includes(this.trajIdxs[this.selectedIdx])) {
+          if (realIdx !== this.trajIdxs[this.selectedIdx] && threes.includes(realIdx)) {
+            if (this.trajIdxs[this.selectedIdx] === 6) {
               if (this.$parent.selectedTraj.durArray.length === 2) {
                 this.selectedIdx = idx;
-                this.emitter.emit('mutateTraj', this.selectedIdx);
+                let outIdx = this.trajIdxs[this.selectedIdx];
+                if (outIdx >= 12) outIdx += 1;
+                this.emitter.emit('mutateTraj', outIdx);
                 document.querySelectorAll('.thumb').forEach(t => {
                   t.classList.remove('selected')
                 })
-                // e.target.classList.add('selected');
                 document.querySelector(selectId).classList.add('selected')
               }
             } else {
               this.selectedIdx = idx;
-              this.emitter.emit('mutateTraj', this.selectedIdx);
+              let outIdx = this.trajIdxs[this.selectedIdx];
+              if (outIdx >= 12) outIdx += 1;
+              this.emitter.emit('mutateTraj', outIdx);
               document.querySelectorAll('.thumb').forEach(t => {
                 t.classList.remove('selected')
               })
-              // e.target.classList.add('selected');
               document.querySelector(selectId).classList.add('selected')
             }
           }
-        } else if (fixed.includes(this.selectedIdx)) {
-          if (idx !== this.selectedIdx && fixed.includes(idx)) {
+        } else if (fixed.includes(realSelectedIdx)) {
+          if (realIdx !== this.trajIdxs[this.selectedIdx] && fixed.includes(realIdx)) {
             this.selectedIdx = idx;
-            this.emitter.emit('mutateTraj', this.selectedIdx);
+            let outIdx = this.trajIdxs[this.selectedIdx];
+            if (outIdx >= 12) outIdx += 1;
+            this.emitter.emit('mutateTraj', outIdx);
             document.querySelectorAll('.thumb').forEach(t => {
               t.classList.remove('selected')
             })
-            // e.target.classList.add('selected');
             document.querySelector(selectId).classList.add('selected')
           }
         }
@@ -330,11 +346,12 @@ export default {
         if (timePts.length === 2) {
           const options = [1, 2, 3];
           if (timePts[0].logFreq === timePts[1].logFreq) options.push(0, 13)
-          if (options.includes(idx)) {
+          if (options.includes(realIdx)) {
             this.selectedIdx = idx;
-            // e.target.classList.add('selected');
             document.querySelector(selectId).classList.add('selected')
-            this.emitter.emit('newTraj', this.selectedIdx);
+            let outIdx = this.trajIdxs[this.selectedIdx];
+            if (outIdx >= 12) outIdx += 1;
+            this.emitter.emit('newTraj', outIdx);
           }
         } else if (timePts.length === 3) {
           const options = [4, 5, 6];
@@ -344,11 +361,12 @@ export default {
           if (lfDiffs[0] < 0 && lfDiffs[1] === 0) options.push(7)
           if (lfDiffs[0] > 0 && lfDiffs[1] === 0) options.push(7)
           if (lfDiffs[1] === 0) options.push(11)
-          if (options.includes(idx)) {
+          if (options.includes(realIdx)) {
             this.selectedIdx = idx;
-            // e.target.classList.add('selected');
             document.querySelector(selectId).classList.add('selected')
-            this.emitter.emit('newTraj', this.selectedIdx);
+            let outIdx = this.trajIdxs[this.selectedIdx];
+            if (outIdx >= 12) outIdx += 1;
+            this.emitter.emit('newTraj', outIdx);
           }
         } else if (timePts.length === 4) {
           const options = [6];
@@ -357,11 +375,12 @@ export default {
           const lfDiffs = logFreqs.slice(1).map((x, i) => x - logFreqs[i]);
           const c = lfDiffs[0] < 0 && lfDiffs[1] < 0 && lfDiffs[2] === 0
           if (c) options.push(8)
-          if (options.includes(idx)) {
+          if (options.includes(realIdx)) {
             this.selectedIdx = idx;
-            // e.target.classList.add('selected');
             document.querySelector(selectId).classList.add('selected')
-            this.emitter.emit('newTraj', this.selectedIdx);
+            let outIdx = this.trajIdxs[this.selectedIdx];
+            if (outIdx >= 12) outIdx += 1;
+            this.emitter.emit('newTraj', outIdx);
           }
         } else if (timePts.length === 5) {
           const options = [6];
@@ -370,19 +389,21 @@ export default {
           const lDif = logFreqs.slice(1).map((x, i) => x - logFreqs[i]);
           const c = lDif[0] < 0 && lDif[1] < 0 && lDif[2] > 0 && lDif[3] === 0;
           if (c) options.push(9);
-          if (options.includes(idx)) {
+          if (options.includes(realIdx)) {
             this.selectedIdx = idx;
-            // e.target.classList.add('selected');
             document.querySelector(selectId).classList.add('selected')
-            this.emitter.emit('newTraj', this.selectedIdx);
+            let outIdx = this.trajIdxs[this.selectedIdx];
+            if (outIdx >= 12) outIdx += 1;
+            this.emitter.emit('newTraj', outIdx);
           }
         } else if (timePts.length === 6) {
           const options = [6];
-          if (options.includes(idx)) {
+          if (options.includes(realIdx)) {
             this.selectedIdx = idx;
-            // e.target.classList.add('selected');
             document.querySelector(selectId).classList.add('selected')
-            this.emitter.emit('newTraj', this.selectedIdx);
+            let outIdx = this.trajIdxs[this.selectedIdx];
+            if (outIdx >= 12) outIdx += 1;
+            this.emitter.emit('newTraj', outIdx);
           }
         } else if (timePts.length === 7) {
           const options = [6];
@@ -400,11 +421,12 @@ export default {
           if (c.every(a => a)) {
             options.push(10)
           }
-          if (options.includes(idx)) {
+          if (options.includes(realIdx)) {
             this.selectedIdx = idx;
-            // e.target.classList.add('selected');
             document.querySelector(selectId).classList.add('selected')
-            this.emitter.emit('newTraj', this.selectedIdx);
+            let outIdx = this.trajIdxs[this.selectedIdx];
+            if (outIdx >= 12) outIdx += 1;
+            this.emitter.emit('newTraj', outIdx);
           }
         }
       } 
@@ -451,6 +473,11 @@ export default {
   align-items: center;
   justify-content: top;
 }
+
+.selectionPanel.vocal {
+  height: v-bind(170 + ctrlBoxWidth/2 + 'px');
+}
+
 
 .imgContainer {
   width: v-bind((ctrlBoxWidth - 3) / 4 + 'px');

@@ -128,14 +128,10 @@ import {
   savePiece,
   makeSpectrograms,
   pieceExists,
-  
 } from '@/js/serverCalls.js';
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
 import TrajSelectPanel from '@/components/TrajSelectPanel.vue';
 import instructionsText from '@/assets/texts/editor_instructions.html?raw';
-
-// import * as d3 from 'd3';
-
 import { detect } from 'detect-browser';
 
 const getStarts = durArray => {
@@ -376,21 +372,25 @@ export default {
       d3SelectAll(`.newTrajDot`).remove();
       
       this.addAllDragDots();
-      this.$refs.trajSelectPanel.selectedIdx = this.selectedTraj.id;
-      this.$refs.trajSelectPanel.parentSelected = true;
-      this.$refs.trajSelectPanel.slope = Math.log2(this.selectedTraj.slope);
+      const tsp = this.$refs.trajSelectPanel;
+      const altId = this.selectedTraj.id >= 12 ? 
+                    this.selectedTraj.id - 1: 
+                    this.selectedTraj.id; 
+      tsp.selectedIdx = tsp.trajIdxs.indexOf(altId);
+      tsp.parentSelected = true;
+      tsp.slope = Math.log2(this.selectedTraj.slope);
       if (this.selectedTraj.vibObj) {
-        this.$refs.trajSelectPanel.extent = this.selectedTraj.vibObj.extent;
-        this.$refs.trajSelectPanel.initUp = this.selectedTraj.vibObj.initUp;
-        this.$refs.trajSelectPanel.periods = this.selectedTraj.vibObj.periods;
-        this.$refs.trajSelectPanel.offset = this.selectedTraj.vibObj.vertOffset;
+        tsp.extent = this.selectedTraj.vibObj.extent;
+        tsp.initUp = this.selectedTraj.vibObj.initUp;
+        tsp.periods = this.selectedTraj.vibObj.periods;
+        tsp.offset = this.selectedTraj.vibObj.vertOffset;
       }
       
       const c1 = this.selectedTraj.articulations[0];
       if (c1 && this.selectedTraj.articulations[0].name === 'pluck') {
-        this.$refs.trajSelectPanel.pluckBool = true
+        tsp.pluckBool = true
       } else {
-        this.$refs.trajSelectPanel.pluckBool = false
+        tsp.pluckBool = false
       }
       if (!this.audioDBDoc) {
         this.extendDurTot();
@@ -514,6 +514,10 @@ export default {
       }
       await this.initializePiece();
       this.$refs.audioPlayer.parentLoaded();
+      const tsp = this.$refs.trajSelectPanel;
+      tsp.trajIdxs = this.piece.trajIdxs;
+      const vox = ['Vocal (M)', 'Vocal (F)'];
+      tsp.vocal = vox.includes(this.piece.instrumentation[0]);
       // GETBACK
       if (this.audioDBDoc) {
         this.$refs.audioPlayer.initAll();
@@ -2516,7 +2520,7 @@ export default {
 
       }
       if (this.setNewTraj || this.selectedTraj) {
-        const keyNums = this.$refs.trajSelectPanel.keyNums;
+        const keyNums = this.$refs.trajSelectPanel.keyNumsFiltered;
         if (keyNums.includes(e.key)) {
           this.$refs.trajSelectPanel.selectIcon(keyNums.indexOf(e.key))
         }
@@ -4058,20 +4062,24 @@ export default {
       const pIdx = this.selectedTrajID.split('t')[0].slice(1);
       const tIdx = this.selectedTrajID.split('t')[1];
       this.selectedTraj = this.piece.phrases[pIdx].trajectories[tIdx];
-      this.$refs.trajSelectPanel.selectedIdx = this.selectedTraj.id;
-      this.$refs.trajSelectPanel.parentSelected = true;
-      this.$refs.trajSelectPanel.slope = Math.log2(this.selectedTraj.slope);
+      const tsp = this.$refs.trajSelectPanel;
+      const altId = this.selectedTraj.id >= 12 ? 
+                    this.selectedTraj.id - 1: 
+                    this.selectedTraj.id; 
+      tsp.selectedIdx = tsp.trajIdxs.indexOf(altId);
+      tsp.parentSelected = true;
+      tsp.slope = Math.log2(this.selectedTraj.slope);
       const c1 = this.selectedTraj.articulations[0];
       const c2 = this.selectedTraj.articulations['1.00'];
       if (c1 && this.selectedTraj.articulations[0].name === 'pluck') {
-        this.$refs.trajSelectPanel.pluckBool = true
+        tsp.pluckBool = true
       } else {
-        this.$refs.trajSelectPanel.pluckBool = false
+        tsp.pluckBool = false
       }
       if (c2 && c2.name === 'dampen') {
-        this.$refs.trajSelectPanel.dampen = true
+        tsp.dampen = true
       } else {
-        this.$refs.trajSelectPanel.dampen = false
+        tsp.dampen = false
       }
       d3Select(`#${this.selectedTrajID}`)
         .attr('stroke', this.selectedTrajColor)

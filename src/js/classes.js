@@ -108,7 +108,7 @@ class Pitch {
     const ratio = this.swara == 0 || this.swara == 4 ?
       this.ratios[this.swara] :
       this.ratios[this.swara][Number(this.raised)];
-    this.frequency = ratio * this.fundamental * (2 ** this.oct)
+    this.frequency = ratio * this.fundamental * (2 ** this.oct);
   }
 
   get sargamLetter() {
@@ -902,6 +902,12 @@ class Piece {
       this.sectionStarts = sectionStarts;
     }
     this.instrumentation = instrumentation;
+    // this is really confusing becuase id12 is silent. The current solution 
+    // is to just skip that number; so 12 listed below is really id13
+    this.possibleTrajs = {
+      'Sitar': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 
+      'Vocal (M)': [0, 1, 2, 3, 4, 5, 6, 12]
+    }
   }
 
   putRagaInPhrase() {
@@ -911,6 +917,10 @@ class Piece {
   get durStarts() {
     const starts = getStarts(this.durArray.map(d => d * this.durTot));
     return starts
+  }
+
+  get trajIdxs() {
+    return this.possibleTrajs[this.instrumentation[0]]
   }
 
   updateStartTimes() {
