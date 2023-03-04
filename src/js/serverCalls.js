@@ -876,6 +876,25 @@ const getInstrumentation = async (audioID) => {
   }
 }
 
+const getIpaVowels = async () => {
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const response = await fetch(url + 'getIpaVowels', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
 
 export { 
   getPiece,
@@ -917,4 +936,5 @@ export {
   updateTranscriptionTitle,
   updateTranscriptionPermissions,
   getInstrumentation,
+  getIpaVowels,
 }

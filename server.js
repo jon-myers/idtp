@@ -101,6 +101,7 @@ const runServer = async () => {
     const performanceSections = db.collection('performanceSections');
     const audioRecordings = db.collection('audioRecordings');
     const users = db.collection('users');
+    const phonemes = db.collection('phonemes');
       
     app.post('/insertNewTranscription', async (req, res) => {
       // creates new transcription entry in transcriptions collection
@@ -611,6 +612,19 @@ const runServer = async () => {
         const projection = { _id: 0, rules: 1, updatedDate: 1 };
         const options = { projection: projection };
         const result = await ragas.findOne(query, options);
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err)
+      }
+    })
+
+    app.get('/getIpaVowels', async (req, res) => {
+      try {
+        const query = { type: 'vowel' };
+        const projection = { _id: 0 };
+        const options = { projection: projection };
+        const result = await phonemes.find(query, options).toArray();
         res.json(result)
       } catch (err) {
         console.error(err);

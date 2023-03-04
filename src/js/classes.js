@@ -203,7 +203,8 @@ class Trajectory {
     name = undefined,
     fundID12 = undefined,
     vibObj = undefined,
-    instrumentation = 'Sitar'
+    instrumentation = 'Sitar',
+    vowel = undefined,
   } = {}) {
     if (typeof(id) === 'number' && Number.isInteger(id)) {
       this.id = id
@@ -294,7 +295,8 @@ class Trajectory {
       slide: 11,
       silent: 12,
       vibrato: 13
-    }
+    };
+    this.vowel = vowel;
 
     // adding proper articulations here, although it feels like it could be
     // done better. Gonna get tricky, because other stuff is done in the compute
@@ -587,7 +589,8 @@ class Trajectory {
       name: this.name,
       fundID12: this.fundID12,
       vibObj: this.vibObj,
-      instrumentation: this.instrumentation
+      instrumentation: this.instrumentation,
+      vowel: this.vowel
     }
   }
   // skip id 11, same code as id 7, just different articulation

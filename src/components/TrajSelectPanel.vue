@@ -1,7 +1,7 @@
 <template>
 <div class='main'>
   <div :class='`selectionPanel ${["", "vocal"][Number(vocal)]}`'>
-    <div class='selectionRow checks' v-if='showTrajChecks'>
+    <div class='selectionRow checks' v-if='!vowel && showTrajChecks'>
       <label>Pluck</label>
       <input 
         v-if='editable' 
@@ -17,7 +17,7 @@
         disabled='disabled'
       />
     </div>
-    <div class='selectionRow checks' v-if='showTrajChecks'>
+    <div class='selectionRow checks' v-if='!vocal && showTrajChecks'>
       <label class='spaceLeft'>Dampen</label>
       <input 
         v-if='editable' 
@@ -32,6 +32,48 @@
         @change='updateDampen'
         disabled='disabled'
       />
+    </div>
+    <div class='selectionRow checks' v-if='vocal && showTrajChecks'>
+      <label class='spaceLeft wide'>Start Consonant</label>
+      <input 
+        v-if='editable' 
+        type='checkbox' 
+        v-model='openingConsonant' 
+        @change='updateOpeningConsonant'
+        />
+        <input 
+        v-if='!editable' 
+        type='checkbox' 
+        v-model='openingConsonant' 
+        @change='updateOpeningConsonant'
+        disabled='disabled'
+        />
+    </div>
+    <div class='selectionRow checks' v-if='vocal && showTrajChecks'>
+      <label class='spaceLeft'>Vowel</label>
+      <select
+        v-if='editable'
+        v-model='vowel' 
+        @change='updateVowel' 
+        class='vowelSelect'>
+        <option v-for='(vowel, idx) in ipaVowels' :key='vowel' :value='vowel'>
+          {{ vowel + '  -  ' + hindiVowels[idx] + '  ('}}
+            <span v-html='englishWords[idx]'></span>
+          {{ ')' }} 
+        </option>
+      </select>
+      <select
+        v-if='!editable'
+        v-model='vowel' 
+        @change='updateVowel' 
+        class='vowelSelect'
+        disabled='disabled'>
+        <option v-for='(vowel, idx) in ipaVowels' :key='vowel' :value='vowel'>
+          {{ vowel + '  -  ' + hindiVowels[idx] + '  ('}}
+            <span v-html='englishWords[idx]'></span>
+          {{ ')' }} 
+        </option>
+      </select>
     </div>
     <div class='radioGroup' v-if='showPhraseRadio'>
       <div class='selectionRow'>
@@ -189,8 +231,7 @@ import t11 from '@/assets/thumbnails/11.png';
 import t12 from '@/assets/thumbnails/12.png';
 import t13 from '@/assets/thumbnails/13.png';
 import { select as d3Select } from 'd3';
-// import { Articulation } from '@/js/classes.js';
-
+import { getIpaVowels } from '@/js/serverCalls.js';
 export default {
   name: 'TrajSelectPanel',
 
@@ -218,6 +259,10 @@ export default {
       urlsFiltered: [],
       keyNumsFiltered: [],
       vocal: false,
+      vowel: undefined,
+      ipaVowels: ['a', 'b', 'c'],
+      englishWords: [],
+      hindiVowels: []
     }
   },
   
@@ -227,9 +272,13 @@ export default {
   ],
 
 
-  mounted() {
+  async mounted() {
     // const piece = this.$parent.piece;
     // this.urlIdxs = piece.possibleTrajs[piece.instrumentation[0]]
+    const result = await getIpaVowels();
+    this.ipaVowels = result.map(v => v.ipa);
+    this.englishWords = result.map(v => v.english);
+    this.hindiVowels = result.map(v => v.hindi.initial);
   },
   
   watch: {
@@ -433,7 +482,6 @@ export default {
     },
     
     updateSlope() {
-      
       this.$parent.alterSlope((2 ** this.slope))
     },
     
@@ -446,6 +494,12 @@ export default {
     updateDampen() {
       if (this.parentSelected) {
         this.emitter.emit('dampen', this.dampen)
+      }
+    },
+
+    updateVowel() {
+      if (this.parentSelected) {
+        this.emitter.emit('vowel', this.vowel)
       }
     },
 
@@ -522,6 +576,10 @@ label {
   text-align: right;
 }
 
+label.wide {
+  width: 150px;
+}
+
 .slider {
   width: 120px;
 }
@@ -572,5 +630,9 @@ label {
   height: 15px;
   text-align: center;
   font-size: 13px;
+}
+
+.vowelSelect {
+  /* width: 100px; */
 }
 </style>

@@ -127,7 +127,7 @@ import {
   getNumberOfSpectrograms,
   savePiece,
   makeSpectrograms,
-  pieceExists,
+  pieceExists
 } from '@/js/serverCalls.js';
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
 import TrajSelectPanel from '@/components/TrajSelectPanel.vue';
@@ -452,12 +452,19 @@ export default {
       // this.resetZoom();
     });
 
+    this.emitter.on('vowel', vowel => {
+      this.selectedTraj.vowel = vowel
+    });
+
     try {
       // if there's a query id, 1. check if exists, 2. if so, load it, else:
       // send some sort of message that entered piece didn't exist and go to files.
       // check if stored piece esists. if so, load it, else: load default piece.
       // push the id to router. 
+      
       let piece, pieceDoesExist;
+      
+
       const queryId = this.$route.query.id;
       if (queryId) {
         pieceDoesExist = await pieceExists(queryId);
@@ -4069,6 +4076,7 @@ export default {
       tsp.selectedIdx = tsp.trajIdxs.indexOf(altId);
       tsp.parentSelected = true;
       tsp.slope = Math.log2(this.selectedTraj.slope);
+      if (this.selectedTraj.vowel) tsp.vowel = this.selectedTraj.vowel;
       const c1 = this.selectedTraj.articulations[0];
       const c2 = this.selectedTraj.articulations['1.00'];
       if (c1 && this.selectedTraj.articulations[0].name === 'pluck') {
