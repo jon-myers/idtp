@@ -456,6 +456,14 @@ export default {
       this.selectedTraj.vowel = vowel
     });
 
+    this.emitter.on('startConsonant', startConsonant => {
+      this.selectedTraj.startConsonant = startConsonant
+    });
+
+    this.emitter.on('endConsonant', endConsonant => {
+      this.selectedTraj.endConsonant = endConsonant
+    });
+
     try {
       // if there's a query id, 1. check if exists, 2. if so, load it, else:
       // send some sort of message that entered piece didn't exist and go to files.
@@ -569,6 +577,9 @@ export default {
     this.emitter.off('newTraj');
     this.emitter.off('vibObj');
     this.emitter.off('dampen');
+    this.emitter.off('vowel');
+    this.emitter.off('startConsonant');
+    this.emitter.off('endConsonant');
   },
 
   watch: {

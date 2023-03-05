@@ -632,6 +632,19 @@ const runServer = async () => {
       }
     })
 
+    app.get('/getConsonants', async (req, res) => {
+      try {
+        const query = { type: 'consonant' };
+        const projection = { _id: 0 };
+        const options = { projection: projection };
+        const result = await phonemes.find(query, options).toArray();
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err)
+      }
+    })
+
     app.post('/saveRaagRules', async (req, res) => {
       try {
         const query = { name: req.body.name };

@@ -205,6 +205,8 @@ class Trajectory {
     vibObj = undefined,
     instrumentation = 'Sitar',
     vowel = undefined,
+    startConsonant = undefined,
+    endConsonant = undefined,
   } = {}) {
     if (typeof(id) === 'number' && Number.isInteger(id)) {
       this.id = id
@@ -297,6 +299,8 @@ class Trajectory {
       vibrato: 13
     };
     this.vowel = vowel;
+    this.startConsonant = startConsonant;
+    this.endConsonant = endConsonant;
 
     // adding proper articulations here, although it feels like it could be
     // done better. Gonna get tricky, because other stuff is done in the compute
@@ -590,7 +594,9 @@ class Trajectory {
       fundID12: this.fundID12,
       vibObj: this.vibObj,
       instrumentation: this.instrumentation,
-      vowel: this.vowel
+      vowel: this.vowel,
+      startConsonant: this.startConsonant,
+      endConsonant: this.endConsonant,
     }
   }
   // skip id 11, same code as id 7, just different articulation

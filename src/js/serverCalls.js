@@ -895,6 +895,25 @@ const getIpaVowels = async () => {
   }
 }
 
+const getConsonants = async () => {
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const response = await fetch(url + 'getConsonants', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
 
 export { 
   getPiece,
@@ -937,4 +956,5 @@ export {
   updateTranscriptionPermissions,
   getInstrumentation,
   getIpaVowels,
+  getConsonants
 }

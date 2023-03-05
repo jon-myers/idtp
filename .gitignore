@@ -34,3 +34,5 @@ credentials
 
 #Electron-builder output
 /dist_electron
+
+.envrc

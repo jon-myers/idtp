@@ -34,20 +34,31 @@
       />
     </div>
     <div class='selectionRow checks' v-if='vocal && showTrajChecks'>
-      <label class='spaceLeft wide'>Start Consonant</label>
-      <input 
+      <label class='spaceLeft wide'>Start</label>
+      <select 
         v-if='editable' 
-        type='checkbox' 
-        v-model='openingConsonant' 
-        @change='updateOpeningConsonant'
-        />
-        <input 
+        v-model='startConsonant' 
+        @change='updateStartConsonant'
+        >
+        <option 
+          v-for='(consonant, idx) in cIpa' 
+          :key='consonant' 
+          :value='consonant'
+          v-html='consonantList[idx]'>
+        </option>
+      </select>
+        <select 
         v-if='!editable' 
-        type='checkbox' 
-        v-model='openingConsonant' 
-        @change='updateOpeningConsonant'
+        v-model='startConsonant' 
         disabled='disabled'
-        />
+        >
+        <option 
+          v-for='(consonant, idx) in cIpa' 
+          :key='consonant' 
+          :value='consonant'
+          v-html='consonantList[idx]'>
+        </option>
+    </select>
     </div>
     <div class='selectionRow checks' v-if='vocal && showTrajChecks'>
       <label class='spaceLeft'>Vowel</label>
@@ -56,10 +67,11 @@
         v-model='vowel' 
         @change='updateVowel' 
         class='vowelSelect'>
-        <option v-for='(vowel, idx) in ipaVowels' :key='vowel' :value='vowel'>
-          {{ vowel + '  -  ' + hindiVowels[idx] + '  ('}}
-            <span v-html='englishWords[idx]'></span>
-          {{ ')' }} 
+        <option 
+        v-for='(vowel, idx) in ipaVowels' 
+        :key='vowel' 
+        :value='vowel'
+        v-html='vowelList[idx]'>
         </option>
       </select>
       <select
@@ -68,12 +80,45 @@
         @change='updateVowel' 
         class='vowelSelect'
         disabled='disabled'>
-        <option v-for='(vowel, idx) in ipaVowels' :key='vowel' :value='vowel'>
-          {{ vowel + '  -  ' + hindiVowels[idx] + '  ('}}
+        <option 
+          v-for='(vowel, idx) in ipaVowels' 
+          :key='vowel' 
+          :value='vowel'
+          v-html='vowelList[idx]'
+          >
+        </option>
+          <!-- {{ hindiVowels[idx] + '  -  ' + iso_15919[idx] + '  ('}}
             <span v-html='englishWords[idx]'></span>
-          {{ ')' }} 
+          {{ ')' }}  -->
+        <!-- </option> -->
+      </select>
+    </div>
+    <div class='selectionRow checks' v-if='vocal && showTrajChecks'>
+      <label class='spaceLeft wide'>End</label>
+      <select 
+        v-if='editable' 
+        v-model='endConsonant' 
+        @change='updateEndConsonant'
+        >
+        <option 
+          v-for='(consonant, idx) in cIpa' 
+          :key='consonant' 
+          :value='consonant'
+          v-html='consonantList[idx]'>
         </option>
       </select>
+        <select 
+        v-if='!editable' 
+        v-model='endConsonant' 
+        disabled='disabled'
+        >
+        <option 
+          v-for='(consonant, idx) in cIpa' 
+          :key='consonant' 
+          :value='consonant'
+          v-html='consonantList[idx]'>
+        </option>
+    </select>
     </div>
     <div class='radioGroup' v-if='showPhraseRadio'>
       <div class='selectionRow'>
@@ -231,7 +276,7 @@ import t11 from '@/assets/thumbnails/11.png';
 import t12 from '@/assets/thumbnails/12.png';
 import t13 from '@/assets/thumbnails/13.png';
 import { select as d3Select } from 'd3';
-import { getIpaVowels } from '@/js/serverCalls.js';
+import { getIpaVowels, getConsonants } from '@/js/serverCalls.js';
 export default {
   name: 'TrajSelectPanel',
 
@@ -262,7 +307,15 @@ export default {
       vowel: undefined,
       ipaVowels: ['a', 'b', 'c'],
       englishWords: [],
-      hindiVowels: []
+      hindiVowels: [],
+      iso_15919: [],
+      cIpa: [],
+      cExample: [],
+      cIso_15919: [],
+      hindi_consonants: [],
+      consonantList: [],
+      startConsonant: undefined,
+      endConsonant: undefined,
     }
   },
   
@@ -277,8 +330,28 @@ export default {
     // this.urlIdxs = piece.possibleTrajs[piece.instrumentation[0]]
     const result = await getIpaVowels();
     this.ipaVowels = result.map(v => v.ipa);
+    this.iso_15919 = result.map(v => v.iso_15919);
     this.englishWords = result.map(v => v.english);
     this.hindiVowels = result.map(v => v.hindi.initial);
+    this.vowelList = result.map(v => {
+      return `${v.hindi.initial} - ${v.iso_15919} (${v.english})`
+    })
+
+    const consonantResults = await getConsonants();
+    this.cIpa = consonantResults.map(v => v.ipa);
+    this.cIpa.push(undefined)
+    this.cIso_15919 = consonantResults.map(v => v.iso_15919);
+    this.cExample = consonantResults.map(v => v.example);
+    this.hindiConsonants = consonantResults.map(v => v.hindi);
+
+    this.consonantList = this.cIso_15919.map((iso, idx) => {
+      return `${this.hindiConsonants[idx]} - ${iso} (${this.cExample[idx]})`
+    })
+
+    // add 'none' to end of consonantlist
+    this.consonantList.push('none');
+
+
   },
   
   watch: {
@@ -503,6 +576,18 @@ export default {
       }
     },
 
+    updateStartConsonant() {
+      if (this.parentSelected) {
+        this.emitter.emit('startConsonant', this.startConsonant)
+      }
+    },
+
+    updateEndConsonant() {
+      if (this.parentSelected) {
+        this.emitter.emit('endConsonant', this.endConsonant)
+      }
+    },
+
     updateVibObj() {
       const vibObj = {
         periods: this.periods,
@@ -632,7 +717,7 @@ label.wide {
   font-size: 13px;
 }
 
-.vowelSelect {
-  /* width: 100px; */
+.selectionRow select {
+  width: 120px;
 }
 </style>
