@@ -627,10 +627,10 @@ class Trajectory {
   changeConsonant(consonant, start=true) {
     if (start) {
       this.startConsonant = consonant;
-      this.articulations['0.00'].pluck = consonant;
+      this.articulations['0.00'].stroke = consonant;
     } else {
       this.endConsonant = consonant;
-      this.articulations['1.00'].pluck = consonant;
+      this.articulations['1.00'].stroke = consonant;
     }
   }
 

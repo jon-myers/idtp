@@ -467,6 +467,19 @@ export default {
       } else {
         this.selectedTraj.changeConsonant(startConsonant)
       }
+      const pIdx = this.selectedTraj.phraseIdx;
+      const tIdx = this.selectedTraj.num;
+      const phrase = this.piece.phrases[pIdx];
+      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`);
+      const selected = d3Select(`#startConsonantp${pIdx}t${tIdx}`);
+      if (selected.node()[0] === null) {
+        this.addStartingConsonant(this.selectedTraj, phrase.startTime, g)
+      } else if (this.selectedTraj.startConsonant === undefined) {
+        selected.remove();
+      } else {
+        selected.remove();
+        this.addStartingConsonant(this.selectedTraj, phrase.startTime, g)
+      }
     });
 
     this.emitter.on('endConsonant', endConsonant => {
@@ -477,6 +490,19 @@ export default {
         this.selectedTraj.addConsonant(endConsonant, false)
       } else {
         this.selectedTraj.changeConsonant(endConsonant, false)
+      }
+      const pIdx = this.selectedTraj.phraseIdx;
+      const tIdx = this.selectedTraj.num;
+      const phrase = this.piece.phrases[pIdx];
+      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`);
+      const selected = d3Select(`#endConsonantp${pIdx}t${tIdx}`);
+      if (selected.node()[0] === null) {
+        this.addEndingConsonant(this.selectedTraj, phrase.startTime, g)
+      } else if (this.selectedTraj.endConsonant === undefined) {
+        selected.remove();
+      } else {
+        selected.remove();
+        this.addEndingConsonant(this.selectedTraj, phrase.startTime, g)
       }
     });
 
@@ -1457,6 +1483,8 @@ export default {
           this.moveKrintin(newNextTraj, phrase.startTime);
           this.moveSlides(newNextTraj, phrase.startTime);
           this.codifiedRedrawDampener(newNextTraj, phrase.startTime);
+          this.moveStartingConsonant(newNextTraj, phrase.startTime, true);
+          this.moveEndingConsonant(newNextTraj, phrase.startTime, true);
           this.removePlucks(newNextTraj);
           const g = d3Select(`#articulations__p${pIdx}t${tIdx+1}`);
           this.codifiedAddPlucks(newNextTraj, phrase.startTime, g)
@@ -1479,6 +1507,8 @@ export default {
             this.moveKrintin(newNextTraj, nextPhrase.startTime)
             this.moveSlides(newNextTraj, nextPhrase.startTime)
             this.codifiedRedrawDampener(newNextTraj, nextPhrase.startTime)
+            this.moveStartingConsonant(newNextTraj, nextPhrase.startTime, true);
+            this.moveEndingConsonant(newNextTraj, nextPhrase.startTime, true);
             this.removePlucks(newNextTraj);
             const g = d3Select(`#articulations__p${pIdx+1}t${0}`);
             this.codifiedAddPlucks(newNextTraj, nextPhrase.startTime, g);
@@ -1498,6 +1528,8 @@ export default {
       this.moveKrintin(this.selectedTraj, phrase.startTime);
       this.moveSlides(this.selectedTraj, phrase.startTime);
       this.codifiedRedrawDampener(this.selectedTraj, phrase.startTime);
+      this.moveStartingConsonant(this.selectedTraj, phrase.startTime, true);
+      this.moveEndingConsonant(this.selectedTraj, phrase.startTime, true);
       this.cleanEmptyTrajs(phrase);
       this.moveChikaris(phrase);
       if (resetRequired) this.resetZoom();
@@ -3492,7 +3524,8 @@ export default {
       this.addKrintin(traj, phraseStart, g)
       this.addSlide(traj, phraseStart, g)
       this.addDampener(traj, phraseStart, g)
-      this.addConsonants(traj, phraseStart, g)
+      this.addStartingConsonant(traj, phraseStart, g)
+      this.addEndingConsonant(traj, phraseStart, g)
     },
 
     codifiedAddArticulations(traj, phraseStart) {
@@ -3502,7 +3535,8 @@ export default {
       this.codifiedAddKrintin(traj, phraseStart, g);
       this.codifiedAddSlide(traj, phraseStart, g);
       this.codifiedAddDampener(traj, phraseStart, g);
-      this.codifiedAddConsonants(traj, phraseStart, g);
+      this.addStartingConsonant(traj, phraseStart, g, true);
+      this.addEndingConsonant(traj, phraseStart, g, true);
 
     },
 
@@ -3543,102 +3577,7 @@ export default {
       }
     },
 
-    addConsonants(traj, phraseStart, g) {
-      if (traj.id !== 12) {
-        const keys = Object.keys(traj.articulations);
-        const relKeys = keys.filter(key => {
-          return traj.articulations[key].name === 'consonant'
-        });
-        const consonantData = relKeys.map(p => {
-          const normedX = Number(p) * traj.durTot;
-          const y = traj.compute(normedX, true);
-          return {
-            x: phraseStart + traj.startTime + normedX,
-            y: y,
-            text: traj.articulations[p].stroke
-          }
-        });
-        // const sym = d3Symbol().type(d3SymbolTriangle).size(20);
-        const x = d => this.xr()(d.x);
-        const y = d => this.yr()(d.y);
-        consonantData.forEach((cd, idx) => {
-          g.append('text')
-            .classed('articulation', true)
-            .classed('consonant', true)
-            .attr('id', `consonantp${traj.phraseIdx}t${traj.num}k${idx}`)
-            .attr('stroke', 'black')
-            .attr('font-size', '20px')
-            .attr('text-anchor', 'middle')
-            .data([cd])
-            .attr('transform', d => `translate(${x(d)}, ${y(d)})`)
-            .text(cd.text)
-        })
-      }
-    },
-
-    codifiedAddConsonants(traj, phraseStart, g) {
-      if (traj.id !== 12) {
-        const keys = Object.keys(traj.articulations);
-        const relKeys = keys.filter(key => {
-          return traj.articulations[key].name === 'consonant'
-        });
-        const consonantData = relKeys.map(p => {
-          const normedX = Number(p) * traj.durTot;
-          const y = traj.compute(normedX, true);
-          return {
-            x: phraseStart + traj.startTime + normedX,
-            y: y,
-            text: traj.articulations[p].stroke
-          }
-        });
-        // const sym = d3Symbol().type(d3SymbolTriangle).size(20);
-        const x = d => this.codifiedXR(d.x);
-        const y = d => this.codifiedYR(d.y);
-        consonantData.forEach((cd, idx) => {
-          g.append('text')
-            .classed('articulation', true)
-            .classed('consonant', true)
-            .attr('id', `consonantp${traj.phraseIdx}t${traj.num}k${idx}`)
-            .attr('stroke', 'black')
-            .attr('font-size', '20px')
-            .attr('text-anchor', 'middle')
-            .data([cd])
-            .attr('transform', d => `translate(${x(d)}, ${y(d)-8})`)
-            .text(cd.text)
-        })
-      }
-    },
-
-    codifiedAddTraj(traj, phraseStart) {
-      const data = this.makeTrajData(traj, phraseStart);
-      this.phraseG.append('path')
-        .datum(data)
-        .classed('phrase', true)
-        .attr('id', `p${traj.phraseIdx}t${traj.num}`)
-        .attr("fill", "none")
-        .attr("stroke", this.trajColor)
-        .attr("stroke-width", '3px')
-        .attr("stroke-linejoin", "round")
-        .attr("stroke-linecap", "round")
-        .attr('d', this.codifiedPhraseLine())
-      this.phraseG.append('path')
-        .datum(data)
-        .classed('phrase', true)
-        .attr('id', `overlay__p${traj.phraseIdx}t${traj.num}`)
-        .attr('fill', 'none')
-        .attr('stroke', 'green')
-        .attr('stroke-width', '6px')
-        .attr('d', this.codifiedPhraseLine())
-        .style('opacity', '0')
-        .style('cursor', 'pointer')
-        .on('mouseover', this.handleMouseOver)
-        .on('mouseout', this.handleMouseOut)
-        .on('click', this.handleClickTraj)
-      this.codifiedAddArticulations(traj, phraseStart)
-    },
-
     codifiedAddPlucks(traj, phraseStart, g) {
-      console.log('does this get called?')
       if (traj.id !== 12) {
         const keys = Object.keys(traj.articulations);
         const relKeys = keys.filter(key => {
@@ -3669,50 +3608,133 @@ export default {
       }
     },
 
-
-    movePlucks(traj) {
-      console.log('happening')
-      if (traj.articulations[0] && traj.articulations[0].name === 'pluck') {
-        const x = d => this.xr()(d.x);
-        const y = d => this.yr()(d.y); 
-        d3Select(`#pluckp${traj.phraseIdx}t${traj.num}`)
-          .transition()
-          .duration(this.transitionTime)
-          .attr('transform', d => `translate(${x(d)}, ${y(d)}) rotate(90)`)
-      }
-    },
-
-    moveConsonants(traj) {
+    addStartingConsonant(traj, phraseStart, g, codified=false) {
       if (traj.id !== 12) {
         const keys = Object.keys(traj.articulations);
         const relKeys = keys.filter(key => {
-          return traj.articulations[key].name === 'consonant'
+          const c1 = traj.articulations[key].name === 'consonant';
+          const c2 = key === '0.00';
+          return c1 && c2;
         });
-        const x = d => this.xr()(d.x);
-        const y = d => this.yr()(d.y);
-        relKeys.forEach((key, idx) => {
-          d3Select(`#consonantp${traj.phraseIdx}t${traj.num}k${idx}`)
-            .transition()
-            .duration(this.transitionTime)
+        if (relKeys[0] !== undefined) {
+          const key = relKeys[0];
+          const normedX = Number(key) * traj.durTot;
+          const y_ = traj.compute(Number(key), true);
+          const cd = {
+            x: phraseStart + traj.startTime + normedX,
+            y: y_,
+            text: traj.articulations[key].stroke
+          }
+          let x, y;
+          if (codified) {
+            x = d => this.codifiedXR(d.x);
+            y = d => this.codifiedYR(d.y);
+          } else {
+            x = d => this.xr()(d.x);
+            y = d => this.yr()(d.y);
+          }
+          g.append('text')
+            .classed('articulation', true)
+            .classed('consonant', true)
+            .attr('id', `startConsonantp${traj.phraseIdx}t${traj.num}`)
+            .attr('stroke', 'black')
+            .attr('font-size', '20px')
+            .attr('text-anchor', 'middle')
+            .data([cd])
             .attr('transform', d => `translate(${x(d)}, ${y(d)-8})`)
-        })
+            .text(cd.text)
+        }
       }
     },
 
-    codifiedMoveConsonants(traj) {
+    addEndingConsonant(traj, phraseStart, g, codified=false) {
       if (traj.id !== 12) {
         const keys = Object.keys(traj.articulations);
         const relKeys = keys.filter(key => {
-          return traj.articulations[key].name === 'consonant'
+          const c1 = traj.articulations[key].name === 'consonant';
+          const c2 = key === '1.00';
+          return c1 && c2;
         });
-        const x = d => this.codifiedXR()(d.x);
-        const y = d => this.codifiedYR()(d.y);
-        relKeys.forEach((key, idx) => {
-          d3Select(`#consonantp${traj.phraseIdx}t${traj.num}k${idx}`)
-            .transition()
-            .duration(this.transitionTime)
+        if (relKeys[0] !== undefined) {
+          const key = relKeys[0];
+          const normedX = Number(key) * traj.durTot;
+          const y_ = traj.compute(Number(key), true);
+          const cd = {
+            x: phraseStart + traj.startTime + normedX,
+            y: y_,
+            text: traj.articulations[key].stroke
+          }
+          let x, y;
+          if (codified) {
+            x = d => this.codifiedXR(d.x);
+            y = d => this.codifiedYR(d.y);
+          } else {
+            x = d => this.xr()(d.x);
+            y = d => this.yr()(d.y);
+          }
+          g.append('text')
+            .classed('articulation', true)
+            .classed('consonant', true)
+            .attr('id', `endConsonantp${traj.phraseIdx}t${traj.num}`)
+            .attr('stroke', 'black')
+            .attr('font-size', '20px')
+            .attr('text-anchor', 'middle')
+            .data([cd])
             .attr('transform', d => `translate(${x(d)}, ${y(d)-8})`)
-        })
+            .text(cd.text)
+        }
+      }
+    },
+
+    moveStartingConsonant(traj, phraseStart, codified=false) {
+      if (traj.id !== 12) {
+        const key = '0.00';
+        if (traj.articulations[key] !== undefined) {
+          const normedX = Number(key) * traj.durTot;
+          const y_ = traj.compute(Number(key), true);
+          const cd = {
+            x: phraseStart + traj.startTime + normedX,
+            y: y_,
+            text: traj.articulations[key].stroke
+          };
+          let x, y;
+          if (codified) {
+            x = d => this.codifiedXR(d.x);
+            y = d => this.codifiedYR(d.y);
+          } else {
+            x = d => this.xr()(d.x);
+            y = d => this.yr()(d.y);
+          }
+          d3Select(`#startConsonantp${traj.phraseIdx}t${traj.num}`)
+            .data([cd])
+            .attr('transform', d => `translate(${x(d)}, ${y(d)-8})`)
+        }
+      }
+    },
+
+    moveEndingConsonant(traj, phraseStart, codified=false) {
+      if (traj.id !== 12) {
+        const key = '1.00';
+        if (traj.articulations[key] !== undefined) {
+          const normedX = Number(key) * traj.durTot;
+          const y_ = traj.compute(Number(key), true);
+          const cd = {
+            x: phraseStart + traj.startTime + normedX,
+            y: y_,
+            text: traj.articulations[key].stroke
+          };
+          let x, y;
+          if (codified) {
+            x = d => this.codifiedXR(d.x);
+            y = d => this.codifiedYR(d.y);
+          } else {
+            x = d => this.xr()(d.x);
+            y = d => this.yr()(d.y);
+          }
+          d3Select(`#endConsonantp${traj.phraseIdx}t${traj.num}`)
+            .data([cd])
+            .attr('transform', d => `translate(${x(d)}, ${y(d)-8})`)
+        }
       }
     },
 
@@ -4599,6 +4621,34 @@ export default {
           .attr('stroke', this.selectedTrajColor)
       }
     },
+
+    codifiedAddTraj(traj, phraseStart) {
+      const data = this.makeTrajData(traj, phraseStart);
+      this.phraseG.append('path')
+        .datum(data)
+        .classed('phrase', true)
+        .attr('id', `p${traj.phraseIdx}t${traj.num}`)
+        .attr("fill", "none")
+        .attr("stroke", this.trajColor)
+        .attr("stroke-width", '3px')
+        .attr("stroke-linejoin", "round")
+        .attr("stroke-linecap", "round")
+        .attr('d', this.codifiedPhraseLine())
+      this.phraseG.append('path')
+        .datum(data)
+        .classed('phrase', true)
+        .attr('id', `overlay__p${traj.phraseIdx}t${traj.num}`)
+        .attr('fill', 'none')
+        .attr('stroke', 'green')
+        .attr('stroke-width', '6px')
+        .attr('d', this.codifiedPhraseLine())
+        .style('opacity', '0')
+        .style('cursor', 'pointer')
+        .on('mouseover', this.handleMouseOver)
+        .on('mouseout', this.handleMouseOut)
+        .on('click', this.handleClickTraj)
+      this.codifiedAddArticulations(traj, phraseStart)
+    },
     
     codifiedAddPhrases() {
       this.addSargamLines(true);
@@ -4644,11 +4694,23 @@ export default {
             this.redrawKrintin(traj, phrase.startTime);
             this.redrawSlide(traj, phrase.startTime);
             this.redrawDampener(traj, phrase.startTime);
-            this.moveConsonants(traj);
+            this.moveStartingConsonant(traj, phrase.startTime);
+            this.moveEndingConsonant(traj, phrase.startTime);
           }
         })
       });
       this.redrawChikaris();
+    },
+
+    movePlucks(traj) {
+      if (traj.articulations[0] && traj.articulations[0].name === 'pluck') {
+        const x = d => this.xr()(d.x);
+        const y = d => this.yr()(d.y); 
+        d3Select(`#pluckp${traj.phraseIdx}t${traj.num}`)
+          .transition()
+          .duration(this.transitionTime)
+          .attr('transform', d => `translate(${x(d)}, ${y(d)}) rotate(90)`)
+      }
     },
 
     addClipPaths() {
@@ -5007,7 +5069,8 @@ export default {
         this.codifiedRedrawKrintin(traj, phrase.startTime)
         this.codifiedRedrawSlide(traj, phrase.startTime)
         this.codifiedRedrawDampener(traj, phrase.startTime)
-        this.codifiedMoveConsonants(traj)
+        this.moveStartingConsonant(traj, phrase.startTime, true)
+        this.moveEndingConsonant(traj, phrase.startTime, true)
       })
     },
 
