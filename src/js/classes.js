@@ -302,6 +302,20 @@ class Trajectory {
     this.startConsonant = startConsonant;
     this.endConsonant = endConsonant;
 
+    if (this.startConsonant !== undefined) {
+      this.articulations['0.00'] = new Articulation({
+        name: 'consonant',
+        stroke: this.startConsonant
+      })
+    }
+
+    if (this.endConsonant !== undefined) {
+      this.articulations['1.00'] = new Articulation({
+        name: 'consonant',
+        stroke: this.endConsonant
+      })
+    }
+
     // adding proper articulations here, although it feels like it could be
     // done better. Gonna get tricky, because other stuff is done in the compute
     // in each id.]
@@ -579,6 +593,47 @@ class Trajectory {
       return 2 ** (out * extent / 2 + vertOffset + this.logFreqs[0])
     }
   }
+
+  removeConsonant(start=true) {
+    if (start) {
+      this.startConsonant = undefined;
+      const art = this.articulations['0.00'];
+      if (art && art.name === 'consonant') {
+        delete this.articulations['0.00'];
+      }
+    } else {
+      this.endConsonant = undefined;
+      const art = this.articulations['1.00'];
+      if (art && art.name === 'consonant') {
+        delete this.articulations['1.00'];
+      }
+    }
+  }
+
+  addConsonant(consonant, start=true) {
+    const art = new Articulation({
+      name: 'consonant',
+      stroke: consonant
+    });
+    if (start) {
+      this.startConsonant = consonant;
+      this.articulations['0.00'] = art;
+    } else {
+      this.endConsonant = consonant;
+      this.articulations['1.00'] = art;
+    }
+  }
+
+  changeConsonant(consonant, start=true) {
+    if (start) {
+      this.startConsonant = consonant;
+      this.articulations['0.00'].pluck = consonant;
+    } else {
+      this.endConsonant = consonant;
+      this.articulations['1.00'].pluck = consonant;
+    }
+  }
+
 
   toJSON() {
     return {

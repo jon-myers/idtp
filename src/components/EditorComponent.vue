@@ -275,12 +275,13 @@ export default {
       const times = this.trajTimePts.map(ttp => ttp.time);
       const durArray = times.slice(1).map((x, i) => (x - times[i]) / durTot);
       let articulations;
-      if (this.$refs.trajSelectPanel.pluckBool === false) {
+      const tsp = this.$refs.trajSelectPanel;
+      if (tsp.vocal || tsp.pluckBool === false) {
         articulations = {};
       } else {
-        articulations = { '0': new Articulation({ name: 'pluck' }) }
+        articulations = { '0.00': new Articulation({ name: 'pluck' }) }
       }
-      if (this.$refs.trajSelectPanel.dampen === true) {
+      if (!tsp.vocal && tsp.dampen === true) {
         // if (!articulations) articulations = {};
         articulations['1.00'] = new Articulation({ name: 'dampen' })
       }
@@ -289,7 +290,10 @@ export default {
         pitches: pitches,
         durTot: durTot,
         durArray: durArray,
-        articulations: articulations
+        articulations: articulations,
+        vowel: tsp.vowel,
+        startConsonant: tsp.startConsonant,
+        endConsonant: tsp.endConsonant,
       };
       const pIdx = this.trajTimePts[0].pIdx;
       const tIdx = this.trajTimePts[0].tIdx;
@@ -372,7 +376,6 @@ export default {
       d3SelectAll(`.newTrajDot`).remove();
       
       this.addAllDragDots();
-      const tsp = this.$refs.trajSelectPanel;
       const altId = this.selectedTraj.id >= 12 ? 
                     this.selectedTraj.id - 1: 
                     this.selectedTraj.id; 
@@ -457,11 +460,24 @@ export default {
     });
 
     this.emitter.on('startConsonant', startConsonant => {
-      this.selectedTraj.startConsonant = startConsonant
+      if (startConsonant === undefined) {
+        this.selectedTraj.removeConsonant()
+      } else if (this.selectedTraj.startConsonant === undefined) {
+        this.selectedTraj.addConsonant(startConsonant)
+      } else {
+        this.selectedTraj.changeConsonant(startConsonant)
+      }
     });
 
     this.emitter.on('endConsonant', endConsonant => {
-      this.selectedTraj.endConsonant = endConsonant
+      if (endConsonant === undefined) {
+        // false indicates that this is the end consonant
+        this.selectedTraj.removeConsonant(false)
+      } else if (this.selectedTraj.endConsonant === undefined) {
+        this.selectedTraj.addConsonant(endConsonant, false)
+      } else {
+        this.selectedTraj.changeConsonant(endConsonant, false)
+      }
     });
 
     try {
@@ -4087,7 +4103,9 @@ export default {
       tsp.selectedIdx = tsp.trajIdxs.indexOf(altId);
       tsp.parentSelected = true;
       tsp.slope = Math.log2(this.selectedTraj.slope);
-      if (this.selectedTraj.vowel) tsp.vowel = this.selectedTraj.vowel;
+      tsp.vowel = this.selectedTraj.vowel;
+      tsp.startConsonant = this.selectedTraj.startConsonant;
+      tsp.endConsonant = this.selectedTraj.endConsonant;
       const c1 = this.selectedTraj.articulations[0];
       const c2 = this.selectedTraj.articulations['1.00'];
       if (c1 && this.selectedTraj.articulations[0].name === 'pluck') {
@@ -4148,12 +4166,16 @@ export default {
     },
 
     clearTrajSelectPanel() {
-      this.$refs.trajSelectPanel.parentSelected = false;
-      this.$refs.trajSelectPanel.selectedIdx = undefined;
-      this.$refs.trajSelectPanel.showVibObj = false;
-      this.$refs.trajSelectPanel.showSlope = false;
-      this.$refs.trajSelectPanel.showTrajChecks = false;
-      this.$refs.trajSelectPanel.showPhraseRadio = false;
+      const tsp = this.$refs.trajSelectPanel;
+      tsp.parentSelected = false;
+      tsp.selectedIdx = undefined;
+      tsp.showVibObj = false;
+      tsp.showSlope = false;
+      tsp.showTrajChecks = false;
+      tsp.showPhraseRadio = false;
+      tsp.startConsonant = undefined;
+      tsp.endConsonant = undefined;
+      tsp.vowel = undefined;
     },
 
     redrawChikaris() {
