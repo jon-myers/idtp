@@ -2591,7 +2591,7 @@ export default {
         const dir = 'https://swara.studio/spectrograms/';
         const url = dir + this.piece.audioID + '/0/' + i + '.webp';
         const img = new Image();
-        img.src = url;
+        img.src = url + '?version=1';
         this.imgs.push(img)
       }
       this.loadedImgs = 0;
@@ -3492,6 +3492,7 @@ export default {
       this.addKrintin(traj, phraseStart, g)
       this.addSlide(traj, phraseStart, g)
       this.addDampener(traj, phraseStart, g)
+      this.addConsonants(traj, phraseStart, g)
     },
 
     codifiedAddArticulations(traj, phraseStart) {
@@ -3501,6 +3502,7 @@ export default {
       this.codifiedAddKrintin(traj, phraseStart, g);
       this.codifiedAddSlide(traj, phraseStart, g);
       this.codifiedAddDampener(traj, phraseStart, g);
+      this.codifiedAddConsonants(traj, phraseStart, g);
 
     },
 
@@ -3541,6 +3543,72 @@ export default {
       }
     },
 
+    addConsonants(traj, phraseStart, g) {
+      if (traj.id !== 12) {
+        const keys = Object.keys(traj.articulations);
+        const relKeys = keys.filter(key => {
+          return traj.articulations[key].name === 'consonant'
+        });
+        const consonantData = relKeys.map(p => {
+          const normedX = Number(p) * traj.durTot;
+          const y = traj.compute(normedX, true);
+          return {
+            x: phraseStart + traj.startTime + normedX,
+            y: y,
+            text: traj.articulations[p].stroke
+          }
+        });
+        // const sym = d3Symbol().type(d3SymbolTriangle).size(20);
+        const x = d => this.xr()(d.x);
+        const y = d => this.yr()(d.y);
+        consonantData.forEach((cd, idx) => {
+          g.append('text')
+            .classed('articulation', true)
+            .classed('consonant', true)
+            .attr('id', `consonantp${traj.phraseIdx}t${traj.num}k${idx}`)
+            .attr('stroke', 'black')
+            .attr('font-size', '20px')
+            .attr('text-anchor', 'middle')
+            .data([cd])
+            .attr('transform', d => `translate(${x(d)}, ${y(d)})`)
+            .text(cd.text)
+        })
+      }
+    },
+
+    codifiedAddConsonants(traj, phraseStart, g) {
+      if (traj.id !== 12) {
+        const keys = Object.keys(traj.articulations);
+        const relKeys = keys.filter(key => {
+          return traj.articulations[key].name === 'consonant'
+        });
+        const consonantData = relKeys.map(p => {
+          const normedX = Number(p) * traj.durTot;
+          const y = traj.compute(normedX, true);
+          return {
+            x: phraseStart + traj.startTime + normedX,
+            y: y,
+            text: traj.articulations[p].stroke
+          }
+        });
+        // const sym = d3Symbol().type(d3SymbolTriangle).size(20);
+        const x = d => this.codifiedXR(d.x);
+        const y = d => this.codifiedYR(d.y);
+        consonantData.forEach((cd, idx) => {
+          g.append('text')
+            .classed('articulation', true)
+            .classed('consonant', true)
+            .attr('id', `consonantp${traj.phraseIdx}t${traj.num}k${idx}`)
+            .attr('stroke', 'black')
+            .attr('font-size', '20px')
+            .attr('text-anchor', 'middle')
+            .data([cd])
+            .attr('transform', d => `translate(${x(d)}, ${y(d)-8})`)
+            .text(cd.text)
+        })
+      }
+    },
+
     codifiedAddTraj(traj, phraseStart) {
       const data = this.makeTrajData(traj, phraseStart);
       this.phraseG.append('path')
@@ -3570,6 +3638,7 @@ export default {
     },
 
     codifiedAddPlucks(traj, phraseStart, g) {
+      console.log('does this get called?')
       if (traj.id !== 12) {
         const keys = Object.keys(traj.articulations);
         const relKeys = keys.filter(key => {
@@ -3600,7 +3669,9 @@ export default {
       }
     },
 
+
     movePlucks(traj) {
+      console.log('happening')
       if (traj.articulations[0] && traj.articulations[0].name === 'pluck') {
         const x = d => this.xr()(d.x);
         const y = d => this.yr()(d.y); 
@@ -3608,6 +3679,40 @@ export default {
           .transition()
           .duration(this.transitionTime)
           .attr('transform', d => `translate(${x(d)}, ${y(d)}) rotate(90)`)
+      }
+    },
+
+    moveConsonants(traj) {
+      if (traj.id !== 12) {
+        const keys = Object.keys(traj.articulations);
+        const relKeys = keys.filter(key => {
+          return traj.articulations[key].name === 'consonant'
+        });
+        const x = d => this.xr()(d.x);
+        const y = d => this.yr()(d.y);
+        relKeys.forEach((key, idx) => {
+          d3Select(`#consonantp${traj.phraseIdx}t${traj.num}k${idx}`)
+            .transition()
+            .duration(this.transitionTime)
+            .attr('transform', d => `translate(${x(d)}, ${y(d)-8})`)
+        })
+      }
+    },
+
+    codifiedMoveConsonants(traj) {
+      if (traj.id !== 12) {
+        const keys = Object.keys(traj.articulations);
+        const relKeys = keys.filter(key => {
+          return traj.articulations[key].name === 'consonant'
+        });
+        const x = d => this.codifiedXR()(d.x);
+        const y = d => this.codifiedYR()(d.y);
+        relKeys.forEach((key, idx) => {
+          d3Select(`#consonantp${traj.phraseIdx}t${traj.num}k${idx}`)
+            .transition()
+            .duration(this.transitionTime)
+            .attr('transform', d => `translate(${x(d)}, ${y(d)-8})`)
+        })
       }
     },
 
@@ -4539,6 +4644,7 @@ export default {
             this.redrawKrintin(traj, phrase.startTime);
             this.redrawSlide(traj, phrase.startTime);
             this.redrawDampener(traj, phrase.startTime);
+            this.moveConsonants(traj);
           }
         })
       });
@@ -4901,6 +5007,7 @@ export default {
         this.codifiedRedrawKrintin(traj, phrase.startTime)
         this.codifiedRedrawSlide(traj, phrase.startTime)
         this.codifiedRedrawDampener(traj, phrase.startTime)
+        this.codifiedMoveConsonants(traj)
       })
     },
 

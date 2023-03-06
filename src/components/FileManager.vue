@@ -99,7 +99,7 @@
       <select v-model='editingPermissions'>
         <option value='Private'>Private</option>
         <option value='Public'>Public</option>
-        <option value='Publically Editable'>Publically Editable</option>
+        <option value='Publicly Editable'>Publicly Editable</option>
       </select>
     </div>
     <div class='modalRow'>
