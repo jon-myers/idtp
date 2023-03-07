@@ -472,7 +472,7 @@ export default {
       const phrase = this.piece.phrases[pIdx];
       const g = d3Select(`#articulations__p${pIdx}t${tIdx}`);
       const selected = d3Select(`#startConsonantp${pIdx}t${tIdx}`);
-      if (selected.node()[0] === null) {
+      if (selected.node() === null) {
         this.addStartingConsonant(this.selectedTraj, phrase.startTime, g)
       } else if (this.selectedTraj.startConsonant === undefined) {
         selected.remove();
@@ -496,7 +496,7 @@ export default {
       const phrase = this.piece.phrases[pIdx];
       const g = d3Select(`#articulations__p${pIdx}t${tIdx}`);
       const selected = d3Select(`#endConsonantp${pIdx}t${tIdx}`);
-      if (selected.node()[0] === null) {
+      if (selected.node() === null) {
         this.addEndingConsonant(this.selectedTraj, phrase.startTime, g)
       } else if (this.selectedTraj.endConsonant === undefined) {
         selected.remove();
@@ -3638,7 +3638,7 @@ export default {
             .classed('consonant', true)
             .attr('id', `startConsonantp${traj.phraseIdx}t${traj.num}`)
             .attr('stroke', 'black')
-            .attr('font-size', '20px')
+            .attr('font-size', '15px')
             .attr('text-anchor', 'middle')
             .data([cd])
             .attr('transform', d => `translate(${x(d)}, ${y(d)-8})`)
@@ -3677,7 +3677,7 @@ export default {
             .classed('consonant', true)
             .attr('id', `endConsonantp${traj.phraseIdx}t${traj.num}`)
             .attr('stroke', 'black')
-            .attr('font-size', '20px')
+            .attr('font-size', '15px')
             .attr('text-anchor', 'middle')
             .data([cd])
             .attr('transform', d => `translate(${x(d)}, ${y(d)-8})`)

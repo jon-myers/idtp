@@ -41,7 +41,7 @@
         @change='updateStartConsonant'
         >
         <option 
-          v-for='(consonant, idx) in cIpa' 
+          v-for='(consonant, idx) in cIso_15919' 
           :key='consonant' 
           :value='consonant'
           v-html='consonantList[idx]'>
@@ -53,7 +53,7 @@
         disabled='disabled'
         >
         <option 
-          v-for='(consonant, idx) in cIpa' 
+          v-for='(consonant, idx) in cIso_15919' 
           :key='consonant' 
           :value='consonant'
           v-html='consonantList[idx]'>
@@ -68,7 +68,7 @@
         @change='updateVowel' 
         class='vowelSelect'>
         <option 
-        v-for='(vowel, idx) in ipaVowels' 
+        v-for='(vowel, idx) in iso_15919' 
         :key='vowel' 
         :value='vowel'
         v-html='vowelList[idx]'>
@@ -81,7 +81,7 @@
         class='vowelSelect'
         disabled='disabled'>
         <option 
-          v-for='(vowel, idx) in ipaVowels' 
+          v-for='(vowel, idx) in iso_15919' 
           :key='vowel' 
           :value='vowel'
           v-html='vowelList[idx]'
@@ -101,7 +101,7 @@
         @change='updateEndConsonant'
         >
         <option 
-          v-for='(consonant, idx) in cIpa' 
+          v-for='(consonant, idx) in cIso_15919' 
           :key='consonant' 
           :value='consonant'
           v-html='consonantList[idx]'>
@@ -113,7 +113,7 @@
         disabled='disabled'
         >
         <option 
-          v-for='(consonant, idx) in cIpa' 
+          v-for='(consonant, idx) in cIso_15919' 
           :key='consonant' 
           :value='consonant'
           v-html='consonantList[idx]'>
@@ -339,8 +339,8 @@ export default {
 
     const consonantResults = await getConsonants();
     this.cIpa = consonantResults.map(v => v.ipa);
-    this.cIpa.push(undefined)
     this.cIso_15919 = consonantResults.map(v => v.iso_15919);
+    
     this.cExample = consonantResults.map(v => v.example);
     this.hindiConsonants = consonantResults.map(v => v.hindi);
 
@@ -350,6 +350,8 @@ export default {
 
     // add 'none' to end of consonantlist
     this.consonantList.push('none');
+
+    this.cIso_15919.push(undefined)
 
 
   },
@@ -404,6 +406,7 @@ export default {
         idx = Number(e)
       }
       const selectId = '#id' + idx;
+      console.log(selectId)
       let realIdx = this.trajIdxs[idx];
       if (realIdx >= 12) {
         realIdx += 1;
@@ -470,6 +473,7 @@ export default {
           if (timePts[0].logFreq === timePts[1].logFreq) options.push(0, 13)
           if (options.includes(realIdx)) {
             this.selectedIdx = idx;
+
             document.querySelector(selectId).classList.add('selected')
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
