@@ -576,9 +576,9 @@ export default {
       const vox = ['Vocal (M)', 'Vocal (F)'];
       tsp.vocal = vox.includes(this.piece.instrumentation[0]);
       // GETBACK
-      if (this.audioDBDoc) {
-        this.$refs.audioPlayer.initAll();
-      }
+      // if (this.audioDBDoc) {
+      //   this.$refs.audioPlayer.initAll();
+      // }
     
       // end GETBACK
       const silentDur = this.durTot - piece.durTot;
@@ -2293,6 +2293,9 @@ export default {
       };
       if (this.piece.instrumentation) {
         ntObj.instrumentation = this.piece.instrumentation[0];
+        if (['Vocal (M)', 'Vocal (F)'].includes(ntObj.instrumentation)) {
+          ntObj.articulations = {}
+        }
       }
       const newTraj = new Trajectory(ntObj);
       const times = this.trajTimePts.map(t => t.time);
