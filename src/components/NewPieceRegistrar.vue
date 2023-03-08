@@ -32,9 +32,8 @@
         </div>
       </div>
       <div class="formRow">
-        <label>Raga
-          <input type='checkbox' v-model='showRaagEditor'>
-        </label>
+        <label class='ragaLabel'>Raga</label>
+        <input class='ragaCheck' type='checkbox' v-model='showRaagEditor'>
         <select v-model='raga' ref='raga'>
           <option v-for='raag in raags' :key='raag'>
             {{raag}}
@@ -46,6 +45,14 @@
         <select v-model='permissions'>
           <option v-for='pType in permissionTypes' :key='pType'>
             {{pType}}
+          </option>
+        </select>
+      </div>
+      <div class='formRow'>
+        <label>Instrumentation</label>
+        <select v-model='instrumentation[0]'>
+          <option v-for='inst in instruments' :key='inst'>
+            {{inst}}
           </option>
         </select>
       </div>
@@ -159,7 +166,9 @@ import {
   getAllAudioEventMetadata, 
   getRagaNames, 
   getRaagRule, 
-  saveRaagRules 
+  saveRaagRules,
+  getInstruments,
+  getInstrumentation
 } from '@/js/serverCalls.js';
 import RaagEditor from '@/components/RaagEditor.vue';
 export default {
@@ -208,6 +217,8 @@ export default {
           raised: false
         }
       },
+      instrumentation: ['Sitar'],
+      instruments: undefined
     }
   },
   
@@ -231,7 +242,8 @@ export default {
       const parsed = JSON.parse(this.$route.query.afName);
       this.recording = allRecNames.indexOf(parsed);
       this.raga = Object.keys(recs[this.recording].raags)[0]
-     }
+    }
+    this.instruments = await getInstruments();
   },
   
   watch: {
@@ -239,7 +251,7 @@ export default {
       this.recording = undefined
     },
     
-    recording(newVal) {
+    async recording(newVal) {
       if (newVal) {
         const ae = this.allEvents[this.aeIdx];
         const raags = ae.recordings[newVal].raags;
@@ -249,7 +261,8 @@ export default {
         } else if (keys.length > 1) {
           this.raga = keys.filter(key => raags[key].start === 0)[0]
         }
-        
+        const audioID = ae.recordings[newVal].audioFileId;
+        this.instrumentation = await getInstrumentation(audioID)
       }
     },
     
@@ -312,7 +325,7 @@ export default {
       }
     },
     
-    makeNewPiece() {
+    async makeNewPiece() {
       if (this.cloning) {
         const ae = this.allEvents[this.aeIdx];
         const newPieceInfo = {
@@ -332,11 +345,12 @@ export default {
           transcriber: this.transcriber,
           raga: this.raga,
           permissions: this.permissions,
-          clone: false
+          clone: false,
+          instrumentation: this.instrumentation
         };
         if (this.aeIdx && this.recording !== undefined) {
           const ae = this.allEvents[this.aeIdx];
-          newPieceInfo.audioID = ae.recordings[this.recording].audioFileId
+          newPieceInfo.audioID = ae.recordings[this.recording].audioFileId;
         }
         this.emitter.emit('newPieceInfo', newPieceInfo);
         this.$parent.designPieceModal = false
@@ -384,11 +398,25 @@ export default {
 label {
   /* padding-left: 20px;
   padding-right: 20px; */
-  width: 100px;
+  width: 120px;
   display: flex;
   flex-direction: row;
-  justify-content: left;
-  padding-left: 20px;
+  justify-content: right;
+  padding-right: 10px;
+}
+
+.ragaLabel {
+  width: 95px;
+  max-width: 95px;
+  padding-right: 0px;
+  margin-right: 5px;
+}
+
+.ragaCheck {
+  width: 20px;
+  max-width: 20px;
+  margin: 0px;
+  margin-right: 10px;
 }
 
 .formRow input {

@@ -1,7 +1,7 @@
 <template>
 <div class='main'>
-  <div class='selectionPanel'>
-    <div class='selectionRow checks' v-if='showTrajChecks'>
+  <div :class='`selectionPanel ${["", "vocal"][Number(vocal)]}`'>
+    <div class='selectionRow checks' v-if='!vowel && showTrajChecks'>
       <label>Pluck</label>
       <input 
         v-if='editable' 
@@ -17,7 +17,7 @@
         disabled='disabled'
       />
     </div>
-    <div class='selectionRow checks' v-if='showTrajChecks'>
+    <div class='selectionRow checks' v-if='!vocal && showTrajChecks'>
       <label class='spaceLeft'>Dampen</label>
       <input 
         v-if='editable' 
@@ -32,6 +32,93 @@
         @change='updateDampen'
         disabled='disabled'
       />
+    </div>
+    <div class='selectionRow checks' v-if='vocal && showTrajChecks'>
+      <label class='spaceLeft wide'>Start</label>
+      <select 
+        v-if='editable' 
+        v-model='startConsonant' 
+        @change='updateStartConsonant'
+        >
+        <option 
+          v-for='(consonant, idx) in cIso_15919' 
+          :key='consonant' 
+          :value='consonant'
+          v-html='consonantList[idx]'>
+        </option>
+      </select>
+        <select 
+        v-if='!editable' 
+        v-model='startConsonant' 
+        disabled='disabled'
+        >
+        <option 
+          v-for='(consonant, idx) in cIso_15919' 
+          :key='consonant' 
+          :value='consonant'
+          v-html='consonantList[idx]'>
+        </option>
+    </select>
+    </div>
+    <div class='selectionRow checks' v-if='vocal && showTrajChecks'>
+      <label class='spaceLeft'>Vowel</label>
+      <select
+        v-if='editable'
+        v-model='vowel' 
+        @change='updateVowel' 
+        class='vowelSelect'>
+        <option 
+        v-for='(vowel, idx) in iso_15919' 
+        :key='vowel' 
+        :value='vowel'
+        v-html='vowelList[idx]'>
+        </option>
+      </select>
+      <select
+        v-if='!editable'
+        v-model='vowel' 
+        @change='updateVowel' 
+        class='vowelSelect'
+        disabled='disabled'>
+        <option 
+          v-for='(vowel, idx) in iso_15919' 
+          :key='vowel' 
+          :value='vowel'
+          v-html='vowelList[idx]'
+          >
+        </option>
+          <!-- {{ hindiVowels[idx] + '  -  ' + iso_15919[idx] + '  ('}}
+            <span v-html='englishWords[idx]'></span>
+          {{ ')' }}  -->
+        <!-- </option> -->
+      </select>
+    </div>
+    <div class='selectionRow checks' v-if='vocal && showTrajChecks'>
+      <label class='spaceLeft wide'>End</label>
+      <select 
+        v-if='editable' 
+        v-model='endConsonant' 
+        @change='updateEndConsonant'
+        >
+        <option 
+          v-for='(consonant, idx) in cIso_15919' 
+          :key='consonant' 
+          :value='consonant'
+          v-html='consonantList[idx]'>
+        </option>
+      </select>
+        <select 
+        v-if='!editable' 
+        v-model='endConsonant' 
+        disabled='disabled'
+        >
+        <option 
+          v-for='(consonant, idx) in cIso_15919' 
+          :key='consonant' 
+          :value='consonant'
+          v-html='consonantList[idx]'>
+        </option>
+    </select>
     </div>
     <div class='radioGroup' v-if='showPhraseRadio'>
       <div class='selectionRow'>
@@ -156,20 +243,20 @@
       />
     </div>
   </div>
-  <div class='thumbRow' v-for='odx in 4' :key='odx'>
+  <div class='thumbRow' v-for='odx in Math.ceil(urlsFiltered.length/4)' :key='odx'>
     <div :class='["imgContainer", idx === 4 ? "right" : ""]' v-for='idx in 4' >
       <img
-        v-if='urls[4 * (odx-1) + (idx-1)] !== undefined'
+        v-if='urlsFiltered[4 * (odx-1) + (idx-1)] !== undefined'
         :class='["thumb", idx === 4 ? "right" : "" ]' 
-        :src="urls[4 * (odx-1) + (idx-1)]" 
+        :src="urlsFiltered[4 * (odx-1) + (idx-1)]" 
         :key='idx' 
         :id='"id" + ((idx-1) + 4 *(odx-1))' 
         @click='selectIcon'>
       <div 
         class='keyNum'
-        v-if='urls[4 * (odx-1) + (idx-1)] !== undefined'
+        v-if='urlsFiltered[4 * (odx-1) + (idx-1)] !== undefined'
         
-        >{{ keyNums[4 * (odx-1) + (idx-1)] }}</div>
+        >{{ keyNumsFiltered[4 * (odx-1) + (idx-1)] }}</div>
     </div>
   </div>
 </div>
@@ -189,8 +276,7 @@ import t11 from '@/assets/thumbnails/11.png';
 import t12 from '@/assets/thumbnails/12.png';
 import t13 from '@/assets/thumbnails/13.png';
 import { select as d3Select } from 'd3';
-// import { Articulation } from '@/js/classes.js';
-
+import { getIpaVowels, getConsonants } from '@/js/serverCalls.js';
 export default {
   name: 'TrajSelectPanel',
 
@@ -213,7 +299,23 @@ export default {
       dampen: false,
       showTrajChecks: false,
       showPhraseRadio: false,
-      phraseDivType: undefined
+      phraseDivType: undefined,
+      trajIdxs: [],
+      urlsFiltered: [],
+      keyNumsFiltered: [],
+      vocal: false,
+      vowel: undefined,
+      ipaVowels: ['a', 'b', 'c'],
+      englishWords: [],
+      hindiVowels: [],
+      iso_15919: [],
+      cIpa: [],
+      cExample: [],
+      cIso_15919: [],
+      hindi_consonants: [],
+      consonantList: [],
+      startConsonant: undefined,
+      endConsonant: undefined,
     }
   },
   
@@ -223,7 +325,34 @@ export default {
   ],
 
 
-  mounted() {
+  async mounted() {
+    // const piece = this.$parent.piece;
+    // this.urlIdxs = piece.possibleTrajs[piece.instrumentation[0]]
+    const result = await getIpaVowels();
+    this.ipaVowels = result.map(v => v.ipa);
+    this.iso_15919 = result.map(v => v.iso_15919);
+    this.englishWords = result.map(v => v.english);
+    this.hindiVowels = result.map(v => v.hindi.initial);
+    this.vowelList = result.map(v => {
+      return `${v.hindi.initial} - ${v.iso_15919} (${v.english})`
+    })
+
+    const consonantResults = await getConsonants();
+    this.cIpa = consonantResults.map(v => v.ipa);
+    this.cIso_15919 = consonantResults.map(v => v.iso_15919);
+    
+    this.cExample = consonantResults.map(v => v.example);
+    this.hindiConsonants = consonantResults.map(v => v.hindi);
+
+    this.consonantList = this.cIso_15919.map((iso, idx) => {
+      return `${this.hindiConsonants[idx]} - ${iso} (${this.cExample[idx]})`
+    })
+
+    // add 'none' to end of consonantlist
+    this.consonantList.push('none');
+
+    this.cIso_15919.push(undefined)
+
 
   },
   
@@ -233,14 +362,11 @@ export default {
         t.classList.remove('selected')
       })
       if (newVal !== undefined) {
-        if (newVal >= 12) {
-          newVal -= 1;
-        }
         const el = document.querySelector(`#id${newVal}`)
         el.classList.add('selected')
         const slopeIdxs = [2, 3, 4, 5]
-        this.showSlope = slopeIdxs.includes(this.selectedIdx);
-        this.showVibObj = this.selectedIdx === 13;
+        this.showSlope = slopeIdxs.includes(this.trajIdxs[this.selectedIdx]);
+        this.showVibObj = this.trajIdxs[this.selectedIdx] === 12;
       }
     },
 
@@ -262,6 +388,11 @@ export default {
             .attr('stroke-width', '3px')
         }
       }
+    },
+
+    trajIdxs(newVal) {
+      this.urlsFiltered = newVal.map(idx => this.urls[idx]);
+      this.keyNumsFiltered = newVal.map(idx => this.keyNums[idx]);
     }
   },
 
@@ -275,53 +406,63 @@ export default {
         idx = Number(e)
       }
       const selectId = '#id' + idx;
-      if (idx >= 12) {
-        idx += 1;
+      console.log(selectId)
+      let realIdx = this.trajIdxs[idx];
+      if (realIdx >= 12) {
+        realIdx += 1;
+      }
+      let realSelectedIdx = this.trajIdxs[this.selectedIdx];
+      if (realSelectedIdx >= 12) {
+        realSelectedIdx += 1;
       }
       if (this.parentSelected && this.editable) {
         const fixed = [0, 13];
         const twos = [1, 2, 3];
         const threes = [4, 5, 6];
-        if (twos.includes(this.selectedIdx)) {
-          if (idx !== this.selectedIdx && twos.includes(idx)) {
+        if (twos.includes(this.trajIdxs[this.selectedIdx])) {
+          if (realIdx !== this.trajIdxs[this.selectedIdx] && twos.includes(realIdx)) {
             this.selectedIdx = idx;
-            this.emitter.emit('mutateTraj', this.selectedIdx);
+            let outIdx = this.trajIdxs[this.selectedIdx];
+            if (outIdx >= 12) outIdx += 1;
+            this.emitter.emit('mutateTraj', outIdx);
             document.querySelectorAll('.thumb').forEach(t => {
               t.classList.remove('selected')
             })
             document.querySelector(selectId).classList.add('selected')
-            // e.target.classList.add('selected');
           }
-        } else if (threes.includes(this.selectedIdx)) {
-          if (idx !== this.selectedIdx && threes.includes(idx)) {
-            if (this.selectedIdx === 6) {
+        } else if (threes.includes(this.trajIdxs[this.selectedIdx])) {
+          if (realIdx !== this.trajIdxs[this.selectedIdx] && threes.includes(realIdx)) {
+            if (this.trajIdxs[this.selectedIdx] === 6) {
               if (this.$parent.selectedTraj.durArray.length === 2) {
                 this.selectedIdx = idx;
-                this.emitter.emit('mutateTraj', this.selectedIdx);
+                let outIdx = this.trajIdxs[this.selectedIdx];
+                if (outIdx >= 12) outIdx += 1;
+                this.emitter.emit('mutateTraj', outIdx);
                 document.querySelectorAll('.thumb').forEach(t => {
                   t.classList.remove('selected')
                 })
-                // e.target.classList.add('selected');
                 document.querySelector(selectId).classList.add('selected')
               }
             } else {
               this.selectedIdx = idx;
-              this.emitter.emit('mutateTraj', this.selectedIdx);
+              let outIdx = this.trajIdxs[this.selectedIdx];
+              if (outIdx >= 12) outIdx += 1;
+              this.emitter.emit('mutateTraj', outIdx);
               document.querySelectorAll('.thumb').forEach(t => {
                 t.classList.remove('selected')
               })
-              // e.target.classList.add('selected');
               document.querySelector(selectId).classList.add('selected')
             }
           }
-        } else if (fixed.includes(this.selectedIdx)) {
-          if (idx !== this.selectedIdx && fixed.includes(idx)) {
+        } else if (fixed.includes(realSelectedIdx)) {
+          if (realIdx !== this.trajIdxs[this.selectedIdx] && fixed.includes(realIdx)) {
             this.selectedIdx = idx;
-            this.emitter.emit('mutateTraj', this.selectedIdx);
+            let outIdx = this.trajIdxs[this.selectedIdx];
+            if (outIdx >= 12) outIdx += 1;
+            this.emitter.emit('mutateTraj', outIdx);
             document.querySelectorAll('.thumb').forEach(t => {
               t.classList.remove('selected')
             })
-            // e.target.classList.add('selected');
             document.querySelector(selectId).classList.add('selected')
           }
         }
@@ -330,11 +471,13 @@ export default {
         if (timePts.length === 2) {
           const options = [1, 2, 3];
           if (timePts[0].logFreq === timePts[1].logFreq) options.push(0, 13)
-          if (options.includes(idx)) {
+          if (options.includes(realIdx)) {
             this.selectedIdx = idx;
-            // e.target.classList.add('selected');
+
             document.querySelector(selectId).classList.add('selected')
-            this.emitter.emit('newTraj', this.selectedIdx);
+            let outIdx = this.trajIdxs[this.selectedIdx];
+            if (outIdx >= 12) outIdx += 1;
+            this.emitter.emit('newTraj', outIdx);
           }
         } else if (timePts.length === 3) {
           const options = [4, 5, 6];
@@ -344,11 +487,12 @@ export default {
           if (lfDiffs[0] < 0 && lfDiffs[1] === 0) options.push(7)
           if (lfDiffs[0] > 0 && lfDiffs[1] === 0) options.push(7)
           if (lfDiffs[1] === 0) options.push(11)
-          if (options.includes(idx)) {
+          if (options.includes(realIdx)) {
             this.selectedIdx = idx;
-            // e.target.classList.add('selected');
             document.querySelector(selectId).classList.add('selected')
-            this.emitter.emit('newTraj', this.selectedIdx);
+            let outIdx = this.trajIdxs[this.selectedIdx];
+            if (outIdx >= 12) outIdx += 1;
+            this.emitter.emit('newTraj', outIdx);
           }
         } else if (timePts.length === 4) {
           const options = [6];
@@ -357,11 +501,12 @@ export default {
           const lfDiffs = logFreqs.slice(1).map((x, i) => x - logFreqs[i]);
           const c = lfDiffs[0] < 0 && lfDiffs[1] < 0 && lfDiffs[2] === 0
           if (c) options.push(8)
-          if (options.includes(idx)) {
+          if (options.includes(realIdx)) {
             this.selectedIdx = idx;
-            // e.target.classList.add('selected');
             document.querySelector(selectId).classList.add('selected')
-            this.emitter.emit('newTraj', this.selectedIdx);
+            let outIdx = this.trajIdxs[this.selectedIdx];
+            if (outIdx >= 12) outIdx += 1;
+            this.emitter.emit('newTraj', outIdx);
           }
         } else if (timePts.length === 5) {
           const options = [6];
@@ -370,19 +515,21 @@ export default {
           const lDif = logFreqs.slice(1).map((x, i) => x - logFreqs[i]);
           const c = lDif[0] < 0 && lDif[1] < 0 && lDif[2] > 0 && lDif[3] === 0;
           if (c) options.push(9);
-          if (options.includes(idx)) {
+          if (options.includes(realIdx)) {
             this.selectedIdx = idx;
-            // e.target.classList.add('selected');
             document.querySelector(selectId).classList.add('selected')
-            this.emitter.emit('newTraj', this.selectedIdx);
+            let outIdx = this.trajIdxs[this.selectedIdx];
+            if (outIdx >= 12) outIdx += 1;
+            this.emitter.emit('newTraj', outIdx);
           }
         } else if (timePts.length === 6) {
           const options = [6];
-          if (options.includes(idx)) {
+          if (options.includes(realIdx)) {
             this.selectedIdx = idx;
-            // e.target.classList.add('selected');
             document.querySelector(selectId).classList.add('selected')
-            this.emitter.emit('newTraj', this.selectedIdx);
+            let outIdx = this.trajIdxs[this.selectedIdx];
+            if (outIdx >= 12) outIdx += 1;
+            this.emitter.emit('newTraj', outIdx);
           }
         } else if (timePts.length === 7) {
           const options = [6];
@@ -400,18 +547,18 @@ export default {
           if (c.every(a => a)) {
             options.push(10)
           }
-          if (options.includes(idx)) {
+          if (options.includes(realIdx)) {
             this.selectedIdx = idx;
-            // e.target.classList.add('selected');
             document.querySelector(selectId).classList.add('selected')
-            this.emitter.emit('newTraj', this.selectedIdx);
+            let outIdx = this.trajIdxs[this.selectedIdx];
+            if (outIdx >= 12) outIdx += 1;
+            this.emitter.emit('newTraj', outIdx);
           }
         }
       } 
     },
     
     updateSlope() {
-      
       this.$parent.alterSlope((2 ** this.slope))
     },
     
@@ -424,6 +571,24 @@ export default {
     updateDampen() {
       if (this.parentSelected) {
         this.emitter.emit('dampen', this.dampen)
+      }
+    },
+
+    updateVowel() {
+      if (this.parentSelected) {
+        this.emitter.emit('vowel', this.vowel)
+      }
+    },
+
+    updateStartConsonant() {
+      if (this.parentSelected) {
+        this.emitter.emit('startConsonant', this.startConsonant)
+      }
+    },
+
+    updateEndConsonant() {
+      if (this.parentSelected) {
+        this.emitter.emit('endConsonant', this.endConsonant)
       }
     },
 
@@ -451,6 +616,11 @@ export default {
   align-items: center;
   justify-content: top;
 }
+
+.selectionPanel.vocal {
+  height: v-bind(170 + ctrlBoxWidth/2 + 'px');
+}
+
 
 .imgContainer {
   width: v-bind((ctrlBoxWidth - 3) / 4 + 'px');
@@ -493,6 +663,10 @@ label {
   display: inline-block;
   width: 60px;
   text-align: right;
+}
+
+label.wide {
+  width: 150px;
 }
 
 .slider {
@@ -545,5 +719,9 @@ label {
   height: 15px;
   text-align: center;
   font-size: 13px;
+}
+
+.selectionRow select {
+  width: 120px;
 }
 </style>

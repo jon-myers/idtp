@@ -20,7 +20,11 @@ xlcs_out_path = sys.argv[3]
 
 phrases = data['phrases']
 for phrase in phrases:
-    for trajectory in phrase['trajectories']:
+    if 'trajectories' in phrase:
+        trajectories = phrase['trajectories']
+    else:
+        trajectories = phrase['trajectoryGrid'][0]
+    for trajectory in trajectories:
         for pitch in trajectory['pitches']:
             pitch.pop('ratios', None)
 
@@ -69,7 +73,11 @@ def add_phrase(phrase, vstart, idx):
     add_traj_headers(vstart)
     art_start = vstart+3
     clen = len(phrase['chikaris'].keys())
-    for tIdx, traj in enumerate(phrase['trajectories']):
+    if 'trajectories' in phrase:
+        trajectories = phrase['trajectories']
+    else:
+        trajectories = phrase['trajectoryGrid'][0]
+    for tIdx, traj in enumerate(trajectories):
         # start with articulations and pitches, whatever the max of thaose are, 
         # that is the merge height for this traj
         arts = traj['articulations']
@@ -84,7 +92,7 @@ def add_phrase(phrase, vstart, idx):
         artKeys = arts.keys()
         if traj['id'] != 12:
             if len(artKeys) == 0:
-                if tIdx == len(phrase['trajectories']) - 1:
+                if tIdx == len(trajectories) - 1:
                     format = entryFormatEnd
                 else:
                     format = entryFormat
@@ -92,7 +100,7 @@ def add_phrase(phrase, vstart, idx):
                 worksheet.merge_range(art_start, 9, art_start + pitch_tot - 1, 11, '', format)
             else:
                 for aIdx, artKey in enumerate(artKeys):
-                    if tIdx == len(phrase['trajectories']) - 1 and aIdx == len(artKeys) - 1 and art_tot >= pitch_tot:
+                    if tIdx == len(trajectories) - 1 and aIdx == len(artKeys) - 1 and art_tot >= pitch_tot:
                         format = openEntryFormatEnd
                     elif aIdx == len(artKeys) - 1:
                         format = openTopEntryFormat
@@ -106,7 +114,7 @@ def add_phrase(phrase, vstart, idx):
                     else:
                         worksheet.write(art_start + aIdx, 11, '', format)
                 if art_tot < pitch_tot:
-                    if tIdx == len(phrase['trajectories']) - 1:
+                    if tIdx == len(trajectories) - 1:
                         
                         format = entryFormatEnd
                     else:
@@ -115,7 +123,7 @@ def add_phrase(phrase, vstart, idx):
             for pIdx, pitch in enumerate(pitches):
                 
                 if pIdx == pitch_tot - 1:
-                    if tIdx == len(phrase['trajectories']) - 1 and pitch_tot >= art_tot:
+                    if tIdx == len(trajectories) - 1 and pitch_tot >= art_tot:
                         format = openEntryFormatEnd
                     else:
                         format = openTopEntryFormat
@@ -132,7 +140,7 @@ def add_phrase(phrase, vstart, idx):
                     format = openBottomEntryFormat
                 else:
                     format = openEntryFormat
-                if tIdx == len(phrase['trajectories']) - 1 and daIdx == len(traj['durArray'])-1:
+                if tIdx == len(trajectories) - 1 and daIdx == len(traj['durArray'])-1:
                     
                     if daIdx == 0:
                         
@@ -142,14 +150,14 @@ def add_phrase(phrase, vstart, idx):
                 worksheet.write(art_start + daIdx, 16, round(da, 2), format)
                 daCt += 1
             for daIdx in range(daCt, vrange):
-                if tIdx == len(phrase['trajectories']) - 1:
+                if tIdx == len(trajectories) - 1:
                     format = openEntryFormatEnd
                 else:
                     format = openEntryFormat
                 worksheet.write(art_start + daIdx, 16, '', format)
             
         else:
-            if tIdx == len(phrase['trajectories']) - 1 and clen != tIdx + 2:
+            if tIdx == len(trajectories) - 1 and clen != tIdx + 2:
 
                 format = entryFormatEnd
             else:
@@ -161,7 +169,7 @@ def add_phrase(phrase, vstart, idx):
             
         if vrange > 1:
             end = art_start + vrange - 1
-            if tIdx == len(phrase['trajectories']) - 1:
+            if tIdx == len(trajectories) - 1:
                 format = entryFormatEnd
             else:
                 format = entryFormat
@@ -180,7 +188,7 @@ def add_phrase(phrase, vstart, idx):
                      
             art_start += vrange
         else:
-            if tIdx == len(phrase['trajectories']) - 1 and clen != tIdx + 2:
+            if tIdx == len(trajectories) - 1 and clen != tIdx + 2:
                 format = entryFormatEnd
             else:
                 format = entryFormat

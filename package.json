@@ -35,6 +35,7 @@
     "jpickle": "^0.4.1",
     "mitt": "^3.0.0",
     "mongo-dot-notation": "^3.1.0",
+    "mongodb": "^5.1.0",
     "npyjs": "^0.4.0",
     "npyz": "^0.4.2",
     "path-browserify": "^1.0.1",

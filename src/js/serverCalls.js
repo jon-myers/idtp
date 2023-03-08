@@ -855,6 +855,65 @@ const cloneTranscription = async (id, title, newOwner, permissions) => {
   }
 }
 
+const getInstrumentation = async (audioID) => {
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const response = await fetch(url + 'getInstrumentation?' + new URLSearchParams({
+      audioID: JSON.stringify(audioID)
+    }), request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const getIpaVowels = async () => {
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const response = await fetch(url + 'getIpaVowels', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const getConsonants = async () => {
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const response = await fetch(url + 'getConsonants', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
 
 export { 
   getPiece,
@@ -894,5 +953,8 @@ export {
   excelData,
   jsonData,
   updateTranscriptionTitle,
-  updateTranscriptionPermissions
+  updateTranscriptionPermissions,
+  getInstrumentation,
+  getIpaVowels,
+  getConsonants
 }

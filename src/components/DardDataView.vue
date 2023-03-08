@@ -141,8 +141,22 @@ export default {
             artObj[key] = new Articulation(artEntries[i]);
           });
           traj.articulations = artObj;
+          if (phrase.instrumentation) {
+            traj.instrumentation = phrase.instrumentation[0];
+          }
         });
-        phrase.trajectories = phrase.trajectories.map(traj => new Trajectory(traj));
+        if (phrase.trajectoryGrid) {
+          phrase.trajectoryGrid[0] = phrase.trajectories.map(traj => {
+            return new Trajectory(traj)
+          })
+        } else {
+          phrase.trajectories = phrase.trajectories.map(traj => {
+            return new Trajectory(traj)
+          });
+        };
+        if (piece.instrumentation) {
+          phrase.instrumentation = piece.instrumentation;
+        }
       });
       piece.phrases = piece.phrases.map(phrase => new Phrase(phrase));
       const rsRes = await getRaagRule(piece.raga.name);
@@ -238,11 +252,6 @@ export default {
   justify-content: space-evenly;
 }
 
-.chunkSpan {
-  /* width: 20px; */
-  /* border: 1px solid black; */
-  /* align-items: center; */
-}
 
 
 .chunkSwaraRow {

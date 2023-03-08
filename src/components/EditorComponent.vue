@@ -127,15 +127,11 @@ import {
   getNumberOfSpectrograms,
   savePiece,
   makeSpectrograms,
-  pieceExists,
-  
+  pieceExists
 } from '@/js/serverCalls.js';
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
 import TrajSelectPanel from '@/components/TrajSelectPanel.vue';
 import instructionsText from '@/assets/texts/editor_instructions.html?raw';
-
-// import * as d3 from 'd3';
-
 import { detect } from 'detect-browser';
 
 const getStarts = durArray => {
@@ -279,25 +275,33 @@ export default {
       const times = this.trajTimePts.map(ttp => ttp.time);
       const durArray = times.slice(1).map((x, i) => (x - times[i]) / durTot);
       let articulations;
-      if (this.$refs.trajSelectPanel.pluckBool === false) {
+      const tsp = this.$refs.trajSelectPanel;
+      if (tsp.vocal || tsp.pluckBool === false) {
         articulations = {};
       } else {
-        articulations = { '0': new Articulation({ name: 'pluck' }) }
+        articulations = { '0.00': new Articulation({ name: 'pluck' }) }
       }
-      if (this.$refs.trajSelectPanel.dampen === true) {
+      if (!tsp.vocal && tsp.dampen === true) {
         // if (!articulations) articulations = {};
         articulations['1.00'] = new Articulation({ name: 'dampen' })
       }
-      const newTraj = new Trajectory({
+      const trajObj = {
         id: idx,
         pitches: pitches,
         durTot: durTot,
         durArray: durArray,
-        articulations: articulations
-      });
+        articulations: articulations,
+        vowel: tsp.vowel,
+        startConsonant: tsp.startConsonant,
+        endConsonant: tsp.endConsonant,
+      };
       const pIdx = this.trajTimePts[0].pIdx;
       const tIdx = this.trajTimePts[0].tIdx;
       const phrase = this.piece.phrases[pIdx];
+      if (this.piece.instrumentation) {
+        trajObj.instrumentation = this.piece.instrumentation[0];
+      }
+      const newTraj = new Trajectory(trajObj);
       const trajs = phrase.trajectories;
       const silentTraj = phrase.trajectories[tIdx];
       const st = phrase.startTime + silentTraj.startTime
@@ -334,12 +338,16 @@ export default {
         const firstDur = times[0] - st;
         const lastDur = (st + silentTraj.durTot) - times[times.length - 1];
         silentTraj.durTot = firstDur;
-        const lastSilentTraj = new Trajectory({
+        const lstObj = {
           id: 12,
           pitches: [],
           durTot: lastDur,
           fundID12: this.piece.raga.fundamental
-        });
+        };
+        if (this.piece.instrumentation) {
+          lstObj.instrumentation = this.piece.instrumentation[0];
+        }
+        const lastSilentTraj = new Trajectory(lstObj);
         phrase.trajectories.splice(tIdx + 1, 0, newTraj);
         phrase.trajectories.splice(tIdx + 2, 0, lastSilentTraj);
         phrase.reset();
@@ -368,21 +376,24 @@ export default {
       d3SelectAll(`.newTrajDot`).remove();
       
       this.addAllDragDots();
-      this.$refs.trajSelectPanel.selectedIdx = this.selectedTraj.id;
-      this.$refs.trajSelectPanel.parentSelected = true;
-      this.$refs.trajSelectPanel.slope = Math.log2(this.selectedTraj.slope);
+      const altId = this.selectedTraj.id >= 12 ? 
+                    this.selectedTraj.id - 1: 
+                    this.selectedTraj.id; 
+      tsp.selectedIdx = tsp.trajIdxs.indexOf(altId);
+      tsp.parentSelected = true;
+      tsp.slope = Math.log2(this.selectedTraj.slope);
       if (this.selectedTraj.vibObj) {
-        this.$refs.trajSelectPanel.extent = this.selectedTraj.vibObj.extent;
-        this.$refs.trajSelectPanel.initUp = this.selectedTraj.vibObj.initUp;
-        this.$refs.trajSelectPanel.periods = this.selectedTraj.vibObj.periods;
-        this.$refs.trajSelectPanel.offset = this.selectedTraj.vibObj.vertOffset;
+        tsp.extent = this.selectedTraj.vibObj.extent;
+        tsp.initUp = this.selectedTraj.vibObj.initUp;
+        tsp.periods = this.selectedTraj.vibObj.periods;
+        tsp.offset = this.selectedTraj.vibObj.vertOffset;
       }
       
       const c1 = this.selectedTraj.articulations[0];
       if (c1 && this.selectedTraj.articulations[0].name === 'pluck') {
-        this.$refs.trajSelectPanel.pluckBool = true
+        tsp.pluckBool = true
       } else {
-        this.$refs.trajSelectPanel.pluckBool = false
+        tsp.pluckBool = false
       }
       if (!this.audioDBDoc) {
         this.extendDurTot();
@@ -444,12 +455,66 @@ export default {
       // this.resetZoom();
     });
 
+    this.emitter.on('vowel', vowel => {
+      this.selectedTraj.vowel = vowel
+    });
+
+    this.emitter.on('startConsonant', startConsonant => {
+      if (startConsonant === undefined) {
+        this.selectedTraj.removeConsonant()
+      } else if (this.selectedTraj.startConsonant === undefined) {
+        this.selectedTraj.addConsonant(startConsonant)
+      } else {
+        this.selectedTraj.changeConsonant(startConsonant)
+      }
+      const pIdx = this.selectedTraj.phraseIdx;
+      const tIdx = this.selectedTraj.num;
+      const phrase = this.piece.phrases[pIdx];
+      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`);
+      const selected = d3Select(`#startConsonantp${pIdx}t${tIdx}`);
+      if (selected.node() === null) {
+        this.addStartingConsonant(this.selectedTraj, phrase.startTime, g)
+      } else if (this.selectedTraj.startConsonant === undefined) {
+        selected.remove();
+      } else {
+        selected.remove();
+        this.addStartingConsonant(this.selectedTraj, phrase.startTime, g)
+      }
+    });
+
+    this.emitter.on('endConsonant', endConsonant => {
+      if (endConsonant === undefined) {
+        // false indicates that this is the end consonant
+        this.selectedTraj.removeConsonant(false)
+      } else if (this.selectedTraj.endConsonant === undefined) {
+        this.selectedTraj.addConsonant(endConsonant, false)
+      } else {
+        this.selectedTraj.changeConsonant(endConsonant, false)
+      }
+      const pIdx = this.selectedTraj.phraseIdx;
+      const tIdx = this.selectedTraj.num;
+      const phrase = this.piece.phrases[pIdx];
+      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`);
+      const selected = d3Select(`#endConsonantp${pIdx}t${tIdx}`);
+      if (selected.node() === null) {
+        this.addEndingConsonant(this.selectedTraj, phrase.startTime, g)
+      } else if (this.selectedTraj.endConsonant === undefined) {
+        selected.remove();
+      } else {
+        selected.remove();
+        this.addEndingConsonant(this.selectedTraj, phrase.startTime, g)
+      }
+    });
+
     try {
       // if there's a query id, 1. check if exists, 2. if so, load it, else:
       // send some sort of message that entered piece didn't exist and go to files.
       // check if stored piece esists. if so, load it, else: load default piece.
       // push the id to router. 
+      
       let piece, pieceDoesExist;
+      
+
       const queryId = this.$route.query.id;
       if (queryId) {
         pieceDoesExist = await pieceExists(queryId);
@@ -506,24 +571,36 @@ export default {
       }
       await this.initializePiece();
       this.$refs.audioPlayer.parentLoaded();
+      const tsp = this.$refs.trajSelectPanel;
+      tsp.trajIdxs = this.piece.trajIdxs;
+      const vox = ['Vocal (M)', 'Vocal (F)'];
+      tsp.vocal = vox.includes(this.piece.instrumentation[0]);
       // GETBACK
-      if (this.audioDBDoc) {
-        this.$refs.audioPlayer.initAll();
-      }
+      // if (this.audioDBDoc) {
+      //   this.$refs.audioPlayer.initAll();
+      // }
     
       // end GETBACK
       const silentDur = this.durTot - piece.durTot;
       if (silentDur >= 0.00001) {
-        const silentTraj = new Trajectory({
+        const stTrajObj = {
           id: 12,
           pitches: [],
           durTot: silentDur,
           fundID12: this.piece.raga.fundamental
-        });
-        const silentPhrase = new Phrase({
+        };
+        if (this.piece.instrumentation) {
+          stTrajObj.instrumentation = this.piece.instrumentation[0];
+        }
+        const silentTraj = new Trajectory(stTrajObj);
+        const phraseObj = {
           trajectories: [silentTraj],
           durTot: silentDur,
-        });
+        };
+        if (this.piece.instrumentation) {
+          phraseObj.instrumentation = this.piece.instrumentation;
+        }
+        const silentPhrase = new Phrase(phraseObj);
         this.piece.phrases.push(silentPhrase);
         this.piece.durArrayFromPhrases();
         this.piece.updateStartTimes();
@@ -542,6 +619,9 @@ export default {
     this.emitter.off('newTraj');
     this.emitter.off('vibObj');
     this.emitter.off('dampen');
+    this.emitter.off('vowel');
+    this.emitter.off('startConsonant');
+    this.emitter.off('endConsonant');
   },
 
   watch: {
@@ -673,12 +753,16 @@ export default {
           lastSilence.durTot += extraTime;
           lastPhrase.reset();
         } else {
-          const newTraj = new Trajectory({
+          const ntObj = {
             id: 12,
             pitches: [],
             durTot: extraTime,
             fundID12: this.piece.raga.fundamental
-          });
+          };
+          if (this.piece.instrumentation) {
+            ntObj.instrumentation = this.piece.instrumentation[0];
+          }
+          const newTraj = new Trajectory(ntObj);
           lastPhrase.trajectories.push(newTraj);
           lastPhrase.reset();
         }
@@ -1399,6 +1483,8 @@ export default {
           this.moveKrintin(newNextTraj, phrase.startTime);
           this.moveSlides(newNextTraj, phrase.startTime);
           this.codifiedRedrawDampener(newNextTraj, phrase.startTime);
+          this.moveStartingConsonant(newNextTraj, phrase.startTime, true);
+          this.moveEndingConsonant(newNextTraj, phrase.startTime, true);
           this.removePlucks(newNextTraj);
           const g = d3Select(`#articulations__p${pIdx}t${tIdx+1}`);
           this.codifiedAddPlucks(newNextTraj, phrase.startTime, g)
@@ -1421,6 +1507,8 @@ export default {
             this.moveKrintin(newNextTraj, nextPhrase.startTime)
             this.moveSlides(newNextTraj, nextPhrase.startTime)
             this.codifiedRedrawDampener(newNextTraj, nextPhrase.startTime)
+            this.moveStartingConsonant(newNextTraj, nextPhrase.startTime, true);
+            this.moveEndingConsonant(newNextTraj, nextPhrase.startTime, true);
             this.removePlucks(newNextTraj);
             const g = d3Select(`#articulations__p${pIdx+1}t${0}`);
             this.codifiedAddPlucks(newNextTraj, nextPhrase.startTime, g);
@@ -1440,6 +1528,8 @@ export default {
       this.moveKrintin(this.selectedTraj, phrase.startTime);
       this.moveSlides(this.selectedTraj, phrase.startTime);
       this.codifiedRedrawDampener(this.selectedTraj, phrase.startTime);
+      this.moveStartingConsonant(this.selectedTraj, phrase.startTime, true);
+      this.moveEndingConsonant(this.selectedTraj, phrase.startTime, true);
       this.cleanEmptyTrajs(phrase);
       this.moveChikaris(phrase);
       if (resetRequired) this.resetZoom();
@@ -1830,11 +1920,15 @@ export default {
                doNormal = false;  
                const pATrajs = phraseA.trajectories;        
                const prevTraj = pATrajs[pATrajs.length-1];
-               const newNextTraj = new Trajectory({ 
+               const nntObj = { 
                  id: 12, 
                  durTot: origDivTime - time,
                  fundID12: this.piece.raga.fundamental
-               });
+               };
+               if (this.piece.instrumentation) {
+                nntObj.instrumentation = this.piece.instrumentation[0];
+               }
+               const newNextTraj = new Trajectory(nntObj);
                prevTraj.durTot -= origDivTime - time;
                phraseA.durTotFromTrajectories();
                phraseA.durArrayFromTrajectories();
@@ -1891,11 +1985,15 @@ export default {
                this.piece.updateStartTimes();             
              } else {
                doNormal = false;
-               const newPrevTraj = new Trajectory({
+               const nptObj = {
                  id: 12,
                  durTot: time - origDivTime,
                  fundID12: this.piece.raga.fundamental
-               });
+               };
+                if (this.piece.instrumentation) {
+                  nptObj.instrumentation = this.piece.instrumentation[0];
+                }
+               const newPrevTraj = new Trajectory(nptObj);
                const nextTraj = phraseB.trajectories[0];
                nextTraj.durTot -= time - origDivTime;
                phraseA.trajectories
@@ -2187,12 +2285,19 @@ export default {
       // const endPitch = new Pitch(pitch.)
       const pitches = [pitch, endPitch];
       const durTot = this.trajTimePts[1].time - this.trajTimePts[0].time;
-      const newTraj = new Trajectory({
+      const ntObj = {
         pitches: pitches,
         durTot: durTot,
         durArray: [1],
         articulations: undefined
-      });
+      };
+      if (this.piece.instrumentation) {
+        ntObj.instrumentation = this.piece.instrumentation[0];
+        if (['Vocal (M)', 'Vocal (F)'].includes(ntObj.instrumentation)) {
+          ntObj.articulations = {}
+        }
+      }
+      const newTraj = new Trajectory(ntObj);
       const times = this.trajTimePts.map(t => t.time);
       const pIdx = this.trajTimePts[0].pIdx;
       const tIdx = this.trajTimePts[0].tIdx;
@@ -2264,12 +2369,16 @@ export default {
           const firstDur = times[0] - st;
           const lastDur = st + silentTraj.durTot - times[times.length - 1];
           silentTraj.durTot = firstDur;
-          const lastSilentTraj = new Trajectory({
+          const lstObj = {
             id: 12,
             pitches: [],
             durTot: lastDur,
             fundID12: this.piece.raga.fundamental
-          });
+          };
+          if (this.piece.instrumentation) {
+            lstObj.instrumentation = this.piece.instrumentation[0];
+          }
+          const lastSilentTraj = new Trajectory(lstObj);
           phrase.trajectories.splice(tIdx + 1, 0, newTraj);
           phrase.trajectories.splice(tIdx + 2, 0, lastSilentTraj);
           phrase.reset();
@@ -2480,7 +2589,7 @@ export default {
 
       }
       if (this.setNewTraj || this.selectedTraj) {
-        const keyNums = this.$refs.trajSelectPanel.keyNums;
+        const keyNums = this.$refs.trajSelectPanel.keyNumsFiltered;
         if (keyNums.includes(e.key)) {
           this.$refs.trajSelectPanel.selectIcon(keyNums.indexOf(e.key))
         }
@@ -2517,7 +2626,7 @@ export default {
         const dir = 'https://swara.studio/spectrograms/';
         const url = dir + this.piece.audioID + '/0/' + i + '.webp';
         const img = new Image();
-        img.src = url;
+        img.src = url + '?version=1';
         this.imgs.push(img)
       }
       this.loadedImgs = 0;
@@ -2598,7 +2707,10 @@ export default {
       piece.raga.ruleSet = rsRes.rules;
       piece.raga = new Raga(piece.raga);
       piece.phrases.forEach(phrase => {
-        phrase.trajectories.forEach(traj => {
+        let pt = phrase.trajectoryGrid ?
+                 phrase.trajectoryGrid[0] : 
+                 phrase.trajectories;
+        pt.forEach(traj => {
           traj.pitches = traj.pitches.map(pitch => {
             pitch.fundamental = piece.raga.fundamental;
             // convert to pitch ratio format
@@ -2615,17 +2727,29 @@ export default {
           if (traj.id === 12 && traj.fundID12 !== piece.raga.fundamental) {
             traj.fundID12 = piece.raga.fundamental
           }
+          if (piece.instrumentation) {
+            traj.instrumentation = piece.instrumentation[0];
+          }
         });
-        phrase.trajectories = phrase.trajectories.map(traj => {
-          return new Trajectory(traj)
-        });
+        if (phrase.trajectoryGrid) {
+          phrase.trajectoryGrid[0] = pt.map(traj => {
+            return new Trajectory(traj)
+          });
+        } else {
+          phrase.trajectories = pt.map(traj => {
+            return new Trajectory(traj)
+          });
+        }
         const chikariKeys = Object.keys(phrase.chikaris);
         const chikariEntries = chikariKeys.map(key => phrase.chikaris[key]);
         const chikariObj = {};
         chikariKeys.forEach((key, i) => {
           chikariObj[key] = new Chikari(chikariEntries[i])
         })
-        phrase.chikaris = chikariObj
+        phrase.chikaris = chikariObj;
+        if (piece.instrumentation) {
+          phrase.instrumentation = piece.instrumentation;
+        }
       });
       piece.phrases = piece.phrases.map(phrase => new Phrase(phrase));
       this.piece = new Piece(piece);
@@ -3117,12 +3241,16 @@ export default {
           const firstTrajDur = time - (phrase.startTime + traj.startTime);
           const secondTrajDur = traj.durTot - firstTrajDur;
           traj.durTot = firstTrajDur;
-          const newTraj = new Trajectory({
+          const ntObj = {
             id: 12,
             durTot: secondTrajDur,
             pitches: [],
             fundID12: this.piece.raga.fundamental
-          });
+          };
+          if (this.piece.instrumentation) {
+            ntObj.instrumentation = this.piece.instrumentation[0];
+          }
+          const newTraj = new Trajectory(ntObj);
           phrase.trajectories.splice(tIdx + 1, 0, newTraj);
           phrase.reset();
           // right here, I need to reid all the following trajectories
@@ -3146,10 +3274,14 @@ export default {
         const newTrajs = phrase_.trajectories.splice(trajIdx+1, end);
         phrase_.durTotFromTrajectories();
         phrase_.durArrayFromTrajectories();
-        const newPhrase = new Phrase({
+        const newPhraseObj = {
           trajectories: newTrajs,
           raga: phrase_.raga
-        })
+        };
+        if (this.piece.instrumentation) {
+          newPhraseObj.instrumentation = this.piece.instrumentation;
+        }
+        const newPhrase = new Phrase(newPhraseObj)
         this.piece.phrases.splice(phrase_.pieceIdx+1, 0, newPhrase);
         this.piece.durTotFromPhrases();
         this.piece.durArrayFromPhrases();
@@ -3395,6 +3527,8 @@ export default {
       this.addKrintin(traj, phraseStart, g)
       this.addSlide(traj, phraseStart, g)
       this.addDampener(traj, phraseStart, g)
+      this.addStartingConsonant(traj, phraseStart, g)
+      this.addEndingConsonant(traj, phraseStart, g)
     },
 
     codifiedAddArticulations(traj, phraseStart) {
@@ -3404,6 +3538,8 @@ export default {
       this.codifiedAddKrintin(traj, phraseStart, g);
       this.codifiedAddSlide(traj, phraseStart, g);
       this.codifiedAddDampener(traj, phraseStart, g);
+      this.addStartingConsonant(traj, phraseStart, g, true);
+      this.addEndingConsonant(traj, phraseStart, g, true);
 
     },
 
@@ -3444,34 +3580,6 @@ export default {
       }
     },
 
-    codifiedAddTraj(traj, phraseStart) {
-      const data = this.makeTrajData(traj, phraseStart);
-      this.phraseG.append('path')
-        .datum(data)
-        .classed('phrase', true)
-        .attr('id', `p${traj.phraseIdx}t${traj.num}`)
-        .attr("fill", "none")
-        .attr("stroke", this.trajColor)
-        .attr("stroke-width", '3px')
-        .attr("stroke-linejoin", "round")
-        .attr("stroke-linecap", "round")
-        .attr('d', this.codifiedPhraseLine())
-      this.phraseG.append('path')
-        .datum(data)
-        .classed('phrase', true)
-        .attr('id', `overlay__p${traj.phraseIdx}t${traj.num}`)
-        .attr('fill', 'none')
-        .attr('stroke', 'green')
-        .attr('stroke-width', '6px')
-        .attr('d', this.codifiedPhraseLine())
-        .style('opacity', '0')
-        .style('cursor', 'pointer')
-        .on('mouseover', this.handleMouseOver)
-        .on('mouseout', this.handleMouseOut)
-        .on('click', this.handleClickTraj)
-      this.codifiedAddArticulations(traj, phraseStart)
-    },
-
     codifiedAddPlucks(traj, phraseStart, g) {
       if (traj.id !== 12) {
         const keys = Object.keys(traj.articulations);
@@ -3503,14 +3611,133 @@ export default {
       }
     },
 
-    movePlucks(traj) {
-      if (traj.articulations[0] && traj.articulations[0].name === 'pluck') {
-        const x = d => this.xr()(d.x);
-        const y = d => this.yr()(d.y); 
-        d3Select(`#pluckp${traj.phraseIdx}t${traj.num}`)
-          .transition()
-          .duration(this.transitionTime)
-          .attr('transform', d => `translate(${x(d)}, ${y(d)}) rotate(90)`)
+    addStartingConsonant(traj, phraseStart, g, codified=false) {
+      if (traj.id !== 12) {
+        const keys = Object.keys(traj.articulations);
+        const relKeys = keys.filter(key => {
+          const c1 = traj.articulations[key].name === 'consonant';
+          const c2 = key === '0.00';
+          return c1 && c2;
+        });
+        if (relKeys[0] !== undefined) {
+          const key = relKeys[0];
+          const normedX = Number(key) * traj.durTot;
+          const y_ = traj.compute(Number(key), true);
+          const cd = {
+            x: phraseStart + traj.startTime + normedX,
+            y: y_,
+            text: traj.articulations[key].stroke
+          }
+          let x, y;
+          if (codified) {
+            x = d => this.codifiedXR(d.x);
+            y = d => this.codifiedYR(d.y);
+          } else {
+            x = d => this.xr()(d.x);
+            y = d => this.yr()(d.y);
+          }
+          g.append('text')
+            .classed('articulation', true)
+            .classed('consonant', true)
+            .attr('id', `startConsonantp${traj.phraseIdx}t${traj.num}`)
+            .attr('stroke', 'black')
+            .attr('font-size', '15px')
+            .attr('text-anchor', 'middle')
+            .data([cd])
+            .attr('transform', d => `translate(${x(d)}, ${y(d)-8})`)
+            .text(cd.text)
+        }
+      }
+    },
+
+    addEndingConsonant(traj, phraseStart, g, codified=false) {
+      if (traj.id !== 12) {
+        const keys = Object.keys(traj.articulations);
+        const relKeys = keys.filter(key => {
+          const c1 = traj.articulations[key].name === 'consonant';
+          const c2 = key === '1.00';
+          return c1 && c2;
+        });
+        if (relKeys[0] !== undefined) {
+          const key = relKeys[0];
+          const normedX = Number(key) * traj.durTot;
+          const y_ = traj.compute(Number(key), true);
+          const cd = {
+            x: phraseStart + traj.startTime + normedX,
+            y: y_,
+            text: traj.articulations[key].stroke
+          }
+          let x, y;
+          if (codified) {
+            x = d => this.codifiedXR(d.x);
+            y = d => this.codifiedYR(d.y);
+          } else {
+            x = d => this.xr()(d.x);
+            y = d => this.yr()(d.y);
+          }
+          g.append('text')
+            .classed('articulation', true)
+            .classed('consonant', true)
+            .attr('id', `endConsonantp${traj.phraseIdx}t${traj.num}`)
+            .attr('stroke', 'black')
+            .attr('font-size', '15px')
+            .attr('text-anchor', 'middle')
+            .data([cd])
+            .attr('transform', d => `translate(${x(d)}, ${y(d)-8})`)
+            .text(cd.text)
+        }
+      }
+    },
+
+    moveStartingConsonant(traj, phraseStart, codified=false) {
+      if (traj.id !== 12) {
+        const key = '0.00';
+        if (traj.articulations[key] !== undefined) {
+          const normedX = Number(key) * traj.durTot;
+          const y_ = traj.compute(Number(key), true);
+          const cd = {
+            x: phraseStart + traj.startTime + normedX,
+            y: y_,
+            text: traj.articulations[key].stroke
+          };
+          let x, y;
+          if (codified) {
+            x = d => this.codifiedXR(d.x);
+            y = d => this.codifiedYR(d.y);
+          } else {
+            x = d => this.xr()(d.x);
+            y = d => this.yr()(d.y);
+          }
+          d3Select(`#startConsonantp${traj.phraseIdx}t${traj.num}`)
+            .data([cd])
+            .attr('transform', d => `translate(${x(d)}, ${y(d)-8})`)
+        }
+      }
+    },
+
+    moveEndingConsonant(traj, phraseStart, codified=false) {
+      if (traj.id !== 12) {
+        const key = '1.00';
+        if (traj.articulations[key] !== undefined) {
+          const normedX = Number(key) * traj.durTot;
+          const y_ = traj.compute(Number(key), true);
+          const cd = {
+            x: phraseStart + traj.startTime + normedX,
+            y: y_,
+            text: traj.articulations[key].stroke
+          };
+          let x, y;
+          if (codified) {
+            x = d => this.codifiedXR(d.x);
+            y = d => this.codifiedYR(d.y);
+          } else {
+            x = d => this.xr()(d.x);
+            y = d => this.yr()(d.y);
+          }
+          d3Select(`#endConsonantp${traj.phraseIdx}t${traj.num}`)
+            .data([cd])
+            .attr('transform', d => `translate(${x(d)}, ${y(d)-8})`)
+        }
       }
     },
 
@@ -3999,20 +4226,27 @@ export default {
       const pIdx = this.selectedTrajID.split('t')[0].slice(1);
       const tIdx = this.selectedTrajID.split('t')[1];
       this.selectedTraj = this.piece.phrases[pIdx].trajectories[tIdx];
-      this.$refs.trajSelectPanel.selectedIdx = this.selectedTraj.id;
-      this.$refs.trajSelectPanel.parentSelected = true;
-      this.$refs.trajSelectPanel.slope = Math.log2(this.selectedTraj.slope);
+      const tsp = this.$refs.trajSelectPanel;
+      const altId = this.selectedTraj.id >= 12 ? 
+                    this.selectedTraj.id - 1: 
+                    this.selectedTraj.id; 
+      tsp.selectedIdx = tsp.trajIdxs.indexOf(altId);
+      tsp.parentSelected = true;
+      tsp.slope = Math.log2(this.selectedTraj.slope);
+      tsp.vowel = this.selectedTraj.vowel;
+      tsp.startConsonant = this.selectedTraj.startConsonant;
+      tsp.endConsonant = this.selectedTraj.endConsonant;
       const c1 = this.selectedTraj.articulations[0];
       const c2 = this.selectedTraj.articulations['1.00'];
       if (c1 && this.selectedTraj.articulations[0].name === 'pluck') {
-        this.$refs.trajSelectPanel.pluckBool = true
+        tsp.pluckBool = true
       } else {
-        this.$refs.trajSelectPanel.pluckBool = false
+        tsp.pluckBool = false
       }
       if (c2 && c2.name === 'dampen') {
-        this.$refs.trajSelectPanel.dampen = true
+        tsp.dampen = true
       } else {
-        this.$refs.trajSelectPanel.dampen = false
+        tsp.dampen = false
       }
       d3Select(`#${this.selectedTrajID}`)
         .attr('stroke', this.selectedTrajColor)
@@ -4062,12 +4296,16 @@ export default {
     },
 
     clearTrajSelectPanel() {
-      this.$refs.trajSelectPanel.parentSelected = false;
-      this.$refs.trajSelectPanel.selectedIdx = undefined;
-      this.$refs.trajSelectPanel.showVibObj = false;
-      this.$refs.trajSelectPanel.showSlope = false;
-      this.$refs.trajSelectPanel.showTrajChecks = false;
-      this.$refs.trajSelectPanel.showPhraseRadio = false;
+      const tsp = this.$refs.trajSelectPanel;
+      tsp.parentSelected = false;
+      tsp.selectedIdx = undefined;
+      tsp.showVibObj = false;
+      tsp.showSlope = false;
+      tsp.showTrajChecks = false;
+      tsp.showPhraseRadio = false;
+      tsp.startConsonant = undefined;
+      tsp.endConsonant = undefined;
+      tsp.vowel = undefined;
     },
 
     redrawChikaris() {
@@ -4386,6 +4624,34 @@ export default {
           .attr('stroke', this.selectedTrajColor)
       }
     },
+
+    codifiedAddTraj(traj, phraseStart) {
+      const data = this.makeTrajData(traj, phraseStart);
+      this.phraseG.append('path')
+        .datum(data)
+        .classed('phrase', true)
+        .attr('id', `p${traj.phraseIdx}t${traj.num}`)
+        .attr("fill", "none")
+        .attr("stroke", this.trajColor)
+        .attr("stroke-width", '3px')
+        .attr("stroke-linejoin", "round")
+        .attr("stroke-linecap", "round")
+        .attr('d', this.codifiedPhraseLine())
+      this.phraseG.append('path')
+        .datum(data)
+        .classed('phrase', true)
+        .attr('id', `overlay__p${traj.phraseIdx}t${traj.num}`)
+        .attr('fill', 'none')
+        .attr('stroke', 'green')
+        .attr('stroke-width', '6px')
+        .attr('d', this.codifiedPhraseLine())
+        .style('opacity', '0')
+        .style('cursor', 'pointer')
+        .on('mouseover', this.handleMouseOver)
+        .on('mouseout', this.handleMouseOut)
+        .on('click', this.handleClickTraj)
+      this.codifiedAddArticulations(traj, phraseStart)
+    },
     
     codifiedAddPhrases() {
       this.addSargamLines(true);
@@ -4431,10 +4697,23 @@ export default {
             this.redrawKrintin(traj, phrase.startTime);
             this.redrawSlide(traj, phrase.startTime);
             this.redrawDampener(traj, phrase.startTime);
+            this.moveStartingConsonant(traj, phrase.startTime);
+            this.moveEndingConsonant(traj, phrase.startTime);
           }
         })
       });
       this.redrawChikaris();
+    },
+
+    movePlucks(traj) {
+      if (traj.articulations[0] && traj.articulations[0].name === 'pluck') {
+        const x = d => this.xr()(d.x);
+        const y = d => this.yr()(d.y); 
+        d3Select(`#pluckp${traj.phraseIdx}t${traj.num}`)
+          .transition()
+          .duration(this.transitionTime)
+          .attr('transform', d => `translate(${x(d)}, ${y(d)}) rotate(90)`)
+      }
     },
 
     addClipPaths() {
@@ -4640,11 +4919,15 @@ export default {
         phrase.trajectories[tIdx - 1].durTot += nextTraj.durTot;
         delAfter = true;
       } else if (!beforeSilent && !afterSilent) {
-        newTraj = new Trajectory({
+        const ntObj = {
           id: 12,
           durTot: traj.durTot,
           fundID12: this.piece.raga.fundamental
-        })
+        };
+        if (this.piece.instrumentation) {
+          ntObj.instrumentation = this.piece.instrumentation[0];
+        }
+        newTraj = new Trajectory(ntObj)
       }
       // if before and after are silence; combine all three trajs into single
       //silent traj
@@ -4725,7 +5008,11 @@ export default {
             return traj.num !== Number(tIdx)
           }
         });
-        this.piece.phrases[pIdx].trajectories = newTrajs;
+        if (this.piece.phrases[pIdx].trajectoryGrid) {
+          this.piece.phrases[pIdx].trajectoryGrid[0] = newTrajs;
+        } else {
+          this.piece.phrases[pIdx].trajectories = newTrajs;
+        }  
       }
       this.piece.phrases[pIdx].durArrayFromTrajectories();
       this.piece.phrases[pIdx].assignStartTimes();
@@ -4785,6 +5072,8 @@ export default {
         this.codifiedRedrawKrintin(traj, phrase.startTime)
         this.codifiedRedrawSlide(traj, phrase.startTime)
         this.codifiedRedrawDampener(traj, phrase.startTime)
+        this.moveStartingConsonant(traj, phrase.startTime, true)
+        this.moveEndingConsonant(traj, phrase.startTime, true)
       })
     },
 
@@ -5022,27 +5311,39 @@ export default {
       console.log(time, ascending)
       let totalDuration = 0;
       const trajectories = this.visiblePitches.map(p => {
-        const traj = new Trajectory({
+        const tObj = {
           id: 0,
           durTot: durTot,
           durArray: [1],
           pitches: [p, new Pitch(p.toJSON())]
-        });
+        };
+        if (this.piece.instrumentation) {
+          tObj.instrumentation = this.piece.instrumentation[0];
+        }
+        const traj = new Trajectory(tObj);
         totalDuration += durTot;
         return traj
       });
-      const rest = new Trajectory({
+      const rObj = {
         id: 12,
         durTot: durTot,
         durArray: [1],
         fundID12: this.piece.raga.fundamental
-      })
+      };
+      if (this.piece.instrumentation) {
+        rObj.instrumentation = this.piece.instrumentation[0];
+      }
+      const rest = new Trajectory(rObj)
       trajectories.splice(0, 0, rest);
       totalDuration += durTot;
-      const phrase = new Phrase({
+      const phraseObj = {
         trajectories: trajectories,
         durTot: totalDuration
-      })
+      };
+      if (this.piece.instrumentation) {
+        phraseObj.instrumentation = this.piece.instrumentation;
+      }
+      const phrase = new Phrase(phraseObj);
       this.piece.phrases.splice(0, 0, phrase);
       const lastPhrase = this.piece.phrases[this.piece.phrases.length-1];
       const lastTrajs = lastPhrase.trajectories;
@@ -5063,27 +5364,43 @@ export default {
         extent: 0.03,
       };
       const rest1DurTot = 1;
-      const rest1 = new Trajectory({
+      const r1Obj = {
         id: 12,
         durTot: rest1DurTot,
         durArray: [1],
         fundID12: this.piece.raga.fundamental
-      });
-      const traj = new Trajectory({
+      };
+      if (this.piece.instrumentation) {
+        r1Obj.instrumentation = this.piece.instrumentation[0];
+      }
+      const rest1 = new Trajectory(r1Obj);
+      const tObj = {
         id: 13,
         durTot: durTot,
         durArray: [1],
         pitches: pitches,
         vibObj: vibObj
-      });
+      };
+      if (this.piece.instrumentation) {
+        tObj.instrumentation = this.piece.instrumentation[0];
+      }
+      const traj = new Trajectory(tObj);
       const rest2DurTot = this.piece.phrases[0].durTot - durTot - rest1DurTot;
-      const rest2 = new Trajectory({
+      const r2Obj = {
         id: 12,
         durTot: rest2DurTot,
         durArray: [1],
         fundID12: this.piece.raga.fundamental
-      });
-      this.piece.phrases[0].trajectories = [rest1, traj, rest2];
+      };
+      if (this.piece.instrumentation) {
+        r2Obj.instrumentation = this.piece.instrumentation[0];
+      }
+      const rest2 = new Trajectory(r2Obj);
+      if (this.piece.phrases[0].trajectoryGrid) {
+        this.piece.phrases[0].trajectoryGrid[0] = [rest1, traj, rest2];
+      } else {
+        this.piece.phrases[0].trajectories = [rest1, traj, rest2];
+      }
       this.piece.phrases[0].reset();
       this.resetZoom();
     }

@@ -91,7 +91,7 @@
           orient='vertical'
         />
       </div>
-      <div class="cbBoxSmall">
+      <div class="cbBoxSmall" v-if='!vocal'>
         <label>Synthesis Damping</label>
         <input
           type="range"
@@ -102,7 +102,7 @@
           orient='vertical'
         />
       </div>
-      <div class="cbBoxSmall">
+      <div class="cbBoxSmall" v-if='!vocal'>
         <label>Chikari Gain</label>
         <input
           type="range"
@@ -308,6 +308,8 @@ export default {
       modsLoaded: false,
       transposition: 0,
       transposable: false,
+      string: undefined,
+      vocal: undefined,
     };
   },
   props: ['audioSource', 'saEstimate', 'saVerified', 'id'],
@@ -334,40 +336,7 @@ export default {
     } else {
       this.gainNode.connect(this.ac.destination);
     }
-
-    this.ac.audioWorklet.addModule(AudioWorklet(ksURL))
-      .then(() => {
-        this.moduleCt++;
-        if (this.moduleCt === 3) {
-          this.modsLoaded = true;
-          if (!this.inited && this.$parent.piece) this.initAll();
-        }
-       })
-      .catch((err) => {
-        console.log(err);
-      });
-    this.ac.audioWorklet.addModule(AudioWorklet(cURL))
-      .then(() => {
-        this.moduleCt++;
-        if (this.moduleCt === 3) {
-          this.modsLoaded = true;
-          if (!this.inited && this.$parent.piece) this.initAll();
-        }
-      })
-      .catch((err) => {
-        console.log(err);
-      });
-    this.ac.audioWorklet.addModule(AudioWorklet(caURL))
-      .then(() => {
-        this.moduleCt++;
-        if (this.moduleCt === 3) {
-          this.modsLoaded = true;
-          if (!this.inited && this.$parent.piece) this.initAll();
-        }
-       })
-      .catch((err) => {
-        console.log(err);
-      });
+    
     if (this.$parent.audioDBDoc && this.$parent.piece) this.gatherInfo();
     this.synthLoopBufSourceNode = this.ac.createBufferSource();
     this.synthLoopBufSourceNode.loop = true; 
@@ -447,13 +416,15 @@ export default {
       const raga = this.$parent.piece.raga;
       const freqs = raga.chikariPitches.map((p) => p.frequency);
       const transp = 2 ** (this.transposition / 1200);
-      const curFreq0 = this.otherNode.freq0.value;
-      const curFreq1 = this.otherNode.freq1.value;
-      this.otherNode.freq0.setValueAtTime(curFreq0, this.now());
-      this.otherNode.freq1.setValueAtTime(curFreq1, this.now());
-      const endTime = this.now() + this.lagTime;
-      this.otherNode.freq0.linearRampToValueAtTime(freqs[0] * transp, endTime);
-      this.otherNode.freq1.linearRampToValueAtTime(freqs[1] * transp, endTime);
+      if (this.string) {
+        const curFreq0 = this.otherNode.freq0.value;
+        const curFreq1 = this.otherNode.freq1.value;
+        this.otherNode.freq0.setValueAtTime(curFreq0, this.now());
+        this.otherNode.freq1.setValueAtTime(curFreq1, this.now());
+        const endTime = this.now() + this.lagTime;
+        this.otherNode.freq0.linearRampToValueAtTime(freqs[0] * transp, endTime);
+        this.otherNode.freq1.linearRampToValueAtTime(freqs[1] * transp, endTime);
+      }
     }
   },
   methods: {
@@ -524,6 +495,55 @@ export default {
     
     parentLoaded() {
       this.gatherInfo();
+      const instrumentation = this.$parent.piece.instrumentation[0];
+      const stringInsts = [
+        'Sitar', 
+        'Sarod', 
+        'Surbahar', 
+        'Veena (Saraswati)',
+        'Veena (Vichitra)',
+        'Veena, Rudra (Bin)'
+      ];
+      const vocInsts = ['Vocal (M)', 'Vocal (F)'];
+      this.string = stringInsts.includes(instrumentation);
+      this.vocal = vocInsts.includes(instrumentation);
+      if (this.string) {
+        this.ac.audioWorklet.addModule(AudioWorklet(ksURL))
+        .then(() => {
+          this.moduleCt++;
+          if (this.moduleCt === 3) {
+            this.modsLoaded = true;
+            if (!this.inited && this.$parent.piece) this.initAll();
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+      this.ac.audioWorklet.addModule(AudioWorklet(cURL))
+        .then(() => {
+          this.moduleCt++;
+          if (this.moduleCt === 3) {
+            this.modsLoaded = true;
+            if (!this.inited && this.$parent.piece) this.initAll();
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+      }
+      
+      this.ac.audioWorklet.addModule(AudioWorklet(caURL))
+        .then(() => {
+          this.moduleCt++;
+          if (this.moduleCt === this.string ? 3 : 1) {
+            this.modsLoaded = true;
+            if (!this.inited && this.$parent.piece) this.initAll();
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+
       this.makeTuningSines();
       if (this.$parent.piece) {
         if (!this.$parent.piece.audioID && !this.$parent.piece.audio_DB_ID) {
@@ -538,8 +558,12 @@ export default {
     },
 
     initAll() {
-      this.initializePluckNode();
-      this.initializeChikariNodes();
+      if (this.string) {
+        this.initializePluckNode();
+        this.initializeChikariNodes();
+      } else if (this.vocal) {
+        this.initializeVocalNode();
+      }
       this.initializeBufferRecorder();
       this.preSetFirstEnvelope(256);
       this.inited = true
@@ -621,13 +645,22 @@ export default {
       const gain = this.intSynthGainNode.gain;
       gain.setValueAtTime(0, now);
       gain.linearRampToValueAtTime(1, now + this.slowRamp);
-      allTrajs.slice(startIdx).forEach((traj, i_) => {
+      const remainingTrajs = allTrajs.slice(startIdx);
+      remainingTrajs.forEach((traj, i_) => {
         const i = i_ + startIdx;
         this.playArticulations(traj, now + Number(allStarts[i]) - curPlayTime);
         if (traj.id !== 12) {
-          const startTime = now + allStarts[i] - curPlayTime;
-          const endTime = now + allEnds[i] - curPlayTime;
-          this.playTraj(traj, startTime, endTime, 64, i === 0);
+          const st = now + allStarts[i] - curPlayTime;
+          const et = now + allEnds[i] - curPlayTime;
+          const lastTraj = remainingTrajs[i_-1];
+          const fromSilence = i === 0 || !lastTraj || lastTraj.id === 12;
+          const last = i === remainingTrajs.length - 1;
+          const toSilence = last || remainingTrajs[i_+1].id === 12;
+          if (this.string) {
+            this.playStringTraj(traj, st, et, 64, i === 0);
+          }  else if (this.vocal) {
+            this.playVocalTraj(traj, st, et, i === 0, fromSilence, toSilence);
+          }
         }
       });
     },
@@ -732,8 +765,9 @@ export default {
       bufferSourceNode.start(when);
     },
 
-    playTraj(traj, startTime, endTime, valueCt, first = false) {
+    playStringTraj(traj, startTime, endTime, valueCt, first = false) {
       const valueDur = 0.02;
+      // this seems to be undoing valueCt; so why is it here?
       valueCt = Math.round((endTime - startTime) / valueDur);
       const freq = this.pluckNode.frequency;
       const lpFreq = this.lowPassNode.frequency;
@@ -761,6 +795,49 @@ export default {
         }
         freq.setValueCurveAtTime(envelope, startTime, duration);
         lpFreq.setValueCurveAtTime(lpEnvelope, startTime, duration);
+      }
+    },
+
+    playVocalTraj(traj, startTime, endTime, first=false, 
+      fromSilence=false, toSilence=false) {
+      const lag = 0.01;
+      const valueDur = 0.02;
+      const valueCt = Math.round((endTime - startTime) / valueDur);
+      const freq = this.vocalNode.frequency;
+      const verySmall = 0.000000000001;
+      if (first) {
+        const offset = startTime < this.now() ? this.now() - startTime : 0;
+        const start = startTime + offset;
+        const duration = endTime - start - verySmall;
+        if (duration < 0) {
+          console.log(duration, traj)
+        }
+        this.vocalGainNode.gain.setValueAtTime(0, start-lag);
+        this.vocalGainNode.gain.linearRampToValueAtTime(1, start);
+        freq.setValueCurveAtTime(this.firstEnvelope, start, duration);
+        if (toSilence) {
+          this.vocalGainNode.gain.setValueAtTime(1, endTime);
+          this.vocalGainNode.gain.linearRampToValueAtTime(0, endTime+lag);
+        }
+      } else {
+        const envelope = new Float32Array(valueCt);
+        const transp = 2 ** (this.transposition / 1200);
+        for (let i = 0; i < valueCt; i++) {
+          envelope[i] = transp * traj.compute(i / (valueCt - 1));
+        }
+        const duration = endTime - startTime - verySmall;
+        if (duration < 0) {
+          console.log(duration, traj)
+        }
+        freq.setValueCurveAtTime(envelope, startTime, duration);
+        if (fromSilence) {
+          this.vocalGainNode.gain.setValueAtTime(0, startTime-lag);
+          this.vocalGainNode.gain.linearRampToValueAtTime(1, startTime);
+        }
+        if (toSilence) {
+          this.vocalGainNode.gain.setValueAtTime(1, endTime);
+          this.vocalGainNode.gain.linearRampToValueAtTime(0, endTime+lag);
+        }
       }
     },
 
@@ -821,7 +898,18 @@ export default {
       this.pluckNode.cutoff = this.pluckNode.parameters.get('Cutoff');
       this.pluckNode.cutoff.setValueAtTime(Number(this.synthDamp), this.now());
     },
-    // end GETBACK
+
+    initializeVocalNode() {
+      if (this.vocalNode) this.vocalNode.disconnect();
+      this.vocalNode = this.ac.createOscillator();
+      this.vocalNode.type = 'triangle';
+      this.vocalGainNode = this.ac.createGain();
+      this.vocalGainNode.gain.setValueAtTime(0, this.now());
+      this.vocalNode
+        .connect(this.vocalGainNode)
+        .connect(this.intSynthGainNode);
+      this.vocalNode.start();
+    },  
 
     initializeBufferRecorder() {
       // the buffer source node
@@ -1106,37 +1194,53 @@ export default {
         this.$parent.startAnimationFrame();
         this.startPlayCursorAnimation();
         this.playTrajs(this.getCurrentTime(), this.now());
-        this.playChikaris(this.getCurrentTime(), this.now());
+        if (this.string) {
+          this.playChikaris(this.getCurrentTime(), this.now());
+        }
+        
       } else {
         this.pause();
         this.$refs.playImg.classList.remove('playing');
         this.$parent.stopAnimationFrame();
         this.stopPlayCursorAnimation();
         this.cancelPlayTrajs();
-        this.cancelBursts();
+        if (this.string) {
+          this.cancelBursts();
+        }
         this.bufferSourceNodes = [];
       }
     },
 
     cancelPlayTrajs(when, mute=true) {
       if (when === undefined) when = this.now();
-      this.pluckNode.frequency.cancelScheduledValues(when);
-      this.lowPassNode.frequency.cancelScheduledValues(when);
+      if (this.string) {
+        this.pluckNode.frequency.cancelScheduledValues(when);
+        this.lowPassNode.frequency.cancelScheduledValues(when);
+        this.pluckNode.cutoff.cancelScheduledValues(when);
+      } else if (this.vocal) {
+        this.vocalNode.frequency.cancelScheduledValues(when);
+        this.vocalGainNode.gain.cancelScheduledValues(when);
+        const curGain = this.vocalGainNode.gain.value;
+        this.vocalGainNode.gain.setValueAtTime(curGain, when);
+        this.vocalGainNode.gain.linearRampToValueAtTime(0, when + 0.01);
+      }
       this.intSynthGainNode.gain.cancelScheduledValues(when);
-      this.pluckNode.cutoff.cancelScheduledValues(when);
       const rampEnd = when + this.slowRamp;
       if (mute) {
         const curSynthGain = this.intSynthGainNode.gain.value;
         this.intSynthGainNode.gain.setValueAtTime(curSynthGain, when);
-        
         this.intSynthGainNode.gain.linearRampToValueAtTime(0, rampEnd);
-        const curChikGain = this.intChikariGainNode.gain.value;
-        this.intChikariGainNode.gain.setValueAtTime(curChikGain, when);
-        this.intChikariGainNode.gain.linearRampToValueAtTime(0, rampEnd);
+        if (this.string) {
+          const curChikGain = this.intChikariGainNode.gain.value;
+          this.intChikariGainNode.gain.setValueAtTime(curChikGain, when);
+          this.intChikariGainNode.gain.linearRampToValueAtTime(0, rampEnd);
+        }  
       }
-      const curCutoff = this.pluckNode.cutoff.value;
-      this.pluckNode.cutoff.setValueAtTime(curCutoff, when);
-      this.pluckNode.cutoff.linearRampToValueAtTime(this.synthDamp, rampEnd);
+      if (this.string) {
+        const curCutoff = this.pluckNode.cutoff.value;
+        this.pluckNode.cutoff.setValueAtTime(curCutoff, when);
+        this.pluckNode.cutoff.linearRampToValueAtTime(this.synthDamp, rampEnd);
+      }
     },
 
     toggleControls(e) {
