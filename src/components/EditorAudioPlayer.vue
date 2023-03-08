@@ -12,8 +12,8 @@
           <div :class="`currentTime tooLeft`">
             {{ formattedCurrentTime }}
           </div>
-          <div class="progressCircle" @mousedown="handleCircleMouseDown">
-            <div class="invisibleProgressCircle"></div>
+          <div class="progressCircle">
+            <!-- <div class="invisibleProgressCircle"></div> -->
           </div>
         </div>
         <div class="timeLeft">{{ '-' + formattedTimeLeft }}</div>
@@ -228,6 +228,8 @@ import rubberBandUrl from '@/audioWorklets/rubberband-processor.js?url';
 import { createRubberBandNode } from 'rubberband-web';
 import { detect } from 'detect-browser';
 
+import { drag as d3Drag, select as d3Select } from 'd3';
+
 
 const structuredTime = (dur) => {
   const hours = String(Math.floor(dur / 3600));
@@ -310,6 +312,7 @@ export default {
       transposable: false,
       string: undefined,
       vocal: undefined,
+      dragStartX: undefined
     };
   },
   props: ['audioSource', 'saEstimate', 'saVerified', 'id'],
@@ -340,6 +343,8 @@ export default {
     if (this.$parent.audioDBDoc && this.$parent.piece) this.gatherInfo();
     this.synthLoopBufSourceNode = this.ac.createBufferSource();
     this.synthLoopBufSourceNode.loop = true; 
+
+    this.addDragger();
   },
 
   beforeUnmount() {
@@ -429,6 +434,57 @@ export default {
   },
   methods: {
 
+    addDragger() {
+      const drag = d3Drag()
+        .on('start', this.dragStart)
+        .on('drag', this.dragging)
+        .on('end', this.dragEnd);
+      d3Select('.progressCircle')
+        .call(drag);
+    },
+
+    dragStart(e) {
+      console.log('drag start');
+      this.dragStartX = e.x;
+    },
+
+    dragging(e) {
+      const diff = this.dragStartX - e.x;
+      const pbi = document.querySelector('.progressBarInner');
+      const pbo = document.querySelector('.progressBarOuter');
+      const pboBox = pbo.getBoundingClientRect();
+      pbi.style.width = pboBox.width * this.progress - diff + 'px';
+      const ct = this.getCurrentTime();
+      const dur = this.audioBuffer.duration;
+      const newTime = ct + (dur * (e.x - this.dragStartX)) / pboBox.width;      
+      this.updateFormattedCurrentTime(newTime);
+      this.updateFormattedTimeLeft(newTime);
+    },
+
+    dragEnd(e) {
+      const bb = this.$refs.pbOuter.getBoundingClientRect();
+      const ct = this.getCurrentTime();
+      const dur = this.audioBuffer.duration;
+      const newTime = ct + (dur * (e.x - this.dragStartX)) / bb.width;
+
+      if (!this.playing) {
+          this.pausedAt = newTime;
+          this.$parent.currentTime = this.pausedAt;
+          this.$parent.movePlayhead();
+          this.$parent.moveShadowPlayhead();
+          this.updateProgress();
+        } else {
+          this.stop();
+          this.pausedAt = newTime;
+          this.play();
+        }
+        this.updateFormattedCurrentTime();
+        this.updateFormattedTimeLeft();
+        // const pc = document.querySelector('.progressCircle');
+        // pc.style.right = '-7px';
+
+
+    },
 
     resetTunings() {
       this.centDevs = this.centDevs.map(() => 0);
@@ -1341,22 +1397,23 @@ export default {
       }
     },
 
-    updateFormattedCurrentTime() {
-      const st = structuredTime(this.getCurrentTime());
+    updateFormattedCurrentTime(ct = undefined) {
+      const st = structuredTime(ct ? ct : this.getCurrentTime());
       const ms = st.minutes + ':' + st.seconds;
       this.formattedCurrentTime = st.hours !== 0 ? ms : st.hours + ':' + ms;
     },
 
-    updateFormattedTimeLeft() {
+    updateFormattedTimeLeft(ct = undefined) {
       if (this.audioBuffer && isNaN(this.audioBuffer.duration)) {
         return '00:00';
       } else {
         let ut;
         if (!this.noAudio) {
           const buf = this.audioBuffer;
-          ut = Number(buf.duration) - Number(this.getCurrentTime());
+          ut = Number(buf.duration) - Number(ct ? ct : this.getCurrentTime());
         } else {
-          ut = Number(this.$parent.piece.durTot) - Number(this.getCurrentTime());
+          const dt = Number(this.$parent.piece.durTot);
+          ut = dt - Number(ct ? ct : this.getCurrentTime());
         }
         
         const st = structuredTime(ut);
@@ -1370,7 +1427,7 @@ export default {
         '.currentTime',
         '.progressCircle',
         '.timeLeft',
-        '.invisibleProgressCircle',
+        // '.invisibleProgressCircle',
       ];
       const cls = classes_.map((cl) => document.querySelector(cl).classList);
       if (bool) {
