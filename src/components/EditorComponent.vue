@@ -398,6 +398,7 @@ export default {
       if (!this.audioDBDoc) {
         this.extendDurTot();
       }
+      this.resetSargam();
     });
 
     this.emitter.on('pluckBool', pluckBool => {
@@ -985,70 +986,13 @@ export default {
       })
     },
 
-    addSargamLabels() { // this 
-      const allTrajs = this.piece.phrases.map(p => p.trajectories).flat();
-      const allPitches = [];
-      // I need pitches and timings
-      let lastPitch = { logFreq: undefined, time: undefined };
-      let trajStart = 0;
-      allTrajs.forEach(t => {
-        if (t.id !== 12) {
-          const durs = t.durArray.map(d => d * t.durTot);
-          let timePts = getStarts(durs);
-          timePts.push(t.durTot);
-          timePts = timePts.map(tp => trajStart + tp);
-          timePts.forEach((tp, i) => {
-            const logFreq = t.logFreqs[i];
-            const cLF = lastPitch.logFreq === logFreq;
-            const cT = lastPitch.time === tp;
-            if (!(cLF || (cLF && cT))) {
-              allPitches.push({ 
-                logFreq: logFreq, 
-                time: tp, 
-                pitch: t.pitches[i] 
-              });
-            }
-            lastPitch.logFreq = logFreq;
-            lastPitch.time = tp;
-          })
-        }
-        trajStart += t.durTot;
-      });
-      const sargamLabels = this.phraseG.append('g')
-        .classed('sargamLabels', true)
-        .style('opacity', Number(this.showSargam))
-      allPitches.forEach((p, pIdx) => {
-        const lastP = allPitches[pIdx - 1];
-        const nextP = allPitches[pIdx + 1];
-        const lastHigher = lastP ? lastP.logFreq > p.logFreq : true;
-        const nextHigher = nextP ? nextP.logFreq > p.logFreq: true;
-        let pos;
-        if (lastHigher && nextHigher) {
-          pos = 0; // top
-        } else if (!lastHigher && !nextHigher) {
-          pos = 1; // bottom
-        } else if (lastHigher && !nextHigher) {
-          pos = 3; // bottom left
-        } else if (!lastHigher && nextHigher) {
-          pos = 2; // top left
-        }
-        const positions = [
-          { x: 0, y: 12 },
-          { x: 0, y: -12 },
-          { x: -5, y: -12 },
-          { x: -5, y: 12 }
-        ]
-        const x = this.xr()(p.time);
-        const y = this.yr()(p.logFreq);
-        sargamLabels.append('text')
-          .attr('x', x + positions[pos].x)
-          .attr('y', y + positions[pos].y)
-          .attr('text-anchor', 'middle')
-          .attr('dominant-baseline', 'middle')
-          .attr('font-size', 14)
-          .attr('fill', 'black')
-          .text(p.pitch.octavedSargamLetter)
-      })
+    clearSargamLabels() {
+      d3Select('.sargamLabels').remove();
+    },
+
+    resetSargam() {
+      this.clearSargamLabels();
+      this.codifiedAddSargamLabels();
     },
 
     addAllDragDots() {
@@ -1533,6 +1477,7 @@ export default {
       this.cleanEmptyTrajs(phrase);
       this.moveChikaris(phrase);
       if (resetRequired) this.resetZoom();
+      this.resetSargam();
     },
     
     cleanEmptyTrajs(phrase) {
@@ -2394,7 +2339,8 @@ export default {
           .attr('cy', this.codifiedYR(this.trajTimePts[0].logFreq))
           .attr('r', 4)
           .style('fill', '#7300e6') 
-      }
+      };
+      this.resetSargam();
     },
     
     clearAll(regionToo) {
@@ -3517,7 +3463,6 @@ export default {
       });
       this.addChikaris();
       this.addPlayhead();
-      // this.addSargamLabels();
     },
 
     addArticulations(traj, phraseStart) {
@@ -4593,9 +4538,7 @@ export default {
       if (this.piece.audioID) await this.redrawSpectrogram();
       this.movePlayhead();
       this.moveShadowPlayhead();
-      // this.movePhraseDivs();
       this.moveRegion();
-      // this.codifiedAddSargamLabels();
     },
 
     resetZoom() {
@@ -4624,6 +4567,7 @@ export default {
           .attr('stroke', this.selectedTrajColor)
       }
     },
+
 
     codifiedAddTraj(traj, phraseStart) {
       const data = this.makeTrajData(traj, phraseStart);
@@ -5020,6 +4964,7 @@ export default {
       this.piece.durArrayFromPhrases();
       this.piece.updateStartTimes();
       this.codifiedRedrawPhrase(pIdx);
+      this.resetSargam();
     },
     
     fixFollowingTrajs(phrase, tIdx) {
