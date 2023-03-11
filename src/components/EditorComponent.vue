@@ -2550,6 +2550,13 @@ export default {
           tsp.updateDampen();
         }
       }
+      if (this.selectedChikariID) {
+        if (e.key === 'ArrowLeft') {
+          this.adjustChikari(true)
+        } else if (e.key === 'ArrowRight') {
+          this.adjustChikari(false)
+        }
+      }
     },
 
     shrink() {
@@ -4061,6 +4068,43 @@ export default {
       })
     },
 
+    codifiedAddOneChikari(phrase, key, selected=true) {
+      const sym = d3Symbol().type(d3SymbolX).size(80);
+      const scaledX = Number(key) / phrase.durTot;
+      const dataObj = {
+        x: Number(key) + phrase.startTime,
+        y: phrase.compute(scaledX, true)
+      };
+      const id = this.idFromKey(key, phrase.pieceIdx);
+      const x = d => this.codifiedXR(d.x);
+      const y = d => this.codifiedYR(d.y);
+      this.phraseG.append('g')
+        .classed('chikari', true)
+        .append('path')
+        .attr('id', id)
+        .attr('d', sym)
+        .attr('stroke', selected ? this.selectedChikariColor : this.chikariColor)
+        .attr('stroke-width', 3)
+        .attr('stroke-linecap', 'round')
+        .data([dataObj])
+        .attr('transform', d => {
+          return `translate(${x(d)}, ${y(d)})`
+        })  
+      this.phraseG.append('g') // for clicking
+        .classed('chikari', true)
+        .append('circle')
+        .attr('id', 'circle__' + id)
+        .classed('chikariCircle', true)
+        .style('opacity', '0')
+        .data([dataObj])
+        .attr('cx', d => this.codifiedXR(d.x))
+        .attr('cy', d => this.codifiedYR(d.y))
+        .attr('r', 6)
+        .on('mouseover', this.handleMouseOver)
+        .on('mouseout', this.handleMouseOut)
+        .on('click', this.handleClickChikari)
+    },
+
     handleMouseOver(e) {
       if (e.target.id.slice(0, 8) === 'circle__') {
         const id = e.target.id.slice(8)
@@ -4144,6 +4188,33 @@ export default {
       }
       if (!(this.selectedPhraseDivIdx === undefined)) {
         this.clearSelectedPhraseDiv()
+      }
+    },
+
+    adjustChikari(left=true) {
+      // first, adjust the actual chikari in phrase object, 
+      const offset = 0.02;
+      const pIdx = this.selectedChikariID.split('_')[0].slice(1);
+      const sec = this.selectedChikariID.split('_')[1];
+      const cSec = this.selectedChikariID.split('_')[2];
+      const time = Number(sec) + Number(cSec) / 100;
+      const phrase = this.piece.phrases[pIdx];
+      if (time < offset && left ) {
+        return 
+      } else if (phrase.durTot - time < offset && !left) {
+        return
+      } else {
+        const selectedChikari = phrase.chikaris[time];
+        const newTime = left ? time - offset : time + offset;
+        const newRealTime = phrase.startTime + newTime;
+        phrase.chikaris[newTime] = selectedChikari;
+        delete phrase.chikaris[time];
+        // then adjust the chikari in the view while altering its id
+        const newID = `p${pIdx}_${newTime.toFixed(2).replace('.', '_')}`;
+        d3Select(`#${this.selectedChikariID}`).remove();
+        d3Select(`#circle__${this.selectedChikariID}`).remove();
+        this.codifiedAddOneChikari(phrase, newTime);
+        this.selectedChikariID = newID;
       }
     },
 
