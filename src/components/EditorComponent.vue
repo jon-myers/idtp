@@ -4204,10 +4204,9 @@ export default {
       } else if (phrase.durTot - time < offset && !left) {
         return
       } else {
-        const selectedChikari = phrase.chikaris[time];
+        const selectedChikari = phrase.chikaris[time.toFixed(2)];
         const newTime = left ? time - offset : time + offset;
-        const newRealTime = phrase.startTime + newTime;
-        phrase.chikaris[newTime] = selectedChikari;
+        phrase.chikaris[newTime.toFixed(2)] = selectedChikari;
         delete phrase.chikaris[time];
         // then adjust the chikari in the view while altering its id
         const newID = `p${pIdx}_${newTime.toFixed(2).replace('.', '_')}`;
