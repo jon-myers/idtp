@@ -2680,6 +2680,9 @@ export default {
           if (traj.id === 12 && traj.fundID12 !== piece.raga.fundamental) {
             traj.fundID12 = piece.raga.fundamental
           }
+          if (traj.id === 12 && Object.keys(traj.articulations).length > 0) {
+            traj.articulations = {};
+          }
           if (piece.instrumentation) {
             traj.instrumentation = piece.instrumentation[0];
           }
@@ -3516,7 +3519,6 @@ export default {
             y: y
           }
         });
-        if (pluckData.length > 0) console.log('adding pluck')
         const sym = d3Symbol().type(d3SymbolTriangle).size(20);
         const x = d => this.xr()(d.x);
         const y = d => this.yr()(d.y);
@@ -4722,11 +4724,9 @@ export default {
     },
 
     movePlucks(traj) {
-      console.log('move plucks', traj.articulations)
       const c1 = traj.articulations[0] && traj.articulations[0].name === 'pluck';
       const c2 = traj.articulations['0.00'] && traj.articulations['0.00'].name === 'pluck';
       if (c1 || c2) {
-        // console.log('these inner plucks')
         const x = d => this.xr()(d.x);
         const y = d => this.yr()(d.y);
         d3Select(`#pluckp${traj.phraseIdx}t${traj.num}`)

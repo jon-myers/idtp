@@ -385,6 +385,17 @@ class Trajectory {
         name: 'slide'
       });
     }
+    this.durArray?.forEach((d, idx) => {
+      if (d === 0) {
+        console.log('removing zero dur')
+        // console.log(this.logFreqs, this.pitches, this.freqs)
+        this.durArray.splice(idx, 1)
+        this.logFreqs.splice(idx + 1, 1);
+        this.pitches.splice(idx + 1, 1);
+        this.freqs.splice(idx + 1, 1);
+        // console.log(this.logFreqs, this.pitches, this.freqs)
+      }
+    })
 
   }
 
