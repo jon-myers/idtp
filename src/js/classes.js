@@ -397,15 +397,17 @@ class Trajectory {
       }
     })
 
+    const vox = ['Vocal (M)', 'Vocal (F)'];
+    if (vox.includes(this.instrumentation)) {
+      const keys = Object.keys(this.articulations)
+      keys?.forEach(k => {
+        if (this.articulations[k].name === 'pluck') {
+          delete this.articulations[k]
+        }
+      })
+    }
   }
 
-  // get freqs() {
-  //   return this.pitches.map(p => p.frequency)
-  // }
-
-  // get logFreqs() {
-  //   return this.pitches.map(p => Math.log2(p.frequency))
-  // }
 
   get name_() {
     // eventually this will replace regular `name`, just testing for now

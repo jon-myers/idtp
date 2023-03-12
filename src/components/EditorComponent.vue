@@ -2542,7 +2542,9 @@ export default {
       }
       if (this.selectedTraj) {
         const tsp = this.$refs.trajSelectPanel;
-        if (e.key === 'p') { 
+        const inst = this.piece.instrumentation[0];
+        const vox = ['Vocal (M)', 'Vocal (F)'];
+        if (e.key === 'p' && !vox.includes(inst)) { 
           tsp.pluckBool = !tsp.pluckBool;
           tsp.updateBool();
         } else if (e.key === 'd') {
