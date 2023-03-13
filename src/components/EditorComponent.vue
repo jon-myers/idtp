@@ -218,6 +218,8 @@ export default {
       playheadReturn: false,
       showInstructions: false,
       instructionsText: instructionsText,
+      scrolling: true,
+      lastTime: undefined,
     }
   },
   components: {
@@ -3332,7 +3334,7 @@ export default {
       const graphWidth = this.rect().width - 30;
       const k = this.tx().k;
       const scrollXExtent = (graphWidth * k - graphWidth) / k;
-      const scrollX = scrollXMin + scrollProp * scrollXExtent;
+      const scrollX = scrollXMin + (scrollProp) * scrollXExtent;
       return scrollX
     },
 
@@ -4907,6 +4909,17 @@ export default {
 
       this.movePlayhead();
       this.startAnimationFrame();
+      if (this.scrolling) {
+        const prop = this.currentTime / this.durTot;
+        const scrollXVal = this.getScrollXVal(prop);
+        this.gx.call(this.zoomX.translateTo, scrollXVal, 0, [0, 0]);
+        this.redraw();
+
+
+      }
+
+
+      this.lastTime = this.currentTime;
     },
 
     stopAnimationFrame() {
