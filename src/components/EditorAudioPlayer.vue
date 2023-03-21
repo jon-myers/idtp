@@ -364,6 +364,7 @@ export default {
     this.chikariGainNode.gain.linearRampToValueAtTime(0, endTime);
     setTimeout(() => this.ac.close(), this.lagTime * 1000);
     this.$parent.stopAnimationFrame();
+    this.ac.close();
   },
 
   watch: {
