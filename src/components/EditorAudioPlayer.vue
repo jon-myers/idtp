@@ -330,7 +330,7 @@ export default {
     this.synthGainNode.connect(this.ac.destination);
     this.moduleCt = 0;
     this.browser = detect();
-    if (this.browser.name !== 'safari' && this.browser.name !== 'firefox') {
+    if (this.browser.os === 'Mac OS' && this.browser.name !== 'safari' && this.browser.name !== 'firefox') {
       this.transposable = true;
       this.rubberBandNode = await createRubberBandNode(this.ac, rubberBandUrl);
       this.rubberBandNode.setHighQuality(true);
