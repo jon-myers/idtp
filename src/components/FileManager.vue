@@ -210,7 +210,10 @@ export default {
           const title = newPieceInfo.title;
           const perm = newPieceInfo.permissions;
           const newOwner = this.$store.state.userID;
-          const result = await cloneTranscription(id, title, newOwner, perm);
+          const name = this.$store.state.name;
+          const family_name = this.$store.state.lastName;
+          const given_name = this.$store.state.firstName;
+          const result = await cloneTranscription(id, title, newOwner, perm, name, family_name, given_name);
           this.$router.push({
             name: 'EditorComponent',
             query: { id: result.insertedId },
@@ -245,6 +248,9 @@ export default {
               trajectories: [traj],
             }),
           ];
+          npi.family_name = this.$store.state.lastName;
+          npi.given_name = this.$store.state.firstName;
+
           this.createNewPiece(npi);
         }
       } catch (err) {
@@ -315,9 +321,9 @@ export default {
     createNewPiece(obj) {
       const piece = obj ? new Piece(obj) : new Piece();
       piece.userID = this.$store.state.userID;
-      piece.lastName = this.$store.state.lastName;
+      // piece.family_name = this.$store.state.lastName;
       piece.name = this.$store.state.name;
-      piece.firstName = this.$store.state.firstName;
+      // piece.given_name = this.$store.state.firstName;
       createNewPiece(piece).then((data) => {
         this.$store.commit('update_id', data.insertedId);
         this.$cookies.set('currentPieceId', data.insertedId);
@@ -346,6 +352,9 @@ export default {
           audioEvent: audioEvent.name,
           audioRecording: audioRecording,
           origID: piece._id,
+          family_name: this.$store.state.lastName,
+          given_name: this.$store.state.firstName,
+          name: this.$store.state.name,
         };
         if (piece.instrumentation) {
           dataObj.instrumentation = piece.instrumentation;

@@ -106,6 +106,9 @@ const runServer = async () => {
     app.post('/insertNewTranscription', async (req, res) => {
       // creates new transcription entry in transcriptions collection
       try {
+        const insert = req.body;
+        insert['dateCreated'] = new Date(insert.dateCreated);
+        insert['dateModified'] = new Date(insert.dateModified);
         const result = await transcriptions.insertOne(req.body)
         res.send(JSON.stringify(result));
       } catch (err) {
@@ -121,6 +124,7 @@ const runServer = async () => {
         if (key !== '_id') updateObj[key] = req.body[key]
       });
       updateObj['dateModified'] = new Date();
+      updateObj['dateCreated'] = new Date(updateObj['dateCreated'])
       const query = { '_id': ObjectId(req.body._id) };
       const update = { '$set': updateObj };
       try {
@@ -137,6 +141,8 @@ const runServer = async () => {
       try {
         const userID = JSON.parse(req.query.userID);
         const sortKey = JSON.parse(req.query.sortKey);
+        let secondarySortKey = undefined;
+        if (sortKey === 'family_name') secondarySortKey = 'given_name';
         const sortDir = JSON.parse(req.query.sortDir);
         const proj = {
           title: 1,
@@ -168,6 +174,7 @@ const runServer = async () => {
         };
         const sort = {};
         sort[sortKey] = sortDir;
+        if (secondarySortKey) sort[secondarySortKey] = sortDir;
         const result = await transcriptions
           .find(query)
           .collation({ 'locale': 'en' })
@@ -720,6 +727,11 @@ const runServer = async () => {
         copy.title = req.body.title;
         copy.userID = req.body.newOwner;
         copy.permissions = req.body.permissions;
+        copy.name = req.body.name;
+        copy.family_name = req.body.family_name;
+        copy.given_name = req.body.given_name;
+        copy.dateModified = new Date();
+        copy.dateCreated = new Date();
         const result = await transcriptions.insertOne(copy);
         res.json(result);
       } catch (err) {

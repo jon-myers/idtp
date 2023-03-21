@@ -28,3 +28,16 @@ for piece in all_pieces:
             transcriptions.update_one({'_id': piece['_id']}, update)
         else:
             print('no user')
+    if 'family_name' not in piece:
+        user = users.find_one({'_id': ObjectId(piece['userID'])})
+        if user:
+            name = user['name']
+            family_name = user['family_name']
+            given_name = user['given_name']
+            update = {'$set': {
+                'family_name': family_name, 
+                'given_name': given_name
+                }}
+            transcriptions.update_one({'_id': piece['_id']}, update)
+        else:
+            print('no user')

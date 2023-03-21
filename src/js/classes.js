@@ -925,8 +925,8 @@ class Piece {
     audio_DB_ID = undefined,
     userID = undefined,
     name = undefined,
-    familyName = undefined,
-    givenName = undefined,
+    family_name = undefined,
+    given_name = undefined,
     permissions = undefined,
     sectionStarts = undefined,
     instrumentation = ['Sitar'],
@@ -971,8 +971,8 @@ class Piece {
     this.userID = userID;
     this.permissions = permissions;
     this.name = name;
-    this.familyName = familyName;
-    this.givenName = givenName;
+    this.family_name = family_name;
+    this.given_name = given_name;
     if (sectionStarts === undefined) {
       this.sectionStarts = [0];
     } else {
@@ -1066,8 +1066,8 @@ class Piece {
       userID: this.userID,
       permissions: this.permissions,
       name: this.name,
-      familyName: this.familyName,
-      givenName: this.givenName,
+      family_name: this.family_name,
+      given_name: this.given_name,
       sectionStarts: this.sectionStarts,
       instrumentation: this.instrumentation,
     }
