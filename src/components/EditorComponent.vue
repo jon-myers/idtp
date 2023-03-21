@@ -4562,8 +4562,9 @@ export default {
         .attr('opacity', '0')
     },
 
-    movePlayhead() {
-      d3Select('.playhead').transition().duration(this.transitionTime)
+    movePlayhead(transitionTime = undefined) {
+      const time = transitionTime ? transitionTime : this.transitionTime;
+      d3Select('.playhead').transition().duration(time)
         .attr('transform', `translate(${this.xr()(this.currentTime)})`)
     },
 
@@ -4886,7 +4887,6 @@ export default {
     },
 
     startAnimationFrame() {
-      this.animationStart = this.$refs.audioPlayer.getCurrentTime();
       if (!this.requestId) {
         this.requestId = window.requestAnimationFrame(this.loopAnimationFrame)
       }
@@ -4894,7 +4894,11 @@ export default {
 
     loopAnimationFrame() {
       this.requestId = undefined;
-      this.currentTime = this.$refs.audioPlayer.getCurrentTime();
+      const latency = this.$refs.audioPlayer.ac.outputLatency;
+      this.currentTime = this.$refs.audioPlayer.getCurrentTime() - latency;
+      if (this.currentTime < this.animationStart) {
+        this.currentTime = this.animationStart;
+      }
 
       const currentStartTime = this.xr().invert(30);
       const currentEndTime = currentStartTime + this.durTot / this.tx().k;
@@ -4913,6 +4917,9 @@ export default {
       if (this.requestId) {
         window.cancelAnimationFrame(this.requestId);
         this.requestId = undefined;
+        this.currentTime = this.$refs.audioPlayer.getCurrentTime();
+        const latency = this.$refs.audioPlayer.ac.outputLatency;
+        this.movePlayhead(latency * 2.0 * 1000);
       }
     },
 
