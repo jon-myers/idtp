@@ -335,7 +335,7 @@ export default {
           permissions: this.permissions,
           audioID: ae.recordings[this.recording].audioFileId,
           clone: true,
-          origID: this.passedInData.origID
+          origID: this.passedInData.origID,
         };
         this.emitter.emit('newPieceInfo', newPieceInfo);
         

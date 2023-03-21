@@ -210,7 +210,10 @@ export default {
           const title = newPieceInfo.title;
           const perm = newPieceInfo.permissions;
           const newOwner = this.$store.state.userID;
-          const result = await cloneTranscription(id, title, newOwner, perm);
+          const name = this.$store.state.name;
+          const family_name = this.$store.state.lastName;
+          const given_name = this.$store.state.firstName;
+          const result = await cloneTranscription(id, title, newOwner, perm, name, family_name, given_name);
           this.$router.push({
             name: 'EditorComponent',
             query: { id: result.insertedId },
@@ -349,6 +352,9 @@ export default {
           audioEvent: audioEvent.name,
           audioRecording: audioRecording,
           origID: piece._id,
+          family_name: this.$store.state.lastName,
+          given_name: this.$store.state.firstName,
+          name: this.$store.state.name,
         };
         if (piece.instrumentation) {
           dataObj.instrumentation = piece.instrumentation;

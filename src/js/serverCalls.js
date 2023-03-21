@@ -830,7 +830,7 @@ const updateTranscriptionPermissions = async (id, permissions) => {
   }
 }
 
-const cloneTranscription = async (id, title, newOwner, permissions) => {
+const cloneTranscription = async (id, title, newOwner, permissions, name, family_name, given_name) => {
   let out;
   const request = {
     method: 'POST',
@@ -841,7 +841,10 @@ const cloneTranscription = async (id, title, newOwner, permissions) => {
       id: id, 
       title: title, 
       newOwner: newOwner, 
-      permissions: permissions 
+      permissions: permissions,
+      name: name,
+      family_name: family_name,
+      given_name: given_name
     })
   };
   try {

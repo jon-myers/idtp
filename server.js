@@ -720,6 +720,9 @@ const runServer = async () => {
         copy.title = req.body.title;
         copy.userID = req.body.newOwner;
         copy.permissions = req.body.permissions;
+        copy.name = req.body.name;
+        copy.family_name = req.body.family_name;
+        copy.given_name = req.body.given_name;
         const result = await transcriptions.insertOne(copy);
         res.json(result);
       } catch (err) {
