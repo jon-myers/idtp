@@ -116,13 +116,20 @@
       <div class='cbBoxSmall' v-if='transposable'>
         <label>Pitch Shift ({{transposition}}&#162;)</label>
         <input 
+          type='checkbox' 
+          v-model='shiftOn' 
+          @click='preventSpace' 
+          @change='toggleShift'
+          :disabled='playing'
+          />
+        <input 
           type='range' 
           min='-200' 
           max='200' 
           step='1' 
           v-model='transposition'
           orient='vertical'
-          :disabled='playing'
+          :disabled='playing || !shiftOn || !readyToShift'
           />
       </div>
 
@@ -314,6 +321,8 @@ export default {
       string: undefined,
       vocal: undefined,
       dragStartX: undefined,
+      shiftOn: false,
+      readyToShift: false,
     };
   },
   props: ['audioSource', 'saEstimate', 'saVerified', 'id'],
@@ -333,13 +342,12 @@ export default {
     this.browser = detect();
     if (this.browser.os === 'Mac OS' && this.browser.name !== 'safari' && this.browser.name !== 'firefox') {
       this.transposable = true;
-      this.rubberBandNode = await createRubberBandNode(this.ac, rubberBandUrl);
-      this.rubberBandNode.setHighQuality(true);
-      this.gainNode.connect(this.rubberBandNode);
-      this.rubberBandNode.connect(this.ac.destination);
-    } else {
-      this.gainNode.connect(this.ac.destination);
+      // this.rubberBandNode = await createRubberBandNode(this.ac, rubberBandUrl);
+      // this.rubberBandNode.setHighQuality(true);
+      // this.gainNode.connect(this.rubberBandNode);
+      // this.rubberBandNode.connect(this.ac.destination);
     }
+    this.gainNode.connect(this.ac.destination);
     
     if (this.$parent.audioDBDoc && this.$parent.piece) this.gatherInfo();
     this.synthLoopBufSourceNode = this.ac.createBufferSource();
@@ -365,7 +373,6 @@ export default {
     this.chikariGainNode.gain.linearRampToValueAtTime(0, endTime);
     setTimeout(() => this.ac.close(), this.lagTime * 1000);
     this.$parent.stopAnimationFrame();
-    this.ac.close();
   },
 
   watch: {
@@ -1303,52 +1310,59 @@ export default {
     },
 
     toggleControls(e) {
-      const cl = e.target.classList;
-      cl.toggle('showControls');
-      this.showControls = this.showControls ? false : true;
-      if (this.showTuning) {
-        this.showTuning = false;
-        this.$refs.tuningImg.classList.remove('showTuning');
-      }
-      if (this.showDownloads) {
-        this.showDownloads = false;
-        this.$refs.downloadImg.classList.remove('showDownloads')
+      if (!this.loading) {
+        const cl = e.target.classList;
+        cl.toggle('showControls');
+        this.showControls = this.showControls ? false : true;
+        if (this.showTuning) {
+          this.showTuning = false;
+          this.$refs.tuningImg.classList.remove('showTuning');
+        }
+        if (this.showDownloads) {
+          this.showDownloads = false;
+          this.$refs.downloadImg.classList.remove('showDownloads')
+        }
       }
     },
 
     toggleTuning(e) {
-      const cl = e.target.classList;
-      cl.toggle('showTuning');
-      if (this.showTuning) {
-        this.showTuning = false;
-        this.tuningGains.forEach((_, i) => {
-          this.tuningGains[i] = 0;
-          this.updateTuningGain(i)
-        })
-      } else {
-        this.showTuning = true
+      if (!this.loading) {
+        const cl = e.target.classList;
+        cl.toggle('showTuning');
+        if (this.showTuning) {
+          this.showTuning = false;
+          this.tuningGains.forEach((_, i) => {
+            this.tuningGains[i] = 0;
+            this.updateTuningGain(i)
+          })
+        } else {
+          this.showTuning = true
+        }
+        if (this.showControls) {
+          this.showControls = false;
+          this.$refs.controlsImg.classList.remove('showControls');
+        }
+        if (this.showDownloads) {
+          this.showDownloads = false;
+          this.$refs.downloadImg.classList.remove('showDownloads')
+        }
       }
-      if (this.showControls) {
-        this.showControls = false;
-        this.$refs.controlsImg.classList.remove('showControls');
-      }
-      if (this.showDownloads) {
-        this.showDownloads = false;
-        this.$refs.downloadImg.classList.remove('showDownloads')
-      }
+      
     },
 
     toggleDownloads(e) {
-      const cl = e.target.classList;
-      cl.toggle('showDownloads');
-      this.showDownloads = this.showDownloads ? false : true;
-      if (this.showControls) {
-        this.showControls = false;
-        this.$refs.controlsImg.classList.remove('showControls');
-      }
-      if (this.showTuning) {
-        this.showTuning = false;
-        this.$refs.tuningImg.classList.remove('showTuning');
+      if (!this.loading) {
+        const cl = e.target.classList;
+        cl.toggle('showDownloads');
+        this.showDownloads = this.showDownloads ? false : true;
+        if (this.showControls) {
+          this.showControls = false;
+          this.$refs.controlsImg.classList.remove('showControls');
+        }
+        if (this.showTuning) {
+          this.showTuning = false;
+          this.$refs.tuningImg.classList.remove('showTuning');
+        }
       }
     },
 
@@ -1489,6 +1503,28 @@ export default {
         excelData(this.$parent.piece._id)
       } else if (this.dataChoice === 'json') {
         jsonData(this.$parent.piece._id)
+      }
+    },
+
+    preventSpace(e) {
+      // prevents spacebar from changing checkbox
+      if (e && e.clientX === 0) e.preventDefault();
+    },
+
+    async toggleShift() {
+      if (this.shiftOn) {
+        this.rubberBandNode = await createRubberBandNode(this.ac, rubberBandUrl);
+        this.rubberBandNode.setHighQuality(true);
+        this.gainNode.disconnect(this.ac.destination);
+        this.gainNode.connect(this.rubberBandNode);
+        this.rubberBandNode.connect(this.ac.destination);
+        this.readyToShift = true;
+      } else {
+        this.rubberBandNode.disconnect(this.ac.destination);
+        this.gainNode.disconnect(this.rubberBandNode);
+        this.gainNode.connect(this.ac.destination);
+        this.readyToShift = false;
+        this.transposition = 0;
       }
     }
   },
