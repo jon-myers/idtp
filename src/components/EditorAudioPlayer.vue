@@ -1248,6 +1248,7 @@ export default {
         this.play();
         this.$refs.playImg.classList.add('playing');
         this.$parent.startAnimationFrame();
+        this.$parent.animationStart = this.getCurrentTime();
         this.startPlayCursorAnimation();
         this.playTrajs(this.getCurrentTime(), this.now());
         if (this.string) {
