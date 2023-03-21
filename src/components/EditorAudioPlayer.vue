@@ -122,6 +122,7 @@
           step='1' 
           v-model='transposition'
           orient='vertical'
+          :disabled='playing'
           />
       </div>
 
@@ -312,7 +313,7 @@ export default {
       transposable: false,
       string: undefined,
       vocal: undefined,
-      dragStartX: undefined
+      dragStartX: undefined,
     };
   },
   props: ['audioSource', 'saEstimate', 'saVerified', 'id'],
