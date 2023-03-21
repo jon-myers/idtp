@@ -2554,9 +2554,9 @@ export default {
       }
       if (this.selectedChikariID) {
         if (e.key === 'ArrowLeft') {
-          this.adjustChikari(true)
+          if (this.editable) this.adjustChikari(true)
         } else if (e.key === 'ArrowRight') {
-          this.adjustChikari(false)
+          if (this.editable) this.adjustChikari(false)
         }
       }
     },
