@@ -855,9 +855,17 @@ const runServer = async () => {
         res.status(500).send(err);
       }
     });
-    app.use('/audio', express.static('audio'))
-    app.use('/peaks', express.static('peaks'))
-    app.use('/spectrograms', express.static('spectrograms'))
+
+    const setNoCache = res => {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0')
+    };
+    app.use('/audio', express.static('audio', { setHeaders: setNoCache }));
+    app.use('/peaks', express.static('peaks', { setHeaders: setNoCache }));
+    app.use('/spectrograms', express.static('spectrograms', { 
+      setHeaders: setNoCache 
+    }))
     app.use('/', express.static('dist'))
     const server = app.listen(3000);
     server.timeout = 600000;
