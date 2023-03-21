@@ -402,6 +402,7 @@ export default {
     });
 
     this.emitter.on('pluckBool', pluckBool => {
+      console.log('pluck bool happening')
       if (pluckBool) {
         if (!this.selectedTraj.articulations[0]) {
           this.selectedTraj.articulations[0] = new Articulation();
