@@ -137,6 +137,8 @@ const runServer = async () => {
       try {
         const userID = JSON.parse(req.query.userID);
         const sortKey = JSON.parse(req.query.sortKey);
+        let secondarySortKey = undefined;
+        if (sortKey === 'family_name') secondarySortKey = 'given_name';
         const sortDir = JSON.parse(req.query.sortDir);
         const proj = {
           title: 1,
@@ -168,6 +170,7 @@ const runServer = async () => {
         };
         const sort = {};
         sort[sortKey] = sortDir;
+        if (secondarySortKey) sort[secondarySortKey] = sortDir;
         const result = await transcriptions
           .find(query)
           .collation({ 'locale': 'en' })
