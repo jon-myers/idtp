@@ -245,6 +245,9 @@ export default {
               trajectories: [traj],
             }),
           ];
+          npi.family_name = this.$store.state.lastName;
+          npi.given_name = this.$store.state.firstName;
+
           this.createNewPiece(npi);
         }
       } catch (err) {
@@ -315,9 +318,9 @@ export default {
     createNewPiece(obj) {
       const piece = obj ? new Piece(obj) : new Piece();
       piece.userID = this.$store.state.userID;
-      piece.lastName = this.$store.state.lastName;
+      // piece.family_name = this.$store.state.lastName;
       piece.name = this.$store.state.name;
-      piece.firstName = this.$store.state.firstName;
+      // piece.given_name = this.$store.state.firstName;
       createNewPiece(piece).then((data) => {
         this.$store.commit('update_id', data.insertedId);
         this.$cookies.set('currentPieceId', data.insertedId);
