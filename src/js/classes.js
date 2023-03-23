@@ -142,7 +142,8 @@ class Pitch {
       swara: this.swara,
       raised: this.raised,
       oct: this.oct,
-      ratios: this.ratios
+      ratios: this.ratios,
+      fundamental: this.fundamental,
     }
   }
 }
