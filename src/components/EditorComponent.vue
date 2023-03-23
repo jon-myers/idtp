@@ -134,6 +134,8 @@ import TrajSelectPanel from '@/components/TrajSelectPanel.vue';
 import instructionsText from '@/assets/texts/editor_instructions.html?raw';
 import { detect } from 'detect-browser';
 
+import { toRaw } from 'vue';
+
 const getStarts = durArray => {
   const cumsum = (sum => value => sum += value)(0);
   return [0].concat(durArray.slice(0, durArray.length - 1)).map(cumsum)
@@ -171,7 +173,7 @@ export default {
       axisColor: '#c4b18b',
       yAxWidth: 30,
       xAxHeight: 30,
-      minDrawDur: 0.025, //this could be smaller, potentially
+      minDrawDur: 0.01, //this could be smaller, potentially
       initViewDur: 20,
       initYScale: 2,
       initXScale: 1,
@@ -186,8 +188,10 @@ export default {
       dateModified: undefined,
       setChikari: false,
       selectedTrajColor: 'red',
+      selectedMultiTrajColor: 'red',
       trajColor: 'midnightblue',
       selectedTraj: undefined,
+      selectedTrajs: [],
       viewPhrases: true,
       phraseLabelHeight: 30,
       loop: false,
@@ -211,6 +215,7 @@ export default {
       setNewSeries: false,
       setNewRegion: false,
       shifted: false,
+      metad: false,
       regionStartTime: undefined,
       regionEndTime: undefined,
       scrollDragColor: '#9c9c9c',
@@ -218,6 +223,8 @@ export default {
       playheadReturn: false,
       showInstructions: false,
       instructionsText: instructionsText,
+      clipboardTrajs: [],
+      pastedTrajs: [],
     }
   },
   components: {
@@ -252,6 +259,7 @@ export default {
         phrase.assignPhraseIdx();
         phrase.assignTrajNums();
         this.selectedTraj = newTraj;
+        this.selectedTrajs = [this.selectedTraj];
         const data = this.makeTrajData(this.selectedTraj, phrase.startTime);
         d3Select(`#p${pIdx}t${tIdx}`)
           .datum(data)
@@ -363,6 +371,7 @@ export default {
       //
       this.codifiedAddTraj(newTraj, phrase.startTime);
       this.selectedTraj = newTraj;
+      this.selectedTrajs = [this.selectedTraj];
       this.selectedTrajID = `p${newTraj.phraseIdx}t${newTraj.num}`;
       d3Select(`#${this.selectedTrajID}`)
         .attr('stroke', this.selectedTrajColor)
@@ -388,9 +397,12 @@ export default {
         tsp.periods = this.selectedTraj.vibObj.periods;
         tsp.offset = this.selectedTraj.vibObj.vertOffset;
       }
-      
+      const selT = this.selectedTraj;
       const c1 = this.selectedTraj.articulations[0];
-      if (c1 && this.selectedTraj.articulations[0].name === 'pluck') {
+      const c2 = this.selectedTraj.articulations['0.00'];
+      const c3 = c1 && selT.articulations[0].name === 'pluck';
+      const c4 = c2 && selT.articulations['0.00'].name === 'pluck';
+      if (c3 || c4) {
         tsp.pluckBool = true
       } else {
         tsp.pluckBool = false
@@ -402,19 +414,22 @@ export default {
     });
 
     this.emitter.on('pluckBool', pluckBool => {
-      console.log('pluck bool happening')
+      const selT = this.selectedTraj;
+      const c1 = selT.articulations[0] || selT.articulations['0.00'];
       if (pluckBool) {
-        if (!this.selectedTraj.articulations[0]) {
-          this.selectedTraj.articulations[0] = new Articulation();
+        if (!c1) {
+          this.selectedTraj.articulations['0.00'] = new Articulation();
           const pIdx = this.selectedTraj.phraseIdx;
           const tIdx = this.selectedTraj.num;
+          console.log(pIdx, tIdx)
           const phrase = this.piece.phrases[pIdx];
           const g = d3Select(`#articulations__p${pIdx}t${tIdx}`)
           this.codifiedAddPlucks(this.selectedTraj, phrase.startTime, g)
         }
       } else {
-        if (this.selectedTraj.articulations[0]) {
+        if (c1) {
           delete this.selectedTraj.articulations[0];
+          delete this.selectedTraj.articulations['0.00']
           this.removePlucks(this.selectedTraj)
         }
       }
@@ -907,6 +922,158 @@ export default {
       this.gy.call(this.zoomY.translateTo, 0, scrollYVal, [0, 0]);
       this.redraw();
       yDragger.attr('transform', `translate(2, ${deltaY})`)
+    },
+
+    pasteTrajs() {
+      this.pastedTrajs = [];
+      //make sure they are sorted by time first
+      this.clipboardTrajs.sort((a, b) => {
+        const aPhrase = this.piece.phrases[a.phraseIdx];
+        const aPhraseStart = aPhrase.startTime;
+        const aStart = a.startTime + aPhraseStart;
+        const bPhrase = this.piece.phrases[b.phraseIdx];
+        const bPhraseStart = bPhrase.startTime;
+        const bStart = b.startTime + bPhraseStart;
+        return aStart - bStart;
+      }, 0);
+
+      // make sure they all fit within a single silent traj, otherwise indicate
+      // somehow that they don't fit
+      const fT = this.clipboardTrajs[0];
+      const fP = this.piece.phrases[fT.phraseIdx];
+      const fPStart = fP.startTime + fT.startTime;
+      const lT = this.clipboardTrajs[this.clipboardTrajs.length - 1];
+      const lP = this.piece.phrases[lT.phraseIdx];
+      const lPEnd = lP.startTime + lT.startTime + lT.durTot;
+      const dur = lPEnd - fPStart;
+      const realST = this.currentTime;
+      const startPIdx = this.phraseIdxFromTime(realST);
+      const startP = this.piece.phrases[startPIdx];
+      const startTIdx = this.trajIdxFromTime(startP, realST);
+      const startT = startP.trajectories[startTIdx];
+      const realET = realST + dur;
+      const endPIdx = this.phraseIdxFromTime(realET);
+      const endP = this.piece.phrases[endPIdx];
+      const endTIdx = this.trajIdxFromTime(endP, realET);
+      if (startPIdx === endPIdx && startTIdx === endTIdx && startT.id === 12) {
+        this.clipboardTrajs.forEach(traj => {
+          // first, find real start time for original traj
+          const origPhrase = this.piece.phrases[traj.phraseIdx];
+          const origPhraseStart = origPhrase.startTime;
+          const origTrajStart = origPhraseStart + traj.startTime;
+          const offsetTrajStart = origTrajStart - fPStart;
+          const realStartTime = realST + offsetTrajStart;
+
+          // get idx of phrase and traj in which to paste
+          const targetPhraseIdx = this.phraseIdxFromTime(realStartTime);
+          const targetPhrase = this.piece.phrases[targetPhraseIdx];
+          const targetTrajIdx = this.trajIdxFromTime(targetPhrase, realStartTime);
+          const targetTraj = targetPhrase.trajectories[targetTrajIdx];
+          // make a copy of traj.toJSON() without reference to original
+          const copyObj = JSON.parse(JSON.stringify(traj.toJSON()))
+          copyObj.pitches.forEach((pitch, pIdx) => {
+            copyObj.pitches[pIdx] = new Pitch(pitch)
+          })
+          const newTraj = new Trajectory(copyObj);
+
+          const startsTogether = targetTraj.startTime === realStartTime - targetPhrase.startTime;
+          const endsTogether = targetTraj.startTime + targetTraj.durTot === realStartTime - targetPhrase.startTime + traj.durTot;
+          const trajs = targetPhrase.trajectories;
+          if (startsTogether && endsTogether) {
+            // replace silent traj with copied traj
+            trajs[targetTrajIdx] = newTraj;
+            targetPhrase.reset();
+          } else if (startsTogether) {
+            // replace with copied traj followed by silent traj
+            targetTraj.durTot = targetTraj.durTot - newTraj.durTot;
+            trajs.splice(targetTrajIdx, 0, newTraj);
+            targetPhrase.reset();
+            const followingTrajs = trajs.slice(targetTrajIdx + 1, trajs.length);
+            followingTrajs.reverse().forEach(t => {
+              if (t.id !== 12) {
+                const oldId = `p${t.phraseIdx}t${t.num - 1}`;
+                const newId = `p${t.phraseIdx}t${t.num}`;
+                this.reIdAllReps(oldId, newId);
+              }
+            })
+          } else if (endsTogether) {
+            // replace with silent traj followed by copied traj
+            targetTraj.durTot = targetTraj.durTot - newTraj.durTot;
+            trajs.splice(targetTrajIdx + 1, 0, newTraj);
+            targetPhrase.reset();
+            const followingTrajs = trajs.slice(targetTrajIdx + 1, trajs.length);
+            followingTrajs.reverse().forEach(t => {
+              if (t.id !== 12) {
+                const oldId = `p${t.phraseIdx}t${t.num - 1}`;
+                const newId = `p${t.phraseIdx}t${t.num}`;
+                this.reIdAllReps(oldId, newId);
+              }
+            })
+          } else {
+            // replace with silent traj followed by copied traj followed by silent traj
+            const firstDur = realStartTime - targetPhrase.startTime - targetTraj.startTime;
+            const lastDur = targetTraj.durTot - firstDur - newTraj.durTot;
+            targetTraj.durTot = firstDur;
+            const lstObj = {
+              id: 12,
+              pitches: [],
+              durTot: lastDur,
+              fundID12: this.piece.raga.fundamental
+            };
+            if (this.piece.instrumentation) {
+              lstObj.instrument = this.piece.instrumentation;
+            }
+            const lastTraj = new Trajectory(lstObj);
+            trajs.splice(targetTrajIdx + 1, 0, newTraj);
+            trajs.splice(targetTrajIdx + 2, 0, lastTraj);
+            targetPhrase.reset();
+            const followingTrajs = trajs.slice(targetTrajIdx + 2, trajs.length);
+            followingTrajs.reverse().forEach(t => {
+              if (t.id !== 12) {
+                const oldId = `p${t.phraseIdx}t${t.num - 2}`;
+                const newId = `p${t.phraseIdx}t${t.num}`;
+                this.reIdAllReps(oldId, newId);
+              }
+            })
+          }
+          this.codifiedAddTraj(newTraj, targetPhrase.startTime)
+          this.pastedTrajs.push(newTraj);
+        });
+        this.selectedTrajs = this.pastedTrajs;
+        if (this.selectedTrajs.length === 1) {
+          this.selectedTraj = this.selectedTrajs[0];
+          this.selectedTrajID = `p${this.selectedTraj.phraseIdx}t${this.selectedTraj.num}`
+          d3Select('#' + this.selectedTrajID)
+            .attr('stroke', this.selectedTrajColor)
+          d3Select(`#dampen${this.selectedTrajID}`)
+            .attr('stroke', this.selectedTrajColor)
+          d3Select(`#pluck${this.selectedTrajID}`)
+            .attr('stroke', this.selectedTrajColor)
+            .attr('fill', this.selectedTrajColor)
+          d3Select(`#overlay__${this.selectedTrajID}`)
+            .attr('cursor', 'default')
+        } else {
+          this.selectedTrajs.forEach(traj => {
+          const id = `p${traj.phraseIdx}t${traj.num}`;
+          d3Select(`#${id}`)
+            .attr('stroke', this.selectedMultiTrajColor)
+          d3Select(`#dampen${id}`)
+            .attr('stroke', this.selectedMultiTrajColor)
+          d3Select(`#pluck${id}`)
+            .attr('fill', this.selectedMultiTrajColor)
+          d3Select(`#pluck${id}`)
+            .attr('stroke', this.selectedMultiTrajColor)
+          d3Select('#overlay__' + id)
+            .attr('cursor', 'default')
+        })
+        }
+        
+        
+      } else {
+        console.log("Can't paste here")
+      }
+
+      
     },
 
     codifiedAddSargamLabels() { // this 
@@ -1470,6 +1637,7 @@ export default {
       phrase.assignTrajNums();
       phrase.assignPhraseIdx();
       this.selectedTraj = newTraj;
+      this.selectedTrajs = [this.selectedTraj];
       this.moveKrintin(this.selectedTraj, phrase.startTime);
       this.moveSlides(this.selectedTraj, phrase.startTime);
       this.codifiedRedrawDampener(this.selectedTraj, phrase.startTime);
@@ -2257,6 +2425,7 @@ export default {
         phrase.reset();
         this.codifiedAddTraj(newTraj, phrase.startTime);
         this.selectedTraj = newTraj;
+        this.selectedTrajs = [this.selectedTraj];
         this.selectedTrajID = `p${newTraj.phraseIdx}t${newTraj.num}`;
         d3Select(`#${this.selectedTrajID}`)
           .attr('stroke', this.selectedTrajColor)
@@ -2284,6 +2453,7 @@ export default {
         phrase.reset();
         this.codifiedAddTraj(newTraj, phrase.startTime);
         this.selectedTraj = newTraj;
+        this.selectedTrajs = [this.selectedTraj];
         this.selectedTrajID = `p${newTraj.phraseIdx}t${newTraj.num}`;
         d3Select(`#${this.selectedTrajID}`)
           .attr('stroke', this.selectedTrajColor)
@@ -2375,12 +2545,15 @@ export default {
     },
 
     handleKeyup(e) {
-      if (e.key === 'Shift') this.shifted = false
+      if (e.key === 'Shift') this.shifted = false;
+      if (e.key === 'Meta') this.metad = false;
     },
 
     handleKeydown(e) {
       if (e.key === ' ') {
         this.$refs.audioPlayer.togglePlay()
+      } else if (e.key === 'Meta') {
+        this.metad = true
       } else if (e.key === 'Escape') {
         e.preventDefault();
         this.clearAll();
@@ -2399,6 +2572,13 @@ export default {
           this.selectedTrajID = undefined;
           this.clearTrajSelectPanel();
           d3SelectAll('.dragDots').remove();
+        } else if (this.selectedTrajs.length > 1) {
+          this.selectedTrajs.forEach(traj => {
+            const trajID = `p${traj.phraseIdx}t${traj.num}`;
+            this.deleteTraj(trajID);
+            this.clearTrajSelectPanel();
+            this.selectedTrajs = [];
+          })
         } else if (!(this.selectedPhraseDivIdx === undefined)) {
           const phraseA = this.piece.phrases[this.selectedPhraseDivIdx];
           const initPhraseADur = phraseA.durTot;
@@ -2466,16 +2646,20 @@ export default {
 
         }
       } else if (e.key === 'c' && this.editable) {
-        this.setChikari = true;
-        this.svg.style('cursor', 'cell')
-        if (this.setNewTraj) {
-          d3SelectAll('.newTrajDot').remove();
-          this.setNewTraj = false;
-        }
-        if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
-        if (this.setNewSeries) {
-          this.setNewSeries = false;
-          d3SelectAll('.newSeriesDot').remove();
+        if (this.metad) {
+          this.clipboardTrajs = this.selectedTrajs
+        } else {
+          this.setChikari = true;
+          this.svg.style('cursor', 'cell')
+          if (this.setNewTraj) {
+            d3SelectAll('.newTrajDot').remove();
+            this.setNewTraj = false;
+          }
+          if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
+          if (this.setNewSeries) {
+            this.setNewSeries = false;
+            d3SelectAll('.newSeriesDot').remove();
+          }
         }
       } else if (e.key === 't' && this.setNewTraj === false && this.editable) {
         this.clearSelectedTraj();
@@ -2534,6 +2718,8 @@ export default {
         this.clearAll();
         this.setNewRegion = true;
 
+      } else if (e.key === 'v' && this.metad && this.editable) {
+        if (this.clipboardTrajs.length > 0) this.pasteTrajs()
       }
       if (this.setNewTraj || this.selectedTraj) {
         const keyNums = this.$refs.trajSelectPanel.keyNumsFiltered;
@@ -3504,7 +3690,8 @@ export default {
     removePlucks(traj) {
       const pIdx = traj.phraseIdx;
       const tIdx = traj.num;
-      d3Select(`#pluckp${pIdx}t${tIdx}`).remove()
+      const id = `#pluckp${pIdx}t${tIdx}`;
+      d3SelectAll(id).remove()
     },
 
     addPlucks(traj, phraseStart, g) {
@@ -4123,16 +4310,18 @@ export default {
         const id = e.target.id.slice(9);
         const pIdx = Number(id.split('t')[0].slice(1));
         const tIdx = Number(id.split('t')[1]);
+        const traj = this.piece.phrases[pIdx].trajectories[tIdx];
+        let color = this.selectedTrajColor;
+        if (this.selectedTrajs.includes(traj) && this.selectedTrajs.length > 1) {
+          color = this.selectedMultiTrajColor;
+        }
         d3Select(`#${id}`)
-          .attr('stroke', this.selectedTrajColor)
+          .attr('stroke', color)
         d3Select(`#dampenp${pIdx}t${tIdx}`)
-          .attr('stroke', this.selectedTrajColor)
-        if (this.selectedTraj) {
-          const c1 = this.selectedTraj.num === tIdx;
-          if (!(c1 && this.selectedTraj.phraseIdx === pIdx)) {
-            d3Select(`#${e.target.id}`)
-              .style('cursor', 'pointer')
-          }
+          .attr('stroke', color)
+        if (this.selectedTraj && traj !== this.selectedTraj) {
+          d3Select(`#${e.target.id}`)
+            .style('cursor', 'pointer')
         } else {
           d3Select(`#${e.target.id}`)
             .style('cursor', 'pointer')
@@ -4152,6 +4341,7 @@ export default {
       phrase.assignPhraseIdx();
       phrase.assignTrajNums();
       this.selectedTraj = newTraj;
+      this.selectedTrajs = [this.selectedTraj];
       const data = this.makeTrajData(this.selectedTraj, phrase.startTime);
       d3Select(`#p${pIdx}t${tIdx}`)
         .datum(data)
@@ -4171,11 +4361,23 @@ export default {
       }
       if (e.target.id.slice(0, 9) === 'overlay__') {
         const id = e.target.id.slice(9)
-        if (id !== this.selectedTrajID) {
-          d3Select(`#${id}`)
-            .attr('stroke', this.trajColor)
-          d3Select(`#dampen${id}`)
-            .attr('stroke', this.trajColor)
+        if (this.selectedTrajs.length < 2) {
+          if (id !== this.selectedTrajID) {
+            d3Select(`#${id}`)
+              .attr('stroke', this.trajColor)
+            d3Select(`#dampen${id}`)
+              .attr('stroke', this.trajColor)
+          }
+        } else {
+          const pIdx = Number(id.split('t')[0].slice(1));
+          const tIdx = Number(id.split('t')[1]);
+          const traj = this.piece.phrases[pIdx].trajectories[tIdx];
+          if (!this.selectedTrajs.includes(traj)) {
+            d3Select(`#${id}`)
+              .attr('stroke', this.trajColor)
+            d3Select(`#dampen${id}`)
+              .attr('stroke', this.trajColor)
+          }
         }
       }
     },
@@ -4226,64 +4428,128 @@ export default {
 
     handleClickTraj(e) {
       e.stopPropagation();
-      const id = e.target.id.split('__')[1];
-      if (this.selectedTrajID && this.selectedTrajID !== id) {
-        d3Select(`#` + this.selectedTrajID)
-          .attr('stroke', this.trajColor)
-        d3Select(`#dampen` + this.selectedTrajID)
-          .attr('stroke', this.trajColor)
-      }
-      if (this.setNewSeries) {
-        this.setNewSeries = false;
-        d3SelectAll('.newSeriesDot').remove();
-      }
-      if (this.setNewTraj) {
-        this.setNewTraj = false;
-        d3SelectAll('.newTrajDot').remove();
-      }
-      if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
-      if (this.setChikari) this.setChikari = false;
-      this.svg.style('cursor', 'default');
-      this.selectedTrajID = e.target.id.split('__')[1];
-      const pIdx = this.selectedTrajID.split('t')[0].slice(1);
-      const tIdx = this.selectedTrajID.split('t')[1];
-      this.selectedTraj = this.piece.phrases[pIdx].trajectories[tIdx];
-      const tsp = this.$refs.trajSelectPanel;
-      const altId = this.selectedTraj.id >= 12 ? 
-                    this.selectedTraj.id - 1: 
-                    this.selectedTraj.id; 
-      tsp.selectedIdx = tsp.trajIdxs.indexOf(altId);
-      tsp.parentSelected = true;
-      tsp.slope = Math.log2(this.selectedTraj.slope);
-      tsp.vowel = this.selectedTraj.vowel;
-      tsp.startConsonant = this.selectedTraj.startConsonant;
-      tsp.endConsonant = this.selectedTraj.endConsonant;
-      const c1 = this.selectedTraj.articulations[0];
-      const c2 = this.selectedTraj.articulations['1.00'];
-      if (c1 && this.selectedTraj.articulations[0].name === 'pluck') {
-        tsp.pluckBool = true
+      if (this.shifted && this.selectedTrajs.length >= 1) {
+        const id = e.target.id.split('__')[1];
+        const pIdx = id.split('t')[0].slice(1);
+        const tIdx = id.split('t')[1];
+        const newTraj = this.piece.phrases[pIdx].trajectories[tIdx];
+        this.selectedTrajs.push(newTraj);
+
+        // clear selected traj visually
+        if (this.selectedTraj && this.selectedTrajID) {
+          d3Select(`#${this.selectedTrajID}`)
+            .attr('stroke', this.trajColor)
+          d3Select(`#dampen${this.selectedTrajID}`)
+            .attr('stroke', this.trajColor)
+          d3Select(`#pluck${this.selectedTrajID}`)
+            .attr('fill', this.trajColor)
+            d3Select(`#pluck${this.selectedTrajID}`)
+            .attr('stroke', this.trajColor)
+          d3Select('#overlay__' + this.selectedTrajID)
+            .attr('cursor', 'pointer')
+          d3SelectAll('.dragDots').remove();
+          this.selectedTrajID = undefined;
+          this.selectedTraj = undefined;
+          this.clearTrajSelectPanel();
+        }
+        this.selectedTrajs.forEach(traj => {
+          const id = `p${traj.phraseIdx}t${traj.num}`;
+          d3Select(`#${id}`)
+            .attr('stroke', this.selectedMultiTrajColor)
+          d3Select(`#dampen${id}`)
+            .attr('stroke', this.selectedMultiTrajColor)
+          d3Select(`#pluck${id}`)
+            .attr('fill', this.selectedMultiTrajColor)
+          d3Select(`#pluck${id}`)
+            .attr('stroke', this.selectedMultiTrajColor)
+          d3Select('#overlay__' + id)
+            .attr('cursor', 'default')
+        })
+        
+
       } else {
-        tsp.pluckBool = false
-      }
-      if (c2 && c2.name === 'dampen') {
-        tsp.dampen = true
-      } else {
-        tsp.dampen = false
-      }
-      d3Select(`#${this.selectedTrajID}`)
-        .attr('stroke', this.selectedTrajColor)
-      d3Select(`#overlay__${this.selectedTrajID}`)
-        .style('cursor', 'auto')
-      d3Select(`#dampen${this.selectedTrajID}`)
-        .attr('stroke', this.selectedTrajColor)
-      if (this.selectedChikariID) {
-        this.clearSelectedChikari()
-      }
-      if (!(this.selectedPhraseDivIdx === undefined)) {
-        this.clearSelectedPhraseDiv()
-      }
-      this.addAllDragDots();
-      this.$refs.trajSelectPanel.showTrajChecks = true;
+        if (this.selectedTrajs.length > 1) {
+          this.selectedTrajs.forEach(traj => {
+            const id = `p${traj.phraseIdx}t${traj.num}`;
+            d3Select(`#${id}`)
+              .attr('stroke', this.trajColor)
+            d3Select(`#dampen${id}`)
+              .attr('stroke', this.trajColor)
+            d3Select(`#pluck${id}`)
+              .attr('fill', this.trajColor)
+            d3Select(`#pluck${id}`)
+              .attr('stroke', this.trajColor)
+            d3Select('#overlay__' + id)
+              .attr('cursor', 'pointer')
+          })
+        }
+        const id = e.target.id.split('__')[1];
+        if (this.selectedTrajID && this.selectedTrajID !== id) {
+          d3Select(`#` + this.selectedTrajID)
+            .attr('stroke', this.trajColor)
+          d3Select(`#dampen` + this.selectedTrajID)
+            .attr('stroke', this.trajColor)
+          d3Select(`#pluck${this.selectedTrajID}`)
+            .attr('fill', this.trajColor)
+            .attr('stroke', this.trajColor)
+        }
+        if (this.setNewSeries) {
+          this.setNewSeries = false;
+          d3SelectAll('.newSeriesDot').remove();
+        }
+        if (this.setNewTraj) {
+          this.setNewTraj = false;
+          d3SelectAll('.newTrajDot').remove();
+        }
+        if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
+        if (this.setChikari) this.setChikari = false;
+        this.svg.style('cursor', 'default');
+        this.selectedTrajID = e.target.id.split('__')[1];
+        const pIdx = this.selectedTrajID.split('t')[0].slice(1);
+        const tIdx = this.selectedTrajID.split('t')[1];
+        this.selectedTraj = this.piece.phrases[pIdx].trajectories[tIdx];
+        this.selectedTrajs = [this.selectedTraj];
+        const tsp = this.$refs.trajSelectPanel;
+        const altId = this.selectedTraj.id >= 12 ? 
+                      this.selectedTraj.id - 1: 
+                      this.selectedTraj.id; 
+        tsp.selectedIdx = tsp.trajIdxs.indexOf(altId);
+        tsp.parentSelected = true;
+        tsp.slope = Math.log2(this.selectedTraj.slope);
+        tsp.vowel = this.selectedTraj.vowel;
+        tsp.startConsonant = this.selectedTraj.startConsonant;
+        tsp.endConsonant = this.selectedTraj.endConsonant;
+        const st = this.selectedTraj;
+        const c1 = st.articulations[0];
+        const c2 = this.selectedTraj.articulations['1.00'];
+        const c3 = st.articulations['0.00'];
+        const c4 = c1 && st.articulations[0].name === 'pluck';
+        const c5 = c3 && st.articulations['0.00'].name === 'pluck';
+        if (c4 || c5) {
+          tsp.pluckBool = true
+        } else {
+          tsp.pluckBool = false
+        }
+        if (c2 && c2.name === 'dampen') {
+          tsp.dampen = true
+        } else {
+          tsp.dampen = false
+        }
+        d3Select(`#${this.selectedTrajID}`)
+          .attr('stroke', this.selectedTrajColor)
+        d3Select(`#overlay__${this.selectedTrajID}`)
+          .style('cursor', 'auto')
+        d3Select(`#dampen${this.selectedTrajID}`)
+          .attr('stroke', this.selectedTrajColor)
+        if (this.selectedChikariID) {
+          this.clearSelectedChikari()
+        }
+        if (!(this.selectedPhraseDivIdx === undefined)) {
+          this.clearSelectedPhraseDiv()
+        }
+        this.addAllDragDots();
+        this.$refs.trajSelectPanel.showTrajChecks = true;
+      }   
     },
 
     clearSelectedChikari() {
@@ -4311,9 +4577,28 @@ export default {
           .style('cursor', 'pointer')
         d3Select(`#dampen${this.selectedTrajID}`)
           .attr('stroke', this.trajColor);
+        d3Select(`#pluck${this.selectedTrajID}`)
+          .attr('fill', this.trajColor)
+          .attr('stroke', this.trajColor)
         this.selectedTrajID = undefined;
         this.selectedTraj = undefined;
+        this.selectedTrajs = [];
         d3SelectAll('.dragDots').remove();
+      }
+      if (this.selectedTrajs.length >= 2) {
+        this.selectedTrajs.forEach(traj => {
+          const id = `p${traj.phraseIdx}t${traj.num}`;
+          d3Select(`#${id}`)
+            .attr('stroke', this.trajColor)
+          d3Select(`#dampen${id}`)
+            .attr('stroke', this.trajColor)
+          d3Select('#overlay__' + id)
+            .attr('cursor', 'pointer')
+          d3Select(`#pluck${id}`)
+            .attr('fill', this.trajColor)
+            .attr('stroke', this.trajColor)
+        })
+        this.selectedTrajs = [];
       }
     },
 
