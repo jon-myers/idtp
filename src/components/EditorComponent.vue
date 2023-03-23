@@ -173,7 +173,7 @@ export default {
       axisColor: '#c4b18b',
       yAxWidth: 30,
       xAxHeight: 30,
-      minDrawDur: 0.025, //this could be smaller, potentially
+      minDrawDur: 0.01, //this could be smaller, potentially
       initViewDur: 20,
       initYScale: 2,
       initXScale: 1,
@@ -925,6 +925,7 @@ export default {
     },
 
     pasteTrajs() {
+      this.pastedTrajs = [];
       //make sure they are sorted by time first
       this.clipboardTrajs.sort((a, b) => {
         const aPhrase = this.piece.phrases[a.phraseIdx];
@@ -1038,6 +1039,35 @@ export default {
           this.codifiedAddTraj(newTraj, targetPhrase.startTime)
           this.pastedTrajs.push(newTraj);
         });
+        this.selectedTrajs = this.pastedTrajs;
+        if (this.selectedTrajs.length === 1) {
+          this.selectedTraj = this.selectedTrajs[0];
+          this.selectedTrajID = `p${this.selectedTraj.phraseIdx}t${this.selectedTraj.num}`
+          d3Select('#' + this.selectedTrajID)
+            .attr('stroke', this.selectedTrajColor)
+          d3Select(`#dampen${this.selectedTrajID}`)
+            .attr('stroke', this.selectedTrajColor)
+          d3Select(`#pluck${this.selectedTrajID}`)
+            .attr('stroke', this.selectedTrajColor)
+            .attr('fill', this.selectedTrajColor)
+          d3Select(`#overlay__${this.selectedTrajID}`)
+            .attr('cursor', 'default')
+        } else {
+          this.selectedTrajs.forEach(traj => {
+          const id = `p${traj.phraseIdx}t${traj.num}`;
+          d3Select(`#${id}`)
+            .attr('stroke', this.selectedMultiTrajColor)
+          d3Select(`#dampen${id}`)
+            .attr('stroke', this.selectedMultiTrajColor)
+          d3Select(`#pluck${id}`)
+            .attr('fill', this.selectedMultiTrajColor)
+          d3Select(`#pluck${id}`)
+            .attr('stroke', this.selectedMultiTrajColor)
+          d3Select('#overlay__' + id)
+            .attr('cursor', 'default')
+        })
+        }
+        
         
       } else {
         console.log("Can't paste here")
@@ -2689,7 +2719,7 @@ export default {
         this.setNewRegion = true;
 
       } else if (e.key === 'v' && this.metad && this.editable) {
-        this.pasteTrajs()
+        if (this.clipboardTrajs.length > 0) this.pasteTrajs()
       }
       if (this.setNewTraj || this.selectedTraj) {
         const keyNums = this.$refs.trajSelectPanel.keyNumsFiltered;
@@ -4411,6 +4441,10 @@ export default {
             .attr('stroke', this.trajColor)
           d3Select(`#dampen${this.selectedTrajID}`)
             .attr('stroke', this.trajColor)
+          d3Select(`#pluck${this.selectedTrajID}`)
+            .attr('fill', this.trajColor)
+            d3Select(`#pluck${this.selectedTrajID}`)
+            .attr('stroke', this.trajColor)
           d3Select('#overlay__' + this.selectedTrajID)
             .attr('cursor', 'pointer')
           d3SelectAll('.dragDots').remove();
@@ -4424,17 +4458,39 @@ export default {
             .attr('stroke', this.selectedMultiTrajColor)
           d3Select(`#dampen${id}`)
             .attr('stroke', this.selectedMultiTrajColor)
+          d3Select(`#pluck${id}`)
+            .attr('fill', this.selectedMultiTrajColor)
+          d3Select(`#pluck${id}`)
+            .attr('stroke', this.selectedMultiTrajColor)
           d3Select('#overlay__' + id)
             .attr('cursor', 'default')
         })
         
 
       } else {
+        if (this.selectedTrajs.length > 1) {
+          this.selectedTrajs.forEach(traj => {
+            const id = `p${traj.phraseIdx}t${traj.num}`;
+            d3Select(`#${id}`)
+              .attr('stroke', this.trajColor)
+            d3Select(`#dampen${id}`)
+              .attr('stroke', this.trajColor)
+            d3Select(`#pluck${id}`)
+              .attr('fill', this.trajColor)
+            d3Select(`#pluck${id}`)
+              .attr('stroke', this.trajColor)
+            d3Select('#overlay__' + id)
+              .attr('cursor', 'pointer')
+          })
+        }
         const id = e.target.id.split('__')[1];
         if (this.selectedTrajID && this.selectedTrajID !== id) {
           d3Select(`#` + this.selectedTrajID)
             .attr('stroke', this.trajColor)
           d3Select(`#dampen` + this.selectedTrajID)
+            .attr('stroke', this.trajColor)
+          d3Select(`#pluck${this.selectedTrajID}`)
+            .attr('fill', this.trajColor)
             .attr('stroke', this.trajColor)
         }
         if (this.setNewSeries) {
@@ -4521,6 +4577,9 @@ export default {
           .style('cursor', 'pointer')
         d3Select(`#dampen${this.selectedTrajID}`)
           .attr('stroke', this.trajColor);
+        d3Select(`#pluck${this.selectedTrajID}`)
+          .attr('fill', this.trajColor)
+          .attr('stroke', this.trajColor)
         this.selectedTrajID = undefined;
         this.selectedTraj = undefined;
         this.selectedTrajs = [];
@@ -4535,6 +4594,9 @@ export default {
             .attr('stroke', this.trajColor)
           d3Select('#overlay__' + id)
             .attr('cursor', 'pointer')
+          d3Select(`#pluck${id}`)
+            .attr('fill', this.trajColor)
+            .attr('stroke', this.trajColor)
         })
         this.selectedTrajs = [];
       }
