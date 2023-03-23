@@ -2533,7 +2533,7 @@ export default {
         this.setNewSeries = false;
         d3SelectAll('.newSeriesDot').remove();
       }
-      if (this.setNewPhrase) this.setNewPhrase = false;
+      if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
       if (this.regionG && regionToo === undefined) {
         this.regionG.remove();
         this.regionG = undefined;
