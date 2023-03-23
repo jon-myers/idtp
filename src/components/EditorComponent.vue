@@ -2643,7 +2643,10 @@ export default {
             }
           })
           this.selectedPhraseDivIdx = undefined;
-
+          this.piece.phrases.forEach(phrase => {
+            phrase.consolidateSilentTrajs()
+          });
+          this.cleanPhrases();
         }
       } else if (e.key === 'c' && this.editable) {
         if (this.metad) {
