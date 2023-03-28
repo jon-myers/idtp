@@ -233,10 +233,13 @@ import ksURL from '@/audioWorklets/karplusStrong.worklet.js?url';
 import cURL from '@/audioWorklets/chikaris.worklet.js?url';
 import caURL from '@/audioWorklets/captureAudio.worklet.js?url';
 import rubberBandUrl from '@/audioWorklets/rubberband-processor.js?url';
+import soundtouchURL from'@/audioWorklets/soundtouch.worklet.js?url';
 import { createRubberBandNode } from 'rubberband-web';
 import { detect } from 'detect-browser';
-
+import createSoundTouchNode from '@soundtouchjs/audio-worklet';
+import regeneratorRuntime from 'regenerator-runtime';
 import { drag as d3Drag, select as d3Select } from 'd3';
+import { SoundTouch } from '@/js/playbackClasses.js';
 
 
 const structuredTime = (dur) => {
@@ -323,6 +326,7 @@ export default {
       dragStartX: undefined,
       shiftOn: false,
       readyToShift: false,
+      soundtouch: undefined,
     };
   },
   props: ['audioSource', 'saEstimate', 'saVerified', 'id'],
@@ -442,6 +446,35 @@ export default {
     }
   },
   methods: {
+
+    // async setupSoundtouch(rate=1, init=true) {
+    //   console.log('doing it again')
+    //   try {
+    //     if (this.soundtouch) {
+    //       this.soundtouch.off();
+    //       this.soundtouch.disconnect();
+    //     }
+    //     this.soundtouch = createSoundTouchNode(this.ac, AudioWorkletNode, this.testBuf);
+    //     this.soundtouch.on('initialized', () => {
+    //       this.soundtouch.rate = rate;
+    //       this.soundtouch.connectToBuffer();
+    //       if (init) {
+    //         this.soundtouch.pause()
+    //       } else {
+    //         this.soundtouch.play()
+    //       }
+    //       this.soundtouch.connect(this.ac.destination)
+    //     })
+    //     this.soundtouch.on('end', () => this.setupSoundtouch(rate, false))
+    //     return 
+    //   } catch (err) {
+    //     console.log(err);
+    //   }
+    // },
+
+    onSoundTouchInit() {
+      console.log('soundtouch initialized')
+    },
 
     addDragger() {
       const drag = d3Drag()
@@ -596,7 +629,7 @@ export default {
           console.log(err);
         });
       }
-      
+      // capture audio
       this.ac.audioWorklet.addModule(AudioWorklet(caURL))
         .then(() => {
           this.moduleCt++;
@@ -608,6 +641,23 @@ export default {
         .catch((err) => {
           console.log(err);
         });
+
+      // soundtouch
+      this.ac.audioWorklet.addModule(soundtouchURL)
+        .then(() => {
+          fetch('https://swara.studio/audio/shortClip.wav').then(res => {
+            return res.arrayBuffer();
+          }).then(buf => {
+            this.testBuf = buf;
+            this.soundtouch = new SoundTouch({ 
+              rate: 1,
+              looping: true,
+              extThis: this,
+              buf: this.testBuf,
+              destination: this.ac.destination,
+            });
+          })
+        })
 
       this.makeTuningSines();
       if (this.$parent.piece) {
