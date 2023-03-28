@@ -232,6 +232,7 @@ import { excelData, jsonData } from '@/js/serverCalls.js';
 import ksURL from '@/audioWorklets/karplusStrong.worklet.js?url';
 import cURL from '@/audioWorklets/chikaris.worklet.js?url';
 import caURL from '@/audioWorklets/captureAudio.worklet.js?url';
+import klattURL from '@/audioWorklets/klattSynth.worklet.js?url';
 import rubberBandUrl from '@/audioWorklets/rubberband-processor.js?url';
 import { createRubberBandNode } from 'rubberband-web';
 import { detect } from 'detect-browser';
@@ -323,6 +324,23 @@ export default {
       dragStartX: undefined,
       shiftOn: false,
       readyToShift: false,
+      vowelParams: [ // f1, f2, f3, b1, b2, b3
+        [[310, 2020, 2960, 45, 200, 400], [290, 2070, 2960, 60, 200, 400]],
+        [[400, 1800, 2570, 50, 100, 140], [470, 1600, 2600, 50, 100, 140]],
+        [[480, 1720, 2520, 70, 100, 200], [330, 2020, 2600, 55, 100, 200]],
+        [[530, 1680, 2500, 60, 90, 200], [620, 1530, 2530, 60, 90, 200]],
+        [[620, 1660, 2430, 70, 150, 320], [650, 1490, 2470, 70, 100, 320]],
+        [[700, 1220, 2600, 130, 70, 160], [700, 1220, 2600, 130, 70, 160]],
+        [[600, 990, 2570, 90, 100, 80], [630, 1040, 2600, 90, 100, 80]],
+        [[620, 1220, 2550, 80, 50, 140], [620, 1220, 2550, 80, 50, 140]],
+        [[540, 1100, 2300, 80, 70, 70], [450, 900, 2300, 80, 70, 70]],
+        [[450, 1100, 2350, 80, 100, 80], [500, 1180, 2390, 80, 100, 80]],
+        [[350, 1250, 2200, 65, 110, 140], [320, 900, 2200, 65, 110, 140]],
+        [[470, 1270, 1540, 100, 60, 110], [420, 1310, 1540, 100, 60, 110]],
+        [[660, 1200, 2550, 100, 70, 200], [400, 1880, 2500, 70, 100, 200]],
+        [[640, 1230, 2550, 80, 70, 140], [420, 940, 2350, 80, 70, 80]],
+        [[550, 960, 2400, 80, 50, 130], [360, 1820, 2450, 60, 50, 160]]
+      ],
     };
   },
   props: ['audioSource', 'saEstimate', 'saVerified', 'id'],
@@ -373,6 +391,30 @@ export default {
     this.chikariGainNode.gain.linearRampToValueAtTime(0, endTime);
     setTimeout(() => this.ac.close(), this.lagTime * 1000);
     this.$parent.stopAnimationFrame();
+    const nodes = [
+      this.gainNode,
+      this.synthGainNode,
+      this.klattNode,
+      this.synthLoopBufSourceNode,
+      this.intSynthGainNode,
+      this.chikariGainNode,
+      this.rubberBandNode,
+      this.otherNode,
+      this.chikariDCOffsetNode,
+      this.intChikariGainNode,
+      this.pluckNode,
+      this.lowPassNode,
+      this.pluckDCOffsetNode,
+      this.vocalNode,
+      this.synthLoopGainNode,
+      this.synthLoopSource,
+      this.capture,
+      this.chikLoopSource,
+      this.chikLoopGainNode,
+    ];
+    nodes.forEach(node => {
+      if (node) node.disconnect();
+    })
   },
 
   watch: {
@@ -557,8 +599,69 @@ export default {
         osc.start();
       });
     },
+
+    // addKlattModule(url = this.ksUrl)
+
+    async setUpKlattNode(url, destination) {
+      try {
+        await this.ac.audioWorklet.addModule(url, destination);
+        this.klattNode = new AudioWorkletNode(this.ac, 'klatt-synth');
+        const params = this.klattNode.parameters;
+        const kn = this.klattNode;
+        kn.f0 = params.get('f0');
+        kn.f1 = params.get('f1');
+        kn.f2 = params.get('f2');
+        kn.f3 = params.get('f3');
+        kn.f4 = params.get('f4');
+        kn.f5 = params.get('f5');
+        kn.f6 = params.get('f6');
+        kn.b1 = params.get('b1');
+        kn.b2 = params.get('b2');
+        kn.b3 = params.get('b3');
+        kn.b4 = params.get('b4');
+        kn.b5 = params.get('b5');
+        kn.b6 = params.get('b6');
+        kn.db1 = params.get('db1');
+        kn.db2 = params.get('db2');
+        kn.db3 = params.get('db3');
+        kn.db4 = params.get('db4');
+        kn.db5 = params.get('db5');
+        kn.db6 = params.get('db6');
+        kn.flutterLevel = params.get('flutterLevel');
+        kn.openPhaseRatio = params.get('openPhaseRatio');
+        kn.breathinessDb = params.get('breathinessDb');
+        kn.tiltDb = params.get('tiltDb');
+        kn.gainDb = params.get('gainDb');
+        kn.agcRmsLevel = params.get('agcRmsLevel');
+        kn.cascadeEnabled = params.get('cascadeEnabled');
+        kn.cascadeVoicingDb = params.get('cascadeVoicingDb');
+        kn.cascadeAspirationDb = params.get('cascadeAspirationDb');
+        kn.cascadeAspirationMod = params.get('cascadeAspirationMod');
+        kn.nasalFormantFreq = params.get('nasalFormantFreq');
+        kn.nasalFormantFreqToggle = params.get('nasalFormantFreqToggle');
+        kn.nasalFormantBw = params.get('nasalFormantBw');
+        kn.nasalFormantBwToggle = params.get('nasalFormantBwToggle');
+        kn.nasalAntiformantFreq = params.get('nasalAntiformantFreq');
+        kn.nasalAntiformantFreqToggle = params.get('nasalAntiformantFreqToggle');
+        kn.nasalAntiformantBw = params.get('nasalAntiformantBw');
+        kn.nasalAntiformantBwToggle = params.get('nasalAntiformantBwToggle');
+        kn.parallelEnabled = params.get('parallelEnabled');
+        kn.parallelVoicingDb = params.get('parallelVoicingDb');
+        kn.parallelAspirationDb = params.get('parallelAspirationDb');
+        kn.parallelAspirationMod = params.get('parallelAspirationMod');
+        kn.fricationDb = params.get('fricationDb');
+        kn.fricationMod = params.get('fricationMod');
+        kn.parallelBypassDb = params.get('parallelBypassDb');
+        kn.nasalFormantDb = params.get('nasalFormantDb');
+        kn.extGain = params.get('extGain');
+        this.klattNode
+          .connect(destination)
+      } catch (e) {
+        console.error(e);
+      }
+    },
     
-    parentLoaded() {
+    async parentLoaded() {
       this.gatherInfo();
       const instrumentation = this.$parent.piece.instrumentation[0];
       const stringInsts = [
@@ -574,28 +677,32 @@ export default {
       this.vocal = vocInsts.includes(instrumentation);
       if (this.string) {
         this.ac.audioWorklet.addModule(AudioWorklet(ksURL))
-        .then(() => {
-          this.moduleCt++;
-          if (this.moduleCt === 3) {
-            this.modsLoaded = true;
-            if (!this.inited && this.$parent.piece) this.initAll();
-          }
-        })
-        .catch((err) => {
-          console.log(err);
-        });
-      this.ac.audioWorklet.addModule(AudioWorklet(cURL))
-        .then(() => {
-          this.moduleCt++;
-          if (this.moduleCt === 3) {
-            this.modsLoaded = true;
-            if (!this.inited && this.$parent.piece) this.initAll();
-          }
-        })
-        .catch((err) => {
-          console.log(err);
-        });
-      }
+          .then(() => {
+            this.moduleCt++;
+            if (this.moduleCt === 3) {
+              this.modsLoaded = true;
+              if (!this.inited && this.$parent.piece) this.initAll();
+            }
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+        this.ac.audioWorklet.addModule(AudioWorklet(cURL))
+          .then(() => {
+            this.moduleCt++;
+            if (this.moduleCt === 3) {
+              this.modsLoaded = true;
+              if (!this.inited && this.$parent.piece) this.initAll();
+            }
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+      } 
+      // else if (this.vocal) {
+      //   // await this.setUpKlattNode(klattURL, this.synthGainNode)
+      //   // this.ac.audioWorklet.addModule(AudioWorklet(klattURL))
+      // }
       
       this.ac.audioWorklet.addModule(AudioWorklet(caURL))
         .then(() => {
@@ -628,6 +735,7 @@ export default {
         this.initializeChikariNodes();
       } else if (this.vocal) {
         this.initializeVocalNode();
+        this.setUpKlattNode(klattURL, this.synthGainNode);
       }
       this.initializeBufferRecorder();
       this.preSetFirstEnvelope(256);
@@ -724,7 +832,7 @@ export default {
           if (this.string) {
             this.playStringTraj(traj, st, et, 64, i === 0);
           }  else if (this.vocal) {
-            this.playVocalTraj(traj, st, et, i === 0, fromSilence, toSilence);
+            this.playKlattTraj(traj, st, et, fromSilence, toSilence);
           }
         }
       });
@@ -865,6 +973,7 @@ export default {
 
     playVocalTraj(traj, startTime, endTime, first=false, 
       fromSilence=false, toSilence=false) {
+        console.log(fromSilence, toSilence)
       const lag = 0.01;
       const valueDur = 0.02;
       const valueCt = Math.round((endTime - startTime) / valueDur);
@@ -904,6 +1013,45 @@ export default {
           this.vocalGainNode.gain.linearRampToValueAtTime(0, endTime+lag);
         }
       }
+    },
+
+    playKlattTraj(traj, startTime, endTime, fromSilence=false, toSilence=false) {
+      const valueDur = 0.02;
+      const valueCt = Math.round((endTime - startTime) / valueDur);
+      const freq = this.klattNode.f0;
+      const verySmall = 0.000000000001;
+      const shwahTime = 0.3;
+      const envelope = new Float32Array(valueCt);
+      const transp = 2 ** (this.transposition / 1200);
+      for (let i = 0; i < valueCt; i++) {
+        envelope[i] = transp * traj.compute(i / (valueCt - 1));
+      }
+      const duration = endTime - startTime - verySmall;
+      if (duration < 0) {
+        console.log(duration, traj)
+      }
+      freq.setValueCurveAtTime(envelope, startTime, duration);
+      const vowels = ['a', 'ā', 'i', 'ī', 'u', 'ū', 'ē', 'ai','ō', 'au'];
+      const vpIdxs = [7, 6, 1, 0, 9, 10, 2, 3, 8, 5];
+      const vIdx = traj.vowel ? vowels.indexOf(traj.vowel) : 0;
+      const params = ['f1', 'f2', 'f3', 'b1', 'b2', 'b3'];
+      params.forEach((param, pIdx) => {
+        const idx = vpIdxs[vIdx];
+        const s0 = this.vowelParams[idx][0][pIdx];
+        const s1 = idx === 1 || idx === 3 ? s0 : this.vowelParams[idx][1][pIdx];
+        this.klattNode[param].setValueAtTime(s0, startTime);
+        this.klattNode[param].linearRampToValueAtTime(s1, startTime + shwahTime);
+      });
+      const max = 0.125;
+      if (fromSilence) {
+        this.klattNode.extGain.setValueAtTime(0, startTime);
+        this.klattNode.extGain.linearRampToValueAtTime(max, startTime+0.01);
+      }
+      if (toSilence) {
+        this.klattNode.extGain.setValueAtTime(max, endTime-0.01);
+        this.klattNode.extGain.linearRampToValueAtTime(0, endTime);
+      }
+      this.klattNode.flutterLevel.setValueAtTime(0.15, startTime);
     },
 
     preSetFirstEnvelope(valueCt) {
@@ -1284,11 +1432,17 @@ export default {
         this.lowPassNode.frequency.cancelScheduledValues(when);
         this.pluckNode.cutoff.cancelScheduledValues(when);
       } else if (this.vocal) {
-        this.vocalNode.frequency.cancelScheduledValues(when);
-        this.vocalGainNode.gain.cancelScheduledValues(when);
-        const curGain = this.vocalGainNode.gain.value;
-        this.vocalGainNode.gain.setValueAtTime(curGain, when);
-        this.vocalGainNode.gain.linearRampToValueAtTime(0, when + 0.01);
+        // this.vocalNode.frequency.cancelScheduledValues(when);
+        // this.vocalGainNode.gain.cancelScheduledValues(when);
+        // const curGain = this.vocalGainNode.gain.value;
+        // this.vocalGainNode.gain.setValueAtTime(curGain, when);
+        // this.vocalGainNode.gain.linearRampToValueAtTime(0, when + 0.01);
+        const curGain = this.klattNode.extGain.value;
+        this.klattNode.parameters.forEach(param => {
+          param.cancelScheduledValues(when + 0.01);
+        })
+        this.klattNode.extGain.setValueAtTime(curGain, when);
+        this.klattNode.extGain.linearRampToValueAtTime(0, when + 0.01);
       }
       this.intSynthGainNode.gain.cancelScheduledValues(when);
       const rampEnd = when + this.slowRamp;
