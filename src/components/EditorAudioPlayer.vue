@@ -324,6 +324,7 @@ export default {
       dragStartX: undefined,
       shiftOn: false,
       readyToShift: false,
+      klattActive: false,
       vowelParams: [ // f1, f2, f3, b1, b2, b3
         [[310, 2020, 2960, 45, 200, 400], [290, 2070, 2960, 60, 200, 400]],
         [[400, 1800, 2570, 50, 100, 140], [470, 1600, 2600, 50, 100, 140]],
@@ -734,8 +735,16 @@ export default {
         this.initializePluckNode();
         this.initializeChikariNodes();
       } else if (this.vocal) {
-        this.initializeVocalNode();
-        this.setUpKlattNode(klattURL, this.synthGainNode);
+        const version = this.browser.version.split('.')[0];
+        const c1 = this.browser.name === 'chrome';
+        const c2 = this.browser.name === 'firefox' && version >= 113;
+        const c3 = this.browser.name === 'edge-chromium';
+        if (c1 || c2 || c3) {
+          this.setUpKlattNode(klattURL, this.synthGainNode);
+          this.klattActive = true
+        } else {
+          this.initializeVocalNode()
+        }
       }
       this.initializeBufferRecorder();
       this.preSetFirstEnvelope(256);
@@ -831,8 +840,13 @@ export default {
           const toSilence = last || remainingTrajs[i_+1].id === 12;
           if (this.string) {
             this.playStringTraj(traj, st, et, 64, i === 0);
-          }  else if (this.vocal) {
-            this.playKlattTraj(traj, st, et, fromSilence, toSilence);
+          } else if (this.vocal) {
+            if (this.klattActive) {
+              this.playKlattTraj(traj, st, et, fromSilence, toSilence);
+            } else {
+              this.playVocalTraj(traj, st, et, i === 0, fromSilence, toSilence);
+            }
+            
           }
         }
       });
@@ -973,7 +987,6 @@ export default {
 
     playVocalTraj(traj, startTime, endTime, first=false, 
       fromSilence=false, toSilence=false) {
-        console.log(fromSilence, toSilence)
       const lag = 0.01;
       const valueDur = 0.02;
       const valueCt = Math.round((endTime - startTime) / valueDur);
@@ -1432,17 +1445,20 @@ export default {
         this.lowPassNode.frequency.cancelScheduledValues(when);
         this.pluckNode.cutoff.cancelScheduledValues(when);
       } else if (this.vocal) {
-        // this.vocalNode.frequency.cancelScheduledValues(when);
-        // this.vocalGainNode.gain.cancelScheduledValues(when);
-        // const curGain = this.vocalGainNode.gain.value;
-        // this.vocalGainNode.gain.setValueAtTime(curGain, when);
-        // this.vocalGainNode.gain.linearRampToValueAtTime(0, when + 0.01);
-        const curGain = this.klattNode.extGain.value;
-        this.klattNode.parameters.forEach(param => {
-          param.cancelScheduledValues(when + 0.01);
-        })
-        this.klattNode.extGain.setValueAtTime(curGain, when);
-        this.klattNode.extGain.linearRampToValueAtTime(0, when + 0.01);
+        if (this.klattActive) {
+          const curGain = this.klattNode.extGain.value;
+          this.klattNode.parameters.forEach(param => {
+            param.cancelScheduledValues(when + 0.01);
+          })
+          this.klattNode.extGain.setValueAtTime(curGain, when);
+          this.klattNode.extGain.linearRampToValueAtTime(0, when + 0.01);
+        } else {
+          this.vocalNode.frequency.cancelScheduledValues(when);
+          this.vocalGainNode.gain.cancelScheduledValues(when);
+          const curGain = this.vocalGainNode.gain.value;
+          this.vocalGainNode.gain.setValueAtTime(curGain, when);
+          this.vocalGainNode.gain.linearRampToValueAtTime(0, when + 0.01);
+        }
       }
       this.intSynthGainNode.gain.cancelScheduledValues(when);
       const rampEnd = when + this.slowRamp;
