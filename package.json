@@ -33,7 +33,6 @@
     "electron-builder": "^23.6.0",
     "fs": "^0.0.1-security",
     "jpickle": "^0.4.1",
-    "klatt-syn": "^1.0.6",
     "mitt": "^3.0.0",
     "mongo-dot-notation": "^3.1.0",
     "mongodb": "^5.1.0",
