@@ -255,7 +255,7 @@ class Trajectory {
     }
 
     this.articulations = articulations === undefined ? {
-      0: new Articulation({
+      '0.00': new Articulation({
         name: 'pluck',
         stroke: 'd'
       })
