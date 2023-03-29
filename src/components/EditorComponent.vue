@@ -430,6 +430,7 @@ export default {
         if (c1) {
           delete this.selectedTraj.articulations[0];
           delete this.selectedTraj.articulations['0.00']
+          console.log(4)
           this.removePlucks(this.selectedTraj)
         }
       }
@@ -1597,6 +1598,7 @@ export default {
           this.codifiedRedrawDampener(newNextTraj, phrase.startTime);
           this.moveStartingConsonant(newNextTraj, phrase.startTime, true);
           this.moveEndingConsonant(newNextTraj, phrase.startTime, true);
+          console.log(0)
           this.removePlucks(newNextTraj);
           const g = d3Select(`#articulations__p${pIdx}t${tIdx+1}`);
           this.codifiedAddPlucks(newNextTraj, phrase.startTime, g)
@@ -1621,6 +1623,7 @@ export default {
             this.codifiedRedrawDampener(newNextTraj, nextPhrase.startTime)
             this.moveStartingConsonant(newNextTraj, nextPhrase.startTime, true);
             this.moveEndingConsonant(newNextTraj, nextPhrase.startTime, true);
+            console.log(1)
             this.removePlucks(newNextTraj);
             const g = d3Select(`#articulations__p${pIdx+1}t${0}`);
             this.codifiedAddPlucks(newNextTraj, nextPhrase.startTime, g);
@@ -1628,6 +1631,7 @@ export default {
           }
         }
       }
+      console.log(2)
       this.removePlucks(traj);
       const g = d3Select(`#articulations__p${pIdx}t${tIdx}`)
       this.codifiedAddPlucks(traj, phrase.startTime, g);
@@ -1711,13 +1715,16 @@ export default {
     fixTrajectory(traj) {
       // so that articulations are in the right place according to new durArray;
       const trajObj = traj.toJSON();
-      const c1 = traj.articulations[0];
+      const c1 = traj.articulations[0] || traj.articulations['0.00'];
       const c2 = traj.articulations['1.00'];
       const pluckExists = c1 && traj.articulations[0].name === 'pluck';
       const dampenExists = c2 && traj.articulations['1.00'].name === 'dampen';
       delete trajObj.articulations;
       const newTraj = new Trajectory(trajObj);
-      if (!pluckExists) delete newTraj.articulations[0];
+      if (!pluckExists) {
+        delete newTraj.articulations[0];
+        delete newTraj.articulations['0.00']
+      }
       if (dampenExists) newTraj.articulations['1.00'] = new Articulation({
         name: 'dampen',
       })
@@ -2441,8 +2448,10 @@ export default {
         this.$refs.trajSelectPanel.selectedIdx = this.selectedTraj.id;
         this.$refs.trajSelectPanel.parentSelected = true;
         this.$refs.trajSelectPanel.slope = Math.log2(this.selectedTraj.slope);
-        const c1 = this.selectedTraj.articulations[0];
-        if (c1 && this.selectedTraj.articulations[0].name === 'pluck') {
+        const arts = this.selectedTraj.articulations;
+        const c1 = arts[0] && arts[0].name === 'pluck';
+        const c2 = arts['0.00'] && arts['0.00'].name === 'pluck';
+        if (c1 || c2) {
           this.$refs.trajSelectPanel.pluckBool = true
         } else {
           this.$refs.trajSelectPanel.pluckBool = false
@@ -2469,8 +2478,10 @@ export default {
         this.$refs.trajSelectPanel.selectedIdx = this.selectedTraj.id;
         this.$refs.trajSelectPanel.parentSelected = true;
         this.$refs.trajSelectPanel.slope = Math.log2(this.selectedTraj.slope);
-        const c1 = this.selectedTraj.articulations[0];
-        if (c1 && this.selectedTraj.articulations[0].name === 'pluck') {
+        const arts = this.selectedTraj.articulations;
+        const c1 = arts[0] && arts[0].name === 'pluck';
+        const c2 = arts['0.00'] && arts['0.00'].name === 'pluck';
+        if (c1 || c2) {
           this.$refs.trajSelectPanel.pluckBool = true
         } else {
           this.$refs.trajSelectPanel.pluckBool = false
@@ -2910,11 +2921,14 @@ export default {
     },
 
     fixTrajs() {
-      // why are they getting named articulation slide
+      // why are they getting named articulation slide ?
       this.piece.phrases.forEach(phrase => {
         phrase.trajectories.forEach((traj) => {
-          if (traj.articulations[0] && traj.articulations[0].name === 'slide') {
-            traj.articulations[0].name = 'pluck'
+          const arts = traj.articulations;
+          const c1 = arts[0] && arts[0].name === 'slide';
+          const c2 = arts['0.00'] && arts['0.00'].name === 'slide';
+          if (c1 || c2) {
+            traj.articulations['0.00'].name = 'pluck'
           }
         })
       })
