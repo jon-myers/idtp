@@ -232,6 +232,7 @@ import { excelData, jsonData } from '@/js/serverCalls.js';
 import ksURL from '@/audioWorklets/karplusStrong.worklet.js?url';
 import cURL from '@/audioWorklets/chikaris.worklet.js?url';
 import caURL from '@/audioWorklets/captureAudio.worklet.js?url';
+import klattURL from '@/audioWorklets/klattSynth2.worklet.js?url';
 import rubberBandUrl from '@/audioWorklets/rubberband-processor.js?url';
 import { createRubberBandNode } from 'rubberband-web';
 import { detect } from 'detect-browser';
@@ -627,7 +628,17 @@ export default {
         this.initializePluckNode();
         this.initializeChikariNodes();
       } else if (this.vocal) {
-        this.initializeVocalNode();
+        const version = this.browser.version.split('.')[0];
+        console.log(this.browser.name)
+        const c1 = this.browser.name === 'chrome';
+        const c2 = this.browser.name === 'firefox' && version >= 113;
+        const c3 = this.browser.name === 'edge-chromium';
+        if (c1 || c2 || c3) {
+          this.setUpKlattNode(klattURL, this.synthGainNode);
+          this.klattActive = true
+        } else {
+          this.initializeVocalNode()
+        }
       }
       this.initializeBufferRecorder();
       this.preSetFirstEnvelope(256);
