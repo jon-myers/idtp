@@ -132,6 +132,26 @@
           :disabled='playing || !shiftOn || !readyToShift'
           />
       </div>
+      <div class='cbBoxSmall'>
+        <label>Loop Speed ({{ (2 ** loopSpeed).toFixed(2) }})</label>
+        <input 
+          type='checkbox' 
+          v-model='loopSpeedOn' 
+          @click='preventSpace' 
+          @change='toggleLoopSpeed'
+          :disabled='playing || !stretchable'
+          />
+        <input
+          type="range"
+          min="-1.0"
+          max="1.0"
+          step="0.01"
+          v-model="loopSpeed"
+          orient='vertical'
+          :disabled='playing || !loopSpeedOn || !stretchable'
+          @mouseup='handleLoopSpeedChange'
+          />
+      </div>
 
     </div>
     <div class='downloads' v-if='showDownloads'>
@@ -237,10 +257,8 @@ import rubberBandUrl from '@/audioWorklets/rubberband-processor.js?url';
 import soundtouchURL from'@/audioWorklets/soundtouch.worklet.js?url';
 import { createRubberBandNode } from 'rubberband-web';
 import { detect } from 'detect-browser';
-import createSoundTouchNode from '@soundtouchjs/audio-worklet';
-import regeneratorRuntime from 'regenerator-runtime';
 import { drag as d3Drag, select as d3Select } from 'd3';
-import { SoundTouch } from '@/js/playbackClasses.js';
+import { Stretcher } from '@/js/stretcher.js';
 
 
 const structuredTime = (dur) => {
@@ -344,6 +362,10 @@ export default {
         [[550, 960, 2400, 80, 50, 130], [360, 1820, 2450, 60, 50, 160]]
       ],
       soundtouch: undefined,
+      stretchable: false,
+      loopSpeed: 0.0,
+      loopSpeedOn: false,
+      stretchBuf: undefined,
     };
   },
   props: ['audioSource', 'saEstimate', 'saVerified', 'id'],
@@ -363,10 +385,6 @@ export default {
     this.browser = detect();
     if (this.browser.os === 'Mac OS' && this.browser.name !== 'safari' && this.browser.name !== 'firefox') {
       this.transposable = true;
-      // this.rubberBandNode = await createRubberBandNode(this.ac, rubberBandUrl);
-      // this.rubberBandNode.setHighQuality(true);
-      // this.gainNode.connect(this.rubberBandNode);
-      // this.rubberBandNode.connect(this.ac.destination);
     }
     this.gainNode.connect(this.ac.destination);
     
@@ -728,21 +746,12 @@ export default {
         });
 
       // soundtouch
-      this.ac.audioWorklet.addModule(soundtouchURL)
-        .then(() => {
-          fetch('https://swara.studio/audio/shortClip.wav').then(res => {
-            return res.arrayBuffer();
-          }).then(buf => {
-            this.testBuf = buf;
-            this.soundtouch = new SoundTouch({ 
-              rate: 1,
-              looping: true,
-              extThis: this,
-              buf: this.testBuf,
-              destination: this.ac.destination,
-            });
-          })
-        })
+
+      // const res = await fetch('https://swara.studio/audio/shortClip.wav');
+      // const buf = await res.arrayBuffer();
+      // this.testBuf = await this.ac.decodeAudioData(buf);
+      // this.stretch(0.5)
+
 
       this.makeTuningSines();
       if (this.$parent.piece) {
@@ -756,6 +765,71 @@ export default {
         }
       }
     },
+
+    stretch(tempo=1.0) {
+      if (this.stretchBuf) {
+        this.stretcher = new Stretcher({
+          tempo: tempo, 
+          buf: this.stretchBuf, 
+        });
+        this.stretcher.process();
+      }
+    },
+
+    playStretchedAudio() {
+      const source = this.ac.createBufferSource();
+      source.buffer = this.stretcher.outAudioBuffer;
+      source.connect(this.ac.destination);
+      source.start();
+    },
+
+    playUnstretchedAudio() {
+      const source = this.ac.createBufferSource();
+      source.buffer = this.stretcher.buf;
+      source.connect(this.ac.destination);
+      source.start();
+    },
+
+    handleLoopSpeedChange() {
+      console.log('handleLoopSpeedChange')
+      this.stretch(2 ** this.loopSpeed);
+    },
+
+    toggleLoopSpeed() {
+      if (this.loopSpeedOn) {
+        const time = this.$parent.regionStartTime;
+        this.$parent.currentTime = time;
+        if (!this.playing) {
+          this.pausedAt = time;
+          this.updateProgress();
+          this.updateFormattedCurrentTime();
+          this.updateFormattedTimeLeft();
+        } else {
+          this.stop();
+          this.pausedAt = time;
+          this.play();
+        }
+        this.$parent.movePlayhead();
+        this.$parent.moveShadowPlayhead();
+
+      }
+      console.log(this.loopSpeedOn)
+    },
+
+    updateStretchBuf() {
+      const start = this.$parent.regionStartTime;
+      const end = this.$parent.regionEndTime;
+      const startSample = Math.round(start * this.ac.sampleRate);
+      const endSample = Math.round(end * this.ac.sampleRate);
+      // make new audio buffer
+      this.stretchBuf = this.ac.createBuffer(2, endSample - startSample, this.ac.sampleRate);
+      // copy data over
+      const left = this.audioBuffer.getChannelData(0).slice(startSample, endSample+1);
+      const right = this.audioBuffer.getChannelData(1).slice(startSample, endSample+1);
+      this.stretchBuf.copyToChannel(left, 0);
+      this.stretchBuf.copyToChannel(right, 1);
+    },
+
     initAll() {
       if (this.string) {
         this.initializePluckNode();
@@ -1941,7 +2015,7 @@ export default {
   right: 0px;
   bottom: v-bind(playerHeight + 'px');
   background-color: #202621;
-  width: 350px;
+  width: 480px;
   height: 200px;
   border-bottom: 1px solid black;
   color: white;
@@ -2113,7 +2187,7 @@ button {
 .cbBoxSmall > label {
   padding-top: 5px;
   height: 50px;
-  width: 70px;
+  width: 75px;
   font-size: 13px;
 }
 /* WaveformAnalyzer {

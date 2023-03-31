@@ -7,7 +7,8 @@ class SoundTouch {
     looping = true, 
     extThis=undefined, 
     buf=undefined, 
-    destination=undefined } = {}) {
+    destination=undefined,
+    node=undefined } = {}) {
     this.rate = rate;
     this.looping = looping;
     this.extThis = extThis;

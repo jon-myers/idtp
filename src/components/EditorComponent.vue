@@ -2375,12 +2375,14 @@ export default {
         this.$refs.audioPlayer.loopStart = undefined;
         this.$refs.audioPlayer.loopEnd = undefined;
       }
+      // also, update stretchBuffer
     },
 
     updateLoop(e) {
       if (e && e.clientX === 0) e.preventDefault(); // stops spacebar from 
       // checking box
     },
+
 
     preventSpaceToggle(e) {
       if (e && e.clientX === 0) e.preventDefault();
@@ -2550,7 +2552,9 @@ export default {
         this.regionG = undefined;
         this.regionStartTime = 0;
         this.regionEndTime = this.durTot;
-        this.mouseUpUpdateLoop();  
+        this.mouseUpUpdateLoop(); 
+        this.$refs.audioPlayer.updateStretchBuf(); 
+        this.$refs.audioPlayer.stretchable = false;
       }
       if (this.setNewRegion) this.setNewRegion = false;
     },
@@ -2998,10 +3002,12 @@ export default {
         }
         this.mouseUpUpdateLoop();
         this.setUpRegion();
+        this.$refs.audioPlayer.updateStretchBuf();
       }
     },
 
     setUpRegion() {
+      this.$refs.audioPlayer.stretchable = true;
       const rect = this.rect();
       const regionLine = d3Line()([
           [0, 0],
@@ -3043,6 +3049,7 @@ export default {
               this.regionStartPx = e.x;
               this.regionStartTime = this.xr().invert(this.regionStartPx);
               this.updateLoop();
+              this.$refs.audioPlayer.updateStretchBuf();
             }
             return d3Drag()
               .on('drag', dragged)
@@ -3061,6 +3068,8 @@ export default {
               this.regionEndPx = e.x;
               this.regionEndTime = this.xr().invert(this.regionEndPx);
               this.updateLoop();
+              this.$refs.audioPlayer.updateStretchBuf();
+
             }
             return d3Drag()
               .on('drag', dragged)
