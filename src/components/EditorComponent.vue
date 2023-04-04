@@ -2557,9 +2557,7 @@ export default {
         this.$refs.audioPlayer.stretchable = false;
       }
       if (this.setNewRegion) this.setNewRegion = false;
-      // region speed settings
-      this.$refs.audioPlayer.regionSpeed = 0;
-      this.$refs.audioPlayer.regionSpeedOn = false;
+
     },
 
     handleKeyup(e) {
@@ -2576,6 +2574,9 @@ export default {
         e.preventDefault();
         this.clearAll();
         this.svg.style('cursor', 'auto');
+        // region speed settings
+        this.$refs.audioPlayer.regionSpeed = 0;
+        this.$refs.audioPlayer.regionSpeedOn = false;
       } else if (e.key === 'Backspace' && this.editable === true) {
         if (this.selectedChikariID) {
           const splitArr = this.selectedChikariID.split('_');
@@ -3256,7 +3257,9 @@ export default {
     handleDblClick(z) {
       const graphX = z.clientX - this.yAxWidth;
       const time = this.xr().invert(z.clientX);
+      console.log(this.$refs.audioPlayer.regionSpeedOn)
       if (this.$refs.audioPlayer.regionSpeedOn) {
+        console.log('this one', time)
         const afterStart = time >= this.regionStartTime;
         const beforeEnd = time <= this.regionEndTime;
         if (afterStart && beforeEnd) {
@@ -3277,6 +3280,7 @@ export default {
           }
         }
       } else if (graphX >= 0) {
+        console.log('naw')
         this.currentTime = time;
         if (!this.$refs.audioPlayer.playing) {
           this.$refs.audioPlayer.pausedAt = time;
@@ -3303,6 +3307,7 @@ export default {
     },
 
     handleClick(e) {
+      console.log('clicking')
       const time = this.xr().invert(e.clientX);
       const pIdx = this.phraseIdxFromTime(time);
       // need to figure out how to handle when click is over a non phrase
