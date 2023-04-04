@@ -27,23 +27,6 @@ class ProcessAudioBufferSource {
   }
 }
 
-// createBaseArray(audioBuffer) {
-//   return [
-//     {
-//       sampleRate: this.sampleRate,
-//       duration: this.duration,
-//       bufferLength: this.bufferLength,
-//       numberOfChannels: this.numberOfChannels,
-//     },
-//     audioBuffer.getChannelData(0),
-//     this.numberOfChannels > 1
-//       ? audioBuffer.getChannelData(1)
-//       : audioBuffer.getChannelData(0),
-//   ];
-// }
-
-
-
 class Stretcher {
   constructor({
     tempo = 1,
