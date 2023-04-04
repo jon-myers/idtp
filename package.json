@@ -24,7 +24,6 @@
   "dependencies": {
     "@soundtouchjs/audio-worklet": "^0.1.17",
     "audio-waveform-svg-path": "^1.0.2",
-    "audiobuffer": "^0.2.0",
     "axios": "^1.3.4",
     "binary-loader": "^0.0.1",
     "connect-history-api-fallback": "^2.0.0",
