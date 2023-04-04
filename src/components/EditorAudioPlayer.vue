@@ -261,7 +261,8 @@ import { createRubberBandNode } from 'rubberband-web';
 import { detect } from 'detect-browser';
 import { drag as d3Drag, select as d3Select } from 'd3';
 import { Stretcher } from '@/js/stretcher.js';
-import stretcherURL from '@/js/stretcherWorker.js?url';
+// import stretcherURL from '@/js/stretcherWorker.js?url';
+import stretcherURL from '@/js/bundledStretcherWorker.js?url';
 
 
 const structuredTime = (dur) => {
@@ -371,6 +372,7 @@ export default {
       stretchBuf: undefined,
       chikariGainDisabled: false,
       synthGainDisabled: false,
+      stretchedBuffer: undefined,
     };
   },
   props: ['audioSource', 'saEstimate', 'saVerified', 'id'],
@@ -797,18 +799,10 @@ export default {
     },
 
     initStretchWorker() {
-      this.stretchWorker = new Worker(stretcherURL, { type: 'module' });
-    },
-
-    playUnstretchedAudio() {
-      const source = this.ac.createBufferSource();
-      source.buffer = this.stretcher.buf;
-      source.connect(this.ac.destination);
-      source.start();
+      this.stretchWorker = new Worker(stretcherURL);
     },
 
     handleregionSpeedChange() {
-      console.log('handleregionSpeedChange')
       this.stretch(2 ** this.regionSpeed);
     },
 
