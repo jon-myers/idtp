@@ -2375,12 +2375,14 @@ export default {
         this.$refs.audioPlayer.loopStart = undefined;
         this.$refs.audioPlayer.loopEnd = undefined;
       }
+      // also, update stretchBuffer
     },
 
     updateLoop(e) {
       if (e && e.clientX === 0) e.preventDefault(); // stops spacebar from 
       // checking box
     },
+
 
     preventSpaceToggle(e) {
       if (e && e.clientX === 0) e.preventDefault();
@@ -2550,9 +2552,12 @@ export default {
         this.regionG = undefined;
         this.regionStartTime = 0;
         this.regionEndTime = this.durTot;
-        this.mouseUpUpdateLoop();  
+        this.mouseUpUpdateLoop(); 
+        this.$refs.audioPlayer.updateStretchBuf(); 
+        this.$refs.audioPlayer.stretchable = false;
       }
       if (this.setNewRegion) this.setNewRegion = false;
+
     },
 
     handleKeyup(e) {
@@ -2569,6 +2574,9 @@ export default {
         e.preventDefault();
         this.clearAll();
         this.svg.style('cursor', 'auto');
+        // region speed settings
+        this.$refs.audioPlayer.regionSpeed = 0;
+        this.$refs.audioPlayer.regionSpeedOn = false;
       } else if (e.key === 'Backspace' && this.editable === true) {
         if (this.selectedChikariID) {
           const splitArr = this.selectedChikariID.split('_');
@@ -2998,10 +3006,12 @@ export default {
         }
         this.mouseUpUpdateLoop();
         this.setUpRegion();
+        this.$refs.audioPlayer.updateStretchBuf();
       }
     },
 
     setUpRegion() {
+      this.$refs.audioPlayer.stretchable = true;
       const rect = this.rect();
       const regionLine = d3Line()([
           [0, 0],
@@ -3043,6 +3053,7 @@ export default {
               this.regionStartPx = e.x;
               this.regionStartTime = this.xr().invert(this.regionStartPx);
               this.updateLoop();
+              this.$refs.audioPlayer.updateStretchBuf();
             }
             return d3Drag()
               .on('drag', dragged)
@@ -3061,6 +3072,8 @@ export default {
               this.regionEndPx = e.x;
               this.regionEndTime = this.xr().invert(this.regionEndPx);
               this.updateLoop();
+              this.$refs.audioPlayer.updateStretchBuf();
+
             }
             return d3Drag()
               .on('drag', dragged)
@@ -3244,7 +3257,30 @@ export default {
     handleDblClick(z) {
       const graphX = z.clientX - this.yAxWidth;
       const time = this.xr().invert(z.clientX);
-      if (graphX >= 0) {
+      console.log(this.$refs.audioPlayer.regionSpeedOn)
+      if (this.$refs.audioPlayer.regionSpeedOn) {
+        console.log('this one', time)
+        const afterStart = time >= this.regionStartTime;
+        const beforeEnd = time <= this.regionEndTime;
+        if (afterStart && beforeEnd) {
+          if (graphX >= 0) {
+            this.currentTime = time;
+            if (!this.$refs.audioPlayer.playing) {
+              this.$refs.audioPlayer.pausedAt = time;
+              this.$refs.audioPlayer.updateProgress();
+              this.$refs.audioPlayer.updateFormattedCurrentTime();
+              this.$refs.audioPlayer.updateFormattedTimeLeft();
+            } else {
+              this.$refs.audioPlayer.stop();
+              this.$refs.audioPlayer.pausedAt = time;
+              this.$refs.audioPlayer.play();
+            }
+            this.movePlayhead();
+            this.moveShadowPlayhead();
+          }
+        }
+      } else if (graphX >= 0) {
+        console.log('naw')
         this.currentTime = time;
         if (!this.$refs.audioPlayer.playing) {
           this.$refs.audioPlayer.pausedAt = time;
@@ -3271,6 +3307,7 @@ export default {
     },
 
     handleClick(e) {
+      console.log('clicking')
       const time = this.xr().invert(e.clientX);
       const pIdx = this.phraseIdxFromTime(time);
       // need to figure out how to handle when click is over a non phrase
@@ -5202,7 +5239,6 @@ export default {
       if (this.currentTime < this.animationStart) {
         this.currentTime = this.animationStart;
       }
-
       const currentStartTime = this.xr().invert(30);
       const currentEndTime = currentStartTime + this.durTot / this.tx().k;
       if (this.currentTime > currentEndTime) {
@@ -5210,8 +5246,6 @@ export default {
         this.gx.call(this.zoomX.translateBy, -delta, 0);
         this.redraw()
       }
-
-
       this.movePlayhead();
       this.startAnimationFrame();
     },
@@ -5221,6 +5255,34 @@ export default {
         window.cancelAnimationFrame(this.requestId);
         this.requestId = undefined;
         this.currentTime = this.$refs.audioPlayer.getCurrentTime();
+        const latency = this.$refs.audioPlayer.ac.outputLatency;
+        this.movePlayhead(latency * 2.0 * 1000);
+      }
+    },
+
+    startStretchedAnimationFrame() {
+      if (!this.requestId) {
+        const frame = this.loopStretchedAnimationFrame;
+        this.requestId = window.requestAnimationFrame(frame)
+      }
+    },
+
+    loopStretchedAnimationFrame() {
+      this.requestId = undefined;
+      const latency = this.$refs.audioPlayer.ac.outputLatency;
+      this.currentTime = this.$refs.audioPlayer.getStretchedCurrentTime() - latency;
+      if (!this.$refs.audioPlayer.loop && this.currentTime < this.stretchedAnimationStart) {
+        this.currentTime = this.stretchedAnimationStart;
+      }
+      this.movePlayhead();
+      this.startStretchedAnimationFrame();
+    },
+
+    stopStretchedAnimationFrame() {
+      if (this.requestId) {
+        window.cancelAnimationFrame(this.requestId);
+        this.requestId = undefined;
+        this.currentTime = this.$refs.audioPlayer.getStretchedCurrentTime();
         const latency = this.$refs.audioPlayer.ac.outputLatency;
         this.movePlayhead(latency * 2.0 * 1000);
       }

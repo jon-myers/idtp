@@ -89,6 +89,7 @@
           step="0.01"
           v-model="synthGain"
           orient='vertical'
+          :disabled='synthGainDisabled'
         />
       </div>
       <div class="cbBoxSmall" v-if='!vocal'>
@@ -111,10 +112,11 @@
           step="0.01"
           v-model="chikariGain"
           orient='vertical'
+          :disabled='chikariGainDisabled'
         />
       </div>
       <div class='cbBoxSmall' v-if='transposable'>
-        <label>Pitch Shift ({{transposition}}&#162;)</label>
+        <label>Pitch Shift <br>({{transposition}}&#162;)</label>
         <input 
           type='checkbox' 
           v-model='shiftOn' 
@@ -130,6 +132,26 @@
           v-model='transposition'
           orient='vertical'
           :disabled='playing || !shiftOn || !readyToShift'
+          />
+      </div>
+      <div class='cbBoxSmall'>
+        <label>Region Speed <br>({{ (2 ** regionSpeed).toFixed(2) }})</label>
+        <input 
+          type='checkbox' 
+          v-model='regionSpeedOn' 
+          @click='preventSpace' 
+          @change='toggleRegionSpeed'
+          :disabled='playing || !stretchable'
+          />
+        <input
+          type="range"
+          min="-1.0"
+          max="1.0"
+          step="0.01"
+          v-model="regionSpeed"
+          orient='vertical'
+          :disabled='playing || !regionSpeedOn || !stretchable'
+          @mouseup='handleregionSpeedChange'
           />
       </div>
 
@@ -234,9 +256,15 @@ import cURL from '@/audioWorklets/chikaris.worklet.js?url';
 import caURL from '@/audioWorklets/captureAudio.worklet.js?url';
 import klattURL from '@/audioWorklets/klattSynth2.worklet.js?url';
 import rubberBandUrl from '@/audioWorklets/rubberband-processor.js?url';
+import soundtouchURL from'@/audioWorklets/soundtouch.worklet.js?url';
 import { createRubberBandNode } from 'rubberband-web';
 import { detect } from 'detect-browser';
 import { drag as d3Drag, select as d3Select } from 'd3';
+import { Stretcher } from '@/js/stretcher.js';
+// import stretcherURL from '@/js/stretcherWorker.js?url';
+import stretcherURL from '@/js/bundledStretcherWorker.js?url';
+
+
 const structuredTime = (dur) => {
   const hours = String(Math.floor(dur / 3600));
   const minutes = leadingZeros(Math.floor((dur % 3600) / 60));
@@ -337,6 +365,14 @@ export default {
         [[640, 1230, 2550, 80, 70, 140], [420, 940, 2350, 80, 70, 80]],
         [[550, 960, 2400, 80, 50, 130], [360, 1820, 2450, 60, 50, 160]]
       ],
+      soundtouch: undefined,
+      stretchable: false,
+      regionSpeed: 0.0,
+      regionSpeedOn: false,
+      stretchBuf: undefined,
+      chikariGainDisabled: false,
+      synthGainDisabled: false,
+      stretchedBuffer: undefined,
     };
   },
   props: ['audioSource', 'saEstimate', 'saVerified', 'id'],
@@ -356,10 +392,6 @@ export default {
     this.browser = detect();
     if (this.browser.os === 'Mac OS' && this.browser.name !== 'safari' && this.browser.name !== 'firefox') {
       this.transposable = true;
-      // this.rubberBandNode = await createRubberBandNode(this.ac, rubberBandUrl);
-      // this.rubberBandNode.setHighQuality(true);
-      // this.gainNode.connect(this.rubberBandNode);
-      // this.rubberBandNode.connect(this.ac.destination);
     }
     this.gainNode.connect(this.ac.destination);
     
@@ -472,6 +504,36 @@ export default {
     }
   },
   methods: {
+
+    // async setupSoundtouch(rate=1, init=true) {
+    //   console.log('doing it again')
+    //   try {
+    //     if (this.soundtouch) {
+    //       this.soundtouch.off();
+    //       this.soundtouch.disconnect();
+    //     }
+    //     this.soundtouch = createSoundTouchNode(this.ac, AudioWorkletNode, this.testBuf);
+    //     this.soundtouch.on('initialized', () => {
+    //       this.soundtouch.rate = rate;
+    //       this.soundtouch.connectToBuffer();
+    //       if (init) {
+    //         this.soundtouch.pause()
+    //       } else {
+    //         this.soundtouch.play()
+    //       }
+    //       this.soundtouch.connect(this.ac.destination)
+    //     })
+    //     this.soundtouch.on('end', () => this.setupSoundtouch(rate, false))
+    //     return 
+    //   } catch (err) {
+    //     console.log(err);
+    //   }
+    // },
+
+    onSoundTouchInit() {
+      console.log('soundtouch initialized')
+    },
+
     addDragger() {
       const drag = d3Drag()
         .on('start', this.dragStart)
@@ -689,6 +751,15 @@ export default {
         .catch((err) => {
           console.log(err);
         });
+
+      // soundtouch
+
+      // const res = await fetch('https://swara.studio/audio/shortClip.wav');
+      // const buf = await res.arrayBuffer();
+      // this.testBuf = await this.ac.decodeAudioData(buf);
+      // this.stretch(0.5)
+
+
       this.makeTuningSines();
       if (this.$parent.piece) {
         if (!this.$parent.piece.audioID && !this.$parent.piece.audio_DB_ID) {
@@ -701,6 +772,102 @@ export default {
         }
       }
     },
+
+    stretch(tempo = 1.0) {
+      if (this.stretchBuf) {
+        const left = this.stretchBuf.getChannelData(0);
+        const right = this.stretchBuf.numberOfChannels > 1 ?
+          this.stretchBuf.getChannelData(1) : left;
+        this.stretchWorker.postMessage({
+          name: 'stretch',
+          tempo: tempo,
+          left: left,
+          right: right,
+        });
+        this.stretchWorker.onmessage = e => {
+          if (e.data.name === 'stretched') {
+            this.stretchedBuffer = this.ac.createBuffer(
+              2,
+              e.data.left.length,
+              this.ac.sampleRate
+            );
+            this.stretchedBuffer.copyToChannel(e.data.left, 0);
+            this.stretchedBuffer.copyToChannel(e.data.right, 1);
+          }
+        }
+      }
+    },
+
+    initStretchWorker() {
+      this.stretchWorker = new Worker(stretcherURL);
+    },
+
+    handleregionSpeedChange() {
+      this.stretch(2 ** this.regionSpeed);
+    },
+
+    toggleRegionSpeed() {
+      if (this.regionSpeedOn) {
+        this.stretch(2 ** this.regionSpeed);
+        const time = this.$parent.regionStartTime;
+        this.$parent.currentTime = time;
+        if (!this.playing) {
+          this.pausedAt = time;
+          this.updateProgress();
+          this.updateFormattedCurrentTime();
+          this.updateFormattedTimeLeft();
+        } else {
+          console.log('this should not happen')
+        }
+        this.$parent.movePlayhead();
+        this.$parent.moveShadowPlayhead();
+        this.synthGainDisabled = true;
+        this.chikariGainDisabled = true;
+        const curSG = this.synthGainNode.gain.value;
+        this.synthGainNode.gain.setValueAtTime(curSG, this.now());
+        this.synthGain = 0;
+        this.synthGainNode.gain.linearRampToValueAtTime(0, this.now() + this.lagTime);
+        this.savedSynthGain = curSG;
+        const curCG = this.chikariGainNode.gain.value;
+        this.chikariGainNode.gain.setValueAtTime(curCG, this.now());
+        this.chikariGain = 0;
+        this.chikariGainNode.gain.linearRampToValueAtTime(0, this.now() + this.lagTime);
+        this.savedChikariGain = curCG;
+
+      } else {
+        this.regionSpeed = 0;
+        this.stretchedBuffer = null;
+        this.synthGainDisabled = false;
+        this.chikariGainDisabled = false;
+        if (this.savedSynthGain !== undefined) {
+          this.synthGainNode.gain.setValueAtTime(0, this.now());
+          this.synthGainNode.gain.linearRampToValueAtTime(this.savedSynthGain, this.now() + this.lagTime);
+          this.synthGain = this.savedSynthGain;
+        }
+        if (this.savedChikariGain !== undefined) {
+          this.chikariGainNode.gain.setValueAtTime(0, this.now());
+          this.chikariGainNode.gain.linearRampToValueAtTime(this.savedChikariGain, this.now() + this.lagTime);
+          this.chikariGain = this.savedChikariGain;
+        }
+      }
+    },
+
+    updateStretchBuf() {
+      const start = this.$parent.regionStartTime;
+      const end = this.$parent.regionEndTime;
+      const startSample = Math.round(start * this.ac.sampleRate);
+      const endSample = Math.round(end * this.ac.sampleRate);
+      // make new audio buffer
+      this.stretchBuf = this.ac.createBuffer(2, endSample - startSample, this.ac.sampleRate);
+      // copy data over
+      const left = this.audioBuffer.getChannelData(0).slice(startSample, endSample+1);
+      const right = this.audioBuffer.numberOfChannels > 1 ?
+        this.audioBuffer.getChannelData(1).slice(startSample, endSample+1) :
+        left
+      this.stretchBuf.copyToChannel(left, 0);
+      this.stretchBuf.copyToChannel(right, 1);
+    },
+
     initAll() {
       if (this.string) {
         this.initializePluckNode();
@@ -719,6 +886,7 @@ export default {
       }
       this.initializeBufferRecorder();
       this.preSetFirstEnvelope(256);
+      this.initStretchWorker();
       this.inited = true
     },
     gatherInfo() {
@@ -1188,9 +1356,53 @@ export default {
         this.play();
       }
     },
+    
     now() {
       return this.ac.currentTime;
     },
+
+    playStretched() {
+      const offset = (this.$parent.currentTime - this.$parent.regionStartTime);
+      const scaledOffset = offset / (2 ** this.regionSpeed);
+      this.sourceNode = this.ac.createBufferSource();
+      this.sourceNode.connect(this.gainNode);
+      this.sourceNode.buffer = this.stretchedBuffer;
+      this.sourceNode.loop = this.loop;
+      this.sourceNode.start(this.now(), scaledOffset);
+      this.sourceNode.addEventListener('ended', () => {
+        this.pauseStretched(this.playing); // this is a fancy way of saying that 
+        // if the sourceNode has ended naturally (without the user pausing it),
+        // then it should return to the beginning, otehrwise, stay where it is.
+        this.$parent.stopStretchedAnimationFrame();
+        this.$parent.currentTime = this.getStretchedCurrentTime();
+      })
+      this.playing = true;
+      this.pausedAt = 0;
+      this.startedAt = this.now() - scaledOffset;
+    },
+
+    pauseStretched(returnToStart=false) {
+      const elapsed = this.now() - this.startedAt;
+      let scaledElapsed = (2 ** this.regionSpeed) * elapsed;
+      if (this.loop) {
+        scaledElapsed = scaledElapsed % (this.$parent.regionEndTime - this.$parent.regionStartTime);
+      }
+      this.stopStretched();
+      this.pausedAt = returnToStart ? 
+        this.$parent.regionStartTime : 
+        scaledElapsed + this.$parent.regionStartTime;
+      this.$parent.moveShadowPlayhead();
+    },
+
+    stopStretched() {
+      if (this.sourceNode) {
+        this.sourceNode.stop(this.now());
+        this.sourceNode.disconnect();
+        this.sourceNode = null;
+      }
+      this.playing = false;
+    },
+
     play() {
       const offset = this.pausedAt;
       this.startingDelta = this.pausedAt;
@@ -1213,28 +1425,28 @@ export default {
           const endTime = this.now() + this.lagTime;
           this.intSynthGainNode.gain.setValueAtTime(0, endTime);
         } else {
-        const startRecTime = this.now() + this.loopStart - offset;
-        const duration = this.loopEnd - this.loopStart;
-        this.endRecTime = startRecTime + duration;
-        const bufSize = duration * this.ac.sampleRate;
-        this.capture.bufferSize.setValueAtTime(bufSize, this.now());
-        this.capture.active.setValueAtTime(1, startRecTime);
-        this.capture.active.setValueAtTime(0, this.endRecTime);
-        const curGain = this.intSynthGainNode.gain.value;
-        this.intSynthGainNode.gain.setValueAtTime(curGain, this.endRecTime);
-        this.intSynthGainNode.gain.setValueAtTime(0, this.endRecTime + this.lagTime);
-        this.synthLoopGainNode.gain.setValueAtTime(1, this.endRecTime);
-        // the following synth stuff needs to be cancelled ...
-        this.cancelPlayTrajs(this.endRecTime + this.lagTime);
-        this.cancelBursts(this.endRecTime + this.lagTime);
-        this.bufferSourceNodes = [];
+          const startRecTime = this.now() + this.loopStart - offset;
+          const duration = this.loopEnd - this.loopStart;
+          this.endRecTime = startRecTime + duration;
+          const bufSize = duration * this.ac.sampleRate;
+          this.capture.bufferSize.setValueAtTime(bufSize, this.now());
+          this.capture.active.setValueAtTime(1, startRecTime);
+          this.capture.active.setValueAtTime(0, this.endRecTime);
+          const curGain = this.intSynthGainNode.gain.value;
+          this.intSynthGainNode.gain.setValueAtTime(curGain, this.endRecTime);
+          this.intSynthGainNode.gain.setValueAtTime(0, this.endRecTime + this.lagTime);
+          this.synthLoopGainNode.gain.setValueAtTime(1, this.endRecTime);
+          // the following synth stuff needs to be cancelled ...
+          this.cancelPlayTrajs(this.endRecTime + this.lagTime);
+          this.cancelBursts(this.endRecTime + this.lagTime);
+          this.bufferSourceNodes = [];
         }
-        
       }
       this.startedAt = this.now() - offset;
       this.pausedAt = 0;
       this.playing = true;
     },
+
     stop() {
       if (this.sourceNode) {
         this.sourceNode.disconnect();
@@ -1277,6 +1489,7 @@ export default {
       this.startedAt = 0;
       this.playing = false;
     },
+
     pause() {
       const elapsed = this.now() - this.startedAt;
       this.stop();
@@ -1290,6 +1503,7 @@ export default {
         // this.startingDelta = this.pausedAt;
       } 
     },
+
     getCurrentTime() {
       if (this.pausedAt) {
         return this.pausedAt;
@@ -1310,6 +1524,22 @@ export default {
         return 0;
       }
     },
+
+    getStretchedCurrentTime() {
+      let out;
+      if (this.pausedAt) {
+        out = this.pausedAt;
+      } else if (this.playing) {
+        const elapsed = this.now() - this.startedAt;
+        let scaledElapsed = (2 ** this.regionSpeed) * elapsed;
+        if (this.loop) {
+          scaledElapsed = scaledElapsed % (this.$parent.regionEndTime - this.$parent.regionStartTime);
+        }
+        out = scaledElapsed + this.$parent.regionStartTime;
+      }
+      return out
+    },
+
     getShadowTime() {
       if (this.pausedAt) {
         return this.pausedAt
@@ -1350,27 +1580,40 @@ export default {
       }
     },
     togglePlay() {
-      if (!this.playing) {
-        this.play();
-        this.$refs.playImg.classList.add('playing');
-        this.$parent.startAnimationFrame();
-        this.$parent.animationStart = this.getCurrentTime();
-        this.startPlayCursorAnimation();
-        this.playTrajs(this.getCurrentTime(), this.now());
-        if (this.string) {
-          this.playChikaris(this.getCurrentTime(), this.now());
+      if (this.regionSpeedOn && this.stretchedBuffer) {
+        if (!this.playing) {
+          this.playStretched();
+          this.$refs.playImg.classList.add('playing');
+          this.$parent.startStretchedAnimationFrame();
+          this.$parent.stretchedAnimationStart = this.getStretchedCurrentTime();
+        } else {
+          this.pauseStretched();
+          this.$refs.playImg.classList.remove('playing');
+          this.$parent.stopStretchedAnimationFrame();
         }
-        
       } else {
-        this.pause();
-        this.$refs.playImg.classList.remove('playing');
-        this.$parent.stopAnimationFrame();
-        this.stopPlayCursorAnimation();
-        this.cancelPlayTrajs();
-        if (this.string) {
-          this.cancelBursts();
+        if (!this.playing) {
+          this.play();
+          this.$refs.playImg.classList.add('playing');
+          this.$parent.startAnimationFrame();
+          this.$parent.animationStart = this.getCurrentTime();
+          this.startPlayCursorAnimation();
+          this.playTrajs(this.getCurrentTime(), this.now());
+          if (this.string) {
+            this.playChikaris(this.getCurrentTime(), this.now());
+          }
+          
+        } else {
+          this.pause();
+          this.$refs.playImg.classList.remove('playing');
+          this.$parent.stopAnimationFrame();
+          this.stopPlayCursorAnimation();
+          this.cancelPlayTrajs();
+          if (this.string) {
+            this.cancelBursts();
+          }
+          this.bufferSourceNodes = [];
         }
-        this.bufferSourceNodes = [];
       }
     },
     cancelPlayTrajs(when, mute=true) {
@@ -1886,7 +2129,7 @@ export default {
   right: 0px;
   bottom: v-bind(playerHeight + 'px');
   background-color: #202621;
-  width: 350px;
+  width: 540px;
   height: 200px;
   border-bottom: 1px solid black;
   color: white;
@@ -2058,7 +2301,7 @@ button {
 .cbBoxSmall > label {
   padding-top: 5px;
   height: 50px;
-  width: 70px;
+  width: 83px;
   font-size: 13px;
 }
 /* WaveformAnalyzer {
