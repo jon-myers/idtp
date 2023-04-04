@@ -5271,7 +5271,7 @@ export default {
       this.requestId = undefined;
       const latency = this.$refs.audioPlayer.ac.outputLatency;
       this.currentTime = this.$refs.audioPlayer.getStretchedCurrentTime() - latency;
-      if (this.currentTime < this.stretchedAnimationStart) {
+      if (!this.$refs.audioPlayer.loop && this.currentTime < this.stretchedAnimationStart) {
         this.currentTime = this.stretchedAnimationStart;
       }
       this.movePlayhead();
