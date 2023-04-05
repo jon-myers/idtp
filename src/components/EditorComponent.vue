@@ -554,10 +554,11 @@ export default {
         })
         piece = await getPiece(id);
       }
+      this.browser = detect();
       
       if (piece.audioID) {
-        const browser = detect();
-        this.audioSource = browser.name === 'safari' ?
+        
+        this.audioSource = this.browser.name === 'safari' ?
           `https://swara.studio/audio/mp3/${piece.audioID}.mp3` :
           `https://swara.studio/audio/opus/${piece.audioID}.opus`;         
         this.audioDBDoc = await getAudioRecording(piece.audioID);
@@ -2562,14 +2563,18 @@ export default {
 
     handleKeyup(e) {
       if (e.key === 'Shift') this.shifted = false;
-      if (e.key === 'Meta') this.metad = false;
+      if (e.key === 'Meta' && this.browser.os.includes('Macintosh')) this.metad = false;
+      if (e.key === 'Control' && this.browser.os.includes('Windows')) this.metad = false;
     },
 
     handleKeydown(e) {
       if (e.key === ' ') {
         this.$refs.audioPlayer.togglePlay()
-      } else if (e.key === 'Meta') {
+      } else if (e.key === 'Meta' && this.browser.os.includes('Macintosh')) {
         this.metad = true
+      } else if (e.key === 'Control' && this.browser.os.includes('Windows')) {
+        this.metad = true
+
       } else if (e.key === 'Escape') {
         e.preventDefault();
         this.clearAll();
@@ -3257,7 +3262,6 @@ export default {
     handleDblClick(z) {
       const graphX = z.clientX - this.yAxWidth;
       const time = this.xr().invert(z.clientX);
-      console.log(this.$refs.audioPlayer.regionSpeedOn)
       if (this.$refs.audioPlayer.regionSpeedOn) {
         console.log('this one', time)
         const afterStart = time >= this.regionStartTime;
@@ -3280,7 +3284,6 @@ export default {
           }
         }
       } else if (graphX >= 0) {
-        console.log('naw')
         this.currentTime = time;
         if (!this.$refs.audioPlayer.playing) {
           this.$refs.audioPlayer.pausedAt = time;
@@ -3307,7 +3310,6 @@ export default {
     },
 
     handleClick(e) {
-      console.log('clicking')
       const time = this.xr().invert(e.clientX);
       const pIdx = this.phraseIdxFromTime(time);
       // need to figure out how to handle when click is over a non phrase
