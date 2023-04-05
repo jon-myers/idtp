@@ -2563,14 +2563,14 @@ export default {
 
     handleKeyup(e) {
       if (e.key === 'Shift') this.shifted = false;
-      if (e.key === 'Meta' && this.browser.os.includes('Macintosh')) this.metad = false;
+      if (e.key === 'Meta' && this.browser.os.includes('Mac OS')) this.metad = false;
       if (e.key === 'Control' && this.browser.os.includes('Windows')) this.metad = false;
     },
 
     handleKeydown(e) {
       if (e.key === ' ') {
         this.$refs.audioPlayer.togglePlay()
-      } else if (e.key === 'Meta' && this.browser.os.includes('Macintosh')) {
+      } else if (e.key === 'Meta' && this.browser.os.includes('Mac OS')) {
         this.metad = true
       } else if (e.key === 'Control' && this.browser.os.includes('Windows')) {
         this.metad = true
