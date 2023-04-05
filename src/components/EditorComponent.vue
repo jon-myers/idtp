@@ -3752,6 +3752,8 @@ export default {
 
     addPlucks(traj, phraseStart, g) {
       if (traj.id !== 12) {
+        const size = 20;
+        const offset = (size ** 0.5 ) / 2;
         
         const keys = Object.keys(traj.articulations);
         const relKeys = keys.filter(key => {
@@ -3765,7 +3767,7 @@ export default {
             y: y
           }
         });
-        const sym = d3Symbol().type(d3SymbolTriangle).size(20);
+        const sym = d3Symbol().type(d3SymbolTriangle).size(size);
         const x = d => this.xr()(d.x);
         const y = d => this.yr()(d.y);
         g.append('g')
@@ -3778,11 +3780,13 @@ export default {
           .attr('stroke-width', 1.5)
           .attr('fill', 'black')
           .data(pluckData)
-          .attr('transform', d => `translate(${x(d)}, ${y(d)}) rotate(90)`)
+          .attr('transform', d => `translate(${x(d) + offset}, ${y(d)}) rotate(90)`)
       }
     },
 
     codifiedAddPlucks(traj, phraseStart, g) {
+      const size = 20;
+      const offset = (size ** 0.5 ) / 2;
       if (traj.id !== 12) {
         const keys = Object.keys(traj.articulations);
         const relKeys = keys.filter(key => {
@@ -3798,7 +3802,7 @@ export default {
         });
         const x = d => this.codifiedXR(d.x);
         const y = d => this.codifiedYR(d.y);
-        const sym = d3Symbol().type(d3SymbolTriangle).size(20);
+        const sym = d3Symbol().type(d3SymbolTriangle).size(size);
         g.append('g')
           .classed('articulation', true)
           .classed('pluck', true)
@@ -3809,7 +3813,7 @@ export default {
           .attr('stroke-width', 1.5)
           .attr('fill', 'black')
           .data(pluckData)
-          .attr('transform', d => `translate(${x(d)}, ${y(d)}) rotate(90)`)
+          .attr('transform', d => `translate(${x(d) + offset}, ${y(d)}) rotate(90)`)
       }
     },
 
@@ -5069,6 +5073,8 @@ export default {
     },
 
     movePlucks(traj) {
+      const size = 20;
+      const offset = (size ** 0.5 ) / 2;
       const c1 = traj.articulations[0] && traj.articulations[0].name === 'pluck';
       const c2 = traj.articulations['0.00'] && traj.articulations['0.00'].name === 'pluck';
       if (c1 || c2) {
@@ -5077,7 +5083,7 @@ export default {
         d3Select(`#pluckp${traj.phraseIdx}t${traj.num}`)
           .transition()
           .duration(this.transitionTime)
-          .attr('transform', d => `translate(${x(d)}, ${y(d)}) rotate(90)`)
+          .attr('transform', d => `translate(${x(d) + offset}, ${y(d)}) rotate(90)`)
       }
     },
 
