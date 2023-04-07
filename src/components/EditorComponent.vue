@@ -962,6 +962,10 @@ export default {
       const endP = this.piece.phrases[endPIdx];
       const endTIdx = this.trajIdxFromTime(endP, realET);
       if (startPIdx === endPIdx && startTIdx === endTIdx && startT.id === 12) {
+        let grouped = false;
+        if (this.clipboardTrajs[0].groupId !== undefined) {
+          grouped = true;
+        }
         this.clipboardTrajs.forEach(traj => {
           // first, find real start time for original traj
           const origPhrase = this.piece.phrases[traj.phraseIdx];
@@ -977,6 +981,7 @@ export default {
           const targetTraj = targetPhrase.trajectories[targetTrajIdx];
           // make a copy of traj.toJSON() without reference to original
           const copyObj = JSON.parse(JSON.stringify(traj.toJSON()))
+          copyObj.groupId = undefined;
           copyObj.pitches.forEach((pitch, pIdx) => {
             copyObj.pitches[pIdx] = new Pitch(pitch)
           })
@@ -1045,7 +1050,11 @@ export default {
           this.codifiedAddTraj(newTraj, targetPhrase.startTime)
           this.pastedTrajs.push(newTraj);
         });
+        
         this.selectedTrajs = this.pastedTrajs;
+        if (grouped) {
+          this.groupSelectedTrajs()
+        }
         if (this.selectedTrajs.length === 1) {
           this.selectedTraj = this.selectedTrajs[0];
           this.selectedTrajID = `p${this.selectedTraj.phraseIdx}t${this.selectedTraj.num}`
