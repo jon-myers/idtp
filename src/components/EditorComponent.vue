@@ -2919,7 +2919,12 @@ export default {
         if (phrase.groupsGrid !== undefined) {
           phrase.groupsGrid.forEach(groups => {
             groups.forEach(group => {
-              console.log(group.trajectories)
+              group.trajectories.forEach((traj, idx) => {
+                // const pIdx = phrase.pieceIdx;
+                const tIdx = traj.num;
+                const realTraj = phrase.trajectoryGrid[0][tIdx];
+                group.trajectories[idx] = realTraj;
+              })
             })
           })
         }
@@ -4563,6 +4568,7 @@ export default {
         if (newTraj.groupId === undefined) {
           this.selectedTrajs.push(newTraj);
           this.groupable = this.selectedTrajsGroupable();
+          this.$refs.trajSelectPanel.grouped = false;
 
           // clear selected traj visually
           if (this.selectedTraj && this.selectedTrajID) {
@@ -4642,6 +4648,7 @@ export default {
           this.selectedTrajs = group.trajectories;
           this.clearTrajSelectPanel();
           this.groupable = true;
+          this.$refs.trajSelectPanel.grouped = true;
           this.selectedTrajID = undefined;
           this.selectedTrajs.forEach(traj => {
             const id = `p${traj.phraseIdx}t${traj.num}`;
