@@ -1632,7 +1632,6 @@ export default {
           }
         }
       }
-      console.log(2)
       this.removePlucks(traj);
       const g = d3Select(`#articulations__p${pIdx}t${tIdx}`)
       this.codifiedAddPlucks(traj, phrase.startTime, g);
@@ -1718,7 +1717,14 @@ export default {
       const trajObj = traj.toJSON();
       const c1 = traj.articulations[0] || traj.articulations['0.00'];
       const c2 = traj.articulations['1.00'];
-      const pluckExists = c1 && traj.articulations[0].name === 'pluck';
+      let pluckExists = false;
+      if (c1) {
+        if (traj.articulations[0]) {
+          pluckExists = traj.articulations[0].name === 'pluck';
+        } else {
+          pluckExists = traj.articulations['0.00'].name === 'pluck';
+        }
+      }   
       const dampenExists = c2 && traj.articulations['1.00'].name === 'dampen';
       delete trajObj.articulations;
       const newTraj = new Trajectory(trajObj);

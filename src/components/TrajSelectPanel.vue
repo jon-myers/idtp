@@ -406,7 +406,6 @@ export default {
         idx = Number(e)
       }
       const selectId = '#id' + idx;
-      console.log(selectId)
       let realIdx = this.trajIdxs[idx];
       if (realIdx >= 12) {
         realIdx += 1;
