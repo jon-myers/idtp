@@ -4662,6 +4662,7 @@ export default {
               .attr('stroke', this.trajColor)
             d3Select('#overlay__' + id)
               .attr('cursor', 'pointer')
+            this.updateArtColors(traj, false)
           })
         }
         const id = e.target.id.split('__')[1];
@@ -4673,6 +4674,7 @@ export default {
           d3Select(`#pluck${this.selectedTrajID}`)
             .attr('fill', this.trajColor)
             .attr('stroke', this.trajColor)
+          this.updateArtColors(this.selectedTraj, false)
         }
         if (this.setNewSeries) {
           this.setNewSeries = false;
