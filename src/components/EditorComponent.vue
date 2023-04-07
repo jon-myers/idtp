@@ -118,8 +118,10 @@ import {
   Pitch,
   Articulation,
   Raga,
-  Chikari
+  Chikari,
+  Group
 } from '@/js/classes.js';
+
 import {
   getPiece,
   getRaagRule,
@@ -165,6 +167,7 @@ export default {
   name: 'EditorComponent',
   data() {
     return {
+      group: Group,
       piece: undefined,
       durTot: 600,
       freqMin: 100,
@@ -225,6 +228,7 @@ export default {
       instructionsText: instructionsText,
       clipboardTrajs: [],
       pastedTrajs: [],
+      groupable: false,
     }
   },
   components: {
@@ -2918,6 +2922,18 @@ export default {
             return new Trajectory(traj)
           });
         }
+        if (phrase.groupsGrid !== undefined) {
+          phrase.groupsGrid.forEach(groups => {
+            groups.forEach(group => {
+              group.trajectories.forEach((traj, idx) => {
+                // const pIdx = phrase.pieceIdx;
+                const tIdx = traj.num;
+                const realTraj = phrase.trajectoryGrid[0][tIdx];
+                group.trajectories[idx] = realTraj;
+              })
+            })
+          })
+        }
         const chikariKeys = Object.keys(phrase.chikaris);
         const chikariEntries = chikariKeys.map(key => phrase.chikaris[key]);
         const chikariObj = {};
@@ -3927,6 +3943,44 @@ export default {
       }
     },
 
+    groupSelectedTrajs() {
+      if (this.selectedTrajsGroupable()) {
+        const pIdx = this.selectedTrajs[0].phraseIdx;
+        const phrase = this.piece.phrases[pIdx];
+        const group = new Group({ trajectories: this.selectedTrajs });
+        phrase.getGroups(0).push(group)
+      } else {
+        throw new Error('Cannot group selected trajectories');
+      }
+    },
+
+    ungroupSelectedTrajs() {
+      if (this.selectedTrajsConstituteAGroup()) {
+        const groupId = this.selectedTrajs[0].groupId;
+        this.selectedTrajs.forEach(traj => {
+          traj.groupId = undefined
+        });
+        const pIdx = this.selectedTrajs[0].phraseIdx;
+        const phrase = this.piece.phrases[pIdx];
+        const groups = phrase.getGroups(0);
+        // remove group from groups
+        const idx = groups.findIndex(group => group.id === groupId);
+        groups.splice(idx, 1);
+
+      } else {
+        throw new Error('Cannot ungroup selected trajectories');
+      }
+    },
+
+    selectedTrajsConstituteAGroup() {
+      const phrase = this.piece.phrases[this.selectedTrajs[0].phraseIdx];
+      const id = this.selectedTrajs[0].groupId;
+      const group = phrase.getGroupFromId(id);
+      const c1 = group.trajectories.length === this.selectedTrajs.length;
+      const c2 = this.selectedTrajs.every(traj => traj.groupId === id);
+      return c1 && c2
+    },
+
     moveEndingConsonant(traj, phraseStart, codified=false) {
       if (traj.id !== 12) {
         const key = '1.00';
@@ -4492,47 +4546,67 @@ export default {
       }
     },
 
+    selectedTrajsGroupable() {// tests whether all trajs in this.selectedTrajs
+      // are adjacent to one another and part of the same phrase
+      
+      const uniquePIdxs = [...new Set(this.selectedTrajs.map(t => t.phraseIdx))];
+      if (uniquePIdxs.length === 1) {
+        // sort by num
+        this.selectedTrajs.sort((a, b) => a.num - b.num);
+        const nums = this.selectedTrajs.map(traj => traj.num);
+        const diffs = nums.slice(1).map((num, nIdx) => {
+          return num - nums[nIdx];
+        })
+        return diffs.every(diff => diff === 1)
+      } else {
+        return false
+      }
+    },
+
     handleClickTraj(e) {
       e.stopPropagation();
+      this.groupable = false;
       if (this.shifted && this.selectedTrajs.length >= 1) {
         const id = e.target.id.split('__')[1];
         const pIdx = id.split('t')[0].slice(1);
         const tIdx = id.split('t')[1];
         const newTraj = this.piece.phrases[pIdx].trajectories[tIdx];
-        this.selectedTrajs.push(newTraj);
+        if (newTraj.groupId === undefined) {
+          this.selectedTrajs.push(newTraj);
+          this.groupable = this.selectedTrajsGroupable();
+          this.$refs.trajSelectPanel.grouped = false;
 
-        // clear selected traj visually
-        if (this.selectedTraj && this.selectedTrajID) {
-          d3Select(`#${this.selectedTrajID}`)
-            .attr('stroke', this.trajColor)
-          d3Select(`#dampen${this.selectedTrajID}`)
-            .attr('stroke', this.trajColor)
-          d3Select(`#pluck${this.selectedTrajID}`)
-            .attr('fill', this.trajColor)
+          // clear selected traj visually
+          if (this.selectedTraj && this.selectedTrajID) {
+            d3Select(`#${this.selectedTrajID}`)
+              .attr('stroke', this.trajColor)
+            d3Select(`#dampen${this.selectedTrajID}`)
+              .attr('stroke', this.trajColor)
             d3Select(`#pluck${this.selectedTrajID}`)
-            .attr('stroke', this.trajColor)
-          d3Select('#overlay__' + this.selectedTrajID)
-            .attr('cursor', 'pointer')
-          d3SelectAll('.dragDots').remove();
-          this.selectedTrajID = undefined;
-          this.selectedTraj = undefined;
-          this.clearTrajSelectPanel();
+              .attr('fill', this.trajColor)
+              d3Select(`#pluck${this.selectedTrajID}`)
+              .attr('stroke', this.trajColor)
+            d3Select('#overlay__' + this.selectedTrajID)
+              .attr('cursor', 'pointer')
+            d3SelectAll('.dragDots').remove();
+            this.selectedTrajID = undefined;
+            this.selectedTraj = undefined;
+            this.clearTrajSelectPanel();
+          }
+          this.selectedTrajs.forEach(traj => {
+            const id = `p${traj.phraseIdx}t${traj.num}`;
+            d3Select(`#${id}`)
+              .attr('stroke', this.selectedMultiTrajColor)
+            d3Select(`#dampen${id}`)
+              .attr('stroke', this.selectedMultiTrajColor)
+            d3Select(`#pluck${id}`)
+              .attr('fill', this.selectedMultiTrajColor)
+            d3Select(`#pluck${id}`)
+              .attr('stroke', this.selectedMultiTrajColor)
+            d3Select('#overlay__' + id)
+              .attr('cursor', 'default')
+          })
         }
-        this.selectedTrajs.forEach(traj => {
-          const id = `p${traj.phraseIdx}t${traj.num}`;
-          d3Select(`#${id}`)
-            .attr('stroke', this.selectedMultiTrajColor)
-          d3Select(`#dampen${id}`)
-            .attr('stroke', this.selectedMultiTrajColor)
-          d3Select(`#pluck${id}`)
-            .attr('fill', this.selectedMultiTrajColor)
-          d3Select(`#pluck${id}`)
-            .attr('stroke', this.selectedMultiTrajColor)
-          d3Select('#overlay__' + id)
-            .attr('cursor', 'default')
-        })
-        
-
       } else {
         if (this.selectedTrajs.length > 1) {
           this.selectedTrajs.forEach(traj => {
@@ -4574,47 +4648,72 @@ export default {
         const pIdx = this.selectedTrajID.split('t')[0].slice(1);
         const tIdx = this.selectedTrajID.split('t')[1];
         this.selectedTraj = this.piece.phrases[pIdx].trajectories[tIdx];
-        this.selectedTrajs = [this.selectedTraj];
-        const tsp = this.$refs.trajSelectPanel;
-        const altId = this.selectedTraj.id >= 12 ? 
-                      this.selectedTraj.id - 1: 
-                      this.selectedTraj.id; 
-        tsp.selectedIdx = tsp.trajIdxs.indexOf(altId);
-        tsp.parentSelected = true;
-        tsp.slope = Math.log2(this.selectedTraj.slope);
-        tsp.vowel = this.selectedTraj.vowel;
-        tsp.startConsonant = this.selectedTraj.startConsonant;
-        tsp.endConsonant = this.selectedTraj.endConsonant;
-        const st = this.selectedTraj;
-        const c1 = st.articulations[0];
-        const c2 = this.selectedTraj.articulations['1.00'];
-        const c3 = st.articulations['0.00'];
-        const c4 = c1 && st.articulations[0].name === 'pluck';
-        const c5 = c3 && st.articulations['0.00'].name === 'pluck';
-        if (c4 || c5) {
-          tsp.pluckBool = true
+        if (this.selectedTraj.groupId !== undefined) {
+          const phrase = this.piece.phrases[pIdx];
+          const group = phrase.getGroupFromId(this.selectedTraj.groupId);
+          this.selectedTrajs = group.trajectories;
+          this.clearTrajSelectPanel();
+          this.groupable = true;
+          this.$refs.trajSelectPanel.grouped = true;
+          this.selectedTrajID = undefined;
+          this.selectedTrajs.forEach(traj => {
+            const id = `p${traj.phraseIdx}t${traj.num}`;
+            d3Select(`#${id}`)
+              .attr('stroke', this.selectedMultiTrajColor)
+            d3Select(`#dampen${id}`)
+              .attr('stroke', this.selectedMultiTrajColor)
+            d3Select(`#pluck${id}`)
+              .attr('fill', this.selectedMultiTrajColor)
+            d3Select(`#pluck${id}`)
+              .attr('stroke', this.selectedMultiTrajColor)
+            d3Select('#overlay__' + id)
+              .attr('cursor', 'default')
+          })
+          d3SelectAll('.dragDots').remove();
+
         } else {
-          tsp.pluckBool = false
+          this.selectedTrajs = [this.selectedTraj];
+          const tsp = this.$refs.trajSelectPanel;
+          const altId = this.selectedTraj.id >= 12 ? 
+                        this.selectedTraj.id - 1: 
+                        this.selectedTraj.id; 
+          tsp.selectedIdx = tsp.trajIdxs.indexOf(altId);
+          tsp.parentSelected = true;
+          tsp.slope = Math.log2(this.selectedTraj.slope);
+          tsp.vowel = this.selectedTraj.vowel;
+          tsp.startConsonant = this.selectedTraj.startConsonant;
+          tsp.endConsonant = this.selectedTraj.endConsonant;
+          const st = this.selectedTraj;
+          const c1 = st.articulations[0];
+          const c2 = this.selectedTraj.articulations['1.00'];
+          const c3 = st.articulations['0.00'];
+          const c4 = c1 && st.articulations[0].name === 'pluck';
+          const c5 = c3 && st.articulations['0.00'].name === 'pluck';
+          if (c4 || c5) {
+            tsp.pluckBool = true
+          } else {
+            tsp.pluckBool = false
+          }
+          if (c2 && c2.name === 'dampen') {
+            tsp.dampen = true
+          } else {
+            tsp.dampen = false
+          }
+          d3Select(`#${this.selectedTrajID}`)
+            .attr('stroke', this.selectedTrajColor)
+          d3Select(`#overlay__${this.selectedTrajID}`)
+            .style('cursor', 'auto')
+          d3Select(`#dampen${this.selectedTrajID}`)
+            .attr('stroke', this.selectedTrajColor)
+          if (this.selectedChikariID) {
+            this.clearSelectedChikari()
+          }
+          if (!(this.selectedPhraseDivIdx === undefined)) {
+            this.clearSelectedPhraseDiv()
+          }
+          this.addAllDragDots();
+          this.$refs.trajSelectPanel.showTrajChecks = true;
         }
-        if (c2 && c2.name === 'dampen') {
-          tsp.dampen = true
-        } else {
-          tsp.dampen = false
-        }
-        d3Select(`#${this.selectedTrajID}`)
-          .attr('stroke', this.selectedTrajColor)
-        d3Select(`#overlay__${this.selectedTrajID}`)
-          .style('cursor', 'auto')
-        d3Select(`#dampen${this.selectedTrajID}`)
-          .attr('stroke', this.selectedTrajColor)
-        if (this.selectedChikariID) {
-          this.clearSelectedChikari()
-        }
-        if (!(this.selectedPhraseDivIdx === undefined)) {
-          this.clearSelectedPhraseDiv()
-        }
-        this.addAllDragDots();
-        this.$refs.trajSelectPanel.showTrajChecks = true;
       }   
     },
 
@@ -4666,6 +4765,7 @@ export default {
         })
         this.selectedTrajs = [];
       }
+      this.groupable = false
     },
 
     clearTrajSelectPanel() {
