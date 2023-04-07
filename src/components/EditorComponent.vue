@@ -191,7 +191,7 @@ export default {
       dateModified: undefined,
       setChikari: false,
       selectedTrajColor: 'red',
-      selectedMultiTrajColor: 'red',
+      selectedArtColor: '#9C2208',
       trajColor: 'midnightblue',
       selectedTraj: undefined,
       selectedTrajs: [],
@@ -383,6 +383,10 @@ export default {
         .style('cursor', 'auto')
       d3Select(`#dampen${this.selectedTrajID}`)
         .attr('stroke', this.selectedTrajColor)
+      d3Select(`#pluck${this.selectedTrajID}`)
+        .attr('stroke', this.selectedArtColor)
+        .attr('fill', this.selectedArtColor)
+      this.updateArtColors(this.selectedTraj, true);
       this.setNewTraj = false;
       this.trajTimePts = [];
       this.svg.style('cursor', 'auto');
@@ -1069,21 +1073,19 @@ export default {
             .attr('cursor', 'default')
         } else {
           this.selectedTrajs.forEach(traj => {
-          const id = `p${traj.phraseIdx}t${traj.num}`;
-          d3Select(`#${id}`)
-            .attr('stroke', this.selectedMultiTrajColor)
-          d3Select(`#dampen${id}`)
-            .attr('stroke', this.selectedMultiTrajColor)
-          d3Select(`#pluck${id}`)
-            .attr('fill', this.selectedMultiTrajColor)
-          d3Select(`#pluck${id}`)
-            .attr('stroke', this.selectedMultiTrajColor)
-          d3Select('#overlay__' + id)
-            .attr('cursor', 'default')
-        })
+            const id = `p${traj.phraseIdx}t${traj.num}`;
+            d3Select(`#${id}`)
+              .attr('stroke', this.selectedTrajColor)
+            d3Select(`#dampen${id}`)
+              .attr('stroke', this.selectedTrajColor)
+            d3Select(`#pluck${id}`)
+              .attr('fill', this.selectedTrajColor)
+            d3Select(`#pluck${id}`)
+              .attr('stroke', this.selectedTrajColor)
+            d3Select('#overlay__' + id)
+              .attr('cursor', 'default')
+          })
         }
-        
-        
       } else {
         console.log("Can't paste here")
       }
@@ -1392,6 +1394,7 @@ export default {
     },
     
     dragDotEnd(e) {
+      let deletedSilentTraj = false;
       let resetRequired = false;
       const idx = Number(this.dragIdx);
       const time = this.constrainTime(e, idx);
@@ -1505,6 +1508,11 @@ export default {
             phrase.durArrayFromTrajectories();
             phrase.assignStartTimes();
             phrase.assignTrajNums();
+            // console.log(phrase.trajectories)
+            // const oldId = `p${phrase.pieceIdx}t${tIdx + 2}`;
+            // const newId = `p${phrase.pieceIdx}t${tIdx + 1}`;
+            // this.reIdAllReps(oldId, newId, true);
+            deletedSilentTraj = true
           }
           phrase.durArrayFromTrajectories();
         } else {
@@ -1594,28 +1602,34 @@ export default {
         }
       } else if (idx === traj.durArray.length) {
         if (tIdx < phrase.trajectories.length - 1) {
-          const nextTraj = phrase.trajectories[tIdx + 1];
-          const newNextTraj = this.fixTrajectory(nextTraj);
-          phrase.trajectories[tIdx + 1] = newNextTraj;
-          phrase.assignStartTimes();
-          phrase.assignTrajNums();
-          phrase.assignPhraseIdx();
-          const data = this.makeTrajData(nextTraj, phrase.startTime);
-          d3Select(`#p${pIdx}t${tIdx+1}`)
-            .datum(data)
-            .attr('d', this.codifiedPhraseLine())
-          d3Select(`#overlay__p${pIdx}t${tIdx+1}`)
-            .datum(data)
-            .attr('d', this.codifiedPhraseLine())
-          this.moveKrintin(newNextTraj, phrase.startTime);
-          this.moveSlides(newNextTraj, phrase.startTime);
-          this.codifiedRedrawDampener(newNextTraj, phrase.startTime);
-          this.moveStartingConsonant(newNextTraj, phrase.startTime, true);
-          this.moveEndingConsonant(newNextTraj, phrase.startTime, true);
-          console.log(0)
-          this.removePlucks(newNextTraj);
-          const g = d3Select(`#articulations__p${pIdx}t${tIdx+1}`);
-          this.codifiedAddPlucks(newNextTraj, phrase.startTime, g)
+          if (deletedSilentTraj) {
+          } else {
+            const nextTraj = phrase.trajectories[tIdx + 1];
+            const newNextTraj = this.fixTrajectory(nextTraj);
+            phrase.trajectories[tIdx + 1] = newNextTraj;
+            phrase.assignStartTimes();
+            phrase.assignTrajNums();
+            phrase.assignPhraseIdx();
+            const data = this.makeTrajData(nextTraj, phrase.startTime);
+            d3Select(`#p${pIdx}t${tIdx+1}`)
+              .datum(data)
+              .attr('d', this.codifiedPhraseLine())
+            d3Select(`#overlay__p${pIdx}t${tIdx+1}`)
+              .datum(data)
+              .attr('d', this.codifiedPhraseLine())
+            this.moveKrintin(newNextTraj, phrase.startTime);
+            this.moveSlides(newNextTraj, phrase.startTime);
+            this.codifiedRedrawDampener(newNextTraj, phrase.startTime);
+            this.moveStartingConsonant(newNextTraj, phrase.startTime, true);
+            this.moveEndingConsonant(newNextTraj, phrase.startTime, true);
+            console.log(0)
+            this.removePlucks(newNextTraj);
+            const g = d3Select(`#articulations__p${pIdx}t${tIdx+1}`);
+            this.codifiedAddPlucks(newNextTraj, phrase.startTime, g);
+          }
+          
+
+
         } else {
           if (this.piece.phrases[pIdx + 1]) {
             const nextPhrase = this.piece.phrases[pIdx + 1];
@@ -1669,6 +1683,7 @@ export default {
     cleanEmptyTrajs(phrase) {
       phrase.trajectories.forEach((traj, i) => {
         if (traj.durTot === 0) {
+          console.log('cleaning empty one')
           phrase.trajectories.splice(i, 1);
           phrase.durArray.splice(i, 1);
           phrase.trajectories.slice(i).forEach(_traj => {
@@ -1684,8 +1699,8 @@ export default {
             let hOffCt = 0;
             let hOnCt = 0;
             let slideCt = 0;
-            Object.keys(traj.articulations).forEach(key => {
-              const art = traj.articulations[key];
+            Object.keys(_traj.articulations).forEach(key => {
+              const art = _traj.articulations[key];
               if (art.name === 'pluck') {
                 d3Select(`#pluck${oldId}`).attr('id', `pluck${newId}`);
               } else if (art.name === 'hammer-off') {
@@ -2323,7 +2338,10 @@ export default {
       d3Select(`#${oldId}`).attr('id', newId);  
     },
     
-    reIdAllReps(oldId, newId) {
+    reIdAllReps(oldId, newId, verbose=false) {
+      if (verbose) {
+        console.log(`reIdAllReps: ${oldId} -> ${newId}`);
+      }
       // given old and new ids, change the ids of all svg representations 
       d3Select(`#${oldId}`).attr('id', newId);
       d3Select(`#overlay__${oldId}`).attr('id', `overlay__${newId}`);
@@ -2334,6 +2352,7 @@ export default {
       const tIdx = Number(newId.split('t')[1]);
       const phrase = this.piece.phrases[pIdx];
       const traj = phrase.trajectories[tIdx];
+      if (verbose) console.log(traj)
       let hOffCt = 0;
       let hOnCt = 0;
       let slideCt = 0;
@@ -4302,7 +4321,20 @@ export default {
         .attr('orient', 'auto-start-reverse')
         .append('path')
         .attr('d', d3Line()(arrowPoints))
-        .attr('stroke', 'black')
+        .attr('fill', 'black')
+
+      this.defs
+        .append('marker')
+        .attr('id', 'selectedArrow')
+        .attr('viewBox', [0, 0, markerBoxWidth, markerBoxHeight])
+        .attr('refX', refX)
+        .attr('refY', refY)
+        .attr('markerWidth', markerBoxWidth)
+        .attr('markerHeight', markerBoxHeight)
+        .attr('orient', 'auto-start-reverse')
+        .append('path')
+        .attr('d', d3Line()(arrowPoints))
+        .attr('fill', this.selectedArtColor)
     },
     
     idFromKey(key, idx) {
@@ -4442,7 +4474,7 @@ export default {
         const traj = this.piece.phrases[pIdx].trajectories[tIdx];
         let color = this.selectedTrajColor;
         if (this.selectedTrajs.includes(traj) && this.selectedTrajs.length > 1) {
-          color = this.selectedMultiTrajColor;
+          color = this.selectedTrajColor;
         }
         d3Select(`#${id}`)
           .attr('stroke', color)
@@ -4593,7 +4625,7 @@ export default {
               .attr('stroke', this.trajColor)
             d3Select(`#pluck${this.selectedTrajID}`)
               .attr('fill', this.trajColor)
-              d3Select(`#pluck${this.selectedTrajID}`)
+            d3Select(`#pluck${this.selectedTrajID}`)
               .attr('stroke', this.trajColor)
             d3Select('#overlay__' + this.selectedTrajID)
               .attr('cursor', 'pointer')
@@ -4605,15 +4637,15 @@ export default {
           this.selectedTrajs.forEach(traj => {
             const id = `p${traj.phraseIdx}t${traj.num}`;
             d3Select(`#${id}`)
-              .attr('stroke', this.selectedMultiTrajColor)
+              .attr('stroke', this.selectedTrajColor)
             d3Select(`#dampen${id}`)
-              .attr('stroke', this.selectedMultiTrajColor)
+              .attr('stroke', this.selectedTrajColor)
             d3Select(`#pluck${id}`)
-              .attr('fill', this.selectedMultiTrajColor)
-            d3Select(`#pluck${id}`)
-              .attr('stroke', this.selectedMultiTrajColor)
+              .attr('fill', this.selectedArtColor)
+              .attr('stroke', this.selectedArtColor)
             d3Select('#overlay__' + id)
               .attr('cursor', 'default')
+            this.updateArtColors(traj, true)
           })
         }
       } else {
@@ -4668,15 +4700,15 @@ export default {
           this.selectedTrajs.forEach(traj => {
             const id = `p${traj.phraseIdx}t${traj.num}`;
             d3Select(`#${id}`)
-              .attr('stroke', this.selectedMultiTrajColor)
+              .attr('stroke', this.selectedTrajColor)
             d3Select(`#dampen${id}`)
-              .attr('stroke', this.selectedMultiTrajColor)
+              .attr('stroke', this.selectedTrajColor)
             d3Select(`#pluck${id}`)
-              .attr('fill', this.selectedMultiTrajColor)
-            d3Select(`#pluck${id}`)
-              .attr('stroke', this.selectedMultiTrajColor)
+              .attr('fill', this.selectedArtColor)
+              .attr('stroke', this.selectedArtColor)
             d3Select('#overlay__' + id)
               .attr('cursor', 'default')
+            this.updateArtColors(traj, true)
           })
           d3SelectAll('.dragDots').remove();
 
@@ -4714,6 +4746,10 @@ export default {
             .style('cursor', 'auto')
           d3Select(`#dampen${this.selectedTrajID}`)
             .attr('stroke', this.selectedTrajColor)
+          d3Select(`#pluck${this.selectedTrajID}`)
+            .attr('fill', this.selectedArtColor)
+            .attr('stroke', this.selectedArtColor)
+          this.updateArtColors(this.selectedTraj, true)
           if (this.selectedChikariID) {
             this.clearSelectedChikari()
           }
@@ -4743,6 +4779,39 @@ export default {
       }
     },
 
+    updateArtColors(traj, selection) {
+      // not plucks
+      const color = selection ? this.selectedArtColor : 'black';
+      const arrow = selection ? 'url(#selectedArrow)' : 'url(#arrow)';
+      const id = `p${traj.phraseIdx}t${traj.num}`;
+      let hOffCt = 0;
+      let hOnCt = 0;
+      let slideCt = 0;
+      Object.keys(traj.articulations).forEach(key => {
+        const art = traj.articulations[key];
+        switch (art.name) {
+          case 'hammer-off':
+            d3Select(`#hammeroff${id}i${hOffCt}`)
+              .attr('stroke', color)
+              .attr('marker-end', arrow)
+            hOffCt++;
+            break;
+          case 'hammer-on':
+            d3Select(`#hammeron${id}i${hOnCt}`)
+              .attr('stroke', color)
+              .attr('marker-end', arrow)
+            hOnCt++;
+            break;
+          case 'slide':
+            d3Select(`#slide${id}i${slideCt}`)
+              .attr('stroke', color)
+              .attr('marker-end', arrow)
+            slideCt++;
+            break;
+        }
+      })
+    },
+
     clearSelectedTraj() {
       if (this.selectedTrajID) {
         d3Select(`#${this.selectedTrajID}`)
@@ -4754,6 +4823,7 @@ export default {
         d3Select(`#pluck${this.selectedTrajID}`)
           .attr('fill', this.trajColor)
           .attr('stroke', this.trajColor)
+        this.updateArtColors(this.selectedTraj, false);
         this.selectedTrajID = undefined;
         this.selectedTraj = undefined;
         this.selectedTrajs = [];
@@ -4771,8 +4841,10 @@ export default {
           d3Select(`#pluck${id}`)
             .attr('fill', this.trajColor)
             .attr('stroke', this.trajColor)
+          this.updateArtColors(traj, false);
         })
         this.selectedTrajs = [];
+        this.selectedTraj = undefined;
       }
       this.groupable = false
     },
@@ -5103,6 +5175,26 @@ export default {
       if (this.selectedTraj && this.selectedTrajID) {
         d3Select(`#${this.selectedTrajID}`)
           .attr('stroke', this.selectedTrajColor)
+        d3Select(`#dampen${this.selectedTrajID}`)
+          .attr('stroke', this.selectedTrajColor)
+        d3Select(`#pluck${this.selectedTrajID}`)
+          .attr('stroke', this.selectedArtColor)
+          .attr('fill', this.selectedArtColor)
+        this.updateArtColors(this.selectedTraj, true);
+        this.addAllDragDots();
+      }
+      if (this.selectedTrajs.length > 1) {
+        this.selectedTrajs.forEach((t, i) => {
+          const id = `p${t.phraseIdx}t${t.num}`;
+          d3Select(`#${id}`)
+            .attr('stroke', this.selectedTrajColor)
+          d3Select(`#dampen${id}`)
+            .attr('stroke', this.selectedTrajColor)
+          d3Select(`#pluck${id}`)
+            .attr('stroke', this.selectedArtColor)
+            .attr('fill', this.selectedArtColor)
+          this.updateArtColors(t, true);
+        })
       }
     },
 
