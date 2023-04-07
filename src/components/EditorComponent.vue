@@ -3829,6 +3829,10 @@ export default {
           .attr('stroke', 'black')
           .attr('stroke-width', 1.5)
           .attr('fill', 'black')
+          .attr('cursor', 'pointer')
+          .on('mouseover', this.handleMouseOver)
+          .on('mouseout', this.handleMouseOut)
+          .on('click', this.handleClickTraj)
           .data(pluckData)
           .attr('transform', d => `translate(${x(d) + offset}, ${y(d)}) rotate(90)`)
       }
@@ -3862,6 +3866,10 @@ export default {
           .attr('stroke', 'black')
           .attr('stroke-width', 1.5)
           .attr('fill', 'black')
+          .attr('cursor', 'pointer')
+          .on('mouseover', this.handleMouseOver)
+          .on('mouseout', this.handleMouseOut)
+          .on('click', this.handleClickTraj)
           .data(pluckData)
           .attr('transform', d => `translate(${x(d) + offset}, ${y(d)}) rotate(90)`)
       }
@@ -4061,6 +4069,9 @@ export default {
           .attr('stroke', 'black')
           .attr('stroke-width', 1.5)
           .attr('fill', 'none')
+          .on('mouseover', this.handleMouseOver)
+          .on('mouseout', this.handleMouseOut)
+          .on('click', this.handleClickTraj)
           .attr('marker-end', 'url(#arrow)')
           .attr('transform', `translate(${x(obj)},${y(obj)})`)
       })
@@ -4089,6 +4100,9 @@ export default {
           .attr('stroke', 'black')
           .attr('stroke-width', 1.5)
           .attr('fill', 'none')
+          .on('mouseover', this.handleMouseOver)
+          .on('mouseout', this.handleMouseOut)
+          .on('click', this.handleClickTraj)
           .attr('marker-end', 'url(#arrow)')
           .attr('transform', `translate(${x(obj)},${y(obj)})`)
       })
@@ -4120,6 +4134,9 @@ export default {
           .attr('stroke', 'black')
           .attr('stroke-width', 1.5)
           .attr('fill', 'none')
+          .on('mouseover', this.handleMouseOver)
+          .on('mouseout', this.handleMouseOut)
+          .on('click', this.handleClickTraj)
           .attr('marker-end', 'url(#arrow)')
           .attr('transform', `translate(${x(obj)},${y(obj)})`)
       })
@@ -4146,6 +4163,9 @@ export default {
           .attr('stroke', 'black')
           .attr('stroke-width', 1.5)
           .attr('fill', 'none')
+          .on('mouseover', this.handleMouseOver)
+          .on('mouseout', this.handleMouseOut)
+          .on('click', this.handleClickTraj)
           .attr('marker-end', 'url(#arrow)')
           .attr('transform', `translate(${x(obj)},${y(obj)})`)
       })
@@ -4236,6 +4256,10 @@ export default {
           .attr('stroke', 'black')
           .attr('stroke-width', 1.5)
           .attr('fill', 'none')
+          .on('mouseover', this.handleMouseOver)
+          .on('mouseout', this.handleMouseOut)
+          .on('click', this.handleClickTraj)
+          .attr('cursor', 'pointer')
           .attr('marker-end', 'url(#arrow)')
           .attr('transform', `translate(${x(obj)},${y(obj)})`)
       })
@@ -4269,6 +4293,9 @@ export default {
           .attr('stroke', 'black')
           .attr('stroke-width', 1.5)
           .attr('fill', 'none')
+          .on('mouseover', this.handleMouseOver)
+          .on('mouseout', this.handleMouseOut)
+          .on('click', this.handleClickTraj)
           .attr('marker-end', 'url(#arrow)')
           .attr('transform', `translate(${x(obj)},${y(obj)})`)
       })
@@ -4460,15 +4487,58 @@ export default {
         .on('click', this.handleClickChikari)
     },
 
+    getIdFromTrajClick(e) {
+      const c1 = e.target.id.slice(0, 9) === 'overlay__';
+      const c2 = e.target.id.slice(0, 5) === 'pluck';
+      const c3 = e.target.id.slice(0, 9) === 'hammeroff';
+      const c4 = e.target.id.slice(0, 8) === 'hammeron';
+      const c5 = e.target.id.slice(0, 5) === 'slide';
+      let id;
+        if (c1) {
+          id = e.target.id.slice(9);
+        } else if (c2) {
+          id = e.target.id.slice(5);
+        } else if (c3) {
+          id = e.target.id.slice(9);
+          id = id.split('i')[0]
+        } else if (c4) {
+          id = e.target.id.slice(8);
+          id = id.split('i')[0];
+        } else if (c5) {
+          id = e.target.id.slice(5);
+          id = id.split('i')[0];
+        }
+      return id;
+    },
+
     handleMouseOver(e) {
+      const c1 = e.target.id.slice(0, 9) === 'overlay__';
+      const c2 = e.target.id.slice(0, 5) === 'pluck';
+      const c3 = e.target.id.slice(0, 9) === 'hammeroff';
+      const c4 = e.target.id.slice(0, 8) === 'hammeron';
+      const c5 = e.target.id.slice(0, 5) === 'slide';
       if (e.target.id.slice(0, 8) === 'circle__') {
         const id = e.target.id.slice(8)
         d3Select(`#${id}`)
           .attr('stroke', this.selectedChikariColor)
         d3Select(`#${e.target.id}`)
           .style('cursor', 'pointer')
-      } else if (e.target.id.slice(0, 9) === 'overlay__') {
-        const id = e.target.id.slice(9);
+      } else if (c1 || c2 || c3 || c4 || c5) {
+        let id;
+        if (c1) {
+          id = e.target.id.slice(9);
+        } else if (c2) {
+          id = e.target.id.slice(5);
+        } else if (c3) {
+          id = e.target.id.slice(9);
+          id = id.split('i')[0]
+        } else if (c4) {
+          id = e.target.id.slice(8);
+          id = id.split('i')[0];
+        } else if (c5) {
+          id = e.target.id.slice(5);
+          id = id.split('i')[0];
+        }
         const pIdx = Number(id.split('t')[0].slice(1));
         const tIdx = Number(id.split('t')[1]);
         const traj = this.piece.phrases[pIdx].trajectories[tIdx];
@@ -4503,8 +4573,7 @@ export default {
             this.updateArtColors(traj, true)
           })
         }
-      }
-        
+      } 
     },
 
     alterSlope(newSlope) {
@@ -4530,6 +4599,11 @@ export default {
     },
 
     handleMouseOut(e) {
+      const c1 = e.target.id.slice(0, 9) === 'overlay__';
+      const c2 = e.target.id.slice(0, 5) === 'pluck';
+      const c3 = e.target.id.slice(0, 9) === 'hammeroff';
+      const c4 = e.target.id.slice(0, 8) === 'hammeron';
+      const c5 = e.target.id.slice(0, 5) === 'slide';
       if (e.target.id.slice(0, 8) === 'circle__') {
         const id = e.target.id.slice(8)
         if (id !== this.selectedChikariID) {
@@ -4537,8 +4611,22 @@ export default {
             .attr('stroke', this.chikariColor)
         }
       }
-      if (e.target.id.slice(0, 9) === 'overlay__') {
-        const id = e.target.id.slice(9)
+      if (c1 || c2 || c3 || c4 || c5) {
+        let id;
+        if (c1) {
+          id = e.target.id.slice(9);
+        } else if (c2) {
+          id = e.target.id.slice(5);
+        } else if (c3) {
+          id = e.target.id.slice(9);
+          id = id.split('i')[0]
+        } else if (c4) {
+          id = e.target.id.slice(8);
+          id = id.split('i')[0];
+        } else if (c5) {
+          id = e.target.id.slice(5);
+          id = id.split('i')[0];
+        }
         if (this.selectedTrajs.length < 2) {
           if (id !== this.selectedTrajID) {
             const pIdx = Number(id.split('t')[0].slice(1));
@@ -4667,7 +4755,7 @@ export default {
       e.stopPropagation();
       this.groupable = false;
       if (this.shifted && this.selectedTrajs.length >= 1) {
-        const id = e.target.id.split('__')[1];
+        const id = this.getIdFromTrajClick(e);
         const pIdx = id.split('t')[0].slice(1);
         const tIdx = id.split('t')[1];
         const newTraj = this.piece.phrases[pIdx].trajectories[tIdx];
@@ -4724,7 +4812,7 @@ export default {
             this.updateArtColors(traj, false)
           })
         }
-        const id = e.target.id.split('__')[1];
+        const id = this.getIdFromTrajClick(e);
         if (this.selectedTrajID && this.selectedTrajID !== id) {
           d3Select(`#` + this.selectedTrajID)
             .attr('stroke', this.trajColor)
@@ -4746,7 +4834,7 @@ export default {
         if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
         if (this.setChikari) this.setChikari = false;
         this.svg.style('cursor', 'default');
-        this.selectedTrajID = e.target.id.split('__')[1];
+        this.selectedTrajID = this.getIdFromTrajClick(e);
         const pIdx = this.selectedTrajID.split('t')[0].slice(1);
         const tIdx = this.selectedTrajID.split('t')[1];
         this.selectedTraj = this.piece.phrases[pIdx].trajectories[tIdx];
