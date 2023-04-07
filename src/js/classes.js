@@ -1,8 +1,5 @@
-// const plt = require('matplotnode');
-// const _ = require('lodash');
 import findLastIndex from 'lodash/findLastIndex';
-
-// import { getRaagRule } from '@/js/serverCalls.js';
+import { v4 as uuidv4 } from 'uuid'
 
 const isObject = argument => typeof argument === 'object' && argument !== null;
 
@@ -208,6 +205,7 @@ class Trajectory {
     vowel = undefined,
     startConsonant = undefined,
     endConsonant = undefined,
+    groupId = undefined,
   } = {}) {
     if (typeof(id) === 'number' && Number.isInteger(id)) {
       this.id = id
@@ -302,6 +300,7 @@ class Trajectory {
     this.vowel = vowel;
     this.startConsonant = startConsonant;
     this.endConsonant = endConsonant;
+    this.groupId = groupId;
 
     if (this.startConsonant !== undefined) {
       this.articulations['0.00'] = new Articulation({
@@ -648,7 +647,6 @@ class Trajectory {
     }
   }
 
-
   toJSON() {
     return {
       id: this.id,
@@ -666,9 +664,61 @@ class Trajectory {
       vowel: this.vowel,
       startConsonant: this.startConsonant,
       endConsonant: this.endConsonant,
+      groupId: this.groupId
     }
   }
   // skip id 11, same code as id 7, just different articulation
+}
+
+class Group { //  a group of adjacent trajectories, cloneable for copy and paste
+  // takes the trajectories as input (they should have already been tested for 
+  // adjacency, but testing again just in case).
+  // this will sit in in the phrase object, within a `groupsGrid` nested array. 
+  // A reference to this group, via ID, will be held in each relevent trajectory.
+  // (if we held the group itself in the traj, we would get circularity ...)
+
+  // when reconstructing this upon loading the piece from JSON, need to make 
+  // sure that the trajectories involved are the same real ones.
+  constructor({
+    trajectories = [],
+    id = undefined,
+  } = {}) {
+    this.trajectories = trajectories;
+    if (this.trajectories.length < 2) {
+      throw new Error('Group must have at least 2 trajectories')
+    }
+    if (!this.testForAdjacency()) {
+      throw new Error('Trajectories are not adjacent')
+    }
+    this.id = id;
+    if (this.id === undefined) {
+      this.id = uuidv4();
+    }
+    this.trajectories.forEach(traj => {
+      traj.groupId = this.id
+    })
+  }
+
+  testForAdjacency() {
+    const uniquePIdxs = [...new Set(this.trajectories.map(t => t.phraseIdx))];
+    if (uniquePIdxs.length === 1) {
+      this.trajectories.sort((a, b) => a.num - b.num);
+      const nums = this.trajectories.map(t => t.num);
+      const diffs = nums.slice(1).map((num, nIdx) => {
+          return num - nums[nIdx];
+      })
+      return diffs.every(diff => diff === 1)
+    } else {
+      return false
+    }
+  }
+
+  toJSON() {
+    return {
+      trajectories: this.trajectories,
+      id: this.id
+    }
+  }
 }
 
 
@@ -682,7 +732,8 @@ class Phrase {
     raga = undefined,
     startTime = undefined,
     trajectoryGrid = undefined,
-    instrumentation = ['Sitar']
+    instrumentation = ['Sitar'],
+    groupsGrid = undefined,
   } = {}) {
 
     this.startTime = startTime;
@@ -720,6 +771,25 @@ class Phrase {
     this.assignStartTimes();
     this.assignTrajNums();
     this.instrumentation = instrumentation;
+    if (groupsGrid !== undefined) {
+      this.groupsGrid = groupsGrid;
+    } else {
+      this.groupsGrid = this.instrumentation.map(() => []);
+    }
+  }
+
+  getGroups(idx = 0) {
+    if (this.groupsGrid[idx] !== undefined) {
+      return this.groupsGrid[idx]
+    } else {
+      throw new Error('No groups for this index')
+    }
+  }
+
+  getGroupFromId(id) {
+    const allGroups = [];
+    this.groupsGrid.forEach(groups => allGroups.push(...groups));
+    return allGroups.find(g => g.id === id)
   }
 
   assignPhraseIdx() {
@@ -842,15 +912,14 @@ class Phrase {
 
   toJSON() {
     return {
-      // trajectories: this.trajectories,
       durTot: this.durTot,
       durArray: this.durArray,
       chikaris: this.chikaris,
-      // connected: this.connected,
       raga: this.raga,
       startTime: this.startTime,
       trajectoryGrid: this.trajectoryGrid,
-      instrumentation: this.instrumentation
+      instrumentation: this.instrumentation,
+      groupsGrid: this.groupsGrid,
     }
   }
 
@@ -1374,5 +1443,6 @@ export {
   Chikari,
   Raga,
   getStarts,
-  getEnds
+  getEnds,
+  Group
 }

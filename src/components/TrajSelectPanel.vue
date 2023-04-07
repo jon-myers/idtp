@@ -1,6 +1,22 @@
 <template>
 <div class='main'>
   <div :class='`selectionPanel ${["", "vocal"][Number(vocal)]}`'>
+    <div class='selectionRow checks' v-if='$parent.groupable'>
+      <label>Grouped</label>
+      <input
+        v-if='editable'
+        type='checkbox'
+        v-model='grouped'
+        @change='toggleGroup'
+      />
+      <input
+        v-if='!editable'
+        type='checkbox'
+        v-model='grouped'
+        @change='toggleGroup'
+        disabled='disabled'
+      />
+    </div>
     <div class='selectionRow checks' v-if='!vowel && showTrajChecks'>
       <label>Pluck</label>
       <input 
@@ -316,6 +332,7 @@ export default {
       consonantList: [],
       startConsonant: undefined,
       endConsonant: undefined,
+      grouped: false
     }
   },
   
@@ -323,7 +340,6 @@ export default {
     'editable',
     'ctrlBoxWidth',
   ],
-
 
   async mounted() {
     // const piece = this.$parent.piece;
@@ -397,6 +413,14 @@ export default {
   },
 
   methods: {
+
+    toggleGroup() {
+      if (this.grouped) {
+        this.$parent.groupSelectedTrajs()
+      } else {
+        this.$parent.ungroupSelectedTrajs()
+      }
+    },
 
     selectIcon(e) {
       let idx;
