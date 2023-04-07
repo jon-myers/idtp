@@ -4472,22 +4472,39 @@ export default {
         const pIdx = Number(id.split('t')[0].slice(1));
         const tIdx = Number(id.split('t')[1]);
         const traj = this.piece.phrases[pIdx].trajectories[tIdx];
-        let color = this.selectedTrajColor;
-        if (this.selectedTrajs.includes(traj) && this.selectedTrajs.length > 1) {
-          color = this.selectedTrajColor;
-        }
-        d3Select(`#${id}`)
-          .attr('stroke', color)
-        d3Select(`#dampenp${pIdx}t${tIdx}`)
-          .attr('stroke', color)
-        if (this.selectedTraj && traj !== this.selectedTraj) {
-          d3Select(`#${e.target.id}`)
-            .style('cursor', 'pointer')
+        if (traj.groupId === undefined) {
+          let color = this.selectedTrajColor;
+          d3Select(`#${id}`)
+            .attr('stroke', color)
+          d3Select(`#dampenp${pIdx}t${tIdx}`)
+            .attr('stroke', color)
+          if (this.selectedTraj && traj !== this.selectedTraj) {
+            d3Select(`#${e.target.id}`)
+              .style('cursor', 'pointer')
+          } else {
+            d3Select(`#${e.target.id}`)
+              .style('cursor', 'pointer')
+          }
+          d3Select(`#pluck${id}`)
+            .attr('stroke', this.selectedArtColor)
+            .attr('fill', this.selectedArtColor)
+          this.updateArtColors(traj, true)
         } else {
-          d3Select(`#${e.target.id}`)
-            .style('cursor', 'pointer')
+          const group = this.piece.phrases[pIdx].getGroupFromId(traj.groupId);
+          group.trajectories.forEach(traj => {
+            const id = `p${traj.phraseIdx}t${traj.num}`;
+            d3Select(`#${id}`)
+              .attr('stroke', this.selectedTrajColor)
+            d3Select(`#dampenp${traj.phraseIdx}t${traj.num}`)
+              .attr('stroke', this.selectedTrajColor)
+            d3Select(`#pluck${id}`)
+              .attr('stroke', this.selectedArtColor)
+              .attr('fill', this.selectedArtColor)
+            this.updateArtColors(traj, true)
+          })
         }
       }
+        
     },
 
     alterSlope(newSlope) {
@@ -4524,20 +4541,62 @@ export default {
         const id = e.target.id.slice(9)
         if (this.selectedTrajs.length < 2) {
           if (id !== this.selectedTrajID) {
-            d3Select(`#${id}`)
-              .attr('stroke', this.trajColor)
-            d3Select(`#dampen${id}`)
-              .attr('stroke', this.trajColor)
+            const pIdx = Number(id.split('t')[0].slice(1));
+            const tIdx = Number(id.split('t')[1]);
+            const traj = this.piece.phrases[pIdx].trajectories[tIdx];
+            if (traj.groupId === undefined) {
+              d3Select(`#${id}`)
+                .attr('stroke', this.trajColor)
+              d3Select(`#dampen${id}`)
+                .attr('stroke', this.trajColor)
+              d3Select(`#pluck${id}`)
+                .attr('stroke', 'black')
+                .attr('fill', 'black')
+              this.updateArtColors(traj, false)
+            } else {
+              const group = this.piece.phrases[pIdx].getGroupFromId(traj.groupId);
+              group.trajectories.forEach(traj_ => {
+                const id_ = `p${traj_.phraseIdx}t${traj_.num}`;
+                d3Select(`#${id_}`)
+                  .attr('stroke', this.trajColor)
+                d3Select(`#dampen${id_}`)
+                  .attr('stroke', this.trajColor)
+                d3Select(`#pluck${id_}`)
+                  .attr('stroke', 'black')
+                  .attr('fill', 'black')
+                this.updateArtColors(traj_, false)
+              })
+            } 
           }
         } else {
           const pIdx = Number(id.split('t')[0].slice(1));
           const tIdx = Number(id.split('t')[1]);
           const traj = this.piece.phrases[pIdx].trajectories[tIdx];
           if (!this.selectedTrajs.includes(traj)) {
-            d3Select(`#${id}`)
-              .attr('stroke', this.trajColor)
-            d3Select(`#dampen${id}`)
-              .attr('stroke', this.trajColor)
+            if (traj.groupId === undefined) {
+              d3Select(`#${id}`)
+                .attr('stroke', this.trajColor)
+              d3Select(`#dampen${id}`)
+                .attr('stroke', this.trajColor)
+              d3Select(`#pluck${id}`)
+                .attr('stroke', 'black')
+                .attr('fill', 'black')
+              this.updateArtColors(traj, false)
+            } else {
+              const group = this.piece.phrases[pIdx].getGroupFromId(traj.groupId);
+              group.trajectories.forEach(traj_ => {
+                const id_ = `p${traj_.phraseIdx}t${traj_.num}`;
+                d3Select(`#${id_}`)
+                  .attr('stroke', this.trajColor)
+                d3Select(`#dampen${id_}`)
+                  .attr('stroke', this.trajColor)
+                d3Select(`#pluck${id_}`)
+                  .attr('stroke', 'black')
+                  .attr('fill', 'black')
+                this.updateArtColors(traj_, false)
+              })
+            }
+            
           }
         }
       }
