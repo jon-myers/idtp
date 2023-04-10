@@ -53,13 +53,14 @@
         </div>
         <div class='cbRow'>
           <button @click='resetZoom'>Reset Zoom</button>
-        </div>
-        <div class='cbRow'>
           <button @click='savePiece'>Save</button>
         </div>
         <div class='cbRow'>
           <span class='savedDate'>
-            {{`Saved: ${dateModified ? dateModified.toLocaleString() : ''}`}}
+            {{`Saved: ${dateModified ? 
+              dateModified.toLocaleString([], { 
+                hour: '2-digit', minute: '2-digit'
+              }) : ''}`}}
           </span>
         </div>
         <div class='instructionsIcon' @click='toggleInstructions'>?</div>
@@ -212,8 +213,8 @@ export default {
       scrollYWidth: 20,
       scrollXHeight: 20,
       yScaleLims: [1, 5],
-      editorHeight: 600,
-      scrollYHeight: 600 - 30 - 20, // this is bad, just a placeholder anyway
+      editorHeight: 400,
+      scrollYHeight: 500 - 30 - 20, // this is bad, just a placeholder anyway
       initYOffset: 0,
       setNewSeries: false,
       setNewRegion: false,
@@ -238,6 +239,7 @@ export default {
   created() {
     window.addEventListener('keydown', this.handleKeydown);
     window.addEventListener('keyup', this.handleKeyup);
+    this.editorHeight = 800;
     if (this.$store.state.userID === undefined) {
       if (this.$route.query) {
         this.$store.commit('update_query', this.$route.query)
@@ -6330,6 +6332,7 @@ overriding time to be either the start or end of the group.');
   color: white;
   background-color: #202621;
   position: relative;
+  overflow-y: scroll;
 }
 
 .mainzz {
@@ -6371,8 +6374,8 @@ button:hover {
 }
 
 .cbRow {
-  height: 30px;
-  min-height: 30px;
+  height: 26px;
+  min-height: 26px;
   width: v-bind(controlBoxWidth - 10 +'px');
   display: flex;
   flex-direction: row;
@@ -6389,6 +6392,14 @@ button:hover {
 
 .cbRow > input:hover {
   cursor: pointer;
+}
+
+.cbRow > button {
+  margin-left: 5px;
+}
+
+.cbRow > span {
+  padding: 0px;
 }
 
 .noSelect {

@@ -1,6 +1,9 @@
 <template>
 <div class='main'>
-  <div :class='`selectionPanel ${["", "vocal"][Number(vocal)]}`'>
+  <div 
+    :class='`selectionPanel \
+    ${["", "vocal"][Number(vocal)]} \
+    ${["", "vib"][Number(showVibObj)]}`'>
     <div class='selectionRow checks' v-if='$parent.groupable'>
       <label>Grouped</label>
       <input
@@ -17,7 +20,7 @@
         disabled='disabled'
       />
     </div>
-    <div class='selectionRow checks' v-if='!vowel && showTrajChecks'>
+    <div class='selectionRow checks' v-if='!vocal && showTrajChecks'>
       <label>Pluck</label>
       <input 
         v-if='editable' 
@@ -146,7 +149,7 @@
         <input type='radio' name='phraseDiv' v-model='phraseDivType' value='section'>
       </div>
     </div>
-    <div class='selectionRow checks'>
+    <div class='selectionRow checks' v-if='showVibObj'>
       <label v-if='showVibObj' class='spaceLeft'>Phase</label>
       <input
         v-if='editable && showVibObj'
@@ -332,7 +335,9 @@ export default {
       consonantList: [],
       startConsonant: undefined,
       endConsonant: undefined,
-      grouped: false
+      grouped: false,
+      panelHeight: 80,
+      vib: false,
     }
   },
   
@@ -632,7 +637,7 @@ export default {
 
 .selectionPanel {
   width: v-bind(ctrlBoxWidth + 'px');
-  height: 170px;
+  height: v-bind(panelHeight + 'px');
   border-top: 1px solid black;
   display: flex;
   flex-direction: column;
@@ -641,7 +646,15 @@ export default {
 }
 
 .selectionPanel.vocal {
-  height: v-bind(170 + ctrlBoxWidth/2 + 'px');
+  height: v-bind(panelHeight + ctrlBoxWidth/4 + 'px');
+}
+
+.selectionPanel.vib {
+  height: v-bind(panelHeight + 50 + 'px');
+}
+
+.selectionPanel.vocal.vib {
+  height: v-bind(panelHeight + ctrlBoxWidth/2 + 'px');
 }
 
 
@@ -707,7 +720,7 @@ label.wide {
   justify-content: right;
   margin-right: 20px;
   width: 100%;
-  height: 30px;
+  height: 25px;
 }
 
 .radioGroup > .selectionRow {
