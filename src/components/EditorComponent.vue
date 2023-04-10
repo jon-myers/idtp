@@ -73,11 +73,13 @@
   </div>
 </div>
 <EditorAudioPlayer 
+  class='audioPlayer'
   ref='audioPlayer' 
   :audioSource='audioSource' 
   :recGain='recGain'
   :synthGain='synthGain'
   :synthDamping='synthDamping'
+  :playerHeight='playerHeight'
   />
 </template>
 <script>
@@ -230,6 +232,9 @@ export default {
       clipboardTrajs: [],
       pastedTrajs: [],
       groupable: false,
+      playerHeight: 100,
+      oldHeight: undefined,
+      leftTime: 0,
     }
   },
   components: {
@@ -239,7 +244,9 @@ export default {
   created() {
     window.addEventListener('keydown', this.handleKeydown);
     window.addEventListener('keyup', this.handleKeyup);
-    this.editorHeight = 800;
+    const navHeight = this.$parent.$parent.navHeight;
+    this.editorHeight = window.innerHeight - navHeight - this.playerHeight;
+    // this.editorHeight = 800;
     if (this.$store.state.userID === undefined) {
       if (this.$route.query) {
         this.$store.commit('update_query', this.$route.query)
@@ -598,18 +605,13 @@ export default {
           throw 'IDTP logger: Piece does not exist, or you do not have \
           permission to view.'
       }
+      this.oldHeight = window.innerHeight;
       await this.initializePiece();
       this.$refs.audioPlayer.parentLoaded();
       const tsp = this.$refs.trajSelectPanel;
       tsp.trajIdxs = this.piece.trajIdxs;
       const vox = ['Vocal (M)', 'Vocal (F)'];
       tsp.vocal = vox.includes(this.piece.instrumentation[0]);
-      // GETBACK
-      // if (this.audioDBDoc) {
-      //   this.$refs.audioPlayer.initAll();
-      // }
-    
-      // end GETBACK
       const silentDur = this.durTot - piece.durTot;
       if (silentDur >= 0.00001) {
         const stTrajObj = {
@@ -815,8 +817,7 @@ export default {
       this.removeAccidentalSilentTrajs()
       this.resetZoom();
     },
-
-    
+ 
     setScrollY() {
       const notchesHeight = this.xAxHeight + this.scrollXHeight;
       this.scrollYHeight = this.editorHeight - notchesHeight;
@@ -1214,6 +1215,24 @@ export default {
           d3Select(`#dragDot${i}`)
             .call(drag())  
         }          
+      }
+    },
+
+    async resizeHeight(controlsOpenOverride = undefined) {
+      const navHeight = this.$parent.$parent.navHeight;
+      const player = this.$refs.audioPlayer;
+      let controlsOpen = player.showControls || player.showDownloads || player.showTuning;
+      if (controlsOpenOverride !== undefined) {
+        controlsOpen = controlsOpenOverride;
+      }
+      const controlsHeight = controlsOpen ? player.controlsHeight : 0;
+      const less = navHeight + controlsHeight + this.playerHeight + 1;
+      this.editorHeight = window.innerHeight - less;
+      try {
+        await this.initializePiece();
+        this.resize();
+      } catch (err) {
+        console.log(err)
       }
     },
     
@@ -3000,6 +3019,11 @@ export default {
     },
 
     resize() {
+      if (this.oldHeight !== window.innerHeight) {
+        console.log('changed real height')
+        this.resizeHeight();
+      }
+
       const rect = this.rect();
       this.svg
         .attr('viewBox', [0, 0, rect.width, rect.height])
@@ -3010,6 +3034,7 @@ export default {
       this.resizeScrollX();
       this.redraw();
       this.resetZoom();
+      this.oldHeight = window.innerHeight;
     },
 
     resizeScrollX() {
@@ -3233,10 +3258,39 @@ export default {
     getScrollXDraggerTranslate() {
       const offset = - (this.xr()(0) - this.yAxWidth);
       const width = this.rect().width - this.yAxWidth;
-      return offset / (this.tx().k * width - width);
+      const out = offset / (this.tx().k * width - width);
+      if (isNaN(out)) return 0 // amateurish, but whatever
+      return out
+    },
+
+    removeEditor() {
+      if (this.scrollY) this.scrollY.remove();
+      if (this.scrollX) this.scrollX.remove();
+      if (this.svg) {
+        this.svg.selectAll('*').remove();
+        this.svg.remove();
+      }
+
+      if (this.defs) {
+        this.defs.selectAll('*').remove();
+        this.defs.remove();
+      }
+      if (this.specbox) {
+        this.specbox.remove();
+        console.log('there was still a specbox')
+      }
+
+      // if (this.svgNode) {
+      //   // console.log(this.$refs.graph)
+      //   // this.$refs.graph.removeChild(this.svgNode)
+      // }
+      
+      // this.imgs = undefined;
+      // this.loadedImgs = 0;
     },
 
     async initializePiece() {
+      this.removeEditor();
       this.visibleSargam = this.piece.raga.getFrequencies({
         low: this.freqMin,
         high: this.freqMax
@@ -3249,6 +3303,7 @@ export default {
       this.setScrollY();
       this.setScrollX();
       const rect = await this.rect();
+      this.oldRectHeight = rect.height;
       this.svg = await d3Create('svg')
         .classed('noSelect', true)
         .attr('viewBox', [0, 0, rect.width, rect.height])
@@ -3292,12 +3347,17 @@ export default {
       this.ty = () => d3ZoomTransform(this.gy.node());
       this.gx.call(this.zoomX).attr('pointer-events', 'none');
       this.gy.call(this.zoomY).attr('pointer-events', 'none');
-      this.zoom = d3Zoom()
+      try {
+        this.zoom = d3Zoom()
         .filter(z_ => {
           if (z_.type === 'dblclick') this.handleDblClick(z_);
           return z_.type !== 'mousedown' && z_.type !== 'dblclick' ? z_ : null
         })
         .on('zoom', this.enactZoom);
+      } catch (err) {
+        console.error(err)
+      }
+      
       this.makeAxes();
       this.addPhrases();
 
@@ -3661,6 +3721,7 @@ overriding time to be either the start or end of the group.');
       if (x > maxX) x = maxX;
       const scrollProp = x / maxX;
       const scrollX = this.getScrollXVal(scrollProp);
+      console.log(scrollX)
       this.gx.call(this.zoomX.translateTo, scrollX, 0, [0, 0]);
       this.redraw();
 
@@ -5239,8 +5300,9 @@ overriding time to be either the start or end of the group.');
           [0, this.codifiedYR(Math.log2(this.freqMax)) - this.xAxHeight]
         ])
       } else {
+
         return d3Line()([
-          [0, this.yr()(Math.log2(this.freqMin))],
+          [0, this.yr()(Math.log2(this.freqMin)) + 1000],
           [0, this.yr()(Math.log2(this.freqMax)) - this.xAxHeight]
         ])
       }
@@ -5493,7 +5555,6 @@ overriding time to be either the start or end of the group.');
         .attr('id', 'imgClipRect')
         .attr('width', rect.width - this.yAxWidth)
         .attr('height', rect.height - this.xAxHeight)
-
       this.defs.append('clipPath')
         .attr('id', 'playheadClip')
         .append('rect')
@@ -5570,7 +5631,8 @@ overriding time to be either the start or end of the group.');
         } else {
           // just for in initial this.zoomX setting
           const x = (this.yAxWidth * k - this.yAxWidth) / k;
-          this.gx.call(this.zoomX.scaleBy, k, point);
+          this.zoomX.scaleBy(this.gx, k, point);
+          // this.gx.call(this.zoomX.scaleBy, k, point);
           this.gx.call(this.zoomX.translateTo, x, 0, [0, 0]);
           this.gy.call(this.zoomY.scaleBy, this.initYScale, point);
           this.gy.call(this.zoomY.translateTo, 0, this.rect().height, [0, 0])
@@ -5584,6 +5646,7 @@ overriding time to be either the start or end of the group.');
       this.redraw();
       this.transformScrollYDragger();
       this.transformScrollXDragger();
+      this.leftTime = this.xr().invert(this.yAxWidth);
     },
 
     verticalZoomIn() {
@@ -6481,4 +6544,5 @@ input[type='checkbox'] {
 
 
 }
+
 </style>
