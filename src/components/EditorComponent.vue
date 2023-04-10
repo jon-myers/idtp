@@ -3360,7 +3360,7 @@ export default {
     },
 
     handleClick(e) {
-      const time = this.xr().invert(e.clientX);
+      let time = this.xr().invert(e.clientX);
       const pIdx = this.phraseIdxFromTime(time);
       // need to figure out how to handle when click is over a non phrase
       if (this.setChikari) {
@@ -3480,10 +3480,33 @@ export default {
           }
         }
       } else if (this.setNewPhraseDiv) {
-        //get trajectory at time
+
+
+
+        // get trajectory at time
         const phrase = this.piece.phrases[pIdx];
         const tIdx = this.trajIdxFromTime(phrase, time);
         const traj = phrase.trajectories[tIdx];
+
+        // override time so that if it falls within a group of trajectories, 
+        // time is set to either the start of the first traj in the group, or 
+        // the end of the last traj in the group. This is so that the phrase div 
+        // does not fall within a group of trajectories.
+
+        if (traj.groupId !== undefined) {
+          console.log('Phrase div would fall within a group of trajectories, so \
+overriding time to be either the start or end of the group.');
+          const group = phrase.getGroupFromId(traj.groupId);
+          const firstTraj = group.trajectories[0];
+          const lastTraj = group.trajectories[group.trajectories.length - 1];
+          const startTime = phrase.startTime + firstTraj.startTime;
+          const endTime = phrase.startTime + lastTraj.startTime + lastTraj.durTot;
+          if (endTime - time <= time - startTime) {
+            time = endTime;
+          } else {
+            time = startTime;
+          }
+        }
         if (traj.id === 12) {
           // make current traj durTot such that it ends at current time, and 
           // make new traj start at current time, update the phrase to reflect

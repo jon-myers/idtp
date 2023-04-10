@@ -684,6 +684,7 @@ class Group { //  a group of adjacent trajectories, cloneable for copy and paste
     id = undefined,
   } = {}) {
     this.trajectories = trajectories;
+    this.trajectories.sort((a, b) => a.num - b.num);
     if (this.trajectories.length < 2) {
       throw new Error('Group must have at least 2 trajectories')
     }
