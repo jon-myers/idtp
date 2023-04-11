@@ -1230,13 +1230,30 @@ export default {
       this.editorHeight = window.innerHeight - less;
       try {
         const leftTime = this.leftTime;
-        await this.initializePiece(leftTime);
+        const currentXK = this.tx().k;
+        const currentYK = this.ty().k;
+        const yProp = this.getScrollYDraggerTranslate();
+        const currentHeight = document.querySelector('#backColor').getBoundingClientRect().height;
+        const scalingParameter = currentYK * currentHeight;
+        const regularMove = await this.initializePiece(leftTime, currentXK, scalingParameter, yProp);
         this.resize();
+        if (regularMove) {
+          await this.$nextTick();
+
+          this.scaleAndMoveToTime(currentXK, leftTime, scalingParameter, yProp)
+        }
         // console.log(leftTime)
         // this.moveToTime(leftTime)
       } catch (err) {
         console.log(err)
       }
+    },
+
+    getCenterPoint() {
+      const rect = document.querySelector('#backColor').getBoundingClientRect();
+      const x = rect.width / 2;
+      const y = rect.height / 2;
+      return [x, y];
     },
     
     async makeSpectrograms() {
@@ -2844,7 +2861,7 @@ export default {
         .attr('transform', `translate(${x},${y}) scale(0.5, 1)`)
     },
 
-    async addSpectrogram(leftTime) {
+    async addSpectrogram(leftTime, currentXK, scalingParameter, yProp) {
       try {
         this.numSpecs = await getNumberOfSpectrograms(this.piece.audioID);
       } catch (err) {
@@ -2866,7 +2883,7 @@ export default {
             // this.totNaturalWidth = 0;
             const unscaledWidths = []
             if (this.imgs.every(img => img.complete)) {
-              this.setSpectrogram(leftTime);
+              this.setSpectrogram(leftTime, currentXK, scalingParameter, yProp);
             } else {
               console.log('not all loaded')
             }
@@ -2875,7 +2892,7 @@ export default {
       })
     },
 
-    setSpectrogram(leftTime) {
+    setSpectrogram(leftTime, currentXK, scalingParameter, yProp) {
       this.totNaturalWidth = 0
       const rect = this.rect();
       const height = rect.height - this.xAxHeight;
@@ -2913,12 +2930,13 @@ export default {
           .style('opacity', this.spectrogramOpacity);
       });
       if (leftTime !== undefined) {
-        this.moveToTime(leftTime);
+        this.scaleAndMoveToTime(currentXK, leftTime, scalingParameter, yProp)
+        // this.moveToTime(leftTime);
         this.leftTime = leftTime;
       }
     },
 
-    redrawSpectrogram(leftTime = undefined) {
+    redrawSpectrogram(instant=false) {
       const rect = this.rect();
       const height = rect.height - this.xAxHeight;
       this.desiredWidth = (rect.width - this.yAxWidth) * this.tx().k;
@@ -2935,13 +2953,9 @@ export default {
           const yS = this.yScale
           d3Select(`.spectrogram.img${i}`)
             .transition()
-            .duration(this.transitionTime)
+            .duration(instant ? 0 : this.transitionTime)
             .attr('transform', `translate(${x}, ${y}) scale(${xS}, ${yS})`)
         })
-        if (leftTime !== undefined) {
-          this.moveToTime(leftTime);
-          this.leftTime = leftTime;
-        }
       }
     },
 
@@ -3305,7 +3319,7 @@ export default {
       // this.loadedImgs = 0;
     },
 
-    async initializePiece(leftTime) {
+    async initializePiece(leftTime, currentXK, scalingParameter, yProp) {
       this.removeEditor();
       this.visibleSargam = this.piece.raga.getFrequencies({
         low: this.freqMin,
@@ -3330,20 +3344,17 @@ export default {
 
       let imgsPreLoaded = false
       this.paintBackgroundColors();
+      let regularMove = false;
       if (this.piece.audioID) {
         try {
-          await this.addSpectrogram(leftTime);
-          // if (this.imgs === undefined) {
-          //   await this.addSpectrogram(leftTime);
-          // } else {
-          //   // this.totNaturalWidth = 0
-          //   this.setSpectrogram(leftTime)
-          // }
-          
+          await this.addSpectrogram(leftTime, currentXK, scalingParameter, yProp);
         } catch (err) {
           console.error(err)
         }
+      } else {
+        regularMove = true
       }
+    
       this.curWidth = rect.width - this.yAxWidth;
       this.addClipPaths();
       this.addMarkers();
@@ -3370,6 +3381,7 @@ export default {
       this.ty = () => d3ZoomTransform(this.gy.node());
       this.gx.call(this.zoomX).attr('pointer-events', 'none');
       this.gy.call(this.zoomY).attr('pointer-events', 'none');
+      
       try {
         this.zoom = d3Zoom()
         .filter(z_ => {
@@ -3383,6 +3395,7 @@ export default {
       
       this.makeAxes();
       this.addPhrases();
+      
 
       this.updateTranslateExtent().then(() => {
         this.svgNode = this.svg
@@ -3390,7 +3403,10 @@ export default {
           .call(this.zoom.transform, d3ZoomIdentity.scale(this.initXScale))
           .node();
         this.$refs.graph.appendChild(this.svgNode)
+        
       });
+    return regularMove
+      
 
     },
     
@@ -3744,7 +3760,6 @@ overriding time to be either the start or end of the group.');
       if (x > maxX) x = maxX;
       const scrollProp = x / maxX;
       const scrollX = this.getScrollXVal(scrollProp);
-      console.log(scrollX)
       this.gx.call(this.zoomX.translateTo, scrollX, 0, [0, 0]);
       this.redraw();
 
@@ -3777,11 +3792,60 @@ overriding time to be either the start or end of the group.');
       this.$router.push({ query: { id: query.id, pIdx: pIdx.toString() } });
     },
 
-    moveToTime(time, scale=undefined) {
+    moveToTime(time, point, redraw=false) {
+      if (point === undefined) {
+        point = [0, 0];
+      }
       const offsetDurTot = this.piece.durTot * (1 - 1 / this.tx().k);
       const scrollX = this.getScrollXVal(time / offsetDurTot);
-      this.gx.call(this.zoomX.translateTo, scrollX, 0, [0, 0]);
+      this.gx.call(this.zoomX.translateTo, scrollX, 0, point);
+      if (redraw === true) this.redraw(true)
+    },
+
+    moveToY(y, point, redraw=false) {
+      if (point === undefined) {
+        point = [0, 0]
+      }
+      this.gy.call(this.zoomY.translateTo, 0, y, point);
+      if (redraw === true) this.redraw(true)
+      // this.transformScrollYDragger();
+    },
+
+    scaleToX(x, point = undefined, redraw = false) {
+      const currentX = this.tx().k;
+      const scaleFactor = x / currentX;
+      if (point === undefined) {
+        point = [0, 0];
+      }
+      this.gx.call(this.zoomX.scaleBy, scaleFactor, point);
+      if (redraw === true) this.redraw(true)
+    },
+
+    scaleToY(y, point = undefined, redraw = false) {
+      const currentY = this.ty().k;
+      const scaleFactor = y / currentY;
+      if (point === undefined) {
+        point = [0, 0];
+      }
+      this.gy.call(this.zoomY.scaleBy, scaleFactor, point);
+      if (redraw === true) this.redraw(true)
+    },
+
+    scaleAndMoveToTime(x, time, scalingParameter, yProp,point=undefined) {
+      console.log('fixing')
+      if (point === undefined) {
+        point = [0, 0];
+      }
+      this.scaleToX(x, point);
+      const currentHeight = document.querySelector('#backColor').getBoundingClientRect().height;
+      const newYK = scalingParameter / currentHeight;
+      this.scaleToY(newYK, point);
+      this.moveToTime(time, [0, point[1]]);
+      const yScroll = this.getScrollYVal(yProp);
+      this.moveToY(yScroll, [0, 0]);
       this.redraw(true);
+      this.transformScrollXDragger();
+      this.transformScrollYDragger();
     },
 
     moveToNextPhrase() {
@@ -5409,7 +5473,7 @@ overriding time to be either the start or end of the group.');
         )
       }
 
-      if (this.piece.audioID) await this.redrawSpectrogram();
+      if (this.piece.audioID) await this.redrawSpectrogram(instant);
       this.movePlayhead();
       this.moveShadowPlayhead();
       this.moveRegion();
