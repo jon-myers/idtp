@@ -6482,6 +6482,11 @@ overriding time to be either the start or end of the group.');
   background-color: #202621;
   position: relative;
   overflow-y: scroll;
+  scrollbar-width: none;
+}
+
+.scrollingControlBox::-webkit-scrollbar {
+  display: none
 }
 
 .mainzz {
