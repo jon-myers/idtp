@@ -1229,8 +1229,11 @@ export default {
       const less = navHeight + controlsHeight + this.playerHeight + 1;
       this.editorHeight = window.innerHeight - less;
       try {
-        await this.initializePiece();
+        const leftTime = this.leftTime;
+        await this.initializePiece(leftTime);
         this.resize();
+        // console.log(leftTime)
+        // this.moveToTime(leftTime)
       } catch (err) {
         console.log(err)
       }
@@ -2841,14 +2844,12 @@ export default {
         .attr('transform', `translate(${x},${y}) scale(0.5, 1)`)
     },
 
-    async addSpectrogram() {
+    async addSpectrogram(leftTime) {
       try {
         this.numSpecs = await getNumberOfSpectrograms(this.piece.audioID);
       } catch (err) {
         console.error(err)
       }      
-      const rect = this.rect();
-      const height = rect.height - this.xAxHeight;
       this.imgs = [];
       for (let i = 0; i < this.numSpecs; i++) {
         const dir = 'https://swara.studio/spectrograms/';
@@ -2862,42 +2863,10 @@ export default {
         img.onload = () => {
           this.loadedImgs++;
           if (this.loadedImgs === this.numSpecs) {
-            this.totNaturalWidth = 0;
+            // this.totNaturalWidth = 0;
             const unscaledWidths = []
             if (this.imgs.every(img => img.complete)) {
-              this.imgs.forEach(img => {
-                this.totNaturalWidth += img.naturalWidth;
-                const num = height * img.naturalWidth / img.naturalHeight;
-                unscaledWidths.push(num)
-              });
-              this.cumulativeWidths = [0].concat(unscaledWidths
-                .map(cumsum()).slice(0, unscaledWidths.length - 1))
-              const ratio = this.totNaturalWidth / this.imgs[0].naturalHeight;
-              this.unscaledWidth = height * ratio;
-              const realWidth = rect.width - this.yAxWidth;
-              this.desiredWidth = realWidth * this.initXScale;
-              this.xScale = this.desiredWidth / this.unscaledWidth;
-              const realHeight = rect.height - this.xAxHeight;
-              this.desiredHeight = realHeight * this.initYScale;
-              this.yScale = this.desiredHeight / height;
-              this.specBox = this.svg.insert('g', 'defs')
-                .attr('clip-path', 'url(#clip)');
-              this.imgs.forEach((img, i) => {
-                const imgPortion = img.naturalWidth / this.totNaturalWidth;
-                const unscaledWidth = this.unscaledWidth * imgPortion;
-                const x = this.yAxWidth + this.cumulativeWidths[i];
-                const y = this.yr()(Math.log2(this.freqMax));
-                const xS = this.xScale;
-                const yS = this.yScale;
-                this.specBox.append('image')
-                  .attr('class', `spectrogram img${i}`)
-                  .attr('xlink:href', this.imgs[i].src)
-                  .attr('width', unscaledWidth)
-                  .attr('height', height)
-                  .attr('transform', `translate(${x},${y}) scale(${xS},${yS})`)
-                  .style('opacity', this.spectrogramOpacity);
-                this.redrawSpectrogram()
-              });
+              this.setSpectrogram(leftTime);
             } else {
               console.log('not all loaded')
             }
@@ -2906,7 +2875,50 @@ export default {
       })
     },
 
-    redrawSpectrogram() {
+    setSpectrogram(leftTime) {
+      this.totNaturalWidth = 0
+      const rect = this.rect();
+      const height = rect.height - this.xAxHeight;
+      const unscaledWidths = []
+      this.imgs.forEach(img => {
+        this.totNaturalWidth += img.naturalWidth;
+        const num = height * img.naturalWidth / img.naturalHeight;
+        unscaledWidths.push(num)
+      });
+      this.cumulativeWidths = [0].concat(unscaledWidths
+        .map(cumsum()).slice(0, unscaledWidths.length - 1))
+      const ratio = this.totNaturalWidth / this.imgs[0].naturalHeight;
+      this.unscaledWidth = height * ratio;
+      const realWidth = rect.width - this.yAxWidth;
+      this.desiredWidth = realWidth * this.initXScale;
+      this.xScale = this.desiredWidth / this.unscaledWidth;
+      const realHeight = rect.height - this.xAxHeight;
+      this.desiredHeight = realHeight * this.initYScale;
+      this.yScale = this.desiredHeight / height;
+      this.specBox = this.svg.insert('g', 'defs')
+        .attr('clip-path', 'url(#clip)');
+      this.imgs.forEach((img, i) => {
+        const imgPortion = img.naturalWidth / this.totNaturalWidth;
+        const unscaledWidth = this.unscaledWidth * imgPortion;
+        const x = this.yAxWidth + this.cumulativeWidths[i];
+        const y = this.yr()(Math.log2(this.freqMax));
+        const xS = this.xScale;
+        const yS = this.yScale;
+        this.specBox.append('image')
+          .attr('class', `spectrogram img${i}`)
+          .attr('xlink:href', this.imgs[i].src)
+          .attr('width', unscaledWidth)
+          .attr('height', height)
+          .attr('transform', `translate(${x},${y}) scale(${xS},${yS})`)
+          .style('opacity', this.spectrogramOpacity);
+      });
+      if (leftTime !== undefined) {
+        this.moveToTime(leftTime);
+        this.leftTime = leftTime;
+      }
+    },
+
+    redrawSpectrogram(leftTime = undefined) {
       const rect = this.rect();
       const height = rect.height - this.xAxHeight;
       this.desiredWidth = (rect.width - this.yAxWidth) * this.tx().k;
@@ -2926,6 +2938,10 @@ export default {
             .duration(this.transitionTime)
             .attr('transform', `translate(${x}, ${y}) scale(${xS}, ${yS})`)
         })
+        if (leftTime !== undefined) {
+          this.moveToTime(leftTime);
+          this.leftTime = leftTime;
+        }
       }
     },
 
@@ -3289,7 +3305,7 @@ export default {
       // this.loadedImgs = 0;
     },
 
-    async initializePiece() {
+    async initializePiece(leftTime) {
       this.removeEditor();
       this.visibleSargam = this.piece.raga.getFrequencies({
         low: this.freqMin,
@@ -3312,11 +3328,18 @@ export default {
         .on('mouseup', this.handleMouseup)
         .style('border-bottom', '1px solid black')
 
-      
+      let imgsPreLoaded = false
       this.paintBackgroundColors();
       if (this.piece.audioID) {
         try {
-          await this.addSpectrogram();
+          await this.addSpectrogram(leftTime);
+          // if (this.imgs === undefined) {
+          //   await this.addSpectrogram(leftTime);
+          // } else {
+          //   // this.totNaturalWidth = 0
+          //   this.setSpectrogram(leftTime)
+          // }
+          
         } catch (err) {
           console.error(err)
         }
@@ -3752,8 +3775,13 @@ overriding time to be either the start or end of the group.');
       this.moveShadowPlayhead();
       const query = this.$route.query;
       this.$router.push({ query: { id: query.id, pIdx: pIdx.toString() } });
+    },
 
-      
+    moveToTime(time, scale=undefined) {
+      const offsetDurTot = this.piece.durTot * (1 - 1 / this.tx().k);
+      const scrollX = this.getScrollXVal(time / offsetDurTot);
+      this.gx.call(this.zoomX.translateTo, scrollX, 0, [0, 0]);
+      this.redraw(true);
     },
 
     moveToNextPhrase() {
@@ -5343,15 +5371,15 @@ overriding time to be either the start or end of the group.');
         .attr('transform', `translate(${this.xr()(shadowTime)})`)
     },
 
-    async redraw() {
+    async redraw(instant = false) {
       await this.updateTranslateExtent();
       this.gx
         .transition()
-        .duration(this.transitionTime)
+        .duration(instant ? 0 : this.transitionTime)
         .call(this.xAxis, this.xr());
       this.gy
         .transition()
-        .duration(this.transitionTime)
+        .duration(instant ? 0 : this.transitionTime)
         .call(this.yAxis, this.yr());
 
       if (this.init) {
@@ -5631,8 +5659,7 @@ overriding time to be either the start or end of the group.');
         } else {
           // just for in initial this.zoomX setting
           const x = (this.yAxWidth * k - this.yAxWidth) / k;
-          this.zoomX.scaleBy(this.gx, k, point);
-          // this.gx.call(this.zoomX.scaleBy, k, point);
+          this.zoomX.scaleBy(this.gx, k, point);    
           this.gx.call(this.zoomX.translateTo, x, 0, [0, 0]);
           this.gy.call(this.zoomY.scaleBy, this.initYScale, point);
           this.gy.call(this.zoomY.translateTo, 0, this.rect().height, [0, 0])
