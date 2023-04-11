@@ -2862,34 +2862,38 @@ export default {
     },
 
     async addSpectrogram(leftTime, currentXK, scalingParameter, yProp) {
-      try {
-        this.numSpecs = await getNumberOfSpectrograms(this.piece.audioID);
-      } catch (err) {
-        console.error(err)
-      }      
-      this.imgs = [];
-      for (let i = 0; i < this.numSpecs; i++) {
-        const dir = 'https://swara.studio/spectrograms/';
-        const url = dir + this.piece.audioID + '/0/' + i + '.webp';
-        const img = new Image();
-        img.src = url + '?version=1';
-        this.imgs.push(img)
-      }
-      this.loadedImgs = 0;
-      this.imgs.forEach(img => {
-        img.onload = () => {
-          this.loadedImgs++;
-          if (this.loadedImgs === this.numSpecs) {
-            // this.totNaturalWidth = 0;
-            const unscaledWidths = []
-            if (this.imgs.every(img => img.complete)) {
-              this.setSpectrogram(leftTime, currentXK, scalingParameter, yProp);
-            } else {
-              console.log('not all loaded')
+      if (false) {
+        // console.log('could do it here instead')
+        // await this.$nextTick();
+        // this.setSpectrogram(leftTime, currentXK, scalingParameter, yProp)
+      } else {
+        try {
+          this.numSpecs = await getNumberOfSpectrograms(this.piece.audioID);
+        } catch (err) {
+          console.error(err)
+        }      
+        this.imgs = [];
+        for (let i = 0; i < this.numSpecs; i++) {
+          const dir = 'https://swara.studio/spectrograms/';
+          const url = dir + this.piece.audioID + '/0/' + i + '.webp';
+          const img = new Image();
+          img.src = url + '?version=1';
+          this.imgs.push(img)
+        }
+        this.loadedImgs = 0;
+        this.imgs.forEach(img => {
+          img.onload = () => {
+            this.loadedImgs++;
+            if (this.loadedImgs === this.numSpecs) {
+              if (this.imgs.every(img => img.complete)) {
+                this.setSpectrogram(leftTime, currentXK, scalingParameter, yProp);
+              } else {
+                console.log('not all loaded')
+              }
             }
           }
-        }
-      })
+        })
+      }  
     },
 
     setSpectrogram(leftTime, currentXK, scalingParameter, yProp) {
@@ -3309,14 +3313,6 @@ export default {
         this.specbox.remove();
         console.log('there was still a specbox')
       }
-
-      // if (this.svgNode) {
-      //   // console.log(this.$refs.graph)
-      //   // this.$refs.graph.removeChild(this.svgNode)
-      // }
-      
-      // this.imgs = undefined;
-      // this.loadedImgs = 0;
     },
 
     async initializePiece(leftTime, currentXK, scalingParameter, yProp) {
@@ -3832,7 +3828,6 @@ overriding time to be either the start or end of the group.');
     },
 
     scaleAndMoveToTime(x, time, scalingParameter, yProp,point=undefined) {
-      console.log('fixing')
       if (point === undefined) {
         point = [0, 0];
       }
