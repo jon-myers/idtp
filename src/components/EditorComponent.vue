@@ -53,13 +53,14 @@
         </div>
         <div class='cbRow'>
           <button @click='resetZoom'>Reset Zoom</button>
-        </div>
-        <div class='cbRow'>
           <button @click='savePiece'>Save</button>
         </div>
         <div class='cbRow'>
           <span class='savedDate'>
-            {{`Saved: ${dateModified ? dateModified.toLocaleString() : ''}`}}
+            {{`Saved: ${dateModified ? 
+              dateModified.toLocaleString([], { 
+                hour: '2-digit', minute: '2-digit'
+              }) : ''}`}}
           </span>
         </div>
         <div class='instructionsIcon' @click='toggleInstructions'>?</div>
@@ -72,11 +73,13 @@
   </div>
 </div>
 <EditorAudioPlayer 
+  class='audioPlayer'
   ref='audioPlayer' 
   :audioSource='audioSource' 
   :recGain='recGain'
   :synthGain='synthGain'
   :synthDamping='synthDamping'
+  :playerHeight='playerHeight'
   />
 </template>
 <script>
@@ -212,8 +215,8 @@ export default {
       scrollYWidth: 20,
       scrollXHeight: 20,
       yScaleLims: [1, 5],
-      editorHeight: 600,
-      scrollYHeight: 600 - 30 - 20, // this is bad, just a placeholder anyway
+      editorHeight: 400,
+      scrollYHeight: 500 - 30 - 20, // this is bad, just a placeholder anyway
       initYOffset: 0,
       setNewSeries: false,
       setNewRegion: false,
@@ -229,6 +232,9 @@ export default {
       clipboardTrajs: [],
       pastedTrajs: [],
       groupable: false,
+      playerHeight: 100,
+      oldHeight: undefined,
+      leftTime: 0,
     }
   },
   components: {
@@ -238,6 +244,9 @@ export default {
   created() {
     window.addEventListener('keydown', this.handleKeydown);
     window.addEventListener('keyup', this.handleKeyup);
+    const navHeight = this.$parent.$parent.navHeight;
+    this.editorHeight = window.innerHeight - navHeight - this.playerHeight;
+    // this.editorHeight = 800;
     if (this.$store.state.userID === undefined) {
       if (this.$route.query) {
         this.$store.commit('update_query', this.$route.query)
@@ -596,18 +605,13 @@ export default {
           throw 'IDTP logger: Piece does not exist, or you do not have \
           permission to view.'
       }
+      this.oldHeight = window.innerHeight;
       await this.initializePiece();
       this.$refs.audioPlayer.parentLoaded();
       const tsp = this.$refs.trajSelectPanel;
       tsp.trajIdxs = this.piece.trajIdxs;
       const vox = ['Vocal (M)', 'Vocal (F)'];
       tsp.vocal = vox.includes(this.piece.instrumentation[0]);
-      // GETBACK
-      // if (this.audioDBDoc) {
-      //   this.$refs.audioPlayer.initAll();
-      // }
-    
-      // end GETBACK
       const silentDur = this.durTot - piece.durTot;
       if (silentDur >= 0.00001) {
         const stTrajObj = {
@@ -813,8 +817,7 @@ export default {
       this.removeAccidentalSilentTrajs()
       this.resetZoom();
     },
-
-    
+ 
     setScrollY() {
       const notchesHeight = this.xAxHeight + this.scrollXHeight;
       this.scrollYHeight = this.editorHeight - notchesHeight;
@@ -1213,6 +1216,44 @@ export default {
             .call(drag())  
         }          
       }
+    },
+
+    async resizeHeight(controlsOpenOverride = undefined) {
+      const navHeight = this.$parent.$parent.navHeight;
+      const player = this.$refs.audioPlayer;
+      let controlsOpen = player.showControls || player.showDownloads || player.showTuning;
+      if (controlsOpenOverride !== undefined) {
+        controlsOpen = controlsOpenOverride;
+      }
+      const controlsHeight = controlsOpen ? player.controlsHeight : 0;
+      const less = navHeight + controlsHeight + this.playerHeight + 1;
+      this.editorHeight = window.innerHeight - less;
+      try {
+        const leftTime = this.leftTime;
+        const currentXK = this.tx().k;
+        const currentYK = this.ty().k;
+        const yProp = this.getScrollYDraggerTranslate();
+        const currentHeight = document.querySelector('#backColor').getBoundingClientRect().height;
+        const scalingParameter = currentYK * currentHeight;
+        const regularMove = await this.initializePiece(leftTime, currentXK, scalingParameter, yProp);
+        this.resize();
+        if (regularMove) {
+          await this.$nextTick();
+
+          this.scaleAndMoveToTime(currentXK, leftTime, scalingParameter, yProp)
+        }
+        // console.log(leftTime)
+        // this.moveToTime(leftTime)
+      } catch (err) {
+        console.log(err)
+      }
+    },
+
+    getCenterPoint() {
+      const rect = document.querySelector('#backColor').getBoundingClientRect();
+      const x = rect.width / 2;
+      const y = rect.height / 2;
+      return [x, y];
     },
     
     async makeSpectrograms() {
@@ -2820,72 +2861,86 @@ export default {
         .attr('transform', `translate(${x},${y}) scale(0.5, 1)`)
     },
 
-    async addSpectrogram() {
-      try {
-        this.numSpecs = await getNumberOfSpectrograms(this.piece.audioID);
-      } catch (err) {
-        console.error(err)
-      }      
-      const rect = this.rect();
-      const height = rect.height - this.xAxHeight;
-      this.imgs = [];
-      for (let i = 0; i < this.numSpecs; i++) {
-        const dir = 'https://swara.studio/spectrograms/';
-        const url = dir + this.piece.audioID + '/0/' + i + '.webp';
-        const img = new Image();
-        img.src = url + '?version=1';
-        this.imgs.push(img)
-      }
-      this.loadedImgs = 0;
-      this.imgs.forEach(img => {
-        img.onload = () => {
-          this.loadedImgs++;
-          if (this.loadedImgs === this.numSpecs) {
-            this.totNaturalWidth = 0;
-            const unscaledWidths = []
-            if (this.imgs.every(img => img.complete)) {
-              this.imgs.forEach(img => {
-                this.totNaturalWidth += img.naturalWidth;
-                const num = height * img.naturalWidth / img.naturalHeight;
-                unscaledWidths.push(num)
-              });
-              this.cumulativeWidths = [0].concat(unscaledWidths
-                .map(cumsum()).slice(0, unscaledWidths.length - 1))
-              const ratio = this.totNaturalWidth / this.imgs[0].naturalHeight;
-              this.unscaledWidth = height * ratio;
-              const realWidth = rect.width - this.yAxWidth;
-              this.desiredWidth = realWidth * this.initXScale;
-              this.xScale = this.desiredWidth / this.unscaledWidth;
-              const realHeight = rect.height - this.xAxHeight;
-              this.desiredHeight = realHeight * this.initYScale;
-              this.yScale = this.desiredHeight / height;
-              this.specBox = this.svg.insert('g', 'defs')
-                .attr('clip-path', 'url(#clip)');
-              this.imgs.forEach((img, i) => {
-                const imgPortion = img.naturalWidth / this.totNaturalWidth;
-                const unscaledWidth = this.unscaledWidth * imgPortion;
-                const x = this.yAxWidth + this.cumulativeWidths[i];
-                const y = this.yr()(Math.log2(this.freqMax));
-                const xS = this.xScale;
-                const yS = this.yScale;
-                this.specBox.append('image')
-                  .attr('class', `spectrogram img${i}`)
-                  .attr('xlink:href', this.imgs[i].src)
-                  .attr('width', unscaledWidth)
-                  .attr('height', height)
-                  .attr('transform', `translate(${x},${y}) scale(${xS},${yS})`)
-                  .style('opacity', this.spectrogramOpacity);
-                this.redrawSpectrogram()
-              });
-            } else {
-              console.log('not all loaded')
+    async addSpectrogram(leftTime, currentXK, scalingParameter, yProp) {
+      if (false) {
+        // console.log('could do it here instead')
+        // await this.$nextTick();
+        // this.setSpectrogram(leftTime, currentXK, scalingParameter, yProp)
+      } else {
+        try {
+          this.numSpecs = await getNumberOfSpectrograms(this.piece.audioID);
+        } catch (err) {
+          console.error(err)
+        }      
+        this.imgs = [];
+        for (let i = 0; i < this.numSpecs; i++) {
+          const dir = 'https://swara.studio/spectrograms/';
+          const url = dir + this.piece.audioID + '/0/' + i + '.webp';
+          const img = new Image();
+          img.src = url + '?version=1';
+          this.imgs.push(img)
+        }
+        this.loadedImgs = 0;
+        this.imgs.forEach(img => {
+          img.onload = () => {
+            this.loadedImgs++;
+            if (this.loadedImgs === this.numSpecs) {
+              if (this.imgs.every(img => img.complete)) {
+                this.setSpectrogram(leftTime, currentXK, scalingParameter, yProp);
+              } else {
+                console.log('not all loaded')
+              }
             }
           }
-        }
-      })
+        })
+      }  
     },
 
-    redrawSpectrogram() {
+    setSpectrogram(leftTime, currentXK, scalingParameter, yProp) {
+      this.totNaturalWidth = 0
+      const rect = this.rect();
+      const height = rect.height - this.xAxHeight;
+      const unscaledWidths = []
+      this.imgs.forEach(img => {
+        this.totNaturalWidth += img.naturalWidth;
+        const num = height * img.naturalWidth / img.naturalHeight;
+        unscaledWidths.push(num)
+      });
+      this.cumulativeWidths = [0].concat(unscaledWidths
+        .map(cumsum()).slice(0, unscaledWidths.length - 1))
+      const ratio = this.totNaturalWidth / this.imgs[0].naturalHeight;
+      this.unscaledWidth = height * ratio;
+      const realWidth = rect.width - this.yAxWidth;
+      this.desiredWidth = realWidth * this.initXScale;
+      this.xScale = this.desiredWidth / this.unscaledWidth;
+      const realHeight = rect.height - this.xAxHeight;
+      this.desiredHeight = realHeight * this.initYScale;
+      this.yScale = this.desiredHeight / height;
+      this.specBox = this.svg.insert('g', 'defs')
+        .attr('clip-path', 'url(#clip)');
+      this.imgs.forEach((img, i) => {
+        const imgPortion = img.naturalWidth / this.totNaturalWidth;
+        const unscaledWidth = this.unscaledWidth * imgPortion;
+        const x = this.yAxWidth + this.cumulativeWidths[i];
+        const y = this.yr()(Math.log2(this.freqMax));
+        const xS = this.xScale;
+        const yS = this.yScale;
+        this.specBox.append('image')
+          .attr('class', `spectrogram img${i}`)
+          .attr('xlink:href', this.imgs[i].src)
+          .attr('width', unscaledWidth)
+          .attr('height', height)
+          .attr('transform', `translate(${x},${y}) scale(${xS},${yS})`)
+          .style('opacity', this.spectrogramOpacity);
+      });
+      if (leftTime !== undefined) {
+        this.scaleAndMoveToTime(currentXK, leftTime, scalingParameter, yProp)
+        // this.moveToTime(leftTime);
+        this.leftTime = leftTime;
+      }
+    },
+
+    redrawSpectrogram(instant=false) {
       const rect = this.rect();
       const height = rect.height - this.xAxHeight;
       this.desiredWidth = (rect.width - this.yAxWidth) * this.tx().k;
@@ -2902,7 +2957,7 @@ export default {
           const yS = this.yScale
           d3Select(`.spectrogram.img${i}`)
             .transition()
-            .duration(this.transitionTime)
+            .duration(instant ? 0 : this.transitionTime)
             .attr('transform', `translate(${x}, ${y}) scale(${xS}, ${yS})`)
         })
       }
@@ -2998,6 +3053,11 @@ export default {
     },
 
     resize() {
+      if (this.oldHeight !== window.innerHeight) {
+        console.log('changed real height')
+        this.resizeHeight();
+      }
+
       const rect = this.rect();
       this.svg
         .attr('viewBox', [0, 0, rect.width, rect.height])
@@ -3008,6 +3068,7 @@ export default {
       this.resizeScrollX();
       this.redraw();
       this.resetZoom();
+      this.oldHeight = window.innerHeight;
     },
 
     resizeScrollX() {
@@ -3231,10 +3292,31 @@ export default {
     getScrollXDraggerTranslate() {
       const offset = - (this.xr()(0) - this.yAxWidth);
       const width = this.rect().width - this.yAxWidth;
-      return offset / (this.tx().k * width - width);
+      const out = offset / (this.tx().k * width - width);
+      if (isNaN(out)) return 0 // amateurish, but whatever
+      return out
     },
 
-    async initializePiece() {
+    removeEditor() {
+      if (this.scrollY) this.scrollY.remove();
+      if (this.scrollX) this.scrollX.remove();
+      if (this.svg) {
+        this.svg.selectAll('*').remove();
+        this.svg.remove();
+      }
+
+      if (this.defs) {
+        this.defs.selectAll('*').remove();
+        this.defs.remove();
+      }
+      if (this.specbox) {
+        this.specbox.remove();
+        console.log('there was still a specbox')
+      }
+    },
+
+    async initializePiece(leftTime, currentXK, scalingParameter, yProp) {
+      this.removeEditor();
       this.visibleSargam = this.piece.raga.getFrequencies({
         low: this.freqMin,
         high: this.freqMax
@@ -3247,6 +3329,7 @@ export default {
       this.setScrollY();
       this.setScrollX();
       const rect = await this.rect();
+      this.oldRectHeight = rect.height;
       this.svg = await d3Create('svg')
         .classed('noSelect', true)
         .attr('viewBox', [0, 0, rect.width, rect.height])
@@ -3255,15 +3338,19 @@ export default {
         .on('mouseup', this.handleMouseup)
         .style('border-bottom', '1px solid black')
 
-      
+      let imgsPreLoaded = false
       this.paintBackgroundColors();
+      let regularMove = false;
       if (this.piece.audioID) {
         try {
-          await this.addSpectrogram();
+          await this.addSpectrogram(leftTime, currentXK, scalingParameter, yProp);
         } catch (err) {
           console.error(err)
         }
+      } else {
+        regularMove = true
       }
+    
       this.curWidth = rect.width - this.yAxWidth;
       this.addClipPaths();
       this.addMarkers();
@@ -3290,14 +3377,21 @@ export default {
       this.ty = () => d3ZoomTransform(this.gy.node());
       this.gx.call(this.zoomX).attr('pointer-events', 'none');
       this.gy.call(this.zoomY).attr('pointer-events', 'none');
-      this.zoom = d3Zoom()
+      
+      try {
+        this.zoom = d3Zoom()
         .filter(z_ => {
           if (z_.type === 'dblclick') this.handleDblClick(z_);
           return z_.type !== 'mousedown' && z_.type !== 'dblclick' ? z_ : null
         })
         .on('zoom', this.enactZoom);
+      } catch (err) {
+        console.error(err)
+      }
+      
       this.makeAxes();
       this.addPhrases();
+      
 
       this.updateTranslateExtent().then(() => {
         this.svgNode = this.svg
@@ -3305,7 +3399,10 @@ export default {
           .call(this.zoom.transform, d3ZoomIdentity.scale(this.initXScale))
           .node();
         this.$refs.graph.appendChild(this.svgNode)
+        
       });
+    return regularMove
+      
 
     },
     
@@ -3689,8 +3786,61 @@ overriding time to be either the start or end of the group.');
       this.moveShadowPlayhead();
       const query = this.$route.query;
       this.$router.push({ query: { id: query.id, pIdx: pIdx.toString() } });
+    },
 
-      
+    moveToTime(time, point, redraw=false) {
+      if (point === undefined) {
+        point = [0, 0];
+      }
+      const offsetDurTot = this.piece.durTot * (1 - 1 / this.tx().k);
+      const scrollX = this.getScrollXVal(time / offsetDurTot);
+      this.gx.call(this.zoomX.translateTo, scrollX, 0, point);
+      if (redraw === true) this.redraw(true)
+    },
+
+    moveToY(y, point, redraw=false) {
+      if (point === undefined) {
+        point = [0, 0]
+      }
+      this.gy.call(this.zoomY.translateTo, 0, y, point);
+      if (redraw === true) this.redraw(true)
+      // this.transformScrollYDragger();
+    },
+
+    scaleToX(x, point = undefined, redraw = false) {
+      const currentX = this.tx().k;
+      const scaleFactor = x / currentX;
+      if (point === undefined) {
+        point = [0, 0];
+      }
+      this.gx.call(this.zoomX.scaleBy, scaleFactor, point);
+      if (redraw === true) this.redraw(true)
+    },
+
+    scaleToY(y, point = undefined, redraw = false) {
+      const currentY = this.ty().k;
+      const scaleFactor = y / currentY;
+      if (point === undefined) {
+        point = [0, 0];
+      }
+      this.gy.call(this.zoomY.scaleBy, scaleFactor, point);
+      if (redraw === true) this.redraw(true)
+    },
+
+    scaleAndMoveToTime(x, time, scalingParameter, yProp,point=undefined) {
+      if (point === undefined) {
+        point = [0, 0];
+      }
+      this.scaleToX(x, point);
+      const currentHeight = document.querySelector('#backColor').getBoundingClientRect().height;
+      const newYK = scalingParameter / currentHeight;
+      this.scaleToY(newYK, point);
+      this.moveToTime(time, [0, point[1]]);
+      const yScroll = this.getScrollYVal(yProp);
+      this.moveToY(yScroll, [0, 0]);
+      this.redraw(true);
+      this.transformScrollXDragger();
+      this.transformScrollYDragger();
     },
 
     moveToNextPhrase() {
@@ -5237,8 +5387,9 @@ overriding time to be either the start or end of the group.');
           [0, this.codifiedYR(Math.log2(this.freqMax)) - this.xAxHeight]
         ])
       } else {
+
         return d3Line()([
-          [0, this.yr()(Math.log2(this.freqMin))],
+          [0, this.yr()(Math.log2(this.freqMin)) + 1000],
           [0, this.yr()(Math.log2(this.freqMax)) - this.xAxHeight]
         ])
       }
@@ -5279,15 +5430,15 @@ overriding time to be either the start or end of the group.');
         .attr('transform', `translate(${this.xr()(shadowTime)})`)
     },
 
-    async redraw() {
+    async redraw(instant = false) {
       await this.updateTranslateExtent();
       this.gx
         .transition()
-        .duration(this.transitionTime)
+        .duration(instant ? 0 : this.transitionTime)
         .call(this.xAxis, this.xr());
       this.gy
         .transition()
-        .duration(this.transitionTime)
+        .duration(instant ? 0 : this.transitionTime)
         .call(this.yAxis, this.yr());
 
       if (this.init) {
@@ -5317,7 +5468,7 @@ overriding time to be either the start or end of the group.');
         )
       }
 
-      if (this.piece.audioID) await this.redrawSpectrogram();
+      if (this.piece.audioID) await this.redrawSpectrogram(instant);
       this.movePlayhead();
       this.moveShadowPlayhead();
       this.moveRegion();
@@ -5491,7 +5642,6 @@ overriding time to be either the start or end of the group.');
         .attr('id', 'imgClipRect')
         .attr('width', rect.width - this.yAxWidth)
         .attr('height', rect.height - this.xAxHeight)
-
       this.defs.append('clipPath')
         .attr('id', 'playheadClip')
         .append('rect')
@@ -5568,7 +5718,7 @@ overriding time to be either the start or end of the group.');
         } else {
           // just for in initial this.zoomX setting
           const x = (this.yAxWidth * k - this.yAxWidth) / k;
-          this.gx.call(this.zoomX.scaleBy, k, point);
+          this.zoomX.scaleBy(this.gx, k, point);    
           this.gx.call(this.zoomX.translateTo, x, 0, [0, 0]);
           this.gy.call(this.zoomY.scaleBy, this.initYScale, point);
           this.gy.call(this.zoomY.translateTo, 0, this.rect().height, [0, 0])
@@ -5582,6 +5732,7 @@ overriding time to be either the start or end of the group.');
       this.redraw();
       this.transformScrollYDragger();
       this.transformScrollXDragger();
+      this.leftTime = this.xr().invert(this.yAxWidth);
     },
 
     verticalZoomIn() {
@@ -6330,6 +6481,12 @@ overriding time to be either the start or end of the group.');
   color: white;
   background-color: #202621;
   position: relative;
+  overflow-y: scroll;
+  scrollbar-width: none;
+}
+
+.scrollingControlBox::-webkit-scrollbar {
+  display: none
 }
 
 .mainzz {
@@ -6371,8 +6528,8 @@ button:hover {
 }
 
 .cbRow {
-  height: 30px;
-  min-height: 30px;
+  height: 26px;
+  min-height: 26px;
   width: v-bind(controlBoxWidth - 10 +'px');
   display: flex;
   flex-direction: row;
@@ -6389,6 +6546,14 @@ button:hover {
 
 .cbRow > input:hover {
   cursor: pointer;
+}
+
+.cbRow > button {
+  margin-left: 5px;
+}
+
+.cbRow > span {
+  padding: 0px;
 }
 
 .noSelect {
@@ -6470,4 +6635,5 @@ input[type='checkbox'] {
 
 
 }
+
 </style>

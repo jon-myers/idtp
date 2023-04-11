@@ -326,14 +326,13 @@ export default {
       pieceTitle: undefined,
       performers: [],
       raags: [],
-      playerHeight: 100,
+      // playerHeight: 100,
       showTuning: false,
       showDownloads: false,
       sargam: [],
       centDevs: [],
       tuningGains: [],
       sargamLetterHeight: 30,
-      tuningControlHeight: 200,
       tuningLabelHeight: 20,
       tuningGainFactor: 0.25,
       dataChoice: 'xlsx',
@@ -373,9 +372,10 @@ export default {
       chikariGainDisabled: false,
       synthGainDisabled: false,
       stretchedBuffer: undefined,
+      controlsHeight: 200,
     };
   },
-  props: ['audioSource', 'saEstimate', 'saVerified', 'id'],
+  props: ['audioSource', 'saEstimate', 'saVerified', 'id', 'playerHeight'],
   async mounted() {
     this.ac = new AudioContext({ sampleRate: 48000 });
     this.gainNode = this.ac.createGain();
@@ -1664,10 +1664,11 @@ export default {
         if (this.showTuning) {
           this.showTuning = false;
           this.$refs.tuningImg.classList.remove('showTuning');
-        }
-        if (this.showDownloads) {
+        } else if (this.showDownloads) {
           this.showDownloads = false;
           this.$refs.downloadImg.classList.remove('showDownloads')
+        } else {
+          this.$parent.resizeHeight(this.showControls);
         }
       }
     },
@@ -1687,10 +1688,11 @@ export default {
         if (this.showControls) {
           this.showControls = false;
           this.$refs.controlsImg.classList.remove('showControls');
-        }
-        if (this.showDownloads) {
+        } else if (this.showDownloads) {
           this.showDownloads = false;
           this.$refs.downloadImg.classList.remove('showDownloads')
+        } else {
+          this.$parent.resizeHeight(this.showTuning);
         }
       }
       
@@ -1703,10 +1705,11 @@ export default {
         if (this.showControls) {
           this.showControls = false;
           this.$refs.controlsImg.classList.remove('showControls');
-        }
-        if (this.showTuning) {
+        } else if (this.showTuning) {
           this.showTuning = false;
           this.$refs.tuningImg.classList.remove('showTuning');
+        } else {
+          this.$parent.resizeHeight(this.showDownloads);
         }
       }
     },
@@ -2130,7 +2133,7 @@ export default {
   bottom: v-bind(playerHeight + 'px');
   background-color: #202621;
   width: 540px;
-  height: 200px;
+  height: v-bind(controlsHeight + 'px');
   border-bottom: 1px solid black;
   color: white;
   display: flex;
@@ -2145,7 +2148,7 @@ export default {
   bottom: v-bind(playerHeight + 'px');
   background-color: #202621;
   width: 1000px;
-  height: v-bind(tuningControlHeight+'px');
+  height: v-bind(controlsHeight+'px');
   border-bottom: 1px solid black;
   color: white;
   display: flex;
@@ -2159,7 +2162,7 @@ export default {
   bottom: v-bind(playerHeight + 'px');
   background-color: #202621;
   width: 200px;
-  height: 200px;
+  height: v-bind(controlsHeight + 'px');;
   border-bottom: 1px solid black;
   color: white;
   display: flex;
@@ -2204,7 +2207,7 @@ export default {
   width: 45px;
 }
 .sliders {
-  height: v-bind(tuningControlHeight - sargamLetterHeight + 'px');
+  height: v-bind(controlsHeight - sargamLetterHeight + 'px');
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -2223,7 +2226,7 @@ export default {
 }
 .sliderCol > input {
   width: 12px;
-  height: v-bind(tuningControlHeight - sargamLetterHeight - tuningLabelHeight - 10 + 'px');
+  height: v-bind(controlsHeight - sargamLetterHeight - tuningLabelHeight - 10 + 'px');
   -webkit-appearance: slider-vertical;
   appearance: slider-vertical;
   -moz-appearance: slider-vertical;
@@ -2241,7 +2244,7 @@ export default {
   flex-direction: column;
   align-items: right;
   justify-content: space-between;
-  height: v-bind(tuningControlHeight - sargamLetterHeight - tuningLabelHeight - 10 + 'px');
+  height: v-bind(controlsHeight - sargamLetterHeight - tuningLabelHeight - 10 + 'px');
   margin-top: 5px;
   margin-bottom: 5px;
 }
