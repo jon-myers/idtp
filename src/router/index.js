@@ -22,9 +22,9 @@ const routes = [
     component: () => import('@/components/EditorComponent.vue')
   },
   {
-    path: '/analyser',
-    name: 'AnalyserComponent',
-    component: () => import('@/components/AnalyserComponent.vue')
+    path: '/analyzer',
+    name: 'AnalyzerComponent',
+    component: () => import('@/components/AnalyzerComponent.vue')
 
   },
   {

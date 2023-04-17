@@ -13,8 +13,8 @@
       <router-link class='routerLink' to='/raagEditor'>
         <div class='link'>Raag Editor</div>
       </router-link>
-      <router-link class='routerLink' to='/analyser'>
-        <div class='link'>Analyser</div>
+      <router-link class='routerLink' to='/analyzer'>
+        <div class='link'>Analyzer</div>
       </router-link>
       <div class='gap'></div>
       <div class='imgBox' @click='handleUsrImgClick'>
