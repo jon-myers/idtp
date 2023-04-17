@@ -123,7 +123,7 @@ import {
   Raga,
   Chikari,
   Group
-} from '@/js/classes.js';
+} from '@/js/classes.mjs';
 
 import {
   getPiece,
@@ -133,7 +133,7 @@ import {
   savePiece,
   makeSpectrograms,
   pieceExists
-} from '@/js/serverCalls.js';
+} from '@/js/serverCalls.mjs';
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
 import TrajSelectPanel from '@/components/TrajSelectPanel.vue';
 import instructionsText from '@/assets/texts/editor_instructions.html?raw';

@@ -1,7 +1,12 @@
 const url = 'https://swara.studio/';
 import axios from 'axios';
-
-// import { Piece } from './classes.js';
+// import fetch from 'node-fetch';
+// if (!fetch) {
+//   const fetch = await import ('node-fetch');
+// }
+import fetch from 'cross-fetch';
+// let fetch = fetch ?? await import ('node-fetch');
+// import { Piece } from './classes.mjs';
 
 
 const getPiece = async id => {

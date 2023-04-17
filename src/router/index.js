@@ -22,6 +22,12 @@ const routes = [
     component: () => import('@/components/EditorComponent.vue')
   },
   {
+    path: '/analyser',
+    name: 'AnalyserComponent',
+    component: () => import('@/components/AnalyserComponent.vue')
+
+  },
+  {
     path: '/',
     name: 'LogIn',
     component: () => import('@/components/LogIn.vue')

@@ -13,6 +13,9 @@
       <router-link class='routerLink' to='/raagEditor'>
         <div class='link'>Raag Editor</div>
       </router-link>
+      <router-link class='routerLink' to='/analyser'>
+        <div class='link'>Analyser</div>
+      </router-link>
       <div class='gap'></div>
       <div class='imgBox' @click='handleUsrImgClick'>
         <img 
@@ -51,7 +54,7 @@ import {
   googleAuthCodeLogin 
 } from 'vue3-google-login';
 // import { detect } from 'detect-browser';
-import { userLoginGoogle, handleGoogleAuthCode } from '@/js/serverCalls.js';
+import { userLoginGoogle, handleGoogleAuthCode } from '@/js/serverCalls.mjs';
 
 import defaultUsrImgUrl from '@/assets/icons/user_head.svg';
 // import Editor from '@/components/Editor.vue'

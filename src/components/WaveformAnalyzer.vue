@@ -64,7 +64,7 @@ import {
   updateSaEstimate, 
   getVerifiedStatus, 
   makeSpectrograms 
-  } from '@/js/serverCalls.js';
+  } from '@/js/serverCalls.mjs';
 
 import * as d3 from 'd3';
 // import AudioSVGWaveform from 'audio-waveform-svg-path';

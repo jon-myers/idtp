@@ -42,9 +42,9 @@ import {
   Pitch,
   Articulation,
   Raga,
-} from '@/js/classes.js';
+} from '@/js/classes.mjs';
 
-import { getRaagRule } from '@/js/serverCalls.js';
+import { getRaagRule } from '@/js/serverCalls.mjs';
 
 // import savedPiece from '@/assets/piece2.JSON';
 // import * as d3 from 'd3';
