@@ -1,5 +1,101 @@
-import findLastIndex from 'lodash/findLastIndex';
+import findLastIndex from 'lodash/findLastIndex.js';
 import { v4 as uuidv4 } from 'uuid'
+
+const chromaToScaleDegree = chroma => {
+    let scaleDegree, raised;
+    switch (chroma) {
+      case 0:
+        scaleDegree = 0;
+        raised = true;
+        break;
+      case 1:
+        scaleDegree = 1;
+        raised = false;
+        break;
+      case 2:
+        scaleDegree = 1;
+        raised = true;
+        break;
+      case 3:
+        scaleDegree = 2;
+        raised = false;
+        break;
+      case 4:
+        scaleDegree = 2;
+        raised = true;
+        break;
+      case 5:
+        scaleDegree = 3;
+        raised = false;
+        break;
+      case 6:
+        scaleDegree = 3;
+        raised = true;
+        break;
+      case 7:
+        scaleDegree = 4;
+        raised = true;
+        break;
+      case 8:
+        scaleDegree = 5;
+        raised = false;
+        break;
+      case 9:
+        scaleDegree = 5;
+        raised = true;
+        break;
+      case 10:
+        scaleDegree = 6;
+        raised = false;
+        break;
+      case 11:
+        scaleDegree = 6;
+        raised = true;
+        break;
+    }
+    return [scaleDegree, raised]
+  }
+
+const pitchNumberToChroma = pitchNumber => {
+  let chroma = pitchNumber % 12;
+  while (chroma < 0) {
+    chroma += 12;
+  }
+  return chroma
+}
+
+const durationsOfFixedPitches = (trajs, {
+  inst = 0, 
+  outputType = 'pitchNumber',
+  countType = 'cumulative'  // 'cumulative' or 'proportional'
+} = {}) => {
+    const pitchDurs = {};
+    trajs.forEach(traj => {
+      const trajPitchDurs = traj.durationsOfFixedPitches({ 
+        outputType: outputType,
+        inst: inst
+      });
+      Object.keys(trajPitchDurs).forEach(pitchNumber => {
+        if (pitchDurs[pitchNumber]) {
+          pitchDurs[pitchNumber] += trajPitchDurs[pitchNumber];
+        } else {
+          pitchDurs[pitchNumber] = trajPitchDurs[pitchNumber];
+        }
+      })
+    })
+    if (countType === 'cumulative') {
+      return pitchDurs
+    } else if (countType === 'proportional') {
+      let totalDuration = 0;
+      Object.keys(pitchDurs).forEach(pitchNumber => {
+        totalDuration += pitchDurs[pitchNumber];
+      })
+      Object.keys(pitchDurs).forEach(pitchNumber => {
+        pitchDurs[pitchNumber] /= totalDuration;
+      })
+      return pitchDurs
+    }
+  }
 
 const isObject = argument => typeof argument === 'object' && argument !== null;
 
@@ -108,6 +204,22 @@ class Pitch {
     this.frequency = ratio * this.fundamental * (2 ** this.oct);
   }
 
+  static fromPitchNumber(pitchNumber, fundamental = 261.63) {
+    const oct = Math.floor(pitchNumber / 12);
+    let chroma = pitchNumber % 12;
+    while (chroma < 0) {
+      chroma += 12
+    }
+    let scaleDegree, raised;
+    [scaleDegree, raised] = chromaToScaleDegree(chroma);
+    return new Pitch({ 
+      swara: scaleDegree,
+      oct: oct,
+      raised: raised,
+      fundamental: fundamental
+    })
+  }
+
   get sargamLetter() {
     let s = this.sargam[this.swara].slice(0,1);
     if (this.raised) {
@@ -133,6 +245,34 @@ class Pitch {
     }
     return s
   }
+
+  get numberedPitch() { 
+    // something like a midi pitch, but centered on 0 instead of 60
+    if (this.swara === 0) {
+      return this.oct * 12 + 0
+    } else if (this.swara === 1) {
+      return this.oct * 12 + 1 + Number(this.raised)
+    } else if (this.swara === 2) {
+      return this.oct * 12 + 3 + Number(this.raised)
+    } else if (this.swara === 3) {
+      return this.oct * 12 + 5 + Number(this.raised)
+    } else if (this.swara === 4) {
+      return this.oct * 12 + 7
+    } else if (this.swara === 5) {
+      return this.oct * 12 + 8 + Number(this.raised)
+    } else if (this.swara === 6) {
+      return this.oct * 12 + 10 + Number(this.raised)
+    }
+  }
+
+  get chroma() {
+    let np = this.numberedPitch;
+    while (np < 0) {
+      np += 12
+    }
+    return np % 12
+  }
+
 
   toJSON() {
     return {
@@ -647,6 +787,93 @@ class Trajectory {
     }
   }
 
+  durationsOfFixedPitches({ outputType = 'pitchNumber' } = {}) {
+    const pitchDurs = {};
+    switch (this.id.toString()) {
+      case '0':
+      case '13': 
+        pitchDurs[this.pitches[0].numberedPitch] = this.durTot;
+        break
+      case '1':
+      case '2':
+      case '3':
+        if (this.pitches[0].numberedPitch === this.pitches[1].numberedPitch) {
+          pitchDurs[this.pitches[0].numberedPitch] = this.durTot;
+        }
+        break
+      case '4':
+      case '5':
+        let p0 = this.pitches[0].numberedPitch;
+        let p1 = this.pitches[1].numberedPitch;
+        let p2 = this.pitches[2].numberedPitch;
+        if (p0 === p1) {
+          pitchDurs[p0] = this.durTot * this.durArray[0];
+        } else if (p1 === p2) {
+          if (pitchDurs[p1]) {
+            pitchDurs[p1] += this.durTot * this.durArray[1];
+          } else {
+            pitchDurs[p1] = this.durTot * this.durArray[1];
+          }
+        }
+        break
+      case '6':
+        let lastNum = undefined;
+        this.pitches.forEach((p, i) => {
+          const num = p.numberedPitch;
+          if (num === lastNum) {
+            if (pitchDurs[num]) {
+              pitchDurs[num] += this.durTot * this.durArray[i-1];
+            } else {
+              pitchDurs[num] = this.durTot * this.durArray[i-1];
+            }
+          }
+          lastNum = num;
+        });
+        break
+      case '7':
+      case '8':
+      case '9':
+      case '10':
+      case '11':
+        this.pitches.forEach((p, i) => {
+          const num = p.numberedPitch;
+          if (this.durArray[i] !== undefined) {
+            if (pitchDurs[num]) {
+              pitchDurs[num] += this.durTot * this.durArray[i];
+            } else {
+              pitchDurs[num] = this.durTot * this.durArray[i];
+            }
+          }
+        });
+        break
+    }
+    if (outputType === 'pitchNumber') {
+      return pitchDurs
+    } else if (outputType === 'chroma') {
+      const altPitchDurs = {};
+      Object.keys(pitchDurs).forEach(p => {
+        let chromaPitch = pitchNumberToChroma(p)
+        altPitchDurs[chromaPitch] = pitchDurs[p];
+      });
+      return altPitchDurs
+    } else if (outputType === 'scaleDegree') {
+      const altPitchDurs = {};
+      Object.keys(pitchDurs).forEach(p => {
+        const chromaPitch = pitchNumberToChroma(p);
+        const scaleDegree = chromaToScaleDegree(chromaPitch)[0];
+        altPitchDurs[scaleDegree] = pitchDurs[p];
+      });
+      return altPitchDurs
+    } else if (outputType === 'sargamLetter') {
+      const altPitchDurs = {};
+      Object.keys(pitchDurs).forEach(p => {
+        const sargamLetter = Pitch.fromPitchNumber(p).sargamLetter;
+        altPitchDurs[sargamLetter] = pitchDurs[p];
+      });
+      return altPitchDurs
+    }
+  }
+
   toJSON() {
     return {
       id: this.id,
@@ -839,6 +1066,32 @@ class Phrase {
     })
   }
 
+  getRange() {
+    // returns an object with the lowest and highest pitches in the phrase
+    const allPitches = this.trajectories.map(t => t.pitches).flat();
+    allPitches.sort((a, b) => a.frequency - b.frequency);
+    let low = allPitches[0];
+    let high = allPitches[allPitches.length - 1];
+    low = {
+      frequency: low?.frequency,
+      swara: low?.swara,
+      oct: low?.oct,
+      raised: low?.raised,
+      numberedPitch: low?.numberedPitch,
+    };
+    high = {
+      frequency: high?.frequency,
+      swara: high?.swara,
+      oct: high?.oct,
+      raised: high?.raised,
+      numberedPitch: high?.numberedPitch,
+    }
+    return {
+      min: low,
+      max: high
+    }
+  }
+
   consolidateSilentTrajs() {
     // within phrase, if there are ever two or more silent trajectories in a 
     // row, consolidate them into one.
@@ -911,6 +1164,25 @@ class Phrase {
     return swara
   }
 
+  allPitches(repetition=true) {
+    let allPitches = [];
+    this.trajectories.forEach(traj => {
+      if (traj.id !== 12) {
+        allPitches.push(...traj.pitches)
+      }
+    });
+    if (!repetition) {
+      allPitches = allPitches.filter((pitch, i) => {
+        const c1 = i === 0;
+        const c2 = pitch.swara === allPitches[i-1]?.swara;
+        const c3 = pitch.oct === allPitches[i-1]?.oct;
+        const c4 = pitch.raised === allPitches[i-1]?.raised;
+        return c1 || !(c2 && c3 && c4)
+      })
+    }
+    return allPitches
+  }
+
   toJSON() {
     return {
       durTot: this.durTot,
@@ -976,7 +1248,6 @@ class NoteViewPhrase {
     this.startTime = startTime;
   }
 }
-
 
 class Piece {
 
@@ -1109,14 +1380,64 @@ class Piece {
 
   get sections() {
     const sections = [];
+    this.sectionStarts.sort((a, b) => a - b)
     this.sectionStarts.forEach((s, i) => {
+      let slice;
       if (i === this.sectionStarts.length - 1) {
-        sections.push(this.phrases.slice(s))
+        slice = this.phrases.slice(s)
+        // sections.push(this.phrases.slice(s))
       } else {
-        sections.push(this.phrases.slice(s, this.sectionStarts[i + 1]))
+        slice = this.phrases.slice(s, this.sectionStarts[i + 1])
+        // sections.push(this.phrases.slice(s, this.sectionStarts[i + 1]))
       }
+      sections.push(new Section({ phrases: slice }))
     });
     return sections
+  }
+
+  allPitches(repetition=true) {
+    let allPitches = [];
+    this.phrases.forEach(p => allPitches.push(...p.allPitches()));
+    if (!repetition) {
+      allPitches = allPitches.filter((pitch, i) => {
+        const c1 = i === 0;
+        const c2 = pitch.swara === allPitches[i-1]?.swara;
+        const c3 = pitch.oct === allPitches[i-1]?.oct;
+        const c4 = pitch.raised === allPitches[i-1]?.raised;
+        return c1 || !(c2 && c3 && c4)
+      })
+    }
+    return allPitches
+  }
+
+  allTrajectories(inst = 0) {
+    const allTrajectories = [];
+    this.phrases.forEach(p => allTrajectories.push(...p.trajectoryGrid[inst]));
+    return allTrajectories
+  }
+
+  durationsOfFixedPitches({ inst = 0, outputType='pitchNumber' } = {}) {
+    const trajs = this.allTrajectories(inst);
+    return durationsOfFixedPitches(trajs, { 
+      inst: inst, 
+      outputType: outputType 
+    })
+  }
+
+  proportionsOfFixedPitches({ inst = 0, outputType = 'pitchNumber' } = {}) {
+    const pitchDurs = this.durationsOfFixedPitches({ 
+      inst: inst,
+      outputType: outputType
+    });
+    let totalDur = 0;
+    Object.keys(pitchDurs).forEach(key => {
+      totalDur += pitchDurs[key];
+    });
+    const pitchProps = {};
+    for (let key in pitchDurs) {
+      pitchProps[key] = pitchDurs[key] / totalDur;
+    }
+    return pitchProps
   }
 
 
@@ -1168,6 +1489,36 @@ const yamanRuleSet = {
   ni: {
     lowered: false,
     raised: true
+  }
+}
+
+class Section {
+
+  constructor({
+    phrases = []
+  } = {}) {
+    this.phrases = phrases
+  }
+
+  allPitches(repetition=true) {
+    let pitches = [];
+    this.phrases.forEach(p => pitches.push(...p.allPitches(true)));
+    if (!repetition) {
+      pitches = pitches.filter((pitch, i) => {
+        const c1 = i === 0;
+        const c2 = pitch.swara === pitches[i-1]?.swara;
+        const c3 = pitch.oct === pitches[i-1]?.oct;
+        const c4 = pitch.raised === pitches[i-1]?.raised;
+        return c1 || !(c2 && c3 && c4)
+      })
+    }
+    return pitches
+  }
+
+  get trajectories() {
+    const trajectories = [];
+    this.phrases.forEach(p => trajectories.push(...p.trajectories));
+    return trajectories
   }
 }
 
@@ -1228,6 +1579,88 @@ class Raga {
     });
     return sl
   }
+
+  pitchNumberToSargamLetter(pitchNumber) {
+    const oct = Math.floor(pitchNumber / 12);
+    let out;
+    let chroma = pitchNumber % 12;
+    while (chroma < 0) chroma += 12;
+    let scaleDegree, raised;
+    [scaleDegree, raised] = chromaToScaleDegree(chroma);
+    const sargam = ['sa', 're', 'ga', 'ma', 'pa', 'dha', 'ni'][scaleDegree];
+    if (typeof this.ruleSet[sargam] === 'boolean') {
+      if (this.ruleSet[sargam]) {
+        out = sargam.slice(0, 1).toUpperCase()
+      }
+    } else {
+      if (this.ruleSet[sargam][raised ? 'raised' : 'lowered']) {
+        out = raised ? sargam.slice(0, 1).toUpperCase() : sargam.slice(0, 1)
+      }
+    }
+    return out
+  }
+
+  getPitchNumbers(low, high) { // returns all pitch numbers, inclusive
+    let pitchNumbers = [];
+    for (let i = low; i <= high; i++) {
+      const oct = Math.floor(i / 12);
+      let chroma = i % 12;
+      while (chroma < 0) chroma += 12;
+      let scaleDegree, raised;
+      [scaleDegree, raised] = chromaToScaleDegree(chroma);
+      const sargam = ['sa', 're', 'ga', 'ma', 'pa', 'dha', 'ni'][scaleDegree];
+      if (typeof this.ruleSet[sargam] === 'boolean') {
+        if (this.ruleSet[sargam]) {
+          pitchNumbers.push(i);
+        }
+      } else {
+        if (this.ruleSet[sargam][raised ? 'raised' : 'lowered']) {
+          pitchNumbers.push(i);
+        }
+      }
+    }
+    return pitchNumbers
+  }
+
+  pitchNumberToScaleNumber(pitchNumber) {
+    // as opposed to scale degree. This is just 0 - x, depending on how many 
+    // pitches are in the raga
+    const oct = Math.floor(pitchNumber / 12);
+    let chroma = pitchNumber % 12;
+    while (chroma < 0) chroma += 12;
+    const mainOct = this.getPitchNumbers(0, 11);
+    const idx = mainOct.indexOf(chroma);
+    if (idx === -1) {
+      throw new Error('pitchNumberToScaleNumber: pitchNumber not in raga')
+    }
+    return idx + oct * mainOct.length
+  }
+
+  scaleNumberToPitchNumber(scaleNumber) {
+    const mainOct = this.getPitchNumbers(0, 11);
+    const oct = Math.floor(scaleNumber / mainOct.length);
+    while (scaleNumber < 0) scaleNumber += mainOct.length;
+    const chroma = mainOct[scaleNumber % mainOct.length];
+    return chroma + oct * 12
+  }
+
+  scaleNumberToSargamLetter(scaleNumber) {
+    const pn = this.scaleNumberToPitchNumber(scaleNumber);
+    return this.pitchNumberToSargamLetter(pn)
+  }
+  // getSargam(low, high) {
+  //   const pitchNumbers = this.getPitchNumbers(low, high);
+  //   const sargam = pitchNumbers.map(pn => {
+  //     const oct = Math.floor(pn / 12);
+  //     let chroma = pn % 12;
+  //     while (chroma < 0) chroma += 12;
+  //     let scaleDegree, raised;
+  //     [scaleDegree, raised] = chromaToScaleDegree(chroma);
+  //     const sargam = ['sa', 're', 'ga', 'ma', 'pa', 'dha', 'ni'][scaleDegree];
+  //     return sargam
+  //   });
+  //   return sargam
+  // }
 
   setRatios(ruleSet) {
     const sargam = Object.keys(ruleSet);
@@ -1445,5 +1878,6 @@ export {
   Raga,
   getStarts,
   getEnds,
-  Group
+  Group,
+  durationsOfFixedPitches
 }

@@ -209,7 +209,7 @@ import {
   getInstruments,
   getLocationObject,
   uploadFile
-} from '@/js/serverCalls.js';
+} from '@/js/serverCalls.mjs';
 
 import AddRaag from '@/components/AddRaag.vue';
 

@@ -34,7 +34,7 @@
   </div>
 </template>
 <script>
-import { getAllAudioFileMetaData, getAllAudioEventMetadata } from '@/js/serverCalls.js';
+import { getAllAudioFileMetaData, getAllAudioEventMetadata } from '@/js/serverCalls.mjs';
 
 import AddAudioEvent from '@/components/AddAudioEvent.vue';
 const displayTime = dur => {
