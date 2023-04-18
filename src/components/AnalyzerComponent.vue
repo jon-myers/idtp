@@ -32,6 +32,10 @@
             <input type='checkbox' v-model='pitchChroma'/>
             <label>Pitch Chroma</label>
           </div>
+          <div>
+            <input type='checkbox' v-model='condensed'/>
+            <label>Condensed</label>
+          </div>
         </div>
         <div class='controlBox button'>
           <button class='generate' @click='createGraph'>
@@ -77,6 +81,7 @@
         segmentationType: 'Section',
         duration: 30,
         pitchChroma: false,
+        condensed: false,
 
       }
     },
@@ -141,6 +146,8 @@
         segmentation = 'Duration', // or 'Phrase' or 'Section'
         duration = 30, // in seconds, only applicable if segmentation is 'Duration'
         displayType = 'simple', // or 'gradient'
+        pitchChroma = false,
+        condensed = false,
       } = {}) {
         let segments;
         if (segmentation === 'Duration') {
@@ -152,13 +159,14 @@
         }
         const durs = segments.map(seg => durationsOfFixedPitches(seg, {
           countType: 'proportional',
-          outputType: this.pitchChroma ? 'chroma' : 'pitchNumber'
+          outputType: pitchChroma ? 'chroma' : 'pitchNumber'
         }));
-        let lowestKey = 0;
-        let highestKey = 0;
+        let lowestKey, highestKey;
         durs.forEach(dur => {
           const keys = Object.keys(dur);
           keys.forEach(key => {
+            if (lowestKey === undefined) lowestKey = Number(key);
+            if (highestKey === undefined) highestKey = Number(key);
             if (Number(key) < lowestKey) {
               lowestKey = Number(key);
             }
@@ -167,10 +175,15 @@
             }
           })
         })
+        if (condensed) {
+          lowestKey = this.piece.raga.pitchNumberToScaleNumber(lowestKey);
+          highestKey = this.piece.raga.pitchNumberToScaleNumber(highestKey);
+        }
         let totalWidth = 900;
         let totalHeight = 600;
-        const lkOct = Math.floor(lowestKey / 12);
-        const hkOct = Math.floor(highestKey / 12);
+        const ppOct = condensed ? this.piece.raga.getPitchNumbers(0, 11).length : 12; 
+        const lkOct = Math.floor(lowestKey / ppOct);
+        const hkOct = Math.floor(highestKey / ppOct);
         const mTop = segmentation === 'Duration' ? 90 : 110;
         const margin = { top: mTop, right: 30, bottom: 20, left: 80 };
         let width = totalWidth - margin.left - margin.right;
@@ -195,8 +208,14 @@
           .range([height, 0]);
 
         const axisNode = this.svg.append('g')
-        const pitchNumbers = this.piece.raga.getPitchNumbers(lowestKey, highestKey);
-        const tickLabels =  pitchNumbers.map(pn => {
+        const pitchNumbers = condensed ? 
+          [...Array(1 + highestKey - lowestKey)].map((_, i) => i + lowestKey) : 
+          this.piece.raga.getPitchNumbers(lowestKey, highestKey) ;
+        const tickLabels =  condensed ? 
+          pitchNumbers.map(sn => {
+            return this.piece.raga.scaleNumberToSargamLetter(sn);
+          }) : 
+          pitchNumbers.map(pn => {
           return this.piece.raga.pitchNumberToSargamLetter(pn)
         }) 
         axisNode
@@ -208,6 +227,19 @@
           .style('color', 'black')
           .style('font-weight', 'normal')
         const sectionRects = [...Array(durs.length)]
+
+        if (condensed) {
+          // transform durs
+          durs.forEach((dur, dIdx) => {
+            const keys = Object.keys(dur);
+            keys.forEach(key => {
+              const sn = this.piece.raga.pitchNumberToScaleNumber(Number(key));
+              dur[sn] = dur[key];
+              if (Number(key) !== Number(sn)) delete dur[key];
+            })
+          })
+        }
+
         durs.forEach((dur, dIdx) => {
           let minVal, maxVal, modeIdx=undefined, modeVal=0;
           const keys = Object.keys(dur);
@@ -277,8 +309,8 @@
           'Very High Octave'
         ];
         for (let i = lkOct; i <= hkOct; i++) {
-          let lowY = i * 12;
-          let highY = (i+1) * 12;
+          let lowY = i * ppOct;
+          let highY = (i+1) * ppOct;
           if (i === lkOct) {
             lowY = lowestKey - 0.5;
           }
@@ -401,10 +433,11 @@
           this.svg = undefined;
         }
 
-
         this.createPitchFrequencyGraph({ 
           segmentation: this.segmentationType,
-          duration: this.duration
+          duration: this.duration,
+          pitchChroma: this.pitchChroma,
+          condensed: this.condensed
         })
       }
     },

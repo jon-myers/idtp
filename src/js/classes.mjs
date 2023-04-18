@@ -1622,6 +1622,32 @@ class Raga {
     return pitchNumbers
   }
 
+  pitchNumberToScaleNumber(pitchNumber) {
+    // as opposed to scale degree. This is just 0 - x, depending on how many 
+    // pitches are in the raga
+    const oct = Math.floor(pitchNumber / 12);
+    let chroma = pitchNumber % 12;
+    while (chroma < 0) chroma += 12;
+    const mainOct = this.getPitchNumbers(0, 11);
+    const idx = mainOct.indexOf(chroma);
+    if (idx === -1) {
+      throw new Error('pitchNumberToScaleNumber: pitchNumber not in raga')
+    }
+    return idx + oct * mainOct.length
+  }
+
+  scaleNumberToPitchNumber(scaleNumber) {
+    const mainOct = this.getPitchNumbers(0, 11);
+    const oct = Math.floor(scaleNumber / mainOct.length);
+    while (scaleNumber < 0) scaleNumber += mainOct.length;
+    const chroma = mainOct[scaleNumber % mainOct.length];
+    return chroma + oct * 12
+  }
+
+  scaleNumberToSargamLetter(scaleNumber) {
+    const pn = this.scaleNumberToPitchNumber(scaleNumber);
+    return this.pitchNumberToSargamLetter(pn)
+  }
   // getSargam(low, high) {
   //   const pitchNumbers = this.getPitchNumbers(low, high);
   //   const sargam = pitchNumbers.map(pn => {
