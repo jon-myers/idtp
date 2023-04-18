@@ -4,6 +4,10 @@
     :class='`selectionPanel \
     ${["", "vocal"][Number(vocal)]} \
     ${["", "vib"][Number(showVibObj)]}`'>
+    <div class='octShift' v-if='$parent.selectedTrajs.length > 0'>
+      <button class='octUp' @click='shiftOct(1)'>&#8593</button>
+      <button class='octDown' @click='shiftOct(-1)'>&#8595</button>
+    </div>
     <div class='selectionRow checks' v-if='$parent.groupable'>
       <label>Grouped</label>
       <input
@@ -419,6 +423,12 @@ export default {
 
   methods: {
 
+    shiftOct(offset = 1) {
+      this.$parent.selectedTrajs.forEach(traj => {
+        this.$parent.shiftTrajByOctave(traj, offset)
+      })
+    },
+
     toggleGroup() {
       if (this.grouped) {
         this.$parent.groupSelectedTrajs()
@@ -643,6 +653,7 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: top;
+  position: relative;
 }
 
 .selectionPanel.vocal {
@@ -760,4 +771,28 @@ label.wide {
 .selectionRow select {
   width: 120px;
 }
+
+.octShift {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: 100px;
+  height: 25px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: left;
+}
+
+.octShift button {
+  width: 25px;
+  /* height: 25px; */
+  text-align: center;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  margin: 2px;
+}
+
+
 </style>

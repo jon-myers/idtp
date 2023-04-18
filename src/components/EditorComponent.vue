@@ -289,8 +289,8 @@ export default {
       this.trajTimePts.sort((a, b) => a.time - b.time);
       const logSargamLines = this.visibleSargam.map(s => Math.log2(s));
       const pitches = this.trajTimePts.map(ttp => {
-        return this.visiblePitches[logSargamLines.indexOf(ttp.logFreq)]
-      });
+        return new Pitch(this.visiblePitches[logSargamLines.indexOf(ttp.logFreq)])
+      })
       const ttp = this.trajTimePts;
       const durTot = ttp[ttp.length - 1].time - ttp[0].time;
       const times = this.trajTimePts.map(ttp => ttp.time);
@@ -1451,7 +1451,7 @@ export default {
       d3Select(`#dragDot${idx}`)
         .attr('cx', x)
         .attr('cy', y)
-      const newPitch = this.visiblePitches[logSargamLines.indexOf(logFreq)]
+      const newPitch = new Pitch(this.visiblePitches[logSargamLines.indexOf(logFreq)])
       if (traj.logFreqs[idx]) {
         traj.logFreqs[idx] = logFreq;
         traj.pitches[idx] = newPitch
@@ -1724,7 +1724,6 @@ export default {
     cleanEmptyTrajs(phrase) {
       phrase.trajectories.forEach((traj, i) => {
         if (traj.durTot === 0) {
-          console.log('cleaning empty one')
           phrase.trajectories.splice(i, 1);
           phrase.durArray.splice(i, 1);
           phrase.trajectories.slice(i).forEach(_traj => {
@@ -1783,6 +1782,7 @@ export default {
 
     fixTrajectory(traj) {
       // so that articulations are in the right place according to new durArray;
+      
       const trajObj = traj.toJSON();
       const c1 = traj.articulations[0] || traj.articulations['0.00'];
       const c2 = traj.articulations['1.00'];
@@ -2507,8 +2507,11 @@ export default {
       const phrase = this.piece.phrases[pIdx];
       const silentTraj = phrase.trajectories[tIdx];
       const st = phrase.startTime + silentTraj.startTime;
-      const startsEqual = times[0] === st;
-      const endsEqual = times[times.length - 1] === st + silentTraj.durTot;
+      const startsEqual = Math.abs(times[0] - st) < 0.000001;
+      const endA = times[times.length - 1];
+      const endB = st + silentTraj.durTot;
+      const endsEqual = Math.abs(endA - endB) < 0.000001;
+      // const endsEqual = times[times.length - 1] === st + silentTraj.durTot;
       if (startsEqual && endsEqual) { // if taking up entire silent traj
         phrase.trajectories[tIdx] = newTraj;
         phrase.reset();
@@ -3574,6 +3577,7 @@ export default {
           })
           if (this.trajTimePts.length > 1) {
             this.addFixedTraj();
+
           }
         }
       } else if (this.setNewPhraseDiv) {
@@ -5019,6 +5023,7 @@ overriding time to be either the start or end of the group.');
           this.groupable = true;
           this.$refs.trajSelectPanel.grouped = true;
           this.selectedTrajID = undefined;
+          this.selectedTraj = undefined;
           this.selectedTrajs.forEach(traj => {
             const id = `p${traj.phraseIdx}t${traj.num}`;
             d3Select(`#${id}`)
@@ -5521,6 +5526,27 @@ overriding time to be either the start or end of the group.');
       }
     },
 
+    shiftTrajByOctave(traj, offset = 1) {
+      // then remove the old trajectory and add the new one;
+      traj.pitches.forEach(pitch => pitch.setOct(pitch.oct + offset));
+      traj.realignPitches();
+      const trajID = `p${traj.phraseIdx}t${traj.num}`;
+      d3Select(`#${trajID}`).remove();
+      d3Select(`#overlay__${trajID}`).remove();
+      d3Select(`#articulations__${trajID}`).remove();
+      this.codifiedAddTraj(traj, this.piece.phraseStarts[traj.phraseIdx]);
+      this.updateArtColors(traj, true);
+      if (traj === this.selectedTraj) this.addAllDragDots();
+      if (this.selectedTrajs.includes(traj)) {
+        d3Select(`#${trajID}`)
+          .attr('stroke', this.selectedTrajColor)
+        d3Select(`#dampen${trajID}`)
+          .attr('stroke', this.selectedTrajColor)
+        d3Select(`#pluck${trajID}`)
+          .attr('stroke', this.selectedArtColor)
+          .attr('fill', this.selectedArtColor)
+      }
+    },
 
     codifiedAddTraj(traj, phraseStart) {
       const data = this.makeTrajData(traj, phraseStart);

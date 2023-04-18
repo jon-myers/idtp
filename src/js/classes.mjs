@@ -220,6 +220,20 @@ class Pitch {
     })
   }
 
+  // set oct(newOct) {
+  //   const ratio = this.swara == 0 || this.swara == 4 ?
+  //     this.ratios[this.swara] :
+  //     this.ratios[this.swara][Number(this.raised)];
+  //   this.frequency = ratio * this.fundamental * (2 ** newOct);
+  // }
+  setOct(newOct) {
+    this.oct = newOct;
+    const ratio = this.swara == 0 || this.swara == 4 ?
+      this.ratios[this.swara] :
+      this.ratios[this.swara][Number(this.raised)];
+    this.frequency = ratio * this.fundamental * (2 ** this.oct);
+  }
+
   get sargamLetter() {
     let s = this.sargam[this.swara].slice(0,1);
     if (this.raised) {
@@ -1438,6 +1452,10 @@ class Piece {
       pitchProps[key] = pitchDurs[key] / totalDur;
     }
     return pitchProps
+  }
+
+  get phraseStarts() {
+    return this.phrases.map(p => p.startTime)
   }
 
 
