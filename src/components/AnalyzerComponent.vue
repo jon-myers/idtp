@@ -36,6 +36,10 @@
             <input type='checkbox' v-model='condensed'/>
             <label>Condensed</label>
           </div>
+          <div>
+            <input type='checkbox' v-model='heatmap'/>
+            <label>Heatmap</label>
+          </div>
         </div>
         <div class='controlBox button'>
           <button class='generate' @click='createGraph'>
@@ -55,7 +59,8 @@
 
   import { instantiatePiece, segmentByDuration } from '@/js/analysis.mjs';
   import { durationsOfFixedPitches } from '@/js/classes.mjs';
-  // import { Gradient } from 'javascript-color-gradient';
+  import { pieceExists } from '@/js/serverCalls.mjs';
+  import Gradient from 'javascript-color-gradient';
   import * as d3 from 'd3';
 
   const displayTime = dur => {
@@ -82,7 +87,7 @@
         duration: 30,
         pitchChroma: false,
         condensed: false,
-
+        heatmap: false,
       }
     },
 
@@ -142,12 +147,23 @@
           .text(text)
       },
 
+      getHeatmapColor(val) {
+        const gradientArray = new Gradient()
+          .setColorGradient('#ffffff', '#000000')
+          .setMidpoint(100)
+          .getColors();
+        val = Math.floor(100 * val);
+        if (val === 100) val = 99;
+        return gradientArray[val]
+      },
+
       createPitchFrequencyGraph({
         segmentation = 'Duration', // or 'Phrase' or 'Section'
         duration = 30, // in seconds, only applicable if segmentation is 'Duration'
         displayType = 'simple', // or 'gradient'
         pitchChroma = false,
         condensed = false,
+        heatmap = false,
       } = {}) {
         let segments;
         if (segmentation === 'Duration') {
@@ -269,31 +285,42 @@
             const w_ = width / durs.length;
             const h_ = y(minVal) - y(maxVal);
 
-            if (!this.pitchChroma) {
+            if (!pitchChroma) {
               sectionRects[dIdx] = this.addRect({
                 x: x_,
                 y: y_,
                 w: w_,
                 h: h_,
-                fill: 'lightgrey',
+                fill: heatmap ? 'none' : 'lightgrey',
               })
             }
             keys.forEach((key, kIdx) => {
               let fillColor = 'black';
               const mY_ = y(Number(key)+0.5);
               const mH_ = y(Number(key)-0.5) - y(Number(key)+0.5);
-              if (key === modeIdx) {
-                fillColor = 'white'
-                this.addRect({ x: x_, y: mY_, w: w_, h: mH_, fill: 'grey' })
-              } else if (this.pitchChroma) {
-                this.addRect({ x: x_, y: mY_, w: w_, h: mH_, fill: 'lightgrey'})
+              if (heatmap) {
+                fillColor = this.getHeatmapColor(dur[key]);
+                this.addRect({ x: x_, y: mY_, w: w_, h: mH_, fill: fillColor });
+                this.addText({ 
+                  x: x_ + width / (2 * durs.length), 
+                  y: y(Number(key)), 
+                  text: (100*dur[key]).toFixed(0)+'%',
+                  fill: dur[key] > 0.5 ? 'white' : 'black' 
+                })
+              } else {
+                if (key === modeIdx) {
+                  fillColor = 'white'
+                  this.addRect({ x: x_, y: mY_, w: w_, h: mH_, fill: 'grey' })
+                } else if (this.pitchChroma) {
+                  this.addRect({ x: x_, y: mY_, w: w_, h: mH_, fill: 'lightgrey'})
+                }
+                this.addText({ 
+                  x: x_ + width / (2 * durs.length), 
+                  y: y(Number(key)), 
+                  text: (100*dur[key]).toFixed(0)+'%', 
+                  fill: fillColor 
+                })
               }
-              this.addText({ 
-                x: x_ + width / (2 * durs.length), 
-                y: y(Number(key)), 
-                text: (100*dur[key]).toFixed(0)+'%', 
-                fill: fillColor 
-              })
             })
           }
         })
@@ -359,7 +386,6 @@
             this.addLine({ x1: width, y1: 0, x2: width, y2: -90 })
             this.addLine({ x1: -60, y1: -90, x2: width, y2: -90 })
             
-            const text = `Pitch Range and Percentage of Duration on each Fixed Pitch, Segmented by Section`;
             this.addText({ 
               x: width / 2, 
               y: -75, 
@@ -437,14 +463,22 @@
           segmentation: this.segmentationType,
           duration: this.duration,
           pitchChroma: this.pitchChroma,
-          condensed: this.condensed
+          condensed: this.condensed,
+          heatmap: this.heatmap
         })
       }
     },
 
     async mounted() {
       try {
-        this.piece = await instantiatePiece(this.$store.state._id);
+        const storedId = this.$store.state._id;
+        const pieceDoesExist = await pieceExists(storedId);
+        const id = pieceDoesExist ? storedId : '63445d13dc8b9023a09747a6';
+        this.$router.push({
+          name: 'AnalyzerComponent', 
+          query: { 'id': id },
+        })
+        this.piece = await instantiatePiece(id);
         this.createGraph();
       } catch (err) {
         console.log(err);
