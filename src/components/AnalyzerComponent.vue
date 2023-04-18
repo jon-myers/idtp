@@ -284,8 +284,7 @@
             const y_ = y(maxVal);
             const w_ = width / durs.length;
             const h_ = y(minVal) - y(maxVal);
-
-            if (!pitchChroma) {
+            if ((!pitchChroma) && (!heatmap)) {
               sectionRects[dIdx] = this.addRect({
                 x: x_,
                 y: y_,
@@ -294,6 +293,8 @@
                 fill: heatmap ? 'none' : 'lightgrey',
               })
             }
+
+            
             keys.forEach((key, kIdx) => {
               let fillColor = 'black';
               const mY_ = y(Number(key)+0.5);
@@ -322,6 +323,15 @@
                 })
               }
             })
+            if ((!pitchChroma) && (heatmap)) {
+              sectionRects[dIdx] = this.addRect({
+                x: x_,
+                y: y_,
+                w: w_,
+                h: h_,
+                fill: heatmap ? 'none' : 'lightgrey',
+              })
+            }
           }
         })
         sectionRects.forEach(rect => {
