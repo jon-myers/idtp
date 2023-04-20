@@ -13,7 +13,23 @@
       </div>
       <div class='controls' v-if='selectedATIdx === 0'>
         <div class='controlBox'>
-          <div v-for='ppType in pitchPrevalenceTypes' :key='type'>
+          <div v-for='prType in pitchRepresentationTypes' :key='prType'>
+            <input 
+              type='radio' 
+              :id='prType' 
+              :value='prType' 
+              v-model='pitchRepresentation'
+              >
+              <label :for='prType'>{{ prType }}</label>
+          </div>
+          <div v-if='pitchRepresentation === "Pitch Onsets"'>
+            <label for='fadeTime'>Fade Time</label>
+            <input type='number' id='fadeTime' v-model.number='fadeTime'>
+            <label for='fadeTime'>(s)</label>
+          </div>
+        </div>
+        <div class='controlBox'>
+          <div v-for='ppType in pitchPrevalenceTypes' :key='pptype'>
             <input 
               type='radio' 
               :id='ppType' 
@@ -24,7 +40,7 @@
           </div>
           <div v-if='segmentationType === "Duration"'>
             <input type='number' id='duration' v-model.number='duration'>
-            <label for='duration'>(seconds)</label>
+            <label for='duration'>(s)</label>
           </div>
         </div>
         <div class='controlBox'>
@@ -57,7 +73,11 @@
 
 <script>
 
-  import { instantiatePiece, segmentByDuration } from '@/js/analysis.mjs';
+  import { 
+    instantiatePiece, 
+    segmentByDuration, 
+    durationsOfPitchOnsets 
+  } from '@/js/analysis.mjs';
   import { durationsOfFixedPitches } from '@/js/classes.mjs';
   import { pieceExists } from '@/js/serverCalls.mjs';
   import Gradient from 'javascript-color-gradient';
@@ -83,11 +103,14 @@
         analysisTypes: ['Pitch Prevalence', 'Markov Matrices'],
         selectedATIdx: 0,
         pitchPrevalenceTypes: ['Section', 'Phrase', 'Duration'],
+        pitchRepresentationTypes: ['Fixed Pitch', 'Pitch Onsets'],
         segmentationType: 'Section',
+        pitchRepresentation: 'Fixed Pitch',
         duration: 30,
         pitchChroma: false,
         condensed: false,
         heatmap: false,
+        fadeTime: 5,
       }
     },
 
@@ -164,6 +187,7 @@
         pitchChroma = false,
         condensed = false,
         heatmap = false,
+        pitchRepresentation = 'Fixed Pitch',
       } = {}) {
         let segments;
         if (segmentation === 'Duration') {
@@ -173,9 +197,14 @@
         } else if (segmentation === 'Section') {
           segments = this.piece.sections.map(s => s.trajectories);
         }
-        const durs = segments.map(seg => durationsOfFixedPitches(seg, {
+        const func = pitchRepresentation === 'Fixed Pitch' ? 
+          durationsOfFixedPitches : 
+          durationsOfPitchOnsets;
+        const durs = segments.map(seg => func(seg, {
           countType: 'proportional',
-          outputType: pitchChroma ? 'chroma' : 'pitchNumber'
+          outputType: pitchChroma ? 'chroma' : 'pitchNumber',
+          maxSilence: this.fadeTime,
+
         }));
         let lowestKey, highestKey;
         durs.forEach(dur => {
@@ -474,7 +503,8 @@
           duration: this.duration,
           pitchChroma: this.pitchChroma,
           condensed: this.condensed,
-          heatmap: this.heatmap
+          heatmap: this.heatmap,
+          pitchRepresentation: this.pitchRepresentation,
         })
       }
     },
@@ -574,7 +604,7 @@
     flex-direction: column;
     justify-content: top;
     align-items: left;
-    width: 120px;
+    width: 150px;
     height: calc(100% - 20px);
     padding: 10px;
     /* border: 1px solid black; */
@@ -608,6 +638,11 @@
 
   #duration {
     max-width: 50px;
-    width: 40px;
+    width: 30px;
+  }
+
+  #fadeTime {
+    /* max-width: 50px; */
+    width: 30px;
   }
 </style>

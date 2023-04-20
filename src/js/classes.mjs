@@ -69,33 +69,35 @@ const durationsOfFixedPitches = (trajs, {
   outputType = 'pitchNumber',
   countType = 'cumulative'  // 'cumulative' or 'proportional'
 } = {}) => {
-    const pitchDurs = {};
-    trajs.forEach(traj => {
-      const trajPitchDurs = traj.durationsOfFixedPitches({ 
-        outputType: outputType,
-        inst: inst
-      });
-      Object.keys(trajPitchDurs).forEach(pitchNumber => {
-        if (pitchDurs[pitchNumber]) {
-          pitchDurs[pitchNumber] += trajPitchDurs[pitchNumber];
-        } else {
-          pitchDurs[pitchNumber] = trajPitchDurs[pitchNumber];
-        }
-      })
+  const pitchDurs = {};
+  trajs.forEach(traj => {
+    const trajPitchDurs = traj.durationsOfFixedPitches({ 
+      outputType: outputType,
+      inst: inst
+    });
+    Object.keys(trajPitchDurs).forEach(pitchNumber => {
+      if (pitchDurs[pitchNumber]) {
+        pitchDurs[pitchNumber] += trajPitchDurs[pitchNumber];
+      } else {
+        pitchDurs[pitchNumber] = trajPitchDurs[pitchNumber];
+      }
     })
-    if (countType === 'cumulative') {
-      return pitchDurs
-    } else if (countType === 'proportional') {
-      let totalDuration = 0;
-      Object.keys(pitchDurs).forEach(pitchNumber => {
-        totalDuration += pitchDurs[pitchNumber];
-      })
-      Object.keys(pitchDurs).forEach(pitchNumber => {
-        pitchDurs[pitchNumber] /= totalDuration;
-      })
-      return pitchDurs
-    }
+  })
+  if (countType === 'cumulative') {
+    return pitchDurs
+  } else if (countType === 'proportional') {
+    let totalDuration = 0;
+    Object.keys(pitchDurs).forEach(pitchNumber => {
+      totalDuration += pitchDurs[pitchNumber];
+    })
+    Object.keys(pitchDurs).forEach(pitchNumber => {
+      pitchDurs[pitchNumber] /= totalDuration;
+    })
+    return pitchDurs
   }
+}
+
+
 
 const isObject = argument => typeof argument === 'object' && argument !== null;
 
@@ -1897,5 +1899,6 @@ export {
   getStarts,
   getEnds,
   Group,
-  durationsOfFixedPitches
+  durationsOfFixedPitches,
+  pitchNumberToChroma
 }
