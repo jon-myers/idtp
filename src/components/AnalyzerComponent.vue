@@ -155,15 +155,15 @@
         x = undefined,
         y = undefined,
         text = '',
-        fontSize = '12px',
-        fontWeight = 'normal',
+        fSize = '12px',
+        fWeight = 'normal',
         fill = 'black',
       } = {}) {
         return svg.append('text')
           .attr('x', x)
           .attr('y', y)
-          .attr('font-size', fontSize)
-          .attr('font-weight', fontWeight)
+          .attr('font-size', fSize)
+          .attr('font-weight', fWeight)
           .attr('fill', fill)
           .attr('text-anchor', 'middle')
           .attr('alignment-baseline', 'middle')
@@ -182,7 +182,7 @@
 
       createPitchFrequencyGraph({
         segmentation = 'Duration', // or 'Phrase' or 'Section'
-        duration = 30, // in seconds, only applicable if segmentation is 'Duration'
+        duration = 30, // in seconds, only if segmentation is 'Duration'
         displayType = 'simple', // or 'gradient'
         pitchChroma = false,
         condensed = false,
@@ -226,9 +226,10 @@
         }
         let totalWidth = 900;
         let totalHeight = 600;
-        const ppOct = condensed ? this.piece.raga.getPitchNumbers(0, 11).length : 12; 
+        const pnLen = this.piece.raga.getPitchNumbers(0, 11).length;
+        const ppOct = condensed ? pnLen : 12; 
         const lkOct = Math.floor(lowestKey / ppOct);
-        const hkOct = Math.floor(highestKey / ppOct);
+        const hOct = Math.floor(highestKey / ppOct);
         const mTop = segmentation === 'Duration' ? 90 : 110;
         const margin = { top: mTop, right: 30, bottom: 20, left: 80 };
         let width = totalWidth - margin.left - margin.right;
@@ -247,7 +248,7 @@
           .style('background-color', 'white')
         this.svg = this.topSvg
           .append('g')
-          .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+          .attr('transform', `translate(${margin.left}, ${margin.top})`);
         let y = d3.scaleLinear()
           .domain([lowestKey-1, highestKey+1])
           .range([height, 0]);
@@ -319,7 +320,7 @@
                 y: y_,
                 w: w_,
                 h: h_,
-                fill: heatmap ? 'none' : 'lightgrey',
+                fill: heatmap ? 'none' : '#D3D3D3',
               })
             }
 
@@ -342,7 +343,7 @@
                   fillColor = 'white'
                   this.addRect({ x: x_, y: mY_, w: w_, h: mH_, fill: 'grey' })
                 } else if (this.pitchChroma) {
-                  this.addRect({ x: x_, y: mY_, w: w_, h: mH_, fill: 'lightgrey'})
+                  this.addRect({ x: x_, y: mY_, w: w_, h: mH_, fill: '#D3D3D3'})
                 }
                 this.addText({ 
                   x: x_ + width / (2 * durs.length), 
@@ -358,7 +359,7 @@
                 y: y_,
                 w: w_,
                 h: h_,
-                fill: heatmap ? 'none' : 'lightgrey',
+                fill: heatmap ? 'none' : '#D3D3D3',
               })
             }
           }
@@ -374,13 +375,13 @@
           'High Octave (Antara)', 
           'Very High Octave'
         ];
-        for (let i = lkOct; i <= hkOct; i++) {
+        for (let i = lkOct; i <= hOct; i++) {
           let lowY = i * ppOct;
           let highY = (i+1) * ppOct;
           if (i === lkOct) {
             lowY = lowestKey - 0.5;
           }
-          if (i === hkOct) {
+          if (i === hOct) {
             highY = highestKey+ 1.5;
           }
           this.addText({ x: '-45', y: y((lowY + highY) / 2 - 0.5), text: i })
@@ -389,7 +390,7 @@
           this.addRect({ x: '-60', y: y_, w: '30', h: h_, stroke: 'black' })
           const lY_ = y(lowY - 0.5);
           this.addLine({ x1: '-30', y1: lY_, x2: width, y2: lY_ })
-          if (i === hkOct) this.addLine({ x1: '-30', y1: y_, x2: width, y2: y_ })
+          if (i === hOct) this.addLine({ x1: '-30', y1: y_, x2: width, y2: y_ })
           this.addLine({ x1: width, y1: lY_, x2: width, y2: y_ })
           if (segmentation === 'Duration') {
             this.addLine({ x1: '-30', y1: '-20', x2: width, y2: '-20' })
@@ -400,19 +401,34 @@
             this.addLine({ x1: 0, y1: 0, x2: 0, y2: '-40' })
             this.addLine({ x1: -30, y1: -70, x2: width, y2: -70 })
             this.addLine({ x1: width, y1: -70, x2: width, y2: 0 })
-            const text = `Pitch Range and Percentage of Duration on each Fixed Pitch, Segmented into ${duration}s Windows`;
+            const text = `Pitch Range and Percentage of Duration on each ` + 
+              `Fixed Pitch, Segmented into ${duration}s Windows`;
             const x_ = (width - 30) / 2;
-            this.addText({ x: x_, y: -55, text: text, fontSize: '14px', fontWeight: 'bold' })
+            this.addText({ 
+              x: x_, 
+              y: -55, 
+              text: text, 
+              fSize: '14px', 
+              fWeight: 'bold' 
+            });
             this.addLine({ x1: -60, y1: 0, x2: -60, y2: -40 })
             this.addLine({ x1: -60, y1: -40, x2: -30, y2: -40})
             this.addText({ x: -45, y: -20, text: 'Oct.' })
             durs.forEach((dur, dIdx) => {
               const tX_ = widthPerSeg * (dIdx + 0.5);
-              this.addText({ x: tX_, y: -30, text: displayTime(dIdx * duration) });
-              this.addText({ x: tX_, y: -10, text: displayTime((dIdx + 1) * duration) });
+              const txt1 = displayTime(dIdx * duration);
+              this.addText({ x: tX_, y: -30, text: txt1 });
+              const txt2 = displayTime((dIdx + 1) * duration);
+              this.addText({ x: tX_, y: -10, text: txt2 });
               if (dIdx !== durs.length - 1) {
                 const x_ = widthPerSeg * (dIdx + 1)
-                this.addLine({ x1: x_, y1: 0, x2: x_, y2: -40, stroke: 'lightgrey' })
+                this.addLine({ 
+                  x1: x_, 
+                  y1: 0, 
+                  x2: x_, 
+                  y2: -40, 
+                  stroke: '#D3D3D3' 
+                })
               }
             })
           } else if (segmentation === 'Section') {
@@ -428,9 +444,10 @@
             this.addText({ 
               x: width / 2, 
               y: -75, 
-              text: 'Pitch Range and Percentage of Duration on each Fixed Pitch, Segmented by Section', 
-              fontSize: '14px', 
-              fontWeight: 'bold' 
+              text: 'Pitch Range and Percentage of Duration on each Fixed ' + 
+                'Pitch, Segmented by Section', 
+              fSize: '14px', 
+              fWeight: 'bold' 
             });
             this.addText({ x: -15, y: -10, text: 'End' })
             this.addText({ x: -15, y: -30, text: 'Start' })
@@ -447,7 +464,13 @@
               this.addText({ x: x_, y: -50, text: dIdx + 1 })
               if (dIdx !== durs.length - 1) {
                 const x_ = widthPerSeg * (dIdx + 1)
-                this.addLine({ x1: x_, y1: 0, x2: x_, y2: -60, stroke: 'lightgrey' })
+                this.addLine({ 
+                  x1: x_, 
+                  y1: 0, 
+                  x2: x_, 
+                  y2: -60, 
+                  stroke: '#D3D3D3' 
+                })
               }           
             })
           } else if (segmentation === 'Phrase') {
@@ -463,9 +486,10 @@
             this.addText({ 
               x: width / 2, 
               y: -75, 
-              text: 'Pitch Range and Percentage of Duration on each Fixed Pitch, Segmented by Phrase', 
-              fontSize: '14px', 
-              fontWeight: 'bold' 
+              text: 'Pitch Range and Percentage of Duration on each Fixed ' + 
+                'Pitch, Segmented by Phrase', 
+              fSize: '14px', 
+              fWeight: 'bold' 
             });
             this.addText({ x: -15, y: -10, text: 'End' })
             this.addText({ x: -15, y: -30, text: 'Start' })
@@ -481,7 +505,13 @@
               this.addText({ x: x_, y: -50, text: dIdx + 1 })
               if (dIdx !== durs.length - 1) {
                 const lX_ = widthPerSeg * (dIdx + 1);
-                this.addLine({ x1: lX_, y1: 0, x2: lX_, y2: -60, stroke: 'lightgrey' })
+                this.addLine({ 
+                  x1: lX_, 
+                  y1: 0, 
+                  x2: lX_, 
+                  y2: -60, 
+                  stroke: '#D3D3D3' 
+                })
               }
             })
 

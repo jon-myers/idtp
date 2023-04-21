@@ -2,12 +2,24 @@
   <div class='main'>
     <div class='fileContainer'>
       <div class='fileInfoKeys'>
-        <div v-for="(ik, idx) in infoKeys" :key='ik' :class='"infoKeyTop "+`idx${idx}`'>
+        <div 
+          v-for="(ik, idx) in infoKeys" 
+          :key='ik' 
+          :class='"infoKeyTop " + `idx${idx}`'
+          >
           {{ik}}
         </div>
       </div>
-      <div :class='`fileInfo${piece.performers.length}`' v-for="(piece, pIdx) in allAudioFiles" :key="piece">
-        <div :class='"infoKey " + `idx${i}`' v-for="(info, i) in audioFileInfo(piece)" :key="info">
+      <div 
+        :class='`fileInfo${piece.performers.length}`' 
+        v-for="(piece, pIdx) in allAudioFiles" 
+        :key="piece"
+        >
+        <div 
+          :class='"infoKey " + `idx${i}`' 
+          v-for="(info, i) in audioFileInfo(piece)" 
+          :key="info"
+          >
           <div class='performerColumn' v-if='i === 1 || i === 2'>
             <div v-for="(item, k) in info" :key='item' 
               :class='`pColItem${k < info.length - 1 ? "Top" : "Bottom"}`'>
@@ -18,7 +30,9 @@
             {{info}}
           </div>
         </div>
-        <button @click='playAudio(pIdx)'>{{['play', 'pause'][Number(playingIdx === pIdx)]}}</button>
+        <button @click='playAudio(pIdx)'>
+          {{['play', 'pause'][Number(playingIdx === pIdx)]}}
+        </button>
       </div>
       <div class='addEventRow'>
         <button @click='toggleAddEvent'>Add new Audio Event</button>
@@ -34,7 +48,10 @@
   </div>
 </template>
 <script>
-import { getAllAudioFileMetaData, getAllAudioEventMetadata } from '@/js/serverCalls.mjs';
+import { 
+  getAllAudioFileMetaData, 
+  getAllAudioEventMetadata 
+} from '@/js/serverCalls.mjs';
 
 import AddAudioEvent from '@/components/AddAudioEvent.vue';
 const displayTime = dur => {

@@ -7,7 +7,9 @@
       :key='phrase.pieceIdx'
       :style="{width: allWidths[phrase.pieceIdx]+'px'}"
       >
-      <span class='swaraRow'>{{'Phrase ' + (Number(phrase.pieceIdx) + 1)}}</span>
+      <span class='swaraRow'>
+        {{'Phrase ' + (Number(phrase.pieceIdx) + 1)}}
+      </span>
       <span class='swaraRow'>
         <span class='swara' v-for='(swara, idx) in phrase.swara'
         :key='idx'>{{getLetters(swara)}}</span>
@@ -21,7 +23,12 @@
         :key='idx'>{{reduceSwara(phrase.swara, 1)[idx]}}</span>
       </span>
       <span class='chunkSwaraRow'>
-        <div class='chunks' v-for='(chunk, idx) in chunks(phrase.swara)' :key='idx' :id='"p"+(chunks(phrase.swara).length - idx)'>
+        <div 
+          class='chunks' 
+          v-for='(chunk, idx) in chunks(phrase.swara)' 
+          :key='idx' 
+          :id='"p"+(chunks(phrase.swara).length - idx)'
+          >
           <span class='chunkSpan' v-for='(ch, chIdx) in chunk' :key='chIdx'>
             {{ch}}
           </span>
@@ -171,28 +178,7 @@ export default {
         return phrase.swara.length * this.horizSize
       })
       this.totWidth = this.allWidths.reduce((a, b) => a + b, 0)
-    },
-
-    // setPhraseLabels() {
-    //   d3.select('.phraseLabel')
-    //     .append('svg')
-    //     .classed('phraseLabelSvg', true)
-    //     .attr('height', this.rowHeight)
-    //   piece.phrases.forEach((phrase, idx) => {
-    //     const phraseDivLine()
-    //     const end = this.totWidths.slice(0, idx+1).reduce((a,b) => a+b, 0)
-    //     d3.select('.phraseLabelSvg')
-    //       .append('path')
-    //       .classed('phraseLabelDivLine', true)
-    //       .attr('fill', 'none')
-    //       .attr('stroke', 'black')
-    //       .attr('stroke-width', '2px')
-    //       .attr('d', phraseDivLine(end))
-    //   })
-    // 
-    // }
-
-
+    }
   }
 }
 </script>
@@ -214,7 +200,6 @@ export default {
 }
 
 .phrase {
-  /* width: 80px; */
   height: 100%;
   border-right: 1px solid black;
   display: flex;
@@ -246,9 +231,6 @@ export default {
   flex-direction: row;
   align-items: center;
   height: 100%;
-  /* border: 1px solid black; */
-  /* width: 50px */
-  /* min-width: 0%; */
   justify-content: space-evenly;
 }
 
@@ -258,8 +240,6 @@ export default {
   display: flex;
   flex-direction: row;
   height: 100%;
-  /* width: 100%; */
-  /* align-items: left; */
 }
 
 </style>

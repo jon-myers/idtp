@@ -283,8 +283,10 @@ export default {
         height: 20px;
         /* border: 7px solid #f56b00; */
         background:
-            linear-gradient(45deg, rgba(0,0,0,0) 0%,rgba(0,0,0,0) 43%,#fff 45%,#fff 55%,rgba(0,0,0,0) 57%,rgba(0,0,0,0) 100%),
-            linear-gradient(135deg, rgba(0,0,0,0) 0%,rgba(0,0,0,0) 43%,#fff 45%,#fff 55%, rgba(0,0,0,0) 57%, rgba(0,0,0,0) 100%);
+            linear-gradient(45deg, rgba(0,0,0,0) 0%,rgba(0,0,0,0) 43%,
+              #fff 45%,#fff 55%,rgba(0,0,0,0) 57%,rgba(0,0,0,0) 100%),
+            linear-gradient(135deg, rgba(0,0,0,0) 0%,rgba(0,0,0,0) 43%,
+              #fff 45%,#fff 55%, rgba(0,0,0,0) 57%, rgba(0,0,0,0) 100%);
 }
 
 .audioEventInputs {

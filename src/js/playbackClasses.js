@@ -1,5 +1,4 @@
 import createSoundTouchNode from '@soundtouchjs/audio-worklet';
-import regeneratorRuntime from 'regenerator-runtime';
 
 class SoundTouch {
   constructor({ 
@@ -34,7 +33,8 @@ class SoundTouch {
         this.node.off();
         this.node.disconnect();
       }
-      this.node = createSoundTouchNode(this.extThis.ac, AudioWorkletNode, this.buf);
+      const ac = this.extThis.ac;
+      this.node = createSoundTouchNode(ac, AudioWorkletNode, this.buf);
       this.node.connect(this.destination);
       this.node.on('initialized', () => {
         this.node.tempo = 1 / this.rate;
