@@ -69,33 +69,35 @@ const durationsOfFixedPitches = (trajs, {
   outputType = 'pitchNumber',
   countType = 'cumulative'  // 'cumulative' or 'proportional'
 } = {}) => {
-    const pitchDurs = {};
-    trajs.forEach(traj => {
-      const trajPitchDurs = traj.durationsOfFixedPitches({ 
-        outputType: outputType,
-        inst: inst
-      });
-      Object.keys(trajPitchDurs).forEach(pitchNumber => {
-        if (pitchDurs[pitchNumber]) {
-          pitchDurs[pitchNumber] += trajPitchDurs[pitchNumber];
-        } else {
-          pitchDurs[pitchNumber] = trajPitchDurs[pitchNumber];
-        }
-      })
+  const pitchDurs = {};
+  trajs.forEach(traj => {
+    const trajPitchDurs = traj.durationsOfFixedPitches({ 
+      outputType: outputType,
+      inst: inst
+    });
+    Object.keys(trajPitchDurs).forEach(pitchNumber => {
+      if (pitchDurs[pitchNumber]) {
+        pitchDurs[pitchNumber] += trajPitchDurs[pitchNumber];
+      } else {
+        pitchDurs[pitchNumber] = trajPitchDurs[pitchNumber];
+      }
     })
-    if (countType === 'cumulative') {
-      return pitchDurs
-    } else if (countType === 'proportional') {
-      let totalDuration = 0;
-      Object.keys(pitchDurs).forEach(pitchNumber => {
-        totalDuration += pitchDurs[pitchNumber];
-      })
-      Object.keys(pitchDurs).forEach(pitchNumber => {
-        pitchDurs[pitchNumber] /= totalDuration;
-      })
-      return pitchDurs
-    }
+  })
+  if (countType === 'cumulative') {
+    return pitchDurs
+  } else if (countType === 'proportional') {
+    let totalDuration = 0;
+    Object.keys(pitchDurs).forEach(pitchNumber => {
+      totalDuration += pitchDurs[pitchNumber];
+    })
+    Object.keys(pitchDurs).forEach(pitchNumber => {
+      pitchDurs[pitchNumber] /= totalDuration;
+    })
+    return pitchDurs
   }
+}
+
+
 
 const isObject = argument => typeof argument === 'object' && argument !== null;
 
@@ -190,11 +192,9 @@ class Pitch {
     }
 
     if (typeof(fundamental) != 'number') {
-      throw new SyntaxError(`invalid fundamental type, must be float: ${fundamental}`)
+      throw new SyntaxError(`invalid fundamental type, ` + 
+        `must be float: ${fundamental}`)
     }
-    //   else if (Number.isInteger(fundamental)) {
-    //   throw new SyntaxError(`invalid fundamental type, must be float: ${fundamental}`)
-    // }
     else {
       this.fundamental = fundamental
     }
@@ -218,6 +218,14 @@ class Pitch {
       raised: raised,
       fundamental: fundamental
     })
+  }
+
+  setOct(newOct) {
+    this.oct = newOct;
+    const ratio = this.swara == 0 || this.swara == 4 ?
+      this.ratios[this.swara] :
+      this.ratios[this.swara][Number(this.raised)];
+    this.frequency = ratio * this.fundamental * (2 ** this.oct);
   }
 
   get sargamLetter() {
@@ -352,13 +360,14 @@ class Trajectory {
     } else {
       throw new SyntaxError(`invalid id type, must be int: ${id}`)
     }
-
-    if (Array.isArray(pitches) && pitches.length > 0 && pitches.every(p => p instanceof Pitch)) {
+    let isArr = Array.isArray(pitches);
+    if (isArr && pitches.length > 0 && pitches.every(p => p instanceof Pitch)) {
       this.pitches = pitches
     } else if (pitches.length === 0) {
       this.pitches = pitches
     } else {
-      throw new SyntaxError(`invalid pitches type, must be array of Pitch: ${pitches}`)
+      throw new SyntaxError('invalid pitches type, must be array of Pitch: ' + 
+        `${pitches}`)
     }
 
     if (typeof(durTot) === 'number') {
@@ -366,12 +375,13 @@ class Trajectory {
     } else {
       throw new SyntaxError(`invalid durTot type, must be number: ${durTot}`)
     }
-
-    const condition = Array.isArray(durArray) && durArray.every(a => typeof(a) === 'number');
+    isArr = Array.isArray(durArray);
+    const condition = isArr && durArray.every(a => typeof(a) === 'number');
     if (durArray === undefined || condition) {
       this.durArray = durArray
     } else {
-      throw new SyntaxError(`invalid durArray type, must be array of numbers: ${durArray}`)
+      throw new SyntaxError(`invalid durArray type, must be array of numbers:` + 
+        `${durArray}`)
     }
 
     if (slope === undefined) {
@@ -400,7 +410,8 @@ class Trajectory {
     } : articulations;
 
     if (typeof(this.articulations) !== 'object') {
-      throw new SyntaxError(`invalid articulations type, must be object: ${articulations}`)
+      throw new SyntaxError(`invalid articulations type, must be object: ` + 
+        `${articulations}`)
     }
     this.freqs = this.pitches.map(p => p.frequency);
     this.logFreqs = this.freqs.map(f => Math.log2(f));
@@ -487,7 +498,7 @@ class Trajectory {
         name: 'slide'
       });
     } else if (this.id === 9) {
-      if (this.durArray === undefined) this.durArray = [1 / 4, 1 / 4, 1 / 4, 1 / 4];
+      if (this.durArray === undefined) this.durArray = [0.25, 0.25, 0.25, 0.25];
       const starts = getStarts(this.durArray);
       this.articulations[starts[1]] = new Articulation({
         name: 'hammer-off'
@@ -528,12 +539,10 @@ class Trajectory {
     this.durArray?.forEach((d, idx) => {
       if (d === 0) {
         console.log('removing zero dur')
-        // console.log(this.logFreqs, this.pitches, this.freqs)
         this.durArray.splice(idx, 1)
         this.logFreqs.splice(idx + 1, 1);
         this.pitches.splice(idx + 1, 1);
         this.freqs.splice(idx + 1, 1);
-        // console.log(this.logFreqs, this.pitches, this.freqs)
       }
     })
 
@@ -632,7 +641,8 @@ class Trajectory {
     return out(x)
   }
 
-  id5(x, lf = undefined, sl = undefined, da = undefined) { // reverse ladle, or 'setup'
+  id5(x, lf = undefined, sl = undefined, da = undefined) { 
+    // reverse ladle, or 'setup'
     const logFreqs = lf === undefined ? this.logFreqs : lf;
     const slope = sl === undefined ? this.slope : sl;
     let durArray = da === undefined ? this.durArray : da;
@@ -646,7 +656,8 @@ class Trajectory {
   }
 
 
-  id6(x, lf = undefined, da = undefined) { // yoyo // make this one so it can be any length
+  id6(x, lf = undefined, da = undefined) { 
+    // yoyo // make this one so it can be any length
     const logFreqs = lf === undefined ? this.logFreqs : lf;
     let durArray = da === undefined ? this.durArray : da;
 
@@ -664,10 +675,9 @@ class Trajectory {
     const outs = Array.from({
       length: logFreqs.length - 1
     }, (_, i) => {
-      let durSum = i === 0 ? 0 : durArray.slice(0, i).reduce((a, b) => a + b, 0);
-      // durSum = [0].concat(durSum);
-      // durSum = durSum.slice(0, durSum.length-1);
-      // const durSum = durArray.slice(0, i).reduce((a, b) => a + b);
+      let durSum = i === 0 ? 
+        0 : 
+        durArray.slice(0, i).reduce((a, b) => a + b, 0);
       return x => bends[i]((x - durSum) / durArray[i])
     });
     const out = x => {
@@ -984,7 +994,9 @@ class Phrase {
       this.durTotFromTrajectories();
       this.durArrayFromTrajectories();
       if (durTot !== undefined && this.durTot !== durTot) {
-        this.trajectories.forEach(t => t.durTot = t.durTot * durTot / this.durTot);
+        this.trajectories.forEach(t => {
+          t.durTot = t.durTot * durTot / this.durTot
+        });
         this.durTot = durTot;
       }
       if (durArray !== undefined && this.durArray !== durArray) {
@@ -1029,7 +1041,9 @@ class Phrase {
   }
 
   durTotFromTrajectories() {
-    this.durTot = this.trajectories.map(t => t.durTot).reduce((a, b) => a + b, 0)
+    this.durTot = this.trajectories
+      .map(t => t.durTot)
+      .reduce((a, b) => a + b, 0)
   }
 
   durArrayFromTrajectories() {
@@ -1128,9 +1142,9 @@ class Phrase {
         }
       }
     });
-    const newTrajs = this.trajectories.filter(traj => !delIdxs.includes(traj.num));
+    const newTs = this.trajectories.filter(traj => !delIdxs.includes(traj.num));
     // this.trajectories = newTrajs;
-    this.trajectoryGrid[0] = newTrajs;
+    this.trajectoryGrid[0] = newTs;
     this.durArrayFromTrajectories();
     this.assignStartTimes();
     this.assignTrajNums();
@@ -1148,14 +1162,16 @@ class Phrase {
           traj.pitches.slice(0, traj.pitches.length - 1).forEach((pitch, i) => {
             const obj = {};
             obj.pitch = pitch;
-            obj.time = this.startTime + traj.startTime + getStarts(traj.durArray)[i] * traj.durTot;
+            const st = this.startTime + traj.startTime;
+            obj.time = st + getStarts(traj.durArray)[i] * traj.durTot;
             swara.push(obj)
           })
         } else {
           traj.pitches.forEach((pitch, i) => {
             const obj = {};
             obj.pitch = pitch;
-            obj.time = this.startTime + traj.startTime + getStarts(traj.durArray)[i] * traj.durTot;
+            const st = this.startTime + traj.startTime;
+            obj.time = st + getStarts(traj.durArray)[i] * traj.durTot;
             swara.push(obj)
           })
         }
@@ -1438,6 +1454,10 @@ class Piece {
       pitchProps[key] = pitchDurs[key] / totalDur;
     }
     return pitchProps
+  }
+
+  get phraseStarts() {
+    return this.phrases.map(p => p.startTime)
   }
 
 
@@ -1760,55 +1780,28 @@ class Raga {
 
 
   get tarafs() {
+    const fund = this.fundamental;
     const templates = {
       'Yaman': [
-        new Pitch({ swara: 'ni', oct: -1, raised: true, fundamental: this.fundamental }), // 1
-        new Pitch({ swara: 'pa', oct: -1, fundamental: this.fundamental }), // 2
-        new Pitch({ swara: 'sa', oct: 0, fundamental: this.fundamental }), // 3
-        new Pitch({ swara: 'sa', oct: 0, fundamental: this.fundamental }), // 4
-        new Pitch({ swara: 're', oct: 0, raised: true, fundamental: this.fundamental }), // 5
-        new Pitch({ swara: 'ga', oct: 0, raised: true, fundamental: this.fundamental }), // 6
-        new Pitch({ swara: 'ma', oct: 0, raised: true, fundamental: this.fundamental }), // 7
-        new Pitch({ swara: 'pa', oct: 0, fundamental: this.fundamental }), // 8
-        new Pitch({ swara: 'dha', oct: 0, raised: true, fundamental: this.fundamental }), // 9
-        new Pitch({ swara: 'ni', oct: 0 , raised: true, fundamental: this.fundamental }), // 10
-        new Pitch({ swara: 'sa', oct: 1, fundamental: this.fundamental }), // 11
-        new Pitch({ swara: 're', oct: 1, raised: true, fundamental: this.fundamental }), // 12
-        new Pitch({ swara: 'ga', oct: 1, raised: true, fundamental: this.fundamental }), // 13
+        new Pitch({ swara: 'ni', oct: -1, raised: true, fundamental: fund }),
+        new Pitch({ swara: 'pa', oct: -1, fundamental: fund }),
+        new Pitch({ swara: 'sa', oct: 0, fundamental: fund }),
+        new Pitch({ swara: 'sa', oct: 0, fundamental: fund }),
+        new Pitch({ swara: 're', oct: 0, raised: true, fundamental: fund }),
+        new Pitch({ swara: 'ga', oct: 0, raised: true, fundamental: fund }),
+        new Pitch({ swara: 'ma', oct: 0, raised: true, fundamental: fund }),
+        new Pitch({ swara: 'pa', oct: 0, fundamental: fund }),
+        new Pitch({ swara: 'dha', oct: 0, raised: true, fundamental: fund }),
+        new Pitch({ swara: 'ni', oct: 0 , raised: true, fundamental: fund }),
+        new Pitch({ swara: 'sa', oct: 1, fundamental: fund }),
+        new Pitch({ swara: 're', oct: 1, raised: true, fundamental: fund }),
+        new Pitch({ swara: 'ga', oct: 1, raised: true, fundamental: fund }),
       ]
     };
     return templates[this.name]
   }
 
   get chikariPitches() {
-    // const templates = {
-    //   'Yaman': [
-    //     new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
-    //     new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
-    //     new Pitch({ swara: 'p', oct: 0, fundamental: this.fundamental }),
-    //     new Pitch({ swara: 'p', oct: 0, fundamental: this.fundamental })
-    //   ],
-    //   'Bageshri': [
-    //     new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
-    //     new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
-    //     new Pitch({ swara: 'd', oct: 0, raised: true, fundamental: this.fundamental }),
-    //     new Pitch({ swara: 'm', oct: 0, raised: false, fundamental: this.fundamental })
-    //   ],
-    //   'Jaijaivanti': [
-    //     new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
-    //     new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
-    //     new Pitch({ swara: 'p', oct: 0, fundamental: this.fundamental }),
-    //     new Pitch({ swara: 'g', oct: 0, raised: true, fundamental: this.fundamental })
-    //   ],
-    //   'Hemant': [
-    //     new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
-    //     new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
-    //     new Pitch({ swara: 'd', oct: 0, raised: true, fundamental: this.fundamental }),
-    //     new Pitch({ swara: 'm', oct: 0, raised: false, fundamental: this.fundamental })
-    //   ],
-    // };
-    // return templates[this.name]
-
     return [
       new Pitch({ swara: 's', oct: 2, fundamental: this.fundamental }),
       new Pitch({ swara: 's', oct: 1, fundamental: this.fundamental }),
@@ -1825,7 +1818,7 @@ class Raga {
     baseFreqs.forEach(f => {
       const lowExp = Math.ceil(Math.log2(low / f));
       const highExp = Math.floor(Math.log2(high / f));
-      const range = [...Array(highExp - lowExp + 1).keys()].map(i => i + lowExp);
+      let range = [...Array(highExp - lowExp + 1).keys()].map(i => i + lowExp);
       const exps = range.map(r => 2.0 ** r);
       const additionalFreqs = exps.map(exp => f * exp);
       freqs.push(...additionalFreqs)
@@ -1879,5 +1872,6 @@ export {
   getStarts,
   getEnds,
   Group,
-  durationsOfFixedPitches
+  durationsOfFixedPitches,
+  pitchNumberToChroma
 }

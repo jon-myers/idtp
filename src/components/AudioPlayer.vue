@@ -30,7 +30,10 @@
             <img :src='icons.loop' @click='toggleLoop'/>
             <img :src='icons.beginning' @click='goToBeginning'/>
             <div class='playCircle' @click='togglePlay'>
-              <img ref='playImg' :src='[icons.play, icons.pause][Number(this.playing)]'/>
+              <img 
+                ref='playImg' 
+                :src='[icons.play, icons.pause][Number(this.playing)]'
+                />
             </div>
             <img :src='icons.end' @click='trackEnd'/>
             <img :src='icons.shuffle' @click='toggleShuffle'/>
@@ -148,24 +151,10 @@ export default {
       this.audio.play();
       this.playing = true;
       this.$refs.playImg.className = 'playing';
-      // this.$refs.waveformAnalyzer.newChart('this one');
-      
-      // this.$nextTick(() => {
-      //   // this.$refs.waveformAnalyzer.setUpBuffer(newSrc);
-      // })
-      
-
-      
     }
   },
   
-  computed: {
-    
-    
-  },
-  
   methods: {
-    
     trackEnd() {
       if (this.looping) {
         this.audio.currentTime = 0;
@@ -175,9 +164,6 @@ export default {
       }
     },
     
-    // getSrc(src) {
-    //   return require(src)
-    // }
     togglePlay() {
       if (this.audio.paused) {
         if (this.audio.currentSrc === '') {
@@ -242,7 +228,7 @@ export default {
       if (st.hours !== 0) {
         this.formattedCurrentTime = st.minutes + ':' + st.seconds
       } else {
-        this.formattedCurrentTime = st.hours + ':' + st.minutes + ':' + st.seconds
+        this.formattedCurrentTime = [st.hours, st.minutes, st.seconds].join(':')
       }       
     },
     
@@ -250,23 +236,24 @@ export default {
       if (isNaN(this.audio.duration)) {
         return '00:00'
       } else {
-        const st = structuredTime(Number(this.audio.duration) - Number(this.audio.currentTime))
+        const au = this.audio;
+        const st = structuredTime(Number(au.duration) - Number(au.currentTime))
         if (st.hours !== 0) {
           this.formattedTimeLeft = st.minutes + ':' + st.seconds
         } else {
-          this.formattedTimeLeft = st.hours + ':' + st.minutes + ':' + st.seconds
+          this.formattedTimeLeft = [st.hours, st.minutes, st.seconds].join(':')
         } 
       }
     
     },
     
     hoverTrigger(bool) {
-      // const cl = document.querySelector('.currentTime').classList;
-      // const ocl = document.querySelector('.progressCircle').classList;
-      // const ecl = document.querySelector('.timeLeft').classList;
-      // const lcl = document.querySelector('.invisibleProgressCircle').classList;
-      // 
-      const classes_ = ['.currentTime', '.progressCircle', '.timeLeft', '.invisibleProgressCircle'];
+      const classes_ = [
+        '.currentTime', 
+        '.progressCircle', 
+        '.timeLeft', 
+        '.invisibleProgressCircle'
+      ];
       const cls = classes_.map(cl => document.querySelector(cl).classList);
       if (bool) {
         cls.forEach(cl => {
@@ -290,7 +277,9 @@ export default {
     handleCircleMouseUp(e) {
       if (this.circleDragging) {
         const bb = this.$refs.pbOuter.getBoundingClientRect()
-        const newTime = this.audio.currentTime + this.audio.duration * (e.clientX - this.dragStart) / bb.width;
+        let offset = this.audio.duration * (e.clientX - this.dragStart) 
+        offset /= bb.width;
+        const newTime = this.audio.currentTime + offset;
         if (this.audio.fastSeek) {
           this.audio.fastSeek(newTime)
         } else {
@@ -300,17 +289,12 @@ export default {
         pc.style.right = '-7px';
         this.circleDragging = false;
         this.$refs.main.classList.toggle('hovering');
-        // const pbi = document.querySelector('.progressBarInner');
-        // pbi.style.width = "v-bind(progress*100+'vw')"
       }
     },
     
     handleCircleMouseMove(e) {
       if (this.circleDragging) {
-        // const currentX = e.clientX;
         const diff = this.dragStart - e.clientX;
-        // const pc = document.querySelector('.progressCircle');
-        // pc.style.right = diff - 7 + 'px';
         const pbi = document.querySelector('.progressBarInner');
         const pbo = document.querySelector('.progressBarOuter');
         const pboBox = pbo.getBoundingClientRect()
@@ -338,10 +322,6 @@ export default {
   flex-direction: column;
   border-top: 1px solid black;
   pointer-events: auto;
-  /* overflow-x: hidden; */
-  /* overflow-x: hidden;
-  overflow-y: visible; */
-  /* border-top: 2px solid black; */
 }
 
 .progressBarOuter {
@@ -371,7 +351,6 @@ export default {
   width: 14px;
   height: 14px;
   border-radius: 7px;
-  /* opacity: 0; */
   position: absolute;
   right: -7px;
   top: -4px;
@@ -420,11 +399,13 @@ export default {
 }
 
 .rulerBox > img:hover {
-  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg) brightness(94%) contrast(97%);
+  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg) 
+    brightness(94%) contrast(97%);
 }
 
 .rulerBox > .showWaveform {
-  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) brightness(97%) contrast(97%);
+  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) 
+    brightness(97%) contrast(97%);
 }
 
 .controlFlexer {
@@ -456,15 +437,18 @@ export default {
 
 
 .controlBox > img:hover {
-  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg) brightness(94%) contrast(97%);
+  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg) 
+    brightness(94%) contrast(97%);
 }
 
 .controlBox > .looping {
-  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) brightness(97%) contrast(97%);
+  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) 
+    brightness(97%) contrast(97%);
 }
 
 .controlBox > .shuffling {
-  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) brightness(97%) contrast(97%);
+  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) 
+    brightness(97%) contrast(97%);
 }
 
 .playCircle > img {
@@ -560,11 +544,4 @@ export default {
 .invisibleProgressCircle.hovering {
   pointer-events: auto;
 }
-
-/* WaveformAnalyzer {
-  position: absolute;
-  left: 0px;
-  bottom: 100px;
-} */
-
 </style>

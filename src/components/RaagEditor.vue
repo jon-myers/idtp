@@ -209,21 +209,6 @@ export default {
   
   methods: {
     
-    // handleSelection() {
-    //   this.$nextTick(async () => {
-    //     console.log(this.selectedRaag)
-    //     const rules = await getRaagRule(this.selectedRaag);
-    //     if (rules.rules) {
-    //       this.rules = rules.rules;
-    //       const date = new Date(rules.updatedDate);
-    //       this.savedMsg = 'Saved: ' + date.toLocaleString();
-    //     } else {
-    //       this.rules = this.rulesTemplate;
-    //       this.savedMsg = 'unsaved'
-    //     }
-    //   })
-    // },
-    
     async save() {
       const date = new Date();
       const res = await saveRaagRules(this.selectedRaag, this.rules, date);

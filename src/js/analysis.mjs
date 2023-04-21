@@ -1,3 +1,4 @@
+import { durationsOfFixedPitches } from './classes.mjs';
 import { 
   Pitch, 
   Trajectory, 
@@ -7,7 +8,8 @@ import {
   Chikari, 
   Raga,
   Group,
-  getStarts
+  getStarts,
+  pitchNumberToChroma
 } from './classes.mjs';
 import { getPiece, getRaagRule } from './serverCalls.mjs';
 const testQueryId = '63445d13dc8b9023a09747a6';
@@ -304,14 +306,126 @@ class PitchCounter {
     }
     return pitchDict
   }
-
-
-
-  
 }
 
 const phraseRange = piece => {
   return piece.phrases.map(phrase => phrase.getRange())
+}
+
+const PitchTimes = (trajs) => { // outputs pitches as pitchNumbers
+  // returns a list of all pitches in trajs, and the cumulative times at which 
+  // they begin, calculated based on summing durtot as we go.
+  // silences are included: instead of pitch, just the string 'silence'.
+  // outputType can be 'pitchNumber', 'chroma', 'scaleDegree', or 'sargamLetter'
+  let pitchTimes = [];
+  let startTime = 0;
+  trajs.forEach(traj => {
+    if (traj.id === 12) {
+      const obj = { time: startTime, pitch: 'silence' };
+      pitchTimes.push(obj);
+      startTime += traj.durTot;
+    } else {
+      traj.pitches.forEach((pitch, pIdx) => {
+        const obj = { time: startTime, pitch: pitch.numberedPitch };
+        pitchTimes.push(obj);
+        if (pIdx < traj.pitches.length - 1) {
+          startTime += traj.durArray[pIdx] * traj.durTot;
+        }
+      })
+    }
+  })
+  // filter out duplicates time + pitch
+  pitchTimes = pitchTimes.filter((obj, idx) => {
+    if (idx === 0) {
+      return true
+    } else {
+      const c1 = obj.pitch === pitchTimes[idx-1].pitch;
+      const c2 = obj.time === pitchTimes[idx-1].time;
+      return !(c1 && c2)
+    }
+  })
+  // now if there are adjacent with the same time but different pitch, 
+  // filter out the first one
+  pitchTimes = pitchTimes.filter((obj, idx) => {
+    if (idx === 0 || idx === pitchTimes.length - 1) {
+      return true
+    } else {
+      return obj.time !== pitchTimes[idx+1].time;
+    }
+  })
+
+  return pitchTimes
+}
+
+const durationsOfPitchOnsets = (trajs, { 
+  outputType = 'pitchNumber', // pitchNumber, chroma, scaleDegree, sargamLetter
+  countType = 'cumulative',
+  excludeSilence = true,
+  maxSilence = 5,
+ } = {}) => {
+  let pitchTimes = PitchTimes(trajs);
+  if (outputType === 'chroma') {
+    pitchTimes.forEach(pt => {
+      if (pt.pitch !== 'silence') pt.pitch = pitchNumberToChroma(pt.pitch)
+      
+    })
+  }
+  // remove latter of adjacent items where pitch is equal
+  pitchTimes = pitchTimes.filter((obj, idx) => {
+    if (idx === 0) {
+      return true
+    } else {
+      return obj.pitch !== pitchTimes[idx-1].pitch;
+    }
+  })
+  const durations = [];
+  const endTime = trajs.reduce((sum, traj) => sum + traj.durTot, 0);
+  const ends = pitchTimes.map(obj => obj.time).slice(1).concat([endTime]);
+  pitchTimes.forEach((obj, idx) => {
+    const newObj = { dur: ends[idx] - obj.time, pitch: obj.pitch };
+    durations.push(newObj);
+  })
+  // if dur of silence is less than maxSilence, add it to the previous pitch
+  let condensedDurations = [];
+  durations.forEach((obj, idx) => {
+    if (obj.pitch === 'silence') {
+      if (idx === 0) {
+        condensedDurations.push(obj)
+      } else if (obj.dur < maxSilence) {
+        condensedDurations[condensedDurations.length - 1].dur += obj.dur;
+      } else {
+        condensedDurations[condensedDurations.length - 1].dur += maxSilence;
+        obj.dur -= maxSilence;
+        condensedDurations.push(obj);
+      }
+    } else {
+      condensedDurations.push(obj);
+    }
+  });
+
+  // pitchDurations is an object whose keys are the pitches, and whose values 
+  // are the summed durations
+  const pitchDurations = {};
+  condensedDurations.forEach(obj => {
+    if (pitchDurations[obj.pitch]) {
+      pitchDurations[obj.pitch] += obj.dur;
+    } else {
+      pitchDurations[obj.pitch] = obj.dur;
+    }
+  })
+  if (excludeSilence) {
+    delete pitchDurations['silence'];
+    condensedDurations = condensedDurations
+      .filter(obj => obj.pitch !== 'silence');
+  }
+  if (countType === 'proportional') {
+    const total = condensedDurations.reduce((sum, obj) => sum + obj.dur, 0);
+    const keys = Object.keys(pitchDurations);
+    keys.forEach(key => {
+      pitchDurations[key] = pitchDurations[key]/total;
+    })
+    return pitchDurations
+  }
 }
 
 const segmentByDuration = (piece, { 
@@ -352,23 +466,25 @@ const segmentByDuration = (piece, {
     });
   }
   return segments
-
-  
 }
 
 const analyze = async () => {
   const piece = await instantiatePiece();
-  const segments = segmentByDuration(piece, { duration: 20, type: 'left' });
-  const out = segments.map(seg => seg.length);
+  const out = durationsOfPitchOnsets(piece.allTrajectories(), { 
+    maxSilence: 4,
+    countType: 'proportional',
+    outputType: 'chroma',
+    excludeSilence: true,
+  });
   console.log(out)
+  const other = durationsOfFixedPitches(piece.allTrajectories(), {
+    countType: 'proportional',
+    outputType: 'chroma',
+  });
+  console.log(other)
 }
 
 
 // analyze();
-// const pitch = Pitch.fromPitchNumber(0);
-// console.log(pitch);
-// const pitch = new Pitch();
-// console.log(pitch.chromaToScaleDegree(7))
-// analyze();
 
-export { instantiatePiece, segmentByDuration }
+export { instantiatePiece, segmentByDuration, durationsOfPitchOnsets }

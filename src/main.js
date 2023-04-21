@@ -62,7 +62,8 @@ app
   .use(router)
   .use(store)
   .use(vue3GoogleLogin, {
-    clientId: "324767655055-crhq76mdupavvrcedtde986glivug1nm.apps.googleusercontent.com"
+    clientId: "324767655055-crhq76mdupavvrcedtde986glivug1nm.apps.googleuserc" +
+      "ontent.com"
   })
   .use(VueCookies, { expire: '7d' })
   .mount('#app')

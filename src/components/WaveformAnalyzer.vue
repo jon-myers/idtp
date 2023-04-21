@@ -11,10 +11,11 @@
       <div class='saVerifierCol'>
         <div class='inputRow'>
           <label class='saLabel'>Sa:</label>
-          <span>{{`${(saEstimate * 2 ** Number(octOffset)).toFixed()} hz.`}}</span>
+          <span>
+            {{`${(saEstimate * 2 ** Number(octOffset)).toFixed()} hz.`}}
+          </span>
           <label>Verified:</label>
           <input type='checkbox' v-model='saVerified' class='checkBox'>
-          <!-- <input type='text' v-model='saEstimate' class='saEst'> -->
         </div>
         <div class='inputRow rangeSlider'>
           <label>Fine</label>
@@ -48,7 +49,13 @@
         </div>
         <div class='inputRow'>
           <label>Oct offset</label>
-          <input type='number' v-model='octOffset' min='-1' max='1' class='octOffset'>
+          <input 
+            type='number' 
+            v-model='octOffset' 
+            min='-1' 
+            max='1' 
+            class='octOffset'
+            >
         </div>
         <div class='inputRow button'>
           <button @click='saveSaEstimate'>Save</button>
@@ -67,15 +74,7 @@ import {
   } from '@/js/serverCalls.mjs';
 
 import * as d3 from 'd3';
-// import AudioSVGWaveform from 'audio-waveform-svg-path';
-// import jpickle from 'jpickle';
-// import pickled from '!!binary-loader!@/assets/pickled.p';
-
-
-// console.log(pickled)
-// console.log(unpickled);
-const avg = values => values.reduce((sum, value) => sum + value, 0) / values.length;
-// const max = values => values.reduce((max, value) => Math.max(max, value), 0);
+const avg = values => values.reduce((sum, val) => sum + val, 0) / values.length;
 
 export default {
   name: 'WaveformAnalyzer',
@@ -108,23 +107,17 @@ export default {
     
     const aeElem = this.$parent.$parent;
     if (aeElem.audioEventId && aeElem.recIdx) {
-      const response = await getVerifiedStatus(aeElem.audioEventId, aeElem.recIdx);
-      this.saEstimate = response.saEstimate;
-      this.saVerified = response.saVerified;
-      this.octOffset = response.octOffset;
-      // if (this.initSaEstimate) {
-        // this.saEstimate = this.initSaEstimate;
+      const res = await getVerifiedStatus(aeElem.audioEventId, aeElem.recIdx);
+      this.saEstimate = res.saEstimate;
+      this.saVerified = res.saVerified;
+      this.octOffset = res.octOffset;
       const cur = this.oscNode.frequency.value
       this.oscNode.frequency.setValueAtTime(cur, this.now());
-      this.oscNode.frequency.exponentialRampToValueAtTime(this.saEstimate, this.now() + this.lag);    
+      this.oscNode.frequency
+        .exponentialRampToValueAtTime(this.saEstimate, this.now() + this.lag);    
       this.coarse = this.linSaVal(this.saEstimate);
-    }
-  
-    // this.saVerified = this.initSaVerified
-    // }    
-    if (this.$parent.id) {    
-      this.newChart();    
     }  
+    if (this.$parent.id) this.newChart();      
   },
   
   beforeUnmount() {
@@ -139,7 +132,8 @@ export default {
       this.saEstimate = newVal;
       const cur = this.oscNode.frequency.value;
       this.oscNode.frequency.setValueAtTime(cur, this.now());
-      this.oscNode.frequency.exponentialRampToValueAtTime(this.saEstimate, this.now() + this.lag);    
+      this.oscNode.frequency
+        .exponentialRampToValueAtTime(this.saEstimate, this.now() + this.lag);    
       this.coarse = this.linSaVal(newVal)
     },
     
@@ -163,20 +157,24 @@ export default {
 
     async generateSpectrogram() {
       const id = this.$parent.$parent.audioRecId;
-      const result = await makeSpectrograms(id, this.saEstimate * 2 ** this.octOffset);
+      const freq = this.saEstimate * 2 ** this.octOffset;
+      const result = await makeSpectrograms(id, freq);
       console.log(result)
     },
     
     zoom(bool) {
       const factor = 1.2;
       
-      this.waveformWidth = bool ? factor * this.waveformWidth : this.waveformWidth / factor;
+      this.waveformWidth = bool ? 
+        factor * this.waveformWidth : 
+        this.waveformWidth / factor;
 
     },
     
     async newChart() {
       try {
-        const response = await fetch(`https://swara.studio/peaks/${this.$parent.id}.json`);
+        const url = `https://swara.studio/peaks/${this.$parent.id}.json`;
+        const response = await fetch(url);
         this.peaks = await response.json();
         this.charts = await this.chartsFromPeaks();
         this.calculateChartWidthLims();
@@ -195,10 +193,8 @@ export default {
     
     calculateChartWidthLims() {
       const lims = this._getLims();
-      let idx = lims.length - lims.reverse().findIndex(lim => lim > this.waveformWidth) - 1;
-      // if (idx === -1) {
-      //   idx = lims.length - 1
-      // }
+      const limIdx = lims.reverse().findIndex(lim => lim > this.waveformWidth);
+      let idx = lims.length - limIdx - 1;
       this.selectedChart = idx
     },
     
@@ -219,21 +215,27 @@ export default {
       
       const curVol = this.gainNode.gain.value;
       this.gainNode.gain.setValueAtTime(curVol, this.now());
-      this.gainNode.gain.linearRampToValueAtTime(Number(this.sineVol), this.now() + this.lag);
+      this.gainNode.gain
+        .linearRampToValueAtTime(Number(this.sineVol), this.now() + this.lag);
     },
     
     updateCoarse() {
       const cur = this.oscNode.frequency.value;
       this.oscNode.frequency.setValueAtTime(cur, this.now());
-      this.saEstimate = this.logSaVal(Number(this.coarse) + Number(this.fineTune));
-      this.oscNode.frequency.exponentialRampToValueAtTime(this.saEstimate, this.now() + this.lag);
+      const num = Number(this.coarse) + Number(this.fineTune);
+      this.saEstimate = this.logSaVal(num);
+      this.oscNode.frequency
+        .exponentialRampToValueAtTime(this.saEstimate, this.now() + this.lag);
     },
     
     saveSaEstimate() {
       const recID = this.$parent.id;
       const aeID = this.$parent.$parent.audioEventId;
       const recIdx = this.$parent.$parent.playing[1];
-      updateSaEstimate(recID, aeID, recIdx, this.saEstimate, this.saVerified, this.octOffset)
+      const saEst = this.saEstimate;
+      const saVer = this.saVerified;
+      const octOffset = this.octOffset;
+      updateSaEstimate(recID, aeID, recIdx, saEst, saVer, octOffset)
     },
     
     
@@ -289,7 +291,7 @@ export default {
     bandChart(data, {
       x = ([x]) => x, // given d in data, returns the (temporal) x-value
       y1 = () => 0, // given d in data, returns the (quantitative) low value
-      y2 = ([, y]) => y, // given d in data, returns the (quantitative) high value
+      y2 = ([, y]) => y, // given d in data, returns the (quant) high value
       defined, // for gaps in data
       curve = d3.curveLinear, // method of interpolation between points
       marginTop = 0, // top margin, in pixels
@@ -313,18 +315,20 @@ export default {
       const Y1 = d3.map(data, y1);
       const Y2 = d3.map(data, y2);
       const I = d3.range(X.length);
-      if (defined === undefined) defined = (d, i) => !isNaN(X[i]) && !isNaN(Y1[i]) && !isNaN(Y2[i]);
+      if (defined === undefined) {
+        defined = (d, i) => !isNaN(X[i]) && !isNaN(Y1[i]) && !isNaN(Y2[i])
+      }
       const D = d3.map(data, defined);
 
       // Compute default domains.
       if (xDomain === undefined) xDomain = d3.extent(X);
-      if (yDomain === undefined) yDomain = d3.nice(...d3.extent([...Y1, ...Y2]), 10);
+      if (yDomain === undefined) {
+        yDomain = d3.nice(...d3.extent([...Y1, ...Y2]), 10)
+      }
 
       // Construct scales and axes.
       const xScale = xType(xDomain, xRange);
       const yScale = yType(yDomain, yRange);
-      // const xAxis = d3.axisBottom(xScale).ticks(width / 80).tickSizeOuter(0);
-      // const yAxis = d3.axisLeft(yScale).ticks(height / 40, yFormat);
 
       // Construct an area generator.
       const area = d3.area()
@@ -340,65 +344,12 @@ export default {
           .attr("viewBox", [0, 0, width, height])
           .attr("style", `max-width: 100%; height: ${this.waveformHeight-6}px`);
 
-      // svg.append("g")
-      //     .attr("transform", `translate(${marginLeft},0)`)
-      //     .call(yAxis)
-      //     .call(g => g.select(".domain").remove())
-      //     .call(g => g.selectAll(".tick line").clone()
-      //         .attr("x2", width - marginLeft - marginRight)
-      //         .attr("stroke-opacity", 0.1))
-      //     .call(g => g.append("text")
-      //         .attr("x", -marginLeft)
-      //         .attr("y", 10)
-      //         .attr("fill", "currentColor")
-      //         .attr("text-anchor", "start")
-      //         .text(yLabel));
-
       svg.append("path")
           .attr("fill", color)
           .attr("d", area(I));
 
-      // svg.append("g")
-      //     .attr("transform", `translate(0,${height - marginBottom})`)
-      //     .call(xAxis)
-      //     .call(g => g.select(".domain").remove());
-
       return svg.node();
-    }
-    // getWaveformData(dataPoints) {
-    //   const leftChannel = this.audioBuffer.getChannelData(0);
-    //   const rightChannel = this.audioBuffer.getChannelData(1);
-    //   const values = new Float32Array(dataPoints);
-    //   const dataWindow = Math.round(leftChannel.length / dataPoints);
-    //   for (let i=0, y=0, buffer=[]; i < leftChannel.length; i++) {
-    //     const summedValue = (Math.abs(leftChannel[i]) + Math.abs(rightChannel[i])) / 2;
-    //     buffer.push(summedValue);
-    //     if (buffer.length === dataWindow) {
-    //       values[y++] = avg(buffer);
-    //       buffer = []
-    //     }
-    //   }
-    //   return values;
-    // },
-    // 
-    // getSVGPath(waveformData, height, smoothing) {
-    //   const maxValue = max(waveformData);
-    //   let path = `M 0 ${height} `;
-    //   for (let i = 0; i < waveformData.length; i++) {
-    //     path += `L ${i * smoothing} ${(1 - waveformData[i] / maxValue) * height} `;
-    //   }
-    //   path += `V ${height} H 0 Z`;
-    //   return path;
-    // }
-    
-    // getWaveformData(dataPoints) {
-    //   const url = this.$parent.audio.currentSrc;
-    // 
-    // }
-    // 
-    
-    
-    
+    }  
   }
 }
 </script>
@@ -408,7 +359,6 @@ export default {
 .mainz {
   width: 100%;
   height: 200px;
-  /* background-color: pink; */
   position: absolute;
   left: 0px;
   bottom: 100px;

@@ -4,6 +4,10 @@
     :class='`selectionPanel \
     ${["", "vocal"][Number(vocal)]} \
     ${["", "vib"][Number(showVibObj)]}`'>
+    <div class='octShift' v-if='$parent.selectedTrajs.length > 0'>
+      <button class='octUp' @click='shiftOct(1)'>&#8593</button>
+      <button class='octDown' @click='shiftOct(-1)'>&#8595</button>
+    </div>
     <div class='selectionRow checks' v-if='$parent.groupable'>
       <label>Grouped</label>
       <input
@@ -142,11 +146,21 @@
     <div class='radioGroup' v-if='showPhraseRadio'>
       <div class='selectionRow'>
         <label>Phrase Division</label>
-        <input type='radio' name='phraseDiv' v-model='phraseDivType' value='phrase'>
+        <input 
+        type='radio' 
+        name='phraseDiv' 
+        v-model='phraseDivType' 
+        value='phrase'
+        >
       </div>
       <div class='selectionRow'>
         <label>Section Division</label>
-        <input type='radio' name='phraseDiv' v-model='phraseDivType' value='section'>
+        <input 
+        type='radio' 
+        name='phraseDiv' 
+        v-model='phraseDivType' 
+        value='section'
+        >
       </div>
     </div>
     <div class='selectionRow checks' v-if='showVibObj'>
@@ -262,7 +276,11 @@
       />
     </div>
   </div>
-  <div class='thumbRow' v-for='odx in Math.ceil(urlsFiltered.length/4)' :key='odx'>
+  <div 
+    class='thumbRow' 
+    v-for='odx in Math.ceil(urlsFiltered.length/4)' 
+    :key='odx'
+    >
     <div :class='["imgContainer", idx === 4 ? "right" : ""]' v-for='idx in 4' >
       <img
         v-if='urlsFiltered[4 * (odx-1) + (idx-1)] !== undefined'
@@ -275,7 +293,7 @@
         class='keyNum'
         v-if='urlsFiltered[4 * (odx-1) + (idx-1)] !== undefined'
         
-        >{{ keyNumsFiltered[4 * (odx-1) + (idx-1)] }}</div>
+        >{{ kNumsFiltered[4 * (odx-1) + (idx-1)] }}</div>
     </div>
   </div>
 </div>
@@ -302,7 +320,7 @@ export default {
   data() {
     return {
       urls: [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13],
-      keyNums: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'e'],
+      kNums: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'e'],
       pluckBool: true,
       intraTrajDursBool: false,
       selectedIcon: undefined,
@@ -321,7 +339,7 @@ export default {
       phraseDivType: undefined,
       trajIdxs: [],
       urlsFiltered: [],
-      keyNumsFiltered: [],
+      kNumsFiltered: [],
       vocal: false,
       vowel: undefined,
       ipaVowels: ['a', 'b', 'c'],
@@ -347,8 +365,6 @@ export default {
   ],
 
   async mounted() {
-    // const piece = this.$parent.piece;
-    // this.urlIdxs = piece.possibleTrajs[piece.instrumentation[0]]
     const result = await getIpaVowels();
     this.ipaVowels = result.map(v => v.ipa);
     this.iso_15919 = result.map(v => v.iso_15919);
@@ -413,11 +429,17 @@ export default {
 
     trajIdxs(newVal) {
       this.urlsFiltered = newVal.map(idx => this.urls[idx]);
-      this.keyNumsFiltered = newVal.map(idx => this.keyNums[idx]);
+      this.kNumsFiltered = newVal.map(idx => this.kNums[idx]);
     }
   },
 
   methods: {
+
+    shiftOct(offset = 1) {
+      this.$parent.selectedTrajs.forEach(traj => {
+        this.$parent.shiftTrajByOctave(traj, offset)
+      })
+    },
 
     toggleGroup() {
       if (this.grouped) {
@@ -447,10 +469,11 @@ export default {
         const fixed = [0, 13];
         const twos = [1, 2, 3];
         const threes = [4, 5, 6];
-        if (twos.includes(this.trajIdxs[this.selectedIdx])) {
-          if (realIdx !== this.trajIdxs[this.selectedIdx] && twos.includes(realIdx)) {
+        const trId = this.trajIdxs[this.selectedIdx];
+        if (twos.includes(trId)) {
+          if (realIdx !== trId && twos.includes(realIdx)) {
             this.selectedIdx = idx;
-            let outIdx = this.trajIdxs[this.selectedIdx];
+            let outIdx = trId;
             if (outIdx >= 12) outIdx += 1;
             this.emitter.emit('mutateTraj', outIdx);
             document.querySelectorAll('.thumb').forEach(t => {
@@ -458,12 +481,12 @@ export default {
             })
             document.querySelector(selectId).classList.add('selected')
           }
-        } else if (threes.includes(this.trajIdxs[this.selectedIdx])) {
-          if (realIdx !== this.trajIdxs[this.selectedIdx] && threes.includes(realIdx)) {
-            if (this.trajIdxs[this.selectedIdx] === 6) {
+        } else if (threes.includes(trId)) {
+          if (realIdx !== trId && threes.includes(realIdx)) {
+            if (trId === 6) {
               if (this.$parent.selectedTraj.durArray.length === 2) {
                 this.selectedIdx = idx;
-                let outIdx = this.trajIdxs[this.selectedIdx];
+                let outIdx = trId;
                 if (outIdx >= 12) outIdx += 1;
                 this.emitter.emit('mutateTraj', outIdx);
                 document.querySelectorAll('.thumb').forEach(t => {
@@ -473,7 +496,7 @@ export default {
               }
             } else {
               this.selectedIdx = idx;
-              let outIdx = this.trajIdxs[this.selectedIdx];
+              let outIdx = trId;
               if (outIdx >= 12) outIdx += 1;
               this.emitter.emit('mutateTraj', outIdx);
               document.querySelectorAll('.thumb').forEach(t => {
@@ -483,9 +506,9 @@ export default {
             }
           }
         } else if (fixed.includes(realSelectedIdx)) {
-          if (realIdx !== this.trajIdxs[this.selectedIdx] && fixed.includes(realIdx)) {
+          if (realIdx !== trId && fixed.includes(realIdx)) {
             this.selectedIdx = idx;
-            let outIdx = this.trajIdxs[this.selectedIdx];
+            let outIdx = trId;
             if (outIdx >= 12) outIdx += 1;
             this.emitter.emit('mutateTraj', outIdx);
             document.querySelectorAll('.thumb').forEach(t => {
@@ -643,6 +666,7 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: top;
+  position: relative;
 }
 
 .selectionPanel.vocal {
@@ -760,4 +784,28 @@ label.wide {
 .selectionRow select {
   width: 120px;
 }
+
+.octShift {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: 100px;
+  height: 25px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: left;
+}
+
+.octShift button {
+  width: 25px;
+  /* height: 25px; */
+  text-align: center;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  margin: 2px;
+}
+
+
 </style>
