@@ -95,7 +95,8 @@ export default {
       this.$store.commit('update_lastName', this.lastName);
       this.$store.commit('update_name', this.name);
       const pieceId = this.$cookies.get('currentPieceId');
-      if (pieceId !== null) this.$store.commit('update_id', pieceId); //just for now
+      if (pieceId !== null) this.$store.commit('update_id', pieceId); 
+        //just for now
     } else {
       try {
         const response = await googleOneTap({ autoLogin: false });
@@ -209,9 +210,6 @@ export default {
   width: 100%;
   height: 100%;
   border-radius: 4px;
-  /* cursor: pointer;
-  border-left: 1px solid black;
-  border-right: 1px solid black; */
 }
 
 .imgBox {
@@ -221,8 +219,6 @@ export default {
   min-height: v-bind(navHeight+'px');
   cursor: pointer;
   border-radius: 4px;
-  /* border-left: 1px solid black; */
-  /* border-right: 1px solid black; */
 }
 
 html, body {
@@ -252,15 +248,11 @@ body {
 }
 
 .routerBox {
-  /* width: 100px; */
   height: 50px;
-  /* border: 1px solid black; */
   display: flex;
   align-items: center;
   justify-content: center;
   background-color: black;
-  /* padding-left: 20px;
-  padding-right: 20px; */
 }
 
 .routerLink {
@@ -282,14 +274,12 @@ body {
   display: flex;
   flex-direction: row;
   text-align: center;
-  /* border-bottom: 1px solid black; */
   background-color: black;
 }
 
 .link {
   width: 100px;
   height: v-bind(navHeight+'px');
-  /* border-right: 1px solid black; */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -310,7 +300,6 @@ a {
 
 #userMenu {
   width: v-bind(userMenuWidth + 'px');
-  /* height: 150px; */
   background-color: black;
   position: fixed;
   right: 1px;
@@ -330,7 +319,6 @@ a {
   flex-direction: row;
   align-items: center;
   justify-content: left;
-  /* cursor: pointer; */
   color: white;
   padding-left: 8px;
   margin-left: 8px;

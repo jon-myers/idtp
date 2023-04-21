@@ -3,7 +3,12 @@
     <div class='waiverContainer'>
       <div class='waiver' v-if='firstTime || returning || firstWelcome'>
         <div v-if='firstTime'>{{waiver}}</div>
-        <input type='checkbox' @change='agreeToWaiver' v-model='agreeBool' v-if='firstTime'>
+        <input 
+          type='checkbox' 
+            @change='agreeToWaiver' 
+            v-model='agreeBool' 
+            v-if='firstTime'
+            >
         <div v-if='returning'>{{`Welcome back, ${firstName}!`}}</div>
         <div v-if='firstWelcome'>{{`Welcome, ${firstName}!`}}</div>
       </div>

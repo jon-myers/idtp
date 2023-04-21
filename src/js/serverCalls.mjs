@@ -1,13 +1,6 @@
 const url = 'https://swara.studio/';
 import axios from 'axios';
-// import fetch from 'node-fetch';
-// if (!fetch) {
-//   const fetch = await import ('node-fetch');
-// }
 import fetch from 'cross-fetch';
-// let fetch = fetch ?? await import ('node-fetch');
-// import { Piece } from './classes.mjs';
-
 
 const getPiece = async id => {
   let piece;
@@ -23,7 +16,6 @@ const getPiece = async id => {
 
   await fetch(url + 'getOneTranscription', request)
     .then(response => {
-      // console.log(response)
       if (response.ok) {
         return response.json()
       }
@@ -240,7 +232,8 @@ const getAudioRecording = async _id => {
 };
 
 const getSortedMusicians = async () => {
-  // query 'musicians' mongoDB collection to get all musicians in alphabetical order
+  // query 'musicians' mongoDB collection to get all musicians in alphabetical 
+  // order
   let allMusicians;
   let request = {
     method: 'GET',
@@ -598,7 +591,7 @@ const saveAudioMetadata = async (_id, updates) => {
   }
 }
 
-const updateSaEstimate = async (recID, aeID, recIdx, saEstimate, verified, octOffset) => {
+const updateSaEstimate = async (recID, aeID, recIdx, saEst, ver, octOffset) => {
   const request = {
     method: 'POST',
     headers: {
@@ -608,8 +601,8 @@ const updateSaEstimate = async (recID, aeID, recIdx, saEstimate, verified, octOf
       'recID': recID,
       'aeID': aeID,
       'recIdx': recIdx,
-      'saEstimate': saEstimate,
-      'verified': verified,
+      'saEstimate': saEst,
+      'verified': ver,
       'octOffset': octOffset
     }),
   };
@@ -634,10 +627,8 @@ const getVerifiedStatus = async (aeID, recIdx) => {
   };
   let out;
   try {
-    const response = await fetch(url + 'getVerifiedStatus?' + new URLSearchParams({
-      aeID: aeID,
-      recIdx: recIdx
-    }), request);
+    const params = new URLSearchParams({ aeID: aeID, recIdx: recIdx });
+    const response = await fetch(url + 'getVerifiedStatus?' + params, request);
     if (response.ok) {
       out = await response.json()
     }
@@ -755,9 +746,8 @@ const nameFromUserID = async userID => {
     }
   };
   try {
-    const response = await fetch(url + 'nameFromUserID?' + new URLSearchParams({
-      userID: JSON.stringify(userID)
-    }), request);
+    const params = new URLSearchParams({ userID: JSON.stringify(userID) });
+    const response = await fetch(url + 'nameFromUserID?' + params, request);
     if (response.ok) {
       out = await response.json()
     }
@@ -825,9 +815,9 @@ const updateTranscriptionPermissions = async (id, permissions) => {
     })
   };
   try {
-    const response = await fetch(url + 'updateTranscriptionPermissions', request);
-    if (response.ok) {
-      out = await response.json()
+    const res = await fetch(url + 'updateTranscriptionPermissions', request);
+    if (res.ok) {
+      out = await res.json()
     }
     return out
   } catch (err) {
@@ -835,7 +825,15 @@ const updateTranscriptionPermissions = async (id, permissions) => {
   }
 }
 
-const cloneTranscription = async (id, title, newOwner, permissions, name, family_name, given_name) => {
+  const cloneTranscription = async ({
+    id = undefined,
+    title = undefined,
+    newOwner = undefined,
+    permissions = undefined,
+    name = undefined,
+    family_name = undefined,
+    given_name = undefined
+  } = {}) => {
   let out;
   const request = {
     method: 'POST',
@@ -872,9 +870,8 @@ const getInstrumentation = async (audioID) => {
     }
   };
   try {
-    const response = await fetch(url + 'getInstrumentation?' + new URLSearchParams({
-      audioID: JSON.stringify(audioID)
-    }), request);
+    const params = new URLSearchParams({ audioID: JSON.stringify(audioID) });
+    const response = await fetch(url + 'getInstrumentation?' + params, request);
     if (response.ok) {
       out = await response.json()
     }

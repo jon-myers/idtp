@@ -344,7 +344,7 @@ const runServer = async () => {
       const sorts = { 'Last Name': 1, 'First Name': 1, 'Middle Name': 1};
       const proj = { 'Initial Name': 1, _id: 0 };
       try {
-        const result = await musicians.find().sort(sorts).project(proj).toArray();
+        let result = await musicians.find().sort(sorts).project(proj).toArray();
         res.json(result.map(r => r['Initial Name']))
       } catch (err) {
         console.error(err);
@@ -395,7 +395,7 @@ const runServer = async () => {
       const proj = { 'name': 1, _id: 0 };
       const sortRule = { 'name': 1 };
       try {
-        const result = await ragas.find().sort(sortRule).project(proj).toArray();
+        let result = await ragas.find().sort(sortRule).project(proj).toArray();
         const names = await result.map(r => r.name);
         res.json(names)
       } catch (err) {
@@ -700,7 +700,8 @@ const runServer = async () => {
         url = url.slice(0, url.length-1);
         console.log(url)
         const OAuthClient = new OAuth2Client({
-          clientId: "324767655055-crhq76mdupavvrcedtde986glivug1nm.apps.googleusercontent.com",
+          clientId: "324767655055-crhq76mdupavvrcedtde986glivug1nm.apps.googl" +
+            "eusercontent.com",
           clientSecret: "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",
           redirectUri: url
         });
@@ -834,7 +835,8 @@ const runServer = async () => {
           await audioEvents.updateOne(query, update, options)
           const fileName = newUniqueId + getSuffix(avatar.mimetype);
           avatar.mv('./uploads/' + fileName);
-          const processAudio = spawn('python3', ['process_audio.py', fileName, parentId, idx])
+          const spawnArr = ['process_audio.py', fileName, parentId, idx];
+          const processAudio = spawn('python3', spawnArr);
           await processAudio.on('close', () => {
             console.log('python closed, finally')
             res.send({

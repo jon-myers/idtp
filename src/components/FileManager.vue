@@ -213,7 +213,15 @@ export default {
           const name = this.$store.state.name;
           const family_name = this.$store.state.lastName;
           const given_name = this.$store.state.firstName;
-          const result = await cloneTranscription(id, title, newOwner, perm, name, family_name, given_name);
+          const result = await cloneTranscription({
+            id: id, 
+            title: title, 
+            newOwner: newTitle, 
+            permissions: perm, 
+            name: name, 
+            family_name: family_name, 
+            given_name: given_name
+          });
           this.$router.push({
             name: 'EditorComponent',
             query: { id: result.insertedId },
@@ -321,9 +329,7 @@ export default {
     createNewPiece(obj) {
       const piece = obj ? new Piece(obj) : new Piece();
       piece.userID = this.$store.state.userID;
-      // piece.family_name = this.$store.state.lastName;
       piece.name = this.$store.state.name;
-      // piece.given_name = this.$store.state.firstName;
       createNewPiece(piece).then((data) => {
         this.$store.commit('update_id', data.insertedId);
         this.$cookies.set('currentPieceId', data.insertedId);
@@ -367,7 +373,8 @@ export default {
     },
 
     async deletePiece() {
-      if (this.delete_ && this.$store.state.userID === this.selectedPiece.userID) {
+      const isUser = this.$store.state.userID === this.selectedPiece.userID;
+      if (this.delete_ && isUser) {
         this.$refs.dropDown.classList.add('closed');
         const res = await deletePiece(this.selectedPiece);
         if (res.deletedCount === 1) {
@@ -472,13 +479,17 @@ export default {
     },
 
     async saveTitle() {
-      const result = await updateTranscriptionTitle(this.selectedPiece._id, this.editingTitle);
+      const id = this.selectedPiece._id;
+      const title = this.editingTitle;
+      const result = await updateTranscriptionTitle(id, title);
       await this.updateSort();
       this.editTitleModal = false;
     },
 
     async savePermissions() {
-      const result = await updateTranscriptionPermissions(this.selectedPiece._id, this.editingPermissions);
+      const id = this.selectedPiece._id;
+      const permissions = this.editingPermissions;
+      const result = await updateTranscriptionPermissions(id, permissions);
       await this.updateSort();
       this.editPermissionsModal = false;
     },

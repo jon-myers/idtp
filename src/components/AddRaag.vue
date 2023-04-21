@@ -19,8 +19,14 @@
   <div class='inputRow'>
     <label>Performance Sections: </label>
     <div class='inputCol' v-for='sec in Number(numSections)' :key='sec'>
-      <select v-model='selectedPSections[sec-1]' class='pSecs' @change='updatePerformanceSections(sec-1)'>
-        <option v-for='pSec in performanceSections' :key='pSec'>{{pSec}}</option>
+      <select 
+        v-model='selectedPSections[sec-1]' 
+        class='pSecs' 
+        @change='updatePerformanceSections(sec-1)'
+        >
+        <option v-for='pSec in performanceSections' :key='pSec'>
+          {{pSec}}
+        </option>
       </select>
       <input 
         type='text' 
@@ -30,7 +36,11 @@
   </div>
   <div class='inputRow'>
     <label>Timings: </label>
-    <div class='inputCol timings' v-for='(s, sec) in Number(numSections)' :key='s'>
+    <div 
+      class='inputCol timings' 
+      v-for='(s, sec) in Number(numSections)' 
+      :key='s'
+      >
       <div class='timingRow timings'>
         <label>start: </label>
         <input 
@@ -95,8 +105,8 @@ export default {
       selectedRaag: undefined,
       performanceSections: undefined,
       selectedPSection: undefined,
-      selectedPSections: [undefined, undefined, undefined, undefined, undefined, undefined],
-      addPSectionVisibility: [false, false, false, false, false, false],
+      selectedPSections: Array(6).fill(undefined),
+      addPSectionVisibility: Array(6).fill(undefined),
       numSections: 1,
       pSectionTimings: [{ 
           start: { hours: '00', minutes: '00', seconds: '00' },
@@ -119,7 +129,7 @@ export default {
         }
       ], 
       newAddedRaag: undefined,
-      newAddedPSections: [undefined, undefined, undefined, undefined, undefined, undefined, undefined]
+      newAddedPSections: Array(7).fill(undefined)
     }
   },
 

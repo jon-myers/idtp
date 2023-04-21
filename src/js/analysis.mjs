@@ -385,7 +385,7 @@ const durationsOfPitchOnsets = (trajs, {
     const newObj = { dur: ends[idx] - obj.time, pitch: obj.pitch };
     durations.push(newObj);
   })
-  // if duration of silence is less than maxSilence, add it to the previous pitch
+  // if dur of silence is less than maxSilence, add it to the previous pitch
   let condensedDurations = [];
   durations.forEach((obj, idx) => {
     if (obj.pitch === 'silence') {
@@ -403,7 +403,8 @@ const durationsOfPitchOnsets = (trajs, {
     }
   });
 
-  // pitchDurations is an object whose keys are the pitches, and whose values are the summed durations
+  // pitchDurations is an object whose keys are the pitches, and whose values 
+  // are the summed durations
   const pitchDurations = {};
   condensedDurations.forEach(obj => {
     if (pitchDurations[obj.pitch]) {
@@ -414,7 +415,8 @@ const durationsOfPitchOnsets = (trajs, {
   })
   if (excludeSilence) {
     delete pitchDurations['silence'];
-    condensedDurations = condensedDurations.filter(obj => obj.pitch !== 'silence');
+    condensedDurations = condensedDurations
+      .filter(obj => obj.pitch !== 'silence');
   }
   if (countType === 'proportional') {
     const total = condensedDurations.reduce((sum, obj) => sum + obj.dur, 0);
@@ -468,8 +470,6 @@ const segmentByDuration = (piece, {
 
 const analyze = async () => {
   const piece = await instantiatePiece();
-  // const segments = segmentByDuration(piece, { duration: 60, type: 'left' });
-  // const seg = segments[0];
   const out = durationsOfPitchOnsets(piece.allTrajectories(), { 
     maxSilence: 4,
     countType: 'proportional',
@@ -482,15 +482,9 @@ const analyze = async () => {
     outputType: 'chroma',
   });
   console.log(other)
-  // console.log(PitchTimes(piece.allTrajectories()));
 }
 
 
-// analyze();
-// const pitch = Pitch.fromPitchNumber(0);
-// console.log(pitch);
-// const pitch = new Pitch();
-// console.log(pitch.chromaToScaleDegree(7))
 // analyze();
 
 export { instantiatePiece, segmentByDuration, durationsOfPitchOnsets }
