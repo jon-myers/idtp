@@ -2836,7 +2836,7 @@ export default {
         if (this.clipboardTrajs.length > 0) this.pasteTrajs()
       }
       if (this.setNewTraj || this.selectedTraj) {
-        const keyNums = this.$refs.trajSelectPanel.keyNumsFiltered;
+        const keyNums = this.$refs.trajSelectPanel.kNumsFiltered;
         if (keyNums.includes(e.key)) {
           this.$refs.trajSelectPanel.selectIcon(keyNums.indexOf(e.key))
         }
@@ -5649,7 +5649,7 @@ export default {
           .transition()
           .duration(this.transitionTime)
           .attr('transform', d => {
-            return `translate(${x(d) - offset}, ${y(d) - offset})`
+            return `translate(${x(d) + offset}, ${y(d)}) rotate(90)`
           })
       }
     },
@@ -6021,6 +6021,7 @@ export default {
     },
 
     redrawPlucks(traj, phraseStart) {
+      console.log('redraw happens')
       if (traj.id !== 12) {
         const keys = Object.keys(traj.articulations);
         const relKeys = keys.filter(key => {
@@ -6038,7 +6039,7 @@ export default {
         const y = d => this.yr()(d.y); 
         d3Select(`#pluckp${traj.phraseIdx}t${traj.num}`)
           .data(pluckData)
-          .attr('transform', d => `translate(${x(y)}, ${d(y)}}) rotate(90)`)
+          .attr('transform', d => `translate(${x(y)}, ${d(y)}) rotate(90)`)
       }
     },
 
