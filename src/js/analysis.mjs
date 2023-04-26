@@ -312,21 +312,26 @@ const phraseRange = piece => {
   return piece.phrases.map(phrase => phrase.getRange())
 }
 
-const PitchTimes = (trajs) => { // outputs pitches as pitchNumbers
+const PitchTimes = (trajs, { outputType = 'pitchNumber' } = {}) => { // outputs pitches as pitchNumbers
   // returns a list of all pitches in trajs, and the cumulative times at which 
   // they begin, calculated based on summing durtot as we go.
   // silences are included: instead of pitch, just the string 'silence'.
   // outputType can be 'pitchNumber', 'chroma', 'scaleDegree', or 'sargamLetter'
   let pitchTimes = [];
   let startTime = 0;
-  trajs.forEach(traj => {
+  trajs.forEach((traj, tIdx) => {
+    const art = traj.articulations[0] || traj.articulations['0.00'];
     if (traj.id === 12) {
-      const obj = { time: startTime, pitch: 'silence' };
+      const obj = { time: startTime, pitch: 'silence', articulation: false };
       pitchTimes.push(obj);
       startTime += traj.durTot;
     } else {
-      traj.pitches.forEach((pitch, pIdx) => {
-        const obj = { time: startTime, pitch: pitch.numberedPitch };
+      traj.pitches.forEach((pitch, pIdx) => {       
+        const obj = { 
+          time: startTime, 
+          pitch: pitch.numberedPitch,
+          articulation: pIdx === 0 && (art !== undefined)
+        };
         pitchTimes.push(obj);
         if (pIdx < traj.pitches.length - 1) {
           startTime += traj.durArray[pIdx] * traj.durTot;
@@ -335,12 +340,12 @@ const PitchTimes = (trajs) => { // outputs pitches as pitchNumbers
     }
   })
   // filter out duplicates time + pitch
-  pitchTimes = pitchTimes.filter((obj, idx) => {
-    if (idx === 0) {
+  pitchTimes = pitchTimes.filter((obj, idx, arr) => {
+    if (idx === arr.length - 1) {
       return true
     } else {
-      const c1 = obj.pitch === pitchTimes[idx-1].pitch;
-      const c2 = obj.time === pitchTimes[idx-1].time;
+      const c1 = obj.pitch === pitchTimes[idx+1].pitch;
+      const c2 = obj.time === pitchTimes[idx+1].time;
       return !(c1 && c2)
     }
   })
@@ -353,7 +358,11 @@ const PitchTimes = (trajs) => { // outputs pitches as pitchNumbers
       return obj.time !== pitchTimes[idx+1].time;
     }
   })
-
+  if (outputType === 'chroma') {
+    pitchTimes.forEach(pt => {
+      if (pt.pitch !== 'silence') pt.pitch = pitchNumberToChroma(pt.pitch)
+    })
+  }
   return pitchTimes
 }
 
@@ -468,23 +477,158 @@ const segmentByDuration = (piece, {
   return segments
 }
 
+const patternCounter = (trajs, { 
+  size = 2, 
+  maxLagTime = 3,
+  sort = true,
+  outputType = 'pitchNumber',
+  targetPitch = undefined,
+  minSize = 1,
+} = {}) => {
+  const pitchTimes = PitchTimes(trajs, { outputType: outputType });
+  // For all adjacent pitchs duplicates in pitchTimes list, remove all 
+  // second instances, unless articulation on second adjacent pitch is === true
+  pitchTimes.forEach((obj, idx) => {
+    if (idx === 0) {
+      return true
+    } else {
+      if (obj.pitch === pitchTimes[idx-1].pitch) {
+        if (obj.articulation === true) {
+          return true
+        } else {
+          pitchTimes.splice(idx, 1);
+        }
+      }
+    }
+  })
+  const endTime = trajs.reduce((sum, traj) => sum + traj.durTot, 0);
+  const ends = pitchTimes.map(obj => obj.time).slice(1).concat([endTime]);
+  const durations = pitchTimes.map((obj, idx) => {
+    return { 
+      dur: ends[idx] - obj.time, 
+      pitch: obj.pitch, 
+      articulation: obj.articulation 
+    }
+  })
+  
+
+
+  // if dur of silence is less than maxLagTime, add it to the previous pitch
+  let condensedDurations = [];
+  durations.forEach((obj, idx) => {
+    if (obj.pitch === 'silence') {
+      if (idx === 0) {
+        condensedDurations.push(obj)
+      } else if (obj.dur < maxLagTime) {
+        condensedDurations[condensedDurations.length - 1].dur += obj.dur;
+      } else {
+        condensedDurations[condensedDurations.length - 1].dur += maxLagTime;
+        obj.dur -= maxLagTime;
+        condensedDurations.push(obj);
+      }
+    } else {
+      condensedDurations.push(obj );
+    }
+  });
+  const patterns = {};
+  let subPattern = [];
+  condensedDurations.forEach(obj => {
+    if (obj.pitch === 'silence') {
+      subPattern = [];
+    } else if (subPattern.length < size) {
+      subPattern.push(obj.pitch);
+    } else {
+      subPattern.shift();
+      subPattern.push(obj.pitch);
+      let sel = patterns;
+      subPattern.forEach((pitch, pIdx, arr) => {
+        if (sel[pitch] === undefined) {
+          sel[pitch] = pIdx === arr.length - 1 ? 0 : {};
+        }
+        if (pIdx === arr.length - 1) {
+          // console.log(sel)
+          sel[pitch] += 1
+        }
+        sel = sel[pitch];
+      })
+    }
+  })
+  // now, create a list of objects from patterns, where each object has a 
+  // 'pattern' key, an array of the nested keys, and a 'count' key, the nested value
+  let out = [];
+  const recurse = (obj, pattern = []) => {
+    const keys = Object.keys(obj);
+    keys.forEach(key => {
+      if (typeof obj[key] === 'number') {
+        out.push({ pattern: pattern.concat([Number(key)]), count: obj[key] });
+      } else {
+        recurse(obj[key], pattern.concat([Number(key)]));
+      }
+    })
+  }
+  recurse(patterns);
+  if (sort) {
+    out.sort((a, b) => b.count - a.count);
+  }
+  if (targetPitch !== undefined) {
+    // at end of pattern
+    out = out.filter(o => o.pattern[o.pattern.length - 1] === targetPitch);
+  }
+  out = out.filter(o => o.count >= minSize)
+  return out
+  // return patterns
+}
+
+const argSort = arr => {
+  const indices = [...arr.keys()].sort((a, b) => arr[a] - arr[b]);
+  return indices
+}
+const chromaSeqToCondensedPitchNums = (chromaSeq) => {
+  // given an array of chroma pitches, (potentially) shift some of them up or
+  // down by an octave such that the max difference between any two elements is
+  // minimized
+
+  // then sort
+  const sortIdxs = argSort(chromaSeq)
+  const dblArgSort = argSort(sortIdxs);
+  const sorted = sortIdxs.map(idx => chromaSeq[idx]);
+
+  // find dif between all adjacent elements; as well as dif between last element
+  // shifted down an octave and first element
+  const difs = sorted.map((pitch, idx) => {
+    if (idx === sorted.length - 1) {
+      return sorted[0] - (pitch - 12);
+    } else {
+      return sorted[idx + 1] - pitch;
+    }
+  })
+
+  // everything above the max diff idx gets shifted down an octave
+  const maxDifIdx = difs.indexOf(Math.max(...difs));
+  const out = sorted.map((pitch, idx) => {
+    if (idx > maxDifIdx) {
+      return pitch - 12;
+    } else {
+      return pitch;
+    }
+  })
+  const unsorted = dblArgSort.map(idx => out[idx]);
+  return unsorted
+}
+
 const analyze = async () => {
-  const piece = await instantiatePiece();
-  const out = durationsOfPitchOnsets(piece.allTrajectories(), { 
-    maxSilence: 4,
-    countType: 'proportional',
-    outputType: 'chroma',
-    excludeSilence: true,
-  });
+  const seq = [0, 2, 11, 7, 0, 9, 11];
+  const out = chromaSeqToCondensedPitchNums(seq);
   console.log(out)
-  const other = durationsOfFixedPitches(piece.allTrajectories(), {
-    countType: 'proportional',
-    outputType: 'chroma',
-  });
-  console.log(other)
 }
 
 
 // analyze();
 
-export { instantiatePiece, segmentByDuration, durationsOfPitchOnsets }
+export { 
+  instantiatePiece, 
+  segmentByDuration, 
+  durationsOfPitchOnsets,
+  patternCounter,
+  chromaSeqToCondensedPitchNums
+}
