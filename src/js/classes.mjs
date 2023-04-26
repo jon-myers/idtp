@@ -281,6 +281,10 @@ class Pitch {
     return np % 12
   }
 
+  get logFreq() {
+    return Math.log2(this.frequency)
+  }
+
 
   toJSON() {
     return {
@@ -1411,7 +1415,7 @@ class Piece {
     return sections
   }
 
-  allPitches(repetition=true) {
+  allPitches({ repetition=true, pitchNumber=false } = {}) {
     let allPitches = [];
     this.phrases.forEach(p => allPitches.push(...p.allPitches()));
     if (!repetition) {
@@ -1423,7 +1427,18 @@ class Piece {
         return c1 || !(c2 && c3 && c4)
       })
     }
+    if (pitchNumber) {
+      allPitches = allPitches.map(p => p.numberedPitch)
+    }
     return allPitches
+  }
+
+  get highestPitchNumber() {
+    return Math.max(...this.allPitches({ pitchNumber: true }))
+  }
+
+  get lowestPitchNumber() {
+    return Math.min(...this.allPitches({ pitchNumber: true }))
   }
 
   allTrajectories(inst = 0) {

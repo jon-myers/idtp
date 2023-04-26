@@ -482,6 +482,8 @@ const patternCounter = (trajs, {
   maxLagTime = 3,
   sort = true,
   outputType = 'pitchNumber',
+  targetPitch = undefined,
+  minSize = 1,
 } = {}) => {
   const pitchTimes = PitchTimes(trajs, { outputType: outputType });
   // For all adjacent pitchs duplicates in pitchTimes list, remove all 
@@ -568,27 +570,65 @@ const patternCounter = (trajs, {
   if (sort) {
     out.sort((a, b) => b.count - a.count);
   }
-  out = out.filter(o => o.pattern[3] === 11)
-  return [patterns, out]
+  if (targetPitch !== undefined) {
+    // at end of pattern
+    out = out.filter(o => o.pattern[o.pattern.length - 1] === targetPitch);
+  }
+  out = out.filter(o => o.count >= minSize)
+  return out
   // return patterns
 }
 
+const argSort = arr => {
+  const indices = [...arr.keys()].sort((a, b) => arr[a] - arr[b]);
+  return indices
+}
+const chromaSeqToCondensedPitchNums = (chromaSeq) => {
+  // given an array of chroma pitches, (potentially) shift some of them up or
+  // down by an octave such that the max difference between any two elements is
+  // minimized
+
+  // then sort
+  const sortIdxs = argSort(chromaSeq)
+  const dblArgSort = argSort(sortIdxs);
+  const sorted = sortIdxs.map(idx => chromaSeq[idx]);
+
+  // find dif between all adjacent elements; as well as dif between last element
+  // shifted down an octave and first element
+  const difs = sorted.map((pitch, idx) => {
+    if (idx === sorted.length - 1) {
+      return sorted[0] - (pitch - 12);
+    } else {
+      return sorted[idx + 1] - pitch;
+    }
+  })
+
+  // everything above the max diff idx gets shifted down an octave
+  const maxDifIdx = difs.indexOf(Math.max(...difs));
+  const out = sorted.map((pitch, idx) => {
+    if (idx > maxDifIdx) {
+      return pitch - 12;
+    } else {
+      return pitch;
+    }
+  })
+  const unsorted = dblArgSort.map(idx => out[idx]);
+  return unsorted
+}
+
 const analyze = async () => {
-  const piece = await instantiatePiece();
-  // const pitchTimes = PitchTimes(piece.allTrajectories(), { outputType: 'chroma'});
-  // console.log(pitchTimes);
-  let patterns, out;
-  // const segs = segmentByDuration(piece, { duration: 60, type: 'rounded' });
-  [patterns, out] = patternCounter(piece.allTrajectories(), { 
-    size: 4,
-    outputType: 'chroma',
-    maxLagTime: 0,
-  });
-  // console.log(patterns);
+  const seq = [0, 2, 11, 7, 0, 9, 11];
+  const out = chromaSeqToCondensedPitchNums(seq);
   console.log(out)
 }
 
 
-analyze();
+// analyze();
 
-export { instantiatePiece, segmentByDuration, durationsOfPitchOnsets }
+export { 
+  instantiatePiece, 
+  segmentByDuration, 
+  durationsOfPitchOnsets,
+  patternCounter,
+  chromaSeqToCondensedPitchNums
+}

@@ -6,7 +6,7 @@
           :class='`analysisType ${atIdx === selectedATIdx ? "selected" : ""}`' 
           v-for='(at, atIdx) in analysisTypes'
           :key='at'
-          @click='selectedATIdx = atIdx'
+          @click='handleClickAnalysisType(atIdx)'
           >
           {{ at }}
         </div>
@@ -23,9 +23,8 @@
               <label :for='prType'>{{ prType }}</label>
           </div>
           <div v-if='pitchRepresentation === "Pitch Onsets"'>
-            <label for='fadeTime'>Fade Time</label>
+            <label for='fadeTime'>Fade Time (s)</label>
             <input type='number' id='fadeTime' v-model.number='fadeTime'>
-            <label for='fadeTime'>(s)</label>
           </div>
         </div>
         <div class='controlBox'>
@@ -61,9 +60,105 @@
           <button class='generate' @click='createGraph'>
             Generate Visualization
           </button>
-        </div>
-        
+        </div>       
       </div>
+      <div class='controls' v-if='selectedATIdx === 1'>
+        <div class='controlBox'>
+          <div v-for='ppType in patternCountTypes' :key='pptype'>
+            <input 
+              type='radio' 
+              :id='ppType' 
+              :value='ppType' 
+              v-model='segmentationType'
+              >
+            <label :for='ppType'>{{ ppType }}</label>
+          </div>
+          <div v-if='segmentationType === "Duration"'>
+            <input type='number' id='duration' v-model.number='duration'>
+            <label for='duration'>(s)</label>
+          </div>
+        </div>
+        <div class='controlBox'>
+          <div v-for='pType in pitchTypes' :key='prType'>
+            <input 
+              type='radio' 
+              :id='pType' 
+              :value='pType' 
+              v-model='pitchType'
+              >
+              <label :for='pType'>{{ pType }}</label>
+          </div>
+          <div>
+            <input type='checkbox' v-model='pitchChroma' @change='updateChroma'/>
+            <label>Chroma</label>
+          </div>
+        </div>
+        <div class='controlBox'>
+          <div class='rightInputRow'>
+            <label for='targetPitch'>Target</label>
+            <input type='checkbox' v-model='targetPitchBool'>
+            <select v-model='targetPitchIdx' id='targetPitch' v-if='targetPitchBool'>
+              <option 
+                v-for='(tpc, idx) in targetPitchChoices' 
+                :key='tpc' 
+                :value='idx'
+                >
+                {{ tpc }}
+              </option>
+            </select>
+            <div id='targetPitch' v-else></div>
+          </div>
+          <div class='rightInputRow'>
+            <label>Fade Time (s)</label>
+            <input type='number' v-model.number='fadeTime' id='fadeTime'>
+          </div>
+        </div>
+        <div class='controlBox'>
+          <label class='patternSizeLabel'>Pattern Size</label>
+          <div class='patternSizeMatrix'>
+            <div 
+              class='patternSizeColumn'
+              v-for='(_, pcIdx) in 3'
+              :key='pcIdx'
+              >
+              <div class='patternSizeRow' v-for='(_, prIdx) in 3' :key='prIdx'>
+                <input type='checkbox' 
+                  :id='`cb_${pcIdx * 3 + prIdx}`' 
+                  :value='patternSizes[pcIdx * 3 + prIdx]'
+                  v-model='selectedPatternSizes[pcIdx * 3 + prIdx]'
+                  >
+                <label>
+                  {{ 2 + pcIdx * 3 + prIdx }}
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class='controlBox'>
+          <div>
+            <input type='checkbox' v-model='minPatternSize' id='minPatternSize'>
+            <label for='#minPatternSize'>Minimum Size</label>
+          </div>
+          <div v-if='minPatternSize'>
+            <input 
+              class='minPatternSizeInput'
+              type='number' 
+              step='1' 
+              v-model.number='minPatternSizeValue'
+              onkeypress="return /[0-9]/i.test(event.key)">
+          </div>
+          <div>
+            <input type='checkbox' v-model='plot' id='plot'>
+            <label for='#plot'>Plot</label>
+          </div>
+        </div>
+        <div class='controlBox button'>
+          <button class='generate' @click='createGraph'>
+            Generate Visualization
+          </button>
+        </div>   
+      </div>
+
     </div>
     <div class='graphContainer'>
       <div class='graph' ref='graph'></div>
@@ -72,13 +167,28 @@
 </template>
 
 <script>
+  const linSpace = (startValue, stopValue, cardinality) => {
+    var arr = [];
+    var step = (stopValue - startValue) / (cardinality - 1);
+    for (var i = 0; i < cardinality; i++) {
+      arr.push(startValue + (step * i));
+    }
+    return arr;
+  };
 
   import { 
     instantiatePiece, 
     segmentByDuration, 
-    durationsOfPitchOnsets 
+    durationsOfPitchOnsets,
+    patternCounter,
+    chromaSeqToCondensedPitchNums
   } from '@/js/analysis.mjs';
-  import { durationsOfFixedPitches } from '@/js/classes.mjs';
+  import { 
+    durationsOfFixedPitches, 
+    Pitch, 
+    pitchNumberToChroma,
+    Trajectory
+  } from '@/js/classes.mjs';
   import { pieceExists } from '@/js/serverCalls.mjs';
   import Gradient from 'javascript-color-gradient';
   import * as d3 from 'd3';
@@ -96,13 +206,48 @@
     }
   }
 
+  function shouldTextBeBlack (backgroundcolor) {
+    return computeLuminence(backgroundcolor) > 0.179;
+  }
+
+  function computeLuminence(backgroundcolor) {
+      var colors = hexToRgb(backgroundcolor);
+      
+      var components = ['r', 'g', 'b'];
+      for (var i in components) {
+          var c = components[i];
+          
+          colors[c] = colors[c] / 255.0;
+
+          if (colors[c] <= 0.03928) { 
+              colors[c] = colors[c]/12.92;
+          } else { 
+              colors[c] = Math.pow (((colors[c] + 0.055) / 1.055), 2.4);
+          }
+      }
+      
+      var luminence = 0.2126 * colors.r + 0.7152 * colors.g + 0.0722 * colors.b;
+
+      return luminence;
+  }
+
+  function hexToRgb(hex) {
+      var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16)
+      } : null;
+  }
+
   export default {
     data() {
       return {
         piece: undefined,
-        analysisTypes: ['Pitch Prevalence', 'Markov Matrices'],
-        selectedATIdx: 0,
+        analysisTypes: ['Pitch Prevalence', 'Pitch Patterns'],
+        selectedATIdx: 1,
         pitchPrevalenceTypes: ['Section', 'Phrase', 'Duration'],
+        patternCountTypes: ['Transcription', 'Section', 'Duration'],
         pitchRepresentationTypes: ['Fixed Pitch', 'Pitch Onsets'],
         segmentationType: 'Section',
         pitchRepresentation: 'Fixed Pitch',
@@ -111,10 +256,115 @@
         condensed: false,
         heatmap: false,
         fadeTime: 5,
+        controlsHeight: 150,
+        typeRowHeight: 30,
+        graphHeight: 1000,
+        targetPitchChoices: [0],
+        targetPitchIdx: 0,
+        pitchTypes: ['Pitch Number', 'Sargam'],
+        pitchType: 'Pitch Number',
+        patternSizes: [2, 3, 4, 5, 6, 7, 8, 9, 10],
+        selectedPatternSizes: [
+          true, // 2
+          true, // 3
+          true, // 4
+          true, // 5
+          true, // 6
+          false, // 7
+          false, // 8
+          false, // 9
+          false, // 10
+        ],
+        controlBoxWidth: 150,
+        minPatternSize: false,
+        minPatternSizeValue: 1,
+        targetPitchBool: true,
+        plot: false
+      }
+    },
+
+    watch: {
+      pitchType(newVal) {
+        const raga = this.piece.raga;
+        if (newVal === 'Pitch Number') {
+          if (this.pitchChroma) {
+            this.targetPitchChoices = raga.getPitchNumbers(0, 11).reverse();
+            this.targetPitchIdx = this.targetPitchChoices.indexOf(0);
+          } else {
+            const low = this.piece.lowestPitchNumber;
+            const high = this.piece.highestPitchNumber;
+            this.targetPitchChoices = raga.getPitchNumbers(low, high).reverse();
+            this.targetPitchIdx = this.targetPitchChoices.indexOf(0);
+          }
+          
+        } else if (newVal === 'Sargam') {
+          if (this.pitchChroma) {
+            const pitchChoices = raga.getPitchNumbers(0, 11).reverse();
+            this.targetPitchChoices = pitchChoices.map(pn => {
+              const pitch = Pitch.fromPitchNumber(pn);
+              return pitch.octavedSargamLetter
+            });
+            this.targetPitchIdx = this.targetPitchChoices.indexOf('S');
+          } else {
+            const low = this.piece.lowestPitchNumber;
+            const high = this.piece.highestPitchNumber;
+            const pnChoices = raga.getPitchNumbers(low, high).reverse();
+            this.targetPitchChoices = pnChoices.map(pn => {
+              const pitch = Pitch.fromPitchNumber(pn);
+              return pitch.octavedSargamLetter
+            });
+            this.targetPitchIdx = this.targetPitchChoices.indexOf('S');
+          }         
+        }
       }
     },
 
     methods: {
+
+      updateChroma() {
+        const raga = this.piece.raga;
+        if (this.pitchType === 'Pitch Number') {
+          if (this.pitchChroma) {
+            this.targetPitchChoices = raga.getPitchNumbers(0, 11).reverse();
+            this.targetPitchIdx = this.targetPitchChoices.indexOf(0);
+          } else {
+            const low = this.piece.lowestPitchNumber;
+            const high = this.piece.highestPitchNumber;
+            this.targetPitchChoices = raga.getPitchNumbers(low, high).reverse();
+            this.targetPitchIdx = this.targetPitchChoices.indexOf(0);
+          }
+        } else if (this.pitchType === 'Sargam') {
+          if (this.pitchChroma) {
+            const pitchChoices = raga.getPitchNumbers(0, 11).reverse();
+            this.targetPitchChoices = pitchChoices.map(pn => {
+              const pitch = Pitch.fromPitchNumber(pn);
+              return pitch.octavedSargamLetter
+            });
+            this.targetPitchIdx = this.targetPitchChoices.indexOf('S');
+          } else {
+            const low = this.piece.lowestPitchNumber;
+            const high = this.piece.highestPitchNumber;
+            const pnChoices = raga.getPitchNumbers(low, high).reverse();
+            this.targetPitchChoices = pnChoices.map(pn => {
+              const pitch = Pitch.fromPitchNumber(pn);
+              return pitch.octavedSargamLetter
+            });
+            this.targetPitchIdx = this.targetPitchChoices.indexOf('S');
+          }  
+        }
+      },
+
+      handleClickAnalysisType(atIdx) {
+        this.selectedATIdx = atIdx;
+        if (this.svg) {
+          this.topSvg.selectAll('*').remove();
+          this.topSvg.remove();
+          this.topSvg = undefined;
+          this.svg = undefined;
+        }
+        this.createGraph();
+
+      },
 
       addRect({
         svg = this.svg, 
@@ -158,6 +408,7 @@
         fSize = '12px',
         fWeight = 'normal',
         fill = 'black',
+        anchor = 'middle'
       } = {}) {
         return svg.append('text')
           .attr('x', x)
@@ -165,7 +416,7 @@
           .attr('font-size', fSize)
           .attr('font-weight', fWeight)
           .attr('fill', fill)
-          .attr('text-anchor', 'middle')
+          .attr('text-anchor', anchor)
           .attr('alignment-baseline', 'middle')
           .text(text)
       },
@@ -527,19 +778,282 @@
           this.topSvg = undefined;
           this.svg = undefined;
         }
+        if (this.selectedATIdx === 0) {
+          this.createPitchFrequencyGraph({ 
+            segmentation: this.segmentationType,
+            duration: this.duration,
+            pitchChroma: this.pitchChroma,
+            condensed: this.condensed,
+            heatmap: this.heatmap,
+            pitchRepresentation: this.pitchRepresentation,
+          })
+        } else if (this.selectedATIdx === 1) {
+          const sargam = this.pitchType === 'Sargam';
+          let tpChoices;
+          if (sargam) {
+            const low = this.piece.lowestPitchNumber;
+            const high = this.piece.highestPitchNumber;
+            tpChoices = this.pitchChroma ?
+              this.piece.raga.getPitchNumbers(0, 11).reverse() :
+              this.piece.raga.getPitchNumbers(low, high).reverse();
+          } else {
+            tpChoices = this.targetPitchChoices;
+          }
+          const tp = tpChoices[this.targetPitchIdx];
+          const targetPitch = this.targetPitchBool ? tp : undefined;
+          const minPatSize = this.minPatternSize ? this.minPatternSizeValue : 1;
+          this.createPatternCounterGraph({
+            segmentation: this.segmentationType,
+            duration: this.duration,
+            pitchChroma: this.pitchChroma,
+            fadeTime: this.fadeTime,
+            targetPitch: targetPitch,
+            minSize: minPatSize,
+            pitchType: this.pitchType,
+            plot: this.plot,
+          })
+        }
+      },
 
-        this.createPitchFrequencyGraph({ 
-          segmentation: this.segmentationType,
-          duration: this.duration,
-          pitchChroma: this.pitchChroma,
-          condensed: this.condensed,
-          heatmap: this.heatmap,
-          pitchRepresentation: this.pitchRepresentation,
+      createPatternCounterGraph({
+        segmentation = 'Section',
+        duration = 30,
+        pitchChroma = false,
+        pitchType = 'Pitch Number',
+        fadeTime = this.fadeTime,
+        targetPitch = undefined,
+        minSize = 1,
+        plot = false
+
+      } = {}) {
+        const pSizes = this.patternSizes
+            .filter((_, idx) => this.selectedPatternSizes[idx]);
+        let segments, title;
+        if (segmentation === 'Duration') {
+          segments = segmentByDuration(this.piece, { duration: duration });
+          title = `Patterns of Size ${pSizes.join(', ')}, ` + 
+            `Segmented into ${duration}s Durations`;
+        } else if (segmentation === 'Phrase') {
+          segments = this.piece.phrases.map(p => p.trajectories);
+          title = `Patterns of Size ${pSizes.join(', ')}, Segmented by Phrase`;
+        } else if (segmentation === 'Section') {
+          segments = this.piece.sections.map(s => s.trajectories);
+          title = `Patterns of Size ${pSizes.join(', ')}, Segmented by Section`;
+        } else if (segmentation === 'Transcription') {
+          segments = [this.piece.allTrajectories()];
+          title = `Patterns of Size ${pSizes.join(', ')} in Full Transcription`;
+        }
+        const pCounts = segments.map(s => {
+          const pCount = {};
+          let maxSize = 0;          
+          pSizes.forEach(ps => {
+              const options = {
+                size: ps,
+                outputType: pitchChroma ? 'chroma' : 'pitchNumber',
+                maxLagTime: fadeTime,
+                sort: true,
+                targetPitch: targetPitch,
+                minSize: minSize
+              }
+              const pc = patternCounter(s, options);
+              if (pc.length > maxSize) maxSize = pc.length;
+              pCount[ps] = pc
+            })
+          pCount['maxSize'] = maxSize;
+          return pCount;
         })
+        let verticalTot = 20 * pCounts
+          .map(pCount => (plot ? pCount.maxSize * 4 : pCount.maxSize) + 3)
+          .reduce((acc, v) => acc + v, 0);
+        const margin = { top: 100, right: 30, bottom: 20, left: 30 };
+        const sum = pSizes.reduce((acc, ps) => acc + ps, 0);
+        let totalWidth = (sum + 3 * pSizes.length) * 20 + margin.left;
+        // let totalWidth = 900;
+        let totalHeight = verticalTot + margin.top;
+        this.topSvg = d3.select(this.$refs.graph)
+          .append('svg')
+          .attr('width', totalWidth)
+          .attr('height', totalHeight)
+          .style('background-color', 'white')
+        this.svg = this.topSvg
+          .append('g')
+          .attr('transform', `translate(${margin.left}, ${margin.top})`)
+
+        // add title
+        this.addText({
+          x: totalWidth / 2,
+          y: -75,
+          text: this.piece.title,
+          fSize: '14px',
+          fWeight: 'bold'
+        });
+        this.addText({ 
+          x: totalWidth / 2, 
+          y: -55, 
+          text: title, 
+          fSize: '14px', 
+          fWeight: 'bold' 
+        });
+
+        let verticalOffset = 0;
+        pCounts.forEach((pCount, pcIdx) => {
+          if (segmentation === 'Section') {
+            this.addText({
+              x: 0,
+              y: verticalOffset * 20 - 15,
+              text: 'Section ' + (pcIdx + 1),
+              fSize: '12px',
+              fWeight: 'bold',
+              anchor: 'left'
+            })
+          } else if (segmentation === 'Duration') {
+            const txt = displayTime(pcIdx * duration) + ' - ' + 
+              displayTime((pcIdx + 1) * duration);
+            this.addText({
+              x: 0,
+              y: verticalOffset * 20 - 15,
+              text: txt,
+              fSize: '12px',
+              fWeight: 'bold',
+              anchor: 'left'
+            })
+          }
+          const sizes = Object.keys(pCount).filter(k => k !== 'maxSize');
+          let ct = 0;
+          sizes.forEach((size, sIdx) => {
+            const arr = pCount[size];
+            arr.forEach((patternObj, aIdx) => {
+              const y = plot ? 
+                  (4 * aIdx + verticalOffset) * 20 : 
+                  (aIdx + verticalOffset) * 20;
+              patternObj.pattern.forEach((patItem, patIdx) => {
+                const x = patIdx * 20 + ct * 20;
+                const chroma = pitchNumberToChroma(patItem);
+                const colors = [
+                  '#e6194b', 
+                  '#3cb44b', 
+                  '#ffe119', 
+                  '#4363d8', 
+                  '#f58231', 
+                  '#911eb4', 
+                  '#46f0f0', 
+                  '#f032e6', 
+                  '#bcf60c', 
+                  '#fabebe', 
+                  '#008080', 
+                  '#e6beff',
+                ]
+                const co = colors[chroma];
+                const x_ = x + 10;
+                const y_ = y + 10;
+                const blk = shouldTextBeBlack(co);
+                const txtColor = blk ? 'black' : 'white';
+                this.addRect({ x: x, y: y, w: 20, h: 20, fill: co });
+                let txt;
+                if (pitchType === 'Sargam') {
+                  const pitch = Pitch.fromPitchNumber(patItem);
+                  txt = pitch.octavedSargamLetter;
+                } else if (pitchType === 'Pitch Number') {
+                  txt = patItem;
+                }
+                this.addText({ x: x_, y: y_, text: txt, fill: txtColor })
+              })
+              const x = size * 20 + ct * 20 + 15;
+              // const y = (verticalOffset + aIdx) * 20 + 10;
+              this.addRect({ x: x-10, y: y, w: 20, h: 20, fill: 'black' })
+              this.addText({ x: x, y: y + 10, text: patternObj.count, fill: 'white' })
+
+              if (plot) {
+                let pattern = patternObj.pattern;
+                if (pitchChroma) {
+                  pattern = chromaSeqToCondensedPitchNums(pattern)
+                }
+                const pitches = pattern.map(p => {
+                  return Pitch.fromPitchNumber(p)
+                })
+                const da = [...Array(pitches.length-1)]
+                  .map(_ => 1 / (pitches.length-1))
+                const trajObj = {
+                  id: 6,
+                  pitches: pitches,
+                  durArray: da,
+                }
+                const traj = new Trajectory(trajObj);
+                const numPts = 50;
+                const pts = linSpace(0, 1, numPts);
+                let computes = pts.map(pt => traj.compute(pt, true));
+                const min = Math.min(...computes);
+                const initMax = Math.max(...computes);
+                computes = computes.map(c => c - min);
+                const max = Math.max(...computes);
+                if (max > 0) computes = computes.map(c => c / max);
+
+
+                const x_ = ct * 20;
+                // const x_end = x_ + 20 * pCount.maxSize;
+                const xScale = d3.scaleLinear()
+                  .domain([0, 1])
+                  .range([x_ + 10, x_ + 20 * size - 10])
+                const y = (4 * aIdx + verticalOffset) * 20 + 30;
+                const yScale = d3.scaleLinear()
+                  .domain([0, 1])
+                  .range([y + 40, y])
+                
+                
+                
+                const line = d3.line()
+                  .x((d, i) => xScale(pts[i]))
+                  .y((d, i) => yScale(d))
+                  
+                
+                
+                if (min !== initMax) {
+                  const nps = pitches.map(p => p.numberedPitch)
+                  const minP = Math.min(...nps);
+                  const maxP = Math.max(...nps);
+                  const pns = this.piece.raga.getPitchNumbers(minP, maxP);
+                  const ps = pns.map(p => Pitch.fromPitchNumber(p));
+                  const lines = ps.map(p => {
+                    return (p.logFreq - min) / (initMax - min)
+                  })
+                  lines.forEach(l => {
+                    this.svg.append('line')
+                      .attr('x1', x_)
+                      .attr('y1', yScale(l))
+                      .attr('x2', x_ + 20 * size)
+                      .attr('y2', yScale(l))
+                      .attr('stroke', 'lightgrey')
+                      .attr('stroke-width', 1)
+                  })
+                }
+                this.svg.append('path')
+                  .datum(computes)
+                  .attr('d', line)
+                  .attr('stroke', 'black')
+                  .attr('stroke-width', 1)
+                  .attr('fill', 'none')
+              }
+            })
+            ct += Number(size);      
+            ct += 3;
+          })
+          const offset = plot ? 3 * pCount.maxSize : pCount.maxSize;
+
+          verticalOffset += offset;
+          verticalOffset += 3;
+        })
+        
+
+
+        
       }
+
     },
 
     async mounted() {
+      const navHeight = this.$parent.$parent.navHeight;
+      const aboveHeight = this.controlsHeight + this.typeRowHeight + navHeight;
+      this.graphRowHeight = window.innerHeight - aboveHeight;
       try {
         const storedId = this.$store.state._id;
         const pieceDoesExist = await pieceExists(storedId);
@@ -550,6 +1064,16 @@
         })
         this.piece = await instantiatePiece(id);
         this.createGraph();
+        const low = this.piece.lowestPitchNumber;
+        const high = this.piece.highestPitchNumber;
+        const raga = this.piece.raga;
+        if (this.pitchChroma) {
+          this.targetPitchChoices = raga.getPitchNumbers(0, 11).reverse();
+          this.targetPitchIdx = this.targetPitchChoices.indexOf(0);
+        } else {
+          this.targetPitchChoices = raga.getPitchNumbers(low, high).reverse()
+          this.targetPitchIdx = this.targetPitchChoices.indexOf(0)
+        }  
       } catch (err) {
         console.log(err);
       }
@@ -567,15 +1091,24 @@
 
   .graph {
     overflow-x: scroll;
+    overflow-y: scroll;
     width: 90vw;
+    /* height: 100%; */
+    height: v-bind(graphRowHeight + 'px');
+    /* max-height: v-bind(graphRowHeight + 'px'); */
+    /* overflow-y: scroll; */
   }
 
   .graphContainer {
     width: 100%;
+    /* height: v-bind(graphRowHeight + 'px'); */
+    /* max-height: v-bind(graphRowHeight + 'px'); */
+    height: calc(100% - v-bind(controlsHeight + typeRowHeight + 100 + 'px'));
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    overflow-y: scroll;
   }
 
   .analysisControls {
@@ -584,7 +1117,7 @@
     justify-content: top;
     align-items: center;
     width: 100%;
-    height: 200px;
+    height: v-bind(controlsHeight + typeRowHeight + 'px');
     border-top: 1px solid black;
   }
 
@@ -594,7 +1127,7 @@
     justify-content: left;
     align-items: center;
     width: 100%;
-    height: 30px;
+    height: v-bind(typeRowHeight + 'px');
     background-color: #1e241e;
   }
 
@@ -634,8 +1167,8 @@
     flex-direction: column;
     justify-content: top;
     align-items: left;
-    width: 150px;
-    height: calc(100% - 20px);
+    width: v-bind(controlBoxWidth + 'px');
+    height: v-bind(controlsHeight - 20 + 'px');
     padding: 10px;
     /* border: 1px solid black; */
   }
@@ -668,11 +1201,85 @@
 
   #duration {
     max-width: 50px;
-    width: 30px;
+    width: 50px;
   }
 
   #fadeTime {
     /* max-width: 50px; */
+    width: 36px;
+    max-width: 36px;
+    padding: 0px;
+    margin: 0px;
+  }
+
+  #targetPitch {
+    max-width: 40px;
+    min-width: 40px;
+    width: 40px;
+    /* margin-left: 5px; */
+  }
+
+  label {
+    font-family: sans-serif;
+    width: 120px;
+    text-align: left;
+    
+  }
+
+  button {
+    font-family: sans-serif
+  }
+
+  input {
+    font-family: sans-serif;
+  }
+  
+
+  .rightInputRow {
+    display: flex;
+    flex-direction: row;
+    justify-content: right;
+    align-items: center;
+    width: 100%;
+    height: 25px;
+  }
+
+  .rightInputRow > label {
+    text-align: right;
+    margin-right: 5px;
+  }
+
+  .patternSizeLabel {
+    text-align: center;
+    height: 25px;
+  }
+
+  .patternSizeMatrix {
+    height: v-bind(controlsHeight - 40 + 'px');
+    min-height: v-bind(controlsHeight - 40 + 'px');
+    display: flex;
+    flex-direction: column;
+    justify-content: top;
+    align-items: center;
+    width: 100%;
+  }
+
+  .patternSizeRow {
+    display: flex;
+    flex-direction: row;
+    justify-content: left;
+    align-items: center;
+    width: v-bind(controlBoxWidth / 3 + 'px');
+    height: 25px;
+  }
+
+  .patternSizeRow > label {
+    margin-left: 5px;
+  }
+
+  .minPatternSizeInput {
     width: 30px;
+    min-width: 30px;
+    max-width: 30px;
   }
 </style>
