@@ -510,9 +510,6 @@ const patternCounter = (trajs, {
       articulation: obj.articulation 
     }
   })
-  
-
-
   // if dur of silence is less than maxLagTime, add it to the previous pitch
   let condensedDurations = [];
   durations.forEach((obj, idx) => {
@@ -546,7 +543,6 @@ const patternCounter = (trajs, {
           sel[pitch] = pIdx === arr.length - 1 ? 0 : {};
         }
         if (pIdx === arr.length - 1) {
-          // console.log(sel)
           sel[pitch] += 1
         }
         sel = sel[pitch];
@@ -616,14 +612,104 @@ const chromaSeqToCondensedPitchNums = (chromaSeq) => {
   return unsorted
 }
 
-const analyze = async () => {
-  const seq = [0, 2, 11, 7, 0, 9, 11];
-  const out = chromaSeqToCondensedPitchNums(seq);
-  console.log(out)
+const displayTime = (dur) => {
+  const hours = Math.floor(dur / 3600);
+  let minutes = Math.floor((dur - hours * 3600) / 60);
+  let seconds = dur % 60;
+  if (seconds.toString().length === 1) seconds = '0' + seconds;
+  if (hours !== 0) {
+    if (minutes.toString().length === 1) minutes = '0' + minutes;
+    return ([hours, minutes, seconds]).join(':')
+  } else {
+    return minutes + ':' + seconds 
+  }
+}
+
+const pitchPatternSegmenter = (trajs, {
+  targetDurThreshold = 1.5,
+} = {}) => {
+  const pitchTimes = PitchTimes(trajs);
+  // For all adjacent pitchs duplicates in pitchTimes list, remove all 
+  // second instances, unless articulation on second adjacent pitch is === true
+  pitchTimes.forEach((obj, idx) => {
+    if (idx === 0) {
+      return true
+    } else {
+      if (obj.pitch === pitchTimes[idx-1].pitch) {
+        if (obj.articulation === true) {
+          return true
+        } else {
+          pitchTimes.splice(idx, 1);
+        }
+      }
+    }
+  })
+  const endTime = trajs.reduce((sum, traj) => sum + traj.durTot, 0);
+  const ends = pitchTimes.map(obj => obj.time).slice(1).concat([endTime]);
+  const durations = pitchTimes.map((obj, idx) => {
+    return { 
+      dur: ends[idx] - obj.time, 
+      pitch: obj.pitch, 
+      articulation: obj.articulation,
+      startTime: displayTime(Math.round(obj.time))
+    }
+  })
+
+  // fold durations of all silences into previous pitch
+  let condensedDurations = [];
+  durations.forEach((obj, idx) => {
+    if (obj.pitch === 'silence') {
+      if (idx === 0) {
+        condensedDurations.push(obj)
+      } else {
+        condensedDurations[condensedDurations.length - 1].dur += obj.dur;
+      }
+    } else {
+      condensedDurations.push(obj );
+    }
+  });
+  // segment condensedDurs into arrays every time a duration is equal to or 
+  // greater than targetDurThreshold
+  let segments = [];
+  let subSegment = [];
+  condensedDurations.forEach(obj => {
+    if (obj.dur < targetDurThreshold) {
+      subSegment.push(obj);
+    } else {
+      if (subSegment.length > 0) {
+        subSegment.push(obj);
+        segments.push(subSegment);
+      } else {
+        segments.push([obj]);
+      }
+      subSegment = [];
+    }
+  })
+  return segments
 }
 
 
-// analyze();
+const analyze = async () => {
+  const piece = await instantiatePiece();
+  const trajs = piece.allTrajectories();
+  const segments = pitchPatternSegmenter(trajs, { targetDurThreshold: 1.4 });
+  // count up all the segment lengths
+  const lengths = segments.map(s => s.length);
+  const highIdxs = lengths.forEach((len, idx) => {
+    if (len >= 70) console.log(segments[idx][0], len)
+  })
+  const counts = {};
+  lengths.forEach(len => {
+    if (counts[len] === undefined) {
+      counts[len] = 0;
+    }
+    counts[len] += 1;
+  })
+  console.log(counts)
+}
+
+
+analyze();
 
 export { 
   instantiatePiece, 

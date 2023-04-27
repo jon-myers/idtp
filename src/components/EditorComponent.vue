@@ -2319,7 +2319,7 @@ export default {
                 const newKey = (phraseA.durTot - (delta - Number(key)))
                   .toFixed(2);
                 phraseA.chikaris[newKey] = phraseB.chikaris[key];
-                delete phraseB.chikaris;
+                delete phraseB.chikaris[key];
                 this.reIdChikari(key, newKey, phraseB, phraseA);
               } else {
                 const newKey = (Number(key) - delta).toFixed(2);
