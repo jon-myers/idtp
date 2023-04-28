@@ -322,7 +322,12 @@ const PitchTimes = (trajs, { outputType = 'pitchNumber' } = {}) => { // outputs 
   trajs.forEach((traj, tIdx) => {
     const art = traj.articulations[0] || traj.articulations['0.00'];
     if (traj.id === 12) {
-      const obj = { time: startTime, pitch: 'silence', articulation: false };
+      const obj = { 
+        time: startTime, 
+        pitch: 'silence', 
+        articulation: false,
+        newPhraseStart: traj.num === 0 
+      };
       pitchTimes.push(obj);
       startTime += traj.durTot;
     } else {
@@ -330,7 +335,8 @@ const PitchTimes = (trajs, { outputType = 'pitchNumber' } = {}) => { // outputs 
         const obj = { 
           time: startTime, 
           pitch: pitch.numberedPitch,
-          articulation: pIdx === 0 && (art !== undefined)
+          articulation: pIdx === 0 && (art !== undefined),
+          newPhraseStart: traj.num === 0 && pIdx === 0
         };
         pitchTimes.push(obj);
         if (pIdx < traj.pitches.length - 1) {
@@ -625,8 +631,52 @@ const displayTime = (dur) => {
   }
 }
 
+
+const testArr = [
+  { pitch: 0 },
+  { pitch: 1 },
+  { pitch: 2 },
+  { pitch: 0 },
+  { pitch: 1 },
+  { pitch: 0 },
+  { pitch: 1 },
+  { pitch: 3 },
+  { pitch: 2 },
+  { pitch: 3 }
+]
+
+const repetitionCutter = (subset) => {
+  // starting from the end of subset, steps backwards through the subset, 
+  // cutting into subgroups in which no pitch is repeated
+  const out = [];
+  let sub = [];
+  subset.slice().reverse().forEach((obj, idx) => {
+    if (sub.length === 0) {
+      sub.push(obj);
+    } else {
+      if (sub.map(o => o.pitch).includes(obj.pitch)) {
+        out.push(sub);
+        sub = [obj];
+      } else {
+        sub.push(obj)
+      }
+    }
+    if (idx === subset.length - 1) {
+      out.push(sub);
+    }
+  })
+  out.forEach(o => o.reverse());
+  out.reverse();
+
+  return out
+
+}
+
+// console.log(repetitionCutter(testArr))
+
 const pitchPatternSegmenter = (trajs, {
   targetDurThreshold = 1.5,
+  phraseLineCutoff = true
 } = {}) => {
   const pitchTimes = PitchTimes(trajs);
   // For all adjacent pitchs duplicates in pitchTimes list, remove all 
@@ -651,7 +701,8 @@ const pitchPatternSegmenter = (trajs, {
       dur: ends[idx] - obj.time, 
       pitch: obj.pitch, 
       articulation: obj.articulation,
-      startTime: displayTime(Math.round(obj.time))
+      startTime: displayTime(Math.round(obj.time)),
+      newPhraseStart: obj.newPhraseStart
     }
   })
 
@@ -673,6 +724,13 @@ const pitchPatternSegmenter = (trajs, {
   let segments = [];
   let subSegment = [];
   condensedDurations.forEach(obj => {
+    if (phraseLineCutoff && obj.newPhraseStart) {
+      // console.log('happens')
+      if (subSegment.length > 0) {
+        segments.push(subSegment);
+        subSegment = [];
+      }
+    }
     if (obj.dur < targetDurThreshold) {
       subSegment.push(obj);
     } else {
@@ -685,31 +743,43 @@ const pitchPatternSegmenter = (trajs, {
       subSegment = [];
     }
   })
-  return segments
+  const output = [];
+  segments.forEach(seg => {
+    if (repetitionCutter(seg).length === 1) {
+      // console.log(seg)
+      // console.log(repetitionCutter(seg))
+    }
+    // console.log(repetitionCutter(seg).length)
+    output.push(...repetitionCutter(seg))
+  })
+  return output
 }
 
 
 const analyze = async () => {
   const piece = await instantiatePiece();
   const trajs = piece.allTrajectories();
-  const segments = pitchPatternSegmenter(trajs, { targetDurThreshold: 1.4 });
+  const segments = pitchPatternSegmenter(trajs, { targetDurThreshold: 2.5 });
+  const out = segments.slice(0, 100).map(seg => seg.map(obj => obj.pitch));
+  console.log(out)
+  // console.log(segments[11])
   // count up all the segment lengths
-  const lengths = segments.map(s => s.length);
-  const highIdxs = lengths.forEach((len, idx) => {
-    if (len >= 70) console.log(segments[idx][0], len)
-  })
-  const counts = {};
-  lengths.forEach(len => {
-    if (counts[len] === undefined) {
-      counts[len] = 0;
-    }
-    counts[len] += 1;
-  })
-  console.log(counts)
+  // const lengths = segments.map(s => s.length);
+  // const highIdxs = lengths.forEach((len, idx) => {
+  //   if (len === 1) console.log(segments[idx][0], len)
+  // })
+  // const counts = {};
+  // lengths.forEach(len => {
+  //   if (counts[len] === undefined) {
+  //     counts[len] = 0;
+  //   }
+  //   counts[len] += 1;
+  // })
+  // console.log(counts)
 }
 
 
-analyze();
+// analyze();
 
 export { 
   instantiatePiece, 
