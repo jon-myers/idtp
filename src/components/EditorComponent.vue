@@ -4755,6 +4755,8 @@ export default {
             d3Select(`#pluck${id}`)
               .attr('stroke', this.selectedArtColor)
               .attr('fill', this.selectedArtColor)
+            // d3Select(`#overlay__${id}`)
+            //   .attr('cursor', 'pointer')
             this.updateArtColors(traj, true)
           })
         }
@@ -4976,7 +4978,7 @@ export default {
               .attr('fill', this.selectedArtColor)
               .attr('stroke', this.selectedArtColor)
             d3Select('#overlay__' + id)
-              .attr('cursor', 'default')
+              .attr('cursor', 'pointer')
             this.updateArtColors(traj, true)
           })
         }
