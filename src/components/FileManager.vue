@@ -47,7 +47,10 @@
       New Transcription
     </div>
     <div v-if="open_" class="dropDownRow" @click="openPieceAlt(piece)">
-      Open Transcription
+      Open In Editor
+    </div>
+    <div v-if="open_" class="dropDownRow" @click="openInAnalyzer(piece)">
+      Open In Analyzer
     </div>
     <div class="dropDownRow" @click="clonePiece(piece)" v-if='open_'>
       Clone Transcription
@@ -313,12 +316,23 @@ export default {
         piece = this.selectedPiece;
       }
       this.$store.commit('update_id', piece._id);
-      console.log('this is where it should be happening?')
       this.$cookies.set('currentPieceId', piece._id);
       this.$router.push({
         name: 'EditorComponent',
         query: { id: piece._id },
       });
+    },
+
+    openInAnalyzer(piece) {
+      if (piece === undefined) {
+        piece = this.selectedPiece;
+      }
+      this.$store.commit('update_id', piece._id);
+      this.$cookies.set('currentPieceId', piece._id);
+      this.$router.push({
+        name: 'AnalyzerComponent',
+        query: { id: piece._id },
+      })
     },
 
     designNewPiece() {

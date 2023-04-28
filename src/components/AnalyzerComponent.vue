@@ -245,7 +245,7 @@
       return {
         piece: undefined,
         analysisTypes: ['Pitch Prevalence', 'Pitch Patterns'],
-        selectedATIdx: 1,
+        selectedATIdx: 0,
         pitchPrevalenceTypes: ['Section', 'Phrase', 'Duration'],
         patternCountTypes: ['Transcription', 'Section', 'Duration'],
         pitchRepresentationTypes: ['Fixed Pitch', 'Pitch Onsets'],
