@@ -121,8 +121,12 @@ export default {
     }
   },
   
-  beforeUnmount() {
-    cleanEmptyDoc(this.uniqueId)
+  async beforeUnmount() {
+    try {
+        await cleanEmptyDoc(this.uniqueId)
+      } catch (err) {
+        console.log(err)
+      }
   },
   
   async mounted() {
@@ -151,11 +155,16 @@ export default {
   
   methods: {
     
-    closeWindow() {
+    async closeWindow() {
       this.$parent.showAddEvent = false;
       this.$parent.editingId = undefined;
       this.$parent.reset();
-      cleanEmptyDoc(this.uniqueId)
+      try {
+        await cleanEmptyDoc(this.uniqueId)
+      } catch (err) {
+        console.log(err)
+      }
+      
     },
     
     incrementSelectedRecording() {

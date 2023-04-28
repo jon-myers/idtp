@@ -40,6 +40,11 @@ cron.schedule('0 0 * * *', () => {
   spawn('python3', ['delete_unlinked_audio.py'])
 })
 
+// schedule a cron job to backup every day
+cron.schedule('0 0 * * *', () => {
+  spawn('python3', ['backups/backup_mongo.py'])
+});
+
 app.use(fileUpload({
   createParentPath: true
 }))
@@ -289,7 +294,7 @@ const runServer = async () => {
         const recordings = result.recordings;
         const idxs = Object.keys(recordings);
         idxs.forEach(async idx => {
-          const recID = recordings[idx].audioFileId.toString();
+          const recID = recordings[idx].audioFileId?.toString();
           // remove from peaks folder
           const peaksPath = 'peaks/' + recID + '.json';
           const spectrogramsPath = 'spectrograms' + recID;
@@ -519,7 +524,7 @@ const runServer = async () => {
       const projection = { projection: { _id: 0 } };
       try {
         const result = await audioEvents.findOne(query, projection)
-        if (Object.keys(result).length === 0) {
+        if (Object.keys(result).length <= 2) {
           const output = await audioEvents.deleteOne(query);
           res.json(output)
         }

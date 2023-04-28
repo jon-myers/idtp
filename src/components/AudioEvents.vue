@@ -404,6 +404,7 @@ export default {
     
     getHeight(audioEvent) {
       let ct = 0;
+      if (!audioEvent.recordings) return 0;
       Object.values(audioEvent.recordings).forEach(rec => {
         Object.keys(rec.raags).forEach(() => ct ++)
       });
