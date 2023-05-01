@@ -356,6 +356,7 @@ export default {
       grouped: false,
       panelHeight: 80,
       vib: false,
+      octShiftTop: 4,
     }
   },
   
@@ -388,7 +389,8 @@ export default {
     // add 'none' to end of consonantlist
     this.consonantList.push('none');
 
-    this.cIso_15919.push(undefined)
+    this.cIso_15919.push(undefined);
+    if (this.vocal) this.octShiftTop = 75;
 
 
   },
@@ -787,7 +789,7 @@ label.wide {
 
 .octShift {
   position: absolute;
-  top: 5px;
+  top: 75px;
   left: 5px;
   width: 100px;
   height: 25px;

@@ -2682,6 +2682,7 @@ export default {
           this.selectedTrajID = undefined;
           this.clearTrajSelectPanel();
           d3SelectAll('.dragDots').remove();
+          this.selectedTrajs = [];
         } else if (this.selectedTrajs.length > 1) {
           this.selectedTrajs.forEach(traj => {
             const trajID = `p${traj.phraseIdx}t${traj.num}`;
@@ -5197,6 +5198,7 @@ export default {
       tsp.startConsonant = undefined;
       tsp.endConsonant = undefined;
       tsp.vowel = undefined;
+
     },
 
     redrawChikaris() {
