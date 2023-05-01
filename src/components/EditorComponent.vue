@@ -63,6 +63,16 @@
               }) : ''}`}}
           </span>
         </div>
+        <div class='cbRow' v-if='vocal'>
+          <label>Phonemes</label>
+          <select 
+            v-model='phonemeRepresentation'
+            @change='updatePhonemeRepresentation'
+            :disabled='!editable'>
+            <option value='Devanagari'>Devanagari</option>
+            <option value='IPA'>IPA</option>
+          </select>
+        </div>
         <div class='instructionsIcon' @click='toggleInstructions'>?</div>
       </div>
       <TrajSelectPanel 
@@ -235,6 +245,8 @@ export default {
       playerHeight: 100,
       oldHeight: undefined,
       leftTime: 0,
+      phonemeRepresentation: 'IPA',
+      vocal: false,
     }
   },
   components: {
@@ -612,6 +624,7 @@ export default {
       tsp.trajIdxs = this.piece.trajIdxs;
       const vox = ['Vocal (M)', 'Vocal (F)'];
       tsp.vocal = vox.includes(this.piece.instrumentation[0]);
+      this.vocal = tsp.vocal;
       const silentDur = this.durTot - piece.durTot;
       if (silentDur >= 0.00001) {
         const stTrajObj = {
@@ -721,6 +734,22 @@ export default {
 
 
   methods: {
+
+    updatePhonemeRepresentation() {
+      const nodes = d3SelectAll('.consonant');
+      nodes.remove();
+      this.piece.phrases.forEach(phrase => {
+        phrase.trajectories.forEach(traj => {
+          const pIdx = phrase.pieceIdx;
+          const tIdx = traj.num;
+          const g = d3Select(`#articulations__p${pIdx}t${tIdx}`)
+          if (traj.id !== 12) {
+            this.addStartingConsonant(traj, phrase.startTime, g, true);
+            this.addEndingConsonant(traj, phrase.startTime, g, true);
+          }
+        })
+      })
+    },
 
     setRegionToPhrase(pIdx) {
       const phrase = this.piece.phrases[pIdx];
@@ -4073,10 +4102,13 @@ export default {
           const key = relKeys[0];
           const normedX = Number(key) * traj.durTot;
           const y_ = traj.compute(Number(key), true);
+          const text = this.phonemeRepresentation === 'IPA' ?
+            traj.articulations[key].ipa :
+            traj.articulations[key].hindi;
           const cd = {
             x: phraseStart + traj.startTime + normedX,
             y: y_,
-            text: traj.articulations[key].stroke
+            text: text
           }
           let x, y;
           if (codified) {
@@ -4112,10 +4144,13 @@ export default {
           const key = relKeys[0];
           const normedX = Number(key) * traj.durTot;
           const y_ = traj.compute(Number(key), true);
+          const text = this.phonemeRepresentation === 'IPA' ?
+            traj.articulations[key].ipa :
+            traj.articulations[key].hindi;
           const cd = {
             x: phraseStart + traj.startTime + normedX,
             y: y_,
-            text: traj.articulations[key].stroke
+            text: text
           }
           let x, y;
           if (codified) {
