@@ -393,6 +393,7 @@ export default {
 
     this.cIso_15919.push(undefined);
     if (this.vocal) this.octShiftTop = 75;
+    if (this.vocal && this.showSlope) this.octShiftTop = 97
 
 
   },
@@ -411,6 +412,14 @@ export default {
         if (this.vocal) {
           this.vowel = 'a'
         }
+      }
+    },
+
+    showSlope(newVal) {
+      if (newVal) {
+        this.octShiftTop = this.vocal ? 97 : 4;
+      } else {
+        this.octShiftTop = this.vocal ? 75 : 4;
       }
     },
 
@@ -794,7 +803,7 @@ label.wide {
 
 .octShift {
   position: absolute;
-  top: 75px;
+  top: v-bind(octShiftTop + 'px');
   left: 5px;
   width: 100px;
   height: 25px;
