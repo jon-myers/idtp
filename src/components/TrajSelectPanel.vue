@@ -412,9 +412,9 @@ export default {
 
     showSlope(newVal) {
       if (newVal) {
-        this.octShiftTop = 97;
+        this.octShiftTop = this.vocal ? 97 : 4;
       } else {
-        this.octShiftTop = 75;
+        this.octShiftTop = this.vocal ? 75 : 4;
       }
     },
 
