@@ -391,6 +391,7 @@ export default {
 
     this.cIso_15919.push(undefined);
     if (this.vocal) this.octShiftTop = 75;
+    if (this.vocal && this.showSlope) this.octShiftTop = 97
 
 
   },
@@ -406,6 +407,14 @@ export default {
         const slopeIdxs = [2, 3, 4, 5]
         this.showSlope = slopeIdxs.includes(this.trajIdxs[this.selectedIdx]);
         this.showVibObj = this.trajIdxs[this.selectedIdx] === 12;
+      }
+    },
+
+    showSlope(newVal) {
+      if (newVal) {
+        this.octShiftTop = 97;
+      } else {
+        this.octShiftTop = 75;
       }
     },
 
@@ -789,7 +798,7 @@ label.wide {
 
 .octShift {
   position: absolute;
-  top: 75px;
+  top: v-bind(octShiftTop + 'px');
   left: 5px;
   width: 100px;
   height: 25px;
