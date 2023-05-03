@@ -1199,6 +1199,7 @@ export default {
             pos = 4
           }
         }
+        console.log(pos, p.pitch.octavedSargamLetter)
         const positions = [
           { x: 0, y: 12 },
           { x: 0, y: -12 },
@@ -4166,7 +4167,7 @@ export default {
             .attr('font-size', '15px')
             .attr('text-anchor', 'middle')
             .data([cd])
-            .attr('transform', d => `translate(${x(d)}, ${y(d)-8})`)
+            .attr('transform', d => `translate(${x(d)}, ${y(d) - 14})`)
             .text(cd.text)
         }
       }
@@ -4215,7 +4216,7 @@ export default {
             .attr('font-size', '15px')
             .attr('text-anchor', 'middle')
             .data([cd])
-            .attr('transform', d => `translate(${x(d)}, ${y(d)-8})`)
+            .attr('transform', d => `translate(${x(d)}, ${y(d) - 14})`)
             .text(cd.text)
         }
       }
@@ -4252,7 +4253,7 @@ export default {
           .attr('font-size', '15px')
           .attr('text-anchor', 'middle')
           .data([cd])
-          .attr('transform', d => `translate(${x(d)}, ${y(d)-8})`)
+          .attr('transform', d => `translate(${x(d)}, ${y(d) - 14})`)
           .text(cd.text)
       }
     },
@@ -4278,7 +4279,7 @@ export default {
           }
           d3Select(`#startConsonantp${traj.phraseIdx}t${traj.num}`)
             .data([cd])
-            .attr('transform', d => `translate(${x(d)}, ${y(d)-8})`)
+            .attr('transform', d => `translate(${x(d)}, ${y(d) - 14})`)
         }
       }
     },
@@ -4308,7 +4309,7 @@ export default {
         }
         d3Select(`#vowelp${traj.phraseIdx}t${traj.num}`)
           .data([cd])
-          .attr('transform', d => `translate(${x(d)}, ${y(d)-8})`)
+          .attr('transform', d => `translate(${x(d)}, ${y(d) - 14})`)
       }
     },
 
@@ -4371,7 +4372,7 @@ export default {
           }
           d3Select(`#endConsonantp${traj.phraseIdx}t${traj.num}`)
             .data([cd])
-            .attr('transform', d => `translate(${x(d)}, ${y(d)-8})`)
+            .attr('transform', d => `translate(${x(d)}, ${y(d) - 14})`)
         }
       }
     },
