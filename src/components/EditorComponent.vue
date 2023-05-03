@@ -1184,9 +1184,9 @@ export default {
         const nextHigher = nextP ? nextP.logFreq > p.logFreq: true;
         let pos;
         if (lastHigher && nextHigher) {
-          pos = 0; // top
+          pos = 0; // bottom
         } else if (!lastHigher && !nextHigher) {
-          pos = 1; // bottom
+          pos = 1; // top
         } else if (lastHigher && !nextHigher) {
           pos = 3; // bottom left
         } else if (!lastHigher && nextHigher) {
@@ -1199,14 +1199,16 @@ export default {
             pos = 4
           }
         }
+        if (this.vocal && pos === 1) pos = 0;
+        if (this.vocal && pos === 2) pos = 5;
         console.log(pos, p.pitch.octavedSargamLetter)
         const positions = [
-          { x: 0, y: 12 },
-          { x: 0, y: -12 },
-          { x: -5, y: -12 },
-          { x: -5, y: 12 },
-          { x: 5, y: -12 },
-          { x: 5, y: 12}
+          { x: 0, y: 15 },
+          { x: 0, y: -15 },
+          { x: -5, y: -15 },
+          { x: -5, y: 15 },
+          { x: 5, y: -15 },
+          { x: 5, y: 15 }
         ]
         const x = this.codifiedXR(p.time);
         const y = this.codifiedYR(p.logFreq);
