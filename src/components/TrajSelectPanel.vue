@@ -415,7 +415,7 @@ export default {
         const slopeIdxs = [2, 3, 4, 5]
         this.showSlope = slopeIdxs.includes(this.trajIdxs[this.selectedIdx]);
         this.showVibObj = this.trajIdxs[this.selectedIdx] === 12;
-        if (this.vocal) {
+        if (this.vocal && this.vowel === undefined) {
           this.vowel = 'a'
         }
       }

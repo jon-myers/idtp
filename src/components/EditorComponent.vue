@@ -71,7 +71,7 @@
             >
             <option value='Devanagari'>Devanagari</option>
             <option value='IPA'>IPA</option>
-            <option value='English'>English</option>
+            <option value='English'>Roman</option>
           </select>
         </div>
         <div class='instructionsIcon' @click='toggleInstructions'>?</div>
