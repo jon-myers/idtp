@@ -5,8 +5,12 @@
     ${["", "vocal"][Number(vocal)]} \
     ${["", "vib"][Number(showVibObj)]}`'>
     <div class='octShift' v-if='$parent.selectedTrajs.length > 0'>
-      <button class='octUp' @click='shiftOct(1)'>&#8593</button>
-      <button class='octDown' @click='shiftOct(-1)'>&#8595</button>
+      <button class='octUp' @click='shiftOct(1)' :disabled='!editable'>
+        &#8593
+      </button>
+      <button class='octDown' @click='shiftOct(-1)' :disabled='!editable'>
+        &#8595
+      </button>
     </div>
     <div class='selectionRow checks' v-if='$parent.groupable'>
       <label>Grouped</label>
@@ -392,6 +396,8 @@ export default {
     this.consonantList.push('none');
 
     this.cIso_15919.push(undefined);
+    // const vox = ['Vocal (M)', 'Vocal (F)'];
+    // this.vocal = vox.includes(this.$parent.piece.instrumentation[0])
     if (this.vocal) this.octShiftTop = 75;
     if (this.vocal && this.showSlope) this.octShiftTop = 97
 
@@ -416,10 +422,19 @@ export default {
     },
 
     showSlope(newVal) {
+      console.log(newVal)
       if (newVal) {
         this.octShiftTop = this.vocal ? 97 : 4;
       } else {
         this.octShiftTop = this.vocal ? 75 : 4;
+      }
+    },
+
+    vocal(newVal) {
+      if (newVal) {
+        this.octShiftTop = this.showSlope ? 97 : 75;
+      } else {
+        this.octShiftTop = 4;
       }
     },
 
