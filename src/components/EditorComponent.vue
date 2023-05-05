@@ -395,7 +395,8 @@ export default {
         })
       }
       //
-      this.codifiedAddTraj(newTraj, phrase.startTime);
+      const vowelIdxs = phrase.firstTrajIdxs();
+      this.codifiedAddTraj(newTraj, phrase.startTime, vowelIdxs);
       this.selectedTraj = newTraj;
       this.selectedTrajs = [this.selectedTraj];
       this.selectedTrajID = `p${newTraj.phraseIdx}t${newTraj.num}`;
@@ -755,6 +756,7 @@ export default {
       const vNodes = d3SelectAll('.vowel');
       vNodes.remove();
       this.piece.phrases.forEach(phrase => {
+        const vowelIdxs = phrase.firstTrajIdxs();
         phrase.trajectories.forEach(traj => {
           const pIdx = phrase.pieceIdx;
           const tIdx = traj.num;
@@ -762,7 +764,9 @@ export default {
           if (traj.id !== 12) {
             this.addStartingConsonant(traj, phrase.startTime, g, true);
             this.addEndingConsonant(traj, phrase.startTime, g, true);
-            this.addVowel(traj, phrase.startTime, g, true);
+            if (vowelIdxs.includes(traj.num)) {
+              this.addVowel(traj, phrase.startTime, g, true);
+            }
           }
         })
       })
@@ -1100,7 +1104,8 @@ export default {
               }
             })
           }
-          this.codifiedAddTraj(newTraj, targetPhrase.startTime)
+          const vowelIdxs = targetPhrase.firstTrajIdxs();
+          this.codifiedAddTraj(newTraj, targetPhrase.startTime, vowelIdxs)
           this.pastedTrajs.push(newTraj);
         });
         
@@ -1201,7 +1206,6 @@ export default {
         }
         if (this.vocal && pos === 1) pos = 0;
         if (this.vocal && pos === 2) pos = 5;
-        console.log(pos, p.pitch.octavedSargamLetter)
         const positions = [
           { x: 0, y: 15 },
           { x: 0, y: -15 },
@@ -2571,7 +2575,8 @@ export default {
       if (startsEqual && endsEqual) { // if taking up entire silent traj
         phrase.trajectories[tIdx] = newTraj;
         phrase.reset();
-        this.codifiedAddTraj(newTraj, phrase.startTime);
+        const vowelIdxs = phrase.firstTrajIdxs();
+        this.codifiedAddTraj(newTraj, phrase.startTime, vowelIdxs);
         this.selectedTraj = newTraj;
         this.selectedTrajs = [this.selectedTraj];
         this.selectedTrajID = `p${newTraj.phraseIdx}t${newTraj.num}`;
@@ -2601,7 +2606,8 @@ export default {
         silentTraj.durTot = silentTraj.durTot - durTot;
         phrase.trajectories.splice(tIdx + 1, 0, newTraj);
         phrase.reset();
-        this.codifiedAddTraj(newTraj, phrase.startTime);
+        const vowelIdxs = phrase.firstTrajIdxs();
+        this.codifiedAddTraj(newTraj, phrase.startTime, vowelIdxs);
         this.selectedTraj = newTraj;
         this.selectedTrajs = [this.selectedTraj];
         this.selectedTrajID = `p${newTraj.phraseIdx}t${newTraj.num}`;
@@ -2652,7 +2658,8 @@ export default {
           phrase.reset();
           this.trajTimePts[1].tIdx += 2;
         }
-        this.codifiedAddTraj(newTraj, phrase.startTime);
+        const vowelIdxs = phrase.firstTrajIdxs();
+        this.codifiedAddTraj(newTraj, phrase.startTime, vowelIdxs);
         this.trajTimePts.splice(0, 1);
         d3SelectAll('.newSeriesDot').remove();
         this.phraseG 
@@ -4007,14 +4014,15 @@ export default {
               .on('mouseout', this.handleMouseOut)
               .on('click', this.handleClickTraj)
           }
-          this.addArticulations(traj, phrase.startTime)
+          const vowelIdxs = phrase.firstTrajIdxs();
+          this.addArticulations(traj, phrase.startTime, vowelIdxs)
         })
       });
       this.addChikaris();
       this.addPlayhead();
     },
 
-    addArticulations(traj, phraseStart) {
+    addArticulations(traj, phraseStart, vowelIdxs) {
       const g = this.phraseG.append('g')
         .attr('id', `articulations__p${traj.phraseIdx}t${traj.num}`)
       this.addPlucks(traj, phraseStart, g)
@@ -4024,11 +4032,13 @@ export default {
       if (this.vocal) {
         this.addStartingConsonant(traj, phraseStart, g)
         this.addEndingConsonant(traj, phraseStart, g)
-        this.addVowel(traj, phraseStart, g)
+        if (vowelIdxs.includes(traj.num)) {
+          this.addVowel(traj, phraseStart, g)
+        }
       }   
     },
 
-    codifiedAddArticulations(traj, phraseStart) {
+    codifiedAddArticulations(traj, phraseStart, vowelIdxs) {
       const g = this.phraseG.append('g')
         .attr('id', `articulations__p${traj.phraseIdx}t${traj.num}`)
       this.codifiedAddPlucks(traj, phraseStart, g);
@@ -4038,7 +4048,9 @@ export default {
       if (this.vocal) {
         this.addStartingConsonant(traj, phraseStart, g, true);
         this.addEndingConsonant(traj, phraseStart, g, true);
-        this.addVowel(traj, phraseStart, g, true);
+        if (vowelIdxs.includes(traj.num)) {
+          this.addVowel(traj, phraseStart, g, true);
+        }
       }
     },
 
@@ -5711,7 +5723,10 @@ export default {
       d3Select(`#${trajID}`).remove();
       d3Select(`#overlay__${trajID}`).remove();
       d3Select(`#articulations__${trajID}`).remove();
-      this.codifiedAddTraj(traj, this.piece.phraseStarts[traj.phraseIdx]);
+      const phrase = this.piece.phrases[traj.phraseIdx];
+      const vowelIdxs = phrase.firstTrajIdxs();
+      const startTime = this.piece.phraseStarts[traj.phraseIdx];
+      this.codifiedAddTraj(traj, startTime, vowelIdxs);
       this.updateArtColors(traj, true);
       if (traj === this.selectedTraj) this.addAllDragDots();
       if (this.selectedTrajs.includes(traj)) {
@@ -5725,7 +5740,7 @@ export default {
       }
     },
 
-    codifiedAddTraj(traj, phraseStart) {
+    codifiedAddTraj(traj, phraseStart, vowelIdxs) {
       const data = this.makeTrajData(traj, phraseStart);
       this.phraseG.append('path')
         .datum(data)
@@ -5750,14 +5765,17 @@ export default {
         .on('mouseover', this.handleMouseOver)
         .on('mouseout', this.handleMouseOut)
         .on('click', this.handleClickTraj)
-      this.codifiedAddArticulations(traj, phraseStart)
+      this.codifiedAddArticulations(traj, phraseStart, vowelIdxs)
     },
     
     codifiedAddPhrases() {
       this.addSargamLines(true);
       this.piece.phrases.forEach(phrase => {
+        const vowelIdxs = phrase.firstTrajIdxs();
         phrase.trajectories.forEach(traj => {
-          if (traj.id !== 12) this.codifiedAddTraj(traj, phrase.startTime)
+          if (traj.id !== 12) {
+            this.codifiedAddTraj(traj, phrase.startTime, vowelIdxs)
+          }
         });
       })
       this.codifiedAddChikari();

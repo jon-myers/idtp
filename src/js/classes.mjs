@@ -1359,6 +1359,36 @@ class Phrase {
     return allPitches
   }
 
+  firstTrajIdxs() {
+    // returns the indexes of each traj that non-silent and 1) is the first of 
+    // the phrase, or 2) is preceded by a silent traj, or 3) has a starting 
+    // consonant, or 4) follows a traj that has an ending consonant, or 5) is a
+    // different vowel than the previous non silent traj
+    // for the purpose of displaying vowels in vocal notation
+    const idxs = [];
+    let ct = 0;
+    let silentTrigger = false;
+    let lastVowel = undefined;
+    let endConsonantTrigger = undefined;
+    this.trajectories.forEach((traj, tIdx) => {
+      if (traj.id !== 12) {
+        const c1 = ct === 0;
+        const c2 = silentTrigger;
+        const c3 = traj.startConsonant !== undefined;
+        const c4 = endConsonantTrigger;
+        const c5 = traj.vowel !== lastVowel;
+        if (c1 || c2 || c3 || c4 || c5) {
+          idxs.push(tIdx);
+        }
+        ct += 1;
+        endConsonantTrigger = traj.endConsonant !== undefined;
+        lastVowel = traj.vowel;
+      }
+      silentTrigger = traj.id === 12;
+    });
+    return idxs
+  }
+
   toJSON() {
     return {
       durTot: this.durTot,
