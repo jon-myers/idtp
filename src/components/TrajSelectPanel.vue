@@ -345,7 +345,7 @@ export default {
       urlsFiltered: [],
       kNumsFiltered: [],
       vocal: false,
-      vowel: undefined,
+      vowel: 'a',
       ipaVowels: ['a', 'b', 'c'],
       englishWords: [],
       hindiVowels: [],
@@ -374,6 +374,7 @@ export default {
     this.ipaVowels = result.map(v => v.ipa);
     this.iso_15919 = result.map(v => v.iso_15919);
     this.englishWords = result.map(v => v.english);
+    this.englishTrans = result.map(v => v.eng_trans);
     this.hindiVowels = result.map(v => v.hindi.initial);
     this.vowelList = result.map(v => {
       return `${v.hindi.initial} - ${v.iso_15919} (${v.english})`
@@ -382,6 +383,7 @@ export default {
     const consonantResults = await getConsonants();
     this.cIpa = consonantResults.map(v => v.ipa);
     this.cIso_15919 = consonantResults.map(v => v.iso_15919);
+    this.cEngTrans = consonantResults.map(v => v.eng_trans);
     
     this.cExample = consonantResults.map(v => v.example);
     this.hindiConsonants = consonantResults.map(v => v.hindi);
@@ -413,6 +415,9 @@ export default {
         const slopeIdxs = [2, 3, 4, 5]
         this.showSlope = slopeIdxs.includes(this.trajIdxs[this.selectedIdx]);
         this.showVibObj = this.trajIdxs[this.selectedIdx] === 12;
+        if (this.vocal && this.vowel === undefined) {
+          this.vowel = 'a'
+        }
       }
     },
 

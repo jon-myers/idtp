@@ -301,10 +301,16 @@ class Articulation {
   // pluck, hammer-off, hammer-on, slide, pluck, dampen
   constructor({
     name = 'pluck',
-    stroke = undefined
+    stroke = undefined,
+    hindi = undefined,
+    ipa = undefined,
+    engTrans = undefined,
   } = {}) {
     this.name = name
-    if (stroke !== undefined) this.stroke = stroke
+    if (stroke !== undefined) this.stroke = stroke;
+    if (hindi !== undefined) this.hindi = hindi;
+    if (ipa !== undefined) this.ipa = ipa;
+    if (engTrans !== undefined) this.engTrans = engTrans;
   }
 }
 
@@ -355,8 +361,15 @@ class Trajectory {
     vibObj = undefined,
     instrumentation = 'Sitar',
     vowel = undefined,
+    vowelIpa = undefined,
+    vowelHindi = undefined,
+    vowelEngTrans = undefined,
     startConsonant = undefined,
+    startConsonantHindi = undefined,
+    startConsonantIpa = undefined,
     endConsonant = undefined,
+    endConsonantHindi = undefined,
+    endConsonantIpa = undefined,
     groupId = undefined,
   } = {}) {
     if (typeof(id) === 'number' && Number.isInteger(id)) {
@@ -453,21 +466,32 @@ class Trajectory {
       vibrato: 13
     };
     this.vowel = vowel;
+    this.vowelIpa = vowelIpa;
+    this.vowelHindi = vowelHindi;
+    this.vowelEngTrans = vowelEngTrans;
     this.startConsonant = startConsonant;
+    this.startConsonantHindi = startConsonantHindi;
+    this.startConsonantIpa = startConsonantIpa;
     this.endConsonant = endConsonant;
+    this.endConsonantHindi = endConsonantHindi;
+    this.endConsonantIpa = endConsonantIpa;
     this.groupId = groupId;
 
     if (this.startConsonant !== undefined) {
       this.articulations['0.00'] = new Articulation({
         name: 'consonant',
-        stroke: this.startConsonant
+        stroke: this.startConsonant,
+        hindi: this.startConsonantHindi,
+        ipa: this.startConsonantIpa
       })
     }
 
     if (this.endConsonant !== undefined) {
       this.articulations['1.00'] = new Articulation({
         name: 'consonant',
-        stroke: this.endConsonant
+        stroke: this.endConsonant,
+        hindi: this.endConsonantHindi,
+        ipa: this.endConsonantIpa
       })
     }
 
@@ -559,6 +583,25 @@ class Trajectory {
         }
       })
     }
+    this.cIpas = ['k', 'kʰ', 'g', 'gʱ', 'ŋ', 'c', 'cʰ', 'ɟ', 'ɟʱ', 'ɲ', 'ʈ', 
+      'ʈʰ', 'ɖ', 'ɖʱ', 'n', 't', 'tʰ', 'd', 'dʱ', 'n̪', 'p', 'pʰ', 'b', 'bʱ', 
+      'm', 'j', 'r', 'l', 'v', 'ʃ', 'ʂ', 's', 'h'];
+    this.cIsos = ['ka', 'kha', 'ga', 'gha', 'ṅa', 'ca', 'cha', 'ja', 'jha', 
+      'ña', 'ṭa', 'ṭha', 'ḍa', 'ḍha', 'na', 'ta', 'tha', 'da', 'dha', 'na', 
+      'pa', 'pha', 'ba', 'bha', 'ma', 'ya', 'ra', 'la', 'va', 'śa', 'ṣa', 'sa', 
+      'ha'];
+    this.cHindis = ['क', 'ख', 'ग', 'घ', 'ङ', 'च', 'छ', 'ज', 'झ', 'ञ', 'ट', 
+      'ठ', 'ड', 'ढ', 'न', 'त', 'थ', 'द', 'ध', 'न', 'प', 'फ़', 'ब', 'भ', 'म', 'य', 
+      'र', 'ल', 'व', 'श', 'ष', 'स', 'ह'];
+    this.cEngTrans = ['k', 'kh', 'g', 'gh', 'ṅ', 'c', 'ch', 'j', 'jh', 'ñ', 'ṭ', 
+      'ṭh', 'ḍ', 'ḍh', 'n', 't', 'th', 'd', 'dh', 'n', 'p', 'ph', 'b', 'bh', 
+      'm', 'y', 'r', 'l', 'v', 'ś', 'ṣ', 's', 'h'];
+    this.vIpas = ['ə', 'aː', 'ɪ', 'iː', 'ʊ', 'uː', 'eː', 'ɛː', 'oː', 'ɔː'];
+    this.vIsos = ['a', 'ā', 'i', 'ī', 'u', 'ū', 'ē', 'ai', 'ō', 'au'];
+    this.vHindis = ['अ', 'आ', 'इ', 'ई', 'उ', 'ऊ', 'ए', 'ऐ', 'ओ', 'औ'];
+    this.vEngTrans = ['a', 'ā', 'i', 'ī', 'u', 'ū', 'ē', 'ai', 'ō', 'au'];
+
+    this.convertCIsoToHindiAndIpa()
   }
 
 
@@ -764,12 +807,18 @@ class Trajectory {
   removeConsonant(start=true) {
     if (start) {
       this.startConsonant = undefined;
+      this.startConsonantHindi = undefined;
+      this.startConsonantIpa = undefined;
+      this.startConsonantEngTrans = undefined;
       const art = this.articulations['0.00'];
       if (art && art.name === 'consonant') {
         delete this.articulations['0.00'];
       }
     } else {
       this.endConsonant = undefined;
+      this.endConsonantHindi = undefined;
+      this.endConsonantIpa = undefined;
+      this.endConsonantEngTrans = undefined;
       const art = this.articulations['1.00'];
       if (art && art.name === 'consonant') {
         delete this.articulations['1.00'];
@@ -778,26 +827,57 @@ class Trajectory {
   }
 
   addConsonant(consonant, start=true) {
+    const idx = this.cIsos.indexOf(consonant);
+    const hindi = this.cHindis[idx];
+    const ipa = this.cIpas[idx];
+    const engTrans = this.cEngTrans[idx];
     const art = new Articulation({
       name: 'consonant',
-      stroke: consonant
+      stroke: consonant,
+      hindi: hindi,
+      ipa: ipa,
+      engTrans: engTrans,
     });
     if (start) {
       this.startConsonant = consonant;
+      this.startConsonantHindi = hindi;
+      this.startConsonantIpa = ipa;
+      this.startConsonantEngTrans = engTrans
       this.articulations['0.00'] = art;
     } else {
       this.endConsonant = consonant;
+      this.endConsonantHindi = hindi;
+      this.endConsonantIpa = ipa;
+      this.endConsonantEngTrans = engTrans;
       this.articulations['1.00'] = art;
     }
   }
 
   changeConsonant(consonant, start=true) {
+    const idx = this.cIsos.indexOf(consonant);
+    const hindi = this.cHindis[idx];
+    const ipa = this.cIpas[idx];
+    const engTrans = this.cEngTrans[idx];
     if (start) {
       this.startConsonant = consonant;
-      this.articulations['0.00'].stroke = consonant;
+      this.startConsonantHindi = hindi;
+      this.startConsonantIpa = ipa;
+      this.startConsonantEngTrans = engTrans;
+      const art = this.articulations['0.00'];
+      art.stroke = consonant;
+      art.hindi = hindi;
+      art.ipa = ipa;
+      art.engTrans = engTrans;
     } else {
       this.endConsonant = consonant;
-      this.articulations['1.00'].stroke = consonant;
+      this.endConsonantHindi = hindi;
+      this.endConsonantIpa = ipa;
+      this.endConsonantEngTrans = engTrans;
+      const art = this.articulations['1.00'];
+      art.stroke = consonant;
+      art.hindi = hindi;
+      art.ipa = ipa;
+      art.engTrans = engTrans;
     }
   }
 
@@ -888,6 +968,76 @@ class Trajectory {
     }
   }
 
+  convertCIsoToHindiAndIpa() {
+    // if the consonants and vowels are in cIso_15919, add fields for hindi and 
+    // ipa. If that works, delete the cIso_15919 fields.
+
+    const keys = Object.keys(this.articulations);
+    keys.forEach(key => {
+      const art = this.articulations[key];
+      if (art.name === 'consonant') {
+        const cIso = art.stroke;
+        const idx = this.cIsos.indexOf(cIso);
+        if (!art['hindi']) {
+          art['hindi'] = this.cHindis[idx];
+        } 
+        if (!art['ipa']) {
+          art['ipa'] = this.cIpas[idx];
+        }
+        if (!art['engTrans']) {
+          art['engTrans'] = this.cEngTrans[idx];
+        }
+      }
+    })
+    if (this.startConsonant !== undefined) {
+      const cIso = this.startConsonant;
+      const idx = this.cIsos.indexOf(cIso);
+      if (!this.startConsonantHindi) {
+        this.startConsonantHindi = this.cHindis[idx];
+      }
+      if (!this.startConsonantIpa) {
+        this.startConsonantIpa = this.cIpas[idx];
+      }
+      if (!this.startConsonantEngTrans) {
+        this.startConsonantEngTrans = this.cEngTrans[idx];
+      }
+    }
+    if (this.endConsonant !== undefined) {
+      const cIso = this.endConsonant;
+      const idx = this.cIsos.indexOf(cIso);
+      if (!this.endConsonantHindi) {
+        this.endConsonantHindi = this.cHindis[idx];
+      }
+      if (!this.endConsonantIpa) {
+        this.endConsonantIpa = this.cIpas[idx];
+      }
+      if (!this.endConsonantEngTrans) {
+        this.endConsonantEngTrans = this.cEngTrans[idx];
+      }
+    }
+    if (this.vowel !== undefined) {
+      const vIso = this.vowel;
+      const idx = this.vIsos.indexOf(vIso);
+      if (!this.vowelHindi) {
+        this.vowelHindi = this.vHindis[idx];
+      }
+      if (!this.vowelIpa) {
+        this.vowelIpa = this.vIpas[idx];
+      }
+      if (!this.vowelEngTrans) {
+        this.vowelEngTrans = this.vEngTrans[idx];
+      }
+    }
+  }
+
+  updateVowel(vIso) {
+    const idx = this.vIsos.indexOf(vIso);
+    this.vowel = vIso;
+    this.vowelHindi = this.vHindis[idx];
+    this.vowelIpa = this.vIpas[idx];
+    this.vowelEngTrans = this.vEngTrans[idx];
+  }
+
   toJSON() {
     return {
       id: this.id,
@@ -904,7 +1054,13 @@ class Trajectory {
       instrumentation: this.instrumentation,
       vowel: this.vowel,
       startConsonant: this.startConsonant,
+      startConsonantHindi: this.startConsonantHindi,
+      startConsonantIpa: this.startConsonantIpa,
+      startConsonantEngTrans: this.startConsonantEngTrans,
       endConsonant: this.endConsonant,
+      endConsonantHindi: this.endConsonantHindi,
+      endConsonantIpa: this.endConsonantIpa,
+      endConsonantEngTrans: this.endConsonantEngTrans,
       groupId: this.groupId
     }
   }
@@ -1201,6 +1357,36 @@ class Phrase {
       })
     }
     return allPitches
+  }
+
+  firstTrajIdxs() {
+    // returns the indexes of each traj that non-silent and 1) is the first of 
+    // the phrase, or 2) is preceded by a silent traj, or 3) has a starting 
+    // consonant, or 4) follows a traj that has an ending consonant, or 5) is a
+    // different vowel than the previous non silent traj
+    // for the purpose of displaying vowels in vocal notation
+    const idxs = [];
+    let ct = 0;
+    let silentTrigger = false;
+    let lastVowel = undefined;
+    let endConsonantTrigger = undefined;
+    this.trajectories.forEach((traj, tIdx) => {
+      if (traj.id !== 12) {
+        const c1 = ct === 0;
+        const c2 = silentTrigger;
+        const c3 = traj.startConsonant !== undefined;
+        const c4 = endConsonantTrigger;
+        const c5 = traj.vowel !== lastVowel;
+        if (c1 || c2 || c3 || c4 || c5) {
+          idxs.push(tIdx);
+        }
+        ct += 1;
+        endConsonantTrigger = traj.endConsonant !== undefined;
+        lastVowel = traj.vowel;
+      }
+      silentTrigger = traj.id === 12;
+    });
+    return idxs
   }
 
   toJSON() {
