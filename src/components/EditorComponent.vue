@@ -460,7 +460,6 @@ export default {
           this.selectedTraj.articulations['0.00'] = new Articulation();
           const pIdx = this.selectedTraj.phraseIdx;
           const tIdx = this.selectedTraj.num;
-          console.log(pIdx, tIdx)
           const phrase = this.piece.phrases[pIdx];
           const g = d3Select(`#articulations__p${pIdx}t${tIdx}`)
           this.codifiedAddPlucks(this.selectedTraj, phrase.startTime, g)
@@ -469,7 +468,6 @@ export default {
         if (c1) {
           delete this.selectedTraj.articulations[0];
           delete this.selectedTraj.articulations['0.00']
-          console.log(4)
           this.removePlucks(this.selectedTraj)
         }
       }
@@ -520,10 +518,8 @@ export default {
       const g = d3Select(`#articulations__p${pIdx}t${tIdx}`);
       const selected = d3Select(`#vowelp${pIdx}t${tIdx}`);
       if (selected.node() === null) {
-        console.log('this')
         this.addVowel(this.selectedTraj, phrase.startTime, g, true)
       } else {
-        console.log('that')
         selected.remove();
         this.addVowel(this.selectedTraj, phrase.startTime, g, true)
       }
@@ -1305,8 +1301,6 @@ export default {
 
           this.scaleAndMoveToTime(currentXK, leftTime, scalingParam, yProp)
         }
-        // console.log(leftTime)
-        // this.moveToTime(leftTime)
       } catch (err) {
         console.log(err)
       }
@@ -1729,7 +1723,6 @@ export default {
             this.moveStartingConsonant(newNextTraj, phrase.startTime, true);
             this.moveEndingConsonant(newNextTraj, phrase.startTime, true);
             this.moveVowel(newNextTraj, phrase.startTime, true);
-            console.log(0)
             this.removePlucks(newNextTraj);
             const g = d3Select(`#articulations__p${pIdx}t${tIdx+1}`);
             this.codifiedAddPlucks(newNextTraj, phrase.startTime, g);
@@ -1759,7 +1752,6 @@ export default {
             this.moveStartingConsonant(newNextTraj, nextPhrase.startTime, true);
             this.moveEndingConsonant(newNextTraj, nextPhrase.startTime, true);
             this.moveVowel(newNextTraj, nextPhrase.startTime, true);
-            console.log(1)
             this.removePlucks(newNextTraj);
             const g = d3Select(`#articulations__p${pIdx+1}t${0}`);
             this.codifiedAddPlucks(newNextTraj, nextPhrase.startTime, g);
@@ -2956,9 +2948,6 @@ export default {
 
     async addSpectrogram(leftTime, currentXK, scalingParam, yProp) {
       if (false) {
-        // console.log('could do it here instead')
-        // await this.$nextTick();
-        // this.setSpectrogram(leftTime, currentXK, scalingParam, yProp)
       } else {
         try {
           this.numSpecs = await getNumberOfSpectrograms(this.piece.audioID);
@@ -3509,7 +3498,6 @@ export default {
       const graphX = z.clientX - this.yAxWidth;
       const time = this.xr().invert(z.clientX);
       if (this.$refs.audioPlayer.regionSpeedOn) {
-        console.log('this one', time)
         const afterStart = time >= this.regionStartTime;
         const beforeEnd = time <= this.regionEndTime;
         if (afterStart && beforeEnd) {
@@ -4228,7 +4216,6 @@ export default {
             text = traj.articulations[key].hindi;
           } else if (this.phonemeRepresentation === 'English') {
             text = traj.articulations[key].engTrans;
-            console.log(traj.articulations[key])
           }
           const cd = {
             x: phraseStart + traj.startTime + normedX,
@@ -4415,9 +4402,6 @@ export default {
              
         let trajProp = timeOffset / traj.durTot;
         if (trajProp > 1) trajProp = 1;
-        if (traj.num === 16) {
-          console.log(trajProp)
-        }
         let rightCompute = traj.compute(trajProp, true);
         rightCompute = y({y:rightCompute});
         let halfRightCompute = traj.compute(trajProp / 2, true);
@@ -5082,10 +5066,8 @@ export default {
         const g = d3Select(`#articulations__p${pIdx}t${tIdx}`);
         const selected = d3Select(`#vowelp${pIdx}t${tIdx}`);
         if (selected.node() === null) {
-          console.log('this')
           this.addVowel(this.selectedTraj, phrase.startTime, g, true)
         } else {
-          console.log('that')
           selected.remove();
           this.addVowel(this.selectedTraj, phrase.startTime, g, true)
         }
