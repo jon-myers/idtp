@@ -443,10 +443,10 @@ export default {
       }
       this.resetSargam();
       const stIdx = this.selectedTraj.num;
-      if (phrase.trajectories[stIdx+1]) {
+      if (this.vocal && phrase.trajectories[stIdx+1]) {
         const followingTraj = phrase.trajectories[stIdx+1];
         this.moveVowel(followingTraj, phrase.startTime, true);
-      } else if (phrase.trajectories[stIdx+2]) {
+      } else if (this.vocal && phrase.trajectories[stIdx+2]) {
         const followingTraj = phrase.trajectories[stIdx+2];
         this.moveVowel(followingTraj, phrase.startTime, true);
       }
@@ -1720,9 +1720,12 @@ export default {
             this.moveKrintin(newNextTraj, phrase.startTime);
             this.moveSlides(newNextTraj, phrase.startTime);
             this.codifiedRedrawDampener(newNextTraj, phrase.startTime);
-            this.moveStartingConsonant(newNextTraj, phrase.startTime, true);
-            this.moveEndingConsonant(newNextTraj, phrase.startTime, true);
-            this.moveVowel(newNextTraj, phrase.startTime, true);
+            if (this.vocal) {
+              this.moveStartingConsonant(newNextTraj, phrase.startTime, true);
+              this.moveEndingConsonant(newNextTraj, phrase.startTime, true);
+              this.moveVowel(newNextTraj, phrase.startTime, true);
+            }
+            
             this.removePlucks(newNextTraj);
             const g = d3Select(`#articulations__p${pIdx}t${tIdx+1}`);
             this.codifiedAddPlucks(newNextTraj, phrase.startTime, g);
@@ -1749,9 +1752,11 @@ export default {
             this.moveKrintin(newNextTraj, nextPhrase.startTime)
             this.moveSlides(newNextTraj, nextPhrase.startTime)
             this.codifiedRedrawDampener(newNextTraj, nextPhrase.startTime)
-            this.moveStartingConsonant(newNextTraj, nextPhrase.startTime, true);
-            this.moveEndingConsonant(newNextTraj, nextPhrase.startTime, true);
-            this.moveVowel(newNextTraj, nextPhrase.startTime, true);
+            if (this.vocal) {
+              this.moveStartingConsonant(newNextTraj, nextPhrase.startTime, true);
+              this.moveEndingConsonant(newNextTraj, nextPhrase.startTime, true);
+              this.moveVowel(newNextTraj, nextPhrase.startTime, true);
+            }
             this.removePlucks(newNextTraj);
             const g = d3Select(`#articulations__p${pIdx+1}t${0}`);
             this.codifiedAddPlucks(newNextTraj, nextPhrase.startTime, g);
@@ -1772,9 +1777,11 @@ export default {
       this.moveKrintin(this.selectedTraj, phrase.startTime);
       this.moveSlides(this.selectedTraj, phrase.startTime);
       this.codifiedRedrawDampener(this.selectedTraj, phrase.startTime);
-      this.moveStartingConsonant(this.selectedTraj, phrase.startTime, true);
-      this.moveEndingConsonant(this.selectedTraj, phrase.startTime, true);
-      this.moveVowel(this.selectedTraj, phrase.startTime, true);
+      if (this.vocal) {
+        this.moveStartingConsonant(this.selectedTraj, phrase.startTime, true);
+        this.moveEndingConsonant(this.selectedTraj, phrase.startTime, true);
+        this.moveVowel(this.selectedTraj, phrase.startTime, true);
+      }
       this.cleanEmptyTrajs(phrase);
       this.moveChikaris(phrase);
       if (resetRequired) this.resetZoom();
@@ -5926,9 +5933,11 @@ export default {
             this.redrawKrintin(traj, phrase.startTime);
             this.redrawSlide(traj, phrase.startTime);
             this.redrawDampener(traj, phrase.startTime);
-            this.moveStartingConsonant(traj, phrase.startTime);
-            this.moveEndingConsonant(traj, phrase.startTime);
-            this.moveVowel(traj, phrase.startTime);
+            if (this.vocal) {
+              this.moveStartingConsonant(traj, phrase.startTime);
+              this.moveEndingConsonant(traj, phrase.startTime);
+              this.moveVowel(traj, phrase.startTime);
+            } 
           }
         })
       });
@@ -6314,9 +6323,11 @@ export default {
         this.codifiedRedrawKrintin(traj, phrase.startTime)
         this.codifiedRedrawSlide(traj, phrase.startTime)
         this.codifiedRedrawDampener(traj, phrase.startTime)
-        this.moveStartingConsonant(traj, phrase.startTime, true)
-        this.moveEndingConsonant(traj, phrase.startTime, true);
-        this.moveVowel(traj, phrase.startTime, true);
+        if (this.vocal) {
+          this.moveStartingConsonant(traj, phrase.startTime, true)
+          this.moveEndingConsonant(traj, phrase.startTime, true);
+          this.moveVowel(traj, phrase.startTime, true);
+        }
       })
     },
 
