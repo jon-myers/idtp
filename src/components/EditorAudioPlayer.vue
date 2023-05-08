@@ -459,11 +459,11 @@ export default {
       this.loading = true;
       this.audioBuffer = await this.getAudio(newSrc, false);
       this.loading = false;
-      if (this.$route.query.pIdx) {
-        this.$parent.moveToPhrase(this.$route.query.pIdx);
-      } else {
-        this.$router.push({ query: { id: this.$route.query.id, pIdx: 0 } });
-      }
+      this.pausedAt = this.$parent.currentTime;
+      this.updateProgress();
+      this.updateFormattedCurrentTime();
+      this.updateFormattedTimeLeft();
+      
     },
     recGain(newGain) {
       if (this.ac.state === 'suspended') this.ac.resume();

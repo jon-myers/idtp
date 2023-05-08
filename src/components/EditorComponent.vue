@@ -649,6 +649,11 @@ export default {
       this.vocal = tsp.vocal;
       await this.initializePiece();
       this.$refs.audioPlayer.parentLoaded();
+      if (this.$route.query.pIdx) {
+        this.moveToPhrase(this.$route.query.pIdx);
+      } else {
+        this.$router.push({ query: { id: this.$route.query.id, pIdx: 0 } });
+      }
       const silentDur = this.durTot - piece.durTot;
       if (silentDur >= 0.00001) {
         const stTrajObj = {
@@ -3491,15 +3496,16 @@ export default {
       this.addPhrases();
       
 
-      this.updateTranslateExtent().then(() => {
+      await this.updateTranslateExtent().then(() => {
         this.svgNode = this.svg
           .call(this.zoom)
           .call(this.zoom.transform, d3ZoomIdentity.scale(this.initXScale))
           .node();
         this.$refs.graph.appendChild(this.svgNode)
+        return regularMove
         
       });
-    return regularMove
+    
       
 
     },
@@ -3872,15 +3878,17 @@ export default {
       this.redraw();
       //move playhead
       this.currentTime = time;
-      if (!this.$refs.audioPlayer.playing) {
-        this.$refs.audioPlayer.pausedAt = time;
-        this.$refs.audioPlayer.updateProgress();
-        this.$refs.audioPlayer.updateFormattedCurrentTime();
-        this.$refs.audioPlayer.updateFormattedTimeLeft();
-      } else {
-        this.$refs.audioPlayer.stop();
-        this.$refs.audioPlayer.pausedAt = time;
-        this.$refs.audioPlayer.play();
+      if (!this.$refs.audioPlayer.loading) {
+        if (!this.$refs.audioPlayer.playing) {
+          this.$refs.audioPlayer.pausedAt = time;
+          this.$refs.audioPlayer.updateProgress();
+          this.$refs.audioPlayer.updateFormattedCurrentTime();
+          this.$refs.audioPlayer.updateFormattedTimeLeft();
+        } else {
+          this.$refs.audioPlayer.stop();
+          this.$refs.audioPlayer.pausedAt = time;
+          this.$refs.audioPlayer.play();
+        }
       }
       this.movePlayhead();
       this.moveShadowPlayhead();
