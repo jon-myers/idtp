@@ -64,7 +64,12 @@
             />
           </div>
           <div class="rulerBox">
-            <img :src="icons.ruler" @click="toggleControls" ref="controlsImg" />
+            <img 
+              :src="icons.ruler" 
+              @click="toggleControls" 
+              ref="controlsImg" 
+              class='showControls'
+              />
           </div>
         </div>
       </div>
@@ -316,7 +321,7 @@ export default {
       // synthGain: 1,
       chikariGain: 0,
       lagTime: 0.1,
-      showControls: false,
+      showControls: true,
       recGain: 1,
       synthGain: 0,
       synthDamp: 0.5,
@@ -370,10 +375,16 @@ export default {
       chikariGainDisabled: false,
       synthGainDisabled: false,
       stretchedBuffer: undefined,
-      controlsHeight: 200,
     };
   },
-  props: ['audioSource', 'saEstimate', 'saVerified', 'id', 'playerHeight'],
+  props: [
+    'audioSource', 
+    'saEstimate', 
+    'saVerified', 
+    'id', 
+    'playerHeight', 
+    'controlsHeight'
+  ],
   async mounted() {
     this.ac = new AudioContext({ sampleRate: 48000 });
     this.gainNode = this.ac.createGain();
@@ -552,8 +563,6 @@ export default {
         }
         this.updateFormattedCurrentTime();
         this.updateFormattedTimeLeft();
-        // const pc = document.querySelector('.progressCircle');
-        // pc.style.right = '-7px';
     },
     resetTunings() {
       this.centDevs = this.centDevs.map(() => 0);

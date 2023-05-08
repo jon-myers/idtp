@@ -91,6 +91,7 @@
   :synthGain='synthGain'
   :synthDamping='synthDamping'
   :playerHeight='playerHeight'
+  :controlsHeight='controlsHeight'
   />
 </template>
 <script>
@@ -248,6 +249,7 @@ export default {
       leftTime: 0,
       phonemeRepresentation: 'IPA',
       vocal: false,
+      controlsHeight: 200,
     }
   },
   components: {
@@ -258,7 +260,8 @@ export default {
     window.addEventListener('keydown', this.handleKeydown);
     window.addEventListener('keyup', this.handleKeyup);
     const navHeight = this.$parent.$parent.navHeight;
-    this.editorHeight = window.innerHeight - navHeight - this.playerHeight;
+    const offset = navHeight + this.playerHeight + this.controlsHeight + 1;
+    this.editorHeight = window.innerHeight - offset  ;
     // this.editorHeight = 800;
     if (this.$store.state.userID === undefined) {
       if (this.$route.query) {
