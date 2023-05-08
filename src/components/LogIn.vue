@@ -28,8 +28,10 @@ export default {
     return {
       firstTime: false,
       returning: false,
-      waiver: 'TBD language regarding only using the service for scholarly and \
-        / or pedagogical purposes. If agreed, check box.',
+      waiver: 'I agree to only use the IDTP for scholarly and \
+        / or pedagogical purposes. I understand that any copywrited materials \
+        that I upload to the IDTP are liable to be taken down in response to \
+        a DMCA takedown notice.',
       agreeBool: false,
       firstName: undefined,
       userID: undefined,
