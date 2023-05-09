@@ -3156,7 +3156,8 @@ export default {
     },
 
     resize() {
-      if (this.oldHeight !== window.innerHeight) {
+      const diff = Math.abs(this.oldHeight - window.innerHeight);
+      if (diff > 53) {
         console.log('changed real height')
         this.resizeHeight();
       }
