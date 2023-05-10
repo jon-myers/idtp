@@ -49,7 +49,7 @@ import {
   Pitch,
   Articulation,
   Raga,
-} from '@/js/classes.mjs';
+} from '@/js/classes.ts';
 
 import { getRaagRule } from '@/js/serverCalls.mjs';
 

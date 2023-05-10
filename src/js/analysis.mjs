@@ -1,4 +1,4 @@
-import { durationsOfFixedPitches } from './classes.mjs';
+import { durationsOfFixedPitches } from './classes.ts';
 import { 
   Pitch, 
   Trajectory, 
@@ -10,7 +10,7 @@ import {
   Group,
   getStarts,
   pitchNumberToChroma
-} from './classes.mjs';
+} from './classes.ts';
 import { getPiece, getRaagRule } from './serverCalls.mjs';
 const testQueryId = '63445d13dc8b9023a09747a6';
 // const Pitch: typeof Pitch_ = Pitch_;

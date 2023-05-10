@@ -1,8 +1,9 @@
-import findLastIndex from 'lodash/findLastIndex.js';
-import { v4 as uuidv4 } from 'uuid'
+import { findLastIndex } from 'lodash';
+import { v4 as uuidv4 } from 'uuid';
 
-const chromaToScaleDegree = chroma => {
-    let scaleDegree, raised;
+const chromaToScaleDegree = (chroma: number): [number, boolean] => {
+    let scaleDegree = 0;
+    let raised = true;
     switch (chroma) {
       case 0:
         scaleDegree = 0;
@@ -56,7 +57,7 @@ const chromaToScaleDegree = chroma => {
     return [scaleDegree, raised]
   }
 
-const pitchNumberToChroma = pitchNumber => {
+const pitchNumberToChroma = (pitchNumber: number) => {
   let chroma = pitchNumber % 12;
   while (chroma < 0) {
     chroma += 12;
@@ -64,17 +65,26 @@ const pitchNumberToChroma = pitchNumber => {
   return chroma
 }
 
-const durationsOfFixedPitches = (trajs, {
+type OutputType = 'pitchNumber' | 'chroma' | 'pitch' | 'pitchClass';
+
+const durationsOfFixedPitches = (trajs: Trajectory[], {
   inst = 0, 
   outputType = 'pitchNumber',
   countType = 'cumulative'  // 'cumulative' or 'proportional'
+}: {
+  inst?: number,
+  outputType?: OutputType,
+  countType?: 'cumulative' | 'proportional'
 } = {}) => {
-  const pitchDurs = {};
+  const pitchDurs: NumObj = {};
   trajs.forEach(traj => {
     const trajPitchDurs = traj.durationsOfFixedPitches({ 
       outputType: outputType,
-      inst: inst
     });
+    if (typeof trajPitchDurs !== 'object' || trajPitchDurs === null) {
+      throw new SyntaxError(`invalid trajPitchDurs type, must be object: ` +
+        `${trajPitchDurs}`)
+    }
     Object.keys(trajPitchDurs).forEach(pitchNumber => {
       if (pitchDurs[pitchNumber]) {
         pitchDurs[pitchNumber] += trajPitchDurs[pitchNumber];
@@ -99,19 +109,32 @@ const durationsOfFixedPitches = (trajs, {
 
 
 
-const isObject = argument => typeof argument === 'object' && argument !== null;
+const isObject = (argument: any) => {
+  return typeof argument === 'object' && argument !== null
+}
 
-const getStarts = durArray => {
-  const cumsum = (sum => value => sum += value)(0);
+// const cumsum: (value: number) => number = (sum => value => sum += value)(0);
+
+// const cumsum = (sum => value => sum += value)(0);
+
+const getStarts = (durArray: number[]) => {
+  const cumsum: (value: number) => number = (sum => value => sum += value)(0);
   return [0].concat(durArray.slice(0, durArray.length - 1)).map(cumsum)
 };
 
-const getEnds = durArray => {
-  const cumsum = (sum => value => sum += value)(0);
+const getEnds = (durArray: number[]) => {
+  const cumsum: (value: number) => number = (sum => value => sum += value)(0);
   return durArray.map(cumsum)
 }
 
 class Pitch {
+  sargam: string[];
+  ratios: (number | number[])[];
+  raised: boolean;
+  swara: string | number = 'sa';
+  oct: number;
+  fundamental: number;
+  frequency: number;
 
   constructor({
     swara = 'sa',
@@ -127,6 +150,12 @@ class Pitch {
       [2 ** (8 / 12), 2 ** (9 / 12)],
       [2 ** (10 / 12), 2 ** (11 / 12)]
     ]
+  }: {
+    swara?: string | number,
+    oct?: number,
+    raised?: boolean,
+    fundamental?: number,
+    ratios?: (number | number[])[]
   } = {}) {
     // """
     // swara: str or int, can be either sargam or number from 0 - 6 as follows
@@ -182,6 +211,9 @@ class Pitch {
     } else {
       throw new SyntaxError(`invalad swara type: ${swara}, ${typeof(swara)}`)
     }
+    if (typeof(this.swara) !== 'number') {
+      throw new SyntaxError(`invalid swara type: ${this.swara}`)
+    }
 
     if (typeof(oct) != 'number') {
       throw new SyntaxError(`invalid oct type: ${oct}`)
@@ -198,13 +230,24 @@ class Pitch {
     else {
       this.fundamental = fundamental
     }
-    const ratio = this.swara == 0 || this.swara == 4 ?
-      this.ratios[this.swara] :
-      this.ratios[this.swara][Number(this.raised)];
+    let ratio;
+    if (this.swara === 0 || this.swara === 4) {
+      ratio = this.ratios[this.swara]
+      if (typeof ratio !== 'number') {
+        throw new SyntaxError(`invalid ratio type, must be float: ${ratio}`)
+      }
+    } else {
+      const nestedRatios = this.ratios[this.swara];
+      if (typeof nestedRatios !== 'object') {
+        throw new SyntaxError(`invalid nestedRatios type, ` + 
+          `must be array: ${nestedRatios}`)
+      }
+      ratio = nestedRatios[Number(this.raised)]
+    }
     this.frequency = ratio * this.fundamental * (2 ** this.oct);
   }
 
-  static fromPitchNumber(pitchNumber, fundamental = 261.63) {
+  static fromPitchNumber(pitchNumber: number, fundamental: number  = 261.63) {
     const oct = Math.floor(pitchNumber / 12);
     let chroma = pitchNumber % 12;
     while (chroma < 0) {
@@ -220,16 +263,30 @@ class Pitch {
     })
   }
 
-  setOct(newOct) {
+  setOct(newOct: number) {
     this.oct = newOct;
-    const ratio = this.swara == 0 || this.swara == 4 ?
-      this.ratios[this.swara] :
-      this.ratios[this.swara][Number(this.raised)];
+    let ratio;
+    if (this.swara === 0 || this.swara === 4) {
+      ratio = this.ratios[this.swara]
+      if (typeof ratio !== 'number') {
+        throw new SyntaxError(`invalid ratio type, must be float: ${ratio}`)
+      }
+    } else {
+      if (typeof(this.swara) !== 'number') {
+        throw new SyntaxError(`invalid swara type: ${this.swara}`)
+      }
+      const nestedRatios = this.ratios[this.swara];
+      if (typeof nestedRatios !== 'object') {
+        throw new SyntaxError(`invalid nestedRatios type, ` + 
+          `must be array: ${nestedRatios}`)
+      }
+      ratio = nestedRatios[Number(this.raised)]
+    }
     this.frequency = ratio * this.fundamental * (2 ** this.oct);
   }
 
   get sargamLetter() {
-    let s = this.sargam[this.swara].slice(0,1);
+    let s = this.sargam[this.swara as number].slice(0,1);
     if (this.raised) {
       s = s.toUpperCase()
     }
@@ -254,7 +311,8 @@ class Pitch {
     return s
   }
 
-  get numberedPitch() { 
+
+  get numberedPitch(): number { 
     // something like a midi pitch, but centered on 0 instead of 60
     if (this.swara === 0) {
       return this.oct * 12 + 0
@@ -270,7 +328,10 @@ class Pitch {
       return this.oct * 12 + 8 + Number(this.raised)
     } else if (this.swara === 6) {
       return this.oct * 12 + 10 + Number(this.raised)
+    } else {
+      throw new SyntaxError(`invalid swara: ${this.swara}`)
     }
+
   }
 
   get chroma() {
@@ -298,6 +359,12 @@ class Pitch {
 }
 
 class Articulation {
+  name: string;
+  stroke: string | undefined;
+  hindi: string | undefined;
+  ipa: string | undefined;
+  engTrans: string | undefined;
+
   // pluck, hammer-off, hammer-on, slide, pluck, dampen
   constructor({
     name = 'pluck',
@@ -305,6 +372,12 @@ class Articulation {
     hindi = undefined,
     ipa = undefined,
     engTrans = undefined,
+  }: {
+    name?: string,
+    stroke?: string,
+    hindi?: string,
+    ipa?: string,
+    engTrans?: string,
   } = {}) {
     this.name = name
     if (stroke !== undefined) this.stroke = stroke;
@@ -315,6 +388,8 @@ class Articulation {
 }
 
 class Chikari {
+  fundamental: number;
+  pitches: Pitch[];
   constructor({
     pitches = [
       new Pitch({
@@ -345,8 +420,63 @@ class Chikari {
   }
 }
 
+type VibObj = {
+  periods: number;
+  vertOffset: number;
+  initUp: boolean;
+  extent: number;
+}
+
+type IdType = 'id0' | 'id1' | 'id2' | 'id3' | 'id4' | 'id5' | 'id6' | 'id7' |
+  'id8' | 'id9' | 'id10' | 'id12' | 'id13';
+
+type IdFunction =
+  ((x: number, lf?: number[], sl?: number, da?: number[]) => number) |
+  ((x: number, lf?: number[], da?: number[]) => number) |
+  ((x: number, lf?: number[], sl?: number) => number) |
+  ((x: number, lf?: number[]) => number) |
+  ((x: number) => number);
+
 class Trajectory {
   // archetypal motion from pitch to pitch, or through series of pitches
+  id: number;
+  pitches: Pitch[];
+  durTot: number;
+  durArray?: number[];
+  slope: number;
+  articulations: { [key: string]: Articulation };
+  num: number | undefined;
+  name: string | undefined;
+  fundID12: number | undefined;
+  vibObj: VibObj;
+  instrumentation: string;
+  vowel: string | undefined;
+  vowelIpa: string | undefined;
+  vowelHindi: string | undefined;
+  vowelEngTrans: string | undefined;
+  startConsonant: string | undefined;
+  startConsonantHindi: string | undefined;
+  startConsonantIpa: string | undefined;
+  startConsonantEngTrans: string | undefined;
+  endConsonant: string | undefined;
+  endConsonantHindi: string | undefined;
+  endConsonantIpa: string | undefined;
+  endConsonantEngTrans: string | undefined;
+  groupId?: number;
+  freqs: number[];
+  logFreqs: number[];
+  ids: IdFunction[];
+  structuredNames: object;
+  cIpas: string[];
+  cIsos: string[];
+  cHindis: string[];
+  cEngTrans: string[];
+  vIpas: string[];
+  vIsos: string[];
+  vHindis: string[];
+  vEngTrans: string[];
+  startTime: number | undefined;
+  phraseIdx: number | undefined;
 
   constructor({
     id = 0,
@@ -367,10 +497,37 @@ class Trajectory {
     startConsonant = undefined,
     startConsonantHindi = undefined,
     startConsonantIpa = undefined,
+    startConsonantEngTrans = undefined,
     endConsonant = undefined,
     endConsonantHindi = undefined,
     endConsonantIpa = undefined,
+    endConsonantEngTrans = undefined,
     groupId = undefined,
+  }: {
+    id?: number,
+    pitches?: Pitch[],
+    durTot?: number,
+    durArray?: number[],
+    slope?: number,
+    articulations?: { [key: string]: Articulation },
+    num?: number,
+    name?: string,
+    fundID12?: number,
+    vibObj?: VibObj,
+    instrumentation?: string,
+    vowel?: string,
+    vowelIpa?: string,
+    vowelHindi?: string,
+    vowelEngTrans?: string,
+    startConsonant?: string,
+    startConsonantHindi?: string,
+    startConsonantIpa?: string,
+    startConsonantEngTrans?: string,  
+    endConsonant?: string,
+    endConsonantHindi?: string,
+    endConsonantIpa?: string,
+    endConsonantEngTrans?: string,
+    groupId?: number,
   } = {}) {
     if (typeof(id) === 'number' && Number.isInteger(id)) {
       this.id = id
@@ -392,14 +549,15 @@ class Trajectory {
     } else {
       throw new SyntaxError(`invalid durTot type, must be number: ${durTot}`)
     }
-    isArr = Array.isArray(durArray);
-    const condition = isArr && durArray.every(a => typeof(a) === 'number');
-    if (durArray === undefined || condition) {
-      this.durArray = durArray
-    } else {
-      throw new SyntaxError(`invalid durArray type, must be array of numbers:` + 
-        `${durArray}`)
-    }
+    // isArr = Array.isArray(durArray) && durArray.length > 0;
+    // const condition = isArr && durArray.every(a => typeof(a) === 'number');
+    // if (durArray === undefined || condition) {
+    //   this.durArray = durArray
+    // } else {
+    //   throw new SyntaxError(`invalid durArray type, must be array of numbers:` + 
+    //     `${durArray}`)
+    // }
+    this.durArray = durArray;
 
     if (slope === undefined) {
       this.slope = 2
@@ -438,7 +596,8 @@ class Trajectory {
     this.ids = [];
     for (let i = 0; i < 14; i++) {
       if (i !== 11) {
-        this.ids.push(this[`id${i}`].bind(this))
+        const key: IdType = `id${i.toString()}` as IdType;
+        this.ids.push(this[key].bind(this))
       } else {
         this.ids.push(this.id7.bind(this))
       }
@@ -472,9 +631,11 @@ class Trajectory {
     this.startConsonant = startConsonant;
     this.startConsonantHindi = startConsonantHindi;
     this.startConsonantIpa = startConsonantIpa;
+    this.startConsonantEngTrans = startConsonantEngTrans;
     this.endConsonant = endConsonant;
     this.endConsonantHindi = endConsonantHindi;
     this.endConsonantIpa = endConsonantIpa;
+    this.endConsonantEngTrans = endConsonantEngTrans;
     this.groupId = groupId;
 
     if (this.startConsonant !== undefined) {
@@ -556,7 +717,7 @@ class Trajectory {
         name: 'hammer-on'
       });
     } else if (this.id === 11) {
-      if (this.durArray === undefined || this.durArray.length === 1) {
+      if (this.durArray === undefined || (Array.isArray(this.durArray) && this.durArray.length === 1)) {
         this.durArray = [0.5, 0.5]
       }
       const starts = getStarts(this.durArray);
@@ -567,7 +728,7 @@ class Trajectory {
     this.durArray?.forEach((d, idx) => {
       if (d === 0) {
         console.log('removing zero dur')
-        this.durArray.splice(idx, 1)
+        this.durArray!.splice(idx, 1)
         this.logFreqs.splice(idx + 1, 1);
         this.pitches.splice(idx + 1, 1);
         this.freqs.splice(idx + 1, 1);
@@ -632,24 +793,19 @@ class Trajectory {
   }
 
 
-  compute(x, logScale = false) {
+  compute(x: number, logScale = false) {
     const value = this.ids[this.id](x);
     return logScale ? Math.log2(value) : value;
   }
 
-  getStarts(durArray) {
-    const cumsum = (sum => value => sum += value)(0);
-    return [0].concat(durArray.slice(0, durArray.length - 1)).map(cumsum)
-  }
-
   // x is always beteen zero and one
 
-  id0(x, lf = undefined) { // steady state
+  id0(x: number, lf?: number[]): number { // steady state
     const logFreqs = lf === undefined ? this.logFreqs : lf;
     return 2 ** logFreqs[0]
   }
 
-  id1(x, lf = undefined) { // half cosine interpolation
+  id1(x: number, lf?: number[]): number { // half cosine interpolation
     const logFreqs = lf === undefined ? this.logFreqs : lf;
     const piX = (Math.cos(Math.PI * (x + 1)) / 2) + 0.5;
     const diff = logFreqs[1] - logFreqs[0];
@@ -657,7 +813,7 @@ class Trajectory {
 
   }
 
-  id2(x, lf = undefined, sl = undefined) { // asymptotic approach
+  id2(x: number, lf?: number[], sl?: number): number { // asymptotic approach
     const logFreqs = lf === undefined ? this.logFreqs : lf;
     const slope = sl === undefined ? this.slope : sl;
     const a = logFreqs[0];
@@ -666,7 +822,7 @@ class Trajectory {
     return 2 ** logFreqOut
   }
 
-  id3(x, lf = undefined, sl = undefined) { // reverse asymptotic approach
+  id3(x: number, lf?: number[], sl?: number): number { // reverse asymptotic approach
     const logFreqs = lf === undefined ? this.logFreqs : lf;
     const slope = sl === undefined ? this.slope : sl;
     const a = logFreqs[0];
@@ -675,35 +831,40 @@ class Trajectory {
     return 2 ** logFreqOut
   }
 
-  id4(x, lf = undefined, sl = undefined, da = undefined) { // ladle
+  id4(x: number, lf?: number[], sl?: number, da?: number[]): number { // ladle
     const logFreqs = lf === undefined ? this.logFreqs : lf;
     const slope = sl === undefined ? this.slope : sl;
     let durArray = da === undefined ? this.durArray : da;
     if (durArray === undefined) durArray = [1 / 3, 2 / 3];
-    const bend0 = x => this.id2(x, logFreqs.slice(0, 2), slope);
-    const bend1 = x => this.id1(x, logFreqs.slice(1, 3));
-    const out0 = x => bend0(x / durArray[0]);
-    const out1 = x => bend1((x - durArray[0]) / (durArray[1]));
-    const out = x => x < durArray[0] ? out0(x) : out1(x);
+    const bend0 = (x: number) => this.id2(x, logFreqs.slice(0, 2), slope);
+    const bend1 = (x: number) => this.id1(x, logFreqs.slice(1, 3));
+    const out0 = (x: number) => bend0(x / durArray![0]);
+    const out1 = (x: number) => bend1((x - durArray![0]) / (durArray![1]));
+    const out = (x: number) => x < durArray![0] ? out0(x) : out1(x);
     return out(x)
   }
 
-  id5(x, lf = undefined, sl = undefined, da = undefined) { 
+  id5(x: number, lf?: number[], sl?: number, da?: number[]): number { 
     // reverse ladle, or 'setup'
     const logFreqs = lf === undefined ? this.logFreqs : lf;
     const slope = sl === undefined ? this.slope : sl;
-    let durArray = da === undefined ? this.durArray : da;
-    if (durArray === undefined) durArray = [2 / 3, 1 / 3];
-    const bend0 = x => this.id1(x, logFreqs.slice(0, 2));
-    const bend1 = x => this.id3(x, logFreqs.slice(1, 3), slope);
-    const out0 = x => bend0(x / durArray[0]);
-    const out1 = x => bend1((x - durArray[0]) / (durArray[1]));
-    const out = x => x < durArray[0] ? out0(x) : out1(x);
+
+    let durArray: number[] | undefined = da === undefined ? this.durArray : da;
+    durArray = durArray || [1 / 3, 2 / 3];
+    if (typeof(durArray) === 'undefined') {
+      durArray = [2 / 3, 1 / 3];
+    }
+
+    const bend0 = (x: number) => this.id1(x, logFreqs.slice(0, 2));
+    const bend1 = (x: number) => this.id3(x, logFreqs.slice(1, 3), slope);
+    const out0 = (x: number) => bend0(x / durArray![0]);
+    const out1 = (x: number) => bend1((x - durArray![0]) / (durArray![1]));
+    const out = (x: number) => x < durArray![0] ? out0(x) : out1(x);
     return out(x)
   }
 
 
-  id6(x, lf = undefined, da = undefined) { 
+  id6(x: number, lf?: number[], da?: number[]): number { 
     // yoyo // make this one so it can be any length
     const logFreqs = lf === undefined ? this.logFreqs : lf;
     let durArray = da === undefined ? this.durArray : da;
@@ -716,7 +877,7 @@ class Trajectory {
     const bends = Array.from({
       length: logFreqs.length - 1
     }, (_, i) => {
-      return x => this.id1(x, logFreqs.slice(i, i + 2))
+      return (x: number) => this.id1(x, logFreqs.slice(i, i + 2))
     });
 
     const outs = Array.from({
@@ -724,18 +885,21 @@ class Trajectory {
     }, (_, i) => {
       let durSum = i === 0 ? 
         0 : 
-        durArray.slice(0, i).reduce((a, b) => a + b, 0);
-      return x => bends[i]((x - durSum) / durArray[i])
+        durArray!.slice(0, i).reduce((a, b) => a + b, 0);
+      return (x: number) => bends[i]((x - durSum) / durArray![i])
     });
-    const out = x => {
-      const starts = getStarts(durArray);
+    const out = (x: number) => {
+      const starts = getStarts(durArray!);
       const index = findLastIndex(starts, s => x >= s);
+      if (index === -1) {
+        console.log(outs, index)
+      }
       return outs[index](x)
     };
     return out(x)
   }
 
-  id7(x, lf = undefined, da = undefined) { // simple krintin
+  id7(x: number, lf?: number[], da?: number[]): number { // simple krintin
     const logFreqs = lf === undefined ? this.logFreqs : lf;
     let durArray = da === undefined ? this.durArray : da;
     if (durArray === undefined) durArray = [0.5, 0.5];
@@ -743,7 +907,7 @@ class Trajectory {
     return 2 ** out
   }
 
-  id8(x, lf = undefined, da = undefined) { // krintin slide
+  id8(x: number, lf?: number[], da?: number[]): number { // krintin slide
     const logFreqs = lf === undefined ? this.logFreqs : lf;
     let durArray = da === undefined ? this.durArray : da;
     if (durArray === undefined) durArray = [1 / 3, 1 / 3, 1 / 3];
@@ -752,7 +916,7 @@ class Trajectory {
     return 2 ** logFreqs[index]
   }
 
-  id9(x, lf = undefined, da = undefined) { // krintin slide hammer
+  id9(x: number, lf?: number[], da?: number[]): number { // krintin slide hammer
     const logFreqs = lf === undefined ? this.logFreqs : lf;
     let durArray = da === undefined ? this.durArray : da;
     if (durArray === undefined) durArray = [1 / 4, 1 / 4, 1 / 4, 1 / 4];
@@ -761,7 +925,7 @@ class Trajectory {
     return 2 ** logFreqs[index]
   }
 
-  id10(x, lf = undefined, da = undefined) { // fancy krintin slide hammer
+  id10(x: number, lf?: number[], da?: number[]): number { // fancy krintin slide hammer
     const logFreqs = lf === undefined ? this.logFreqs : lf;
     let durArray = da === undefined ? this.durArray : da;
     if (durArray === undefined) durArray = [...Array(6)].map((_, i) => i / 6);
@@ -770,11 +934,11 @@ class Trajectory {
     return 2 ** logFreqs[index]
   }
   // eslint-disable-next-line no-unused-vars
-  id12(x) {
-    return this.fundID12
+  id12(x: number): number {
+    return this.fundID12!
   }
 
-  id13(x) {
+  id13(x: number): number {
     // vib object includes: periods, vertOffset, initUp, extent
     
     const periods = this.vibObj.periods;
@@ -784,7 +948,7 @@ class Trajectory {
     if (Math.abs(vertOffset) > extent / 2) {
       vertOffset = Math.sign(vertOffset) * extent / 2;
     }
-    let out = Math.cos(x * 2 * Math.PI * periods + initUp * Math.PI);
+    let out = Math.cos(x * 2 * Math.PI * periods + Number(initUp) * Math.PI);
     if (x < 1 / (2 * periods)) {
       const start = this.logFreqs[0];
       const end = Math.log2(this.id13(1 / (2 * periods)));
@@ -826,7 +990,7 @@ class Trajectory {
     }
   }
 
-  addConsonant(consonant, start=true) {
+  addConsonant(consonant: string, start=true) {
     const idx = this.cIsos.indexOf(consonant);
     const hindi = this.cHindis[idx];
     const ipa = this.cIpas[idx];
@@ -853,7 +1017,7 @@ class Trajectory {
     }
   }
 
-  changeConsonant(consonant, start=true) {
+  changeConsonant(consonant: string, start=true) {
     const idx = this.cIsos.indexOf(consonant);
     const hindi = this.cHindis[idx];
     const ipa = this.cIpas[idx];
@@ -881,8 +1045,9 @@ class Trajectory {
     }
   }
 
-  durationsOfFixedPitches({ outputType = 'pitchNumber' } = {}) {
-    const pitchDurs = {};
+  durationsOfFixedPitches({ outputType = 'pitchNumber' }: 
+    { outputType?: string } = {} ): NumObj {
+    const pitchDurs: NumObj = {};
     switch (this.id.toString()) {
       case '0':
       case '13': 
@@ -901,24 +1066,24 @@ class Trajectory {
         let p1 = this.pitches[1].numberedPitch;
         let p2 = this.pitches[2].numberedPitch;
         if (p0 === p1) {
-          pitchDurs[p0] = this.durTot * this.durArray[0];
+          pitchDurs[p0] = this.durTot * this.durArray![0];
         } else if (p1 === p2) {
           if (pitchDurs[p1]) {
-            pitchDurs[p1] += this.durTot * this.durArray[1];
+            pitchDurs[p1] += this.durTot * this.durArray![1];
           } else {
-            pitchDurs[p1] = this.durTot * this.durArray[1];
+            pitchDurs[p1] = this.durTot * this.durArray![1];
           }
         }
         break
       case '6':
-        let lastNum = undefined;
+        let lastNum: number | undefined = undefined;
         this.pitches.forEach((p, i) => {
           const num = p.numberedPitch;
           if (num === lastNum) {
             if (pitchDurs[num]) {
-              pitchDurs[num] += this.durTot * this.durArray[i-1];
+              pitchDurs[num] += this.durTot * this.durArray![i-1];
             } else {
-              pitchDurs[num] = this.durTot * this.durArray[i-1];
+              pitchDurs[num] = this.durTot * this.durArray![i-1];
             }
           }
           lastNum = num;
@@ -931,11 +1096,11 @@ class Trajectory {
       case '11':
         this.pitches.forEach((p, i) => {
           const num = p.numberedPitch;
-          if (this.durArray[i] !== undefined) {
+          if (this.durArray![i] !== undefined) {
             if (pitchDurs[num]) {
-              pitchDurs[num] += this.durTot * this.durArray[i];
+              pitchDurs[num] += this.durTot * this.durArray![i];
             } else {
-              pitchDurs[num] = this.durTot * this.durArray[i];
+              pitchDurs[num] = this.durTot * this.durArray![i];
             }
           }
         });
@@ -944,27 +1109,29 @@ class Trajectory {
     if (outputType === 'pitchNumber') {
       return pitchDurs
     } else if (outputType === 'chroma') {
-      const altPitchDurs = {};
+      const altPitchDurs: {[key: number]: number } = {};
       Object.keys(pitchDurs).forEach(p => {
-        let chromaPitch = pitchNumberToChroma(p)
+        let chromaPitch = pitchNumberToChroma(Number(p))
         altPitchDurs[chromaPitch] = pitchDurs[p];
       });
       return altPitchDurs
     } else if (outputType === 'scaleDegree') {
-      const altPitchDurs = {};
+      const altPitchDurs: { [key: number]: number } = {};
       Object.keys(pitchDurs).forEach(p => {
-        const chromaPitch = pitchNumberToChroma(p);
+        const chromaPitch = pitchNumberToChroma(Number(p));
         const scaleDegree = chromaToScaleDegree(chromaPitch)[0];
         altPitchDurs[scaleDegree] = pitchDurs[p];
       });
       return altPitchDurs
     } else if (outputType === 'sargamLetter') {
-      const altPitchDurs = {};
+      const altPitchDurs: NumObj = {};
       Object.keys(pitchDurs).forEach(p => {
-        const sargamLetter = Pitch.fromPitchNumber(p).sargamLetter;
+        const sargamLetter = Pitch.fromPitchNumber(Number(p)).sargamLetter;
         altPitchDurs[sargamLetter] = pitchDurs[p];
       });
       return altPitchDurs
+    } else {
+      throw new Error('outputType not recognized')
     }
   }
 
@@ -976,6 +1143,9 @@ class Trajectory {
     keys.forEach(key => {
       const art = this.articulations[key];
       if (art.name === 'consonant') {
+        if (typeof(art.stroke) !== 'string') {
+          throw new Error('stroke is not a string')
+        }
         const cIso = art.stroke;
         const idx = this.cIsos.indexOf(cIso);
         if (!art['hindi']) {
@@ -1030,7 +1200,7 @@ class Trajectory {
     }
   }
 
-  updateVowel(vIso) {
+  updateVowel(vIso: string) {
     const idx = this.vIsos.indexOf(vIso);
     this.vowel = vIso;
     this.vowelHindi = this.vHindis[idx];
@@ -1067,7 +1237,13 @@ class Trajectory {
   // skip id 11, same code as id 7, just different articulation
 }
 
-class Group { //  a group of adjacent trajectories, cloneable for copy and paste
+class Group { 
+  trajectories: Trajectory[];
+  id: string;
+
+
+  
+  //  a group of adjacent trajectories, cloneable for copy and paste
   // takes the trajectories as input (they should have already been tested for 
   // adjacency, but testing again just in case).
   // this will sit in in the phrase object, within a `groupsGrid` nested array. 
@@ -1076,32 +1252,54 @@ class Group { //  a group of adjacent trajectories, cloneable for copy and paste
 
   // when reconstructing this upon loading the piece from JSON, need to make 
   // sure that the trajectories involved are the same real ones.
+
+
   constructor({
     trajectories = [],
     id = undefined,
+  }: {
+    trajectories?: Trajectory[],
+    id?: string,
   } = {}) {
     this.trajectories = trajectories;
-    this.trajectories.sort((a, b) => a.num - b.num);
+
+    this.trajectories.sort((a, b) => {
+      if (a.num === undefined || b.num === undefined) {
+        throw new Error('Trajectory must have a num')
+      }
+      return a.num - b.num
+    });
     if (this.trajectories.length < 2) {
       throw new Error('Group must have at least 2 trajectories')
     }
     if (!this.testForAdjacency()) {
       throw new Error('Trajectories are not adjacent')
     }
-    this.id = id;
-    if (this.id === undefined) {
-      this.id = uuidv4();
+    
+    if (id === undefined) {
+      id = uuidv4();
     }
+    this.id = id;
     this.trajectories.forEach(traj => {
-      traj.groupId = this.id
+      traj.groupId = Number(this.id)
     })
   }
 
   testForAdjacency() {
     const uniquePIdxs = [...new Set(this.trajectories.map(t => t.phraseIdx))];
     if (uniquePIdxs.length === 1) {
-      this.trajectories.sort((a, b) => a.num - b.num);
-      const nums = this.trajectories.map(t => t.num);
+      this.trajectories.sort((a, b) => {
+        if (a.num === undefined || b.num === undefined) {
+          throw new Error('Trajectory must have a num')
+        }
+        return a.num - b.num
+      });
+      const nums = this.trajectories.map(t => {
+        if (t.num === undefined) {
+          throw new Error('Trajectory must have a num')
+        }
+        return t.num
+      });
       const diffs = nums.slice(1).map((num, nIdx) => {
           return num - nums[nIdx];
       })
@@ -1121,6 +1319,17 @@ class Group { //  a group of adjacent trajectories, cloneable for copy and paste
 
 
 class Phrase {
+  startTime?: number;
+  raga?: Raga;
+  trajectoryGrid: Trajectory[][];
+  instrumentation: string[];
+  groupsGrid: Group[][];
+  durTot?: number;
+  durArray?: number[];
+  chikaris: object;
+  pieceIdx?: number;
+  
+
 
   constructor({
     trajectories = [],
@@ -1132,6 +1341,16 @@ class Phrase {
     trajectoryGrid = undefined,
     instrumentation = ['Sitar'],
     groupsGrid = undefined,
+  }: {
+    trajectories?: Trajectory[],
+    durTot?: number,
+    durArray?: number[],
+    chikaris?: object,
+    raga?: Raga,
+    startTime?: number,
+    trajectoryGrid?: Trajectory[][],
+    instrumentation?: string[],
+    groupsGrid?: Group[][],
   } = {}) {
 
     this.startTime = startTime;
@@ -1155,13 +1374,13 @@ class Phrase {
       this.durArrayFromTrajectories();
       if (durTot !== undefined && this.durTot !== durTot) {
         this.trajectories.forEach(t => {
-          t.durTot = t.durTot * durTot / this.durTot
+          t.durTot = t.durTot * durTot / this.durTot!
         });
         this.durTot = durTot;
       }
       if (durArray !== undefined && this.durArray !== durArray) {
         this.trajectories.forEach((t, i) => {
-          t.durTot = t.durTot * durArray[i] / this.durArray[i]
+          t.durTot = t.durTot * durArray[i] / this.durArray![i]
         })
         this.durArray = durArray;
         this.durTotFromTrajectories()
@@ -1186,8 +1405,8 @@ class Phrase {
     }
   }
 
-  getGroupFromId(id) {
-    const allGroups = [];
+  getGroupFromId(id: string) {
+    const allGroups: Group[] = [];
     this.groupsGrid.forEach(groups => allGroups.push(...groups));
     return allGroups.find(g => g.id === id)
   }
@@ -1208,10 +1427,13 @@ class Phrase {
 
   durArrayFromTrajectories() {
     this.durTotFromTrajectories();
-    this.durArray = this.trajectories.map(t => t.durTot / this.durTot);
+    this.durArray = this.trajectories.map(t => t.durTot / this.durTot!);
   }
 
-  compute(x, logScale = false) {
+  compute(x: number, logScale = false) {
+    if (this.durArray === undefined ) {
+      throw new Error('durArray is undefined')
+    }
     if (this.durArray.length === 0) {
       return null
     } else {
@@ -1226,7 +1448,7 @@ class Phrase {
   realignPitches() {
     this.trajectories.forEach(traj => {
       traj.pitches = traj.pitches.map(p => {
-        p.ratios = this.raga.stratifiedRatios;
+        p.ratios = this.raga!.stratifiedRatios;
         return new Pitch(p)
       })
       traj.realignPitches()
@@ -1234,7 +1456,13 @@ class Phrase {
   }
 
   assignStartTimes() {
-    const starts = getStarts(this.durArray).map(s => s * this.durTot)
+    if (this.durArray === undefined) {
+      throw new Error('durArray is undefined')
+    }
+    if (this.durTot === undefined) {
+      throw new Error('durTot is undefined')
+    }
+    const starts = getStarts(this.durArray).map(s => s * this.durTot!)
     this.trajectories.forEach((traj, i) => {
       traj.startTime = starts[i]
     })
@@ -1246,14 +1474,14 @@ class Phrase {
     allPitches.sort((a, b) => a.frequency - b.frequency);
     let low = allPitches[0];
     let high = allPitches[allPitches.length - 1];
-    low = {
+    const low_ = {
       frequency: low?.frequency,
       swara: low?.swara,
       oct: low?.oct,
       raised: low?.raised,
       numberedPitch: low?.numberedPitch,
     };
-    high = {
+    const high_ = {
       frequency: high?.frequency,
       swara: high?.swara,
       oct: high?.oct,
@@ -1261,8 +1489,8 @@ class Phrase {
       numberedPitch: high?.numberedPitch,
     }
     return {
-      min: low,
-      max: high
+      min: low_,
+      max: high_
     }
   }
 
@@ -1270,8 +1498,8 @@ class Phrase {
     // within phrase, if there are ever two or more silent trajectories in a 
     // row, consolidate them into one.
     let chain = false;
-    let start = undefined;
-    const delIdxs = [];
+    let start: number | undefined = undefined;
+    const delIdxs: number[] = [];
     this.trajectories.forEach((traj, i) => {
       if (traj.id === 12) {
         if (chain === false) {
@@ -1279,22 +1507,28 @@ class Phrase {
           chain = true
         }
         if (i === this.trajectories.length - 1) {
+          if (start === undefined) {
+            throw new Error('start is undefined')
+          }
           const extraDur = this.trajectories
             .slice(start+1)
             .map(t => t.durTot)
             .reduce((a, b) => a + b, 0);
           this.trajectories[start].durTot += extraDur;
           const dIdxs = [...Array(this.trajectories.length - start - 1)]
-            .map((_, i) => i + start + 1);
+            .map((_, i) => i + start! + 1);
           delIdxs.push(...dIdxs)
         }
       } else {
         if (chain === true) {
+          if (start === undefined) {
+            throw new Error('start is undefined')
+          }
           const extraDur = this.trajectories
             .slice(start+1, i)
             .map(t => t.durTot)
             .reduce((a, b) => a + b, 0);
-          const dIdxs = [...Array(i - (start+1))].map((_, i) => i + start + 1);
+          const dIdxs = [...Array(i - (start+1))].map((_, i) => i + start! + 1);
           this.trajectories[start].durTot += extraDur;
           delIdxs.push(...dIdxs);
           chain = false;
@@ -1302,7 +1536,12 @@ class Phrase {
         }
       }
     });
-    const newTs = this.trajectories.filter(traj => !delIdxs.includes(traj.num));
+    const newTs = this.trajectories.filter(traj => {
+      if (traj.num === undefined) {
+        throw new Error('traj.num is undefined')
+      }
+      return !delIdxs.includes(traj.num)
+    });
     // this.trajectories = newTrajs;
     this.trajectoryGrid[0] = newTs;
     this.durArrayFromTrajectories();
@@ -1315,23 +1554,35 @@ class Phrase {
   }
 
   get swara() {
-    const swara = [];
+    const swara: object[] = [];
+    if (this.startTime === undefined) {
+      throw new Error('startTime is undefined')
+    }
     this.trajectories.forEach(traj => {
       if (traj.id !== 12) {
+        if (traj.durArray === undefined) {
+          throw new Error('traj.durArray is undefined')
+        }
+        if (traj.startTime === undefined) {
+          throw new Error('traj.startTime is undefined')
+        }
         if (traj.durArray.length === traj.pitches.length - 1) {
           traj.pitches.slice(0, traj.pitches.length - 1).forEach((pitch, i) => {
-            const obj = {};
-            obj.pitch = pitch;
-            const st = this.startTime + traj.startTime;
-            obj.time = st + getStarts(traj.durArray)[i] * traj.durTot;
+            const st = this.startTime! + traj.startTime!;
+            const obj = {
+              pitch: pitch,
+              time: st + getStarts(traj.durArray!)[i] * traj.durTot
+            };       
             swara.push(obj)
           })
         } else {
           traj.pitches.forEach((pitch, i) => {
-            const obj = {};
+            const st = this.startTime! + traj.startTime!;
+            const obj = {
+              pitch: pitch,
+              time: st + getStarts(traj.durArray!)[i] * traj.durTot
+            };
             obj.pitch = pitch;
-            const st = this.startTime + traj.startTime;
-            obj.time = st + getStarts(traj.durArray)[i] * traj.durTot;
             swara.push(obj)
           })
         }
@@ -1341,7 +1592,7 @@ class Phrase {
   }
 
   allPitches(repetition=true) {
-    let allPitches = [];
+    let allPitches: Pitch[] = [];
     this.trajectories.forEach(traj => {
       if (traj.id !== 12) {
         allPitches.push(...traj.pitches)
@@ -1365,11 +1616,11 @@ class Phrase {
     // consonant, or 4) follows a traj that has an ending consonant, or 5) is a
     // different vowel than the previous non silent traj
     // for the purpose of displaying vowels in vocal notation
-    const idxs = [];
+    const idxs: number[] = [];
     let ct = 0;
     let silentTrigger = false;
-    let lastVowel = undefined;
-    let endConsonantTrigger = undefined;
+    let lastVowel: string | undefined = undefined;
+    let endConsonantTrigger: boolean | undefined = undefined;
     this.trajectories.forEach((traj, tIdx) => {
       if (traj.id !== 12) {
         const c1 = ct === 0;
@@ -1403,11 +1654,11 @@ class Phrase {
   }
 
   toNoteViewPhrase() {
-    const pitches = [];
+    const pitches: Pitch[] = [];
     this.trajectories.forEach(traj => {
       if (traj.id !== 0) {
         traj.pitches.forEach(pitch => pitches.push(pitch))
-      } else if (Object.keys(traj.articulations) > 0) {
+      } else if (Object.keys(traj.articulations).length > 0) {
         traj.pitches.forEach(pitch => pitches.push(pitch))
       }
     })
@@ -1419,19 +1670,6 @@ class Phrase {
     });
     return nvPhrase
   }
-
-  offsetChikaris(deltaTime, initChikaris) {
-    this.chikaris = Object.assign({}, initChikaris);
-    const keys = Object.keys(this.chikaris);
-    keys.forEach(key => {
-      const newKey = (Number(key) - deltaTime).toFixed(2);
-      if (key !== newKey) {
-        Object.defineProperty(this.chikaris, newKey,
-          Object.getOwnPropertyDescriptor(this.chikaris, key));
-        delete this.chikaris[key]
-      }
-    })
-  }
   
   reset() {
     this.durArrayFromTrajectories();
@@ -1442,11 +1680,21 @@ class Phrase {
 }
 
 class NoteViewPhrase {
+  pitches: Pitch[];
+  durTot?: number;
+  raga?: Raga;
+  startTime?: number;
+
   constructor({
     pitches = [],
     durTot = undefined,
     raga = undefined,
     startTime = undefined
+  }: {
+    pitches?: Pitch[],
+    durTot?: number,
+    raga?: Raga,
+    startTime?: number
   } = {}) {
     this.pitches = pitches;
     this.durTot = durTot;
@@ -1456,12 +1704,34 @@ class NoteViewPhrase {
 }
 
 class Piece {
+  phrases: Phrase[];
+  durTot?: number;
+  durArray?: number[];
+  raga: Raga;
+  title: string;
+  performers: string[];
+  dateCreated: Date;
+  dateModified: Date;
+  location: string;
+  transcriber: string;
+  _id?: string;
+  audioID?: string;
+  audio_DB_ID?: string;
+  userID?: string;
+  name?: string;
+  family_name?: string;
+  given_name?: string;
+  permissions?: string;
+  sectionStarts?: number[];
+  instrumentation: string[];
+  possibleTrajs: { [key: string]: number[] };
+
 
   constructor({
     phrases = [],
     durTot = undefined,
     durArray = undefined,
-    raga = new Raga('Yaman'),
+    raga = new Raga(),
     title = 'untitled',
     performers = [],
     dateCreated = new Date(),
@@ -1493,12 +1763,20 @@ class Piece {
       this.durTotFromPhrases();
       this.durArrayFromPhrases();
       if (durTot !== undefined && this.durTot !== durTot) {
-        this.phrases.forEach(p => p.durTot = p.durTot * durTot / this.durTot);
+        this.phrases.forEach(p => {
+          if (p.durTot === undefined) {
+            throw new Error('p.durTot is undefined')
+          }
+          p.durTot = p.durTot * durTot / this.durTot!
+        });
         this.durTot = durTot;
       }
       if (durArray !== undefined && this.durArray !== durArray) {
         this.phrases.forEach((p, i) => {
-          p.durTot = p.durTot * durArray[i] / this.durArray[i]
+          if (p.durTot === undefined) {
+            throw new Error('p.durTot is undefined')
+          }
+          p.durTot = p.durTot * durArray[i] / this.durArray![i]
         })
         this.durArray = durArray;
         this.durTotFromPhrases();
@@ -1554,7 +1832,13 @@ class Piece {
   }
 
   get durStarts() {
-    const starts = getStarts(this.durArray.map(d => d * this.durTot));
+    if (this.durArray === undefined) {
+      throw new Error('durArray is undefined')
+    }
+    if (this.durTot === undefined) {
+      throw new Error('durTot is undefined')
+    }
+    const starts = getStarts(this.durArray.map(d => d * this.durTot!));
     return starts
   }
 
@@ -1571,12 +1855,22 @@ class Piece {
   }
 
   durTotFromPhrases() {
-    this.durTot = this.phrases.map(p => p.durTot).reduce((a, b) => a + b, 0)
+    this.durTot = this.phrases.map(p => p.durTot as number).reduce((a, b) => {
+      if (a === undefined || b === undefined) {
+        throw new Error('a or b is undefined')
+      }
+      return a + b
+    }, 0)
   }
 
   durArrayFromPhrases() {
     this.durTotFromPhrases();
-    this.durArray = this.phrases.map(p => p.durTot / this.durTot);
+    this.durArray = this.phrases.map(p => {
+      if (p.durTot === undefined) {
+        throw new Error('p.durTot is undefined')
+      }
+      return p.durTot / this.durTot!
+    });
     this.updateStartTimes();
   }
 
@@ -1585,15 +1879,15 @@ class Piece {
   }
 
   get sections() {
-    const sections = [];
-    this.sectionStarts.sort((a, b) => a - b)
-    this.sectionStarts.forEach((s, i) => {
+    const sections: Section[] = [];
+    this.sectionStarts!.sort((a, b) => a - b)
+    this.sectionStarts!.forEach((s, i) => {
       let slice;
-      if (i === this.sectionStarts.length - 1) {
+      if (i === this.sectionStarts!.length - 1) {
         slice = this.phrases.slice(s)
         // sections.push(this.phrases.slice(s))
       } else {
-        slice = this.phrases.slice(s, this.sectionStarts[i + 1])
+        slice = this.phrases.slice(s, this.sectionStarts![i + 1])
         // sections.push(this.phrases.slice(s, this.sectionStarts[i + 1]))
       }
       sections.push(new Section({ phrases: slice }))
@@ -1602,38 +1896,57 @@ class Piece {
   }
 
   allPitches({ repetition=true, pitchNumber=false } = {}) {
-    let allPitches = [];
+    let allPitches: Pitch[] = [];
     this.phrases.forEach(p => allPitches.push(...p.allPitches()));
     if (!repetition) {
       allPitches = allPitches.filter((pitch, i) => {
+        if (typeof pitch === 'number') {
+          throw new Error('pitch is a number')
+        }
         const c1 = i === 0;
-        const c2 = pitch.swara === allPitches[i-1]?.swara;
-        const c3 = pitch.oct === allPitches[i-1]?.oct;
-        const c4 = pitch.raised === allPitches[i-1]?.raised;
+        const lastP = allPitches[i-1];
+        if (typeof lastP === 'number') {
+          throw new Error('lastP is a number')
+        }
+        const c2 = pitch.swara === lastP?.swara;
+        const c3 = pitch.oct === lastP?.oct;
+        const c4 = pitch.raised === lastP?.raised;
         return c1 || !(c2 && c3 && c4)
       })
     }
     if (pitchNumber) {
-      allPitches = allPitches.map(p => p.numberedPitch)
+      const allPitchNumbers = allPitches.map((p) => {
+        if (typeof p === 'number') {
+          throw new Error('p is a number')
+        }
+        return p.numberedPitch
+      })
+      return allPitchNumbers
+    } else {
+      return allPitches
     }
-    return allPitches
   }
 
   get highestPitchNumber() {
-    return Math.max(...this.allPitches({ pitchNumber: true }))
+    return Math.max(...this.allPitches({ pitchNumber: true }) as number[]);
   }
 
   get lowestPitchNumber() {
-    return Math.min(...this.allPitches({ pitchNumber: true }))
+    return Math.min(...this.allPitches({ pitchNumber: true }) as number[])
   }
 
   allTrajectories(inst = 0) {
-    const allTrajectories = [];
+    const allTrajectories: Trajectory[] = [];
     this.phrases.forEach(p => allTrajectories.push(...p.trajectoryGrid[inst]));
     return allTrajectories
   }
 
-  durationsOfFixedPitches({ inst = 0, outputType='pitchNumber' } = {}) {
+  durationsOfFixedPitches({ 
+    inst = 0, 
+    outputType = 'pitchNumber' }: {
+      inst?: number,
+      outputType?: OutputType
+    } = {}) {
     const trajs = this.allTrajectories(inst);
     return durationsOfFixedPitches(trajs, { 
       inst: inst, 
@@ -1641,16 +1954,22 @@ class Piece {
     })
   }
 
-  proportionsOfFixedPitches({ inst = 0, outputType = 'pitchNumber' } = {}) {
+  proportionsOfFixedPitches({ 
+    inst = 0, 
+    outputType = 'pitchNumber' 
+  }: {
+    inst?: number,
+    outputType?: OutputType
+  } = {}) {
     const pitchDurs = this.durationsOfFixedPitches({ 
       inst: inst,
       outputType: outputType
-    });
+    })!;
     let totalDur = 0;
     Object.keys(pitchDurs).forEach(key => {
       totalDur += pitchDurs[key];
     });
-    const pitchProps = {};
+    const pitchProps: NumObj = {};
     for (let key in pitchDurs) {
       pitchProps[key] = pitchDurs[key] / totalDur;
     }
@@ -1714,15 +2033,18 @@ const yamanRuleSet = {
 }
 
 class Section {
+  phrases: Phrase[];
 
   constructor({
     phrases = []
+  }: {
+    phrases?: Phrase[]
   } = {}) {
     this.phrases = phrases
   }
 
   allPitches(repetition=true) {
-    let pitches = [];
+    let pitches: Pitch[] = [];
     this.phrases.forEach(p => pitches.push(...p.allPitches(true)));
     if (!repetition) {
       pitches = pitches.filter((pitch, i) => {
@@ -1737,13 +2059,24 @@ class Section {
   }
 
   get trajectories() {
-    const trajectories = [];
+    const trajectories: Trajectory[] = [];
     this.phrases.forEach(p => trajectories.push(...p.trajectories));
     return trajectories
   }
 }
 
+type BoolObj = { [key: string]: boolean };
+type NumObj = { [key: string]: number };
+type RuleSetType = {[key: string]: (boolean | BoolObj) };
+type TuningType = { [key: string]: number | NumObj };
+
+
 class Raga {
+  name: string;
+  fundamental: number;
+  ruleSet: RuleSetType;
+  tuning: TuningType;
+  ratios: number[];
 
   constructor({
     name = 'Yaman',
@@ -1789,11 +2122,12 @@ class Raga {
 
   get sargamLetters() {
     const initSargam = ['sa', 're', 'ga', 'ma', 'pa', 'dha', 'ni'];
-    const sl = [];
+    const sl: string[] = [];
     initSargam.forEach(s => {
       if (isObject(this.ruleSet[s])) {
-        if (this.ruleSet[s].lowered) sl.push(s.slice(0, 1));
-        if (this.ruleSet[s].raised) sl.push(s.slice(0, 1).toUpperCase());
+        const ruleSet = this.ruleSet[s] as BoolObj;
+        if (ruleSet.lowered) sl.push(s.slice(0, 1));
+        if (ruleSet.raised) sl.push(s.slice(0, 1).toUpperCase());
       } else if (this.ruleSet[s]) {
         sl.push(s.slice(0, 1).toUpperCase())
       }
@@ -1801,7 +2135,7 @@ class Raga {
     return sl
   }
 
-  pitchNumberToSargamLetter(pitchNumber) {
+  pitchNumberToSargamLetter(pitchNumber: number) {
     const oct = Math.floor(pitchNumber / 12);
     let out;
     let chroma = pitchNumber % 12;
@@ -1814,14 +2148,15 @@ class Raga {
         out = sargam.slice(0, 1).toUpperCase()
       }
     } else {
-      if (this.ruleSet[sargam][raised ? 'raised' : 'lowered']) {
+      const ruleSet = this.ruleSet[sargam] as BoolObj;
+      if (ruleSet[raised ? 'raised' : 'lowered']) {
         out = raised ? sargam.slice(0, 1).toUpperCase() : sargam.slice(0, 1)
       }
     }
     return out
   }
 
-  getPitchNumbers(low, high) { // returns all pitch numbers, inclusive
+  getPitchNumbers(low: number, high: number) { // returns all pitch numbers, inclusive
     let pitchNumbers = [];
     for (let i = low; i <= high; i++) {
       const oct = Math.floor(i / 12);
@@ -1835,7 +2170,8 @@ class Raga {
           pitchNumbers.push(i);
         }
       } else {
-        if (this.ruleSet[sargam][raised ? 'raised' : 'lowered']) {
+        const ruleSet = this.ruleSet[sargam] as BoolObj;
+        if (ruleSet[raised ? 'raised' : 'lowered']) {
           pitchNumbers.push(i);
         }
       }
@@ -1843,7 +2179,7 @@ class Raga {
     return pitchNumbers
   }
 
-  pitchNumberToScaleNumber(pitchNumber) {
+  pitchNumberToScaleNumber(pitchNumber: number) {
     // as opposed to scale degree. This is just 0 - x, depending on how many 
     // pitches are in the raga
     const oct = Math.floor(pitchNumber / 12);
@@ -1857,7 +2193,7 @@ class Raga {
     return idx + oct * mainOct.length
   }
 
-  scaleNumberToPitchNumber(scaleNumber) {
+  scaleNumberToPitchNumber(scaleNumber: number) {
     const mainOct = this.getPitchNumbers(0, 11);
     const oct = Math.floor(scaleNumber / mainOct.length);
     while (scaleNumber < 0) scaleNumber += mainOct.length;
@@ -1865,33 +2201,22 @@ class Raga {
     return chroma + oct * 12
   }
 
-  scaleNumberToSargamLetter(scaleNumber) {
+  scaleNumberToSargamLetter(scaleNumber: number) {
     const pn = this.scaleNumberToPitchNumber(scaleNumber);
     return this.pitchNumberToSargamLetter(pn)
   }
-  // getSargam(low, high) {
-  //   const pitchNumbers = this.getPitchNumbers(low, high);
-  //   const sargam = pitchNumbers.map(pn => {
-  //     const oct = Math.floor(pn / 12);
-  //     let chroma = pn % 12;
-  //     while (chroma < 0) chroma += 12;
-  //     let scaleDegree, raised;
-  //     [scaleDegree, raised] = chromaToScaleDegree(chroma);
-  //     const sargam = ['sa', 're', 'ga', 'ma', 'pa', 'dha', 'ni'][scaleDegree];
-  //     return sargam
-  //   });
-  //   return sargam
-  // }
 
-  setRatios(ruleSet) {
+  setRatios(ruleSet: RuleSetType) {
     const sargam = Object.keys(ruleSet);
-    const ratios = [];
+    const ratios: number[] = [];
     sargam.forEach(s => {
       if (typeof(this.tuning[s]) === 'number' && ruleSet[s]) {
-        ratios.push(this.tuning[s]);
+        ratios.push(this.tuning[s] as number);
       } else {
-        if (ruleSet[s].lowered) ratios.push(this.tuning[s].lowered);
-        if (ruleSet[s].raised) ratios.push(this.tuning[s].raised);
+        const ruleSet = this.ruleSet[s] as BoolObj;
+        const tuning = this.tuning[s] as NumObj;
+        if (ruleSet.lowered) ratios.push(tuning.lowered);
+        if (ruleSet.raised) ratios.push(tuning.raised);
       }
     })
     return ratios;
@@ -1899,10 +2224,10 @@ class Raga {
 
   getPitches({ low=100, high=800 } = {}) {
     const sargam = Object.keys(this.ruleSet);
-    const pitches = [];
+    const pitches: Pitch[] = [];
     sargam.forEach(s => {
       if (typeof(this.ruleSet[s]) === 'boolean' && this.ruleSet[s]) {
-        const freq = this.tuning[s] * this.fundamental;
+        const freq = this.tuning[s] as number * this.fundamental;
         const octsBelow = Math.ceil(Math.log2(low/freq));
         const octsAbove = Math.floor(Math.log2(high/freq));
         for (let i = octsBelow; i <= octsAbove; i++) {
@@ -1914,8 +2239,8 @@ class Raga {
           }))
         }
       } else {
-        if (this.ruleSet[s].lowered) {
-          const freq = this.tuning[s].lowered * this.fundamental;
+        if ((this.ruleSet[s] as BoolObj).lowered) {
+          const freq = (this.tuning[s] as NumObj).lowered * this.fundamental;
           const octsBelow = Math.ceil(Math.log2(low/freq));
           const octsAbove = Math.floor(Math.log2(high/freq));
           for (let i = octsBelow; i <= octsAbove; i++) {
@@ -1928,8 +2253,8 @@ class Raga {
             }))
           }
         }
-        if (this.ruleSet[s].raised) {
-          const freq = this.tuning[s].raised * this.fundamental;
+        if ((this.ruleSet[s] as BoolObj).raised) {
+          const freq = (this.tuning[s] as NumObj).raised * this.fundamental;
           const octsBelow = Math.ceil(Math.log2(low/freq));
           const octsAbove = Math.floor(Math.log2(high/freq));
           for (let i = octsBelow; i <= octsAbove; i++) {
@@ -1950,7 +2275,7 @@ class Raga {
 
   get stratifiedRatios() {
     const sargam = ['sa', 're', 'ga', 'ma', 'pa', 'dha', 'ni'];
-    const ratios = [];
+    const ratios: (number | number[])[] = [];
     let ct = 0;
     sargam.forEach((s, sIdx) => {
       if (typeof(this.ruleSet[s]) === 'boolean') {
@@ -1958,48 +2283,25 @@ class Raga {
           ratios.push(this.ratios[ct]);
           ct++;
         } else {
-          ratios.push(this.tuning[s])
+          ratios.push(this.tuning[s] as number)
         }
       } else {
         ratios.push([]);
-        if (this.ruleSet[s].lowered) {
-          ratios[sIdx].push(this.ratios[ct]);
+        if ((this.ruleSet[s] as BoolObj).lowered) {
+          (ratios[sIdx] as number[]).push(this.ratios[ct]);
           ct++;
         } else {
-          ratios[sIdx].push(this.tuning[s].lowered)
+          (ratios[sIdx] as number[]).push((this.tuning[s] as NumObj).lowered)
         }
-        if (this.ruleSet[s].raised) {
-          ratios[sIdx].push(this.ratios[ct]);
+        if ((this.ruleSet[s] as BoolObj).raised) {
+          (ratios[sIdx] as number[]).push(this.ratios[ct]);
           ct++;
         } else {
-          ratios[sIdx].push(this.tuning[s].raised)
+          (ratios[sIdx] as number[]).push((this.tuning[s] as NumObj).raised)
         }
       } 
     });
     return ratios
-  }
-
-
-  get tarafs() {
-    const fund = this.fundamental;
-    const templates = {
-      'Yaman': [
-        new Pitch({ swara: 'ni', oct: -1, raised: true, fundamental: fund }),
-        new Pitch({ swara: 'pa', oct: -1, fundamental: fund }),
-        new Pitch({ swara: 'sa', oct: 0, fundamental: fund }),
-        new Pitch({ swara: 'sa', oct: 0, fundamental: fund }),
-        new Pitch({ swara: 're', oct: 0, raised: true, fundamental: fund }),
-        new Pitch({ swara: 'ga', oct: 0, raised: true, fundamental: fund }),
-        new Pitch({ swara: 'ma', oct: 0, raised: true, fundamental: fund }),
-        new Pitch({ swara: 'pa', oct: 0, fundamental: fund }),
-        new Pitch({ swara: 'dha', oct: 0, raised: true, fundamental: fund }),
-        new Pitch({ swara: 'ni', oct: 0 , raised: true, fundamental: fund }),
-        new Pitch({ swara: 'sa', oct: 1, fundamental: fund }),
-        new Pitch({ swara: 're', oct: 1, raised: true, fundamental: fund }),
-        new Pitch({ swara: 'ga', oct: 1, raised: true, fundamental: fund }),
-      ]
-    };
-    return templates[this.name]
   }
 
   get chikariPitches() {
@@ -2015,7 +2317,7 @@ class Raga {
   } = {}) {
     // returns all oct instances of raga's pitches that are between low and high
     const baseFreqs = this.ratios.map(r => r * this.fundamental);
-    const freqs = [];
+    const freqs: number[] = [];
     baseFreqs.forEach(f => {
       const lowExp = Math.ceil(Math.log2(low / f));
       const highExp = Math.floor(Math.log2(high / f));
@@ -2029,11 +2331,11 @@ class Raga {
   }
 
   get sargamNames() {
-    const names = [];
+    const names: string[] = [];
     const sargam = Object.keys(this.ruleSet);
     sargam.forEach(s => {
       if (typeof(this.ruleSet[s]) === 'object') {
-        const obj = this.ruleSet[s];
+        const obj = this.ruleSet[s] as BoolObj;
         if (obj.raised) {
           const str = s.charAt(0).toUpperCase() + s.slice(1);
           names.push(str)

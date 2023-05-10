@@ -188,7 +188,7 @@
     Pitch, 
     pitchNumberToChroma,
     Trajectory
-  } from '@/js/classes.mjs';
+  } from '@/js/classes.ts';
   import { pieceExists } from '@/js/serverCalls.mjs';
   import Gradient from 'javascript-color-gradient';
   import * as d3 from 'd3';
