@@ -8,5 +8,8 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "strict": true,
+    "paths": {
+      "@/*": ["src/*"]
+    },
   }
 }
