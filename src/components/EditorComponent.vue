@@ -2694,6 +2694,13 @@ export default {
           .style('fill', '#7300e6') 
       };
       this.resetSargam();
+      const vowelIdxs = phrase.firstTrajIdxs();
+      // this.codifiedAddArticulations(newTraj, phrase.startTime, vowelIdxs)
+      // const id = `p${newTraj.phraseIdx}t${newTraj.num}`;
+      // const g = d3Select(`#articulations__${id}`);
+      // this.addVowel(newTraj, phrase.startTime, g, true)
+      // console.log(d3Select(`#vowel${id}`).node())
+      // console.log(g.node())
     },
     
     clearAll(regionToo) {
@@ -4183,7 +4190,7 @@ export default {
           const y = traj.compute(0, true);
           const scaledX = codified ? this.codifiedXR(x) : this.xr()(x);
           const scaledY = codified ? this.codifiedYR(y) : this.yr()(y);
-          const sym = d3Symbol().type(d3SymbolDiamond).size(30);
+          const sym = d3Symbol().type(d3SymbolDiamond).size(40);
           g.append('path')
             .classed('articulation', true)
             .classed('consonantSymbol', true)
@@ -4203,7 +4210,7 @@ export default {
           const y = traj.compute(1, true);
           const scaledX = codified ? this.codifiedXR(x) : this.xr()(x);
           const scaledY = codified ? this.codifiedYR(y) : this.yr()(y);
-          const sym = d3Symbol().type(d3SymbolDiamond).size(30);
+          const sym = d3Symbol().type(d3SymbolDiamond).size(40);
           g.append('path')
             .classed('articulation', true)
             .classed('consonantSymbol', true)
