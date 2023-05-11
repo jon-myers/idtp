@@ -135,7 +135,7 @@ import {
   Raga,
   Chikari,
   Group
-} from '@/js/classes.mjs';
+} from '@/js/classes.ts';
 
 import {
   getPiece,

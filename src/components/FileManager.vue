@@ -124,7 +124,7 @@ import {
   updateTranscriptionPermissions,
 } from '@/js/serverCalls.mjs';
 import NewPieceRegistrar from '@/components/NewPieceRegistrar.vue';
-import { Raga, Piece, Trajectory, Phrase } from '@/js/classes.mjs';
+import { Raga, Piece, Trajectory, Phrase } from '@/js/classes.ts';
 
 export default {
   name: 'FileManager',

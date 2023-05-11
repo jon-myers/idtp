@@ -6,6 +6,10 @@
     "importHelpers": true,
     "isolatedModules": true,
     "noEmit": true,
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "strict": true,
+    "paths": {
+      "@/*": ["src/*"]
+    },
   }
 }

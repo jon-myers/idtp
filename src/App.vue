@@ -55,11 +55,12 @@ import {
 } from 'vue3-google-login';
 // import { detect } from 'detect-browser';
 import { userLoginGoogle, handleGoogleAuthCode } from '@/js/serverCalls.mjs';
+import { defineComponent } from 'vue';
 
 import defaultUsrImgUrl from '@/assets/icons/user_head.svg';
 // import Editor from '@/components/Editor.vue'
 // const browser = detect();
-export default {
+export default defineComponent({
   name: 'App',
   components: {
     // Editor
@@ -201,7 +202,7 @@ export default {
       if (this.showUserMenu) this.showUserMenu = false
     }
   }
-}
+})
 </script>
 
 <style>
