@@ -422,7 +422,6 @@ export default {
     },
 
     showSlope(newVal) {
-      console.log(newVal)
       if (newVal) {
         this.octShiftTop = this.vocal ? 97 : 4;
       } else {
