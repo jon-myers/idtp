@@ -9,7 +9,7 @@
     "allowImportingTsExtensions": true,
     "strict": true,
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     },
   }
 }
