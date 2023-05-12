@@ -3139,6 +3139,9 @@ export default {
         phrase.consolidateSilentTrajs()
       });
       this.piece.durArrayFromPhrases();
+      if (this.piece.durTot !== this.durTot) {
+        this.piece.setDurTot(this.durTot)
+      }
     },
 
     fixTrajs() {

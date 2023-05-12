@@ -1980,6 +1980,23 @@ class Piece {
     return this.phrases.map(p => p.startTime)
   }
 
+  setDurTot(durTot: number) {
+    const lastPhrase: Phrase = this.phrases[this.phrases.length - 1];
+    const trajs = lastPhrase.trajectories;
+    const lastTraj: Trajectory = trajs[trajs.length - 1];
+    if (lastTraj.id !== 12) {
+      throw new Error('lastTraj is not silent')
+    } else {
+      const extraDur = durTot - this.durTot!;
+      lastTraj.durTot += extraDur;
+      lastPhrase.durTotFromTrajectories();
+      lastPhrase.durArrayFromTrajectories();
+      // this.durTot = durTot;
+      this.durArrayFromPhrases();
+      this.updateStartTimes();
+    }
+  }
+
 
   toJSON() {
     return {
