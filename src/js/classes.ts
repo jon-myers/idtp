@@ -765,6 +765,14 @@ class Trajectory {
     this.convertCIsoToHindiAndIpa()
   }
 
+  get minFreq() {
+    return Math.min(...this.freqs)
+  }
+
+  get maxFreq() {
+    return Math.max(...this.freqs)
+  }
+
 
   get name_() {
     // eventually this will replace regular `name`, just testing for now
@@ -1242,6 +1250,7 @@ class Group {
   id: string;
 
 
+
   
   //  a group of adjacent trajectories, cloneable for copy and paste
   // takes the trajectories as input (they should have already been tested for 
@@ -1278,12 +1287,21 @@ class Group {
     
     if (id === undefined) {
       id = uuidv4();
-      console.log(id)
     }
     this.id = id;
     this.trajectories.forEach(traj => {
       traj.groupId = this.id
     })
+  }
+
+  get minFreq() {
+    const out = Math.min(...this.trajectories.map(t => t.minFreq));
+    return out
+  }
+
+  get maxFreq() {
+    const out = Math.max(...this.trajectories.map(t => t.maxFreq));
+    return out
   }
 
   testForAdjacency() {

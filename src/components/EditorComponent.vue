@@ -453,6 +453,16 @@ export default {
         const followingTraj = phrase.trajectories[stIdx+2];
         this.moveVowel(followingTraj, phrase.startTime, true);
       }
+      if ((this.selectedTraj.minFreq / 2) < this.freqMin) {
+        tsp.canShiftDown = false;
+      } else {
+        tsp.canShiftDown = true;
+      }
+      if ((this.selectedTraj.maxFreq * 2) > this.freqMax) {
+        tsp.canShiftUp = false;
+      } else {
+        tsp.canShiftUp = true;
+      }
     });
 
     this.emitter.on('pluckBool', pluckBool => {
@@ -3109,14 +3119,14 @@ export default {
           });
         }
         if (phrase.groupsGrid !== undefined) {
-          phrase.groupsGrid.forEach(groups => {
-            groups.forEach(group => {
+          phrase.groupsGrid.forEach((groups, ggIdx) => {
+            groups.forEach((group, gIdx) => {
               group.trajectories.forEach((traj, idx) => {
-                // const pIdx = phrase.pieceIdx;
                 const tIdx = traj.num;
                 const realTraj = phrase.trajectoryGrid[0][tIdx];
                 group.trajectories[idx] = realTraj;
               })
+              groups[gIdx] = new Group(group)
             })
           })
         }
@@ -5293,6 +5303,20 @@ export default {
               .attr('cursor', 'pointer')
             this.updateArtColors(traj, true)
           })
+          console.log('this should be triggering')
+          let minFreq = Math.min(...this.selectedTrajs.map(t => t.minFreq));
+          let maxFreq = Math.max(...this.selectedTrajs.map(t => t.maxFreq));
+          console.log(minFreq, maxFreq)
+          if ((minFreq / 2) < this.freqMin) {
+            this.$refs.trajSelectPanel.canShiftDown = false
+          } else {
+            this.$refs.trajSelectPanel.canShiftDown = true
+          }
+          if ((maxFreq * 2) > this.freqMax) {
+            this.$refs.trajSelectPanel.canShiftUp = false
+          } else {
+            this.$refs.trajSelectPanel.canShiftUp = true
+          }
         }
       } else {
         if (this.selectedTrajs.length > 1) {
@@ -5310,6 +5334,19 @@ export default {
               .attr('cursor', 'pointer')
             this.updateArtColors(traj, false)
           })
+          let minFreq = Math.min(...this.selectedTrajs.map(t => t.freqMin));
+          let maxFreq = Math.max(...this.selectedTrajs.map(t => t.freqMax));
+          if ((minFreq / 2) < this.freqMin) {
+            this.$refs.trajSelectPanel.canShiftDown = false
+          } else {
+            this.$refs.trajSelectPanel.canShiftDown = true
+          }
+          if ((maxFreq * 2) > this.freqMax) {
+            this.$refs.trajSelectPanel.canShiftUp = false
+          } else {
+            this.$refs.trajSelectPanel.canShiftUp = true
+          }
+          
         }
         const id = this.getIdFromTrajClick(e);
         if (this.selectedTrajID && this.selectedTrajID !== id) {
@@ -5340,6 +5377,16 @@ export default {
         if (this.selectedTraj.groupId !== undefined) {
           const phrase = this.piece.phrases[pIdx];
           const group = phrase.getGroupFromId(this.selectedTraj.groupId);
+          if ((group.minFreq / 2) < this.freqMin) {
+            this.$refs.trajSelectPanel.canShiftDown = false
+          } else {
+            this.$refs.trajSelectPanel.canShiftDown = true
+          }
+          if ((group.maxFreq * 2) > this.freqMax) {
+            this.$refs.trajSelectPanel.canShiftUp = false
+          } else {
+            this.$refs.trajSelectPanel.canShiftUp = true
+          }
           this.selectedTrajs = group.trajectories;
           this.clearTrajSelectPanel();
           this.groupable = true;
@@ -5374,6 +5421,16 @@ export default {
           tsp.startConsonant = this.selectedTraj.startConsonant;
           tsp.endConsonant = this.selectedTraj.endConsonant;
           const st = this.selectedTraj;
+          if ((st.minFreq / 2) < this.freqMin) {
+            tsp.canShiftDown = false
+          } else {
+            tsp.canShiftDown = true
+          }
+          if ((st.maxFreq * 2) > this.freqMax) {
+            tsp.canShiftUp = false
+          } else {
+            tsp.canShiftUp = true
+          }
           const c1 = st.articulations[0];
           const c2 = this.selectedTraj.articulations['1.00'];
           const c3 = st.articulations['0.00'];
