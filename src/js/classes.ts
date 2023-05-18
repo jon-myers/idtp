@@ -462,7 +462,7 @@ class Trajectory {
   endConsonantHindi: string | undefined;
   endConsonantIpa: string | undefined;
   endConsonantEngTrans: string | undefined;
-  groupId?: number;
+  groupId?: string;
   freqs: number[];
   logFreqs: number[];
   ids: IdFunction[];
@@ -527,7 +527,7 @@ class Trajectory {
     endConsonantHindi?: string,
     endConsonantIpa?: string,
     endConsonantEngTrans?: string,
-    groupId?: number,
+    groupId?: string,
   } = {}) {
     if (typeof(id) === 'number' && Number.isInteger(id)) {
       this.id = id
@@ -1278,10 +1278,11 @@ class Group {
     
     if (id === undefined) {
       id = uuidv4();
+      console.log(id)
     }
     this.id = id;
     this.trajectories.forEach(traj => {
-      traj.groupId = Number(this.id)
+      traj.groupId = this.id
     })
   }
 
