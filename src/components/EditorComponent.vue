@@ -4154,6 +4154,7 @@ export default {
         g.append('g')
           .classed('articulation', true)
           .classed('pluck', true)
+          .classed('codified', true)
           .append('path')
           .attr('d', sym)
           .attr('id', `pluckp${traj.phraseIdx}t${traj.num}`)
