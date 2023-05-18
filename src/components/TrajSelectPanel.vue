@@ -503,7 +503,7 @@ export default {
         if (twos.includes(trId)) {
           if (realIdx !== trId && twos.includes(realIdx)) {
             this.selectedIdx = idx;
-            let outIdx = trId;
+            let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
             this.emitter.emit('mutateTraj', outIdx);
             document.querySelectorAll('.thumb').forEach(t => {
@@ -516,7 +516,7 @@ export default {
             if (trId === 6) {
               if (this.$parent.selectedTraj.durArray.length === 2) {
                 this.selectedIdx = idx;
-                let outIdx = trId;
+                let outIdx = this.trajIdxs[this.selectedIdx];
                 if (outIdx >= 12) outIdx += 1;
                 this.emitter.emit('mutateTraj', outIdx);
                 document.querySelectorAll('.thumb').forEach(t => {
@@ -526,7 +526,7 @@ export default {
               }
             } else {
               this.selectedIdx = idx;
-              let outIdx = trId;
+              let outIdx = this.trajIdxs[this.selectedIdx];
               if (outIdx >= 12) outIdx += 1;
               this.emitter.emit('mutateTraj', outIdx);
               document.querySelectorAll('.thumb').forEach(t => {
@@ -538,7 +538,7 @@ export default {
         } else if (fixed.includes(realSelectedIdx)) {
           if (realIdx !== trId && fixed.includes(realIdx)) {
             this.selectedIdx = idx;
-            let outIdx = trId;
+            let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
             this.emitter.emit('mutateTraj', outIdx);
             document.querySelectorAll('.thumb').forEach(t => {

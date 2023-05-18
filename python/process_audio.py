@@ -48,7 +48,7 @@ duration = ess.Duration()(audio)
 # this could be sped up by just sampling chunks rather than whole file ...
 tonic_guess = ess.TonicIndianArtMusic(maxTonicFrequency=200)(audio)
 
-dur = math.ceil(duration)
+dur = duration
 query = { '_id': ObjectId(objectId) }
 dur_path = 'recordings.' + str(recording_idx) + '.duration'
 sa_path = 'recordings.' + str(recording_idx) + '.saEstimate'
