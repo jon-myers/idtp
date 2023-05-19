@@ -348,7 +348,7 @@ export default {
           clone: false,
           instrumentation: this.instrumentation
         };
-        if (this.aeIdx && this.recording !== undefined) {
+        if (this.aeIdx !== undefined && this.recording !== undefined) {
           const ae = this.allEvents[this.aeIdx];
           newPieceInfo.audioID = ae.recordings[this.recording].audioFileId;
         }
