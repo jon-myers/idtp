@@ -527,6 +527,16 @@ export default {
         selected.remove();
         this.addVowel(this.selectedTraj, phrase.startTime, g, true)
       }
+      // if there is a next traj, check its vowel, and change it if necessary
+      const nextTraj = phrase.trajectories[tIdx + 1];
+      if (nextTraj) {
+        const sel = d3Select(`#vowelp${pIdx}t${tIdx + 1}`);
+        sel.remove();
+        const vowelIdxs = phrase.firstTrajIdxs();
+        if (vowelIdxs.includes(nextTraj.num)) {
+          this.addVowel(nextTraj, phrase.startTime, g, true)
+        }
+      }
     });
 
     this.emitter.on('startConsonant', startConsonant => {
@@ -546,7 +556,10 @@ export default {
       } 
       const selected = d3Select(`#vowelp${pIdx}t${tIdx}`);
       selected.remove();
-      this.addVowel(this.selectedTraj, phrase.startTime, g, true)
+      const vowelIdxs = phrase.firstTrajIdxs();
+      if (vowelIdxs.includes(this.selectedTraj.num)) {
+        this.addVowel(this.selectedTraj, phrase.startTime, g, true)
+      }      
     });
 
     this.emitter.on('endConsonant', endConsonant => {
@@ -1614,6 +1627,7 @@ export default {
           }
           phrase.durArrayFromTrajectories();
         } else {
+          
           if (this.piece.phrases[pIdx + 1]) {
             resetRequired = true;
             const nextPhrase = this.piece.phrases[pIdx + 1];
@@ -1725,6 +1739,7 @@ export default {
               this.moveStartingConsonant(newNextTraj, phrase.startTime, true);
               this.moveEndingConsonant(newNextTraj, phrase.startTime, true);
               this.moveVowel(newNextTraj, phrase.startTime, true);
+              this.moveConsonantSymbols(newNextTraj, phrase.startTime, true);
             }
             
             this.removePlucks(newNextTraj);
@@ -2581,7 +2596,11 @@ export default {
       if (this.piece.instrumentation) {
         ntObj.instrumentation = this.piece.instrumentation[0];
         if (['Vocal (M)', 'Vocal (F)'].includes(ntObj.instrumentation)) {
-          ntObj.articulations = {}
+          ntObj.articulations = {};
+          ntObj.vowel = 'a';
+          ntObj.vowelEngTrans = 'a';
+          ntObj.vowelHindi = "अ";
+          ntObj.vowelIPA = 'ə';
         }
       }
       const newTraj = new Trajectory(ntObj);
@@ -3057,6 +3076,7 @@ export default {
           d3Select(`.spectrogram.img${i}`)
             .transition()
             .duration(instant ? 0 : this.transitionTime)
+            .ease(d3EaseQuadInOut)
             .attr('transform', `translate(${x}, ${y}) scale(${xS}, ${yS})`)
         })
       }
