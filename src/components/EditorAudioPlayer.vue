@@ -264,7 +264,6 @@ import rubberBandUrl from '@/audioWorklets/rubberband-processor.js?url';
 import { createRubberBandNode as createRBNode } from 'rubberband-web';
 import { detect } from 'detect-browser';
 import { drag as d3Drag, select as d3Select } from 'd3';
-import { Stretcher } from '@/js/stretcher.js';
 import stretcherURL from '@/js/bundledStretcherWorker.js?url';
 
 
