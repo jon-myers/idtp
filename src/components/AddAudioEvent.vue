@@ -58,7 +58,7 @@ import {
   cleanEmptyDoc, 
   saveAudioMetadata ,
   getAudioEvent,
-} from '@/js/serverCalls.mjs';
+} from '@/js/serverCalls.ts';
 
 const capFirst = string => {
   return string.charAt(0).toUpperCase() + string.slice(1);

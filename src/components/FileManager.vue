@@ -122,7 +122,7 @@ import {
   cloneTranscription,
   updateTranscriptionTitle,
   updateTranscriptionPermissions,
-} from '@/js/serverCalls.mjs';
+} from '@/js/serverCalls.ts';
 import NewPieceRegistrar from '@/components/NewPieceRegistrar.vue';
 import { Raga, Piece, Trajectory, Phrase } from '@/js/classes.ts';
 

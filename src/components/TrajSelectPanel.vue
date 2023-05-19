@@ -317,7 +317,7 @@ import t11 from '@/assets/thumbnails/11.png';
 import t12 from '@/assets/thumbnails/12.png';
 import t13 from '@/assets/thumbnails/13.png';
 import { select as d3Select } from 'd3';
-import { getIpaVowels, getConsonants } from '@/js/serverCalls.mjs';
+import { getIpaVowels, getConsonants } from '@/js/serverCalls.ts';
 export default {
   name: 'TrajSelectPanel',
 
