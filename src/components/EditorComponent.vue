@@ -5920,10 +5920,12 @@ export default {
       this.gx
         .transition()
         .duration(instant ? 0 : this.transitionTime)
+        .ease(d3EaseQuadInOut)
         .call(this.xAxis, this.xr());
       this.gy
         .transition()
         .duration(instant ? 0 : this.transitionTime)
+        .ease(d3EaseQuadInOut)
         .call(this.yAxis, this.yr());
 
       if (this.init) {
@@ -5939,6 +5941,7 @@ export default {
           d3Select(`.s${i}`)
             .transition()
             .duration(this.transitionTime)
+            .ease(d3EaseQuadInOut)
             .attr('d', this.sargamLine(Math.log2(s)))
         });
         this.updatePhraseDivs();
