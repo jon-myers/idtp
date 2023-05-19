@@ -11,7 +11,7 @@ import {
   getStarts,
   pitchNumberToChroma
 } from './classes.ts';
-import { getPiece, getRaagRule } from './serverCalls.mjs';
+import { getPiece, getRaagRule } from './serverCalls.ts';
 const testQueryId = '63445d13dc8b9023a09747a6';
 // const Pitch: typeof Pitch_ = Pitch_;
 // type PieceType = {

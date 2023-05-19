@@ -255,7 +255,7 @@ import { getStarts, getEnds } from '@/js/classes.ts';
 import { AudioWorklet } from '@/audio-worklet';
 import tuningForkIcon from '@/assets/icons/tuning_fork.png';
 import downloadIcon from '@/assets/icons/download.svg';
-import { excelData, jsonData } from '@/js/serverCalls.mjs';
+import { excelData, jsonData } from '@/js/serverCalls.ts';
 import ksURL from '@/audioWorklets/karplusStrong.worklet.js?url';
 import cURL from '@/audioWorklets/chikaris.worklet.js?url';
 import caURL from '@/audioWorklets/captureAudio.worklet.js?url';
