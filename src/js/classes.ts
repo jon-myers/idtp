@@ -462,7 +462,7 @@ class Trajectory {
   endConsonantHindi: string | undefined;
   endConsonantIpa: string | undefined;
   endConsonantEngTrans: string | undefined;
-  groupId?: number;
+  groupId?: string;
   freqs: number[];
   logFreqs: number[];
   ids: IdFunction[];
@@ -527,7 +527,7 @@ class Trajectory {
     endConsonantHindi?: string,
     endConsonantIpa?: string,
     endConsonantEngTrans?: string,
-    groupId?: number,
+    groupId?: string,
   } = {}) {
     if (typeof(id) === 'number' && Number.isInteger(id)) {
       this.id = id
@@ -763,6 +763,14 @@ class Trajectory {
     this.vEngTrans = ['a', 'ā', 'i', 'ī', 'u', 'ū', 'ē', 'ai', 'ō', 'au'];
 
     this.convertCIsoToHindiAndIpa()
+  }
+
+  get minFreq() {
+    return Math.min(...this.freqs)
+  }
+
+  get maxFreq() {
+    return Math.max(...this.freqs)
   }
 
 
@@ -1242,6 +1250,7 @@ class Group {
   id: string;
 
 
+
   
   //  a group of adjacent trajectories, cloneable for copy and paste
   // takes the trajectories as input (they should have already been tested for 
@@ -1281,8 +1290,18 @@ class Group {
     }
     this.id = id;
     this.trajectories.forEach(traj => {
-      traj.groupId = Number(this.id)
+      traj.groupId = this.id
     })
+  }
+
+  get minFreq() {
+    const out = Math.min(...this.trajectories.map(t => t.minFreq));
+    return out
+  }
+
+  get maxFreq() {
+    const out = Math.max(...this.trajectories.map(t => t.maxFreq));
+    return out
   }
 
   testForAdjacency() {
@@ -1978,6 +1997,30 @@ class Piece {
 
   get phraseStarts() {
     return this.phrases.map(p => p.startTime)
+  }
+
+  setDurTot(durTot: number) {
+    let lastPhrase: Phrase = this.phrases[this.phrases.length - 1];
+    while (lastPhrase.durTot === 0) {
+      this.phrases.pop();
+      this.durTotFromPhrases();
+      this.durArrayFromPhrases();
+      lastPhrase = this.phrases[this.phrases.length - 1];
+    }
+    const trajs = lastPhrase.trajectories;
+    const lastTraj: Trajectory = trajs[trajs.length - 1];
+    console.log(lastPhrase)
+    if (lastTraj.id !== 12) {
+      throw new Error('lastTraj is not silent')
+    } else {
+      const extraDur = durTot - this.durTot!;
+      lastTraj.durTot += extraDur;
+      lastPhrase.durTotFromTrajectories();
+      lastPhrase.durArrayFromTrajectories();
+      // this.durTot = durTot;
+      this.durArrayFromPhrases();
+      this.updateStartTimes();
+    }
   }
 
 

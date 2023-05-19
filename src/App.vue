@@ -112,8 +112,6 @@ export default defineComponent({
           await this.loggedIn(userData);
         } catch (error) {
           console.error();
-        } finally {
-          console.log('got to the finally')
         }
       }
     }

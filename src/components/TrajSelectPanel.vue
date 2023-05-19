@@ -5,10 +5,18 @@
     ${["", "vocal"][Number(vocal)]} \
     ${["", "vib"][Number(showVibObj)]}`'>
     <div class='octShift' v-if='$parent.selectedTrajs.length > 0'>
-      <button class='octUp' @click='shiftOct(1)' :disabled='!editable'>
+      <button 
+        class='octUp' 
+        @click='shiftOct(1)' 
+        :disabled='!editable || !canShiftUp'
+        >
         &#8593
       </button>
-      <button class='octDown' @click='shiftOct(-1)' :disabled='!editable'>
+      <button 
+        class='octDown' 
+        @click='shiftOct(-1)' 
+        :disabled='!editable || !canShiftDown'
+        >
         &#8595
       </button>
     </div>
@@ -361,6 +369,8 @@ export default {
       panelHeight: 80,
       vib: false,
       octShiftTop: 4,
+      canShiftUp: true,
+      canShiftDown: true
     }
   },
   
@@ -422,7 +432,6 @@ export default {
     },
 
     showSlope(newVal) {
-      console.log(newVal)
       if (newVal) {
         this.octShiftTop = this.vocal ? 97 : 4;
       } else {
@@ -467,9 +476,20 @@ export default {
   methods: {
 
     shiftOct(offset = 1) {
-      this.$parent.selectedTrajs.forEach(traj => {
-        this.$parent.shiftTrajByOctave(traj, offset)
-      })
+      const sts = this.$parent.selectedTrajs;
+      sts.forEach(traj => this.$parent.shiftTrajByOctave(traj, offset))
+      const minFreq = Math.min(...sts.map(traj => traj.minFreq));
+      const maxFreq = Math.max(...sts.map(traj => traj.maxFreq));
+      if ((minFreq / 2) < this.$parent.freqMin) {
+        this.canShiftDown = false;
+      } else {
+        this.canShiftDown = true;
+      }
+      if ((maxFreq * 2) > this.$parent.freqMax) {
+        this.canShiftUp = false;
+      } else {
+        this.canShiftUp = true;
+      }
     },
 
     toggleGroup() {
@@ -504,7 +524,7 @@ export default {
         if (twos.includes(trId)) {
           if (realIdx !== trId && twos.includes(realIdx)) {
             this.selectedIdx = idx;
-            let outIdx = trId;
+            let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
             this.emitter.emit('mutateTraj', outIdx);
             document.querySelectorAll('.thumb').forEach(t => {
@@ -517,7 +537,7 @@ export default {
             if (trId === 6) {
               if (this.$parent.selectedTraj.durArray.length === 2) {
                 this.selectedIdx = idx;
-                let outIdx = trId;
+                let outIdx = this.trajIdxs[this.selectedIdx];
                 if (outIdx >= 12) outIdx += 1;
                 this.emitter.emit('mutateTraj', outIdx);
                 document.querySelectorAll('.thumb').forEach(t => {
@@ -527,7 +547,7 @@ export default {
               }
             } else {
               this.selectedIdx = idx;
-              let outIdx = trId;
+              let outIdx = this.trajIdxs[this.selectedIdx];
               if (outIdx >= 12) outIdx += 1;
               this.emitter.emit('mutateTraj', outIdx);
               document.querySelectorAll('.thumb').forEach(t => {
@@ -539,7 +559,7 @@ export default {
         } else if (fixed.includes(realSelectedIdx)) {
           if (realIdx !== trId && fixed.includes(realIdx)) {
             this.selectedIdx = idx;
-            let outIdx = trId;
+            let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
             this.emitter.emit('mutateTraj', outIdx);
             document.querySelectorAll('.thumb').forEach(t => {
