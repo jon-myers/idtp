@@ -5905,13 +5905,18 @@ export default {
 
     movePlayhead(transitionTime = undefined) {
       const time = transitionTime ? transitionTime : this.transitionTime;
-      d3Select('.playhead').transition().duration(time)
+      d3Select('.playhead')
+        .transition()
+        .duration(time)
+        .ease(d3EaseQuadInOut)
         .attr('transform', `translate(${this.xr()(this.currentTime)})`)
     },
 
     moveShadowPlayhead() {
       const shadowTime = this.$refs.audioPlayer.getShadowTime();
-      d3Select('.playheadShadow').transition().duration(this.transitionTime)
+      d3Select('.playheadShadow')
+        .transition()
+        .duration(this.transitionTime)
         .attr('transform', `translate(${this.xr()(shadowTime)})`)
     },
 
