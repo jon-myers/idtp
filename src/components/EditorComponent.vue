@@ -5905,7 +5905,10 @@ export default {
 
     movePlayhead(transitionTime = undefined) {
       const time = transitionTime ? transitionTime : this.transitionTime;
-      d3Select('.playhead').transition().duration(time)
+      d3Select('.playhead')
+        .transition()
+        .duration(time)
+        .ease(d3EaseQuadInOut)
         .attr('transform', `translate(${this.xr()(this.currentTime)})`)
     },
 
