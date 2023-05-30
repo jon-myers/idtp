@@ -251,6 +251,7 @@ export default {
       phonemeRepresentation: 'English',
       vocal: false,
       controlsHeight: 200,
+      unsavedChanges: false,
     }
   },
   components: {
@@ -271,12 +272,38 @@ export default {
       this.$router.push('/')
     }
   },
+
+  beforeRouteLeave(to, from) {
+    if (this.unsavedChanges) {
+      const txt = 'You have unsaved changes. Are you sure you want to leave ' +
+                  'the transcription editor?'
+      const answer = window.confirm(txt)
+      if (!answer) return false
+    }
+  },
+
+  // async beforeUnmount() {
+  //   if (this.unsavedChanges) {
+  //     // have an alert ask if you are sure you want to leave
+  //     // this.$dialog
+  //     //   .confirm('Please confirm to continue')
+  //     //   .then(function(dialog) {
+  //     //     console.log('clicked on proceed')
+  //     //   })
+  //     //   .catch(function() {
+  //     //     console.log('clicked on cancel')
+  //     //   })
+      
+  //   }
+  // },
+
   async mounted() {
     window.addEventListener('resize', this.resize);
     this.emitter.on('mutateTraj', newIdx => {
       if (!this.selectedTraj) {
         console.log('no selected traj')
       } else {
+        this.unsavedChanges = true;
         const trajObj = this.selectedTraj.toJSON();
         trajObj.id = newIdx;
         const newTraj = new Trajectory(trajObj);
@@ -303,6 +330,7 @@ export default {
     });
 
     this.emitter.on('newTraj', idx => {
+      this.unsavedChanges = true;
       this.trajTimePts.sort((a, b) => a.time - b.time);
       const logSGLines = this.visibleSargam.map(s => Math.log2(s));
       const pitches = this.trajTimePts.map(ttp => {
@@ -467,6 +495,7 @@ export default {
     });
 
     this.emitter.on('pluckBool', pluckBool => {
+      this.unsavedChanges = true;
       const selT = this.selectedTraj;
       const c1 = selT.articulations[0] || selT.articulations['0.00'];
       if (pluckBool) {
@@ -488,6 +517,7 @@ export default {
     });
 
     this.emitter.on('dampen', dampen => {
+      this.unsavedChanges = true;
       const pIdx = this.selectedTraj.phraseIdx;
       const tIdx = this.selectedTraj.num;
       if (dampen) {
@@ -509,6 +539,7 @@ export default {
     });
 
     this.emitter.on('vibObj', vibObj => {
+      this.unsavedChanges = true;
       this.selectedTraj.vibObj = vibObj;
       const phrase = this.piece.phrases[this.selectedTraj.phraseIdx];
       const data = this.makeTrajData(this.selectedTraj, phrase.startTime);
@@ -525,6 +556,7 @@ export default {
     });
 
     this.emitter.on('vowel', vowel => {
+      this.unsavedChanges = true;
       this.selectedTraj.updateVowel(vowel)
       const pIdx = this.selectedTraj.phraseIdx;
       const tIdx = this.selectedTraj.num;
@@ -550,6 +582,7 @@ export default {
     });
 
     this.emitter.on('startConsonant', startConsonant => {
+      this.unsavedChanges = true;
       const pIdx = this.selectedTraj.phraseIdx;
       const tIdx = this.selectedTraj.num;
       const id = `p${pIdx}t${tIdx}`;
@@ -573,6 +606,7 @@ export default {
     });
 
     this.emitter.on('endConsonant', endConsonant => {
+      this.unsavedChanges = true;
       const pIdx = this.selectedTraj.phraseIdx;
       const tIdx = this.selectedTraj.num;
       const id = `p${pIdx}t${tIdx}`;
@@ -1516,6 +1550,7 @@ export default {
     },
     
     dragDotEnd(e) {
+      this.unsavedChanges = true;
       let deletedSilentTraj = false;
       let resetRequired = false;
       const idx = Number(this.dragIdx);
@@ -2576,7 +2611,7 @@ export default {
     preventSpaceToggle(e) {
       if (e && e.clientX === 0) e.preventDefault();
     },
-
+ 
     async savePiece() {
       this.piece.phrases.forEach(phrase => {
         phrase.consolidateSilentTrajs()
@@ -2584,9 +2619,11 @@ export default {
       this.cleanPhrases();
       const result = await savePiece(this.piece);
       this.dateModified = new Date(result.dateModified);
+      this.unsavedChanges = false;
     },
 
     addFixedTraj() {
+      this.unsavedChanges = true;
       this.trajTimePts.sort((a, b) => a.time - b.time);
       const logSGLines = this.visibleSargam.map(s => Math.log2(s));
       const lf = this.trajTimePts[0].logFreq;
@@ -2795,6 +2832,7 @@ export default {
         this.$refs.audioPlayer.regionSpeedOn = false;
       } else if (e.key === 'Backspace' && this.editable === true) {
         if (this.selectedChikariID) {
+          this.unsavedChanges = true;
           const splitArr = this.selectedChikariID.split('_');
           const pIdx = splitArr[0].slice(1);
           const key = splitArr[1] + '.' + splitArr[2];
@@ -2803,12 +2841,14 @@ export default {
           d3Select(`#circle__${this.selectedChikariID}`).remove()
           this.selectedChikariID = undefined;
         } else if (this.selectedTrajID) {
+          this.unsavedChanges = true;
           this.deleteTraj(this.selectedTrajID);
           this.selectedTrajID = undefined;
           this.clearTrajSelectPanel();
           d3SelectAll('.dragDots').remove();
           this.selectedTrajs = [];
         } else if (this.selectedTrajs.length > 1) {
+          this.unsavedChanges = true;
           this.selectedTrajs.forEach(traj => {
             const trajID = `p${traj.phraseIdx}t${traj.num}`;
             this.deleteTraj(trajID);
@@ -2816,6 +2856,7 @@ export default {
             this.selectedTrajs = [];
           })
         } else if (!(this.selectedPhraseDivIdx === undefined)) {
+          this.unsavedChanges = true;
           const phraseA = this.piece.phrases[this.selectedPhraseDivIdx];
           const initPhraseADur = phraseA.durTot;
           const phraseB = this.piece.phrases[this.selectedPhraseDivIdx+1];
@@ -3603,6 +3644,7 @@ export default {
       const pIdx = this.phraseIdxFromTime(time);
       // need to figure out how to handle when click is over a non phrase
       if (this.setChikari) {
+        this.unsavedChanges = true;
         const sym = d3Symbol().type(d3SymbolX).size(80);
         const phrase = this.piece.phrases[pIdx];
         const fixedTime = Number((time - phrase.startTime).toFixed(2));
@@ -3721,7 +3763,7 @@ export default {
           }
         }
       } else if (this.setNewPhraseDiv) {
-
+        this.unsavedChanges = true;
 
 
         // get trajectory at time
@@ -5174,6 +5216,7 @@ export default {
     },
 
     alterSlope(newSlope) {
+      this.unsavedChanges = true;
       const trajObj = this.selectedTraj.toJSON();
       trajObj.slope = Number(newSlope);
       const newTraj = new Trajectory(trajObj);
