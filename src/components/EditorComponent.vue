@@ -2713,7 +2713,7 @@ export default {
         const vowelIdxs = phrase.firstTrajIdxs();
         this.codifiedAddTraj(newTraj, phrase.startTime, vowelIdxs);
         this.trajTimePts.splice(0, 1);
-        this.extendDurTot();
+        if (!this.audioDBDoc) this.extendDurTot();
         d3SelectAll('.newSeriesDot').remove();
         this.phraseG 
           .append('circle')
