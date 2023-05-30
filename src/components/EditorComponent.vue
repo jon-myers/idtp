@@ -4233,8 +4233,6 @@ export default {
     },
 
     codifiedAddPlucks(traj, phraseStart, g) {
-      console.log('getting added somehow?!')
-
       const size = 20;
       const offset = (size ** 0.5 ) / 2;
       if (traj.id !== 12) {
