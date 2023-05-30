@@ -299,6 +299,7 @@ export default {
 
   async mounted() {
     window.addEventListener('resize', this.resize);
+    window.addEventListener('beforeunload', this.beforeUnload);
     this.emitter.on('mutateTraj', newIdx => {
       if (!this.selectedTraj) {
         console.log('no selected traj')
@@ -737,6 +738,7 @@ export default {
     window.removeEventListener('resize', this.resize);
     window.removeEventListener('keydown', this.handleKeydown);
     window.removeEventListener('keyup', this.handleKeyup);
+    window.removeEventListener('beforeunload', this.beforeUnload);
     this.emitter.off('pluckBool');
     this.emitter.off('mutateTraj');
     this.emitter.off('newTraj');
@@ -813,6 +815,17 @@ export default {
 
 
   methods: {
+
+    beforeUnload(event) {
+      if (this.unsavedChanges) {
+        const txt = 'You have unsaved changes. Are you sure you want to leave ' +
+                    'the transcription editor?'
+        event.returnValue = txt;
+        return txt;
+      } else {
+        return undefined;
+      }
+    },
 
     updatePhonemeRepresentation() {
       const nodes = d3SelectAll('.consonant');
