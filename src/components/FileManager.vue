@@ -219,7 +219,7 @@ export default {
           const result = await cloneTranscription({
             id: id, 
             title: title, 
-            newOwner: newTitle, 
+            newOwner: newOwner, 
             permissions: perm, 
             name: name, 
             family_name: family_name, 
