@@ -4198,7 +4198,8 @@ export default {
         const relKeys = keys.filter(key => {
           return traj.articulations[key].name === 'pluck'
         });
-        const pluckData = relKeys.map(p => {
+        if (relKeys.length > 0) {
+          const pluckData = relKeys.map(p => {
           const normedX = Number(p) * traj.durTot;
           const y = traj.compute(normedX, true);
           return {
@@ -4226,10 +4227,14 @@ export default {
           .attr('transform', d => {
             return `translate(${x(d) + offset}, ${y(d)}) rotate(90)`
           })
+
+        }
       }
     },
 
     codifiedAddPlucks(traj, phraseStart, g) {
+      console.log('getting added somehow?!')
+
       const size = 20;
       const offset = (size ** 0.5 ) / 2;
       if (traj.id !== 12) {
@@ -4237,7 +4242,8 @@ export default {
         const relKeys = keys.filter(key => {
           return traj.articulations[key].name === 'pluck'
         });
-        const pluckData = relKeys.map(p => {
+        if (relKeys.length > 0) {
+          const pluckData = relKeys.map(p => {
           const normedX = Number(p) * traj.durTot;
           const y = traj.compute(normedX, true);
           return {
@@ -4266,6 +4272,7 @@ export default {
           .attr('transform', d => {
             return `translate(${x(d) + offset}, ${y(d)}) rotate(90)`
           })
+        }
       }
     },
 
@@ -5460,10 +5467,8 @@ export default {
               .attr('cursor', 'pointer')
             this.updateArtColors(traj, true)
           })
-          console.log('this should be triggering')
           let minFreq = Math.min(...this.selectedTrajs.map(t => t.minFreq));
           let maxFreq = Math.max(...this.selectedTrajs.map(t => t.maxFreq));
-          console.log(minFreq, maxFreq)
           if ((minFreq / 2) < this.freqMin) {
             this.$refs.trajSelectPanel.canShiftDown = false
           } else {
