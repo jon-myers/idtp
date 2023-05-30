@@ -2713,6 +2713,7 @@ export default {
         const vowelIdxs = phrase.firstTrajIdxs();
         this.codifiedAddTraj(newTraj, phrase.startTime, vowelIdxs);
         this.trajTimePts.splice(0, 1);
+        this.extendDurTot();
         d3SelectAll('.newSeriesDot').remove();
         this.phraseG 
           .append('circle')
@@ -2722,6 +2723,7 @@ export default {
           .attr('r', 4)
           .style('fill', '#7300e6') 
       };
+      
       this.resetSargam();
       const vowelIdxs = phrase.firstTrajIdxs();
       // this.codifiedAddArticulations(newTraj, phrase.startTime, vowelIdxs)
@@ -2730,6 +2732,7 @@ export default {
       // this.addVowel(newTraj, phrase.startTime, g, true)
       // console.log(d3Select(`#vowel${id}`).node())
       // console.log(g.node())
+      
     },
     
     clearAll(regionToo) {
@@ -4187,7 +4190,6 @@ export default {
             y: y
           }
         });
-        if (pluckData.length > 0) console.log('holler')
         const x = d => this.codifiedXR(d.x);
         const y = d => this.codifiedYR(d.y);
         const sym = d3Symbol().type(d3SymbolTriangle).size(size);
