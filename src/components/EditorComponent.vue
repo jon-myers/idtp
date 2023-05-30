@@ -4148,7 +4148,6 @@ export default {
             y: y
           }
         });
-        if (pluckData.length > 0) console.log('holler')
         const sym = d3Symbol().type(d3SymbolTriangle).size(size);
         const x = d => this.xr()(d.x);
         const y = d => this.yr()(d.y);
