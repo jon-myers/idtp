@@ -4,7 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 type AffiliationType = { 
     pulseStructureId: string, 
     idx: number, 
-    layer?: number 
+    layer?: number,
+    segmentedMeterIdx: number, 
 };
 
 class Pulse {
@@ -26,13 +27,14 @@ class Pulse {
     this.affiliations = affiliation ? [affiliation] : [];
   }
 
-  addAffiliation(pulseStructure: PulseStructure, idx: number, layer?: number) {
+  addAffiliation(pulseStructure: PulseStructure, idx: number, segmentedMeterIdx: number, layer?: number) {
     // check if pulse real time is the same as the affiliation's pulse real time
     if (this.realTime === pulseStructure.pulses[idx].realTime) {
       const affiliation = { 
         pulseStructureId: pulseStructure.uniqueId, 
         idx, 
-        layer 
+        layer,
+        segmentedMeterIdx,
       };
       if (this.affiliations.some(a => a.pulseStructureId !== affiliation.pulseStructureId)) {
         this.affiliations.push(affiliation)
@@ -80,6 +82,7 @@ class PulseStructure {
   layer?: number;
   parentPulseID?: string;
   primary: boolean;
+  segmentedMeterIdx: number;
 
   constructor({
     tempo = 60,
@@ -92,7 +95,8 @@ class PulseStructure {
     initPulse = undefined,
     layer = undefined,
     parentPulseID = undefined,
-    primary = true
+    primary = true,
+    segmentedMeterIdx = 0,
   }: {
     tempo?: number,
     size?: number,
@@ -104,8 +108,10 @@ class PulseStructure {
     initPulse?: Pulse,
     layer?: number,
     parentPulseID?: string,
-    primary?: boolean
+    primary?: boolean,
+    segmentedMeterIdx?: number,
   } = {}) {
+    this.segmentedMeterIdx = segmentedMeterIdx;
     this.frontWeighted = frontWeighted;
     this.uniqueId = uniqueId;
     this.tempo = tempo;
@@ -119,10 +125,10 @@ class PulseStructure {
       this.pulses = [...Array(size).keys()].map(i => new Pulse({ 
         realTime: this.startTime + i * this.pulseDur,
         affiliation: { 
-          pulseStructureId: 
-          this.uniqueId, 
+          pulseStructureId: this.uniqueId, 
           idx: i, 
-          layer: this.layer 
+          layer: this.layer,
+          segmentedMeterIdx: this.segmentedMeterIdx, 
         } 
       }));
       this.proportionalOffsets = [...Array(size).keys()].map(i => 0.0);
@@ -152,7 +158,11 @@ class PulseStructure {
         const time = this.startTime + o + i * this.pulseDur;
         return new Pulse({
           realTime: time,
-          affiliation: { pulseStructureId: this.uniqueId, idx: i }
+          affiliation: { 
+            pulseStructureId: this.uniqueId, 
+            idx: i,
+            segmentedMeterIdx: this.segmentedMeterIdx,
+          }
         })
       });
       if (this.pulses[0].realTime < 0) {
@@ -236,7 +246,7 @@ class PulseStructure {
       parentPulseID: pulse.uniqueId
     });
     const idx = frontWeighted === true ? 0 : ps.pulses.length - 1;
-    pulse.addAffiliation(ps, idx, layer)
+    pulse.addAffiliation(ps, idx, 0, layer)
     return ps
   }
 }
@@ -302,7 +312,8 @@ class Meter {
                 size: subH,
                 startTime,
                 layer: i,
-                primary: j === 0
+                primary: j === 0,
+                segmentedMeterIdx: j
               })
               subPulseStructures.push(ps)
             })
@@ -345,7 +356,8 @@ class Meter {
                     startTime,
                     layer: i,
                     parentPulseID: p.uniqueId,
-                    primary: false
+                    primary: false,
+                    segmentedMeterIdx: k
                   });
                 }
                 subPulseStructures.push(ps)
@@ -437,15 +449,30 @@ class Meter {
         })
       } else {
         const summed = sum(h);
-        const startIdx = prevPulse.affiliations.find(aff => {
+        const prevPulseAff = prevPulse.affiliations.find(aff => {
           return aff.layer === relLayer - 1
-        })!.idx
+        })
+        if (prevPulseAff === undefined) {
+          throw new Error(`Pulse ${prevPulse.uniqueId} does not have affiliation in layer ${relLayer - 1}`)
+        }
+        let startIdx: number;
+        if (prevPulseAff.segmentedMeterIdx === 0) {
+          startIdx = prevPulseAff?.idx
+        } else {
+          const hierarchyLayer = this.hierarchy[relLayer - 1];
+          if (typeof hierarchyLayer === 'number') {
+            throw new Error(`Cannot have segmented meter index for layer ${relLayer - 1} because it is not a hierarchical layer`)
+          }
+          const segIdx = prevPulseAff.segmentedMeterIdx;
+
+          const idxOffset = sum(hierarchyLayer.slice(0, segIdx))
+          startIdx = prevPulseAff.idx + idxOffset;
+        }
         layerDurs.forEach((dur, j) => {
           if (j >= startIdx && j < startIdx + 2) {
             const unitDur = dur / summed;
             h.forEach((subH, k) => {
               const dur = unitDur * subH;
-              const oldPS = this.pulseStructures[relLayer][j * h.length + k];
               if (k === 0) {
                 const newPS = PulseStructure.fromPulse(lps[j], dur, subH, {
                   layer: relLayer
@@ -506,9 +533,12 @@ class Meter {
 }
 
 
-const a = new Meter({ hierarchy: [4, [3, 2]] });
-const pulse = a.allPulses[10];
-console.log(a.allPulses.map(p => p.realTime))
-// console.log(a.pulseStructures[1].length)
-a.offsetPulse(pulse, 0.05)
-console.log(a.allPulses.map(p => p.realTime))
+// const a = new Meter({ hierarchy: [[3, 2], [2, 2]] });
+// const pulse = a.allPulses[16];
+// a.offsetPulse(pulse, 0.05)
+// console.log(a.allPulses.map(p => p.realTime))
+
+// const b = new Meter({ hierarchy: [[2, 1, 2], 4] });
+// const pulse2 = b.allPulses[16];
+// b.offsetPulse(pulse2, 0.05)
+// console.log(b.allPulses.map(p => p.realTime))
