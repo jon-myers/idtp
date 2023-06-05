@@ -249,6 +249,28 @@ class PulseStructure {
     pulse.addAffiliation(ps, idx, 0, layer)
     return ps
   }
+
+  setTempo(newTempo: number) {
+    const newPulseDur = 60.0 / newTempo;
+    const newRealTimes = this.proportionalOffsets.map((o, i) => {
+      return this.startTime + o * newPulseDur + i * newPulseDur;
+    });
+    this.pulseDur = newPulseDur;
+    this.pulses.forEach((p, i) => {
+      p.realTime = newRealTimes[i];
+    });
+    this.tempo = newTempo;
+  }
+
+  setStartTime(newStartTime: number) {
+    const newRealTimes = this.proportionalOffsets.map((o, i) => {
+      return newStartTime + o * this.pulseDur + i * this.pulseDur;
+    });
+    this.startTime = newStartTime;
+    this.pulses.forEach((p, i) => {
+      p.realTime = newRealTimes[i];
+    });
+  }
 }
 
 // [4] or [4, 2] or [[4, 3], [2]] or 
@@ -262,6 +284,7 @@ class Meter {
   cycleDuration: number;
   uniqueId: string;
   repetitions: number;
+  tempo: number;
 
   constructor({
     hierarchy = [4, 4],
@@ -279,11 +302,12 @@ class Meter {
     this.repetitions = repetitions;
     this.hierarchy = hierarchy;
     this.startTime = startTime;
+    this.tempo = tempo;
     if (typeof hierarchy[0] === 'number') {
-      this.cycleDuration = 60 * hierarchy[0] / tempo;
+      this.cycleDuration = 60 * hierarchy[0] / this.tempo;
     } else {
       const summed = sum(hierarchy[0]);
-      this.cycleDuration = 60 * summed / tempo;
+      this.cycleDuration = 60 * summed / this.tempo;
     }
     this.uniqueId = uniqueId;
     this.pulseStructures = [];
@@ -292,9 +316,9 @@ class Meter {
       if (i === 0) {
         for (let rep = 0; rep < repetitions; rep++) {
           if (typeof h === 'number') {
-            const tempo = 60 * h / this.cycleDuration;
+            const tempo_ = 60 * h / this.cycleDuration;
             const ps = new PulseStructure({
-              tempo,
+              tempo: tempo_,
               size: h,
               startTime: rep * this.cycleDuration + this.startTime,
               layer: i
@@ -302,13 +326,13 @@ class Meter {
             subPulseStructures.push(ps)
           } else {
             const summed = sum(h);
-            const tempo = 60 * summed / this.cycleDuration;
+            const tempo_ = 60 * summed / this.cycleDuration;
             const beatDur = this.cycleDuration / summed;
             h.forEach((subH, j) => {
               let startTime = this.startTime + beatDur * sum(h.slice(0, j));
               startTime += rep * this.cycleDuration;
               const ps = new PulseStructure({
-                tempo,
+                tempo: tempo_,
                 size: subH,
                 startTime,
                 layer: i,
@@ -324,8 +348,8 @@ class Meter {
           this.pulseStructures[i - 1].forEach(parentPS => {
             parentPS.pulses.forEach((p, j) => {
               let duration = parentPS.pulseDur;
-              const tempo = 60 * h / duration;
-              let startTime = p.realTime + parentPS.pulseDur * j;
+              // const tempo = 60 * h / duration;
+              // let startTime = p.realTime + parentPS.pulseDur * j;
               const ps = PulseStructure.fromPulse(p, duration, h, { 
                 layer: i 
               })
@@ -339,7 +363,7 @@ class Meter {
               const beatDur = parentPS.pulseDur / summed;
               h.forEach((subH, k) => {
                 let startTime = p.realTime + beatDur * sum(h.slice(0, k));
-                const tempo = 60 / beatDur;
+                const tempo_ = 60 / beatDur;
                 const duration = beatDur * subH;
                 const c1 = parentPS.frontWeighted && k === 0;
                 const c2 = !parentPS.frontWeighted && k === h.length - 1;
@@ -351,7 +375,7 @@ class Meter {
                   })
                 } else {
                   ps = new PulseStructure({
-                    tempo,
+                    tempo: tempo_,
                     size: subH,
                     startTime,
                     layer: i,
@@ -479,10 +503,10 @@ class Meter {
                 })
                 replacePSs.push(newPS);
               } else {
-                const tempo = 60 * subH / dur;
+                const tempo_ = 60 * subH / dur;
                 const startTime = lps[j].realTime + unitDur * sum(h.slice(0, k));
                 const newPS = new PulseStructure({
-                  tempo,
+                  tempo: tempo_,
                   size: subH,
                   startTime,
                   layer: relLayer,
@@ -509,7 +533,9 @@ class Meter {
     })
   }
 
-  offsetPulse(pulse: Pulse, offset: number) {
+  offsetPulse(pulse: Pulse, offset: number) { // adjust the start time of one
+    // of the pulses in the pulse structure by a given amount, and adjust the 
+    // relevent higher-layer pulses accordingly.
     const psID = pulse.getLowestPSID();
     const layer = pulse.lowestLayer;
     const pulseStructure = this.getPSFromId(psID);
@@ -530,6 +556,41 @@ class Meter {
     }
     this.replaceAllChildrenPulseStructures(pulse, layer+1)
   }
+
+  adjustTempo(newTempo: number) {
+    const oldTempo = this.tempo;
+    const ratio = oldTempo / newTempo;
+    this.pulseStructures.forEach(psLayer => {
+      psLayer.forEach((ps, idx) => {
+        // if (idx === 0) console.log(ps)
+        const newSt = this.startTime + (ps.startTime - this.startTime) * ratio;
+        // console.log(ps.startTime, newSt)
+        ps.setStartTime(newSt);
+        // if (idx === 0) console.log(ps)
+        const psNewTempo = ps.tempo / ratio;
+        ps.setTempo(psNewTempo);
+        // if (idx === 0) console.log(ps)
+        // if (idx === 0) console.log('---')
+      })
+    })
+    this.tempo = newTempo;
+  }
+
+  adjustStartTime(newStartTime: number) {
+    const oldStartTime = this.startTime;
+    const offset = newStartTime - oldStartTime;
+    this.pulseStructures.forEach(psLayer => {
+      psLayer.forEach((ps, idx) => {
+        const newSt = ps.startTime + offset;
+        ps.setStartTime(newSt);
+      })
+    })
+    this.startTime = newStartTime;
+  }
+  
+  get realTimes() {
+    return this.allPulses.map(p => p.realTime)
+  }
 }
 
 
@@ -542,3 +603,18 @@ class Meter {
 // const pulse2 = b.allPulses[16];
 // b.offsetPulse(pulse2, 0.05)
 // console.log(b.allPulses.map(p => p.realTime))
+
+const a = new Meter({ hierarchy: [4, 4], repetitions: 2, startTime: 1 })
+// const a = new PulseStructure({ startTime: 2 });
+// a.setStartTime(0.5)
+// a.setTempo(120)
+
+// const q = new PulseStructure();
+// q.setTempo(120)
+// console.log(q.pulses.map(p => p.realTime))
+
+console.log(a.realTimes)
+a.adjustTempo(120)
+console.log(a.realTimes)
+a.adjustStartTime(5)
+console.log(a.realTimes)
