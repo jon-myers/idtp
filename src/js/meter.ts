@@ -79,6 +79,7 @@ class PulseStructure {
   frontWeighted: boolean;
   layer?: number;
   parentPulseID?: string;
+  primary: boolean;
 
   constructor({
     tempo = 60,
@@ -90,7 +91,8 @@ class PulseStructure {
     frontWeighted = true,
     initPulse = undefined,
     layer = undefined,
-    parentPulseID = undefined
+    parentPulseID = undefined,
+    primary = true
   }: {
     tempo?: number,
     size?: number,
@@ -101,7 +103,8 @@ class PulseStructure {
     frontWeighted?: boolean,
     initPulse?: Pulse,
     layer?: number,
-    parentPulseID?: string
+    parentPulseID?: string,
+    primary?: boolean
   } = {}) {
     this.frontWeighted = frontWeighted;
     this.uniqueId = uniqueId;
@@ -111,6 +114,7 @@ class PulseStructure {
     this.startTime = startTime;
     this.layer = layer;
     this.parentPulseID = parentPulseID;
+    this.primary = primary;
     if (offsets === undefined) {
       this.pulses = [...Array(size).keys()].map(i => new Pulse({ 
         realTime: this.startTime + i * this.pulseDur,
@@ -297,7 +301,8 @@ class Meter {
                 tempo,
                 size: subH,
                 startTime,
-                layer: i
+                layer: i,
+                primary: j === 0
               })
               subPulseStructures.push(ps)
             })
@@ -323,7 +328,7 @@ class Meter {
               const beatDur = parentPS.pulseDur / summed;
               h.forEach((subH, k) => {
                 let startTime = p.realTime + beatDur * sum(h.slice(0, k));
-                const tempo = 60 * subH / beatDur;
+                const tempo = 60 / beatDur;
                 const duration = beatDur * subH;
                 const c1 = parentPS.frontWeighted && k === 0;
                 const c2 = !parentPS.frontWeighted && k === h.length - 1;
@@ -339,7 +344,8 @@ class Meter {
                     size: subH,
                     startTime,
                     layer: i,
-                    parentPulseID: p.uniqueId
+                    parentPulseID: p.uniqueId,
+                    primary: false
                   });
                 }
                 subPulseStructures.push(ps)
@@ -394,7 +400,6 @@ class Meter {
       const psLayer = this.pulseStructures[i];
       const removeIdxs: number[] = [];
       psLayer.forEach((ps, j) => {
-        // console.log(ps.parentPulseID)
         if (parentPulseIDs.includes(ps.parentPulseID!)) {
           removeIdxs.push(j);
           ps.pulses.forEach(p => {
@@ -416,14 +421,56 @@ class Meter {
       })
       const lastDur = this.cycleDuration - lps[lps.length-1].realTime + lps[0].realTime;
       layerDurs.push(lastDur);
-      removeIdxs.forEach(idx => {
-        const dur = layerDurs[idx];
-        const oldPS = this.pulseStructures[relLayer][idx];
-        const newPS = PulseStructure.fromPulse(lps[idx], dur, oldPS.size, {
-          layer: relLayer
+
+
+      // this most likely does not work at all for bifurcated metric units, i.e. [3, 4]
+      const h = this.hierarchy[relLayer];
+      if (typeof h === 'number') {
+        removeIdxs.forEach(idx => {
+          const dur = layerDurs[idx];
+          const oldPS = this.pulseStructures[relLayer][idx];
+          
+          const newPS = PulseStructure.fromPulse(lps[idx], dur, oldPS.size, {
+            layer: relLayer
+          })
+          replacePSs.push(newPS);
         })
-        replacePSs.push(newPS);
-      })
+      } else {
+        const summed = sum(h);
+        const startIdx = prevPulse.affiliations.find(aff => {
+          return aff.layer === relLayer - 1
+        })!.idx
+        layerDurs.forEach((dur, j) => {
+          if (j >= startIdx && j < startIdx + 2) {
+            const unitDur = dur / summed;
+            h.forEach((subH, k) => {
+              const dur = unitDur * subH;
+              const oldPS = this.pulseStructures[relLayer][j * h.length + k];
+              if (k === 0) {
+                const newPS = PulseStructure.fromPulse(lps[j], dur, subH, {
+                  layer: relLayer
+                })
+                replacePSs.push(newPS);
+              } else {
+                const tempo = 60 * subH / dur;
+                const startTime = lps[j].realTime + unitDur * sum(h.slice(0, k));
+                const newPS = new PulseStructure({
+                  tempo,
+                  size: subH,
+                  startTime,
+                  layer: relLayer,
+                  parentPulseID: lps[j].uniqueId,
+                  primary: false
+                })
+                replacePSs.push(newPS);
+              }
+            })
+          }
+          
+        })
+
+
+      }
       replacePSsGrid.push(replacePSs);
     })
     removeIdxsGrid.forEach((removeIdxs, i) => {
@@ -459,4 +506,9 @@ class Meter {
 }
 
 
-// const a = new Meter({ hierarchy: [4, 2, 4] });
+const a = new Meter({ hierarchy: [4, [3, 2]] });
+const pulse = a.allPulses[10];
+console.log(a.allPulses.map(p => p.realTime))
+// console.log(a.pulseStructures[1].length)
+a.offsetPulse(pulse, 0.05)
+console.log(a.allPulses.map(p => p.realTime))
