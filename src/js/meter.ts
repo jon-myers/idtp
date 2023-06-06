@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 
 type AffiliationType = { 
-    pulseStructureId: string, 
+    psId: string, 
     idx: number, 
     layer?: number,
     segmentedMeterIdx: number, 
@@ -12,31 +12,51 @@ class Pulse {
   realTime: number;
   uniqueId: string;
   affiliations: AffiliationType[];
+  corporeal: boolean = true; // as opposed to just a placeholder that won't 
+  // actually be visible in the transcription; useful for when a pulsed melodic
+  // action begins in the middle of a metric / pulse structure (or ends midway
+  // through one)
 
   constructor({
     realTime = 0.0,
     uniqueId = uuidv4(),
-    affiliation = undefined 
+    affiliation = undefined,
+    corporeal = true,
   }: {
     realTime?: number,
     uniqueId?: string,
-    affiliation?: AffiliationType
+    affiliation?: AffiliationType,
+    corporeal?: boolean,
   } = {}) {
     this.realTime = realTime;
     this.uniqueId = uniqueId;
     this.affiliations = affiliation ? [affiliation] : [];
+    this.corporeal = corporeal;
   }
 
-  addAffiliation(pulseStructure: PulseStructure, idx: number, segmentedMeterIdx: number, layer?: number) {
+  addAffiliation({
+    pulseStructure = undefined,
+    idx = 0,
+    segmentedMeterIdx = 0,
+    layer = undefined
+  }: {
+    pulseStructure?: PulseStructure,
+    idx?: number,
+    segmentedMeterIdx?: number,
+    layer?: number,
+  } = {}) {
     // check if pulse real time is the same as the affiliation's pulse real time
+    if (pulseStructure === undefined) {
+      throw new Error('Pulse structure not defined')
+    }
     if (this.realTime === pulseStructure.pulses[idx].realTime) {
       const affiliation = { 
-        pulseStructureId: pulseStructure.uniqueId, 
+        psId: pulseStructure.uniqueId, 
         idx, 
         layer,
         segmentedMeterIdx,
       };
-      if (this.affiliations.some(a => a.pulseStructureId !== affiliation.pulseStructureId)) {
+      if (this.affiliations.some(a => a.psId !== affiliation.psId)) {
         this.affiliations.push(affiliation)
       } else {
         throw new Error('Pulse already affiliated with this pulse structure')
@@ -65,7 +85,7 @@ class Pulse {
     if (affiliation === undefined) {
       throw new Error('Affiliation not found')
     }
-    return affiliation.pulseStructureId
+    return affiliation.psId
   }
 }
 
@@ -125,7 +145,7 @@ class PulseStructure {
       this.pulses = [...Array(size).keys()].map(i => new Pulse({ 
         realTime: this.startTime + i * this.pulseDur,
         affiliation: { 
-          pulseStructureId: this.uniqueId, 
+          psId: this.uniqueId, 
           idx: i, 
           layer: this.layer,
           segmentedMeterIdx: this.segmentedMeterIdx, 
@@ -159,7 +179,7 @@ class PulseStructure {
         return new Pulse({
           realTime: time,
           affiliation: { 
-            pulseStructureId: this.uniqueId, 
+            psId: this.uniqueId, 
             idx: i,
             segmentedMeterIdx: this.segmentedMeterIdx,
           }
@@ -246,7 +266,12 @@ class PulseStructure {
       parentPulseID: pulse.uniqueId
     });
     const idx = frontWeighted === true ? 0 : ps.pulses.length - 1;
-    pulse.addAffiliation(ps, idx, 0, layer)
+    pulse.addAffiliation({
+      pulseStructure: ps, 
+      idx, 
+      segmentedMeterIdx: 0, 
+      layer
+    })
     return ps
   }
 
@@ -270,6 +295,7 @@ class PulseStructure {
     this.pulses.forEach((p, i) => {
       p.realTime = newRealTimes[i];
     });
+    
   }
 }
 
@@ -281,33 +307,39 @@ class Meter {
   hierarchy: (number | number[])[];
   pulseStructures: PulseStructure[][];
   startTime: number;
-  cycleDuration: number;
+  cycleDur: number;
   uniqueId: string;
   repetitions: number;
   tempo: number;
+  relCorpLims: number[]; // relative corporeal limits
+  propCorpLims: number[]; // proportional corporeal limits
 
   constructor({
     hierarchy = [4, 4],
     startTime = 0.0,
     tempo = 60, //bpm
     uniqueId = uuidv4(),
-    repetitions = 1
+    repetitions = 1,
+    relCorpLims = undefined,
+    propCorpLims = undefined,
   }: {
     hierarchy?: (number | number[])[],
     startTime?: number,
     tempo?: number,
     uniqueId?: string,
-    repetitions?: number
+    repetitions?: number,
+    relCorpLims?: number[],
+    propCorpLims?: number[],
   }) {
     this.repetitions = repetitions;
     this.hierarchy = hierarchy;
     this.startTime = startTime;
     this.tempo = tempo;
     if (typeof hierarchy[0] === 'number') {
-      this.cycleDuration = 60 * hierarchy[0] / this.tempo;
+      this.cycleDur = 60 * hierarchy[0] / this.tempo;
     } else {
       const summed = sum(hierarchy[0]);
-      this.cycleDuration = 60 * summed / this.tempo;
+      this.cycleDur = 60 * summed / this.tempo;
     }
     this.uniqueId = uniqueId;
     this.pulseStructures = [];
@@ -316,21 +348,21 @@ class Meter {
       if (i === 0) {
         for (let rep = 0; rep < repetitions; rep++) {
           if (typeof h === 'number') {
-            const tempo_ = 60 * h / this.cycleDuration;
+            const tempo_ = 60 * h / this.cycleDur;
             const ps = new PulseStructure({
               tempo: tempo_,
               size: h,
-              startTime: rep * this.cycleDuration + this.startTime,
+              startTime: rep * this.cycleDur + this.startTime,
               layer: i
             })
             subPulseStructures.push(ps)
           } else {
             const summed = sum(h);
-            const tempo_ = 60 * summed / this.cycleDuration;
-            const beatDur = this.cycleDuration / summed;
+            const tempo_ = 60 * summed / this.cycleDur;
+            const beatDur = this.cycleDur / summed;
             h.forEach((subH, j) => {
               let startTime = this.startTime + beatDur * sum(h.slice(0, j));
-              startTime += rep * this.cycleDuration;
+              startTime += rep * this.cycleDur;
               const ps = new PulseStructure({
                 tempo: tempo_,
                 size: subH,
@@ -392,12 +424,37 @@ class Meter {
       }
       this.pulseStructures.push(subPulseStructures)
     })
+    if (relCorpLims !== undefined) {
+      if (propCorpLims !== undefined) {
+        throw new Error('Cannot specify both relative and proportional ' + 
+        'corporeal limits')
+      }
+      this.relCorpLims = relCorpLims;
+      this.propCorpLims = this.relCorpLims.map(r => {
+        return r / this.durTot
+      })
+    } else if (propCorpLims !== undefined) {
+      this.propCorpLims = propCorpLims;
+      this.relCorpLims = this.propCorpLims.map(p => {
+        return p * this.durTot
+      })
+    } else {
+      this.relCorpLims = [0, this.durTot];
+      this.propCorpLims = [0, 1];
+    }
+    const start = this.relCorpLims[0];
+    const end = this.relCorpLims[1];
+    this.limitRelTemporalCorporeality(start, end)
   }
 
   get allPulses() {
     // go to lowest layer, get all pulses
     const lastLayer = this.pulseStructures[this.pulseStructures.length - 1];
     return lastLayer.map(ps => ps.pulses).flat()
+  }
+
+  get allCorporealPulses() {
+    return this.allPulses.filter(p => p.corporeal)
   }
 
   get allPulseStructures() {
@@ -455,11 +512,8 @@ class Meter {
       const layerDurs = [...Array(lps.length-1).keys()].map(j => {
         return lps[j+1].realTime - lps[j].realTime
       })
-      const lastDur = this.cycleDuration - lps[lps.length-1].realTime + lps[0].realTime;
-      layerDurs.push(lastDur);
-
-
-      // this most likely does not work at all for bifurcated metric units, i.e. [3, 4]
+      const last = this.cycleDur - lps[lps.length-1].realTime + lps[0].realTime;
+      layerDurs.push(last);
       const h = this.hierarchy[relLayer];
       if (typeof h === 'number') {
         removeIdxs.forEach(idx => {
@@ -477,7 +531,8 @@ class Meter {
           return aff.layer === relLayer - 1
         })
         if (prevPulseAff === undefined) {
-          throw new Error(`Pulse ${prevPulse.uniqueId} does not have affiliation in layer ${relLayer - 1}`)
+          throw new Error(`Pulse ${prevPulse.uniqueId} does not have ` + 
+            `affiliation in layer ${relLayer - 1}`)
         }
         let startIdx: number;
         if (prevPulseAff.segmentedMeterIdx === 0) {
@@ -485,7 +540,8 @@ class Meter {
         } else {
           const hierarchyLayer = this.hierarchy[relLayer - 1];
           if (typeof hierarchyLayer === 'number') {
-            throw new Error(`Cannot have segmented meter index for layer ${relLayer - 1} because it is not a hierarchical layer`)
+            throw new Error(`Cannot have segmented meter index for layer ` + 
+              `${relLayer - 1} because it is not a hierarchical layer`)
           }
           const segIdx = prevPulseAff.segmentedMeterIdx;
 
@@ -504,11 +560,11 @@ class Meter {
                 replacePSs.push(newPS);
               } else {
                 const tempo_ = 60 * subH / dur;
-                const startTime = lps[j].realTime + unitDur * sum(h.slice(0, k));
+                const st = lps[j].realTime + unitDur * sum(h.slice(0, k));
                 const newPS = new PulseStructure({
                   tempo: tempo_,
                   size: subH,
-                  startTime,
+                  startTime: st,
                   layer: relLayer,
                   parentPulseID: lps[j].uniqueId,
                   primary: false
@@ -517,10 +573,7 @@ class Meter {
               }
             })
           }
-          
         })
-
-
       }
       replacePSsGrid.push(replacePSs);
     })
@@ -562,18 +615,15 @@ class Meter {
     const ratio = oldTempo / newTempo;
     this.pulseStructures.forEach(psLayer => {
       psLayer.forEach((ps, idx) => {
-        // if (idx === 0) console.log(ps)
         const newSt = this.startTime + (ps.startTime - this.startTime) * ratio;
-        // console.log(ps.startTime, newSt)
         ps.setStartTime(newSt);
-        // if (idx === 0) console.log(ps)
         const psNewTempo = ps.tempo / ratio;
         ps.setTempo(psNewTempo);
-        // if (idx === 0) console.log(ps)
-        // if (idx === 0) console.log('---')
       })
     })
     this.tempo = newTempo;
+    this.cycleDur = this.cycleDur * ratio;
+    this.limitPropCorporeality();
   }
 
   adjustStartTime(newStartTime: number) {
@@ -586,35 +636,80 @@ class Meter {
       })
     })
     this.startTime = newStartTime;
+    this.limitPropCorporeality();
+  }
+
+  limitRealTemporalCorporeality(startTime: number, endTime: number) {
+    // all pulses whose `realTime` is less than `startTime` or greater than 
+    // `endTime` are set to `corporeal: false`
+    this.allPulses.forEach(p => {
+      if (p.realTime < startTime || p.realTime > endTime) {
+        p.corporeal = false;
+      }
+    });
+    const relStartTime = startTime - this.startTime;
+    const relEndTime = endTime - this.startTime;
+    this.relCorpLims = [relStartTime, relEndTime];
+    this.propCorpLims = this.relCorpLims.map(r => r / this.durTot);
+  }
+
+  limitRelTemporalCorporeality(relStartTime: number, relEndTime: number) {
+    const startTime = this.startTime + relStartTime;
+    const endTime = this.startTime + relEndTime;
+    this.limitRealTemporalCorporeality(startTime, endTime);
+  }
+
+  limitPropCorporeality({
+    propStartTime = undefined, 
+    propEndTime = undefined
+  }: {
+    propStartTime?: number,
+    propEndTime?: number
+  } = {}) {
+    if (propStartTime === undefined) {
+      propStartTime = this.propCorpLims[0];
+    }
+    if (propEndTime === undefined) {
+      propEndTime = this.propCorpLims[1];
+    }
+    if (propStartTime < 0 || propStartTime > 1) {
+      throw new Error(`Invalid proportional start time: ${propStartTime}`)
+    }
+    if (propEndTime < 0 || propEndTime > 1) {
+      throw new Error(`Invalid proportional end time: ${propEndTime}`)
+    }
+    if (propStartTime >= propEndTime) {
+      throw new Error(`Proportional start time must be less than proportional` + 
+      ` end time`)
+    }
+    const startTime = this.startTime + propStartTime * this.durTot;
+    const endTime = this.startTime + propEndTime * this.durTot;
+    this.limitRealTemporalCorporeality(startTime, endTime);
+
+  }
+
+  get durTot() {
+    return this.cycleDur * this.repetitions;
   }
   
   get realTimes() {
     return this.allPulses.map(p => p.realTime)
   }
+
+  get realCorpTimes() {
+    return this.allCorporealPulses.map(p => p.realTime)
+  }
 }
 
+const a = new Meter({ 
+  hierarchy: [4, 4], 
+  repetitions: 2, 
+  tempo: 120,
+  startTime: 3,
+  propCorpLims: [0.2, 0.8]
+});
 
-// const a = new Meter({ hierarchy: [[3, 2], [2, 2]] });
-// const pulse = a.allPulses[16];
-// a.offsetPulse(pulse, 0.05)
-// console.log(a.allPulses.map(p => p.realTime))
+a.adjustTempo(200)
 
-// const b = new Meter({ hierarchy: [[2, 1, 2], 4] });
-// const pulse2 = b.allPulses[16];
-// b.offsetPulse(pulse2, 0.05)
-// console.log(b.allPulses.map(p => p.realTime))
 
-const a = new Meter({ hierarchy: [4, 4], repetitions: 2, startTime: 1 })
-// const a = new PulseStructure({ startTime: 2 });
-// a.setStartTime(0.5)
-// a.setTempo(120)
 
-// const q = new PulseStructure();
-// q.setTempo(120)
-// console.log(q.pulses.map(p => p.realTime))
-
-console.log(a.realTimes)
-a.adjustTempo(120)
-console.log(a.realTimes)
-a.adjustStartTime(5)
-console.log(a.realTimes)
