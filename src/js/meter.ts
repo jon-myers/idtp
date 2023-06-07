@@ -701,15 +701,7 @@ class Meter {
   }
 }
 
-const a = new Meter({ 
-  hierarchy: [4, 4], 
-  repetitions: 2, 
-  tempo: 120,
-  startTime: 3,
-  propCorpLims: [0.2, 0.8]
-});
 
-a.adjustTempo(200)
-
+export { Meter }
 
 

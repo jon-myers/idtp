@@ -1,5 +1,6 @@
 import { findLastIndex } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
+import { Meter } from './meter.ts';
 
 const chromaToScaleDegree = (chroma: number): [number, boolean] => {
     let scaleDegree = 0;
@@ -1744,6 +1745,7 @@ class Piece {
   sectionStarts?: number[];
   instrumentation: string[];
   possibleTrajs: { [key: string]: number[] };
+  meters: Meter[];
 
 
   constructor({
@@ -1767,7 +1769,9 @@ class Piece {
     permissions = undefined,
     sectionStarts = undefined,
     instrumentation = ['Sitar'],
+    meters = [],
   } = {}) {
+    this.meters = meters;
     this.phrases = phrases;
     this.raga = raga;
     if (this.phrases.length === 0) {
@@ -1848,6 +1852,24 @@ class Piece {
 
   putRagaInPhrase() {
     this.phrases.forEach(p => p.raga = this.raga)
+  }
+
+  addMeter(meter: Meter) {
+    if (this.meters.length === 0) {
+      this.meters.push(meter);
+    } else {
+      const start = meter.startTime;
+      const end = start + meter.durTot;
+      this.meters.forEach(m => {
+        const c1 = m.startTime < start && m.startTime + m.durTot > start;
+        const c2 = m.startTime < end && m.startTime + m.durTot > end;
+        const c3 = m.startTime > start && m.startTime + m.durTot < end;
+        if (c1 || c2 || c3) {
+          throw new Error('meters overlap')
+        }
+      })
+      this.meters.push(meter);
+    }
   }
 
   get durStarts() {
