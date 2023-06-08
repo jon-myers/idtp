@@ -5,13 +5,16 @@ type AffiliationType = {
     psId: string, 
     idx: number, 
     layer?: number,
-    segmentedMeterIdx: number, 
+    segmentedMeterIdx: number,
+    strong: boolean,
 };
+
 
 class Pulse {
   realTime: number;
   uniqueId: string;
-  affiliations: AffiliationType[];
+  affiliations: AffiliationType[]; // for PulseStructures
+  meterId?: string;
   corporeal: boolean = true; // as opposed to just a placeholder that won't 
   // actually be visible in the transcription; useful for when a pulsed melodic
   // action begins in the middle of a metric / pulse structure (or ends midway
@@ -21,29 +24,34 @@ class Pulse {
     realTime = 0.0,
     uniqueId = uuidv4(),
     affiliation = undefined,
+    meterId = undefined,
     corporeal = true,
   }: {
     realTime?: number,
     uniqueId?: string,
     affiliation?: AffiliationType,
+    meterId?: string,
     corporeal?: boolean,
   } = {}) {
     this.realTime = realTime;
     this.uniqueId = uniqueId;
     this.affiliations = affiliation ? [affiliation] : [];
     this.corporeal = corporeal;
+    this.meterId = meterId;
   }
 
   addAffiliation({
     pulseStructure = undefined,
     idx = 0,
     segmentedMeterIdx = 0,
-    layer = undefined
+    layer = undefined,
+    strong = false,
   }: {
     pulseStructure?: PulseStructure,
     idx?: number,
     segmentedMeterIdx?: number,
     layer?: number,
+    strong?: boolean,
   } = {}) {
     // check if pulse real time is the same as the affiliation's pulse real time
     if (pulseStructure === undefined) {
@@ -55,6 +63,7 @@ class Pulse {
         idx, 
         layer,
         segmentedMeterIdx,
+        strong,
       };
       if (this.affiliations.some(a => a.psId !== affiliation.psId)) {
         this.affiliations.push(affiliation)
@@ -103,6 +112,7 @@ class PulseStructure {
   parentPulseID?: string;
   primary: boolean;
   segmentedMeterIdx: number;
+  meterId?: string;
 
   constructor({
     tempo = 60,
@@ -117,6 +127,7 @@ class PulseStructure {
     parentPulseID = undefined,
     primary = true,
     segmentedMeterIdx = 0,
+    meterId = undefined,
   }: {
     tempo?: number,
     size?: number,
@@ -130,6 +141,7 @@ class PulseStructure {
     parentPulseID?: string,
     primary?: boolean,
     segmentedMeterIdx?: number,
+    meterId?: string,
   } = {}) {
     this.segmentedMeterIdx = segmentedMeterIdx;
     this.frontWeighted = frontWeighted;
@@ -141,6 +153,7 @@ class PulseStructure {
     this.layer = layer;
     this.parentPulseID = parentPulseID;
     this.primary = primary;
+    this.meterId = meterId;
     if (offsets === undefined) {
       this.pulses = [...Array(size).keys()].map(i => new Pulse({ 
         realTime: this.startTime + i * this.pulseDur,
@@ -148,8 +161,10 @@ class PulseStructure {
           psId: this.uniqueId, 
           idx: i, 
           layer: this.layer,
-          segmentedMeterIdx: this.segmentedMeterIdx, 
-        } 
+          segmentedMeterIdx: this.segmentedMeterIdx,
+          strong: this.frontWeighted ? i === 0 : i === size - 1, 
+        },
+        meterId: this.meterId,
       }));
       this.proportionalOffsets = [...Array(size).keys()].map(i => 0.0);
       this.linearOffsets = [...Array(size).keys()].map(i => 0.0);
@@ -182,7 +197,9 @@ class PulseStructure {
             psId: this.uniqueId, 
             idx: i,
             segmentedMeterIdx: this.segmentedMeterIdx,
-          }
+            strong: this.frontWeighted ? i === 0 : i === size - 1,
+          },
+          meterId: this.meterId,
         })
       });
       if (this.pulses[0].realTime < 0) {
@@ -250,7 +267,7 @@ class PulseStructure {
     layer = 0,
   }: {
     frontWeighted?: boolean,
-    layer?: number
+    layer?: number,
   } = {}) {
     // for evenly spaced pulse structures ... you can always update offsets
     // later
@@ -263,14 +280,16 @@ class PulseStructure {
       frontWeighted,
       initPulse: pulse,
       layer,
-      parentPulseID: pulse.uniqueId
+      parentPulseID: pulse.uniqueId,
+      meterId: pulse.meterId,
     });
     const idx = frontWeighted === true ? 0 : ps.pulses.length - 1;
     pulse.addAffiliation({
       pulseStructure: ps, 
       idx, 
       segmentedMeterIdx: 0, 
-      layer
+      layer,
+      strong: true,
     })
     return ps
   }
@@ -298,7 +317,6 @@ class PulseStructure {
     
   }
 }
-
 // [4] or [4, 2] or [[4, 3], [2]] or 
 
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
@@ -353,7 +371,8 @@ class Meter {
               tempo: tempo_,
               size: h,
               startTime: rep * this.cycleDur + this.startTime,
-              layer: i
+              layer: i,
+              meterId: this.uniqueId,
             })
             subPulseStructures.push(ps)
           } else {
@@ -369,7 +388,8 @@ class Meter {
                 startTime,
                 layer: i,
                 primary: j === 0,
-                segmentedMeterIdx: j
+                segmentedMeterIdx: j,
+                meterId: this.uniqueId,
               })
               subPulseStructures.push(ps)
             })
@@ -413,7 +433,8 @@ class Meter {
                     layer: i,
                     parentPulseID: p.uniqueId,
                     primary: false,
-                    segmentedMeterIdx: k
+                    segmentedMeterIdx: k,
+                    meterId: this.uniqueId,
                   });
                 }
                 subPulseStructures.push(ps)
@@ -426,8 +447,13 @@ class Meter {
     })
     if (relCorpLims !== undefined) {
       if (propCorpLims !== undefined) {
-        throw new Error('Cannot specify both relative and proportional ' + 
-        'corporeal limits')
+        const translated = propCorpLims.map(p => p * this.durTot);
+        const equalArrs = translated.every((t, i) => t === relCorpLims[i]);
+        if (!equalArrs) {
+          throw new Error('Cannot specify both relative and proportional ' + 
+            'corporeal limits')
+        }
+        this.propCorpLims = propCorpLims;
       }
       this.relCorpLims = relCorpLims;
       this.propCorpLims = this.relCorpLims.map(r => {
@@ -567,7 +593,8 @@ class Meter {
                   startTime: st,
                   layer: relLayer,
                   parentPulseID: lps[j].uniqueId,
-                  primary: false
+                  primary: false,
+                  meterId: this.uniqueId
                 })
                 replacePSs.push(newPS);
               }

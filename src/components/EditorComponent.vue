@@ -146,6 +146,7 @@ import {
   makeSpectrograms,
   pieceExists
 } from '@/js/serverCalls.mjs';
+import { Meter } from '@/js/meter.ts';
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
 import TrajSelectPanel from '@/components/TrajSelectPanel.vue';
 import instructionsText from '@/assets/texts/editor_instructions.html?raw';
@@ -252,6 +253,7 @@ export default {
       vocal: false,
       controlsHeight: 200,
       unsavedChanges: false,
+      selectedMeterColor: 'red'
     }
   },
   components: {
@@ -2166,6 +2168,60 @@ export default {
       this.updatePhraseDivs();
     },
 
+    addMetricGrid(codified=true) {
+      const allPulses = [];
+      this.piece.meters.forEach(meter => {
+        allPulses.push(...meter.allCorporealPulses)
+      });
+      const layerWidth = [1, 0.5, 0.25, 0.125]
+      
+      allPulses.forEach(pulse => {
+        const x = codified? this.codifiedXR(pulse.realTime) : this.xr()(pulse.realTime);
+        let strokeWidth = layerWidth[pulse.lowestLayer];
+        if (pulse.lowestLayer === 0 && pulse.affiliations[0].strong) {
+          strokeWidth += 0.5;
+        }
+        this.phraseG
+          .append('path')
+          .classed('metricGrid', true)
+          .classed(`layer_${pulse.lowestLayer}`, true)
+          .classed(`meterId_${pulse.meterId}`, true)
+          .attr('id', `metricGrid_${pulse.uniqueId}`)
+          .attr('stroke', '#9368b3')
+          .attr('stroke-width', `${strokeWidth}px`)
+          .attr('d', this.playheadLine(codified))
+          .on('click', () => this.selectMeter(pulse.uniqueId))
+          .style('cursor', 'pointer')
+          .attr('transform', `translate(${x},0)`)
+      })
+    },
+
+    selectMeter(id) {
+      const allPulses = []
+      this.piece.meters.forEach(meter => {
+        allPulses.push(...meter.allCorporealPulses)
+      });
+      const pulse = allPulses.find(pulse => pulse.uniqueId === id);
+      const audioPlayer = this.$refs.audioPlayer;
+      const meterControls = audioPlayer.$refs.meterControls;
+      meterControls.meterSelected = true;
+      const meter = this.piece.meters.find(meter => {
+        return meter.uniqueId === pulse.meterId
+      });
+      meterControls.meter = meter;
+      //should go to the meter controls, if not selected
+      audioPlayer.openMeterControls();
+      const selecteds = d3SelectAll(`.meterId_${pulse.meterId}`)
+        .attr('stroke', this.selectedMeterColor)
+    },
+
+    async removeMeter(id) { // the specific graph
+      d3SelectAll('#metricGrid_' + id)
+        .remove();
+      await this.$nextTick();
+      this.resetZoom();
+    },
+
     updatePhraseDivs() {
       if (this.viewPhrases) {
         this.piece.phrases.forEach((phrase, i) => {
@@ -3221,6 +3277,7 @@ export default {
         }
       });
       piece.phrases = piece.phrases.map(phrase => new Phrase(phrase));
+      piece.meters = piece.meters.map(meter => new Meter(meter));
       this.piece = new Piece(piece);
       this.dateModified = new Date(this.piece.dateModified);
       this.fixTrajs();
@@ -3613,6 +3670,7 @@ export default {
         return regularMove
         
       });
+      this.addMetricGrid(false);
     
       
 
@@ -4156,6 +4214,7 @@ export default {
       });
       this.addChikaris();
       this.addPlayhead();
+      
     },
 
     addArticulations(traj, phraseStart, vowelIdxs) {
@@ -6153,6 +6212,7 @@ export default {
         });
       })
       this.codifiedAddChikari();
+      this.addMetricGrid();
     },
 
     xr() {

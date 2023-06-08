@@ -248,9 +248,10 @@
       </div>
     </div>
     <MeterControls 
-        v-if='showMeterControls' 
+        v-show='showMeterControls' 
         :height='controlsHeight'
         :playerHeight='playerHeight'
+        ref='meterControls'
         />
   </div>
 </template>
@@ -762,6 +763,27 @@ export default {
           this.chikariGain = 1;
           this.recGain = 0;
           if (this.modsLoaded && !this.inited) this.initAll()
+        }
+      }
+    },
+
+    openMeterControls() {
+      // check if classlist includes showMeterControls
+      const cl = this.$refs.meterImg.classList;
+      if (!cl.contains('showMeterControls')) {
+        cl.toggle('showMeterControls');
+        this.showMeterControls = this.showMeterControls ? false : true;
+        if (this.showControls) {
+          this.showControls = false;
+          this.$refs.controlsImg.classList.remove('showControls');
+        } else if (this.showTuning) {
+          this.showTuning = false;
+          this.$refs.tuningImg.classList.remove('showTuning');
+        } else if (this.showDownloads) {
+          this.showDownloads = false;
+          this.$refs.downloadImg.classList.remove('showDownloads')
+        } else {
+          this.$parent.resizeHeight(this.showMeterControls);
         }
       }
     },

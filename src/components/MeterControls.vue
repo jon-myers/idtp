@@ -24,7 +24,7 @@
       </div>
       <select 
         v-for='k, kIdx in layerCompounds[i]' 
-        v-model='pulseDivisions[i][kIdx]'
+        v-model.number='pulseDivisions[i][kIdx]'
         >
         <option v-for='j in 8'>{{ j+1 }}</option>
       </select>
@@ -54,7 +54,15 @@
       {{ getDuration() }}
     </div>
     <div class='controlsRow'>
-      <button @click='insertMeter'>Insert Meter</button>
+      <button @click='insertMeter' v-if='!meterSelected'>
+        Insert New Meter
+      </button>
+      <button v-if='meterSelected' @click='updateMeter'>
+        Update Meter
+      </button>
+      <button v-if='meterSelected' @click='removeMeter'>
+        Remove Meter
+      </button>
     </div>
   </div>
 </div>
@@ -74,7 +82,8 @@ type MeterControlsDataType = {
   minTempo: number,
   maxTempo: number,
   cycles: number,
-  meter?: Meter
+  meter?: Meter,
+  meterSelected: boolean,
 }
 
 export default {
@@ -94,7 +103,8 @@ export default {
       minTempo: 20,
       maxTempo: 300,
       cycles: 1,
-      meter: undefined
+      meter: undefined,
+      meterSelected: false,
     }
   },
   props: ['height', 'playerHeight'],
@@ -105,6 +115,17 @@ export default {
 
     decreaseCompounds(i: number) {
       this.layerCompounds[i]--
+    },
+
+    removeMeter() {
+      const piece = this.$parent!.$parent!.piece;
+      this.$parent!.$parent!.removeMeter(this.meter.uniqueId);
+      const meterIdx = piece.meters.indexOf(this.meter!);
+      if (meterIdx !== -1) {
+        piece.meters.splice(meterIdx, 1);
+        this.meterSelected = false;
+      }
+      
     },
 
     updateTempo() {
@@ -139,7 +160,8 @@ export default {
     },
 
     insertMeter() {
-      const startTime: number = this.$parent!.$parent!.currentTime;
+      const editor = this.$parent!.$parent!;
+      const startTime: number = editor.currentTime;
       const hierarchy: (number | number[])[] = [];
       for (let i = 0; i < this.numLayers; i++) {
         if (this.layerCompounds[i] === 1) {
@@ -155,8 +177,9 @@ export default {
         tempo: this.tempo,
         repetitions: this.cycles,
       });
-      this.$parent!.$parent!.piece.addMeter(meter);
-      this.$parent!.$parent!.unsavedChanges = true;
+      editor.piece.addMeter(meter);
+      editor.unsavedChanges = true;
+      editor.addMetricGrid();
 
     }
   },

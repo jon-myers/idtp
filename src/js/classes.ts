@@ -1861,7 +1861,7 @@ class Piece {
       const start = meter.startTime;
       const end = start + meter.durTot;
       this.meters.forEach(m => {
-        const c1 = m.startTime < start && m.startTime + m.durTot > start;
+        const c1 = m.startTime <= start && m.startTime + m.durTot >= start;
         const c2 = m.startTime < end && m.startTime + m.durTot > end;
         const c3 = m.startTime > start && m.startTime + m.durTot < end;
         if (c1 || c2 || c3) {
@@ -2067,6 +2067,7 @@ class Piece {
       given_name: this.given_name,
       sectionStarts: this.sectionStarts,
       instrumentation: this.instrumentation,
+      meters: this.meters
     }
   }
 
