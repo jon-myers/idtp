@@ -3,7 +3,10 @@
   <div class='controlsBox'>
     <div class='controlsRow'>
       <label class='big'>Hierarchical Depth</label>
-      <select v-model='numLayers'>
+      <select 
+        v-model='numLayers' 
+        @change='updateMeter'
+        >
         <option value='1'>1</option>
         <option value='2'>2</option>
         <option value='3'>3</option>
@@ -25,17 +28,23 @@
       <select 
         v-for='k, kIdx in layerCompounds[i]' 
         v-model.number='pulseDivisions[i][kIdx]'
+        @change='updateMeter'
         >
         <option v-for='j in 8'>{{ j+1 }}</option>
       </select>
-      
     </div>
-    
   </div>
   <div class='controlsBox'>
     <div class='controlsRow'>
       <label>Tempo</label>
-      <input type='number' min='20' max='300' step='1' v-model='tempo' />
+      <input 
+        type='number' 
+        min='20' 
+        max='300' 
+        step='1' 
+        v-model='tempo'
+        @input='updateMeter'
+        />
       <input 
         type='range' 
         min='0' 
@@ -47,7 +56,18 @@
     </div>
     <div class='controlsRow'>
       <label>Cycles</label>
-      <input type='number' min='1' max='1000' step='1' v-model='cycles' />
+      <input 
+        type='number' 
+        min='1' 
+        max='1000' 
+        step='1' 
+        v-model='cycles'
+        @input='updateMeter'
+        />
+    </div>
+    <div class='controlsRow'>
+      <label>Start</label>
+      {{ getStartTime() }}
     </div>
     <div class='controlsRow'>
       <label>Duration</label>
@@ -57,12 +77,19 @@
       <button @click='insertMeter' v-if='!meterSelected'>
         Insert New Meter
       </button>
-      <button v-if='meterSelected' @click='updateMeter'>
-        Update Meter
-      </button>
-      <button v-if='meterSelected' @click='removeMeter'>
-        Remove Meter
-      </button>
+    </div>
+  </div>
+  <div class='controlsBox'>
+    <div class='titleRow'>Layer Visibility</div>
+    <div class='controlsRow'>
+      <label>max: {{ maxLayer }}</label>
+      <input 
+        type='range' 
+        min='0' 
+        max='3' 
+        step='1' 
+        v-model.number='maxLayer' 
+        @input='updateVisibility'/>
     </div>
   </div>
 </div>
@@ -72,6 +99,11 @@
 
 import { Meter } from '@/js/meter.ts';
 import { h } from 'vue';
+
+import { 
+  selectAll as d3SelectAll,
+  select as d3Select,
+ } from 'd3';
 
 type MeterControlsDataType = {
   numLayers: number,
@@ -84,6 +116,7 @@ type MeterControlsDataType = {
   cycles: number,
   meter?: Meter,
   meterSelected: boolean,
+  maxLayer: number,
 }
 
 export default {
@@ -105,16 +138,19 @@ export default {
       cycles: 1,
       meter: undefined,
       meterSelected: false,
+      maxLayer: 3,
     }
   },
   props: ['height', 'playerHeight'],
   methods: {
     increaseCompounds(i: number) {
-      this.layerCompounds[i]++
+      this.layerCompounds[i]++;
+      this.updateMeter();
     },
 
     decreaseCompounds(i: number) {
-      this.layerCompounds[i]--
+      this.layerCompounds[i]--;
+      this.updateMeter();
     },
 
     removeMeter() {
@@ -125,7 +161,48 @@ export default {
         piece.meters.splice(meterIdx, 1);
         this.meterSelected = false;
       }
-      
+    },
+
+    async updateMeter() {
+      if (this.meter !== undefined) {
+        const startTime = this.meter!.startTime;
+        await this.removeMeter();
+        this.insertMeter(undefined, startTime)
+      }
+    },
+
+    updateVisibility() {
+      for (let i = 1; i <= 4; i++) {
+        const selects = d3SelectAll(`.layer_${i}`)
+          .filter((d, idx: number, nodes) => { 
+            return !d3Select(nodes[idx]).classed('overlay')
+        })
+          .style('opacity', this.maxLayer >= i ? 1 : 0)
+      }
+    },
+
+    assignData() {
+      if (this.meter === undefined) {
+        throw new Error('Meter is undefined');
+      }
+      this.numLayers = this.meter.hierarchy.length;
+      this.cycles = this.meter.repetitions;
+      this.tempo = this.meter.tempo;
+      const logTempoDiff = Math.log(this.maxTempo) - Math.log(this.minTempo);
+      const logTempoOffset = Math.log(this.tempo) - Math.log(this.minTempo);
+      this.tempoSlider = logTempoOffset / logTempoDiff;
+
+      this.meter.hierarchy.map((layer, i) => {
+        if (typeof layer === 'number') {
+          this.layerCompounds[i] = 1;
+          this.pulseDivisions[i][0] = layer;
+        } else {
+          this.layerCompounds[i] = layer.length;
+          layer.map((div, j) => {
+            this.pulseDivisions[i][j] = div;
+          })
+        }
+      })
     },
 
     updateTempo() {
@@ -133,6 +210,7 @@ export default {
       const logMax = Math.log(this.maxTempo);
       const logTempo = logMin + (logMax - logMin) * this.tempoSlider;
       this.tempo = Math.round(Math.exp(logTempo));
+      this.updateMeter();
     },
 
     sum(arr: number[]) {
@@ -144,6 +222,15 @@ export default {
       const pulsesPer = this.sum(relDivs);
       const dur = (this.cycles * (60 / this.tempo) * pulsesPer);
       return this.displayTime(dur)
+    },
+
+    getStartTime() {
+      if (this.meter !== undefined) {
+        return this.displayTime(this.meter.startTime);
+      } else {
+        const editor = this.$parent!.$parent!;
+        return this.displayTime(editor.currentTime)
+      }
     },
 
     displayTime(dur: number) {
@@ -159,9 +246,11 @@ export default {
       }
     },
 
-    insertMeter() {
+    insertMeter(_, startTime_?: number) {
       const editor = this.$parent!.$parent!;
-      const startTime: number = editor.currentTime;
+      const startTime = startTime_ !== undefined ? 
+                        startTime_ : 
+                        editor.currentTime;
       const hierarchy: (number | number[])[] = [];
       for (let i = 0; i < this.numLayers; i++) {
         if (this.layerCompounds[i] === 1) {
@@ -179,7 +268,13 @@ export default {
       });
       editor.piece.addMeter(meter);
       editor.unsavedChanges = true;
-      editor.addMetricGrid();
+      editor.addMetricGrid(true);
+      editor.selectedMeter = meter;
+      this.meterSelected = true;
+      editor.meterMode = true;
+      editor.selectMeter(meter.allPulses[0].uniqueId)
+      
+
 
     }
   },

@@ -40,6 +40,10 @@ class Pulse {
     this.meterId = meterId;
   }
 
+  removeAffiliation(psId: string) {
+    this.affiliations = this.affiliations.filter(a => a.psId !== psId)
+  }
+
   addAffiliation({
     pulseStructure = undefined,
     idx = 0,
@@ -223,14 +227,14 @@ class PulseStructure {
     return this.pulses.findIndex(p => p.uniqueId === pulseId)
   }
 
-  adjustLinearOffsets(offsets: number[]) {
+  adjustLinearOffsets(offsets: number[], override: boolean = false) {
     if (offsets.length !== this.size) {
       throw new Error('offsets must be same length as size')
     }
     const maxOff = 0.5 * this.pulseDur;
     const min = Math.min(...offsets);
     const max = Math.max(...offsets);
-    if (min < -maxOff || max > maxOff) {
+    if (!override && (min < -maxOff || max > maxOff)) {
       throw new Error('offsets must be between -0.5 and 0.5 of pulse duration')
     }
     this.linearOffsets = offsets;
@@ -241,6 +245,23 @@ class PulseStructure {
     this.pulses.forEach((p, i) => {
       p.realTime = newRealTimes[i];
     });
+    this.fixOffsets();
+  }
+
+  fixOffsets() {
+    // is first offset is not zero, adjusts the pulse structure accordingly
+    if (this.linearOffsets[0] !== 0) {
+      const newDurTot = this.durTot - this.linearOffsets[0];
+      const newStartTime = this.startTime + this.linearOffsets[0];
+      const newPulseDur = newDurTot / this.size;
+      this.pulseDur = newPulseDur;
+      this.startTime = newStartTime;
+      this.tempo = 60 / newPulseDur;
+      this.linearOffsets = this.pulses.map((p, i) => {
+        return p.realTime - this.startTime - i * this.pulseDur;
+      });
+      this.proportionalOffsets = this.linearOffsets.map(o => o / this.pulseDur);
+    }
   }
 
   adjustProportionalOffsets(offsets: number[]) {
@@ -260,6 +281,7 @@ class PulseStructure {
     this.pulses.forEach((p, i) => {
       p.realTime = newRealTimes[i];
     });
+    this.fixOffsets();
   }
 
   static fromPulse(pulse: Pulse, duration: number, size: number, {
@@ -499,12 +521,9 @@ class Meter {
     return this.allPulses.find(p => p.uniqueId === id)
   }
 
-  replaceAllChildrenPulseStructures(pulse: Pulse, layer: number) { // recursive
-    if (this.pulseStructures.length < layer + 1) {
-      throw new Error(`Layer ${layer + 1} does not exist`)
-    }
+  async replaceAllChildrenPulseStructures(pulse: Pulse, layer: number) { // recursive
     const bottomLayerPulses = this.allPulses.filter(p => {
-      return p.lowestLayer === layer - 1
+      return p.lowestLayer <= layer - 1
     })
     const pulseIdx = bottomLayerPulses.indexOf(pulse);
     if (pulseIdx === -1) {
@@ -514,7 +533,7 @@ class Meter {
     }
     const prevPulse = bottomLayerPulses[pulseIdx - 1];
     let parentPulseIDs = [prevPulse.uniqueId, pulse.uniqueId];
-    const removeIdxsGrid = [];
+    let removeIdxsGrid = [];
     for (let i = layer; i < this.pulseStructures.length; i++) {
       const psLayer = this.pulseStructures[i];
       const removeIdxs: number[] = [];
@@ -530,22 +549,20 @@ class Meter {
       })
       removeIdxsGrid.push(removeIdxs);
     }
-    const replacePSsGrid: PulseStructure[][] = [];
     removeIdxsGrid.forEach((removeIdxs, i) => {
       const replacePSs: PulseStructure[] = [];
       const relLayer = i + layer;
-      const lps = this.allPulses.filter(p => p.lowestLayer <= relLayer-1);
+      const lps = this.pulseStructures[relLayer-1].map(ps => ps.pulses).flat();
       const layerDurs = [...Array(lps.length-1).keys()].map(j => {
         return lps[j+1].realTime - lps[j].realTime
       })
-      const last = this.cycleDur - lps[lps.length-1].realTime + lps[0].realTime;
+      const last = this.repetitions * this.cycleDur - lps[lps.length-1].realTime + lps[0].realTime;
       layerDurs.push(last);
       const h = this.hierarchy[relLayer];
       if (typeof h === 'number') {
         removeIdxs.forEach(idx => {
           const dur = layerDurs[idx];
           const oldPS = this.pulseStructures[relLayer][idx];
-          
           const newPS = PulseStructure.fromPulse(lps[idx], dur, oldPS.size, {
             layer: relLayer
           })
@@ -602,28 +619,53 @@ class Meter {
           }
         })
       }
-      replacePSsGrid.push(replacePSs);
-    })
-    removeIdxsGrid.forEach((removeIdxs, i) => {
-      const relLayer = i + layer;
       const riStart = removeIdxs[0];
       const riEnd = removeIdxs[removeIdxs.length - 1];
-      this.pulseStructures[relLayer]
-        .splice(riStart, riEnd - riStart + 1, ...replacePSsGrid[i])
+      const deletedPSs = this.pulseStructures[relLayer]
+        .splice(riStart, riEnd - riStart + 1, ...replacePSs)
+      deletedPSs.forEach(ps => {
+        ps.pulses.forEach(p => p.removeAffiliation(ps.uniqueId))
+      })
+      const nextLps = this.pulseStructures[relLayer].map(ps => ps.pulses).flat();
     })
   }
 
-  offsetPulse(pulse: Pulse, offset: number) { // adjust the start time of one
+  offsetPulse(pulse: Pulse, offset: number, override: boolean = false) { // adjust the start time of one
     // of the pulses in the pulse structure by a given amount, and adjust the 
     // relevent higher-layer pulses accordingly.
     const psID = pulse.getLowestPSID();
     const layer = pulse.lowestLayer;
     const pulseStructure = this.getPSFromId(psID);
+    const psIdx = this.pulseStructures[layer].findIndex(ps => {
+      return ps.uniqueId === psID
+    });
+    
+    if (layer === 0 && psIdx > 0 && pulseStructure.segmentedMeterIdx === 0) {
+
+      console.log('gotta update previous one too!')
+      // if (typeof this.hierarchy[0] === 'number') {
+        const prevPS = this.pulseStructures[0][psIdx - 1];
+        const prevDurTot = prevPS.durTot;
+        const newDurTot = prevDurTot + offset;
+        const newPulseDur = newDurTot / prevPS.size;
+        const newLinearOffsets = prevPS.pulses.map((p, pIdx) => {
+          return (p.realTime - prevPS.startTime) - newPulseDur * pIdx
+        })
+        const newProporionalOffsets = newLinearOffsets.map((o, oIdx) => {
+          return o / newPulseDur
+        })
+        const newTempo = 60 * prevPS.size / newPulseDur;
+        prevPS.tempo = newTempo;
+        prevPS.pulseDur = newPulseDur;
+        prevPS.linearOffsets = newLinearOffsets;
+        prevPS.proportionalOffsets = newProporionalOffsets;
+      // }
+    }
     // first, adjust the pulse structure
     const pulseIdx = pulseStructure.getPulseIdxFromId(pulse.uniqueId);
     const newOffsets = pulseStructure.linearOffsets;
     newOffsets[pulseIdx] += offset;
-    pulseStructure.adjustLinearOffsets(newOffsets);
+    pulseStructure.adjustLinearOffsets(newOffsets, override);
     // then, for relevent pulses (the previous, and the next), get rid of all
     // children pulse structures, and re-add them
     // get all pulses whose lowest layer is less than or equal to that layer;
@@ -728,7 +770,12 @@ class Meter {
   }
 }
 
+// const a = new PulseStructure();
 
+// a.adjustLinearOffsets([0.2, 0, 0, 0])
+// console.log(a.pulses.map(p => p.realTime))
+// a.fixOffsets();
+// console.log(a.pulses.map(p => p.realTime))
 export { Meter }
 
 

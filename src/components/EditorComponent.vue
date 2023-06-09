@@ -154,6 +154,8 @@ import { detect } from 'detect-browser';
 
 import { toRaw } from 'vue';
 
+const sum = (arr) => arr.reduce((a, b) => a + b, 0);
+
 const getStarts = durArray => {
   const cumsum = (sum => value => sum += value)(0);
   return [0].concat(durArray.slice(0, durArray.length - 1)).map(cumsum)
@@ -253,7 +255,12 @@ export default {
       vocal: false,
       controlsHeight: 200,
       unsavedChanges: false,
-      selectedMeterColor: 'red'
+      selectedMeterColor: 'red',
+      meterMode: false,
+      selectedMeter: undefined,
+      meterColor: '#9368b3',
+      pulseDragEnabled: false,
+      pulseDragInitX: undefined,
     }
   },
   components: {
@@ -2173,13 +2180,25 @@ export default {
       this.piece.meters.forEach(meter => {
         allPulses.push(...meter.allCorporealPulses)
       });
-      const layerWidth = [1, 0.5, 0.25, 0.125]
+      const layerWidth = [1.5, 1, 0.5, 0.25]
       
       allPulses.forEach(pulse => {
         const x = codified? this.codifiedXR(pulse.realTime) : this.xr()(pulse.realTime);
         let strokeWidth = layerWidth[pulse.lowestLayer];
         if (pulse.lowestLayer === 0 && pulse.affiliations[0].strong) {
           strokeWidth += 0.5;
+          if (pulse.affiliations[0].segmentedMeterIdx === 0) {
+            strokeWidth += 0.5;
+          }
+        }
+        const meter = this.piece.meters.find(m => m.uniqueId === pulse.meterId);
+        const ps = meter.getPSFromId(pulse.affiliations[0].psId);
+        const drag = (pulse) => {
+
+          return d3Drag()
+            .on('start', this.pulseDragStart(pulse))
+            .on('drag', this.pulseDragging(pulse))
+            .on('end', this.pulseDragEnd(pulse))
         }
         this.phraseG
           .append('path')
@@ -2187,33 +2206,202 @@ export default {
           .classed(`layer_${pulse.lowestLayer}`, true)
           .classed(`meterId_${pulse.meterId}`, true)
           .attr('id', `metricGrid_${pulse.uniqueId}`)
-          .attr('stroke', '#9368b3')
+          .attr('stroke', this.meterColor)
           .attr('stroke-width', `${strokeWidth}px`)
           .attr('d', this.playheadLine(codified))
-          .on('click', () => this.selectMeter(pulse.uniqueId))
-          .style('cursor', 'pointer')
           .attr('transform', `translate(${x},0)`)
+
+        this.phraseG
+          .append('path')
+          .classed('metricGrid', true)
+          .classed(`layer_${pulse.lowestLayer}`, true)
+          .classed(`meterId_${pulse.meterId}`, true)
+          .classed('overlay', true)
+          .attr('id', `metricGrid_${pulse.uniqueId}`)
+          .attr('stroke', this.meterColor)
+          .style('opacity', '0')
+          .attr('stroke-width', `5px`)
+          .attr('d', this.playheadLine(codified))
+          .on('click', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.selectMeter(pulse.uniqueId)
+          })
+          .on('mouseover', () => this.hoverMeter(pulse.uniqueId))
+          .on('mouseout', () => this.unhoverMeter(pulse.uniqueId))
+          .attr('transform', `translate(${x},0)`)
+          .call(drag(pulse))
       })
     },
 
-    selectMeter(id) {
-      const allPulses = []
+    pulseDragStart(pulse) {
+      return e => {
+        this.pulseDragInitX = e.x;
+        if (this.selectedMeter && pulse.meterId === this.selectedMeter.uniqueId) {
+          this.pulseDragEnabled = true;
+        }
+      }
+    },
+
+    pulseDragging(pulse) {
+      return e => {
+        // get affiliation with
+        if (this.selectedMeter && pulse.meterId === this.selectedMeter.uniqueId) {
+          const aff = pulse.affiliations[0];
+          const psId = pulse.affiliations[0].psId;
+          const ps = this.selectedMeter.getPSFromId(psId)
+          let minTime, maxTime;
+          if (aff.idx === 0 && aff.segmentedMeterIdx === 0 && aff.layer === 0) {
+            const psIdx = this.selectedMeter.pulseStructures[0].indexOf(ps);
+            let cycleNum, subdivs;
+            const hierarchy = this.selectedMeter.hierarchy[0];
+            if (typeof hierarchy === 'number') {
+              cycleNum = psIdx
+              subdivs = hierarchy
+            } else {
+              cycleNum = Math.floor(psIdx / hierarchy.length);
+              subdivs = sum(hierarchy);
+            }
+            const st = this.selectedMeter.startTime;
+            const center = st + this.selectedMeter.cycleDur * cycleNum;
+            const subDur = this.selectedMeter.cycleDur / subdivs;
+            const maxOff = subDur / 2;
+            maxTime = center + maxOff;
+            minTime = center - maxOff;
+          } else {
+            const maxOff = ps.pulseDur / 2;
+            const pulseIdx = ps.pulses.indexOf(pulse);
+            const center = ps.startTime + ps.pulseDur * pulseIdx;
+            maxTime = center + maxOff;
+            minTime = center - maxOff;
+          }
+          let newX = e.x;
+          if (newX < this.codifiedXR(minTime)) {
+            newX = this.codifiedXR(minTime);
+          } else if (newX > this.codifiedXR(maxTime)) {
+            newX = this.codifiedXR(maxTime);
+          }
+          if (this.pulseDragEnabled) {
+            d3Select(`#metricGrid_${pulse.uniqueId}`)
+              .attr('transform', `translate(${newX},0)`)
+          }
+        }
+      }
+    },
+
+    pulseDragEnd(pulse) {
+      return e => {
+        if (this.pulseDragEnabled) {
+          const aff = pulse.affiliations[0];
+          const psId = pulse.affiliations[0].psId;
+          const ps = this.selectedMeter.getPSFromId(psId);
+          let minTime, maxTime;
+          if (aff.idx === 0 && aff.segmentedMeterIdx === 0 && aff.layer === 0) {
+            const psIdx = this.selectedMeter.pulseStructures[0].indexOf(ps);
+            let cycleNum, subdivs;
+            const hierarchy = this.selectedMeter.hierarchy[0];
+            if (typeof hierarchy === 'number') {
+              cycleNum = psIdx
+              subdivs = hierarchy
+            } else {
+              cycleNum = Math.floor(psIdx / hierarchy.length);
+              subdivs = sum(hierarchy);
+            }
+            const st = this.selectedMeter.startTime;
+            const center = st + this.selectedMeter.cycleDur * cycleNum;
+            const subDur = this.selectedMeter.cycleDur / subdivs;
+            const maxOff = subDur / 2;
+            maxTime = center + maxOff;
+            minTime = center - maxOff;
+          } else {
+            const maxOff = ps.pulseDur / 2;
+            const pulseIdx = ps.pulses.indexOf(pulse);
+            const center = ps.startTime + ps.pulseDur * pulseIdx;
+            maxTime = center + maxOff;
+            minTime = center - maxOff;
+          }
+          let newX = e.x;
+          if (newX < this.codifiedXR(minTime)) {
+            newX = this.codifiedXR(minTime);
+          } else if (newX > this.codifiedXR(maxTime)) {
+            newX = this.codifiedXR(maxTime);
+          }
+          const oldTime = pulse.realTime;
+          const newTime = this.codifiedXR.invert(newX);
+          const time = newTime - oldTime;
+          this.selectedMeter.offsetPulse(pulse, time, true);
+          this.resetZoom();
+          this.pulseDragEnabled = false;
+          this.pulseDragInitX = undefined
+          this.selectMeter(pulse.uniqueId)
+        }
+      }
+    },
+
+    hoverMeter(id) {
+      if (this.meterMode) {
+        const allPulses = [];
+        this.piece.meters.forEach(meter => {
+          allPulses.push(...meter.allCorporealPulses)
+        });
+        const pulse = allPulses.find(pulse => pulse.uniqueId === id);
+        const meter = this.piece.meters.find(meter => {
+          return meter.uniqueId === pulse.meterId
+        });
+        if (this.selectedMeter !== meter) {
+          this.svg.style('cursor', 'pointer')
+          d3SelectAll(`.meterId_${pulse.meterId}`)
+            .filter((d, i, nodes) => !d3Select(nodes[i]).classed('overlay'))
+            .attr('stroke', this.selectedMeterColor)
+        } else {
+          this.svg.style('cursor', 'col-resize')
+        }
+      }
+    },
+
+    unhoverMeter(id) {
+      this.svg.style('cursor', 'default')
+      const allPulses = [];
       this.piece.meters.forEach(meter => {
         allPulses.push(...meter.allCorporealPulses)
       });
       const pulse = allPulses.find(pulse => pulse.uniqueId === id);
-      const audioPlayer = this.$refs.audioPlayer;
-      const meterControls = audioPlayer.$refs.meterControls;
-      meterControls.meterSelected = true;
       const meter = this.piece.meters.find(meter => {
         return meter.uniqueId === pulse.meterId
       });
-      meterControls.meter = meter;
-      //should go to the meter controls, if not selected
-      audioPlayer.openMeterControls();
-      const selecteds = d3SelectAll(`.meterId_${pulse.meterId}`)
-        .attr('stroke', this.selectedMeterColor)
+      if (this.selectedMeter !== meter) {
+        d3SelectAll(`.meterId_${pulse.meterId}`)
+        .filter((d, i, nodes) => !d3Select(nodes[i]).classed('overlay'))
+        .attr('stroke', this.meterColor)
+      }
     },
+
+    selectMeter(id) {
+      if (this.meterMode) {
+        const allPulses = []
+        this.piece.meters.forEach(meter => {
+          allPulses.push(...meter.allCorporealPulses)
+        });
+        const pulse = allPulses.find(pulse => pulse.uniqueId === id);
+        const audioPlayer = this.$refs.audioPlayer;
+        const meterControls = audioPlayer.$refs.meterControls;
+        meterControls.meterSelected = true;
+        const meter = this.piece.meters.find(meter => {
+          return meter.uniqueId === pulse.meterId
+        });
+        this.selectedMeter = meter;
+        meterControls.meter = meter;
+        //should go to the meter controls, if not selected
+        audioPlayer.openMeterControls();
+        d3SelectAll('.metricGrid')
+          .attr('stroke', this.meterColor)
+        const selecteds = d3SelectAll(`.meterId_${pulse.meterId}`)
+          .filter((d, i, nodes) => !d3Select(nodes[i]).classed('overlay'))
+          .attr('stroke', this.selectedMeterColor)
+        meterControls.assignData();
+      }   
+    },
+
 
     async removeMeter(id) { // the specific graph
       d3SelectAll('#metricGrid_' + id)
@@ -2871,7 +3059,16 @@ export default {
         this.$refs.audioPlayer.stretchable = false;
       }
       if (this.setNewRegion) this.setNewRegion = false;
-
+      this.meterMode = false;
+      d3SelectAll('.metricGrid')
+        .filter((d, i, nodes) => !d3Select(nodes[i]).classed('overlay'))
+        .attr('stroke', this.meterColor)
+      this.selectedMeter = undefined;
+      // d3SelectAll('.metricGrid').style('cursor', 'none')
+      const audioPlayer = this.$refs.audioPlayer;
+      const meterControls = audioPlayer.$refs.meterControls;
+      meterControls.meter = undefined;
+      meterControls.meterSelected = false;
     },
 
     handleKeyup(e) {
@@ -2994,6 +3191,10 @@ export default {
             phrase.consolidateSilentTrajs()
           });
           this.cleanPhrases();
+        } else if (this.meterMode && this.selectedMeter) {
+          const audioPlayer = this.$refs.audioPlayer;
+          const meterControls = audioPlayer.$refs.meterControls;
+          meterControls.removeMeter(this.selectedMeter.uniqueId);
         }
       } else if (e.key === 'c' && this.editable) {
         if (this.metad) {
@@ -3070,6 +3271,12 @@ export default {
 
       } else if (e.key === 'v' && this.metad && this.editable) {
         if (this.clipboardTrajs.length > 0) this.pasteTrajs()
+      } else if (e.key === 'm') {
+        this.clearAll();
+        this.meterMode = true;
+        // d3SelectAll('.metricGrid').style('cursor', 'pointer')
+        
+
       }
       if (this.setNewTraj || this.selectedTraj) {
         const keyNums = this.$refs.trajSelectPanel.kNumsFiltered;
@@ -3277,7 +3484,7 @@ export default {
         }
       });
       piece.phrases = piece.phrases.map(phrase => new Phrase(phrase));
-      piece.meters = piece.meters.map(meter => new Meter(meter));
+      if (piece.meters) piece.meters = piece.meters.map(meter => new Meter(meter));
       this.piece = new Piece(piece);
       this.dateModified = new Date(this.piece.dateModified);
       this.fixTrajs();
