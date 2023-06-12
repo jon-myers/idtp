@@ -62,7 +62,7 @@
         max='1000' 
         step='1' 
         v-model='cycles'
-        @input='updateMeter'
+        @input='updateCycles'
         />
     </div>
     <div class='controlsRow'>
@@ -168,6 +168,22 @@ export default {
         const startTime = this.meter!.startTime;
         await this.removeMeter();
         this.insertMeter(undefined, startTime)
+      }
+    },
+
+    updateCycles() {
+      if (this.meter!== undefined) {
+        const oldReps = this.meter.repetitions;
+        const newReps = this.cycles;
+        const diff = newReps - oldReps;
+        if (diff > 0) {
+          this.meter.growCycles(diff);
+        } else if (diff < 0) {
+          this.meter.shrinkCycles(-diff);
+        }
+        const editor = this.$parent!.$parent!;
+        editor.resetZoom();
+        editor.selectMeter(this.meter.allPulses[0].uniqueId)
       }
     },
 

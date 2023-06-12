@@ -495,6 +495,118 @@ class Meter {
     this.limitRelTemporalCorporeality(start, end)
   }
 
+  growCycle() {
+    const newPSs: PulseStructure[][] = [];
+    this.hierarchy.forEach((h, i) => {
+      const subPulseStructures: PulseStructure[] = [];
+      if (i === 0) {
+        if (typeof h === 'number') {
+          const tempo_ = 60 * h / this.cycleDur;
+          const ps = new PulseStructure({
+            tempo: tempo_,
+            size: h,
+            startTime: this.repetitions * this.cycleDur + this.startTime,
+            layer: i,
+            meterId: this.uniqueId,
+          })
+          subPulseStructures.push(ps)
+        } else {
+          const summed = sum(h);
+          const tempo_ = 60 * summed / this.cycleDur;
+          const beatDur = this.cycleDur / summed;
+          h.forEach((subH, j) => {
+            let startTime = this.startTime + beatDur * sum(h.slice(0, j));
+            startTime += this.repetitions * this.cycleDur;
+            const ps = new PulseStructure({
+              tempo: tempo_,
+              size: subH,
+              startTime,
+              layer: i,
+              primary: j === 0,
+              segmentedMeterIdx: j,
+              meterId: this.uniqueId,
+            });
+            subPulseStructures.push(ps)
+          })
+        }
+      } else {
+        if (typeof h === 'number') {
+          newPSs[i-1].forEach(parentPS => {
+            parentPS.pulses.forEach((p, j) => {
+              let duration = parentPS.pulseDur;
+              const ps = PulseStructure.fromPulse(p, duration, h, {
+                layer: i
+              })
+              subPulseStructures.push(ps)
+            })
+          })
+        } else {
+          const summed = sum(h);
+          newPSs[i-1].forEach(parentPS => {
+            parentPS.pulses.forEach(p => {
+              const beatDur = parentPS.pulseDur / summed;
+              h.forEach((subH, k) => {
+                let startTime = p.realTime + beatDur * sum(h.slice(0, k));
+                const tempo_ = 60 / beatDur;
+                const duration = beatDur * subH;
+                const c1 = parentPS.frontWeighted && k === 0;
+                const c2 = !parentPS.frontWeighted && k === h.length - 1;
+                let ps: PulseStructure;
+                if (c1 || c2) {
+                  ps = PulseStructure.fromPulse(p, duration, subH, {
+                    frontWeighted: parentPS.frontWeighted,
+                    layer: i,
+                  })
+                } else {
+                  ps = new PulseStructure({
+                    tempo: tempo_,
+                    size: subH,
+                    startTime,
+                    layer: i,
+                    parentPulseID: p.uniqueId,
+                    primary: false,
+                    segmentedMeterIdx: k,
+                    meterId: this.uniqueId,
+                  });
+                }
+                subPulseStructures.push(ps)
+              })
+            })
+          })
+        }
+      }
+      newPSs.push(subPulseStructures)    
+    })
+    newPSs.forEach((psArr, i) => {
+      this.pulseStructures[i] = this.pulseStructures[i].concat(psArr)
+    })
+    this.repetitions += 1;
+  }
+
+  growCycles(n: number) {
+    for (let i = 0; i < n; i++) {
+      this.growCycle()
+    }
+  }
+
+  shrinkCycle() {
+    if (this.repetitions <= 1) {
+      throw new Error('Cannot shrink meter with only one cycle')
+    }
+    this.hierarchy.forEach((_, i) => {
+      const pssPerCycle = this.pulseStructures[i].length / this.repetitions;
+      const cutoff = pssPerCycle * (this.repetitions - 1);
+      this.pulseStructures[i] = this.pulseStructures[i].slice(0, cutoff)
+    })
+    this.repetitions -= 1;
+  }
+
+  shrinkCycles(n: number) {
+    for (let i = 0; i < n; i++) {
+      this.shrinkCycle()
+    }
+  }
+
   get allPulses() {
     // go to lowest layer, get all pulses
     const lastLayer = this.pulseStructures[this.pulseStructures.length - 1];
@@ -770,12 +882,8 @@ class Meter {
   }
 }
 
-// const a = new PulseStructure();
 
-// a.adjustLinearOffsets([0.2, 0, 0, 0])
-// console.log(a.pulses.map(p => p.realTime))
-// a.fixOffsets();
-// console.log(a.pulses.map(p => p.realTime))
+
 export { Meter }
 
 
