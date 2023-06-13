@@ -9,6 +9,9 @@ type AffiliationType = {
     strong: boolean,
 };
 
+const indexOfAll = (arr: any[], val: any): number[] => arr.reduce((acc, el, i) => {
+  return (el === val ? [...acc, i] : acc)
+}, []);
 
 class Pulse {
   realTime: number;
@@ -729,6 +732,92 @@ class Meter {
     return outPS
   }
 
+  static fromTimePoints({
+    timePoints = undefined,
+    hierarchy = undefined,
+    repetitions = 1,
+  }: {
+    timePoints?: number[],
+    hierarchy?: (number | number[])[],
+    repetitions?: number,
+  } = {}) {
+    // assume timepoints are top layer, with no skips, they start at beginning
+    // of cycle, and they are in order
+    if (timePoints === undefined) {
+      throw new Error('Must provide timePoints to create Meter')
+    }
+    if (timePoints.length < 2) {
+      throw new Error('Must provide at least two timePoints')
+    }
+    if (hierarchy === undefined) {
+      throw new Error('Must provide hierarchy to create Meter')
+    }
+    if (hierarchy.length < 1) {
+      throw new Error('Must provide at least one hierarchy')
+    }
+    let diffs = timePoints.slice(0, timePoints.length - 1).map((tp, i) => {
+      return timePoints[i+1] - tp;
+    })
+    let pulseDur = sum(diffs) / diffs.length;
+
+    let zerodTPs = timePoints.map(tp => tp - timePoints[0]);
+    let norms = timePoints.map((_, i) => pulseDur * i);
+    let tpDiffs = zerodTPs.map((tp, i) => (tp - norms[i]) / pulseDur);
+    while (tpDiffs.some(d => Math.abs(d) > 0.4)) {
+      const absTpDiffs = tpDiffs.map(d => Math.abs(d));
+      const biggestIdx = absTpDiffs.indexOf(Math.max(...absTpDiffs));
+      const diff = tpDiffs[biggestIdx];
+      if (diff > 0) {
+        const newTP = (timePoints[biggestIdx-1] + timePoints[biggestIdx]) / 2;
+        timePoints.splice(biggestIdx, 0, newTP);
+      } else {
+        const newTP = (timePoints[biggestIdx] + timePoints[biggestIdx+1]) / 2;
+        timePoints.splice(biggestIdx+1, 0, newTP);
+      }
+      diffs = timePoints.slice(0, timePoints.length - 1).map((tp, i) => {
+        return timePoints[i+1] - tp;
+      });
+      pulseDur = sum(diffs) / diffs.length;
+      zerodTPs = timePoints.map(tp => tp - timePoints[0]);
+      norms = timePoints.map((_, i) => pulseDur * i);
+      tpDiffs = zerodTPs.map((tp, i) => (tp - norms[i]) / pulseDur);
+    }
+    if (typeof hierarchy[0] === 'number') {
+      while (hierarchy[0] * repetitions < timePoints.length) {
+        repetitions += 1;
+      }
+    } else {
+      while (sum(hierarchy[0]) * repetitions < timePoints.length) {
+        repetitions += 1;
+      }
+    }
+    diffs = timePoints.slice(0, timePoints.length - 1).map((tp, i) => {
+      return timePoints[i+1] - tp;
+    });
+    pulseDur = sum(diffs) / diffs.length;
+
+    
+    const tempo = 60 / pulseDur;
+    const startTime = timePoints[0];
+    const meter = new Meter({
+      hierarchy,
+      startTime,
+      tempo,
+      repetitions
+    })
+    const metricPulses = meter.allPulses
+      .filter(p => p.lowestLayer === 0)
+    const metricTimes = metricPulses
+      .map(p => p.realTime);
+    timePoints.forEach((tp, i) => {
+      if (i > 0) {
+        const diff = tp - metricTimes[i];
+        meter.offsetPulse(metricPulses[i], diff)
+      }
+    })
+    return meter
+  }
+
   getPulseFromId(id: string) {
     return this.allPulses.find(p => p.uniqueId === id)
   }
@@ -853,7 +942,6 @@ class Meter {
     const psIdx = this.pulseStructures[layer].findIndex(ps => {
       return ps.uniqueId === psID
     });
-    console.log(psIdx)
     const first = pulse.affiliations[0].idx === 0;
     const firstSeg = pulseStructure.segmentedMeterIdx === 0;
     if (layer === 0 && psIdx > 0 && firstSeg && first) {
@@ -989,12 +1077,15 @@ class Meter {
   }
 }
 
-// const a = new Meter({ hierarchy: [4] })
-// console.log(a.realTimes)
-// a.growLayers([2, [1, 1]])
-// console.log(a.realTimes)
+// const a = Meter.fromTimePoints({ timePoints: [1, 1.4, 3], hierarchy: [4] })
+// // console.log(a.realTimes)
 
+// const tp = [1, 1.3, 1.6, 2.7, 3.0];
+// const hierarchy = [4];
+// const repetitions = 4;
+// const a = Meter.fromTimePoints({ timePoints: tp, hierarchy, repetitions })
+// console.log(a.realTimes) 
 
 export { Meter }
 
-
+ 

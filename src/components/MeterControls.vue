@@ -75,8 +75,11 @@
       {{ getDuration() }}
     </div>
     <div class='controlsRow'>
-      <button @click='insertMeter' v-if='!meterSelected'>
-        Insert New Meter
+      <button @click='insertMeter' v-if='!(meterSelected || insertPulseMode)'>
+        Insert Meter at Playhead
+      </button>
+      <button v-if='insertPulseMode' @click='insertMeterFromPulses'>
+        Insert Meter from Pulses
       </button>
     </div>
   </div>
@@ -118,6 +121,7 @@ type MeterControlsDataType = {
   meter?: Meter,
   meterSelected: boolean,
   maxLayer: number,
+  insertPulseMode: boolean,
 }
 
 export default {
@@ -140,6 +144,7 @@ export default {
       meter: undefined,
       meterSelected: false,
       maxLayer: 3,
+      insertPulseMode: false,
     }
   },
   props: ['height', 'playerHeight'],
@@ -372,9 +377,35 @@ export default {
       this.meterSelected = true;
       editor.meterMode = true;
       editor.selectMeter(meter.allPulses[0].uniqueId)
-      
+    },
 
-
+    insertMeterFromPulses() {
+      const editor = this.$parent!.$parent!;
+      const timePoints: number[] = editor.insertPulses;
+      const hierarchy: (number | number[])[] = [];
+      for (let i = 0; i < this.numLayers; i++) {
+        if (this.layerCompounds[i] === 1) {
+          hierarchy.push(this.pulseDivisions[i][0])
+        } else {
+          const layer = this.pulseDivisions[i].slice(0, this.layerCompounds[i]);
+          hierarchy.push(layer)
+        }
+      }
+      timePoints.sort((a: number, b: number) => a - b, 0);
+      const meter = Meter.fromTimePoints( {
+        timePoints,
+        hierarchy,
+        repetitions: this.cycles,
+      })
+      editor.piece.addMeter(meter);
+      editor.unsavedChanges = true;
+      editor.addMetricGrid(true);
+      editor.selectedMeter = meter;
+      editor.insertPulseMode = false;
+      this.meterSelected = true;
+      editor.meterMode = true;
+      editor.selectMeter(meter.allPulses[0].uniqueId);
+      d3SelectAll('.insertPulse').remove();
     }
   },
 }

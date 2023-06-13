@@ -261,6 +261,8 @@ export default {
       meterColor: '#9368b3',
       pulseDragEnabled: false,
       pulseDragInitX: undefined,
+      insertPulseMode: false,
+      insertPulses: [],
     }
   },
   components: {
@@ -2360,19 +2362,21 @@ export default {
     },
 
     unhoverMeter(id) {
-      this.svg.style('cursor', 'default')
-      const allPulses = [];
-      this.piece.meters.forEach(meter => {
-        allPulses.push(...meter.allCorporealPulses)
-      });
-      const pulse = allPulses.find(pulse => pulse.uniqueId === id);
-      const meter = this.piece.meters.find(meter => {
-        return meter.uniqueId === pulse.meterId
-      });
-      if (this.selectedMeter !== meter) {
-        d3SelectAll(`.meterId_${pulse.meterId}`)
-        .filter((d, i, nodes) => !d3Select(nodes[i]).classed('overlay'))
-        .attr('stroke', this.meterColor)
+      if (this.meterMode) {
+        this.svg.style('cursor', 'default')
+        const allPulses = [];
+        this.piece.meters.forEach(meter => {
+          allPulses.push(...meter.allCorporealPulses)
+        });
+        const pulse = allPulses.find(pulse => pulse.uniqueId === id);
+        const meter = this.piece.meters.find(meter => {
+          return meter.uniqueId === pulse.meterId
+        });
+        if (this.selectedMeter !== meter) {
+          d3SelectAll(`.meterId_${pulse.meterId}`)
+          .filter((d, i, nodes) => !d3Select(nodes[i]).classed('overlay'))
+          .attr('stroke', this.meterColor)
+        }
       }
     },
 
@@ -3072,6 +3076,10 @@ export default {
       const meterControls = audioPlayer.$refs.meterControls;
       meterControls.meter = undefined;
       meterControls.meterSelected = false;
+      this.insertPulses = [];
+      this.insertPulseMode = false;
+      this.$refs.audioPlayer.$refs.meterControls.insertPulseMode = false;
+      d3SelectAll('.insertPulse').remove();
     },
 
     handleKeyup(e) {
@@ -3274,9 +3282,17 @@ export default {
 
       } else if (e.key === 'v' && this.metad && this.editable) {
         if (this.clipboardTrajs.length > 0) this.pasteTrajs()
-      } else if (e.key === 'm') {
-        this.clearAll();
-        this.meterMode = true;
+      } else if (e.key === 'm' || e.key === 'M') {
+        if (this.shifted) {
+          this.svg.style('cursor', 's-resize');
+          this.insertPulseMode = true;
+          this.$refs.audioPlayer.$refs.meterControls.insertPulseMode = true;
+        } else {
+          this.clearAll();
+          this.meterMode = true;
+        }
+        
+        // this.svg.style('cursor', 'crosshair');
         // d3SelectAll('.metricGrid').style('cursor', 'pointer')
         
 
@@ -4060,9 +4076,6 @@ export default {
         }
       } else if (this.setNewPhraseDiv) {
         this.unsavedChanges = true;
-
-
-        // get trajectory at time
         const phrase = this.piece.phrases[pIdx];
         const tIdx = this.trajIdxFromTime(phrase, time);
         const traj = phrase.trajectories[tIdx];
@@ -4161,6 +4174,20 @@ export default {
         this.addNewPhraseDiv(phrase_.pieceIdx);
         this.setNewPhraseDiv = false;
         this.svg.style('cursor', 'auto');        
+      } else if (this.insertPulseMode) {
+        this.insertPulses.push(time);
+        // this.insertPulses.sort((a, b) => a - b, 0);
+        this.phraseG
+          .append('path')
+          .classed('insertPulse', true)
+          .attr('id', `insertPulse${this.insertPulses.length - 1}`)
+          .attr('stroke', 'red')
+          .attr('stroke-width', 2)
+          .attr('d', this.playheadLine(true))
+          .attr('transform', `translate(${this.codifiedXR(time)}, 0)`)
+
+
+
       } else if (this.setNewRegion) {
         this.setRegionToPhrase(pIdx);
         this.setNewRegion = false;
