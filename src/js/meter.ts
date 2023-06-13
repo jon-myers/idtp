@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-
+const approxEqual = (v1: number, v2: number, epsilon = 0.001) => Math.abs(v1 - v2) <= epsilon;
 
 type AffiliationType = { 
     psId: string, 
@@ -956,6 +956,9 @@ class Meter {
     }
     if (propEndTime === undefined) {
       propEndTime = this.propCorpLims[1];
+    }
+    if (approxEqual(1, propEndTime)) {
+      propEndTime = 1;
     }
     if (propStartTime < 0 || propStartTime > 1) {
       throw new Error(`Invalid proportional start time: ${propStartTime}`)
