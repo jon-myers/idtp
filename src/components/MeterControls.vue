@@ -5,7 +5,7 @@
       <label class='big'>Hierarchical Depth</label>
       <select 
         v-model='numLayers' 
-        @change='updateMeter'
+        @change='updateDepth'
         >
         <option value='1'>1</option>
         <option value='2'>2</option>
@@ -15,7 +15,7 @@
     </div>
     <div class='controlsRow' v-for='(n, i) in Number(numLayers)' :key='n'>
       <label>Layer {{ i }}</label>
-      <div class='buttonCol'>
+      <div class='buttonCol' v-if='i === 0'>
         <button 
           :disabled='layerCompounds[i] === 4' 
           @click='increaseCompounds(i)'
@@ -25,10 +25,11 @@
           @click='decreaseCompounds(i)'
           >-</button>
       </div>
+      <div class='buttonCol' v-else></div>
       <select 
         v-for='k, kIdx in layerCompounds[i]' 
         v-model.number='pulseDivisions[i][kIdx]'
-        @change='updateMeter'
+        @change='updatePulseDivs(i, kIdx)'
         >
         <option v-for='j in 8'>{{ j+1 }}</option>
       </select>
@@ -43,7 +44,7 @@
         max='300' 
         step='1' 
         v-model='tempo'
-        @input='updateMeter'
+        @input='updateTempo'
         />
       <input 
         type='range' 
@@ -145,17 +146,40 @@ export default {
   methods: {
     increaseCompounds(i: number) {
       this.layerCompounds[i]++;
-      this.updateMeter();
+      // this.updateMeter();
+      if (this.meter !== undefined) {
+        if (i === 0) {
+          this.updateMeter();
+        } else {
+          const newHi = this.pulseDivisions[i].slice(0, this.layerCompounds[i]);
+          this.meter.alterLayer(i, newHi);
+          const editor = this.$parent!.$parent!;
+          editor.resetZoom();
+          editor.selectMeter(this.meter.allPulses[0].uniqueId);
+        }
+      }
     },
 
     decreaseCompounds(i: number) {
       this.layerCompounds[i]--;
-      this.updateMeter();
+      // this.updateMeter();
+      if (this.meter !== undefined) {
+        if (i === 0) {
+          this.updateMeter();
+        } else {
+          const newHi = this.pulseDivisions[i].slice(0, this.layerCompounds[i]);
+          this.meter.alterLayer(i, newHi);
+          const editor = this.$parent!.$parent!;
+          editor.resetZoom();
+          editor.selectMeter(this.meter.allPulses[0].uniqueId);
+        }
+      }
     },
 
     removeMeter() {
-      const piece = this.$parent!.$parent!.piece;
-      this.$parent!.$parent!.removeMeter(this.meter.uniqueId);
+      const editor = this.$parent!.$parent!;
+      const piece = editor.piece;
+      editor.removeMeter(this.meter.uniqueId);
       const meterIdx = piece.meters.indexOf(this.meter!);
       if (meterIdx !== -1) {
         piece.meters.splice(meterIdx, 1);
@@ -168,6 +192,36 @@ export default {
         const startTime = this.meter!.startTime;
         await this.removeMeter();
         this.insertMeter(undefined, startTime)
+        const editor = this.$parent!.$parent!;
+        // editor.resetZoom();
+        await this.$nextTick();
+        editor.selectMeter(this.meter!.allPulses[0].uniqueId);
+        console.log(editor.meterMode)
+      }
+    },
+
+    updateDepth() {
+      if (this.meter !== undefined) {
+        const oldDepth = this.meter.hierarchy.length;
+        const newDepth = this.numLayers;
+        const diff = newDepth - oldDepth;
+        const editor = this.$parent!.$parent!;
+        if (diff < 0) {
+          this.meter.shrinkLayers(-diff);
+        } else {
+          const newHierarchies = [];
+          for (let i = oldDepth; i < newDepth; i++) {
+            const lc = this.layerCompounds[i];
+            if (lc === 1) {
+              newHierarchies.push(this.pulseDivisions[i][0]);
+            } else {
+              newHierarchies.push(this.pulseDivisions[i].slice(0, lc));
+            }
+          }
+          this.meter.growLayers(newHierarchies);
+        }
+        editor.resetZoom();
+        editor.selectMeter(this.meter.allPulses[0].uniqueId)
       }
     },
 
@@ -185,6 +239,28 @@ export default {
         editor.resetZoom();
         editor.selectMeter(this.meter.allPulses[0].uniqueId)
       }
+    },
+
+    updatePulseDivs(i: number, kIdx: number) {
+      if (this.meter !== undefined) {
+        const newHierarchy = [];
+        for (let i = 0; i < this.numLayers; i++) {
+          const lc = this.layerCompounds[i];
+          if (lc === 1) {
+            newHierarchy.push(this.pulseDivisions[i][0]);
+          } else {
+            newHierarchy.push(this.pulseDivisions[i].slice(0, lc));
+          }
+        }
+        if (i === 0) {
+          this.updateMeter()
+        } else {
+          this.meter.alterLayer(i, newHierarchy[i]);
+          const editor = this.$parent!.$parent!;
+          editor.resetZoom();
+          editor.selectMeter(this.meter.allPulses[0].uniqueId);
+        }
+      } 
     },
 
     updateVisibility() {
@@ -226,7 +302,14 @@ export default {
       const logMax = Math.log(this.maxTempo);
       const logTempo = logMin + (logMax - logMin) * this.tempoSlider;
       this.tempo = Math.round(Math.exp(logTempo));
-      this.updateMeter();
+      if (this.meter !== undefined) {
+        this.meter?.adjustTempo(this.tempo);
+        const editor = this.$parent!.$parent!;
+        editor.resetZoom();
+        editor.selectMeter(this.meter!.allPulses[0].uniqueId)
+      }
+      
+      // this.updateMeter();
     },
 
     sum(arr: number[]) {

@@ -607,6 +607,106 @@ class Meter {
     }
   }
 
+  shrinkLayer() {
+    if (this.hierarchy.length <= 1) {
+      throw new Error('Cannot shrink meter with only one layer')
+    }
+    const layer = this.hierarchy.length - 1;
+    this.allPulses.forEach(p => {
+      p.affiliations = p.affiliations.filter(aff => {
+        return aff.layer !== layer
+      })
+  
+    })
+    this.hierarchy.pop();
+    this.pulseStructures.pop();
+
+  }
+
+  shrinkLayers(n: number) {
+    if (n > this.hierarchy.length - 1) {
+      throw new Error('Cannot shrink meter below one layer')
+    }
+    for (let i = 0; i < n; i++) {
+      this.shrinkLayer()
+    }
+  }
+
+  growLayer(hierarchy: number[] | number) {
+    this.hierarchy.push(hierarchy);
+    const newPSs: PulseStructure[] = [];
+    let durs = this.realTimes.slice(0, this.realTimes.length-1).map((rt, i) => {
+      return this.realTimes[i+1] - rt;
+    })
+    durs.push(this.cycleDur * this.repetitions - sum(durs));
+    const lastPSs = this.pulseStructures[this.pulseStructures.length - 1];
+    if (typeof hierarchy === 'number') {  
+      let ct = 0;
+      lastPSs.forEach(ps => {
+        ps.pulses.forEach(p => {
+          const dur = durs[ct];
+          const newPS = PulseStructure.fromPulse(p, dur, hierarchy, {
+            layer: this.pulseStructures.length,
+          })
+          newPSs.push(newPS)
+          ct += 1;
+        })
+      })
+    } else {
+      let ct = 0;
+      lastPSs.forEach(ps => {
+        ps.pulses.forEach(p => {
+          const durTot = durs[ct];
+          const summed = sum(hierarchy);
+          const beatDur = durTot / summed;
+          hierarchy.forEach((h, j) => {
+            let startTime = p.realTime + beatDur * sum(hierarchy.slice(0, j));
+            const tempo_ = 60 / beatDur;
+            const duration = beatDur * h;
+            const c1 = ps.frontWeighted && j === 0;
+            const c2 = !ps.frontWeighted && j === hierarchy.length - 1;
+            let newPS: PulseStructure;
+            if (c1 || c2) {
+              newPS = PulseStructure.fromPulse(p, duration, h, {
+                frontWeighted: ps.frontWeighted,
+                layer: this.pulseStructures.length,
+              })
+            } else {
+              newPS = new PulseStructure({
+                tempo: tempo_,
+                size: h,
+                startTime,
+                layer: this.pulseStructures.length,
+                parentPulseID: p.uniqueId,
+                primary: false,
+                segmentedMeterIdx: j,
+                meterId: this.uniqueId,
+              });
+            }
+            newPSs.push(newPS)            
+          })
+          ct += 1;
+        })
+      })
+    }
+    this.pulseStructures.push(newPSs);
+  }
+
+  growLayers(hierarchies: (number | number[])[]) {
+    console.log(hierarchies)
+    hierarchies.forEach(h => this.growLayer(h))
+  }
+
+  alterLayer(layer: number, hierarchy: number | number[]) {
+    if (layer > this.hierarchy.length - 1) {
+      throw new Error(`Layer ${layer} does not exist`)
+    }
+    this.hierarchy[layer] = hierarchy;
+    const hiCopy = this.hierarchy.slice(0, this.hierarchy.length);
+    this.shrinkLayers(this.hierarchy.length - layer);
+    this.growLayers(hiCopy.slice(layer))
+  }
+
   get allPulses() {
     // go to lowest layer, get all pulses
     const lastLayer = this.pulseStructures[this.pulseStructures.length - 1];
@@ -681,6 +781,8 @@ class Meter {
           replacePSs.push(newPS);
         })
       } else {
+        console.log(h)
+        console.log('this one then?')
         const summed = sum(h);
         const prevPulseAff = prevPulse.affiliations.find(aff => {
           return aff.layer === relLayer - 1
@@ -751,10 +853,11 @@ class Meter {
     const psIdx = this.pulseStructures[layer].findIndex(ps => {
       return ps.uniqueId === psID
     });
-    
-    if (layer === 0 && psIdx > 0 && pulseStructure.segmentedMeterIdx === 0) {
-
-      console.log('gotta update previous one too!')
+    console.log(psIdx)
+    const first = pulse.affiliations[0].idx === 0;
+    const firstSeg = pulseStructure.segmentedMeterIdx === 0;
+    if (layer === 0 && psIdx > 0 && firstSeg && first) {
+      // console.log('gotta update previous one too!')
       // if (typeof this.hierarchy[0] === 'number') {
         const prevPS = this.pulseStructures[0][psIdx - 1];
         const prevDurTot = prevPS.durTot;
@@ -766,12 +869,13 @@ class Meter {
         const newProporionalOffsets = newLinearOffsets.map((o, oIdx) => {
           return o / newPulseDur
         })
-        const newTempo = 60 * prevPS.size / newPulseDur;
+        const newTempo = 60 / newPulseDur;
         prevPS.tempo = newTempo;
         prevPS.pulseDur = newPulseDur;
         prevPS.linearOffsets = newLinearOffsets;
         prevPS.proportionalOffsets = newProporionalOffsets;
       // }
+    } else {
     }
     // first, adjust the pulse structure
     const pulseIdx = pulseStructure.getPulseIdxFromId(pulse.uniqueId);
@@ -882,6 +986,10 @@ class Meter {
   }
 }
 
+// const a = new Meter({ hierarchy: [4] })
+// console.log(a.realTimes)
+// a.growLayers([2, [1, 1]])
+// console.log(a.realTimes)
 
 
 export { Meter }

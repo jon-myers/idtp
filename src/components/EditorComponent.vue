@@ -2386,6 +2386,7 @@ export default {
         const audioPlayer = this.$refs.audioPlayer;
         const meterControls = audioPlayer.$refs.meterControls;
         meterControls.meterSelected = true;
+        // console.log(pulse, id)
         const meter = this.piece.meters.find(meter => {
           return meter.uniqueId === pulse.meterId
         });
@@ -2408,6 +2409,8 @@ export default {
         .remove();
       await this.$nextTick();
       this.resetZoom();
+      this.meterMode = false;
+      this.svg.style('cursor', 'default')
     },
 
     updatePhraseDivs() {
