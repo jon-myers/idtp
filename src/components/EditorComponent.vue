@@ -1418,7 +1418,7 @@ export default {
     },
     
     async makeSpectrograms() {
-      // use call from serverCalls.js to create new spectrograms on the server.
+      // use call from serverCalls.ts to create new spectrograms on the server.
       const recId = this.piece.audioID;
       const saEst = this.audioDBDoc.saEstimate;
       const octOffset = this.audioDBDoc.octOffset;

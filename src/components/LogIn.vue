@@ -19,7 +19,7 @@
 
 
 // import { decodeCredential } from 'vue3-google-login';
-import { agreeToWaiver } from '@/js/serverCalls.mjs';
+import { agreeToWaiver } from '@/js/serverCalls.ts';
 
 export default {
   name: 'LogIn',

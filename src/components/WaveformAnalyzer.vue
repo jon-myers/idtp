@@ -71,7 +71,7 @@ import {
   updateSaEstimate, 
   getVerifiedStatus, 
   makeSpectrograms 
-  } from '@/js/serverCalls.mjs';
+  } from '@/js/serverCalls.ts';
 
 import * as d3 from 'd3';
 const avg = values => values.reduce((sum, val) => sum + val, 0) / values.length;

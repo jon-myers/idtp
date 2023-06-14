@@ -101,7 +101,7 @@
   
 </template>
 <script>
-import { getAllAudioEventMetadata, deleteAudioEvent } from '@/js/serverCalls.mjs';
+import { getAllAudioEventMetadata, deleteAudioEvent } from '@/js/serverCalls.ts';
 import AddAudioEvent from '@/components/AddAudioEvent.vue';
 import AudioPlayer from '@/components/AudioPlayer.vue';
 const displayTime = dur => {

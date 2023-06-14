@@ -54,7 +54,7 @@ import {
   googleAuthCodeLogin 
 } from 'vue3-google-login';
 // import { detect } from 'detect-browser';
-import { userLoginGoogle, handleGoogleAuthCode } from '@/js/serverCalls.mjs';
+import { userLoginGoogle, handleGoogleAuthCode } from '@/js/serverCalls.ts';
 import { defineComponent } from 'vue';
 
 import defaultUsrImgUrl from '@/assets/icons/user_head.svg';

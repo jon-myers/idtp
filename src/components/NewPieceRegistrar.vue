@@ -169,7 +169,7 @@ import {
   saveRaagRules,
   getInstruments,
   getInstrumentation
-} from '@/js/serverCalls.mjs';
+} from '@/js/serverCalls.ts';
 import RaagEditor from '@/components/RaagEditor.vue';
 export default {
   name: 'NewPieceRegistrar',

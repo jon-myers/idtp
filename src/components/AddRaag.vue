@@ -94,7 +94,7 @@
 import {
   getRagaNames,
   getPerformanceSections
-} from '@/js/serverCalls.mjs';
+} from '@/js/serverCalls.ts';
 
 export default {
   name: 'AddRaag',

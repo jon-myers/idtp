@@ -51,7 +51,7 @@
 import { 
   getAllAudioFileMetaData, 
   getAllAudioEventMetadata 
-} from '@/js/serverCalls.mjs';
+} from '@/js/serverCalls.ts';
 
 import AddAudioEvent from '@/components/AddAudioEvent.vue';
 const displayTime = dur => {
