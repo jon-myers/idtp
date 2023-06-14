@@ -474,7 +474,6 @@ class Meter {
       if (propCorpLims !== undefined) {
         const translated = propCorpLims.map(p => p * this.durTot);
         const equalArrs = translated.every((t, i) => t === relCorpLims[i]);
-        console.log(translated, relCorpLims)
         if (!equalArrs) {
           throw new Error('Cannot specify both relative and proportional ' + 
             'corporeal limits')
@@ -497,6 +496,28 @@ class Meter {
     const start = this.relCorpLims[0];
     const end = this.relCorpLims[1];
     this.limitRelTemporalCorporeality(start, end)
+  }
+
+  hidePulseAndPriors(pulse: Pulse) {
+    const prop = Number.EPSILON + pulse.realTime / this.durTot;
+    this.limitPropCorporeality({
+      propStartTime: prop
+    })    
+  }
+
+  showPriorPulses() {
+    this.limitPropCorporeality({ propStartTime: 0 })
+  }
+
+  showLaterPulses() {
+    this.limitPropCorporeality({ propEndTime: 1 })
+  }
+
+  hidePulseAndFollowing(pulse: Pulse) {
+    const prop = pulse.realTime / this.durTot - Number.EPSILON;
+    this.limitPropCorporeality({
+      propEndTime: prop
+    })
   }
 
   growCycle() {
@@ -826,6 +847,13 @@ class Meter {
     return this.allPulses.find(p => p.uniqueId === id)
   }
 
+  cycleOfPulse(pulse: Pulse) {
+    // returns the cycle number of the pulse
+    const pulseIdx = this.allPulses.indexOf(pulse);
+    const pulsesPerCycle = this.allPulses.length / this.repetitions;
+    return Math.floor(pulseIdx / pulsesPerCycle)
+  }
+
   async replaceAllChildrenPulseStructures(pulse: Pulse, layer: number) { // recursive
     const bottomLayerPulses = this.allPulses.filter(p => {
       return p.lowestLayer <= layer - 1
@@ -1003,7 +1031,7 @@ class Meter {
     this.limitPropCorporeality();
   }
 
-  adjustStartTime(newStartTime: number) {
+  setStartTime(newStartTime: number) {
     const oldStartTime = this.startTime;
     const offset = newStartTime - oldStartTime;
     this.pulseStructures.forEach(psLayer => {
@@ -1016,12 +1044,21 @@ class Meter {
     this.limitPropCorporeality();
   }
 
+  adjustStartTime(offset: number) {
+    if (this.startTime + offset < 0) {
+      throw new Error('Cannot adjust start time to negative value')
+    }
+    this.setStartTime(this.startTime + offset);
+  }
+
   limitRealTemporalCorporeality(startTime: number, endTime: number) {
     // all pulses whose `realTime` is less than `startTime` or greater than 
     // `endTime` are set to `corporeal: false`
     this.allPulses.forEach(p => {
       if (p.realTime < startTime || p.realTime > endTime) {
         p.corporeal = false;
+      } else {
+        p.corporeal = true;
       }
     });
     const relStartTime = startTime - this.startTime;
@@ -1080,6 +1117,11 @@ class Meter {
     return this.allCorporealPulses.map(p => p.realTime)
   }
 }
+
+// const a = new Meter({ startTime: 0.5 });
+// console.log(a.realTimes)
+// a.adjustStartTime(-0.5);
+// console.log(a.realTimes)
 
 // const a = Meter.fromTimePoints({ timePoints: [1, 1.4, 3], hierarchy: [4] })
 // // console.log(a.realTimes)

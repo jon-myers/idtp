@@ -2045,6 +2045,12 @@ class Piece {
     }
   }
 
+  pulseFromId(id: string) {
+    const allPulses = this.meters.map(m => m.allPulses).flat();
+    const pulse = allPulses.find(p => p.uniqueId === id);
+    return pulse
+  }
+
 
   toJSON() {
     return {

@@ -101,6 +101,12 @@
   :controlsHeight='controlsHeight'
   :editable='editable'
   />
+  <ContextMenu 
+    :x='contextMenuX'
+    :y='contextMenuY'
+    :closed='contextMenuClosed'
+    :choices='contextMenuChoices'
+    />
 </template>
 <script>
 const getClosest = (counts, goal) => {
@@ -157,6 +163,7 @@ import {
 import { Meter } from '@/js/meter.ts';
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
 import TrajSelectPanel from '@/components/TrajSelectPanel.vue';
+import ContextMenu from'@/components/ContextMenu.vue';
 import instructionsText from '@/assets/texts/editor_instructions.html?raw';
 import { detect } from 'detect-browser';
 
@@ -272,11 +279,16 @@ export default {
       insertPulseMode: false,
       insertPulses: [],
       magnetMode: false,
+      contextMenuX: 0,
+      contextMenuY: 0,
+      contextMenuClosed: true,
+      contextMenuChoices: []
     }
   },
   components: {
     EditorAudioPlayer,
-    TrajSelectPanel
+    TrajSelectPanel,
+    ContextMenu
   },
   created() {
     window.addEventListener('keydown', this.handleKeydown);
@@ -2240,6 +2252,63 @@ export default {
             }
             this.selectMeter(pulse.uniqueId)
           })
+          .on('contextmenu', e => {
+            if (this.meterMode) {
+              e.preventDefault();
+              e.stopPropagation();
+              this.contextMenuX = e.x;
+              this.contextMenuY = e.y;
+              this.contextMenuClosed = false;
+              const pulseId = e.target.id.slice(11);
+              const pulse = this.selectedMeter.getPulseFromId(pulseId);
+              const cycle = this.selectedMeter.cycleOfPulse(pulse);
+              this.contextMenuChoices = [];
+              if (cycle === 0) {
+                this.contextMenuChoices.push({
+                  text: 'Hide Pulse and priors',
+                  action: () => {
+                    this.selectedMeter.hidePulseAndPriors(pulse);
+                    this.contextMenuClosed = true;
+                    this.resetZoom();
+                    this.selectMeter(pulse.uniqueId)
+                  }
+                })
+              } else if (cycle === this.selectedMeter.repetitions - 1) {
+                this.contextMenuChoices.push({
+                  text: 'Hide Pulse and nexts',
+                  action: () => {
+                    this.selectedMeter.hidePulseAndFollowing(pulse);
+                    this.contextMenuClosed = true;
+                    this.resetZoom();
+                    this.selectMeter(pulse.uniqueId)
+                  }
+                })
+              }
+              if (!this.selectedMeter.allPulses[0].corporeal) {
+                this.contextMenuChoices.push({
+                  text: 'Show all Prior Pulses',
+                  action: () => {
+                    this.selectedMeter.showPriorPulses(pulse);
+                    this.contextMenuClosed = true;
+                    this.resetZoom();
+                    this.selectMeter(pulse.uniqueId)
+                  }
+                })
+              }
+              const ap = this.selectedMeter.allPulses;
+              if (!ap[ap.length - 1].corporeal) {
+                this.contextMenuChoices.push({
+                  text: 'Show all Later Pulses',
+                  action: () => {
+                    this.selectedMeter.showLaterPulses(pulse);
+                    this.contextMenuClosed = true;
+                    this.resetZoom();
+                    this.selectMeter(pulse.uniqueId)
+                  }
+                })
+              }
+            }
+          })
           .on('mouseover', () => this.hoverMeter(pulse.uniqueId))
           .on('mouseout', () => this.unhoverMeter(pulse.uniqueId))
           .attr('transform', `translate(${x},0)`)
@@ -2396,7 +2465,7 @@ export default {
       if (this.meterMode) {
         const allPulses = []
         this.piece.meters.forEach(meter => {
-          allPulses.push(...meter.allCorporealPulses)
+          allPulses.push(...meter.allPulses)
         });
         const pulse = allPulses.find(pulse => pulse.uniqueId === id);
         const audioPlayer = this.$refs.audioPlayer;
@@ -3092,6 +3161,7 @@ export default {
       this.insertPulseMode = false;
       this.$refs.audioPlayer.$refs.meterControls.insertPulseMode = false;
       d3SelectAll('.insertPulse').remove();
+      this.contextMenuClosed = true;
     },
 
     handleKeyup(e) {
@@ -3339,6 +3409,14 @@ export default {
           if (this.editable) this.adjustChikari(false)
         }
       }
+      if (this.selectedMeter !== undefined) {
+        if (e.key === 'ArrowLeft') {
+          if (this.editable) this.adjustMeter(true)
+        } else if (e.key === 'ArrowRight') {
+          if (this.editable) this.adjustMeter(false)
+        }
+      }
+
     },
 
     shrink() {
@@ -5741,7 +5819,7 @@ export default {
       }
     },
 
-    adjustChikari(left=true) {
+    adjustChikari(left = true) {
       // first, adjust the actual chikari in phrase object, 
       const offset = 0.02;
       const pIdx = this.selectedChikariID.split('_')[0].slice(1);
@@ -5765,6 +5843,36 @@ export default {
         this.codifiedAddOneChikari(phrase, newTime);
         this.selectedChikariID = newID;
       }
+    },
+
+    adjustMeter(left = true) {
+      const offset = 0.02;
+      const startTime = this.selectedMeter.startTime;
+      let adjustment;
+      if (left) {
+        if (startTime - offset >= 0) {
+          this.selectedMeter.adjustStartTime(-offset);
+          adjustment = this.codifiedXR(0) - this.codifiedXR(0.02);
+        } else if (startTime !== 0) {
+          this.selectedMeter.setStartTime(0);
+          adjustment = this.codifiedXR(0) - this.codifiedXR(startTime);
+        } else {
+          return
+        }
+      } else {
+        this.selectedMeter.adjustStartTime(offset);
+        adjustment = this.codifiedXR(0.02) - this.codifiedXR(0);
+      }
+      const selected = d3SelectAll(`.meterId_${this.selectedMeter.uniqueId}`);
+      selected.nodes().forEach(node => {
+        const curX = node.transform.baseVal[0].matrix.e;
+        const newX = curX + adjustment;
+        d3Select(node).attr('transform', `translate(${newX}, 0)`);
+      })
+      this.resetZoom();
+      this.selectMeter(this.selectedMeter.allPulses[0].uniqueId);
+      this.unsavedChanges = true;
+      
     },
 
     selectedTrajsGroupable() {// tests whether all trajs in this.selectedTrajs

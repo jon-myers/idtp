@@ -122,6 +122,9 @@ import {
   select as d3Select,
  } from 'd3';
 
+import { defineComponent } from 'vue';
+ 
+
 type MeterControlsDataType = {
   numLayers: number,
   layerCompounds: number[],
@@ -137,7 +140,7 @@ type MeterControlsDataType = {
   insertPulseMode: boolean,
 }
 
-export default {
+export default defineComponent({
   name: 'MeterControls',
   data(): MeterControlsDataType {
     return {
@@ -166,15 +169,17 @@ export default {
       this.layerCompounds[i]++;
       // this.updateMeter();
       if (this.meter !== undefined) {
+        const editor = this.$parent!.$parent!;
         if (i === 0) {
           this.updateMeter();
         } else {
           const newHi = this.pulseDivisions[i].slice(0, this.layerCompounds[i]);
           this.meter.alterLayer(i, newHi);
-          const editor = this.$parent!.$parent!;
+          
           editor.resetZoom();
           editor.selectMeter(this.meter.allPulses[0].uniqueId);
         }
+        editor.unsavedChanges = true;
       }
     },
 
@@ -182,15 +187,16 @@ export default {
       this.layerCompounds[i]--;
       // this.updateMeter();
       if (this.meter !== undefined) {
+        const editor = this.$parent!.$parent!;
         if (i === 0) {
           this.updateMeter();
         } else {
           const newHi = this.pulseDivisions[i].slice(0, this.layerCompounds[i]);
           this.meter.alterLayer(i, newHi);
-          const editor = this.$parent!.$parent!;
           editor.resetZoom();
           editor.selectMeter(this.meter.allPulses[0].uniqueId);
         }
+        editor.unsavedChanges = true;
       }
     },
 
@@ -198,6 +204,7 @@ export default {
       const editor = this.$parent!.$parent!;
       const piece = editor.piece;
       editor.removeMeter(this.meter.uniqueId);
+      editor.unsavedChanges = true;
       const meterIdx = piece.meters.indexOf(this.meter!);
       if (meterIdx !== -1) {
         piece.meters.splice(meterIdx, 1);
@@ -214,7 +221,7 @@ export default {
         // editor.resetZoom();
         await this.$nextTick();
         editor.selectMeter(this.meter!.allPulses[0].uniqueId);
-        console.log(editor.meterMode)
+        editor.unsavedChanges = true;
       }
     },
 
@@ -239,7 +246,8 @@ export default {
           this.meter.growLayers(newHierarchies);
         }
         editor.resetZoom();
-        editor.selectMeter(this.meter.allPulses[0].uniqueId)
+        editor.selectMeter(this.meter.allPulses[0].uniqueId);
+        editor.unsavedChanges = true;
       }
     },
 
@@ -256,11 +264,13 @@ export default {
         const editor = this.$parent!.$parent!;
         editor.resetZoom();
         editor.selectMeter(this.meter.allPulses[0].uniqueId)
+        editor.unsavedChanges = true;
       }
     },
 
     updatePulseDivs(i: number, kIdx: number) {
       if (this.meter !== undefined) {
+        const editor = this.$parent!.$parent!;
         const newHierarchy = [];
         for (let i = 0; i < this.numLayers; i++) {
           const lc = this.layerCompounds[i];
@@ -274,10 +284,11 @@ export default {
           this.updateMeter()
         } else {
           this.meter.alterLayer(i, newHierarchy[i]);
-          const editor = this.$parent!.$parent!;
+          
           editor.resetZoom();
           editor.selectMeter(this.meter.allPulses[0].uniqueId);
         }
+        editor.unsavedChanges = true
       } 
     },
 
@@ -325,9 +336,8 @@ export default {
         const editor = this.$parent!.$parent!;
         editor.resetZoom();
         editor.selectMeter(this.meter!.allPulses[0].uniqueId)
+        editor.unsavedChanges = true;
       }
-      
-      // this.updateMeter();
     },
 
     sum(arr: number[]) {
@@ -389,7 +399,8 @@ export default {
       editor.selectedMeter = meter;
       this.meterSelected = true;
       editor.meterMode = true;
-      editor.selectMeter(meter.allPulses[0].uniqueId)
+      editor.selectMeter(meter.allPulses[0].uniqueId);
+      editor.unsavedChanges = true;
     },
 
     insertMeterFromPulses() {
@@ -418,10 +429,11 @@ export default {
       this.meterSelected = true;
       editor.meterMode = true;
       editor.selectMeter(meter.allPulses[0].uniqueId);
+      editor.unsavedChanges = true;
       d3SelectAll('.insertPulse').remove();
     }
   },
-}
+})
 
 </script>
 
