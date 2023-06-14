@@ -6,6 +6,7 @@
       <select 
         v-model='numLayers' 
         @change='updateDepth'
+        :disabled='!editable'
         >
         <option value='1'>1</option>
         <option value='2'>2</option>
@@ -17,11 +18,11 @@
       <label>Layer {{ i }}</label>
       <div class='buttonCol' v-if='i === 0'>
         <button 
-          :disabled='layerCompounds[i] === 4' 
+          :disabled='layerCompounds[i] === 4 || !editable' 
           @click='increaseCompounds(i)'
           >+</button>
         <button 
-          :disabled='layerCompounds[i] === 1'
+          :disabled='layerCompounds[i] === 1 || !editable'
           @click='decreaseCompounds(i)'
           >-</button>
       </div>
@@ -30,6 +31,7 @@
         v-for='k, kIdx in layerCompounds[i]' 
         v-model.number='pulseDivisions[i][kIdx]'
         @change='updatePulseDivs(i, kIdx)'
+        :disabled='!editable'
         >
         <option v-for='j in 8'>{{ j+1 }}</option>
       </select>
@@ -45,6 +47,7 @@
         step='1' 
         v-model='tempo'
         @input='updateTempo'
+        :disabled='!editable'
         />
       <input 
         type='range' 
@@ -53,6 +56,7 @@
         step='0.001' 
         v-model='tempoSlider'
         @input='updateTempo'
+        :disabled='!editable'
         />
     </div>
     <div class='controlsRow'>
@@ -64,6 +68,7 @@
         step='1' 
         v-model='cycles'
         @input='updateCycles'
+        :disabled='!editable'
         />
     </div>
     <div class='controlsRow'>
@@ -75,10 +80,17 @@
       {{ getDuration() }}
     </div>
     <div class='controlsRow'>
-      <button @click='insertMeter' v-if='!(meterSelected || insertPulseMode)'>
+      <button 
+        @click='insertMeter' 
+        v-if='!(meterSelected || insertPulseMode)'
+        :disabled='!editable'
+        >
         Insert Meter at Playhead
       </button>
-      <button v-if='insertPulseMode' @click='insertMeterFromPulses'>
+      <button 
+        v-if='insertPulseMode' 
+        @click='insertMeterFromPulses'
+        :disabled='!editable'>
         Insert Meter from Pulses
       </button>
     </div>
@@ -89,11 +101,12 @@
       <label>max: {{ maxLayer }}</label>
       <input 
         type='range' 
-        min='0' 
+        min='-1' 
         max='3' 
         step='1' 
         v-model.number='maxLayer' 
-        @input='updateVisibility'/>
+        @input='updateVisibility'
+        />
     </div>
   </div>
 </div>
@@ -147,7 +160,7 @@ export default {
       insertPulseMode: false,
     }
   },
-  props: ['height', 'playerHeight'],
+  props: ['height', 'playerHeight', 'editable'],
   methods: {
     increaseCompounds(i: number) {
       this.layerCompounds[i]++;
@@ -269,7 +282,7 @@ export default {
     },
 
     updateVisibility() {
-      for (let i = 1; i <= 4; i++) {
+      for (let i = 0; i <= 4; i++) {
         const selects = d3SelectAll(`.layer_${i}`)
           .filter((d, idx: number, nodes) => { 
             return !d3Select(nodes[idx]).classed('overlay')

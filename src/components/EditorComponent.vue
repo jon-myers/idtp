@@ -52,6 +52,13 @@
             @click='preventSpaceToggle'>
         </div>
         <div class='cbRow'>
+          <label>Magnet Mode</label>
+          <input
+            type='checkbox'
+            v-model='magnetMode'
+            @click='preventSpaceToggle'>
+        </div>
+        <div class='cbRow'>
           <button @click='resetZoom'>Reset Zoom</button>
           <button @click='savePiece'>Save</button>
         </div>
@@ -92,6 +99,7 @@
   :synthDamping='synthDamping'
   :playerHeight='playerHeight'
   :controlsHeight='controlsHeight'
+  :editable='editable'
   />
 </template>
 <script>
@@ -263,6 +271,7 @@ export default {
       pulseDragInitX: undefined,
       insertPulseMode: false,
       insertPulses: [],
+      magnetMode: false,
     }
   },
   components: {
@@ -2225,8 +2234,10 @@ export default {
           .attr('stroke-width', `5px`)
           .attr('d', this.playheadLine(codified))
           .on('click', e => {
-            e.preventDefault();
-            e.stopPropagation();
+            if (this.meterMode) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
             this.selectMeter(pulse.uniqueId)
           })
           .on('mouseover', () => this.hoverMeter(pulse.uniqueId))
@@ -2248,7 +2259,8 @@ export default {
     pulseDragging(pulse) {
       return e => {
         // get affiliation with
-        if (this.selectedMeter && pulse.meterId === this.selectedMeter.uniqueId) {
+        const c1 = pulse.meterId === this.selectedMeter.uniqueId;
+        if (this.selectedMeter && c1 && this.editable) {
           const aff = pulse.affiliations[0];
           const psId = pulse.affiliations[0].psId;
           const ps = this.selectedMeter.getPSFromId(psId)
@@ -2293,7 +2305,7 @@ export default {
 
     pulseDragEnd(pulse) {
       return e => {
-        if (this.pulseDragEnabled) {
+        if (this.pulseDragEnabled && this.editable) {
           const aff = pulse.affiliations[0];
           const psId = pulse.affiliations[0].psId;
           const ps = this.selectedMeter.getPSFromId(psId);
@@ -3284,9 +3296,14 @@ export default {
         if (this.clipboardTrajs.length > 0) this.pasteTrajs()
       } else if (e.key === 'm' || e.key === 'M') {
         if (this.shifted) {
+          this.clearAll();
           this.svg.style('cursor', 's-resize');
           this.insertPulseMode = true;
-          this.$refs.audioPlayer.$refs.meterControls.insertPulseMode = true;
+          const audioPlayer = this.$refs.audioPlayer;
+          const meterControls = audioPlayer.$refs.meterControls;
+          meterControls.insertPulseMode = true;
+          audioPlayer.openMeterControls();
+
         } else {
           this.clearAll();
           this.meterMode = true;
@@ -3951,6 +3968,32 @@ export default {
       })[0].num
     },
 
+    magnetize(time) {
+      let outTime = undefined
+      this.piece.meters.forEach(meter => {
+        const corpTimes = meter.realCorpTimes;
+        // const corpPulses = meter.allCorporealPulses;
+        const start = corpTimes[0];
+        const end = corpTimes[corpTimes.length - 1]
+        if (time >= start && time <= end) {
+          const nearestTime = corpTimes.reduce((a, b) => {
+            const aDiff = Math.abs(a - time);
+            const bDiff = Math.abs(b - time);
+            if (aDiff < bDiff) {
+              return a
+            } else {
+              return b
+            }
+          })
+          outTime = nearestTime
+        }
+      })
+      if (outTime === undefined) {
+        outTime = time
+      }
+      return outTime
+    },
+
     handleClick(e) {
       let time = this.xr().invert(e.clientX);
       const pIdx = this.phraseIdxFromTime(time);
@@ -3999,6 +4042,9 @@ export default {
         this.setChikari = false;
         this.svg.style('cursor', 'auto');
       } else if (this.setNewTraj) {
+        if (this.magnetMode) {
+          time = this.magnetize(time);
+        }
         const logSGLines = this.visibleSargam.map(s => Math.log2(s));
         const navHeight = this.$parent.$parent.navHeight;
         let logFreq = this.yr().invert(e.clientY - navHeight);
@@ -4039,6 +4085,9 @@ export default {
           }
         }
       } else if (this.setNewSeries) {
+        if (this.magnetMode) {
+          time = this.magnetize(time);
+        }
         const logSGLines = this.visibleSargam.map(s => Math.log2(s));
         const navHeight = this.$parent.$parent.navHeight;
         let logFreq = this.yr().invert(e.clientY - navHeight);

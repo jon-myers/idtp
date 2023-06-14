@@ -474,6 +474,7 @@ class Meter {
       if (propCorpLims !== undefined) {
         const translated = propCorpLims.map(p => p * this.durTot);
         const equalArrs = translated.every((t, i) => t === relCorpLims[i]);
+        console.log(translated, relCorpLims)
         if (!equalArrs) {
           throw new Error('Cannot specify both relative and proportional ' + 
             'corporeal limits')
@@ -584,6 +585,8 @@ class Meter {
       this.pulseStructures[i] = this.pulseStructures[i].concat(psArr)
     })
     this.repetitions += 1;
+    const mult = this.repetitions / (this.repetitions - 1);
+    this.relCorpLims[1] = this.relCorpLims[1] * mult;
   }
 
   growCycles(n: number) {
@@ -602,6 +605,8 @@ class Meter {
       this.pulseStructures[i] = this.pulseStructures[i].slice(0, cutoff)
     })
     this.repetitions -= 1;
+    const mult = this.repetitions / (this.repetitions + 1);
+    this.relCorpLims[1] = this.relCorpLims[1] * mult;
   }
 
   shrinkCycles(n: number) {
@@ -696,7 +701,6 @@ class Meter {
   }
 
   growLayers(hierarchies: (number | number[])[]) {
-    console.log(hierarchies)
     hierarchies.forEach(h => this.growLayer(h))
   }
 

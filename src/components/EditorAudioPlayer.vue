@@ -251,6 +251,7 @@
         v-show='showMeterControls' 
         :height='controlsHeight'
         :playerHeight='playerHeight'
+        :editable='editable'
         ref='meterControls'
         />
   </div>
@@ -401,7 +402,8 @@ export default {
     'saVerified', 
     'id', 
     'playerHeight', 
-    'controlsHeight'
+    'controlsHeight',
+    'editable'
   ],
   components: {
     MeterControls
