@@ -49,6 +49,14 @@
         <div class="recInfo right">
           <div class="rulerBox">
             <img
+              :src="icons.meter"
+              @click="toggleMeterControls"
+              class="meterImg"
+              ref="meterImg"
+            />
+          </div>
+          <div class="rulerBox">
+            <img
               :src="icons.download"
               @click="toggleDownloads"
               class="downloadImg"
@@ -239,6 +247,13 @@
         </div>
       </div>
     </div>
+    <MeterControls 
+        v-show='showMeterControls' 
+        :height='controlsHeight'
+        :playerHeight='playerHeight'
+        :editable='editable'
+        ref='meterControls'
+        />
   </div>
 </template>
 <script>
@@ -255,7 +270,8 @@ import { getStarts, getEnds } from '@/js/classes.ts';
 import { AudioWorklet } from '@/audio-worklet';
 import tuningForkIcon from '@/assets/icons/tuning_fork.png';
 import downloadIcon from '@/assets/icons/download.svg';
-import { excelData, jsonData } from '@/js/serverCalls.ts';
+import meterIcon from '@/assets/icons/meter.svg';
+import { excelData, jsonData } from '@/js/serverCalls.mjs';
 import ksURL from '@/audioWorklets/karplusStrong.worklet.js?url';
 import cURL from '@/audioWorklets/chikaris.worklet.js?url';
 import caURL from '@/audioWorklets/captureAudio.worklet.js?url';
@@ -265,6 +281,7 @@ import { createRubberBandNode as createRBNode } from 'rubberband-web';
 import { detect } from 'detect-browser';
 import { drag as d3Drag, select as d3Select } from 'd3';
 import stretcherURL from '@/js/bundledStretcherWorker.js?url';
+import MeterControls from '@/components/MeterControls.vue';
 
 
 const structuredTime = (dur) => {
@@ -303,7 +320,8 @@ export default {
         back_15: back_15,
         forward_15: forward_15,
         download: downloadIcon,
-        tuningFork: tuningForkIcon
+        tuningFork: tuningForkIcon,
+        meter: meterIcon,
       },
       circleDragging: false,
       formattedCurrentTime: '00:00',
@@ -331,6 +349,7 @@ export default {
       // playerHeight: 100,
       showTuning: false,
       showDownloads: false,
+      showMeterControls: false,
       sargam: [],
       centDevs: [],
       tuningGains: [],
@@ -382,8 +401,12 @@ export default {
     'saVerified', 
     'id', 
     'playerHeight', 
-    'controlsHeight'
+    'controlsHeight',
+    'editable'
   ],
+  components: {
+    MeterControls
+  },
   async mounted() {
     this.ac = new AudioContext({ sampleRate: 48000 });
     this.gainNode = this.ac.createGain();
@@ -741,6 +764,27 @@ export default {
           this.chikariGain = 1;
           this.recGain = 0;
           if (this.modsLoaded && !this.inited) this.initAll()
+        }
+      }
+    },
+
+    openMeterControls() {
+      // check if classlist includes showMeterControls
+      const cl = this.$refs.meterImg.classList;
+      if (!cl.contains('showMeterControls')) {
+        cl.toggle('showMeterControls');
+        this.showMeterControls = this.showMeterControls ? false : true;
+        if (this.showControls) {
+          this.showControls = false;
+          this.$refs.controlsImg.classList.remove('showControls');
+        } else if (this.showTuning) {
+          this.showTuning = false;
+          this.$refs.tuningImg.classList.remove('showTuning');
+        } else if (this.showDownloads) {
+          this.showDownloads = false;
+          this.$refs.downloadImg.classList.remove('showDownloads')
+        } else {
+          this.$parent.resizeHeight(this.showMeterControls);
         }
       }
     },
@@ -1656,6 +1700,9 @@ export default {
         } else if (this.showDownloads) {
           this.showDownloads = false;
           this.$refs.downloadImg.classList.remove('showDownloads')
+        } else if (this.showMeterControls) {
+          this.showMeterControls = false;
+          this.$refs.meterImg.classList.remove('showMeterControls');
         } else {
           this.$parent.resizeHeight(this.showControls);
         }
@@ -1680,6 +1727,9 @@ export default {
         } else if (this.showDownloads) {
           this.showDownloads = false;
           this.$refs.downloadImg.classList.remove('showDownloads')
+        } else if (this.showMeterControls) {
+          this.showMeterControls = false;
+          this.$refs.meterImg.classList.remove('showMeterControls');
         } else {
           this.$parent.resizeHeight(this.showTuning);
         }
@@ -1697,11 +1747,35 @@ export default {
         } else if (this.showTuning) {
           this.showTuning = false;
           this.$refs.tuningImg.classList.remove('showTuning');
+        } else if (this.showMeterControls) {
+          this.showMeterControls = false;
+          this.$refs.meterImg.classList.remove('showMeterControls');
         } else {
           this.$parent.resizeHeight(this.showDownloads);
         }
       }
     },
+
+    toggleMeterControls(e) {
+      if (!this.loading) {
+        const cl = e.target.classList;
+        cl.toggle('showMeterControls');
+        this.showMeterControls = this.showMeterControls ? false : true;
+        if (this.showControls) {
+          this.showControls = false;
+          this.$refs.controlsImg.classList.remove('showControls');
+        } else if (this.showTuning) {
+          this.showTuning = false;
+          this.$refs.tuningImg.classList.remove('showTuning');
+        } else if (this.showDownloads) {
+          this.showDownloads = false;
+          this.$refs.downloadImg.classList.remove('showDownloads')
+        } else {
+          this.$parent.resizeHeight(this.showMeterControls);
+        }
+      }
+    },
+
     goToBeginning() {
       if (!this.playing) {
         this.pausedAt = 0;
@@ -2182,6 +2256,11 @@ export default {
   filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg)
     brightness(94%) contrast(97%);
 }
+
+.rulerBox > .showMeterControls {
+  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg)
+    brightness(94%) contrast(97%);
+}
 .tuningBox {
   display: flex;
   flex-direction: column;
@@ -2294,5 +2373,9 @@ button {
   height: 50px;
   width: 83px;
   font-size: 13px;
+}
+
+.meterImg {
+  width: 40px;
 }
 </style>
