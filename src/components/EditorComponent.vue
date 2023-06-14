@@ -1287,7 +1287,8 @@ export default {
       });
       const sargamLabels = this.phraseG.append('g')
         .classed('sargamLabels', true)
-        .style('opacity', Number(this.showSargam));
+        .style('opacity', Number(this.showSargam))
+        .style('pointer-events', 'none');
       const phraseDivs = this.piece.phrases.map(p => p.startTime + p.durTot);
       const pwr = 10 ** 5;
       const roundedPDs = phraseDivs.map(p => Math.round(p * pwr) / pwr);
@@ -2458,6 +2459,7 @@ export default {
           .filter((d, i, nodes) => !d3Select(nodes[i]).classed('overlay'))
           .attr('stroke', this.meterColor)
         }
+        this.svg.style('cursor', 'wait')
       }
     },
 
@@ -3162,6 +3164,7 @@ export default {
       this.$refs.audioPlayer.$refs.meterControls.insertPulseMode = false;
       d3SelectAll('.insertPulse').remove();
       this.contextMenuClosed = true;
+      this.svg.style('cursor', 'auto');
     },
 
     handleKeyup(e) {
@@ -3373,10 +3376,15 @@ export default {
           const meterControls = audioPlayer.$refs.meterControls;
           meterControls.insertPulseMode = true;
           audioPlayer.openMeterControls();
+          d3SelectAll('.phrase').style('cursor', 's-resize');
+          d3SelectAll('.articulation').selectAll('*').style('cursor', 's-resize');
 
         } else {
           this.clearAll();
           this.meterMode = true;
+          this.svg.style('cursor', 'wait');
+          d3SelectAll('.phrase').style('cursor', 'wait');
+          d3SelectAll('.articulation').selectAll('*').style('cursor', 'wait');
         }
         
         // this.svg.style('cursor', 'crosshair');
@@ -4567,7 +4575,7 @@ export default {
               .attr('stroke-width', '6px')
               .attr('d', this.phraseLine())
               .style('opacity', '0')
-              .style('cursor', 'pointer')
+              // .style('cursor', () => this.meterMode ? '' : 'pointer')
               .on('mouseover', this.handleMouseOver)
               .on('mouseout', this.handleMouseOut)
               .on('click', this.handleClickTraj)
@@ -5605,70 +5613,72 @@ export default {
     },
 
     handleMouseOver(e) {
-      const c1 = e.target.id.slice(0, 9) === 'overlay__';
-      const c2 = e.target.id.slice(0, 5) === 'pluck';
-      const c3 = e.target.id.slice(0, 9) === 'hammeroff';
-      const c4 = e.target.id.slice(0, 8) === 'hammeron';
-      const c5 = e.target.id.slice(0, 5) === 'slide';
-      if (e.target.id.slice(0, 8) === 'circle__') {
-        const id = e.target.id.slice(8)
-        d3Select(`#${id}`)
-          .attr('stroke', this.selectedChikariColor)
-        d3Select(`#${e.target.id}`)
-          .style('cursor', 'pointer')
-      } else if (c1 || c2 || c3 || c4 || c5) {
-        let id;
-        if (c1) {
-          id = e.target.id.slice(9);
-        } else if (c2) {
-          id = e.target.id.slice(5);
-        } else if (c3) {
-          id = e.target.id.slice(9);
-          id = id.split('i')[0]
-        } else if (c4) {
-          id = e.target.id.slice(8);
-          id = id.split('i')[0];
-        } else if (c5) {
-          id = e.target.id.slice(5);
-          id = id.split('i')[0];
-        }
-        const pIdx = Number(id.split('t')[0].slice(1));
-        const tIdx = Number(id.split('t')[1]);
-        const traj = this.piece.phrases[pIdx].trajectories[tIdx];
-        if (traj.groupId === undefined) {
-          let color = this.selectedTrajColor;
+      if (!(this.meterMode || this.insertPulseMode)) {
+        const c1 = e.target.id.slice(0, 9) === 'overlay__';
+        const c2 = e.target.id.slice(0, 5) === 'pluck';
+        const c3 = e.target.id.slice(0, 9) === 'hammeroff';
+        const c4 = e.target.id.slice(0, 8) === 'hammeron';
+        const c5 = e.target.id.slice(0, 5) === 'slide';
+        if (e.target.id.slice(0, 8) === 'circle__') {
+          const id = e.target.id.slice(8)
           d3Select(`#${id}`)
-            .attr('stroke', color)
-          d3Select(`#dampenp${pIdx}t${tIdx}`)
-            .attr('stroke', color)
-          if (this.selectedTraj && traj !== this.selectedTraj) {
-            d3Select(`#${e.target.id}`)
-              .style('cursor', 'pointer')
-          } else {
-            d3Select(`#${e.target.id}`)
-              .style('cursor', 'pointer')
+            .attr('stroke', this.selectedChikariColor)
+          d3Select(`#${e.target.id}`)
+            .style('cursor', 'pointer')
+        } else if (c1 || c2 || c3 || c4 || c5) {
+          let id;
+          if (c1) {
+            id = e.target.id.slice(9);
+          } else if (c2) {
+            id = e.target.id.slice(5);
+          } else if (c3) {
+            id = e.target.id.slice(9);
+            id = id.split('i')[0]
+          } else if (c4) {
+            id = e.target.id.slice(8);
+            id = id.split('i')[0];
+          } else if (c5) {
+            id = e.target.id.slice(5);
+            id = id.split('i')[0];
           }
-          d3Select(`#pluck${id}`)
-            .attr('stroke', this.selectedArtColor)
-            .attr('fill', this.selectedArtColor)
-          this.updateArtColors(traj, true)
-        } else {
-          const group = this.piece.phrases[pIdx].getGroupFromId(traj.groupId);
-          group.trajectories.forEach(traj => {
-            const id = `p${traj.phraseIdx}t${traj.num}`;
+          const pIdx = Number(id.split('t')[0].slice(1));
+          const tIdx = Number(id.split('t')[1]);
+          const traj = this.piece.phrases[pIdx].trajectories[tIdx];
+          if (traj.groupId === undefined) {
+            let color = this.selectedTrajColor;
             d3Select(`#${id}`)
-              .attr('stroke', this.selectedTrajColor)
-            d3Select(`#dampenp${traj.phraseIdx}t${traj.num}`)
-              .attr('stroke', this.selectedTrajColor)
+              .attr('stroke', color)
+            d3Select(`#dampenp${pIdx}t${tIdx}`)
+              .attr('stroke', color)
+            if (this.selectedTraj && traj !== this.selectedTraj) {
+              d3Select(`#${e.target.id}`)
+                .style('cursor', 'pointer')
+            } else {
+              d3Select(`#${e.target.id}`)
+                .style('cursor', 'pointer')
+            }
             d3Select(`#pluck${id}`)
               .attr('stroke', this.selectedArtColor)
               .attr('fill', this.selectedArtColor)
-            // d3Select(`#overlay__${id}`)
-            //   .attr('cursor', 'pointer')
             this.updateArtColors(traj, true)
-          })
-        }
-      } 
+          } else {
+            const group = this.piece.phrases[pIdx].getGroupFromId(traj.groupId);
+            group.trajectories.forEach(traj => {
+              const id = `p${traj.phraseIdx}t${traj.num}`;
+              d3Select(`#${id}`)
+                .attr('stroke', this.selectedTrajColor)
+              d3Select(`#dampenp${traj.phraseIdx}t${traj.num}`)
+                .attr('stroke', this.selectedTrajColor)
+              d3Select(`#pluck${id}`)
+                .attr('stroke', this.selectedArtColor)
+                .attr('fill', this.selectedArtColor)
+              // d3Select(`#overlay__${id}`)
+              //   .attr('cursor', 'pointer')
+              this.updateArtColors(traj, true)
+            })
+          }
+        } 
+      }
     },
 
     alterSlope(newSlope) {
@@ -5708,94 +5718,95 @@ export default {
     },
 
     handleMouseOut(e) {
-      const c1 = e.target.id.slice(0, 9) === 'overlay__';
-      const c2 = e.target.id.slice(0, 5) === 'pluck';
-      const c3 = e.target.id.slice(0, 9) === 'hammeroff';
-      const c4 = e.target.id.slice(0, 8) === 'hammeron';
-      const c5 = e.target.id.slice(0, 5) === 'slide';
-      if (e.target.id.slice(0, 8) === 'circle__') {
-        const id = e.target.id.slice(8)
-        if (id !== this.selectedChikariID) {
-          d3Select(`#${id}`)
-            .attr('stroke', this.chikariColor)
+      if (!(this.meterMode || this.insertPulseMode)) {
+        const c1 = e.target.id.slice(0, 9) === 'overlay__';
+        const c2 = e.target.id.slice(0, 5) === 'pluck';
+        const c3 = e.target.id.slice(0, 9) === 'hammeroff';
+        const c4 = e.target.id.slice(0, 8) === 'hammeron';
+        const c5 = e.target.id.slice(0, 5) === 'slide';
+        if (e.target.id.slice(0, 8) === 'circle__') {
+          const id = e.target.id.slice(8)
+          if (id !== this.selectedChikariID) {
+            d3Select(`#${id}`)
+              .attr('stroke', this.chikariColor)
+          }
         }
-      }
-      if (c1 || c2 || c3 || c4 || c5) {
-        let id;
-        if (c1) {
-          id = e.target.id.slice(9);
-        } else if (c2) {
-          id = e.target.id.slice(5);
-        } else if (c3) {
-          id = e.target.id.slice(9);
-          id = id.split('i')[0]
-        } else if (c4) {
-          id = e.target.id.slice(8);
-          id = id.split('i')[0];
-        } else if (c5) {
-          id = e.target.id.slice(5);
-          id = id.split('i')[0];
-        }
-        if (this.selectedTrajs.length < 2) {
-          if (id !== this.selectedTrajID) {
+        if (c1 || c2 || c3 || c4 || c5) {
+          let id;
+          if (c1) {
+            id = e.target.id.slice(9);
+          } else if (c2) {
+            id = e.target.id.slice(5);
+          } else if (c3) {
+            id = e.target.id.slice(9);
+            id = id.split('i')[0]
+          } else if (c4) {
+            id = e.target.id.slice(8);
+            id = id.split('i')[0];
+          } else if (c5) {
+            id = e.target.id.slice(5);
+            id = id.split('i')[0];
+          }
+          if (this.selectedTrajs.length < 2) {
+            if (id !== this.selectedTrajID) {
+              const pIdx = Number(id.split('t')[0].slice(1));
+              const tIdx = Number(id.split('t')[1]);
+              const traj = this.piece.phrases[pIdx].trajectories[tIdx];
+              if (traj.groupId === undefined) {
+                d3Select(`#${id}`)
+                  .attr('stroke', this.trajColor)
+                d3Select(`#dampen${id}`)
+                  .attr('stroke', this.trajColor)
+                d3Select(`#pluck${id}`)
+                  .attr('stroke', 'black')
+                  .attr('fill', 'black')
+                this.updateArtColors(traj, false)
+              } else {
+                const group = this.piece.phrases[pIdx]
+                  .getGroupFromId(traj.groupId);
+                group.trajectories.forEach(traj_ => {
+                  const id_ = `p${traj_.phraseIdx}t${traj_.num}`;
+                  d3Select(`#${id_}`)
+                    .attr('stroke', this.trajColor)
+                  d3Select(`#dampen${id_}`)
+                    .attr('stroke', this.trajColor)
+                  d3Select(`#pluck${id_}`)
+                    .attr('stroke', 'black')
+                    .attr('fill', 'black')
+                  this.updateArtColors(traj_, false)
+                })
+              } 
+            }
+          } else {
             const pIdx = Number(id.split('t')[0].slice(1));
             const tIdx = Number(id.split('t')[1]);
             const traj = this.piece.phrases[pIdx].trajectories[tIdx];
-            if (traj.groupId === undefined) {
-              d3Select(`#${id}`)
-                .attr('stroke', this.trajColor)
-              d3Select(`#dampen${id}`)
-                .attr('stroke', this.trajColor)
-              d3Select(`#pluck${id}`)
-                .attr('stroke', 'black')
-                .attr('fill', 'black')
-              this.updateArtColors(traj, false)
-            } else {
-              const group = this.piece.phrases[pIdx]
-                .getGroupFromId(traj.groupId);
-              group.trajectories.forEach(traj_ => {
-                const id_ = `p${traj_.phraseIdx}t${traj_.num}`;
-                d3Select(`#${id_}`)
+            if (!this.selectedTrajs.includes(traj)) {
+              if (traj.groupId === undefined) {
+                d3Select(`#${id}`)
                   .attr('stroke', this.trajColor)
-                d3Select(`#dampen${id_}`)
+                d3Select(`#dampen${id}`)
                   .attr('stroke', this.trajColor)
-                d3Select(`#pluck${id_}`)
+                d3Select(`#pluck${id}`)
                   .attr('stroke', 'black')
                   .attr('fill', 'black')
-                this.updateArtColors(traj_, false)
-              })
-            } 
-          }
-        } else {
-          const pIdx = Number(id.split('t')[0].slice(1));
-          const tIdx = Number(id.split('t')[1]);
-          const traj = this.piece.phrases[pIdx].trajectories[tIdx];
-          if (!this.selectedTrajs.includes(traj)) {
-            if (traj.groupId === undefined) {
-              d3Select(`#${id}`)
-                .attr('stroke', this.trajColor)
-              d3Select(`#dampen${id}`)
-                .attr('stroke', this.trajColor)
-              d3Select(`#pluck${id}`)
-                .attr('stroke', 'black')
-                .attr('fill', 'black')
-              this.updateArtColors(traj, false)
-            } else {
-              const group = this.piece.phrases[pIdx]
-                .getGroupFromId(traj.groupId);
-              group.trajectories.forEach(traj_ => {
-                const id_ = `p${traj_.phraseIdx}t${traj_.num}`;
-                d3Select(`#${id_}`)
-                  .attr('stroke', this.trajColor)
-                d3Select(`#dampen${id_}`)
-                  .attr('stroke', this.trajColor)
-                d3Select(`#pluck${id_}`)
-                  .attr('stroke', 'black')
-                  .attr('fill', 'black')
-                this.updateArtColors(traj_, false)
-              })
+                this.updateArtColors(traj, false)
+              } else {
+                const group = this.piece.phrases[pIdx]
+                  .getGroupFromId(traj.groupId);
+                group.trajectories.forEach(traj_ => {
+                  const id_ = `p${traj_.phraseIdx}t${traj_.num}`;
+                  d3Select(`#${id_}`)
+                    .attr('stroke', this.trajColor)
+                  d3Select(`#dampen${id_}`)
+                    .attr('stroke', this.trajColor)
+                  d3Select(`#pluck${id_}`)
+                    .attr('stroke', 'black')
+                    .attr('fill', 'black')
+                  this.updateArtColors(traj_, false)
+                })
+              }  
             }
-            
           }
         }
       }
@@ -5892,208 +5903,211 @@ export default {
     },
 
     handleClickTraj(e) {
-      e.stopPropagation();
-      this.groupable = false;
-      if (this.shifted && this.selectedTrajs.length >= 1) {
-        const id = this.getIdFromTrajClick(e);
-        const pIdx = id.split('t')[0].slice(1);
-        const tIdx = id.split('t')[1];
-        const newTraj = this.piece.phrases[pIdx].trajectories[tIdx];
-        if (newTraj.groupId === undefined) {
-          this.selectedTrajs.push(newTraj);
-          this.groupable = this.selectedTrajsGroupable();
-          this.$refs.trajSelectPanel.grouped = false;
-          // clear selected traj visually
-          if (this.selectedTraj && this.selectedTrajID) {
-            d3Select(`#${this.selectedTrajID}`)
+      if (!(this.meterMode || this.insertPulseMode )) {
+        e.stopPropagation();
+        this.groupable = false;
+        if (this.shifted && this.selectedTrajs.length >= 1) {
+          const id = this.getIdFromTrajClick(e);
+          const pIdx = id.split('t')[0].slice(1);
+          const tIdx = id.split('t')[1];
+          const newTraj = this.piece.phrases[pIdx].trajectories[tIdx];
+          if (newTraj.groupId === undefined) {
+            this.selectedTrajs.push(newTraj);
+            this.groupable = this.selectedTrajsGroupable();
+            this.$refs.trajSelectPanel.grouped = false;
+            // clear selected traj visually
+            if (this.selectedTraj && this.selectedTrajID) {
+              d3Select(`#${this.selectedTrajID}`)
+                .attr('stroke', this.trajColor)
+              d3Select(`#dampen${this.selectedTrajID}`)
+                .attr('stroke', this.trajColor)
+              d3Select(`#pluck${this.selectedTrajID}`)
+                .attr('fill', this.trajColor)
+              d3Select(`#pluck${this.selectedTrajID}`)
+                .attr('stroke', this.trajColor)
+              d3Select('#overlay__' + this.selectedTrajID)
+                .attr('cursor', 'pointer')
+              d3SelectAll('.dragDots').remove();
+              this.selectedTrajID = undefined;
+              this.selectedTraj = undefined;
+              this.clearTrajSelectPanel();
+            }
+            this.selectedTrajs.forEach(traj => {
+              const id = `p${traj.phraseIdx}t${traj.num}`;
+              d3Select(`#${id}`)
+                .attr('stroke', this.selectedTrajColor)
+              d3Select(`#dampen${id}`)
+                .attr('stroke', this.selectedTrajColor)
+              d3Select(`#pluck${id}`)
+                .attr('fill', this.selectedArtColor)
+                .attr('stroke', this.selectedArtColor)
+              d3Select('#overlay__' + id)
+                .attr('cursor', 'pointer')
+              this.updateArtColors(traj, true)
+            })
+            let minFreq = Math.min(...this.selectedTrajs.map(t => t.minFreq));
+            let maxFreq = Math.max(...this.selectedTrajs.map(t => t.maxFreq));
+            if ((minFreq / 2) < this.freqMin) {
+              this.$refs.trajSelectPanel.canShiftDown = false
+            } else {
+              this.$refs.trajSelectPanel.canShiftDown = true
+            }
+            if ((maxFreq * 2) > this.freqMax) {
+              this.$refs.trajSelectPanel.canShiftUp = false
+            } else {
+              this.$refs.trajSelectPanel.canShiftUp = true
+            }
+          }
+        } else {
+          if (this.selectedTrajs.length > 1) {
+            this.selectedTrajs.forEach(traj => {
+              const id = `p${traj.phraseIdx}t${traj.num}`;
+              d3Select(`#${id}`)
+                .attr('stroke', this.trajColor)
+              d3Select(`#dampen${id}`)
+                .attr('stroke', this.trajColor)
+              d3Select(`#pluck${id}`)
+                .attr('fill', this.trajColor)
+              d3Select(`#pluck${id}`)
+                .attr('stroke', this.trajColor)
+              d3Select('#overlay__' + id)
+                .attr('cursor', 'pointer')
+              this.updateArtColors(traj, false)
+            })
+            let minFreq = Math.min(...this.selectedTrajs.map(t => t.freqMin));
+            let maxFreq = Math.max(...this.selectedTrajs.map(t => t.freqMax));
+            if ((minFreq / 2) < this.freqMin) {
+              this.$refs.trajSelectPanel.canShiftDown = false
+            } else {
+              this.$refs.trajSelectPanel.canShiftDown = true
+            }
+            if ((maxFreq * 2) > this.freqMax) {
+              this.$refs.trajSelectPanel.canShiftUp = false
+            } else {
+              this.$refs.trajSelectPanel.canShiftUp = true
+            }
+            
+          }
+          const id = this.getIdFromTrajClick(e);
+          if (this.selectedTrajID && this.selectedTrajID !== id) {
+            d3Select(`#` + this.selectedTrajID)
               .attr('stroke', this.trajColor)
-            d3Select(`#dampen${this.selectedTrajID}`)
+            d3Select(`#dampen` + this.selectedTrajID)
               .attr('stroke', this.trajColor)
             d3Select(`#pluck${this.selectedTrajID}`)
               .attr('fill', this.trajColor)
-            d3Select(`#pluck${this.selectedTrajID}`)
               .attr('stroke', this.trajColor)
-            d3Select('#overlay__' + this.selectedTrajID)
-              .attr('cursor', 'pointer')
-            d3SelectAll('.dragDots').remove();
+            this.updateArtColors(this.selectedTraj, false)
+          }
+          if (this.setNewSeries) {
+            this.setNewSeries = false;
+            d3SelectAll('.newSeriesDot').remove();
+          }
+          if (this.setNewTraj) {
+            this.setNewTraj = false;
+            d3SelectAll('.newTrajDot').remove();
+          }
+          if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
+          if (this.setChikari) this.setChikari = false;
+          this.svg.style('cursor', 'default');
+          this.selectedTrajID = this.getIdFromTrajClick(e);
+          const pIdx = this.selectedTrajID.split('t')[0].slice(1);
+          const tIdx = this.selectedTrajID.split('t')[1];
+          this.selectedTraj = this.piece.phrases[pIdx].trajectories[tIdx];
+          if (this.selectedTraj.groupId !== undefined) {
+            const phrase = this.piece.phrases[pIdx];
+            const group = phrase.getGroupFromId(this.selectedTraj.groupId);
+            if ((group.minFreq / 2) < this.freqMin) {
+              this.$refs.trajSelectPanel.canShiftDown = false
+            } else {
+              this.$refs.trajSelectPanel.canShiftDown = true
+            }
+            if ((group.maxFreq * 2) > this.freqMax) {
+              this.$refs.trajSelectPanel.canShiftUp = false
+            } else {
+              this.$refs.trajSelectPanel.canShiftUp = true
+            }
+            this.selectedTrajs = group.trajectories;
+            this.clearTrajSelectPanel();
+            this.groupable = true;
+            this.$refs.trajSelectPanel.grouped = true;
             this.selectedTrajID = undefined;
             this.selectedTraj = undefined;
-            this.clearTrajSelectPanel();
-          }
-          this.selectedTrajs.forEach(traj => {
-            const id = `p${traj.phraseIdx}t${traj.num}`;
-            d3Select(`#${id}`)
-              .attr('stroke', this.selectedTrajColor)
-            d3Select(`#dampen${id}`)
-              .attr('stroke', this.selectedTrajColor)
-            d3Select(`#pluck${id}`)
-              .attr('fill', this.selectedArtColor)
-              .attr('stroke', this.selectedArtColor)
-            d3Select('#overlay__' + id)
-              .attr('cursor', 'pointer')
-            this.updateArtColors(traj, true)
-          })
-          let minFreq = Math.min(...this.selectedTrajs.map(t => t.minFreq));
-          let maxFreq = Math.max(...this.selectedTrajs.map(t => t.maxFreq));
-          if ((minFreq / 2) < this.freqMin) {
-            this.$refs.trajSelectPanel.canShiftDown = false
-          } else {
-            this.$refs.trajSelectPanel.canShiftDown = true
-          }
-          if ((maxFreq * 2) > this.freqMax) {
-            this.$refs.trajSelectPanel.canShiftUp = false
-          } else {
-            this.$refs.trajSelectPanel.canShiftUp = true
-          }
-        }
-      } else {
-        if (this.selectedTrajs.length > 1) {
-          this.selectedTrajs.forEach(traj => {
-            const id = `p${traj.phraseIdx}t${traj.num}`;
-            d3Select(`#${id}`)
-              .attr('stroke', this.trajColor)
-            d3Select(`#dampen${id}`)
-              .attr('stroke', this.trajColor)
-            d3Select(`#pluck${id}`)
-              .attr('fill', this.trajColor)
-            d3Select(`#pluck${id}`)
-              .attr('stroke', this.trajColor)
-            d3Select('#overlay__' + id)
-              .attr('cursor', 'pointer')
-            this.updateArtColors(traj, false)
-          })
-          let minFreq = Math.min(...this.selectedTrajs.map(t => t.freqMin));
-          let maxFreq = Math.max(...this.selectedTrajs.map(t => t.freqMax));
-          if ((minFreq / 2) < this.freqMin) {
-            this.$refs.trajSelectPanel.canShiftDown = false
-          } else {
-            this.$refs.trajSelectPanel.canShiftDown = true
-          }
-          if ((maxFreq * 2) > this.freqMax) {
-            this.$refs.trajSelectPanel.canShiftUp = false
-          } else {
-            this.$refs.trajSelectPanel.canShiftUp = true
-          }
-          
-        }
-        const id = this.getIdFromTrajClick(e);
-        if (this.selectedTrajID && this.selectedTrajID !== id) {
-          d3Select(`#` + this.selectedTrajID)
-            .attr('stroke', this.trajColor)
-          d3Select(`#dampen` + this.selectedTrajID)
-            .attr('stroke', this.trajColor)
-          d3Select(`#pluck${this.selectedTrajID}`)
-            .attr('fill', this.trajColor)
-            .attr('stroke', this.trajColor)
-          this.updateArtColors(this.selectedTraj, false)
-        }
-        if (this.setNewSeries) {
-          this.setNewSeries = false;
-          d3SelectAll('.newSeriesDot').remove();
-        }
-        if (this.setNewTraj) {
-          this.setNewTraj = false;
-          d3SelectAll('.newTrajDot').remove();
-        }
-        if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
-        if (this.setChikari) this.setChikari = false;
-        this.svg.style('cursor', 'default');
-        this.selectedTrajID = this.getIdFromTrajClick(e);
-        const pIdx = this.selectedTrajID.split('t')[0].slice(1);
-        const tIdx = this.selectedTrajID.split('t')[1];
-        this.selectedTraj = this.piece.phrases[pIdx].trajectories[tIdx];
-        if (this.selectedTraj.groupId !== undefined) {
-          const phrase = this.piece.phrases[pIdx];
-          const group = phrase.getGroupFromId(this.selectedTraj.groupId);
-          if ((group.minFreq / 2) < this.freqMin) {
-            this.$refs.trajSelectPanel.canShiftDown = false
-          } else {
-            this.$refs.trajSelectPanel.canShiftDown = true
-          }
-          if ((group.maxFreq * 2) > this.freqMax) {
-            this.$refs.trajSelectPanel.canShiftUp = false
-          } else {
-            this.$refs.trajSelectPanel.canShiftUp = true
-          }
-          this.selectedTrajs = group.trajectories;
-          this.clearTrajSelectPanel();
-          this.groupable = true;
-          this.$refs.trajSelectPanel.grouped = true;
-          this.selectedTrajID = undefined;
-          this.selectedTraj = undefined;
-          this.selectedTrajs.forEach(traj => {
-            const id = `p${traj.phraseIdx}t${traj.num}`;
-            d3Select(`#${id}`)
-              .attr('stroke', this.selectedTrajColor)
-            d3Select(`#dampen${id}`)
-              .attr('stroke', this.selectedTrajColor)
-            d3Select(`#pluck${id}`)
-              .attr('fill', this.selectedArtColor)
-              .attr('stroke', this.selectedArtColor)
-            d3Select('#overlay__' + id)
-              .attr('cursor', 'default')
-            this.updateArtColors(traj, true)
-          })
-          d3SelectAll('.dragDots').remove();
+            this.selectedTrajs.forEach(traj => {
+              const id = `p${traj.phraseIdx}t${traj.num}`;
+              d3Select(`#${id}`)
+                .attr('stroke', this.selectedTrajColor)
+              d3Select(`#dampen${id}`)
+                .attr('stroke', this.selectedTrajColor)
+              d3Select(`#pluck${id}`)
+                .attr('fill', this.selectedArtColor)
+                .attr('stroke', this.selectedArtColor)
+              d3Select('#overlay__' + id)
+                .attr('cursor', 'default')
+              this.updateArtColors(traj, true)
+            })
+            d3SelectAll('.dragDots').remove();
 
-        } else {
-          this.selectedTrajs = [this.selectedTraj];
-          const tsp = this.$refs.trajSelectPanel;
-          const altId = this.selectedTraj.id >= 12 ? 
-                        this.selectedTraj.id - 1: 
-                        this.selectedTraj.id; 
-          tsp.selectedIdx = tsp.trajIdxs.indexOf(altId);
-          tsp.parentSelected = true;
-          tsp.slope = Math.log2(this.selectedTraj.slope);
-          tsp.vowel = this.selectedTraj.vowel;
-          tsp.startConsonant = this.selectedTraj.startConsonant;
-          tsp.endConsonant = this.selectedTraj.endConsonant;
-          const st = this.selectedTraj;
-          if ((st.minFreq / 2) < this.freqMin) {
-            tsp.canShiftDown = false
           } else {
-            tsp.canShiftDown = true
+            this.selectedTrajs = [this.selectedTraj];
+            const tsp = this.$refs.trajSelectPanel;
+            const altId = this.selectedTraj.id >= 12 ? 
+                          this.selectedTraj.id - 1: 
+                          this.selectedTraj.id; 
+            tsp.selectedIdx = tsp.trajIdxs.indexOf(altId);
+            tsp.parentSelected = true;
+            tsp.slope = Math.log2(this.selectedTraj.slope);
+            tsp.vowel = this.selectedTraj.vowel;
+            tsp.startConsonant = this.selectedTraj.startConsonant;
+            tsp.endConsonant = this.selectedTraj.endConsonant;
+            const st = this.selectedTraj;
+            if ((st.minFreq / 2) < this.freqMin) {
+              tsp.canShiftDown = false
+            } else {
+              tsp.canShiftDown = true
+            }
+            if ((st.maxFreq * 2) > this.freqMax) {
+              tsp.canShiftUp = false
+            } else {
+              tsp.canShiftUp = true
+            }
+            const c1 = st.articulations[0];
+            const c2 = this.selectedTraj.articulations['1.00'];
+            const c3 = st.articulations['0.00'];
+            const c4 = c1 && st.articulations[0].name === 'pluck';
+            const c5 = c3 && st.articulations['0.00'].name === 'pluck';
+            if (c4 || c5) {
+              tsp.pluckBool = true
+            } else {
+              tsp.pluckBool = false
+            }
+            if (c2 && c2.name === 'dampen') {
+              tsp.dampen = true
+            } else {
+              tsp.dampen = false
+            }
+            d3Select(`#${this.selectedTrajID}`)
+              .attr('stroke', this.selectedTrajColor)
+            d3Select(`#overlay__${this.selectedTrajID}`)
+              .style('cursor', 'auto')
+            d3Select(`#dampen${this.selectedTrajID}`)
+              .attr('stroke', this.selectedTrajColor)
+            d3Select(`#pluck${this.selectedTrajID}`)
+              .attr('fill', this.selectedArtColor)
+              .attr('stroke', this.selectedArtColor)
+            this.updateArtColors(this.selectedTraj, true)
+            if (this.selectedChikariID) {
+              this.clearSelectedChikari()
+            }
+            if (!(this.selectedPhraseDivIdx === undefined)) {
+              this.clearSelectedPhraseDiv()
+            }
+            this.addAllDragDots();
+            this.$refs.trajSelectPanel.showTrajChecks = true;
           }
-          if ((st.maxFreq * 2) > this.freqMax) {
-            tsp.canShiftUp = false
-          } else {
-            tsp.canShiftUp = true
-          }
-          const c1 = st.articulations[0];
-          const c2 = this.selectedTraj.articulations['1.00'];
-          const c3 = st.articulations['0.00'];
-          const c4 = c1 && st.articulations[0].name === 'pluck';
-          const c5 = c3 && st.articulations['0.00'].name === 'pluck';
-          if (c4 || c5) {
-            tsp.pluckBool = true
-          } else {
-            tsp.pluckBool = false
-          }
-          if (c2 && c2.name === 'dampen') {
-            tsp.dampen = true
-          } else {
-            tsp.dampen = false
-          }
-          d3Select(`#${this.selectedTrajID}`)
-            .attr('stroke', this.selectedTrajColor)
-          d3Select(`#overlay__${this.selectedTrajID}`)
-            .style('cursor', 'auto')
-          d3Select(`#dampen${this.selectedTrajID}`)
-            .attr('stroke', this.selectedTrajColor)
-          d3Select(`#pluck${this.selectedTrajID}`)
-            .attr('fill', this.selectedArtColor)
-            .attr('stroke', this.selectedArtColor)
-          this.updateArtColors(this.selectedTraj, true)
-          if (this.selectedChikariID) {
-            this.clearSelectedChikari()
-          }
-          if (!(this.selectedPhraseDivIdx === undefined)) {
-            this.clearSelectedPhraseDiv()
-          }
-          this.addAllDragDots();
-          this.$refs.trajSelectPanel.showTrajChecks = true;
         }
-      }   
+      }
+         
     },
 
     clearSelectedChikari() {
@@ -6588,7 +6602,7 @@ export default {
         .attr('stroke-width', '6px')
         .attr('d', this.codifiedPhraseLine())
         .style('opacity', '0')
-        .style('cursor', 'pointer')
+        // .style('cursor', () => this.meterMode ? '' : 'pointer')
         .on('mouseover', this.handleMouseOver)
         .on('mouseout', this.handleMouseOut)
         .on('click', this.handleClickTraj)
