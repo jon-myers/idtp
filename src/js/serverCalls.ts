@@ -233,49 +233,67 @@ const getAudioRecording = async (_id: string) => {
   }
 };
 
-const getSortedMusicians = async () => {
-  // query 'musicians' mongoDB collection to get all musicians in alphabetical 
-  // order
-  let allMusicians;
+// const getSortedMusicians = async () => {
+//   // query 'musicians' mongoDB collection to get all musicians in alphabetical 
+//   // order
+//   let allMusicians;
+//   let request = {
+//     method: 'GET',
+//     headers: {
+//       'Content-Type': 'application/json'
+//     },
+//   };
+//   await fetch(url + 'getSortedMusicians', request)
+//     .then(res => {
+//       if (res.ok) {
+//         return res.json();
+//       }
+//     }).then(data => {
+//       if (data) {
+//         allMusicians = data
+//       }
+//     }).catch(err => console.error(err))
+//   return allMusicians
+// };
+
+
+const getSortedMusicians = async (): Promise<string[]> => {
+  let allMusicians: string[] = [];
   let request = {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json'
     },
   };
-  await fetch(url + 'getSortedMusicians', request)
-    .then(res => {
-      if (res.ok) {
-        return res.json();
-      }
-    }).then(data => {
-      if (data) {
-        allMusicians = data
-      }
-    }).catch(err => console.error(err))
+  try {
+    const res = await fetch(url + 'getSortedMusicians', request);
+    if (res.ok) {
+      allMusicians = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
   return allMusicians
-};
+}
 
 const getEventTypes = async () => {
   // query 'audioEventTypes' mongoDB collection to get all event types
-  let allEventTypes;
+  let allEventTypes: string[] = []; 
   let request = {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json'
     },
   };
-  await fetch(url + 'getEventTypes', request)
-    .then(res => {
-      if (res.ok) {
-        return res.json();
-      }
-    }).then(data => {
-      if (data) {
-        allEventTypes = data
-      }
-    }).catch(err => console.error(err))
-    return allEventTypes
+  try {
+    const res = await fetch(url + 'getEventTypes', request);
+    if (res.ok) {
+      allEventTypes = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return allEventTypes
 };
 
 const getGharana = async (initName: string) => {
@@ -302,7 +320,7 @@ const getGharana = async (initName: string) => {
     return gharana  
 };
 
-const getInstruments = async (melody: boolean) => {
+const getInstruments = async (melody: boolean): Promise<string[]> => {
   melody = melody || false;
   const searchParams = new URLSearchParams({ melody: 'true' });
   const suffix = melody ? '?' + searchParams : '';
@@ -313,17 +331,16 @@ const getInstruments = async (melody: boolean) => {
       'Content-Type': 'application/json'
     },
   };
-  await fetch(url + 'getInstruments' + suffix, request)
-    .then(res => {
-      if (res.ok) {
-        return res.json();
-      }
-    }).then(data => {
-      if (data) {
-        instruments = data
-      }
-    }).catch(err => console.error(err))
-    return instruments
+
+  try {
+    const res = await fetch(url + 'getInstruments' + suffix, request);
+    if (res.ok) {
+      instruments = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return instruments
 };
 
 const getNumberOfSpectrograms = async (id: string) => {
@@ -369,7 +386,7 @@ const makeSpectrograms = async (recId: string, saEst: string | number) => {
   }
 };
 
-const getRagaNames = async () => {
+const getRagaNames = async (): Promise<string[]> => {
   // gets all raga names
   let ragas;
   const request = {
@@ -378,17 +395,15 @@ const getRagaNames = async () => {
       'Content-Type': 'application/json'
     },
   };
-  await fetch(url + 'getRagaNames', request)
-    .then(res => {
-      if (res.ok) {
-        return res.json()
-      }
-    }).then(data => {
-      if (data) {
-        ragas = data
-      }
-    }).catch(err => console.error(err))
-    return ragas
+  try {
+    const res = await fetch(url + 'getRagaNames', request);
+    if (res.ok) {
+      ragas = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return ragas
 };
 
 const getRaagRule = async (name: string) => {
@@ -412,7 +427,17 @@ const getRaagRule = async (name: string) => {
   
 }
 
-const getLocationObject = async () => {
+type LocationType = {
+  _id: string,
+} & {
+  [key: string]: {
+    [key: string]: string[]
+  }
+}
+
+export type { LocationType };
+
+const getLocationObject = async (): Promise<LocationType> => {
   // gets location object
   let location;
   const request = {
@@ -421,20 +446,19 @@ const getLocationObject = async () => {
       'Content-Type': 'application/json'
     },
   };
-  await fetch(url+'getLocationObject', request)
-    .then(res => {
-      if (res.ok) {
-        return res.json()
-      }
-    }).then(data => {
-      if (data) {
-        location = data
-      }
-    }).catch(err => console.error(err))
+  try {
+    const res = await fetch(url + 'getLocationObject', request);
+    if (res.ok) {
+      location = await res.json();
+      
+    }
+  } catch (err) {
+    console.error(err)
+  }
   return location
 };
 
-const getPerformanceSections = async () => {
+const getPerformanceSections = async (): Promise<string[]> => {
   let performanceSections;
   const request = {
     method: 'GET',
@@ -442,16 +466,14 @@ const getPerformanceSections = async () => {
       'Content-Type': 'application/json'
     },
   };
-  await fetch(url + 'getPerformanceSections', request)
-    .then(res => {
-      if (res.ok) {
-        return res.json()
-      }
-    }).then(data => {
-      if (data) {
-        performanceSections = data
-      }
-    }).catch(err => console.error(err))
+  try {
+    const res = await fetch(url + 'getPerformanceSections', request);
+    if (res.ok) {
+      performanceSections = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
   return performanceSections
 };
 

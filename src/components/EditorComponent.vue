@@ -159,7 +159,7 @@ import {
   savePiece,
   makeSpectrograms,
   pieceExists
-} from '@/js/serverCalls.mjs';
+} from '@/js/serverCalls.ts';
 import { Meter } from '@/js/meter.ts';
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
 import TrajSelectPanel from '@/components/TrajSelectPanel.vue';

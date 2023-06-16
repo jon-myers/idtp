@@ -111,7 +111,7 @@
     </div>
   </div>
 </template>
-<script>
+<script lang='ts'>
 import {
   getAllPieces,
   createNewPiece,
@@ -126,7 +126,15 @@ import {
 import NewPieceRegistrar from '@/components/NewPieceRegistrar.vue';
 import { Raga, Piece, Trajectory, Phrase } from '@/js/classes.ts';
 
-export default {
+import { defineComponent } from 'vue';
+
+type FileManagerType = {
+  infoKeys: string[];
+  designPieceModal: boolean;
+  selectedPiece?: Piece,
+}
+
+export default defineComponent({
   name: 'FileManager',
   data() {
     return {
@@ -276,7 +284,7 @@ export default {
   },
 
   methods: {
-    async toggleSort(idx) {
+    async toggleSort(idx: number) {
       if (this.sorts[idx] === 1) {
         this.sorts[idx] = -1;
       } else {
@@ -286,7 +294,7 @@ export default {
       await this.updateSort();
     },
 
-    pieceInfo(p) {
+    pieceInfo(p: Piece) {
       const title = p.title;
       const raga = p.raga.name;
       let name = undefined;
@@ -311,9 +319,12 @@ export default {
       return month + '/' + day + '/' + year;
     },
 
-    openPieceAlt(piece) {
+    openPieceAlt(piece?: Piece) {
       if (piece === undefined) {
         piece = this.selectedPiece;
+      }
+      if (piece === undefined) {
+        throw new Error('piece is undefined')
       }
       this.$store.commit('update_id', piece._id);
       this.$cookies.set('currentPieceId', piece._id);
@@ -323,9 +334,12 @@ export default {
       });
     },
 
-    openInAnalyzer(piece) {
+    openInAnalyzer(piece: Piece | undefined) {
       if (piece === undefined) {
         piece = this.selectedPiece;
+      }
+      if (piece === undefined) {
+        throw new Error('piece is undefined')
       }
       this.$store.commit('update_id', piece._id);
       this.$cookies.set('currentPieceId', piece._id);
@@ -336,7 +350,8 @@ export default {
     },
 
     designNewPiece() {
-      this.$refs.dropDown.classList.add('closed');
+      const dropDown = this.$refs.dropDown as HTMLElement;
+      dropDown.classList.add('closed');
       this.designPieceModal = true;
     },
 
@@ -537,7 +552,7 @@ export default {
       }
     },
   },
-};
+});
 </script>
 
 <style scoped>

@@ -41,6 +41,7 @@
       :key='recording'
       v-show='selectedRecording === recording'
       :ref='`audioFile${idx}`'
+      :parentId='uniqueId'
       />
     
     <div class='closeWindow' @click='closeWindow'>
@@ -49,7 +50,7 @@
   
   </div>
 </template>
-<script>
+<script lang='ts'>
 
 import AddAudioFile from '@/components/AddAudioFile.vue';
 import { 
@@ -60,18 +61,20 @@ import {
   getAudioEvent,
 } from '@/js/serverCalls.ts';
 
-const capFirst = string => {
+import { defineComponent } from 'vue';
+
+const capFirst = (string: string) => {
   return string.charAt(0).toUpperCase() + string.slice(1);
 };
 
-const structuredTime = dur => {
+const structuredTime = (dur: number) => {
   const hours = String(Math.floor(dur / 3600));
   const minutes = leadingZeros(Math.floor((dur % 3600) / 60));
   const seconds = leadingZeros(dur % 60);
   return { hours: hours, minutes: minutes, seconds: seconds }
 }
 
-const leadingZeros = int => {
+const leadingZeros = (int: number) => {
   if (int < 10) {
     return '0'+int
   } else {
@@ -79,10 +82,86 @@ const leadingZeros = int => {
   }
 }
 
-export default {
+type AddAudioEventDataType = {
+  eventTypes?: string[],
+  numRecordings: number,
+  keyElems: number[],
+  selectedRecording: number,
+  leftIsDisabled: boolean,
+  rightIsDisabled: boolean,
+  selectedEventType: string,
+  addEventTypeVisibility: boolean,
+  uniqueId?: string,
+  eventName?: string,
+  audioEvent?: AudioEventType,
+}
+
+export type { AddAudioEventDataType }
+
+type MusicianType = {
+  instrument: string,
+  role: string,
+  gharana: string
+}
+
+import type { RecObjType } from '@/components/AddAudioFile.vue';
+
+type PSecType = {
+  end: number,
+  start: number
+}
+
+type RaagType = {
+  end: number,
+  start: number,
+  'performance sections'?: {
+    [key: string]: PSecType
+  }
+}
+
+type RecType = {
+  audioFileId: string,
+  date: {
+    day: number,
+    month: number,
+    year: number
+  },
+  duration: number,
+  location: {
+    city: string,
+    country: string,
+    continent: string
+  },
+  musicians: {
+    [key: string]: MusicianType
+  },
+  octOffset: number,
+  raags: {
+    [key: string]: RaagType
+  },
+  saEstimate: number,
+  saVerified: boolean,
+}
+
+type AudioEventType = {
+  'event type': string,
+  name: string,
+  permissions: string,
+  userID: string,
+  _id: string,
+  recordings: {
+    [key: number]: RecType
+  },
+  visible?: boolean,
+}
+
+export type { AudioEventType, RecType, RaagType, PSecType }
+
+
+export default defineComponent({
   name: 'AddAudioEvent',
   
-  data() {
+  data(): AddAudioEventDataType {
     return {
       eventTypes: undefined,
       numRecordings: 1,
@@ -123,21 +202,32 @@ export default {
   
   async beforeUnmount() {
     try {
+      if (this.uniqueId !== undefined) {
         await cleanEmptyDoc(this.uniqueId)
-      } catch (err) {
-        console.log(err)
-      }
+      }      
+    } catch (err) {
+      console.log(err)
+    }
   },
+
   
   async mounted() {
     if (this.extUniqueId === undefined) {
-      const idObj = await initializeAudioEvent(this.$parent.userID);
+      if (this.userID === undefined) {
+        throw new Error('this.userID is undefined')
+      }
+      const idObj = await initializeAudioEvent(this.userID);
       this.uniqueId = idObj.insertedId
     } else {
       this.uniqueId = this.extUniqueId
       this.audioEvent = await getAudioEvent(this.uniqueId)
+      if (this.audioEvent === undefined) {
+        throw new Error('Could not find audio event')
+      } else {
+        this.refillForm()
+      }
       
-      this.refillForm()
+      
       
       // here's where you auto fill everything from
     }
@@ -151,16 +241,19 @@ export default {
     AddAudioFile
   },
   
-  props: ['extUniqueId'],
+  props: {
+    extUniqueId: String,
+    userID: {
+      type: String,
+    }
+  },
   
   methods: {
     
     async closeWindow() {
-      this.$parent.showAddEvent = false;
-      this.$parent.editingId = undefined;
-      this.$parent.reset();
+      this.$emit('reset-parent')
       try {
-        await cleanEmptyDoc(this.uniqueId)
+        if (this.uniqueId) await cleanEmptyDoc(this.uniqueId)
       } catch (err) {
         console.log(err)
       }
@@ -176,9 +269,11 @@ export default {
     },
     
     makeAllRecsObj() {
-      const recordings = {};
+      const recordings: { [key: number]: RecObjType } = {};
       for (let i = 0; i < this.numRecordings; i++) {
-        recordings[i] = this.$refs[`audioFile${i}`][0].makeRecordingObject()
+        const arr = this.$refs[`audioFile${i}`] as typeof AddAudioFile[];
+        const addAF = arr[0];
+        recordings[i] = addAF.makeRecordingObject()
       }
       return recordings
       //test this, then send it up to the cloud!!
@@ -187,12 +282,15 @@ export default {
     makeUpdates() {
       // translate AllRecsObj into mongo update syntax
       const allRecsObj = this.makeAllRecsObj();
-      const updates = {};
+      const updates: {
+        [key: string]: any
+      } = {};
       Object.keys(allRecsObj).forEach(key => {
-        updates[`recordings.${key}.musicians`] = allRecsObj[key]['musicians'];
-        updates[`recordings.${key}.date`] = allRecsObj[key]['date'];
-        updates[`recordings.${key}.location`] = allRecsObj[key]['location'];
-        updates[`recordings.${key}.raags`] = allRecsObj[key]['raags'];
+        const k = Number(key);
+        updates[`recordings.${key}.musicians`] = allRecsObj[k]['musicians'];
+        updates[`recordings.${key}.date`] = allRecsObj[k]['date'];
+        updates[`recordings.${key}.location`] = allRecsObj[k]['location'];
+        updates[`recordings.${key}.raags`] = allRecsObj[k]['raags'];
         updates[`recordings.${key}.octOffset`] = 0;
       });
       updates['name'] = this.eventName;
@@ -202,18 +300,28 @@ export default {
     
     async saveMetadata() {
       console.log('saving')
+      if (!this.uniqueId) {
+        throw new Error('uniqueId is undefined')
+      }
       const saveMsg = await saveAudioMetadata(this.uniqueId, this.makeUpdates())
       console.log(saveMsg)
     },
     
     refillForm() {
+      if (this.audioEvent === undefined) {
+        throw new Error('audioEvent is undefined')
+      } 
       this.eventName = this.audioEvent.name;
       this.selectedEventType = this.audioEvent['event type'];
       this.numRecordings = Object.keys(this.audioEvent.recordings).length;
       this.$nextTick(() => {
+        if (this.audioEvent === undefined) {
+          throw new Error('audioEvent is undefined')
+        }
         for (let i=0; i < this.numRecordings; i++) {
           const rec = this.audioEvent.recordings[i];
-          const recElem = this.$refs[`audioFile${i}`][0];
+          const arr = this.$refs[`audioFile${i}`] as Array<typeof AddAudioFile>;
+          const recElem = arr[0];
           recElem.audioFileId = rec.audioFileId;
           recElem.uploadDone = true;
           recElem.processingDone = true;
@@ -226,10 +334,12 @@ export default {
             recElem.gharana[idx] = musician.gharana;
             recElem.selectedRoles[idx] = musician.role;
           });
-          Object.keys(rec.location).forEach(placeType => {
-            recElem[`selected${capFirst(placeType)}`] = rec.location[placeType]
+          const locKeys = Object.keys(rec.location) as Array<keyof typeof rec.location>;
+          locKeys.forEach((placeType) => {
+            recElem[`selected${capFirst(placeType)}`] = rec.location[placeType];
           });
-          Object.keys(rec.date).forEach(dateType => {
+          const dateKeys = Object.keys(rec.date) as Array<keyof typeof rec.date>;
+          dateKeys.forEach(dateType => {
             recElem[`selected${capFirst(dateType)}`] = rec.date[dateType]
           });
           recElem.numRaags = Object.keys(rec.raags).length;
@@ -243,11 +353,14 @@ export default {
               const raagElem = recElem.$refs[raagString][0];
               raagElem.selectedRaag = raagName;
               const pSecs = raag['performance sections'];
+              if (pSecs === undefined) {
+                throw new Error('pSecs is undefined')
+              }
               raagElem.numSections = Object.keys(pSecs).length;
               this.$nextTick(() => {
                 Object.keys(pSecs).forEach((pSecName, pIdx) => {
                   raagElem.selectedPSections[pIdx] = pSecName;
-                  const pSec = raag['performance sections'][pSecName];
+                  const pSec = pSecs[pSecName];
                   const start = structuredTime(pSec.start);
                   const end = structuredTime(pSec.end);
                   raagElem.pSectionTimings[pIdx].start = start;
@@ -260,7 +373,7 @@ export default {
       })
     }
   }
-}
+})
 </script>
 
 <style scoped>
