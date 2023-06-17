@@ -119,7 +119,7 @@ const savePiece = async (piece: Piece) => {
   }
 };
 
-const getAllPieces = async (userID: string, sortKey: string, sortDir: string) => {
+const getAllPieces = async (userID: string, sortKey: string, sortDir: string): Promise<Piece[]> => {
   if (sortKey === undefined) {
     sortKey = 'title'
   }
