@@ -3161,7 +3161,7 @@ export default {
       meterControls.meterSelected = false;
       this.insertPulses = [];
       this.insertPulseMode = false;
-      this.$refs.audioPlayer.$refs.meterControls.insertPulseMode = false;
+      audioPlayer.$refs.meterControls.insertPulseMode = false;
       d3SelectAll('.insertPulse').remove();
       this.contextMenuClosed = true;
       this.svg.style('cursor', 'auto');
@@ -3189,9 +3189,15 @@ export default {
         e.preventDefault();
         this.clearAll();
         this.svg.style('cursor', 'auto');
+        
         // region speed settings
-        this.$refs.audioPlayer.regionSpeed = 0;
-        this.$refs.audioPlayer.regionSpeedOn = false;
+        if (this.$refs.audioPlayer.regionSpeedOn) {
+          this.$refs.audioPlayer.regionSpeed = 0;
+          this.$refs.audioPlayer.regionSpeedOn = false;
+          this.$refs.audioPlayer.toggleRegionSpeed();
+          
+        }
+        
       } else if (e.key === 'Backspace' && this.editable === true) {
         if (this.selectedChikariID) {
           this.unsavedChanges = true;

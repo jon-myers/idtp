@@ -2031,7 +2031,6 @@ class Piece {
     }
     const trajs = lastPhrase.trajectories;
     const lastTraj: Trajectory = trajs[trajs.length - 1];
-    console.log(lastPhrase)
     if (lastTraj.id !== 12) {
       throw new Error('lastTraj is not silent')
     } else {
