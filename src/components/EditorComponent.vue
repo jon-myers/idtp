@@ -3145,7 +3145,7 @@ export default {
         this.regionStartTime = 0;
         this.regionEndTime = this.durTot;
         this.mouseUpUpdateLoop(); 
-        this.$refs.audioPlayer.updateStretchBuf(); 
+        if (this.audioDBDoc) this.$refs.audioPlayer.updateStretchBuf();
         this.$refs.audioPlayer.stretchable = false;
       }
       if (this.setNewRegion) this.setNewRegion = false;
@@ -3710,7 +3710,7 @@ export default {
         }
         this.mouseUpUpdateLoop();
         this.setUpRegion();
-        this.$refs.audioPlayer.updateStretchBuf();
+        if (this.audioDBDoc) this.$refs.audioPlayer.updateStretchBuf();
       }
     },
 
@@ -3757,7 +3757,7 @@ export default {
               this.regionStartPx = e.x;
               this.regionStartTime = this.xr().invert(this.regionStartPx);
               this.updateLoop();
-              this.$refs.audioPlayer.updateStretchBuf();
+              if (this.audioDBDoc) this.$refs.audioPlayer.updateStretchBuf();
             }
             return d3Drag()
               .on('drag', dragged)
@@ -3776,7 +3776,7 @@ export default {
               this.regionEndPx = e.x;
               this.regionEndTime = this.xr().invert(this.regionEndPx);
               this.updateLoop();
-              this.$refs.audioPlayer.updateStretchBuf();
+              if (this.audioDBDoc) this.$refs.audioPlayer.updateStretchBuf();
 
             }
             return d3Drag()

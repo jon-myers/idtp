@@ -147,7 +147,7 @@
           :disabled='playing || !shiftOn || !readyToShift'
           />
       </div>
-      <div class='cbBoxSmall'>
+      <div class='cbBoxSmall' v-if='this.$parent.audioDBDoc'>
         <label>Region Speed <br>({{ (2 ** regionSpeed).toFixed(2) }})</label>
         <input 
           type='checkbox' 
