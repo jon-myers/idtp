@@ -4320,9 +4320,6 @@ export default {
           .attr('stroke-width', 2)
           .attr('d', this.playheadLine(true))
           .attr('transform', `translate(${this.codifiedXR(time)}, 0)`)
-
-
-
       } else if (this.setNewRegion) {
         this.setRegionToPhrase(pIdx);
         this.setNewRegion = false;
@@ -4334,6 +4331,126 @@ export default {
           this.clearAll(false)
         }
       }
+    },
+
+    insertSilentTrajRight(traj, dur=0.1) {
+      // if traj is not silent and next traj is not silent (and there is a next 
+      // traj), then shorten the current traj by 0.1 s, and insert a silent traj
+      // after it with a duration of 0.1 s.
+      const pIdx = traj.phraseIdx;
+      const tIdx = traj.num;
+      const phrase = this.piece.phrases[pIdx];
+
+      if (traj.id === 12) {
+        throw new Error('traj is already silent');
+      }
+      if (tIdx === phrase.trajectories.length - 1) {
+        if (piece.phrases.length > pIdx + 1) {
+          const nextPhrase = piece.phrases[pIdx + 1];
+          const nextTraj = nextPhrase.trajectories[0];
+          if (nextTraj.id === 12) {
+            throw new Error('next traj is already silent');
+          }
+        }
+      } else {
+        const nextTraj = phrase.trajectories[tIdx + 1];
+        if (nextTraj.id === 12) {
+          throw new Error('next traj is already silent');
+        }
+      }
+      const newTraj = new Trajectory({
+        id: 12,
+        durTot: dur,
+        pitches: [],
+        fundID12: this.piece.raga.fundamental
+      });
+      if (traj.durArray.length === 1) {
+        traj.durTot -= dur;
+      } else {
+        const durs = traj.durArray.map(d => d * traj.durTot);
+        durs[durs.length - 1] -= dur;
+        traj.durTot -= dur;
+        traj.durArray = durs.map(d => d / traj.durTot);
+      }
+      phrase.trajectories.splice(tIdx + 1, 0, newTraj);
+      phrase.reset();
+
+      const data = this.makeTrajData(traj, phrase.startTime);
+      d3Select(`#p${pIdx}t${tIdx}`)
+        .datum(data)
+        .attr('d', this.codifiedPhraseLine())
+      d3Select(`#overlay__p${pIdx}t${tIdx}`)
+        .datum(data)
+        .attr('d', this.codifiedPhraseLine())
+
+      for (let i = phrase.trajectories.length-1; i > tIdx + 1; i--) {
+        const oldId = `p${pIdx}t${i-1}`;
+        const newId = `p${pIdx}t${i}`;
+        this.reIdAllReps(oldId, newId);
+      }
+
+      // d3SelectAll('.dragDots').remove();
+      // this.addAllDragDots();
+      this.resetZoom();
+    },
+
+    insertSilentTrajLeft(traj, dur=0.1) {
+      const pIdx = traj.phraseIdx;
+      const tIdx = traj.num;
+      const phrase = this.piece.phrases[pIdx];
+      if (traj.id === 12) {
+        throw new Error('traj is already silent');
+      }
+      if (tIdx === 0) {
+        if (pIdx > 0) {
+          const prevPhrase = this.piece.phrases[pIdx - 1];
+          const trajs = prevPhrase.trajectories;
+          const prevTraj = trajs[trajs.length - 1];
+          if (prevTraj.id === 12) {
+            throw new Error('previous traj is already silent');
+          }
+        }
+      } else {
+        const prevTraj = phrase.trajectories[tIdx - 1];
+        if (prevTraj.id === 12) {
+          throw new Error('previous traj is already silent');
+        }
+      }
+      const newTraj = new Trajectory({
+        id: 12,
+        durTot: dur,
+        pitches: [],
+        fundID12: this.piece.raga.fundamental
+      });
+      if (traj.durArray.length === 1) {
+        traj.durTot -= dur;
+      } else {
+        const durs = traj.durArray.map(d => d * traj.durTot);
+        durs[0] -= dur;
+        traj.durTot -= dur;
+        traj.durArray = durs.map(d => d / traj.durTot);
+      }
+      phrase.trajectories.splice(tIdx, 0, newTraj);
+      phrase.reset();
+
+      const data = this.makeTrajData(traj, phrase.startTime);
+      d3Select(`#p${pIdx}t${tIdx}`)
+        .datum(data)
+        .attr('d', this.codifiedPhraseLine())
+      d3Select(`#overlay__p${pIdx}t${tIdx}`)
+        .datum(data)
+        .attr('d', this.codifiedPhraseLine())
+      
+
+      for (let i = phrase.trajectories.length - 2; i >= tIdx; i--) {
+        const oldId = `p${pIdx}t${i}`;
+        const newId = `p${pIdx}t${i + 1}`;
+        this.reIdAllReps(oldId, newId);
+      }
+      this.selectedTrajID = `p${pIdx}t${tIdx + 1}`;
+      // d3SelectAll('.dragDots').remove();
+      // this.addAllDragDots();
+      this.resetZoom();
     },
 
     scrollYDragStart(e) {
@@ -4579,6 +4696,7 @@ export default {
               .on('mouseover', this.handleMouseOver)
               .on('mouseout', this.handleMouseOut)
               .on('click', this.handleClickTraj)
+              .on('contextmenu', this.trajContextMenuClick)
           }
           const vowelIdxs = phrase.firstTrajIdxs();
           this.addArticulations(traj, phrase.startTime, vowelIdxs)
@@ -4587,6 +4705,72 @@ export default {
       this.addChikaris();
       this.addPlayhead();
       
+    },
+
+    trajContextMenuClick(e) {
+      if (!this.meterMode) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.contextMenuX = e.x;
+        this.contextMenuY = e.y;
+        const trajID = e.target.id.split('__')[1];
+        const tIdx = Number(trajID.split('t')[1]);
+        const pIdx = Number(trajID.split('t')[0].split('p')[1]);
+        const phrase = this.piece.phrases[pIdx];
+        const traj = phrase.trajectories[tIdx];
+        let insertRight = false;
+        let insertLeft = false;
+        if (phrase.trajectories.length > tIdx + 1) {
+          const nextTraj = phrase.trajectories[tIdx + 1];
+          if (nextTraj.id !== 12) {
+            insertRight = true;
+          }
+        } else if (this.piece.phrases.length > pIdx + 1) {
+          const nextPhrase = this.piece.phrases[pIdx + 1];
+          if (nextPhrase.trajectories.length > 0) {
+            const nextTraj = nextPhrase.trajectories[0];
+            if (nextTraj.id !== 12) {
+              insertRight = true;
+            }
+          }
+        }
+        if (tIdx > 0) {
+          const prevTraj = phrase.trajectories[tIdx - 1];
+          if (prevTraj.id !== 12) {
+            insertLeft = true;
+          }
+        } else if (pIdx > 0) {
+          const prevPhrase = this.piece.phrases[pIdx - 1];
+          if (prevPhrase.trajectories.length > 0) {
+            const prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
+            if (prevTraj.id !== 12) {
+              insertLeft = true;
+            }
+          }
+        }
+        this.contextMenuChoices = [];
+        if (insertLeft) {
+          this.contextMenuChoices.push({
+            text: 'Insert Silence Left',
+            action: () => {
+              this.insertSilentTrajLeft(traj);
+              this.contextMenuClosed = true;
+            }
+          })
+        }
+        if (insertRight) {
+          this.contextMenuChoices.push({
+            text: 'Insert Silence Right',
+            action: () => {
+              this.insertSilentTrajRight(traj);
+              this.contextMenuClosed = true;
+            }
+          })
+        } 
+        if (this.contextMenuChoices.length > 0) {
+          this.contextMenuClosed = false;
+        }
+      }
     },
 
     addArticulations(traj, phraseStart, vowelIdxs) {
@@ -6606,6 +6790,7 @@ export default {
         .on('mouseover', this.handleMouseOver)
         .on('mouseout', this.handleMouseOut)
         .on('click', this.handleClickTraj)
+        .on('contextmenu', this.trajContextMenuClick)
       this.codifiedAddArticulations(traj, phraseStart, vowelIdxs)
     },
     
