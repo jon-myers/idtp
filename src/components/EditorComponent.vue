@@ -2965,6 +2965,7 @@ export default {
         phrase.consolidateSilentTrajs()
       });
       this.cleanPhrases();
+      this.piece.sectionStarts = [...new Set(this.piece.sectionStarts)]
       const result = await savePiece(this.piece);
       this.dateModified = new Date(result.dateModified);
       this.unsavedChanges = false;
@@ -3624,6 +3625,7 @@ export default {
       if (this.piece.durTot !== this.durTot) {
         this.piece.setDurTot(this.durTot)
       }
+      this.piece.sectionStarts = [...new Set(this.piece.sectionStarts)];
     },
 
     fixTrajs() {

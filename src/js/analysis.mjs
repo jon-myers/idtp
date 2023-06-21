@@ -170,6 +170,7 @@ const instantiatePiece = async (queryId = testQueryId)=> {
     phrase.consolidateSilentTrajs()
   });
   piece.durArrayFromPhrases();
+  piece.sectionStarts = [...new Set(piece.sectionStarts)]
   return piece
 }
 
