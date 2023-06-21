@@ -567,7 +567,6 @@ export default {
       if (this.$parent.audioDBDoc && this.$parent.piece) this.gatherInfo();
       this.synthLoopBufSourceNode = this.ac.createBufferSource();
       this.synthLoopBufSourceNode.loop = true; 
-      this.moduleCt = 0;
       this.inited = false;
       this.parentLoaded();
       // this.initAll();
@@ -1271,12 +1270,21 @@ export default {
         this.firstLPEnvelope[i] = transp * traj.compute(x) * 2 ** 3;
       }
     },
-    initializeChikariNodes() {
+    async initializeChikariNodes() {
       if (this.intChikariGainNode) this.intChikariGainNode.disconnect();
       this.intChikariGainNode = this.ac.createGain();
       if (this.chikariNodes) this.chikariNodes.forEach((cn) => cn.disconnect());
       const options = { numberOfInputs: 1, numberOfOutputs: 2 };
-      this.otherNode = new AudioWorkletNode(this.ac, 'chikaris', options);
+      try {
+        this.otherNode = await new AudioWorkletNode(this.ac, 'chikaris', options);
+      } catch (e) {
+        console.log(e);
+        this.ac.audioWorklet.addModule(AudioWorklet(cURL))
+          .then(() => {
+            this.otherNode = new AudioWorkletNode(this.ac, 'chikaris', options);
+          });
+      }
+      
       this.otherNode.freq0 = this.otherNode.parameters.get('freq0');
       this.otherNode.freq1 = this.otherNode.parameters.get('freq1');
       this.otherNode.cutoff = this.otherNode.parameters.get('Cutoff');
