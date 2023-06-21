@@ -408,6 +408,7 @@ export default {
   components: {
     MeterControls
   },
+
   async mounted() {
     this.ac = new AudioContext({ sampleRate: 48000 });
     this.gainNode = this.ac.createGain();
@@ -539,6 +540,39 @@ export default {
     }
   },
   methods: {
+
+    reinitializeAC() {
+      if (this.ac) this.ac.close();
+      this.ac = new AudioContext({ sampleRate: 48000 });
+      this.gainNode = this.ac.createGain();
+      this.gainNode.gain.setValueAtTime(Number(this.recGain), this.now());
+      this.synthGainNode = this.ac.createGain();
+      this.synthGainNode.gain.setValueAtTime(Number(this.synthGain), this.now());
+      this.intSynthGainNode = this.ac.createGain();
+      this.intSynthGainNode.connect(this.synthGainNode);
+      this.chikariGainNode = this.ac.createGain();
+      this.chikariGainNode.connect(this.ac.destination);
+      this.chikariGainNode.gain.setValueAtTime(this.chikariGain, this.now());
+      this.synthGainNode.connect(this.ac.destination);
+      this.moduleCt = 0;
+      this.browser = detect();
+      const mac = this.browser.os === 'Mac OS';
+      const safari = this.browser.name === 'safari';
+      const firefox = this.browser.name === 'firefox';
+      if (mac && (!safari) && (!firefox)) {
+        this.transposable = true;
+      }
+      this.gainNode.connect(this.ac.destination);
+      
+      if (this.$parent.audioDBDoc && this.$parent.piece) this.gatherInfo();
+      this.synthLoopBufSourceNode = this.ac.createBufferSource();
+      this.synthLoopBufSourceNode.loop = true; 
+      this.moduleCt = 0;
+      this.inited = false;
+      this.parentLoaded();
+      // this.initAll();
+
+    },
 
     onSoundTouchInit() {
       console.log('soundtouch initialized')
@@ -706,6 +740,9 @@ export default {
     },
     
     async parentLoaded() {
+      console.log('parentloaded')
+      
+
       this.gatherInfo();
       const instrumentation = this.$parent.piece.instrumentation[0];
       const stringInsts = [
@@ -895,6 +932,7 @@ export default {
     },
 
     initAll() {
+      console.log('initing')
       if (this.string) {
         this.initializePluckNode();
         this.initializeChikariNodes();
@@ -954,7 +992,7 @@ export default {
       const roles = ['Soloist', 'Percussionist', 'Accompanist', 'Drone'];
       return roles.indexOf(musician.role);
     },
-    playChikaris(curPlayTime, now) {
+    playChikaris(curPlayTime, now, otherNode) {
       const gain = this.intChikariGainNode.gain;
       gain.setValueAtTime(0, now);
       gain.linearRampToValueAtTime(1, now + this.slowRamp);
@@ -962,7 +1000,7 @@ export default {
         Object.keys(phrase.chikaris).forEach((key) => {
           const time = now + phrase.startTime + Number(key) - curPlayTime;
           if (time >= this.now()) {
-            this.sendNoiseBurst(time, 0.01, this.otherNode, 0.025, 0.2);
+            this.sendNoiseBurst(time, 0.01, otherNode, 0.025, 0.2);
           }
         });
       });
@@ -1107,6 +1145,7 @@ export default {
       }
       const bufferSourceNode = this.ac.createBufferSource();
       this.bufferSourceNodes.push(bufferSourceNode);
+      // console.log(where)
       bufferSourceNode.connect(where);
       bufferSourceNode.buffer = noiseBuffer;
       bufferSourceNode.start(when);
@@ -1261,7 +1300,12 @@ export default {
       this.otherNode.freq1.setValueAtTime(freqs[1] * transp, this.now());
     },
     initializePluckNode() {
-      if (this.pluckNode) this.pluckNode.disconnect();
+      console.log('how many times?')
+      if (this.pluckNode) {
+        this.pluckNode.disconnect();
+        this.pluckNode.port.close();
+        this.pluckNode = null;
+      }
       if (this.lowPassNode) this.lowPassNode.disconnect();
       this.pluckNode = new AudioWorkletNode(this.ac, 'karplusStrong');
       this.pluckDCOffsetNode = this.ac.createBiquadFilter();
@@ -1338,6 +1382,13 @@ export default {
              
       }
     },
+
+    resetPluckNode() {
+      this.pluckNode.port.postMessage('kill');
+      this.initializePluckNode();
+    },
+
+
     async getAudio(filepath, verbose) {
       try {
         const start = await performance.now();
@@ -1634,7 +1685,7 @@ export default {
           this.startPlayCursorAnimation();
           this.playTrajs(this.getCurrentTime(), this.now());
           if (this.string) {
-            this.playChikaris(this.getCurrentTime(), this.now());
+            this.playChikaris(this.getCurrentTime(), this.now(), this.otherNode);
           }
           
         } else {

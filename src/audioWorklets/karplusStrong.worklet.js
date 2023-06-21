@@ -1,5 +1,7 @@
 const AMP = 1.25;
 
+let dead;
+
 class Processor extends AudioWorkletProcessor {
     static get parameterDescriptors() {
         return [
@@ -18,6 +20,25 @@ class Processor extends AudioWorkletProcessor {
         ];
     }
 
+    constructor() {
+        super();
+        this.port.onmessage = e => {
+            if (e.data === 'reset') {
+                reset();
+            };
+            if (e.data === 'status') {
+                console.log('readPtr', readPtr, 
+                            'writePtr', writePtr,
+                            'dead?', dead ? 'yes' : 'no')
+            };
+            if (e.data === 'kill') {
+                dead = true;
+            }
+        };
+        dead = false;
+    }
+
+
     process(inputs, outputs, params) {
         let freq = params['Frequency'][0];
         const cutoff = params['Cutoff'][0];
@@ -31,7 +52,11 @@ class Processor extends AudioWorkletProcessor {
             delayInput(x);
             out[i] = AMP * x;
         }
-        return true;
+        if (dead === true) {
+            return false;
+        } else {
+            return true;
+        }
     }
 }
 
@@ -63,4 +88,11 @@ function filter(x, cutoff) {
     const y = cutoff * x + (1 - cutoff) * y1;
     y1 = y;
     return y;
+}
+
+function reset() {
+    delay.fill(0);
+    readPtr = 0;
+    writePtr = 0;
+    y1 = 0;
 }
