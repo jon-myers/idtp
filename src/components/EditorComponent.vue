@@ -283,7 +283,9 @@ export default {
       contextMenuX: 0,
       contextMenuY: 0,
       contextMenuClosed: true,
-      contextMenuChoices: []
+      contextMenuChoices: [],
+      selBoxStartX: undefined,
+      selBoxStartY: undefined,
     }
   },
   components: {
@@ -3166,6 +3168,7 @@ export default {
       d3SelectAll('.insertPulse').remove();
       this.contextMenuClosed = true;
       this.svg.style('cursor', 'auto');
+      d3Select('#selBox').remove();
     },
 
     handleKeyup(e) {
@@ -3930,6 +3933,11 @@ export default {
         high: this.freqMax
       })
 
+      const drag = d3Drag()
+        .on('start', this.selBoxDragStart)
+        .on('drag', this.selBoxDrag)
+        .on('end', this.selBoxDragEnd);
+
       this.setScrollY();
       this.setScrollX();
       const rect = await this.rect();
@@ -3941,6 +3949,7 @@ export default {
         .on('mousedown', this.handleMousedown)
         .on('mouseup', this.handleMouseup)
         .style('border-bottom', '1px solid black')
+        .call(drag)
 
       let imgsPreLoaded = false
       this.paintBackgroundColors();
@@ -4011,6 +4020,73 @@ export default {
       
 
     },
+
+    selBoxDragStart(e) {
+      if (this.shifted) {
+        this.selBoxStartX = e.x;
+        this.selBoxStartY = e.y;
+        this.selBox = this.svg.append('rect')
+          .attr('id', 'selBox');
+      }
+    },
+
+    selBoxDrag(e) {
+      if (this.shifted && this.selBoxStartX && this.selBoxStartY) {
+        const x = Math.min(this.selBoxStartX, e.x);
+        const y = Math.min(this.selBoxStartY, e.y);
+        const width = Math.abs(this.selBoxStartX - e.x);
+        const height = Math.abs(this.selBoxStartY - e.y);
+        this.selBox.attr('x', x)
+          .attr('y', y)
+          .attr('width', width)
+          .attr('height', height)
+          .attr('fill', 'none')
+          .attr('stroke', 'black')
+          .attr('stroke-width', 1)
+          .attr('stroke-dasharray', '5,5')
+      }
+    },
+
+    selBoxDragEnd(e) {
+      if (this.shifted && this.selBoxStartX && this.selBoxStartY) {
+        const x = Math.min(this.selBoxStartX, e.x);
+        const y = Math.min(this.selBoxStartY, e.y);
+        const width = Math.abs(this.selBoxStartX - e.x);
+        const height = Math.abs(this.selBoxStartY - e.y);
+        const startTime = this.xr().invert(x);
+        const endTime = this.xr().invert(x + width);
+        const lowFreq = this.yr().invert(y + height);
+        const highFreq = this.yr().invert(y);
+        // console.log('start time: ' + startTime);
+        // console.log('end time: ' + endTime);
+        // console.log('low freq: ' + lowFreq);
+        // console.log('high freq: ' + highFreq);
+        this.selectTrajectories(startTime, endTime, lowFreq, highFreq);
+      }
+    },
+
+    // selectTrajectories(startTime, endTime, lowFreq, highFreq) {
+    //   const timelyTrajs = this.piece.allTrajectories().filter(traj => {
+    //     const phraseStart = this.piece.phrases[traj.phraseIdx].startTime;
+    //     const trajStart = phraseStart + traj.startTime;
+    //     const trajEnd = trajStart + traj.durTot;
+    //     const trajLowFreq = Math.min(...traj.logFreqs);
+    //     const trajHighFreq = Math.max(...traj.logFreqs);
+    //     // if any portion of traj is within box, return true
+    //     // const c1 = trajStart >= startTime;
+    //     // const c2 = trajEnd <= endTime;
+    //     // const c3 = trajLowFreq >= lowFreq;
+    //     // const c4 = trajHighFreq <= highFreq;
+
+    //     // starts during
+    //     const c1 = trajStart >= startTime && trajStart <= endTime;
+    //     if (c1) {
+    //       if 
+    //     }
+
+    //   })
+    //   console.log(timelyTrajs.length)
+    // },
     
     handleDblClick(z) {
       const graphX = z.clientX - this.yAxWidth;
@@ -4330,6 +4406,8 @@ export default {
       } else if (this.setNewRegion) {
         this.setRegionToPhrase(pIdx);
         this.setNewRegion = false;
+      } else if (this.shifted) {
+        console.log('shifted')
       } else {
         if (this.justEnded) {
           this.justEnded = false // this just prevents phrase div drag end from 
