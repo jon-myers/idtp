@@ -59,6 +59,7 @@
             @click='preventSpaceToggle'>
         </div>
         <div class='cbRow'>
+          <button @click='resetAudio'>Reset Audio</button>
           <button @click='resetZoom'>Reset Zoom</button>
           <button @click='savePiece'>Save</button>
         </div>
@@ -216,7 +217,7 @@ export default {
       initXScale: 1,
       spectrogramOpacity: 0,
       transitionTime: 40,
-      controlBoxWidth: 200,
+      controlBoxWidth: 240,
       audioSource: undefined,
       currentTime: 0,
       selectedChikariID: undefined,
@@ -6697,6 +6698,11 @@ export default {
       this.movePlayhead();
       this.moveShadowPlayhead();
       this.moveRegion();
+    },
+
+    resetAudio() {
+      this.$refs.audioPlayer.reinitializeAC();
+
     },
 
     resetZoom() {
