@@ -740,9 +740,6 @@ export default {
     },
     
     async parentLoaded() {
-      console.log('parentloaded')
-      
-
       this.gatherInfo();
       const instrumentation = this.$parent.piece.instrumentation[0];
       const stringInsts = [
@@ -932,7 +929,6 @@ export default {
     },
 
     initAll() {
-      console.log('initing')
       if (this.string) {
         this.initializePluckNode();
         this.initializeChikariNodes();
@@ -1300,7 +1296,6 @@ export default {
       this.otherNode.freq1.setValueAtTime(freqs[1] * transp, this.now());
     },
     initializePluckNode() {
-      console.log('how many times?')
       if (this.pluckNode) {
         this.pluckNode.disconnect();
         this.pluckNode.port.close();
