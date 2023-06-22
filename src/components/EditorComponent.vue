@@ -4346,6 +4346,7 @@ export default {
       // if traj is not silent and next traj is not silent (and there is a next 
       // traj), then shorten the current traj by 0.1 s, and insert a silent traj
       // after it with a duration of 0.1 s.
+      if (traj.durTot < 0.2) dur = 0.1 * traj.durTot;
       const pIdx = traj.phraseIdx;
       const tIdx = traj.num;
       const phrase = this.piece.phrases[pIdx];
@@ -4404,6 +4405,7 @@ export default {
     },
 
     insertSilentTrajLeft(traj, dur=0.1) {
+      if (traj.durTot < 0.2) dur = 0.1 * traj.durTot;
       const pIdx = traj.phraseIdx;
       const tIdx = traj.num;
       const phrase = this.piece.phrases[pIdx];
