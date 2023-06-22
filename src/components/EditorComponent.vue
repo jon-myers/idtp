@@ -4048,7 +4048,9 @@ export default {
     },
 
     selBoxDragEnd(e) {
-      if (this.shifted && this.selBoxStartX && this.selBoxStartY) {
+      const c1 = this.selBoxStartX === e.x;
+      const c2 = this.selBoxStartY === e.y;
+      if (this.shifted && this.selBoxStartX && this.selBoxStartY && !(c1 && c2)) {
         const x = Math.min(this.selBoxStartX, e.x);
         const y = Math.min(this.selBoxStartY, e.y);
         const width = Math.abs(this.selBoxStartX - e.x);
@@ -4065,28 +4067,225 @@ export default {
       }
     },
 
-    // selectTrajectories(startTime, endTime, lowFreq, highFreq) {
-    //   const timelyTrajs = this.piece.allTrajectories().filter(traj => {
-    //     const phraseStart = this.piece.phrases[traj.phraseIdx].startTime;
-    //     const trajStart = phraseStart + traj.startTime;
-    //     const trajEnd = trajStart + traj.durTot;
-    //     const trajLowFreq = Math.min(...traj.logFreqs);
-    //     const trajHighFreq = Math.max(...traj.logFreqs);
-    //     // if any portion of traj is within box, return true
-    //     // const c1 = trajStart >= startTime;
-    //     // const c2 = trajEnd <= endTime;
-    //     // const c3 = trajLowFreq >= lowFreq;
-    //     // const c4 = trajHighFreq <= highFreq;
+    async collectTrajs(timelyTrajs, startTime, endTime, lowFreq, highFreq) {
+      const collectedTrajs = [];
+      const sampleDur = 0.01;
+      timelyTrajs.forEach(async (traj, tIdx) => {
+        const phrase = this.piece.phrases[traj.phraseIdx];
+        const trajStart = phrase.startTime + traj.startTime;
+        const trajEnd = trajStart + traj.durTot;
+        let sampleTimes;
+        if (tIdx === 0) {
+          if (timelyTrajs.length === 1) {
+            const div = Math.floor((endTime - startTime) / sampleDur);
+            sampleTimes = linSpace(0, 1, div);
+          } else {
+            const div = Math.floor((trajEnd - startTime) / sampleDur);
+            sampleTimes = linSpace(0, 1, div)
+          }
+        } else if (tIdx === timelyTrajs.length - 1) {
+          const div = Math.floor((endTime - trajStart) / sampleDur);
+          sampleTimes = linSpace(0, 1, div)
+        } else {
+          const div = Math.floor((trajEnd - trajStart) / sampleDur);
+          sampleTimes = linSpace(0, 1, div)
+        }
+        let trigger = false;
+        let override = false;
+        let ct = 0;
+        while ((!trigger) && (!override)) {
+          console.log(ct)
+          const logFreq = traj.compute(sampleTimes[ct], true);
+          if (logFreq >= lowFreq && logFreq <= highFreq) {
+            trigger = true;
+          } else if (ct === sampleTimes.length - 1) {
+            override = true;
+          } else {
+            ct++;
+          }
+        }
+        if (trigger) {
+          collectedTrajs.push(traj);
+        }
+        if (ct > 1000) {
+          throw new Error('ct > 1000')
+        }
+        return
+      });
+      return collectedTrajs
+    },
 
-    //     // starts during
-    //     const c1 = trajStart >= startTime && trajStart <= endTime;
-    //     if (c1) {
-    //       if 
-    //     }
+    async selectTrajectories(startTime, endTime, lowFreq, highFreq) {
+      const timelyTrajs = this.piece.allTrajectories().filter(traj => {
+        const phraseStart = this.piece.phrases[traj.phraseIdx].startTime;
+        const trajStart = phraseStart + traj.startTime;
+        const trajEnd = trajStart + traj.durTot;
+        const c1 = trajStart >= startTime && trajStart <= endTime;
+        const c2 = trajEnd >= startTime && trajEnd <= endTime;
+        const c3 = trajStart <= startTime && trajEnd >= endTime;
+        const c4 = traj.id !== 12;
+        return (c1 || c2 || c3) && c4
+      });
+      let collectedTrajs = await this.collectTrajs(timelyTrajs, startTime, endTime, lowFreq, highFreq);
+      if (this.selectedTrajs.length >= 1) {
+        collectedTrajs = collectedTrajs.filter(traj => {
+          return !this.selectedTrajs.includes(traj)
+        });
+        this.selectedTrajs.push(...collectedTrajs);
+        console.log(this.selectedTrajs)
+        this.selectedTrajs.forEach(traj => {
+          const id = `p${traj.phraseIdx}t${traj.num}`;
+          d3Select(`#${id}`)
+            .attr('stroke', this.selectedTrajColor)
+          d3Select(`#dampen${id}`)
+            .attr('stroke', this.selectedTrajColor)
+          d3Select(`#pluck${id}`)
+            .attr('fill', this.selectedArtColor)
+            .attr('stroke', this.selectedArtColor)
+          d3Select('#overlay__' + id)
+            .attr('cursor', 'pointer')
+          this.updateArtColors(traj, true)
+        })
+        if (this.selectedTrajs.length > 1) {
+          this.selectedTraj = undefined;
+          this.selectedTrajID = undefined;
+          d3SelectAll('.dragDots').remove();
+          d3Select('#selBox').remove();
+        }
+      } else if (collectedTrajs.length === 1) {
+        this.selectedTraj = collectedTrajs[0];
+        const pIdx = this.selectedTraj.phraseIdx;
+        const tIdx = this.selectedTraj.num;
+        const id__ = `p${pIdx}t${tIdx}`; 
+        if (this.selectedTrajID && this.selectedTrajID !== id__) {
+          d3Select(`#` + this.selectedTrajID)
+            .attr('stroke', this.trajColor)
+          d3Select(`#dampen` + this.selectedTrajID)
+            .attr('stroke', this.trajColor)
+          d3Select(`#pluck${this.selectedTrajID}`)
+            .attr('fill', this.trajColor)
+            .attr('stroke', this.trajColor)
+          this.updateArtColors(this.selectedTraj, false)
+        }
+        this.svg.style('cursor', 'default');
+        this.selectedTrajID = id__;
+        this.selectedTraj = collectedTrajs[0]
+        if (this.selectedTraj.groupId !== undefined) {
+          const phrase = this.piece.phrases[pIdx];
+          const group = phrase.getGroupFromId(this.selectedTraj.groupId);
+          if ((group.minFreq / 2) < this.freqMin) {
+            this.$refs.trajSelectPanel.canShiftDown = false
+          } else {
+            this.$refs.trajSelectPanel.canShiftDown = true
+          }
+          if ((group.maxFreq * 2) > this.freqMax) {
+            this.$refs.trajSelectPanel.canShiftUp = false
+          } else {
+            this.$refs.trajSelectPanel.canShiftUp = true
+          }
+          this.selectedTrajs = group.trajectories;
+          this.clearTrajSelectPanel();
+          this.groupable = true;
+          this.$refs.trajSelectPanel.grouped = true;
+          this.selectedTrajID = undefined;
+          this.selectedTraj = undefined;
+          this.selectedTrajs.forEach(traj => {
+            const id = `p${traj.phraseIdx}t${traj.num}`;
+            d3Select(`#${id}`)
+              .attr('stroke', this.selectedTrajColor)
+            d3Select(`#dampen${id}`)
+              .attr('stroke', this.selectedTrajColor)
+            d3Select(`#pluck${id}`)
+              .attr('fill', this.selectedArtColor)
+              .attr('stroke', this.selectedArtColor)
+            d3Select('#overlay__' + id)
+              .attr('cursor', 'default')
+            this.updateArtColors(traj, true)
+          })
+          d3SelectAll('.dragDots').remove();
 
-    //   })
-    //   console.log(timelyTrajs.length)
-    // },
+        } else {
+          this.selectedTrajs = [this.selectedTraj];
+          const tsp = this.$refs.trajSelectPanel;
+          const altId = this.selectedTraj.id >= 12 ? 
+                        this.selectedTraj.id - 1: 
+                        this.selectedTraj.id; 
+          tsp.selectedIdx = tsp.trajIdxs.indexOf(altId);
+          tsp.parentSelected = true;
+          tsp.slope = Math.log2(this.selectedTraj.slope);
+          tsp.vowel = this.selectedTraj.vowel;
+          tsp.startConsonant = this.selectedTraj.startConsonant;
+          tsp.endConsonant = this.selectedTraj.endConsonant;
+          const st = this.selectedTraj;
+          if ((st.minFreq / 2) < this.freqMin) {
+            tsp.canShiftDown = false
+          } else {
+            tsp.canShiftDown = true
+          }
+          if ((st.maxFreq * 2) > this.freqMax) {
+            tsp.canShiftUp = false
+          } else {
+            tsp.canShiftUp = true
+          }
+          const c1 = st.articulations[0];
+          const c2 = this.selectedTraj.articulations['1.00'];
+          const c3 = st.articulations['0.00'];
+          const c4 = c1 && st.articulations[0].name === 'pluck';
+          const c5 = c3 && st.articulations['0.00'].name === 'pluck';
+          if (c4 || c5) {
+            tsp.pluckBool = true
+          } else {
+            tsp.pluckBool = false
+          }
+          if (c2 && c2.name === 'dampen') {
+            tsp.dampen = true
+          } else {
+            tsp.dampen = false
+          }
+          d3Select(`#${this.selectedTrajID}`)
+            .attr('stroke', this.selectedTrajColor)
+          d3Select(`#overlay__${this.selectedTrajID}`)
+            .style('cursor', 'auto')
+          d3Select(`#dampen${this.selectedTrajID}`)
+            .attr('stroke', this.selectedTrajColor)
+          d3Select(`#pluck${this.selectedTrajID}`)
+            .attr('fill', this.selectedArtColor)
+            .attr('stroke', this.selectedArtColor)
+          this.updateArtColors(this.selectedTraj, true)
+          if (this.selectedChikariID) {
+            this.clearSelectedChikari()
+          }
+          if (!(this.selectedPhraseDivIdx === undefined)) {
+            this.clearSelectedPhraseDiv()
+          }
+          this.addAllDragDots();
+          this.$refs.trajSelectPanel.showTrajChecks = true;
+        }
+        // this.selectedTrajID = `p${pIdx}t${tIdx}`;
+      } else {
+        this.selectedTrajs = collectedTrajs;
+        this.selectedTrajs.forEach(traj => {
+          const id = `p${traj.phraseIdx}t${traj.num}`;
+          d3Select(`#${id}`)
+            .attr('stroke', this.selectedTrajColor)
+          d3Select(`#dampen${id}`)
+            .attr('stroke', this.selectedTrajColor)
+          d3Select(`#pluck${id}`)
+            .attr('fill', this.selectedArtColor)
+            .attr('stroke', this.selectedArtColor)
+          d3Select('#overlay__' + id)
+            .attr('cursor', 'pointer')
+          this.updateArtColors(traj, true)
+        })   
+      }
+      // console.log('didnt make it here?')
+      // this.$nextTick(() => d3Select('#selBox').remove())
+      d3Select('#selBox').remove()
+      // const removal = d3Select('#selBox').remove();
+      // console.log('removal', removal)
+
+         
+    },
     
     handleDblClick(z) {
       const graphX = z.clientX - this.yAxWidth;
@@ -4164,6 +4363,7 @@ export default {
     },
 
     handleClick(e) {
+      console.log('clicking')
       let time = this.xr().invert(e.clientX);
       const pIdx = this.phraseIdxFromTime(time);
       // need to figure out how to handle when click is over a non phrase
@@ -6185,7 +6385,7 @@ export default {
             this.groupable = this.selectedTrajsGroupable();
             this.$refs.trajSelectPanel.grouped = false;
             // clear selected traj visually
-            if (this.selectedTraj && this.selectedTrajID) {
+            if (this.selectedTraj && this.selectedTrajID && id !== this.selectedTrajID) {
               d3Select(`#${this.selectedTrajID}`)
                 .attr('stroke', this.trajColor)
               d3Select(`#dampen${this.selectedTrajID}`)
