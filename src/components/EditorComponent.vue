@@ -283,7 +283,9 @@ export default {
       contextMenuX: 0,
       contextMenuY: 0,
       contextMenuClosed: true,
-      contextMenuChoices: []
+      contextMenuChoices: [],
+      selBoxStartX: undefined,
+      selBoxStartY: undefined,
     }
   },
   components: {
@@ -314,21 +316,6 @@ export default {
       if (!answer) return false
     }
   },
-
-  // async beforeUnmount() {
-  //   if (this.unsavedChanges) {
-  //     // have an alert ask if you are sure you want to leave
-  //     // this.$dialog
-  //     //   .confirm('Please confirm to continue')
-  //     //   .then(function(dialog) {
-  //     //     console.log('clicked on proceed')
-  //     //   })
-  //     //   .catch(function() {
-  //     //     console.log('clicked on cancel')
-  //     //   })
-      
-  //   }
-  // },
 
   async mounted() {
     window.addEventListener('resize', this.resize);
@@ -1234,7 +1221,7 @@ export default {
             .attr('stroke', this.selectedTrajColor)
             .attr('fill', this.selectedTrajColor)
           d3Select(`#overlay__${this.selectedTrajID}`)
-            .attr('cursor', 'default')
+            // .attr('cursor', 'default')
         } else {
           this.selectedTrajs.forEach(traj => {
             const id = `p${traj.phraseIdx}t${traj.num}`;
@@ -1247,7 +1234,7 @@ export default {
             d3Select(`#pluck${id}`)
               .attr('stroke', this.selectedTrajColor)
             d3Select('#overlay__' + id)
-              .attr('cursor', 'default')
+              // .attr('cursor', 'default')
           })
         }
       } else {
@@ -2474,7 +2461,6 @@ export default {
         const audioPlayer = this.$refs.audioPlayer;
         const meterControls = audioPlayer.$refs.meterControls;
         meterControls.meterSelected = true;
-        // console.log(pulse, id)
         const meter = this.piece.meters.find(meter => {
           return meter.uniqueId === pulse.meterId
         });
@@ -3112,13 +3098,6 @@ export default {
       
       this.resetSargam();
       const vowelIdxs = phrase.firstTrajIdxs();
-      // this.codifiedAddArticulations(newTraj, phrase.startTime, vowelIdxs)
-      // const id = `p${newTraj.phraseIdx}t${newTraj.num}`;
-      // const g = d3Select(`#articulations__${id}`);
-      // this.addVowel(newTraj, phrase.startTime, g, true)
-      // console.log(d3Select(`#vowel${id}`).node())
-      // console.log(g.node())
-      
     },
     
     clearAll(regionToo) {
@@ -3167,6 +3146,7 @@ export default {
       d3SelectAll('.insertPulse').remove();
       this.contextMenuClosed = true;
       this.svg.style('cursor', 'auto');
+      d3Select('#selBox').remove();
     },
 
     handleKeyup(e) {
@@ -3932,6 +3912,11 @@ export default {
         high: this.freqMax
       })
 
+      const drag = d3Drag()
+        .on('start', this.selBoxDragStart)
+        .on('drag', this.selBoxDrag)
+        .on('end', this.selBoxDragEnd);
+
       this.setScrollY();
       this.setScrollX();
       const rect = await this.rect();
@@ -3943,6 +3928,7 @@ export default {
         .on('mousedown', this.handleMousedown)
         .on('mouseup', this.handleMouseup)
         .style('border-bottom', '1px solid black')
+        .call(drag)
 
       let imgsPreLoaded = false
       this.paintBackgroundColors();
@@ -4012,6 +3998,263 @@ export default {
     
       
 
+    },
+
+    selBoxDragStart(e) {
+      if (this.shifted) {
+        this.selBoxStartX = e.x;
+        this.selBoxStartY = e.y;
+        this.selBox = this.svg.append('rect')
+          .attr('id', 'selBox');
+      }
+    },
+
+    selBoxDrag(e) {
+      if (this.shifted && this.selBoxStartX && this.selBoxStartY) {
+        const x = Math.min(this.selBoxStartX, e.x);
+        const y = Math.min(this.selBoxStartY, e.y);
+        const width = Math.abs(this.selBoxStartX - e.x);
+        const height = Math.abs(this.selBoxStartY - e.y);
+        this.selBox.attr('x', x)
+          .attr('y', y)
+          .attr('width', width)
+          .attr('height', height)
+          .attr('fill', 'none')
+          .attr('stroke', 'black')
+          .attr('stroke-width', 1)
+          .attr('stroke-dasharray', '5,5')
+      }
+    },
+
+    async selBoxDragEnd(e) {
+      const c1 = this.selBoxStartX === e.x;
+      const c2 = this.selBoxStartY === e.y;
+      if (this.shifted && this.selBoxStartX && this.selBoxStartY && !(c1 && c2)) {
+        const x = Math.min(this.selBoxStartX, e.x);
+        const y = Math.min(this.selBoxStartY, e.y);
+        const width = Math.abs(this.selBoxStartX - e.x);
+        const height = Math.abs(this.selBoxStartY - e.y);
+        const startTime = this.xr().invert(x);
+        const endTime = this.xr().invert(x + width);
+        const lowFreq = this.yr().invert(y + height);
+        const highFreq = this.yr().invert(y);
+        await this.selectTrajectories(startTime, endTime, lowFreq, highFreq);
+        this.groupable = this.selectedTrajsGroupable();
+      } else {
+        this.handleClick(e, true)
+      }
+    },
+
+    async collectTrajs(timelyTrajs, startTime, endTime, lowFreq, highFreq) {
+      const collectedTrajs = [];
+      const sampleDur = 0.01;
+      timelyTrajs.forEach(async (traj, tIdx) => {
+        const phrase = this.piece.phrases[traj.phraseIdx];
+        const trajStart = phrase.startTime + traj.startTime;
+        const trajEnd = trajStart + traj.durTot;
+        let sampleTimes;
+        if (tIdx === 0) {
+          if (timelyTrajs.length === 1) {
+            const div = Math.floor((endTime - startTime) / sampleDur);
+            sampleTimes = linSpace(0, 1, div);
+          } else {
+            const div = Math.floor((trajEnd - startTime) / sampleDur);
+            sampleTimes = linSpace(0, 1, div)
+          }
+        } else if (tIdx === timelyTrajs.length - 1) {
+          const div = Math.floor((endTime - trajStart) / sampleDur);
+          sampleTimes = linSpace(0, 1, div)
+        } else {
+          const div = Math.floor((trajEnd - trajStart) / sampleDur);
+          sampleTimes = linSpace(0, 1, div)
+        }
+        let trigger = false;
+        let override = false;
+        let ct = 0;
+        while ((!trigger) && (!override)) {
+          const logFreq = traj.compute(sampleTimes[ct], true);
+          if (logFreq >= lowFreq && logFreq <= highFreq) {
+            trigger = true;
+          } else if (ct === sampleTimes.length - 1) {
+            override = true;
+          } else {
+            ct++;
+          }
+        }
+        if (trigger) {
+          collectedTrajs.push(traj);
+        }
+        if (ct > 1000) {
+          throw new Error('ct > 1000')
+        }
+        return
+      });
+      return collectedTrajs
+    },
+
+    async selectTrajectories(startTime, endTime, lowFreq, highFreq) {
+      const timelyTrajs = this.piece.allTrajectories().filter(traj => {
+        const phraseStart = this.piece.phrases[traj.phraseIdx].startTime;
+        const trajStart = phraseStart + traj.startTime;
+        const trajEnd = trajStart + traj.durTot;
+        const c1 = trajStart >= startTime && trajStart <= endTime;
+        const c2 = trajEnd >= startTime && trajEnd <= endTime;
+        const c3 = trajStart <= startTime && trajEnd >= endTime;
+        const c4 = traj.id !== 12;
+        return (c1 || c2 || c3) && c4
+      });
+      let collectedTrajs = await this.collectTrajs(timelyTrajs, startTime, endTime, lowFreq, highFreq);
+      if (this.selectedTrajs.length >= 1) {
+        collectedTrajs = collectedTrajs.filter(traj => {
+          return !this.selectedTrajs.includes(traj)
+        });
+        this.selectedTrajs.push(...collectedTrajs);
+        this.selectedTrajs.forEach(traj => {
+          const id = `p${traj.phraseIdx}t${traj.num}`;
+          d3Select(`#${id}`)
+            .attr('stroke', this.selectedTrajColor)
+          d3Select(`#dampen${id}`)
+            .attr('stroke', this.selectedTrajColor)
+          d3Select(`#pluck${id}`)
+            .attr('fill', this.selectedArtColor)
+            .attr('stroke', this.selectedArtColor)
+          d3Select('#overlay__' + id)
+            .attr('cursor', 'pointer')
+          this.updateArtColors(traj, true)
+        })
+        if (this.selectedTrajs.length > 1) {
+          this.selectedTraj = undefined;
+          this.selectedTrajID = undefined;
+          d3SelectAll('.dragDots').remove();
+          d3Select('#selBox').remove();
+        }
+      } else if (collectedTrajs.length === 1) {
+        this.selectedTraj = collectedTrajs[0];
+        const pIdx = this.selectedTraj.phraseIdx;
+        const tIdx = this.selectedTraj.num;
+        const id__ = `p${pIdx}t${tIdx}`; 
+        if (this.selectedTrajID && this.selectedTrajID !== id__) {
+          d3Select(`#` + this.selectedTrajID)
+            .attr('stroke', this.trajColor)
+          d3Select(`#dampen` + this.selectedTrajID)
+            .attr('stroke', this.trajColor)
+          d3Select(`#pluck${this.selectedTrajID}`)
+            .attr('fill', this.trajColor)
+            .attr('stroke', this.trajColor)
+          this.updateArtColors(this.selectedTraj, false)
+        }
+        this.svg.style('cursor', 'default');
+        this.selectedTrajID = id__;
+        this.selectedTraj = collectedTrajs[0]
+        if (this.selectedTraj.groupId !== undefined) {
+          const phrase = this.piece.phrases[pIdx];
+          const group = phrase.getGroupFromId(this.selectedTraj.groupId);
+          if ((group.minFreq / 2) < this.freqMin) {
+            this.$refs.trajSelectPanel.canShiftDown = false
+          } else {
+            this.$refs.trajSelectPanel.canShiftDown = true
+          }
+          if ((group.maxFreq * 2) > this.freqMax) {
+            this.$refs.trajSelectPanel.canShiftUp = false
+          } else {
+            this.$refs.trajSelectPanel.canShiftUp = true
+          }
+          this.selectedTrajs = [...group.trajectories];
+          this.clearTrajSelectPanel();
+          this.groupable = true;
+          this.$refs.trajSelectPanel.grouped = true;
+          this.selectedTrajID = undefined;
+          this.selectedTraj = undefined;
+          this.selectedTrajs.forEach(traj => {
+            const id = `p${traj.phraseIdx}t${traj.num}`;
+            d3Select(`#${id}`)
+              .attr('stroke', this.selectedTrajColor)
+            d3Select(`#dampen${id}`)
+              .attr('stroke', this.selectedTrajColor)
+            d3Select(`#pluck${id}`)
+              .attr('fill', this.selectedArtColor)
+              .attr('stroke', this.selectedArtColor)
+            d3Select('#overlay__' + id)
+              .attr('cursor', 'default')
+            this.updateArtColors(traj, true)
+          })
+          d3SelectAll('.dragDots').remove();
+
+        } else {
+          this.selectedTrajs = [this.selectedTraj];
+          const tsp = this.$refs.trajSelectPanel;
+          const altId = this.selectedTraj.id >= 12 ? 
+                        this.selectedTraj.id - 1: 
+                        this.selectedTraj.id; 
+          tsp.selectedIdx = tsp.trajIdxs.indexOf(altId);
+          tsp.parentSelected = true;
+          tsp.slope = Math.log2(this.selectedTraj.slope);
+          tsp.vowel = this.selectedTraj.vowel;
+          tsp.startConsonant = this.selectedTraj.startConsonant;
+          tsp.endConsonant = this.selectedTraj.endConsonant;
+          const st = this.selectedTraj;
+          if ((st.minFreq / 2) < this.freqMin) {
+            tsp.canShiftDown = false
+          } else {
+            tsp.canShiftDown = true
+          }
+          if ((st.maxFreq * 2) > this.freqMax) {
+            tsp.canShiftUp = false
+          } else {
+            tsp.canShiftUp = true
+          }
+          const c1 = st.articulations[0];
+          const c2 = this.selectedTraj.articulations['1.00'];
+          const c3 = st.articulations['0.00'];
+          const c4 = c1 && st.articulations[0].name === 'pluck';
+          const c5 = c3 && st.articulations['0.00'].name === 'pluck';
+          if (c4 || c5) {
+            tsp.pluckBool = true
+          } else {
+            tsp.pluckBool = false
+          }
+          if (c2 && c2.name === 'dampen') {
+            tsp.dampen = true
+          } else {
+            tsp.dampen = false
+          }
+          d3Select(`#${this.selectedTrajID}`)
+            .attr('stroke', this.selectedTrajColor)
+          // d3Select(`#overlay__${this.selectedTrajID}`)
+          //   .style('cursor', 'auto')
+          d3Select(`#dampen${this.selectedTrajID}`)
+            .attr('stroke', this.selectedTrajColor)
+          d3Select(`#pluck${this.selectedTrajID}`)
+            .attr('fill', this.selectedArtColor)
+            .attr('stroke', this.selectedArtColor)
+          this.updateArtColors(this.selectedTraj, true)
+          if (this.selectedChikariID) {
+            this.clearSelectedChikari()
+          }
+          if (!(this.selectedPhraseDivIdx === undefined)) {
+            this.clearSelectedPhraseDiv()
+          }
+          this.addAllDragDots();
+          this.$refs.trajSelectPanel.showTrajChecks = true;
+        }
+        // this.selectedTrajID = `p${pIdx}t${tIdx}`;
+      } else {
+        this.selectedTrajs = collectedTrajs;
+        this.selectedTrajs.forEach(traj => {
+          const id = `p${traj.phraseIdx}t${traj.num}`;
+          d3Select(`#${id}`)
+            .attr('stroke', this.selectedTrajColor)
+          d3Select(`#dampen${id}`)
+            .attr('stroke', this.selectedTrajColor)
+          d3Select(`#pluck${id}`)
+            .attr('fill', this.selectedArtColor)
+            .attr('stroke', this.selectedArtColor)
+          d3Select('#overlay__' + id)
+            .attr('cursor', 'pointer')
+          this.updateArtColors(traj, true)
+        })   
+      }
+      d3Select('#selBox').remove()        
     },
     
     handleDblClick(z) {
@@ -4089,8 +4332,10 @@ export default {
       return outTime
     },
 
-    handleClick(e) {
-      let time = this.xr().invert(e.clientX);
+    handleClick(e, dragbox=false) {
+      const eventX = dragbox ? e.x : e.clientX;
+      const eventY = dragbox ? e.y : e.clientY;
+      let time = this.xr().invert(eventX);
       const pIdx = this.phraseIdxFromTime(time);
       // need to figure out how to handle when click is over a non phrase
       if (this.setChikari) {
@@ -4142,7 +4387,7 @@ export default {
         }
         const logSGLines = this.visibleSargam.map(s => Math.log2(s));
         const navHeight = this.$parent.$parent.navHeight;
-        let logFreq = this.yr().invert(e.clientY - navHeight);
+        let logFreq = this.yr().invert(eventY - navHeight);
         logFreq = getClosest(logSGLines, logFreq);
         const phrase = this.piece.phrases[pIdx];
         const tIdx = this.trajIdxFromTime(phrase, time);
@@ -4185,7 +4430,7 @@ export default {
         }
         const logSGLines = this.visibleSargam.map(s => Math.log2(s));
         const navHeight = this.$parent.$parent.navHeight;
-        let logFreq = this.yr().invert(e.clientY - navHeight);
+        let logFreq = this.yr().invert(eventY - navHeight);
         logFreq = getClosest(logSGLines, logFreq);
         const phrase = this.piece.phrases[pIdx];
         const tIdx = this.trajIdxFromTime(phrase, time);
@@ -4332,6 +4577,7 @@ export default {
       } else if (this.setNewRegion) {
         this.setRegionToPhrase(pIdx);
         this.setNewRegion = false;
+      } else if (this.shifted) {
       } else {
         if (this.justEnded) {
           this.justEnded = false // this just prevents phrase div drag end from 
@@ -6081,6 +6327,21 @@ export default {
       
     },
 
+    setTrajColor(id, color, secondaryColor = undefined) {
+      // sets the colors for the traj stroke, dampen, pluck, and turns the 
+      // overlay to pointer
+      if (secondaryColor === undefined) secondaryColor = color;
+      d3Select(`#${id}`)
+        .attr('stroke', color)
+      d3Select(`#dampen${id}`)
+        .attr('stroke', color)
+      d3Select(`#pluck${id}`)
+        .attr('stroke', secondaryColor)
+        .attr('fill', secondaryColor)
+      d3Select(`#overlay__${id}`)
+        .attr('cursor', 'pointer')
+    },
+
     selectedTrajsGroupable() {// tests whether all trajs in this.selectedTrajs
       // are adjacent to one another and part of the same phrase
       const uniquePIdxs = [...new Set(this.selectedTrajs.map(t => t.phraseIdx))];
@@ -6091,7 +6352,9 @@ export default {
         const diffs = nums.slice(1).map((num, nIdx) => {
           return num - nums[nIdx];
         })
-        return diffs.every(diff => diff === 1)
+        const c1 = diffs.every(diff => diff === 1);
+        const c2 = this.selectedTrajs.every(traj => traj.groupId === this.selectedTrajs[0].groupId);
+        return c1 && c2
       } else {
         return false
       }
@@ -6107,21 +6370,15 @@ export default {
           const tIdx = id.split('t')[1];
           const newTraj = this.piece.phrases[pIdx].trajectories[tIdx];
           if (newTraj.groupId === undefined) {
+            // if (this.selectedTrajs.each(traj => traj.groupId === undefined)) {
+              
+            // }
             this.selectedTrajs.push(newTraj);
             this.groupable = this.selectedTrajsGroupable();
             this.$refs.trajSelectPanel.grouped = false;
             // clear selected traj visually
-            if (this.selectedTraj && this.selectedTrajID) {
-              d3Select(`#${this.selectedTrajID}`)
-                .attr('stroke', this.trajColor)
-              d3Select(`#dampen${this.selectedTrajID}`)
-                .attr('stroke', this.trajColor)
-              d3Select(`#pluck${this.selectedTrajID}`)
-                .attr('fill', this.trajColor)
-              d3Select(`#pluck${this.selectedTrajID}`)
-                .attr('stroke', this.trajColor)
-              d3Select('#overlay__' + this.selectedTrajID)
-                .attr('cursor', 'pointer')
+            if (this.selectedTraj && this.selectedTrajID && id !== this.selectedTrajID) {
+              this.setTrajColor(this.selectedTrajID, this.trajColor, 'black');
               d3SelectAll('.dragDots').remove();
               this.selectedTrajID = undefined;
               this.selectedTraj = undefined;
@@ -6129,15 +6386,7 @@ export default {
             }
             this.selectedTrajs.forEach(traj => {
               const id = `p${traj.phraseIdx}t${traj.num}`;
-              d3Select(`#${id}`)
-                .attr('stroke', this.selectedTrajColor)
-              d3Select(`#dampen${id}`)
-                .attr('stroke', this.selectedTrajColor)
-              d3Select(`#pluck${id}`)
-                .attr('fill', this.selectedArtColor)
-                .attr('stroke', this.selectedArtColor)
-              d3Select('#overlay__' + id)
-                .attr('cursor', 'pointer')
+              this.setTrajColor(id, this.selectedTrajColor, this.selectedArtColor);
               this.updateArtColors(traj, true)
             })
             let minFreq = Math.min(...this.selectedTrajs.map(t => t.minFreq));
@@ -6152,6 +6401,8 @@ export default {
             } else {
               this.$refs.trajSelectPanel.canShiftUp = true
             }
+          } else {
+            // need to actually make stuff happen here
           }
         } else {
           if (this.selectedTrajs.length > 1) {
@@ -6209,6 +6460,7 @@ export default {
           const pIdx = this.selectedTrajID.split('t')[0].slice(1);
           const tIdx = this.selectedTrajID.split('t')[1];
           this.selectedTraj = this.piece.phrases[pIdx].trajectories[tIdx];
+          
           if (this.selectedTraj.groupId !== undefined) {
             const phrase = this.piece.phrases[pIdx];
             const group = phrase.getGroupFromId(this.selectedTraj.groupId);
@@ -6222,7 +6474,7 @@ export default {
             } else {
               this.$refs.trajSelectPanel.canShiftUp = true
             }
-            this.selectedTrajs = group.trajectories;
+            this.selectedTrajs = [...group.trajectories];
             this.clearTrajSelectPanel();
             this.groupable = true;
             this.$refs.trajSelectPanel.grouped = true;
@@ -6283,8 +6535,8 @@ export default {
             }
             d3Select(`#${this.selectedTrajID}`)
               .attr('stroke', this.selectedTrajColor)
-            d3Select(`#overlay__${this.selectedTrajID}`)
-              .style('cursor', 'auto')
+            // d3Select(`#overlay__${this.selectedTrajID}`)
+            //   .style('cursor', 'auto')
             d3Select(`#dampen${this.selectedTrajID}`)
               .attr('stroke', this.selectedTrajColor)
             d3Select(`#pluck${this.selectedTrajID}`)
@@ -6388,6 +6640,7 @@ export default {
         })
         this.selectedTrajs = [];
         this.selectedTraj = undefined;
+        this.selectedTrajID = undefined;
       }
       this.groupable = false
     },
@@ -7259,7 +7512,6 @@ export default {
     },
 
     redrawPlucks(traj, phraseStart) {
-      console.log('redraw happens')
       if (traj.id !== 12) {
         const keys = Object.keys(traj.articulations);
         const relKeys = keys.filter(key => {
