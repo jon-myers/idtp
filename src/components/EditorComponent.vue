@@ -4001,6 +4001,8 @@ export default {
     },
 
     selBoxDragStart(e) {
+      console.log(e)
+      console.log(performance.now())
       if (this.shifted) {
         this.selBoxStartX = e.x;
         this.selBoxStartY = e.y;
@@ -4041,7 +4043,7 @@ export default {
         await this.selectTrajectories(startTime, endTime, lowFreq, highFreq);
         this.groupable = this.selectedTrajsGroupable();
       } else {
-        this.handleClick(e, true)
+        // this.handleClick(e, true)
       }
     },
 
@@ -4333,6 +4335,7 @@ export default {
     },
 
     handleClick(e, dragbox=false) {
+      console.log('handleClick', dragbox)
       const eventX = dragbox ? e.x : e.clientX;
       const eventY = dragbox ? e.y : e.clientY;
       let time = this.xr().invert(eventX);
