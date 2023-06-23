@@ -1528,13 +1528,6 @@ export default {
           nextTraj.startTime += delta;
           
           if (traj.durArray.length > 1) {
-            // const tda = traj.durArray;
-            // const initPortionZ = tda[tda.length - 1] * traj.durTot;
-            // const newDurTot = traj.durTot + delta;
-            // const newPropZ = (initPortionZ + delta) / newDurTot;
-            // let newDurArray = tda.map(i => i * traj.durTot / newDurTot);
-            // newDurArray[newDurArray.length - 1] = newPropZ;
-            // traj.durArray = newDurArray;
             traj.durArray = this.newDurArrayZ(traj, delta)
           }
           traj.durTot += delta;
@@ -1601,17 +1594,31 @@ export default {
       d3Select(`#dragDot${idx}`)
         .attr('cx', x)
         .attr('cy', y)
-      const newPitch = new Pitch(this.visPitches[logSGLines.indexOf(logFreq)])
+      const pitchMold = this.visPitches[logSGLines.indexOf(logFreq)];
+      const newPitch = new Pitch(pitchMold);
       if (traj.logFreqs[idx]) {
         traj.logFreqs[idx] = logFreq;
-        traj.pitches[idx] = newPitch
+        traj.pitches[idx] = newPitch;
+        if (idx === 0 && traj.id === 0) { // moves both dots of a fixed traj
+          traj.logFreqs[1] = logFreq;
+          const secondPitch = new Pitch(pitchMold);
+          traj.pitches[1] = secondPitch;
+          d3Select(`#dragDot${1}`)
+            .attr('cy', y)
+        } else if (idx === 1 && traj.id === 0) {
+          traj.logFreqs[0] = logFreq;
+          const secondPitch = new Pitch(pitchMold);
+          traj.pitches[0] = secondPitch;
+          d3Select(`#dragDot${0}`)
+            .attr('cy', y)
+        }
       }
       // special case of moving inner dots, doesn't effect other trajs
       if (idx > 0 && idx < traj.durArray.length) {
         const newDurArray = this.calculateNewDurArray(phrase, traj, idx, time);
         traj.durArray = newDurArray;
-      } else if (idx === 0) {
-        if (tIdx === 0) {
+      } else if (idx === 0) { // if first drag dot
+        if (tIdx === 0) { 
           resetRequired = true;
           const prevPhrase = this.piece.phrases[pIdx - 1];
           const pTrajs = prevPhrase.trajectories;
@@ -4001,8 +4008,6 @@ export default {
     },
 
     selBoxDragStart(e) {
-      console.log(e)
-      console.log(performance.now())
       if (this.shifted) {
         this.selBoxStartX = e.x;
         this.selBoxStartY = e.y;
@@ -4335,7 +4340,6 @@ export default {
     },
 
     handleClick(e, dragbox=false) {
-      console.log('handleClick', dragbox)
       const eventX = dragbox ? e.x : e.clientX;
       const eventY = dragbox ? e.y : e.clientY;
       let time = this.xr().invert(eventX);
