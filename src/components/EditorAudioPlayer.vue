@@ -1453,6 +1453,10 @@ export default {
       this.sourceNode.connect(this.gainNode);
       this.sourceNode.buffer = this.stretchedBuffer;
       this.sourceNode.loop = this.loop;
+      // const realDur = this.$parent.regionEndTime - this.$parent.regionStartTime;
+      // const scaledDur = realDur / (2 ** Number(this.regionSpeed));
+      // const bufDur = this.stretchedBuffer.duration;
+      // this.sourceNode.playbackRate.setValueAtTime(bufDur / scaledDur, this.now());
       this.sourceNode.start(this.now(), scaledOffset);
       this.sourceNode.addEventListener('ended', () => {
         this.pauseStretched(this.playing); // this is a fancy way of saying that 
@@ -1617,8 +1621,12 @@ export default {
       if (this.pausedAt) {
         out = this.pausedAt;
       } else if (this.playing) {
+        const ed = this.$parent;
+        const realDur = ed.regionEndTime - ed.regionStartTime;
+        const bufDur = this.stretchedBuffer.duration;
+        const realStretchedSpeed = Math.log2(realDur / bufDur)
         const elapsed = this.now() - this.startedAt;
-        let scaledElapsed = (2 ** this.regionSpeed) * elapsed;
+        let scaledElapsed = (2 ** realStretchedSpeed) * elapsed;
         if (this.loop) {
           const tot = this.$parent.regionEndTime - this.$parent.regionStartTime;
           scaledElapsed = scaledElapsed % tot;
