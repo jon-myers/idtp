@@ -3688,6 +3688,7 @@ export default {
     },
 
     handleMouseup(e) {
+      console.log('this mouseup event is probably no longer reachable')
       if (e.offsetY < this.xAxHeight && this.drawingRegion) {
         if (e.offsetX < this.regionStartPx) {
           this.regionEndPx = this.regionStartPx;
@@ -4048,7 +4049,20 @@ export default {
         await this.selectTrajectories(startTime, endTime, lowFreq, highFreq);
         this.groupable = this.selectedTrajsGroupable();
       } else {
-        // this.handleClick(e, true)
+        if (e.y < this.xAxHeight && this.drawingRegion) {
+          if (e < this.regionStartPx) {
+            this.regionEndPx = this.regionStartPx;
+            this.regionEndTime = this.xr().invert(this.regionEndPx);
+            this.regionStartPx = e.x;
+            this.regionStartTime = this.xr().invert(this.regionStartPx);
+          } else {
+            this.regionEndTime = this.xr().invert(e.x);
+            this.regionEndPx = e.x;
+          }
+          this.mouseUpUpdateLoop();
+          this.setUpRegion();
+          if (this.audioDBDoc) this.$refs.audioPlayer.updateStretchBuf();
+        }
       }
     },
 
