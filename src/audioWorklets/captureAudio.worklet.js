@@ -46,6 +46,7 @@ class Processor extends AudioWorkletProcessor {
             this.first = false;
             this.switch = true;
             this.on = true;
+            console.log('started')
         }
         if (this.on) {
             this.append(inputs[0][0], inputs[1][0], outputBufferSize);
@@ -58,6 +59,7 @@ class Processor extends AudioWorkletProcessor {
     }
 
     append(strChannelData, chikChannelData, fullSize) {
+        console.log('appending', fullSize)
         if (this.isBufferFull()) {
             this.flush_big();
         }
@@ -137,6 +139,7 @@ class Processor extends AudioWorkletProcessor {
     }
 
     flush(fullSize) {
+        console.log('flushing')
         const strBuf = this.fadeBufEdges(this._stringBuffer.slice(0, fullSize));
         const chikBuf = this.fadeBufEdges(this._chikBuffer.slice(0, fullSize));
         this.port.postMessage([strBuf, chikBuf])
