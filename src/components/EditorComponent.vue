@@ -4311,6 +4311,7 @@ export default {
         } else {
           this.$refs.audioPlayer.stop();
           this.$refs.audioPlayer.pausedAt = time;
+          this.animationStart = time;
           this.$refs.audioPlayer.play();
         }
         this.movePlayhead();
