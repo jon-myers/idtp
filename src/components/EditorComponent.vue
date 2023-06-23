@@ -4281,21 +4281,22 @@ export default {
     handleDblClick(z) {
       const graphX = z.clientX - this.yAxWidth;
       const time = this.xr().invert(z.clientX);
-      if (this.$refs.audioPlayer.regionSpeedOn) {
+      const ap = this.$refs.audioPlayer;
+      if (ap.regionSpeedOn) {
         const afterStart = time >= this.regionStartTime;
         const beforeEnd = time <= this.regionEndTime;
         if (afterStart && beforeEnd) {
           if (graphX >= 0) {
             this.currentTime = time;
-            if (!this.$refs.audioPlayer.playing) {
-              this.$refs.audioPlayer.pausedAt = time;
-              this.$refs.audioPlayer.updateProgress();
-              this.$refs.audioPlayer.updateFormattedCurrentTime();
-              this.$refs.audioPlayer.updateFormattedTimeLeft();
+            if (!ap.playing) {
+              ap.pausedAt = time;
+              ap.updateProgress();
+              ap.updateFormattedCurrentTime();
+              ap.updateFormattedTimeLeft();
             } else {
-              this.$refs.audioPlayer.stop();
-              this.$refs.audioPlayer.pausedAt = time;
-              this.$refs.audioPlayer.play();
+              ap.stop();
+              ap.pausedAt = time;
+              ap.play();
             }
             this.movePlayhead();
             this.moveShadowPlayhead();
@@ -4303,16 +4304,25 @@ export default {
         }
       } else if (graphX >= 0) {
         this.currentTime = time;
-        if (!this.$refs.audioPlayer.playing) {
-          this.$refs.audioPlayer.pausedAt = time;
-          this.$refs.audioPlayer.updateProgress();
-          this.$refs.audioPlayer.updateFormattedCurrentTime();
-          this.$refs.audioPlayer.updateFormattedTimeLeft();
+        if (!ap.playing) {
+          ap.pausedAt = time;
+          ap.updateProgress();
+          ap.updateFormattedCurrentTime();
+          ap.updateFormattedTimeLeft();
         } else {
-          this.$refs.audioPlayer.stop();
-          this.$refs.audioPlayer.pausedAt = time;
+          ap.stop();
+          ap.pausedAt = time;
           this.animationStart = time;
-          this.$refs.audioPlayer.play();
+          ap.play();
+          ap.cancelPlayTrajs();
+          if (ap.string) {
+            ap.cancelBursts();
+          }
+          ap.bufferSourceNodes = [];
+          ap.playTrajs(ap.getCurrentTime(), ap.now());
+          if (ap.string) {
+            ap.playChikaris(ap.getCurrentTime(), ap.now(), ap.otherNode)
+          }
         }
         this.movePlayhead();
         this.moveShadowPlayhead();
