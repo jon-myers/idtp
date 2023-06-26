@@ -58,16 +58,21 @@ class Processor extends AudioWorkletProcessor {
     }
 
     append(strChannelData, chikChannelData, fullSize) {
+        // console.log('appending', fullSize, this._bytesWritten)
         if (this.isBufferFull()) {
             this.flush_big();
         }
-
         if (!strChannelData) return
-        if (!chikChannelData) return
+        // if (!chikChannelData) return
+        
 
         for (let i = 0; i < strChannelData.length; i++) {
-            this._stringBuffer[this._bytesWritten] = strChannelData[i];
-            this._chikBuffer[this._bytesWritten++] = chikChannelData[i];
+            // console.log('getting in here?')
+            
+            if (chikChannelData) {
+                this._chikBuffer[this._bytesWritten] = chikChannelData[i];
+            }
+            this._stringBuffer[this._bytesWritten++] = strChannelData[i];
         }
         if (this._bytesWritten >= fullSize) {
             this.flush(fullSize);

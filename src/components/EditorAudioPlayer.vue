@@ -938,7 +938,7 @@ export default {
         const c2 = this.browser.name === 'firefox' && version >= 113;
         const c3 = this.browser.name === 'edge-chromium';
         if (c1 || c2 || c3) {
-          this.setUpKlattNode(klattURL, this.synthGainNode);
+          this.setUpKlattNode(klattURL, this.intSynthGainNode);
           this.klattActive = true
         } else {
           this.initializeVocalNode()
@@ -1367,23 +1367,21 @@ export default {
         this.intChikariGainNode.connect(this.capture, 0, 1)
       }
       this.capture.port.onmessage = e => {
-        
-        
-      const synthArr = new Float32Array(e.data[0]);
-      const sr = this.ac.sampleRate;
-      const synthBuffer = this.ac.createBuffer(1, synthArr.length, sr);
-      synthBuffer.copyToChannel(synthArr, 0);
-      const chikArr = new Float32Array(e.data[1]);
-      const chikBuffer = this.ac.createBuffer(1, chikArr.length, sr);
-      chikBuffer.copyToChannel(chikArr, 0);
-      const offset = this.now() - this.endRecTime;
-      this.synthLoopSource.buffer = synthBuffer;
-      this.synthLoopSource.start(this.now(), offset);
-      this.synthLoopSource.playing = true;
-      this.chikLoopSource.buffer = chikBuffer;
-      this.chikLoopSource.start(this.now(), offset);
-      this.chikLoopSource.playing = true;
-             
+        const synthArr = new Float32Array(e.data[0]);
+        const sr = this.ac.sampleRate;
+        const synthBuffer = this.ac.createBuffer(1, synthArr.length, sr);
+        synthBuffer.copyToChannel(synthArr, 0);
+        const chikArr = new Float32Array(e.data[1]);
+        const chikBuffer = this.ac.createBuffer(1, chikArr.length, sr);
+        chikBuffer.copyToChannel(chikArr, 0);
+        const offset = this.now() - this.endRecTime;
+        this.synthLoopSource.buffer = synthBuffer;
+        this.synthLoopSource.start(this.now(), offset);
+        this.synthLoopSource.playing = true;
+        this.chikLoopSource.buffer = chikBuffer;
+        this.chikLoopSource.start(this.now(), offset);
+        this.chikLoopSource.playing = true;
+              
       }
     },
 
@@ -1521,6 +1519,7 @@ export default {
           this.endRecTime = startRecTime + duration;
           const bufSize = duration * this.ac.sampleRate;
           this.capture.bufferSize.setValueAtTime(bufSize, this.now());
+          // console.log('we here?')
           this.capture.active.setValueAtTime(1, startRecTime);
           this.capture.active.setValueAtTime(0, this.endRecTime);
           const curGain = this.intSynthGainNode.gain.value;
