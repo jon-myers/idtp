@@ -4007,9 +4007,6 @@ export default {
         
       });
       this.addMetricGrid(false);
-    
-      
-
     },
 
     selBoxDragStart(e) {
@@ -4758,6 +4755,7 @@ export default {
 
     getScrollYVal(scrollProp) {
       const scrollYMin = this.zoomY.translateExtent()[0][1];
+      console.log('scrollYMin', scrollYMin)
       const graphHeight = this.rect().height - 30;
       const k = this.ty().k;
       const scrollYExtent = (graphHeight * k - graphHeight) / k;
@@ -4771,7 +4769,9 @@ export default {
       const maxY = this.scrollYHeight - this.getScrollYDraggerHeight();
       if (y > maxY) y = maxY;
       const scrollProp = y / maxY;
+      // console.log(scrollProp)
       const scrollY = this.getScrollYVal(scrollProp);
+      console.log(scrollY)
       this.gy.call(this.zoomY.translateTo, 0, scrollY, [0, 0]);
       this.redraw();
 
@@ -7282,7 +7282,8 @@ export default {
           this.zoomX.scaleBy(this.gx, k, point);    
           this.gx.call(this.zoomX.translateTo, x, 0, [0, 0]);
           this.gy.call(this.zoomY.scaleBy, this.initYScale, point);
-          this.gy.call(this.zoomY.translateTo, 0, this.rect().height, [0, 0])
+          const newY = this.getScrollYVal(0.5)
+          this.gy.call(this.zoomY.translateTo, 0, newY, [0, 0])
         }
       } else {
         // if not, we're zooming on a fixed point
