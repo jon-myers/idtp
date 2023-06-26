@@ -4053,8 +4053,9 @@ export default {
         await this.selectTrajectories(startTime, endTime, lowFreq, highFreq);
         this.groupable = this.selectedTrajsGroupable();
       } else {
+        // console.log('here')
         if (e.y < this.xAxHeight && this.drawingRegion) {
-          if (e < this.regionStartPx) {
+          if (e.x < this.regionStartPx) {
             this.regionEndPx = this.regionStartPx;
             this.regionEndTime = this.xr().invert(this.regionEndPx);
             this.regionStartPx = e.x;
