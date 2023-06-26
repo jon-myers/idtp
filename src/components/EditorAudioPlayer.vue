@@ -1366,8 +1366,6 @@ export default {
         this.intChikariGainNode.connect(this.capture, 0, 1)
       }
       this.capture.port.onmessage = e => {
-        
-        console.log(e)
         const synthArr = new Float32Array(e.data[0]);
         const sr = this.ac.sampleRate;
         const synthBuffer = this.ac.createBuffer(1, synthArr.length, sr);
