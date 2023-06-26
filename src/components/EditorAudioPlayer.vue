@@ -403,7 +403,8 @@ export default {
     'id', 
     'playerHeight', 
     'controlsHeight',
-    'editable'
+    'editable',
+    'windowWidth'
   ],
   components: {
     MeterControls
@@ -2273,7 +2274,7 @@ export default {
   right: 0px;
   bottom: v-bind(playerHeight + 'px');
   background-color: #202621;
-  width: 1000px;
+  width: v-bind(windowWidth+'px');
   height: v-bind(controlsHeight+'px');
   border-bottom: 1px solid black;
   color: white;

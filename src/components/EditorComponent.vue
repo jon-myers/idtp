@@ -101,6 +101,7 @@
   :playerHeight='playerHeight'
   :controlsHeight='controlsHeight'
   :editable='editable'
+  :windowWidth='fullWidth'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -286,6 +287,7 @@ export default {
       contextMenuChoices: [],
       selBoxStartX: undefined,
       selBoxStartY: undefined,
+      fullWidth: 0,
     }
   },
   components: {
@@ -320,6 +322,7 @@ export default {
   async mounted() {
     window.addEventListener('resize', this.resize);
     window.addEventListener('beforeunload', this.beforeUnload);
+    this.fullWidth = window.innerWidth;
     this.emitter.on('mutateTraj', newIdx => {
       if (!this.selectedTraj) {
         console.log('no selected traj')
@@ -3647,6 +3650,7 @@ export default {
       this.redraw();
       this.resetZoom();
       this.oldHeight = window.innerHeight;
+      this.fullWidth = window.innerWidth;
     },
 
     resizeScrollX() {
