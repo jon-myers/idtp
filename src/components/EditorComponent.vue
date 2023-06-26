@@ -3962,7 +3962,7 @@ export default {
       this.gy = this.svg.append('g');
       this.x = d3ScaleLinear()
         .domain([0, this.durTot])
-        .range([this.yAxWidth, rect.width])
+        .range([this.yAxWidth, this.rect().width])
       this.y = d3ScaleLinear()
         .domain([Math.log2(this.freqMax), Math.log2(this.freqMin)])
         .range([this.xAxHeight, rect.height])
@@ -4333,11 +4333,15 @@ export default {
 
     trajIdxFromTime(phrase, time) {
       let phraseTime = time - phrase.startTime;
-      return phrase.trajectories.filter(traj => {
+      const trajs = phrase.trajectories.filter(traj => {
         const a = phraseTime >= traj.startTime;
         const b = phraseTime < traj.startTime + traj.durTot;
         return a && b
-      })[0].num
+      })
+      if (trajs.length === 0) {
+        console.log(trajs, phrase, time)
+      }
+      return trajs[0].num
     },
 
     magnetize(time) {
@@ -4755,7 +4759,6 @@ export default {
 
     getScrollYVal(scrollProp) {
       const scrollYMin = this.zoomY.translateExtent()[0][1];
-      console.log('scrollYMin', scrollYMin)
       const graphHeight = this.rect().height - 30;
       const k = this.ty().k;
       const scrollYExtent = (graphHeight * k - graphHeight) / k;
@@ -4771,7 +4774,6 @@ export default {
       const scrollProp = y / maxY;
       // console.log(scrollProp)
       const scrollY = this.getScrollYVal(scrollProp);
-      console.log(scrollY)
       this.gy.call(this.zoomY.translateTo, 0, scrollY, [0, 0]);
       this.redraw();
 
@@ -5506,6 +5508,7 @@ export default {
         const timeOffset = this.xr().invert(pxlOffset) - this.xr().invert(0);
         const leftTime = phraseStart + traj.startTime - timeOffset;
         let leftTraj, halfLeftTraj, leftPhrase, halfLeftPhrase, halfLeftTime;
+
         if (leftTime >= 0) {
           const leftPhraseIdx = this.phraseIdxFromTime(leftTime, true);
           leftPhrase = this.piece.phrases[leftPhraseIdx];
@@ -5514,8 +5517,8 @@ export default {
           halfLeftTime = phraseStart + traj.startTime - timeOffset / 2;
           const halfLeftPhraseIdx = this.phraseIdxFromTime(halfLeftTime, true);
           halfLeftPhrase = this.piece.phrases[halfLeftPhraseIdx];
-          const halfLeftTrajIdx = this.trajIdxFromTime(halfLeftPhrase, halfLeftTime);
-          halfLeftTraj = halfLeftPhrase.trajectories[halfLeftTrajIdx]; 
+          // const halfLeftTrajIdx = this.trajIdxFromTime(halfLeftPhrase, halfLeftTime);
+          // halfLeftTraj = halfLeftPhrase.trajectories[halfLeftTrajIdx]; 
         }
              
         let trajProp = timeOffset / traj.durTot;
@@ -6961,23 +6964,26 @@ export default {
         .call(this.yAxis, this.yr());
 
       if (this.init) {
-        this.movePhrases();
-        this.init = false;
-        this.codifiedXScale = this.tx().k;
-        this.codifiedYScale = this.ty().k;
-        this.codifiedYOffset = this.yr().invert(0);
-        this.codifiedXOffset = this.xr().invert(0);
-        this.codifiedXR = this.xr();
-        this.codifiedYR = this.yr();
-        this.visibleSargam.forEach((s, i) => {
-          d3Select(`.s${i}`)
-            .transition()
-            .duration(this.transitionTime)
-            .ease(d3EaseQuadInOut)
-            .attr('d', this.sargamLine(Math.log2(s)))
-        });
-        this.updatePhraseDivs();
-        this.codifiedAddSargamLabels();
+        this.$nextTick(() => {
+          this.movePhrases();
+          this.init = false;
+          this.codifiedXScale = this.tx().k;
+          this.codifiedYScale = this.ty().k;
+          this.codifiedYOffset = this.yr().invert(0);
+          this.codifiedXOffset = this.xr().invert(0);
+          this.codifiedXR = this.xr();
+          this.codifiedYR = this.yr();
+          this.visibleSargam.forEach((s, i) => {
+            d3Select(`.s${i}`)
+              .transition()
+              .duration(this.transitionTime)
+              .ease(d3EaseQuadInOut)
+              .attr('d', this.sargamLine(Math.log2(s)))
+          });
+          this.updatePhraseDivs();
+          this.codifiedAddSargamLabels();
+        })
+        
       } else {
         this.slidePhrases(
           this.xr()(this.codifiedXOffset),
@@ -7151,7 +7157,7 @@ export default {
             if (this.vocal) {
               this.moveStartingConsonant(traj, phrase.startTime);
               this.moveEndingConsonant(traj, phrase.startTime);
-              this.moveVowel(traj, phrase.startTime);
+              this.moveVowel(traj, phrase.startTime, false);
               this.moveConsonantSymbols(traj, phrase.startTime);
             } 
           }
@@ -7282,8 +7288,7 @@ export default {
           this.zoomX.scaleBy(this.gx, k, point);    
           this.gx.call(this.zoomX.translateTo, x, 0, [0, 0]);
           this.gy.call(this.zoomY.scaleBy, this.initYScale, point);
-          const newY = this.getScrollYVal(0.5)
-          this.gy.call(this.zoomY.translateTo, 0, newY, [0, 0])
+          this.gy.call(this.zoomY.translateTo, 0, this.rect().height, [0, 0])
         }
       } else {
         // if not, we're zooming on a fixed point
