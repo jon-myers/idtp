@@ -748,7 +748,8 @@ export default {
         'Surbahar', 
         'Veena (Saraswati)',
         'Veena (Vichitra)',
-        'Veena, Rudra (Bin)'
+        'Veena, Rudra (Bin)',
+        'Sarangi'
       ];
       const vocInsts = ['Vocal (M)', 'Vocal (F)'];
       this.string = stringInsts.includes(instrumentation);
