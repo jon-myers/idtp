@@ -164,7 +164,8 @@ const runServer = async () => {
           name: 1,
           family_name: 1,
           given_name: 1,
-          audioID: 1
+          audioID: 1,
+          instrumentation: 1
         }
         const query = {
           '$or': [

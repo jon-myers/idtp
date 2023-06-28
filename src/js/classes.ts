@@ -1271,6 +1271,7 @@ class Group {
     trajectories?: Trajectory[],
     id?: string,
   } = {}) {
+    console.log('NEW GROUP')
     this.trajectories = trajectories;
 
     this.trajectories.sort((a, b) => {
@@ -1291,7 +1292,8 @@ class Group {
     }
     this.id = id;
     this.trajectories.forEach(traj => {
-      traj.groupId = this.id
+      traj.groupId = this.id;
+      console.log('is it this somehow?')
     })
   }
 
@@ -2031,7 +2033,6 @@ class Piece {
     }
     const trajs = lastPhrase.trajectories;
     const lastTraj: Trajectory = trajs[trajs.length - 1];
-    console.log(lastPhrase)
     if (lastTraj.id !== 12) {
       throw new Error('lastTraj is not silent')
     } else {

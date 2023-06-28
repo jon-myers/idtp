@@ -494,6 +494,7 @@ export default {
 
     toggleGroup() {
       if (this.grouped) {
+        console.log('getting toggled')
         this.$parent.groupSelectedTrajs()
       } else {
         this.$parent.ungroupSelectedTrajs()

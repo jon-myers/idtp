@@ -297,6 +297,7 @@ export default {
       try {
         this.passedInData = JSON.parse(this.dataObj);
         this.title = this.passedInData.title;
+        this.instrumentation = this.passedInData.instrumentation;
         this.aeIdx = this.allEvents.findIndex(ae => {
           return ae.name === this.passedInData.audioEvent
         });
@@ -336,6 +337,7 @@ export default {
           audioID: ae.recordings[this.recording].audioFileId,
           clone: true,
           origID: this.passedInData.origID,
+          instrumentation: this.instrumentation
         };
         this.emitter.emit('newPieceInfo', newPieceInfo);
         

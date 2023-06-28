@@ -87,82 +87,40 @@ class Processor extends AudioWorkletProcessor {
 }
 
 registerProcessor('chikaris', Processor);
-
-// const delay0 = new Float32Array(2048);
-// const delay1 = new Float32Array(2048);
-// const delay2 = new Float32Array(2048);
-// const delay3 = new Float32Array(2048);
-
 const delay0 = Array(2048).fill(0);
 const delay1 = Array(2048).fill(0);
-// const delay2 = Array(2048).fill(0);
-// const delay3 = Array(2048).fill(0);
 
 let readPtr0 = 0, readPtr1 = 0
-// , readPtr2 = 0, readPtr3 = 0;
 let writePtr0 = 0, writePtr1 = 0
-// , writePtr2 = 0, writePtr3 = 0;
 
-// const initDelay1 = new Float32Array(2048);
-// const initDelay2 = new Float32Array(2048);
-// const initDelay3 = new Float32Array(2048);
 
 const initDelay1 = Array(2048).fill(0);
-// const initDelay2 = Array(2048).fill(0);
-// const initDelay3 = Array(2048).fill(0);
 
 const del = 2 ** -8;
 const initDelDur1 = del; // must be less than 0.0464
-// const initDelDur2 = 2 * del // must be less than 0.0464
-// const initDelDur3 = 3 * del; // must be less than 0.0464
-// eslint-disable-next-line no-undef
 let initWritePtr1 = (initDelDur1 * sampleRate) & 2047;
-// eslint-disable-next-line no-undef
-// let initWritePtr2 = (initDelDur2 * sampleRate) & 2047;
-// eslint-disable-next-line no-undef
-// let initWritePtr3 = (initDelDur3 * sampleRate) & 2047;
 let initReadPtr1 = 0
-// , initReadPtr2 = 0, initReadPtr3 = 0;
 
 
 function setDelayTime(time0, time1) {
-    // eslint-disable-next-line no-undef
     writePtr0 = (readPtr0 + time0 * sampleRate) & 2047;
-    // eslint-disable-next-line no-undef
     writePtr1 = (readPtr1 + time1 * sampleRate) & 2047;
-    // eslint-disable-next-line no-undef
-    // writePtr2 = (readPtr2 + time2 * sampleRate) & 2047;
-    // // eslint-disable-next-line no-undef
-    // writePtr3 = (readPtr3 + time3 * sampleRate) & 2047;
 }
 
 function delayInput(x0, x1) {
     delay0[writePtr0] = x0;
     delay1[writePtr1] = x1;
-    // delay2[writePtr2] = x2;
-    // delay3[writePtr3] = x3;
+
     readPtr0 = (readPtr0 + 1) & 2047;
     writePtr0 = (writePtr0 + 1) & 2047;
     readPtr1 = (readPtr1 + 1) & 2047;
     writePtr1 = (writePtr1 + 1) & 2047;
-    // readPtr2 = (readPtr2 + 1) & 2047;
-    // writePtr2 = (writePtr2 + 1) & 2047;
-    // readPtr3 = (readPtr3 + 1) & 2047;
-    // writePtr3 = (writePtr3 + 1) & 2047;
 }
 
 function initDelayInput(x) {
   initDelay1[initWritePtr1] = x;
   initReadPtr1 = (initReadPtr1 + 1) & 2047;
   initWritePtr1 = (initWritePtr1 + 1) & 2047;
-  
-//   initDelay2[initWritePtr2] = x;
-//   initReadPtr2 = (initReadPtr2 + 1) & 2047;
-//   initWritePtr2 = (initWritePtr2 + 1) & 2047;
-  
-//   initDelay3[initWritePtr3] = x;
-//   initReadPtr3 = (initReadPtr3 + 1) & 2047;
-//   initWritePtr3 = (initWritePtr3 + 1) & 2047;
 }
 
 function delayOutput(i) {

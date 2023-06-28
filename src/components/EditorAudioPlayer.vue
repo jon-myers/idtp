@@ -147,7 +147,7 @@
           :disabled='playing || !shiftOn || !readyToShift'
           />
       </div>
-      <div class='cbBoxSmall'>
+      <div class='cbBoxSmall' v-if='this.$parent.audioDBDoc'>
         <label>Region Speed <br>({{ (2 ** regionSpeed).toFixed(2) }})</label>
         <input 
           type='checkbox' 
@@ -402,11 +402,13 @@ export default {
     'id', 
     'playerHeight', 
     'controlsHeight',
-    'editable'
+    'editable',
+    'windowWidth'
   ],
   components: {
     MeterControls
   },
+
   async mounted() {
     this.ac = new AudioContext({ sampleRate: 48000 });
     this.gainNode = this.ac.createGain();
@@ -538,6 +540,38 @@ export default {
     }
   },
   methods: {
+
+    reinitializeAC() {
+      if (this.ac) this.ac.close();
+      this.ac = new AudioContext({ sampleRate: 48000 });
+      this.gainNode = this.ac.createGain();
+      this.gainNode.gain.setValueAtTime(Number(this.recGain), this.now());
+      this.synthGainNode = this.ac.createGain();
+      this.synthGainNode.gain.setValueAtTime(Number(this.synthGain), this.now());
+      this.intSynthGainNode = this.ac.createGain();
+      this.intSynthGainNode.connect(this.synthGainNode);
+      this.chikariGainNode = this.ac.createGain();
+      this.chikariGainNode.connect(this.ac.destination);
+      this.chikariGainNode.gain.setValueAtTime(this.chikariGain, this.now());
+      this.synthGainNode.connect(this.ac.destination);
+      this.moduleCt = 0;
+      this.browser = detect();
+      const mac = this.browser.os === 'Mac OS';
+      const safari = this.browser.name === 'safari';
+      const firefox = this.browser.name === 'firefox';
+      if (mac && (!safari) && (!firefox)) {
+        this.transposable = true;
+      }
+      this.gainNode.connect(this.ac.destination);
+      
+      if (this.$parent.audioDBDoc && this.$parent.piece) this.gatherInfo();
+      this.synthLoopBufSourceNode = this.ac.createBufferSource();
+      this.synthLoopBufSourceNode.loop = true; 
+      this.inited = false;
+      this.parentLoaded();
+      // this.initAll();
+
+    },
 
     onSoundTouchInit() {
       console.log('soundtouch initialized')
@@ -713,7 +747,8 @@ export default {
         'Surbahar', 
         'Veena (Saraswati)',
         'Veena (Vichitra)',
-        'Veena, Rudra (Bin)'
+        'Veena, Rudra (Bin)',
+        'Sarangi'
       ];
       const vocInsts = ['Vocal (M)', 'Vocal (F)'];
       this.string = stringInsts.includes(instrumentation);
@@ -903,7 +938,7 @@ export default {
         const c2 = this.browser.name === 'firefox' && version >= 113;
         const c3 = this.browser.name === 'edge-chromium';
         if (c1 || c2 || c3) {
-          this.setUpKlattNode(klattURL, this.synthGainNode);
+          this.setUpKlattNode(klattURL, this.intSynthGainNode);
           this.klattActive = true
         } else {
           this.initializeVocalNode()
@@ -953,7 +988,7 @@ export default {
       const roles = ['Soloist', 'Percussionist', 'Accompanist', 'Drone'];
       return roles.indexOf(musician.role);
     },
-    playChikaris(curPlayTime, now) {
+    playChikaris(curPlayTime, now, otherNode) {
       const gain = this.intChikariGainNode.gain;
       gain.setValueAtTime(0, now);
       gain.linearRampToValueAtTime(1, now + this.slowRamp);
@@ -961,7 +996,7 @@ export default {
         Object.keys(phrase.chikaris).forEach((key) => {
           const time = now + phrase.startTime + Number(key) - curPlayTime;
           if (time >= this.now()) {
-            this.sendNoiseBurst(time, 0.01, this.otherNode, 0.025, 0.2);
+            this.sendNoiseBurst(time, 0.01, otherNode, 0.025, 0.2);
           }
         });
       });
@@ -1106,6 +1141,7 @@ export default {
       }
       const bufferSourceNode = this.ac.createBufferSource();
       this.bufferSourceNodes.push(bufferSourceNode);
+      // console.log(where)
       bufferSourceNode.connect(where);
       bufferSourceNode.buffer = noiseBuffer;
       bufferSourceNode.start(when);
@@ -1235,12 +1271,21 @@ export default {
         this.firstLPEnvelope[i] = transp * traj.compute(x) * 2 ** 3;
       }
     },
-    initializeChikariNodes() {
+    async initializeChikariNodes() {
       if (this.intChikariGainNode) this.intChikariGainNode.disconnect();
       this.intChikariGainNode = this.ac.createGain();
       if (this.chikariNodes) this.chikariNodes.forEach((cn) => cn.disconnect());
       const options = { numberOfInputs: 1, numberOfOutputs: 2 };
-      this.otherNode = new AudioWorkletNode(this.ac, 'chikaris', options);
+      try {
+        this.otherNode = await new AudioWorkletNode(this.ac, 'chikaris', options);
+      } catch (e) {
+        console.log(e);
+        this.ac.audioWorklet.addModule(AudioWorklet(cURL))
+          .then(() => {
+            this.otherNode = new AudioWorkletNode(this.ac, 'chikaris', options);
+          });
+      }
+      
       this.otherNode.freq0 = this.otherNode.parameters.get('freq0');
       this.otherNode.freq1 = this.otherNode.parameters.get('freq1');
       this.otherNode.cutoff = this.otherNode.parameters.get('Cutoff');
@@ -1260,7 +1305,11 @@ export default {
       this.otherNode.freq1.setValueAtTime(freqs[1] * transp, this.now());
     },
     initializePluckNode() {
-      if (this.pluckNode) this.pluckNode.disconnect();
+      if (this.pluckNode) {
+        this.pluckNode.disconnect();
+        this.pluckNode.port.close();
+        this.pluckNode = null;
+      }
       if (this.lowPassNode) this.lowPassNode.disconnect();
       this.pluckNode = new AudioWorkletNode(this.ac, 'karplusStrong');
       this.pluckDCOffsetNode = this.ac.createBiquadFilter();
@@ -1318,25 +1367,30 @@ export default {
         this.intChikariGainNode.connect(this.capture, 0, 1)
       }
       this.capture.port.onmessage = e => {
-        
-        
-      const synthArr = new Float32Array(e.data[0]);
-      const sr = this.ac.sampleRate;
-      const synthBuffer = this.ac.createBuffer(1, synthArr.length, sr);
-      synthBuffer.copyToChannel(synthArr, 0);
-      const chikArr = new Float32Array(e.data[1]);
-      const chikBuffer = this.ac.createBuffer(1, chikArr.length, sr);
-      chikBuffer.copyToChannel(chikArr, 0);
-      const offset = this.now() - this.endRecTime;
-      this.synthLoopSource.buffer = synthBuffer;
-      this.synthLoopSource.start(this.now(), offset);
-      this.synthLoopSource.playing = true;
-      this.chikLoopSource.buffer = chikBuffer;
-      this.chikLoopSource.start(this.now(), offset);
-      this.chikLoopSource.playing = true;
-             
+        const synthArr = new Float32Array(e.data[0]);
+        const sr = this.ac.sampleRate;
+        const synthBuffer = this.ac.createBuffer(1, synthArr.length, sr);
+        synthBuffer.copyToChannel(synthArr, 0);
+        const chikArr = new Float32Array(e.data[1]);
+        const chikBuffer = this.ac.createBuffer(1, chikArr.length, sr);
+        chikBuffer.copyToChannel(chikArr, 0);
+        const offset = this.now() - this.endRecTime;
+        this.synthLoopSource.buffer = synthBuffer;
+        this.synthLoopSource.start(this.now(), offset);
+        this.synthLoopSource.playing = true;
+        this.chikLoopSource.buffer = chikBuffer;
+        this.chikLoopSource.start(this.now(), offset);
+        this.chikLoopSource.playing = true;
+              
       }
     },
+
+    resetPluckNode() {
+      this.pluckNode.port.postMessage('kill');
+      this.initializePluckNode();
+    },
+
+
     async getAudio(filepath, verbose) {
       try {
         const start = await performance.now();
@@ -1398,6 +1452,10 @@ export default {
       this.sourceNode.connect(this.gainNode);
       this.sourceNode.buffer = this.stretchedBuffer;
       this.sourceNode.loop = this.loop;
+      // const realDur = this.$parent.regionEndTime - this.$parent.regionStartTime;
+      // const scaledDur = realDur / (2 ** Number(this.regionSpeed));
+      // const bufDur = this.stretchedBuffer.duration;
+      // this.sourceNode.playbackRate.setValueAtTime(bufDur / scaledDur, this.now());
       this.sourceNode.start(this.now(), scaledOffset);
       this.sourceNode.addEventListener('ended', () => {
         this.pauseStretched(this.playing); // this is a fancy way of saying that 
@@ -1461,6 +1519,7 @@ export default {
           this.endRecTime = startRecTime + duration;
           const bufSize = duration * this.ac.sampleRate;
           this.capture.bufferSize.setValueAtTime(bufSize, this.now());
+          // console.log('we here?')
           this.capture.active.setValueAtTime(1, startRecTime);
           this.capture.active.setValueAtTime(0, this.endRecTime);
           const curGain = this.intSynthGainNode.gain.value;
@@ -1562,8 +1621,12 @@ export default {
       if (this.pausedAt) {
         out = this.pausedAt;
       } else if (this.playing) {
+        const ed = this.$parent;
+        const realDur = ed.regionEndTime - ed.regionStartTime;
+        const bufDur = this.stretchedBuffer.duration;
+        const realStretchedSpeed = Math.log2(realDur / bufDur)
         const elapsed = this.now() - this.startedAt;
-        let scaledElapsed = (2 ** this.regionSpeed) * elapsed;
+        let scaledElapsed = (2 ** realStretchedSpeed) * elapsed;
         if (this.loop) {
           const tot = this.$parent.regionEndTime - this.$parent.regionStartTime;
           scaledElapsed = scaledElapsed % tot;
@@ -1633,7 +1696,7 @@ export default {
           this.startPlayCursorAnimation();
           this.playTrajs(this.getCurrentTime(), this.now());
           if (this.string) {
-            this.playChikaris(this.getCurrentTime(), this.now());
+            this.playChikaris(this.getCurrentTime(), this.now(), this.otherNode);
           }
           
         } else {
@@ -2210,7 +2273,7 @@ export default {
   right: 0px;
   bottom: v-bind(playerHeight + 'px');
   background-color: #202621;
-  width: 1000px;
+  width: v-bind(windowWidth+'px');
   height: v-bind(controlsHeight+'px');
   border-bottom: 1px solid black;
   color: white;
