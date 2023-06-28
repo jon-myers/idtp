@@ -4,7 +4,7 @@ import { AxiosProgressEvent } from 'axios';
 import fetch from 'cross-fetch';
 import { Piece } from './classes.ts';
 
-const getPiece = async (id: string) => {
+const getPiece = async (id: string): Promise<Piece> => {
   let piece;
   const request = {
     method: "POST",
@@ -15,16 +15,14 @@ const getPiece = async (id: string) => {
       _id: id
     })
   };
-
-  await fetch(url + 'getOneTranscription', request)
-    .then(response => {
-      if (response.ok) {
-        return response.json()
-      }
-    }).then(data => {
-      piece = data;
-      if (!piece) throw 'no piece'
-    }).catch(err => console.error(err))
+  try {
+    const response = await fetch(url + 'getOneTranscription', request);
+    if (response.ok) {
+      piece = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
   return piece
 }
 
@@ -119,7 +117,11 @@ const savePiece = async (piece: Piece) => {
   }
 };
 
-const getAllPieces = async (userID: string, sortKey: string, sortDir: string): Promise<Piece[]> => {
+const getAllPieces = async (
+    userID: string, 
+    sortKey: string, 
+    sortDir: string
+  ): Promise<Piece[]> => {
   if (sortKey === undefined) {
     sortKey = 'title'
   }
@@ -138,16 +140,14 @@ const getAllPieces = async (userID: string, sortKey: string, sortDir: string): P
     sortKey: JSON.stringify(sortKey),
     sortDir: JSON.stringify(sortDir)
   });
-  await fetch(url + 'getAllTranscriptions' + query, request)
-    .then(response => {
-      if (response.ok) {
-        return response.json();
-      }
-    }).then(data => {
-      if (data) {
-        allPieces = data
-      }
-    }).catch(err => console.error(err));
+  try {
+    const response = await fetch(url + 'getAllTranscriptions' + query, request);
+    if (response.ok) {
+      allPieces = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
   return allPieces
 };
 

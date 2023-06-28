@@ -122,7 +122,7 @@ const instantiatePiece = async (queryId = testQueryId)=> {
       });
       const artKeys = Object.keys(traj.articulations);
       const artEntries = artKeys.map(key => traj.articulations[key]);
-      const artObj = {};
+      const artObj: { [key: string]: Articulation } = {};
       artKeys.forEach((key, i) => {
         artObj[key] = new Articulation(artEntries[i]);
       });
@@ -141,11 +141,16 @@ const instantiatePiece = async (queryId = testQueryId)=> {
       phrase.trajectoryGrid[0] = pt.map(traj => new Trajectory(traj))
     } else {
       phrase.trajectories = pt.map(traj => new Trajectory(traj));
+      // I think thes shoudn't really exist anymore, but I guess I should go 
+      // through all pieces and make sure they're all the new format.
     }
     if (phrase.groupsGrid !== undefined) {
       phrase.groupsGrid.forEach(groups => {
         groups.forEach((group)=> {
           group.trajectories.forEach((traj, idx) => {
+            if (traj.num === undefined) {
+              throw new Error('traj.num is undefined');
+            }
             const tIdx = traj.num;
             const realTraj = phrase.trajectoryGrid[0][tIdx];
             group.trajectories[idx] = realTraj;
@@ -155,7 +160,7 @@ const instantiatePiece = async (queryId = testQueryId)=> {
     }
     const chikariKeys = Object.keys(phrase.chikaris);
     const chikariEntries = chikariKeys.map(key => phrase.chikaris[key]);
-    const chikariObj = {};
+    const chikariObj: { [key: string]: Chikari } = {};
     chikariKeys.forEach((key, i) => {
       chikariObj[key] = new Chikari(chikariEntries[i]);
     });
@@ -309,16 +314,20 @@ class PitchCounter {
   }
 }
 
-const phraseRange = piece => {
+const phraseRange = (piece: Piece) => {
   return piece.phrases.map(phrase => phrase.getRange())
 }
 
-const PitchTimes = (trajs, { outputType = 'pitchNumber' } = {}) => { // outputs pitches as pitchNumbers
+const PitchTimes = (trajs: Trajectory[], { outputType = 'pitchNumber' } = {}) => { // outputs pitches as pitchNumbers
   // returns a list of all pitches in trajs, and the cumulative times at which 
   // they begin, calculated based on summing durtot as we go.
   // silences are included: instead of pitch, just the string 'silence'.
   // outputType can be 'pitchNumber', 'chroma', 'scaleDegree', or 'sargamLetter'
-  let pitchTimes = [];
+  let pitchTimes: { 
+    time: number, 
+    pitch: string | number, 
+    articulation: boolean 
+  }[] = [];
   let startTime = 0;
   trajs.forEach((traj, tIdx) => {
     const art = traj.articulations[0] || traj.articulations['0.00'];
@@ -335,6 +344,9 @@ const PitchTimes = (trajs, { outputType = 'pitchNumber' } = {}) => { // outputs 
         };
         pitchTimes.push(obj);
         if (pIdx < traj.pitches.length - 1) {
+          if (traj.durArray === undefined) {
+            throw new Error('traj.durArray is undefined')
+          }
           startTime += traj.durArray[pIdx] * traj.durTot;
         }
       })
@@ -361,13 +373,18 @@ const PitchTimes = (trajs, { outputType = 'pitchNumber' } = {}) => { // outputs 
   })
   if (outputType === 'chroma') {
     pitchTimes.forEach(pt => {
-      if (pt.pitch !== 'silence') pt.pitch = pitchNumberToChroma(pt.pitch)
+      if (pt.pitch !== 'silence') {
+        if (typeof pt.pitch !== 'number') {
+          throw new Error('pitch is not a number')
+        }
+        pt.pitch = pitchNumberToChroma(pt.pitch)
+      }
     })
   }
   return pitchTimes
 }
 
-const durationsOfPitchOnsets = (trajs, { 
+const durationsOfPitchOnsets = (trajs: Trajectory[], { 
   outputType = 'pitchNumber', // pitchNumber, chroma, scaleDegree, sargamLetter
   countType = 'cumulative',
   excludeSilence = true,
@@ -376,8 +393,12 @@ const durationsOfPitchOnsets = (trajs, {
   let pitchTimes = PitchTimes(trajs);
   if (outputType === 'chroma') {
     pitchTimes.forEach(pt => {
-      if (pt.pitch !== 'silence') pt.pitch = pitchNumberToChroma(pt.pitch)
-      
+      if (pt.pitch !== 'silence') {
+        if (typeof pt.pitch !== 'number') {
+          throw new Error('pitch is not a number')
+        }
+        pt.pitch = pitchNumberToChroma(pt.pitch)
+      }
     })
   }
   // remove latter of adjacent items where pitch is equal
@@ -388,7 +409,7 @@ const durationsOfPitchOnsets = (trajs, {
       return obj.pitch !== pitchTimes[idx-1].pitch;
     }
   })
-  const durations = [];
+  const durations: { dur: number, pitch: string | number }[] = [];
   const endTime = trajs.reduce((sum, traj) => sum + traj.durTot, 0);
   const ends = pitchTimes.map(obj => obj.time).slice(1).concat([endTime]);
   pitchTimes.forEach((obj, idx) => {
@@ -396,7 +417,7 @@ const durationsOfPitchOnsets = (trajs, {
     durations.push(newObj);
   })
   // if dur of silence is less than maxSilence, add it to the previous pitch
-  let condensedDurations = [];
+  let condensedDurations: { dur: number, pitch: string | number }[] = [];
   durations.forEach((obj, idx) => {
     if (obj.pitch === 'silence') {
       if (idx === 0) {
@@ -415,7 +436,7 @@ const durationsOfPitchOnsets = (trajs, {
 
   // pitchDurations is an object whose keys are the pitches, and whose values 
   // are the summed durations
-  const pitchDurations = {};
+  const pitchDurations: { [key: string | number]: number } = {};
   condensedDurations.forEach(obj => {
     if (pitchDurations[obj.pitch]) {
       pitchDurations[obj.pitch] += obj.dur;
@@ -438,16 +459,24 @@ const durationsOfPitchOnsets = (trajs, {
   }
 }
 
-const segmentByDuration = (piece, { 
+const segmentByDuration = (piece: Piece, { 
   // options for type are 'left', 'right', and 'rounded' indicating which 
   // direction border trajs get pushed.
   duration = 10,
   type = 'rounded',
-  inst = '0',
+  inst = 0,
   removeEmpty = true 
+}: {
+  duration?: number,
+  type?: 'left' | 'right' | 'rounded',
+  inst?: number,
+  removeEmpty?: boolean
 } = {}) => {
+  if (piece.durTot === undefined) {
+    throw new Error('piece.durTot is undefined')
+  } 
   const numSegments = Math.ceil(piece.durTot / duration);
-  let segments = [...Array(numSegments)].map(() => []);
+  let segments: Trajectory[][] = [...Array(numSegments)].map(() => []);
   const trajs = piece.allTrajectories(inst);
   const trajDurs = trajs.map(traj => traj.durTot);
   const starts = getStarts(trajDurs);
@@ -461,7 +490,7 @@ const segmentByDuration = (piece, {
       segmentIdx = Math.floor(start / duration);
     } else if (type === 'right') {
       segmentIdx = Math.floor(end / duration);
-    } else if (type === 'rounded') {
+    } else { // (type === 'rounded')
       const center = (start + end) / 2;
       segmentIdx = Math.floor(center / duration);
     }
@@ -478,7 +507,7 @@ const segmentByDuration = (piece, {
   return segments
 }
 
-const patternCounter = (trajs, { 
+const patternCounter = (trajs: Trajectory[], { 
   size = 2, 
   maxLagTime = 3,
   sort = true,
@@ -515,7 +544,7 @@ const patternCounter = (trajs, {
 
 
   // if dur of silence is less than maxLagTime, add it to the previous pitch
-  let condensedDurations = [];
+  let condensedDurations: { dur: number, pitch: string | number }[] = [];
   durations.forEach((obj, idx) => {
     if (obj.pitch === 'silence') {
       if (idx === 0) {
@@ -531,8 +560,8 @@ const patternCounter = (trajs, {
       condensedDurations.push(obj );
     }
   });
-  const patterns = {};
-  let subPattern = [];
+  const patterns: { [key: number | string]: number | {} } = {};
+  let subPattern: (string | number)[] = [];
   condensedDurations.forEach(obj => {
     if (obj.pitch === 'silence') {
       subPattern = [];
@@ -547,7 +576,6 @@ const patternCounter = (trajs, {
           sel[pitch] = pIdx === arr.length - 1 ? 0 : {};
         }
         if (pIdx === arr.length - 1) {
-          // console.log(sel)
           sel[pitch] += 1
         }
         sel = sel[pitch];
@@ -580,11 +608,11 @@ const patternCounter = (trajs, {
   // return patterns
 }
 
-const argSort = arr => {
+const argSort = (arr: number[]) => {
   const indices = [...arr.keys()].sort((a, b) => arr[a] - arr[b]);
   return indices
 }
-const chromaSeqToCondensedPitchNums = (chromaSeq) => {
+const chromaSeqToCondensedPitchNums = (chromaSeq: number[]) => {
   // given an array of chroma pitches, (potentially) shift some of them up or
   // down by an octave such that the max difference between any two elements is
   // minimized

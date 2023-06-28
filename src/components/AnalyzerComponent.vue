@@ -166,8 +166,8 @@
   </div>
 </template>
 
-<script>
-  const linSpace = (startValue, stopValue, cardinality) => {
+<script lang='ts'>
+  const linSpace = (startValue: number, stopValue: number, cardinality: number) => {
     var arr = [];
     var step = (stopValue - startValue) / (cardinality - 1);
     for (var i = 0; i < cardinality; i++) {
@@ -182,21 +182,23 @@
     durationsOfPitchOnsets,
     patternCounter,
     chromaSeqToCondensedPitchNums
-  } from '@/js/analysis.mjs';
+  } from '@/js/analysis.ts';
   import { 
     durationsOfFixedPitches, 
     Pitch, 
     pitchNumberToChroma,
-    Trajectory
+    Trajectory,
+    Piece
   } from '@/js/classes.ts';
   import { pieceExists } from '@/js/serverCalls.ts';
   import Gradient from 'javascript-color-gradient';
   import * as d3 from 'd3';
+import { defineComponent } from 'vue';
 
-  const displayTime = dur => {
+  const displayTime = (dur: number) => {
     const hours = Math.floor(dur / 3600);
-    let minutes = Math.floor((dur - hours * 3600) / 60);
-    let seconds = Math.round(dur % 60);
+    let minutes: number | string = Math.floor((dur - hours * 3600) / 60);
+    let seconds: number | string = Math.round(dur % 60);
     if (seconds.toString().length === 1) seconds = '0' + seconds;
     if (hours !== 0) {
       if (minutes.toString().length === 1) minutes = '0' + minutes;
@@ -206,14 +208,17 @@
     }
   }
 
-  function shouldTextBeBlack (backgroundcolor) {
+  function shouldTextBeBlack (backgroundcolor: string) {
     return computeLuminence(backgroundcolor) > 0.179;
   }
 
-  function computeLuminence(backgroundcolor) {
+  function computeLuminence(backgroundcolor: string) {
       var colors = hexToRgb(backgroundcolor);
+      if (!colors) {
+        throw new Error('Invalid color: ' + backgroundcolor);
+      }
       
-      var components = ['r', 'g', 'b'];
+      var components: ('r' | 'g' | 'b')[] = ['r', 'g', 'b'];
       for (var i in components) {
           var c = components[i];
           
@@ -231,7 +236,7 @@
       return luminence;
   }
 
-  function hexToRgb(hex) {
+  function hexToRgb(hex: string) {
       var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
       return result ? {
           r: parseInt(result[1], 16),
@@ -240,8 +245,41 @@
       } : null;
   }
 
-  export default {
-    data() {
+  type AnalyzerComponentDataType = {
+    piece?: Piece,
+    analysisTypes: string[],
+    selectedATIdx: number,
+    pitchPrevalenceTypes: string[],
+    patternCountTypes: string[],
+    pitchRepresentationTypes: string[],
+    segmentationType: string,
+    pitchRepresentation: string,
+    duration: number,
+    pitchChroma: boolean,
+    condensed: boolean,
+    heatmap: boolean,
+    fadeTime: number,
+    controlsHeight: number,
+    typeRowHeight: number,
+    graphHeight: number,
+    targetPitchChoices: (string | number)[],
+    targetPitchIdx: number,
+    pitchTypes: string[],
+    pitchType: string,
+    patternSizes: number[],
+    selectedPatternSizes: boolean[],
+    controlBoxWidth: number,
+    minPatternSize: boolean,
+    minPatternSizeValue: number,
+    targetPitchBool: boolean,
+    plot: boolean,
+    graphRowHeight?: number,
+    svg?: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>,
+
+  }
+
+  export default defineComponent({
+    data(): AnalyzerComponentDataType {
       return {
         piece: undefined,
         analysisTypes: ['Pitch Prevalence', 'Pitch Patterns'],
@@ -279,12 +317,17 @@
         minPatternSize: false,
         minPatternSizeValue: 1,
         targetPitchBool: true,
-        plot: false
+        plot: false,
+        graphRowHeight: undefined,
+        svg: undefined
       }
     },
 
     watch: {
       pitchType(newVal) {
+        if (this.piece === undefined) {
+          throw new Error('Piece is undefined');
+        }
         const raga = this.piece.raga;
         if (newVal === 'Pitch Number') {
           if (this.pitchChroma) {
@@ -322,6 +365,9 @@
     methods: {
 
       updateChroma() {
+        if (this.piece === undefined) {
+          throw new Error('Piece is undefined');
+        }
         const raga = this.piece.raga;
         if (this.pitchType === 'Pitch Number') {
           if (this.pitchChroma) {
@@ -354,9 +400,9 @@
         }
       },
 
-      handleClickAnalysisType(atIdx) {
+      handleClickAnalysisType(atIdx: number) {
         this.selectedATIdx = atIdx;
-        if (this.svg) {
+        if (this.svg !== undefined) {
           this.topSvg.selectAll('*').remove();
           this.topSvg.remove();
           this.topSvg = undefined;
@@ -1078,7 +1124,7 @@
         console.log(err);
       }
     }
-  }
+  })
 </script>
 
 <style lang="css" scoped>
