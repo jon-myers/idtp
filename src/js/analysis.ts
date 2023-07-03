@@ -514,6 +514,13 @@ const patternCounter = (trajs: Trajectory[], {
   outputType = 'pitchNumber',
   targetPitch = undefined,
   minSize = 1,
+}: {
+  size?: number,
+  maxLagTime?: number,
+  sort?: boolean,
+  outputType?: string,
+  targetPitch?: number | string,
+  minSize?: number,
 } = {}) => {
   const pitchTimes = PitchTimes(trajs, { outputType: outputType });
   // For all adjacent pitchs duplicates in pitchTimes list, remove all 

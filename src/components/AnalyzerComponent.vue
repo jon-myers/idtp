@@ -195,6 +195,11 @@
   import * as d3 from 'd3';
 import { defineComponent } from 'vue';
 
+type PCountType = {
+  [key: number]: { pattern: number[], count: number }[],
+  maxSize: number
+}
+
   const displayTime = (dur: number) => {
     const hours = Math.floor(dur / 3600);
     let minutes: number | string = Math.floor((dur - hours * 3600) / 60);
@@ -275,6 +280,7 @@ import { defineComponent } from 'vue';
     plot: boolean,
     graphRowHeight?: number,
     svg?: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>,
+    topSvg?: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>,
 
   }
 
@@ -319,7 +325,8 @@ import { defineComponent } from 'vue';
         targetPitchBool: true,
         plot: false,
         graphRowHeight: undefined,
-        svg: undefined
+        svg: undefined,
+        topSvg: undefined,
       }
     },
 
@@ -403,6 +410,9 @@ import { defineComponent } from 'vue';
       handleClickAnalysisType(atIdx: number) {
         this.selectedATIdx = atIdx;
         if (this.svg !== undefined) {
+          if (this.topSvg === undefined) {
+            throw new Error('Top SVG is undefined');
+          }
           this.topSvg.selectAll('*').remove();
           this.topSvg.remove();
           this.topSvg = undefined;
@@ -420,7 +430,18 @@ import { defineComponent } from 'vue';
         h = undefined, 
         fill = 'none',
         stroke = 'none',
+      }: {
+        svg?: d3.Selection<SVGElement, any, any, any>,
+        x?: number,
+        y?: number,
+        w?: number,
+        h?: number,
+        fill?: string,
+        stroke?: string,
       } = {}) {
+        if (x === undefined || y === undefined || w === undefined || h === undefined) {
+          throw new Error('x, y, w, or h is undefined');
+        }
         return svg.append('rect')
           .attr('x', x)
           .attr('y', y)
@@ -437,7 +458,17 @@ import { defineComponent } from 'vue';
         x2 = undefined,
         y2 = undefined,
         stroke = 'black',
+      }: {
+        svg?: d3.Selection<SVGElement, any, any, any>,
+        x1?: number,
+        y1?: number,
+        x2?: number,
+        y2?: number,
+        stroke?: string,
       } = {}) {
+        if (x1 === undefined || y1 === undefined || x2 === undefined || y2 === undefined) {
+          throw new Error('x1, y1, x2, or y2 is undefined');
+        }
         return svg.append('line')
           .attr('x1', x1)
           .attr('y1', y1)
@@ -455,7 +486,19 @@ import { defineComponent } from 'vue';
         fWeight = 'normal',
         fill = 'black',
         anchor = 'middle'
+      }: {
+        svg?: d3.Selection<SVGElement, any, any, any>,
+        x?: number,
+        y?: number,
+        text?: string,
+        fSize?: string,
+        fWeight?: string,
+        fill?: string,
+        anchor?: string,
       } = {}) {
+        if (x === undefined || y === undefined || text === undefined) {
+          throw new Error('x, y, or text is undefined');
+        }
         return svg.append('text')
           .attr('x', x)
           .attr('y', y)
@@ -467,7 +510,7 @@ import { defineComponent } from 'vue';
           .text(text)
       },
 
-      getHeatmapColor(val) {
+      getHeatmapColor(val: number) {
         const gradientArray = new Gradient()
           .setColorGradient('#ffffff', '#000000')
           .setMidpoint(100)
@@ -486,13 +529,21 @@ import { defineComponent } from 'vue';
         heatmap = false,
         pitchRepresentation = 'Fixed Pitch',
       } = {}) {
-        let segments;
+        if (this.piece === undefined) {
+          throw new Error('Piece is undefined');
+        }
+        let segments: Trajectory[][];
+        if (this.piece === undefined) {
+          throw new Error('Piece is undefined');
+        }
         if (segmentation === 'Duration') {
           segments = segmentByDuration(this.piece, { duration: duration });
         } else if (segmentation === 'Phrase') {
           segments = this.piece.phrases.map(p => p.trajectories);
         } else if (segmentation === 'Section') {
           segments = this.piece.sections.map(s => s.trajectories);
+        } else {
+          throw new Error('Invalid segmentation');
         }
         const func = pitchRepresentation === 'Fixed Pitch' ? 
           durationsOfFixedPitches : 
@@ -503,8 +554,11 @@ import { defineComponent } from 'vue';
           maxSilence: this.fadeTime,
 
         }));
-        let lowestKey, highestKey;
+        let lowestKey: number, highestKey: number;
         durs.forEach(dur => {
+          if (dur === undefined) {
+            throw new Error('dur is undefined');
+          }
           const keys = Object.keys(dur);
           keys.forEach(key => {
             if (lowestKey === undefined) lowestKey = Number(key);
@@ -518,15 +572,15 @@ import { defineComponent } from 'vue';
           })
         })
         if (condensed) {
-          lowestKey = this.piece.raga.pitchNumberToScaleNumber(lowestKey);
-          highestKey = this.piece.raga.pitchNumberToScaleNumber(highestKey);
+          lowestKey = this.piece.raga.pitchNumberToScaleNumber(lowestKey!);
+          highestKey = this.piece.raga.pitchNumberToScaleNumber(highestKey!);
         }
         let totalWidth = 900;
         let totalHeight = 600;
         const pnLen = this.piece.raga.getPitchNumbers(0, 11).length;
         const ppOct = condensed ? pnLen : 12; 
-        const lkOct = Math.floor(lowestKey / ppOct);
-        const hOct = Math.floor(highestKey / ppOct);
+        const lkOct = Math.floor(lowestKey! / ppOct);
+        const hOct = Math.floor(highestKey! / ppOct);
         const mTop = segmentation === 'Duration' ? 90 : 110;
         const margin = { top: mTop, right: 30, bottom: 20, left: 80 };
         let width = totalWidth - margin.left - margin.right;
@@ -538,7 +592,7 @@ import { defineComponent } from 'vue';
           width = widthPerSeg * durs.length;
           totalWidth = width + margin.left + margin.right;
         }
-        this.topSvg = d3.select(this.$refs.graph)
+        this.topSvg = d3.select('.graph')
           .append('svg')
           .attr('width', totalWidth)
           .attr('height', totalHeight)
@@ -817,11 +871,16 @@ import { defineComponent } from 'vue';
       },
 
       createGraph() {
+        if (this.piece === undefined) {
+          throw new Error('Piece is undefined');
+        }
 
         if (this.svg) {
-          this.topSvg.selectAll('*').remove();
-          this.topSvg.remove();
-          this.topSvg = undefined;
+          if (this.topSvg !== undefined) {
+            this.topSvg.selectAll('*').remove();
+            this.topSvg.remove();
+            this.topSvg = undefined;
+          }
           this.svg = undefined;
         }
         if (this.selectedATIdx === 0) {
@@ -871,7 +930,19 @@ import { defineComponent } from 'vue';
         minSize = 1,
         plot = false
 
+      }: {
+        segmentation?: string,
+        duration?: number,
+        pitchChroma?: boolean,
+        pitchType?: string,
+        fadeTime?: number,
+        targetPitch?: number | string,
+        minSize?: number,
+        plot?: boolean,
       } = {}) {
+        if (this.piece === undefined) {
+          throw new Error('Piece is undefined');
+        }
         const pSizes = this.patternSizes
             .filter((_, idx) => this.selectedPatternSizes[idx]);
         let segments, title;
@@ -888,9 +959,11 @@ import { defineComponent } from 'vue';
         } else if (segmentation === 'Transcription') {
           segments = [this.piece.allTrajectories()];
           title = `Patterns of Size ${pSizes.join(', ')} in Full Transcription`;
+        } else {
+          throw new Error('Invalid segmentation type');
         }
         const pCounts = segments.map(s => {
-          const pCount = {};
+          const pCount: PCountType = { maxSize: 0 };
           let maxSize = 0;          
           pSizes.forEach(ps => {
               const options = {
@@ -908,6 +981,7 @@ import { defineComponent } from 'vue';
           pCount['maxSize'] = maxSize;
           return pCount;
         })
+        console.log(pCounts)
         let verticalTot = 20 * pCounts
           .map(pCount => (plot ? pCount.maxSize * 4 : pCount.maxSize) + 3)
           .reduce((acc, v) => acc + v, 0);
@@ -916,7 +990,7 @@ import { defineComponent } from 'vue';
         let totalWidth = (sum + 3 * pSizes.length) * 20 + margin.left;
         // let totalWidth = 900;
         let totalHeight = verticalTot + margin.top;
-        this.topSvg = d3.select(this.$refs.graph)
+        this.topSvg = d3.select('.graph')
           .append('svg')
           .attr('width', totalWidth)
           .attr('height', totalHeight)
