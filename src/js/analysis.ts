@@ -140,7 +140,7 @@ const instantiatePiece = async (queryId = testQueryId)=> {
     if (phrase.trajectoryGrid) {
       phrase.trajectoryGrid[0] = pt.map(traj => new Trajectory(traj))
     } else {
-      phrase.trajectories = pt.map(traj => new Trajectory(traj));
+      // phrase.trajectories = pt.map(traj => new Trajectory(traj));
       // I think thes shoudn't really exist anymore, but I guess I should go 
       // through all pieces and make sure they're all the new format.
     }
@@ -583,8 +583,15 @@ const patternCounter = (trajs: Trajectory[], {
           sel[pitch] = pIdx === arr.length - 1 ? 0 : {};
         }
         if (pIdx === arr.length - 1) {
-          sel[pitch] += 1
+          const lcl = sel[pitch];
+          if (typeof lcl === 'number') {
+            sel[pitch] = lcl + 1;
+          } else {
+            throw new Error('sel[pitch] is not a number')
+          }      
         }
+        console.log(sel, sel[pitch])
+        console.log('')
         sel = sel[pitch];
       })
     }
@@ -653,13 +660,16 @@ const chromaSeqToCondensedPitchNums = (chromaSeq: number[]) => {
 }
 
 const analyze = async () => {
-  const seq = [0, 2, 11, 7, 0, 9, 11];
-  const out = chromaSeqToCondensedPitchNums(seq);
+  const piece = await instantiatePiece();
+  const trajs = piece.allTrajectories();
+  let out = patternCounter(trajs, { size: 3, maxLagTime: 0.5, sort: true, outputType: 'pitchNum' })
+  // const seq = [0, 2, 11, 7, 0, 9, 11];
+  // const out = chromaSeqToCondensedPitchNums(seq);
   console.log(out)
 }
 
 
-// analyze();
+analyze();
 
 export { 
   instantiatePiece, 
