@@ -761,11 +761,14 @@ class Meter {
     timePoints = undefined,
     hierarchy = undefined,
     repetitions = 1,
+    layer = 0
   }: {
     timePoints?: number[],
     hierarchy?: (number | number[])[],
     repetitions?: number,
+    layer?: number
   } = {}) {
+    
     // assume timepoints are top layer, with no skips, they start at beginning
     // of cycle, and they are in order
     if (timePoints === undefined) {
@@ -783,6 +786,7 @@ class Meter {
     let diffs = timePoints.slice(0, timePoints.length - 1).map((tp, i) => {
       return timePoints[i+1] - tp;
     })
+    const initTimepoints = timePoints.slice(0, timePoints.length);
     let pulseDur = sum(diffs) / diffs.length;
 
     let zerodTPs = timePoints.map(tp => tp - timePoints[0]);
@@ -806,6 +810,17 @@ class Meter {
       zerodTPs = timePoints.map(tp => tp - timePoints[0]);
       norms = timePoints.map((_, i) => pulseDur * i);
       tpDiffs = zerodTPs.map((tp, i) => (tp - norms[i]) / pulseDur);
+    }
+
+    if (layer === 1) {
+      console.log('got here')
+      let sum = 0;
+      if (typeof hierarchy[1] === 'number') {
+        sum = hierarchy[1] as number;
+      } else {
+        sum = (hierarchy[1] as number[]).reduce((a, b) => a + b, 0);
+      }
+      timePoints = timePoints.filter((_, i) => i % sum === 0)
     }
     if (typeof hierarchy[0] === 'number') {
       while (hierarchy[0] * repetitions < timePoints.length) {
@@ -840,6 +855,23 @@ class Meter {
         meter.offsetPulse(metricPulses[i], diff)
       }
     })
+    if (layer === 1) {
+      let otpCt = 0;
+      meter.pulseStructures[1].forEach(ps => {
+        let psMetricPulses = ps.pulses;
+        let psMetricTimes = psMetricPulses.map(p => p.realTime);
+        psMetricTimes.forEach((mt, i) => {
+          if (i > 0) {
+            const tp = initTimepoints[otpCt + i];
+            const pulse = psMetricPulses[i];
+            const diff = tp - mt;
+            meter.offsetPulse(pulse, diff);
+
+          }
+        })
+        otpCt += psMetricTimes.length;
+      })
+    }
     return meter
   }
 

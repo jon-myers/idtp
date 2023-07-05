@@ -4,7 +4,7 @@
     <div class='controlsRow'>
       <label class='big'>Hierarchical Depth</label>
       <select 
-        v-model='numLayers' 
+        v-model.number='numLayers' 
         @change='updateDepth'
         :disabled='!editable'
         >
@@ -79,6 +79,22 @@
       <label>Duration</label>
       {{ getDuration() }}
     </div>
+    <div class='controlsRow' v-if='insertPulseMode'>
+      <div v-if='numLayers === 1' class='row'>
+        <label>Layer {{ 0 }}</label>
+        <input type='radio' v-model.number='insertLayer' value='0' />
+      </div>
+      <div v-else class='row'>
+        <div class='row'>
+          <label>Layer {{ 0 }}</label>
+          <input type='radio' v-model.number='insertLayer' value='0' />
+        </div>
+        <div class='row'>
+          <label>Layer {{ 1 }}</label>
+          <input type='radio' v-model.number='insertLayer' value='1' />
+        </div>
+      </div> 
+    </div>
     <div class='controlsRow'>
       <button 
         @click='insertMeter' 
@@ -138,6 +154,7 @@ type MeterControlsDataType = {
   meterSelected: boolean,
   maxLayer: number,
   insertPulseMode: boolean,
+  insertLayer: number,
 }
 
 export default defineComponent({
@@ -161,6 +178,7 @@ export default defineComponent({
       meterSelected: false,
       maxLayer: 3,
       insertPulseMode: false,
+      insertLayer: 0,
     }
   },
   props: ['height', 'playerHeight', 'editable'],
@@ -523,6 +541,15 @@ input[type=range] {
 
 select {
   cursor: pointer
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: left;
+  margin-top: 5px;
+  margin-bottom: 5px;
 }
 
 </style>
