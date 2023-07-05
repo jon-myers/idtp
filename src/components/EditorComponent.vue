@@ -2457,7 +2457,7 @@ export default {
           .filter((d, i, nodes) => !d3Select(nodes[i]).classed('overlay'))
           .attr('stroke', this.meterColor)
         }
-        this.svg.style('cursor', 'wait')
+        this.svg.style('cursor', 'crosshair')
       }
     },
 
@@ -3380,9 +3380,9 @@ export default {
         } else {
           this.clearAll();
           this.meterMode = true;
-          this.svg.style('cursor', 'wait');
-          d3SelectAll('.phrase').style('cursor', 'wait');
-          d3SelectAll('.articulation').selectAll('*').style('cursor', 'wait');
+          this.svg.style('cursor', 'crosshair');
+          d3SelectAll('.phrase').style('cursor', 'crosshair');
+          d3SelectAll('.articulation').selectAll('*').style('cursor', 'crosshair');
         }
         
         // this.svg.style('cursor', 'crosshair');
