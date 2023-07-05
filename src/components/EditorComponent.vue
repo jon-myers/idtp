@@ -5394,51 +5394,51 @@ export default {
         const pxlOffset = 12;
         const timeOffset = this.xr().invert(pxlOffset) - this.xr().invert(0);
         const leftTime = phraseStart + traj.startTime - timeOffset;
-        let leftTraj, halfLeftTraj, leftPhrase, halfLeftPhrase, halfLeftTime;
-        if (leftTime >=0) {
-          const leftPhraseIdx = this.phraseIdxFromTime(leftTime, true);
-          leftPhrase = this.piece.phrases[leftPhraseIdx];
-          const leftTrajIdx = this.trajIdxFromTime(leftPhrase, leftTime);
-          leftTraj = leftPhrase.trajectories[leftTrajIdx];
-          halfLeftTime = phraseStart + traj.startTime - timeOffset / 2;
-          const halfLeftPhraseIdx = this.phraseIdxFromTime(halfLeftTime, true);
-          halfLeftPhrase = this.piece.phrases[halfLeftPhraseIdx];
-          const halfLeftTrajIdx = this.trajIdxFromTime(halfLeftPhrase, halfLeftTime);
-          halfLeftTraj = halfLeftPhrase.trajectories[halfLeftTrajIdx];            
-        }
-        let trajProp = timeOffset / traj.durTot;
-        if (trajProp > 1) trajProp = 1;
-        let rightCompute = traj.compute(trajProp, true);
-        rightCompute = y({y:rightCompute});
-        let halfRightCompute = traj.compute(trajProp / 2, true);
-        halfRightCompute = y({y:halfRightCompute});
+        // let leftTraj, halfLeftTraj, leftPhrase, halfLeftPhrase, halfLeftTime;
+        // if (leftTime >=0) {
+        //   const leftPhraseIdx = this.phraseIdxFromTime(leftTime, true);
+        //   leftPhrase = this.piece.phrases[leftPhraseIdx];
+        //   const leftTrajIdx = this.trajIdxFromTime(leftPhrase, leftTime);
+        //   leftTraj = leftPhrase.trajectories[leftTrajIdx];
+        //   halfLeftTime = phraseStart + traj.startTime - timeOffset / 2;
+        //   const halfLeftPhraseIdx = this.phraseIdxFromTime(halfLeftTime, true);
+        //   halfLeftPhrase = this.piece.phrases[halfLeftPhraseIdx];
+        //   const halfLeftTrajIdx = this.trajIdxFromTime(halfLeftPhrase, halfLeftTime);
+        //   halfLeftTraj = halfLeftPhrase.trajectories[halfLeftTrajIdx];            
+        // }
+        // let trajProp = timeOffset / traj.durTot;
+        // if (trajProp > 1) trajProp = 1;
+        // let rightCompute = traj.compute(trajProp, true);
+        // rightCompute = y({y:rightCompute});
+        // let halfRightCompute = traj.compute(trajProp / 2, true);
+        // halfRightCompute = y({y:halfRightCompute});
         let ctrCompute = traj.compute(0, true);
         ctrCompute = y({y:ctrCompute});
         let yVal = ctrCompute;
-        if (rightCompute < yVal) {
-          yVal = rightCompute;
-        }
-        if (halfRightCompute < yVal) {
-          yVal = halfRightCompute;
-        }
-        if (leftTime >= 0 && leftTraj && leftTraj.id !== 12) {
-          const leftTrajStart = leftPhrase.startTime + leftTraj.startTime;
-          const leftTrajCptProp = (leftTime - leftTrajStart) / leftTraj.durTot;
-          let leftCompute = leftTraj.compute(leftTrajCptProp, true);
-          leftCompute = y({y:leftCompute});
-          if (leftCompute < yVal) {
-            yVal = leftCompute;
-          }
-        }
-        if (leftTime >= 0 && halfLeftTraj && halfLeftTraj.id !== 12) {
-          const halfLeftTrajStart = halfLeftPhrase.startTime + halfLeftTraj.startTime;
-          const halfLeftTrajCptProp = (halfLeftTime - halfLeftTrajStart) / halfLeftTraj.durTot;
-          let halfLeftCompute = halfLeftTraj.compute(halfLeftTrajCptProp, true);
-          halfLeftCompute = y({y:halfLeftCompute});
-          if (halfLeftCompute < yVal) {
-            yVal = halfLeftCompute;
-          }
-        }
+        // if (rightCompute < yVal) {
+        //   yVal = rightCompute;
+        // }
+        // if (halfRightCompute < yVal) {
+        //   yVal = halfRightCompute;
+        // }
+        // if (leftTime >= 0 && leftTraj && leftTraj.id !== 12) {
+        //   const leftTrajStart = leftPhrase.startTime + leftTraj.startTime;
+        //   const leftTrajCptProp = (leftTime - leftTrajStart) / leftTraj.durTot;
+        //   let leftCompute = leftTraj.compute(leftTrajCptProp, true);
+        //   leftCompute = y({y:leftCompute});
+        //   if (leftCompute < yVal) {
+        //     yVal = leftCompute;
+        //   }
+        // }
+        // if (leftTime >= 0 && halfLeftTraj && halfLeftTraj.id !== 12) {
+        //   const halfLeftTrajStart = halfLeftPhrase.startTime + halfLeftTraj.startTime;
+        //   const halfLeftTrajCptProp = (halfLeftTime - halfLeftTrajStart) / halfLeftTraj.durTot;
+        //   let halfLeftCompute = halfLeftTraj.compute(halfLeftTrajCptProp, true);
+        //   halfLeftCompute = y({y:halfLeftCompute});
+        //   if (halfLeftCompute < yVal) {
+        //     yVal = halfLeftCompute;
+        //   }
+        // }
         
         const txtElem = g.append('text')
           .text(cd.text)
