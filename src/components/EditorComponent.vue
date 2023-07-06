@@ -288,6 +288,7 @@ export default {
       selBoxStartX: undefined,
       selBoxStartY: undefined,
       fullWidth: 0,
+      initLogFreq: undefined
     }
   },
   components: {
@@ -1365,11 +1366,40 @@ export default {
           .attr('r', 4)
           .style('fill', 'purple')
           .style('cursor', 'pointer')
+          .on('contextmenu', this.dragDotContextMenuClick)
         if (this.editable) {
           d3Select(`#dragDot${i}`)
             .call(drag())  
         }          
       }
+    },
+
+    dragDotContextMenuClick(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      this.contextMenuX = e.x;
+      this.contextMenuY = e.y;
+      const traj = this.selectedTraj;
+      const ddIdx = Number(e.target.id.slice(7));
+      
+      this.contextMenuChoices = [];
+      this.contextMenuChoices.push({
+        text: 'Offset Frequency',
+        action: () => {
+          e.target.style.fill = '#398BB9';
+          this.contextMenuClosed = true;
+          const newDrag = () => {
+            return d3Drag()
+              .on('start', this.verticalDragDotStart)
+              .on('drag', this.verticalDragDotDragging)
+              .on('end', this.verticalDragDotEnd)
+          }
+          d3Select(`#dragDot${ddIdx}`)
+            .on('.drag', null)
+            .call(newDrag())
+        }
+      })
+      this.contextMenuClosed = false;
     },
 
     async resizeHeight(controlsOpenOverride = undefined) {
@@ -1423,7 +1453,6 @@ export default {
       const trajStart = this.selectedTraj.startTime;
       const idx = e.sourceEvent.target.id.split('dragDot')[1];
       this.dragIdx = idx;
-      // const time = this.xr().invert(e.x);
       const logFreq = this.codifiedYR.invert(e.y);
       this.selectedTraj.logFreqs[idx] = logFreq;
       const st = phraseStart + trajStart;
@@ -1902,6 +1931,134 @@ export default {
         this.moveVowel(followingTraj, phrase.startTime, true);
       }
     },
+
+    verticalDragDotStart(e) {
+      if (this.editable) {
+        const phrase = this.piece.phrases[this.selectedTraj.phraseIdx]; 
+        const phraseStart = phrase.startTime;
+        const trajStart = this.selectedTraj.startTime;
+        const idx = e.sourceEvent.target.id.split('dragDot')[1];
+        this.dragIdx = idx;
+        const logFreq = this.codifiedYR.invert(e.y);
+        this.initLogFreq = this.selectedTraj.pitches[idx].nonOffsetLogFreq;
+        // this.selectedTraj.logFreqs[idx] = logFreq;
+        const st = phraseStart + trajStart;
+        const endTime = st + this.selectedTraj.durTot;
+        const timePts = Math.round((endTime - st) / this.minDrawDur);
+        const drawTimes = linSpace(st, endTime, timePts);
+        const mp = t => (t - st) / (endTime - st);
+        const trajDrawXs = drawTimes.map(mp);
+        const trajDrawYs = trajDrawXs.map(x => this.selectedTraj.compute(x))
+        const data = trajDrawYs.map((y, i) => {
+          return {
+            x: drawTimes[i],
+            y: y
+          }
+        });
+        this.phraseG.append('path')
+          .datum(data)
+          .attr('id', 'transparentPhrase')
+          .attr('stroke', this.trajColor)
+          .attr('fill', 'none')
+          .attr('stroke-width', '3px')
+          .attr('stroke-linejoin', 'round')
+          .attr('stroke-linecap', 'round')
+          .attr('d', this.codifiedPhraseLine())
+          .style('opacity', '0.35')
+      }
+    },
+
+    verticalDragDotDragging(e) {
+      if (this.editable) {
+        const idx = Number(this.dragIdx);
+
+        
+        const traj = this.selectedTraj;
+        const tIdx = traj.num;
+        const pIdx = traj.phraseIdx;
+        const phrase = this.piece.phrases[traj.phraseIdx];
+        const pitch = traj.pitches[idx];
+        const basicLogFreq = pitch.logFreq - pitch.logOffset;
+        const logSGLines = this.visibleSargam.map(s => Math.log2(s));
+        const closest = getClosest(logSGLines, basicLogFreq);
+        const lIdx = logSGLines.indexOf(closest);
+        let logMax = logSGLines.length > lIdx + 1 ? logSGLines[lIdx + 1] : logSGLines[lIdx];
+        logMax = (logMax + basicLogFreq) / 2;
+        let logMin = lIdx > 0 ? logSGLines[lIdx - 1] : logSGLines[lIdx];
+        logMin = (logMin + basicLogFreq) / 2;
+        let logFreq = this.codifiedYR.invert(e.y);
+        if (logFreq > logMax) logFreq = logMax;
+        if (logFreq < logMin) logFreq = logMin;
+        const yPxl = this.codifiedYR(logFreq);
+        const offset = logFreq - this.initLogFreq;
+        pitch.logOffset = offset;
+        
+        d3Select(`#dragDot${idx}`)
+          .attr('cy', yPxl)
+        const data = this.makeTrajData(traj, phrase.startTime);
+        d3Select(`#transparentPhrase`)
+          .datum(data)
+          .attr('d', this.codifiedPhraseLine())
+      } 
+    },
+
+    verticalDragDotEnd(e) {
+      if (this.editable) {
+        const idx = Number(this.dragIdx);
+        const traj = this.selectedTraj;
+        const tIdx = traj.num;
+        const pIdx = traj.phraseIdx;
+        const phrase = this.piece.phrases[traj.phraseIdx];
+        const pitch = traj.pitches[idx];
+        let logFreq = this.codifiedYR.invert(e.y);
+        const basicLogFreq = pitch.logFreq - pitch.logOffset;
+        const logSGLines = this.visibleSargam.map(s => Math.log2(s));
+        const closest = getClosest(logSGLines, basicLogFreq);
+        const lIdx = logSGLines.indexOf(closest);
+        let logMax = logSGLines.length > lIdx + 1 ? logSGLines[lIdx + 1] : logSGLines[lIdx];
+        logMax = (logMax + basicLogFreq) / 2;
+        let logMin = lIdx > 0 ? logSGLines[lIdx - 1] : logSGLines[lIdx];
+        logMin = (logMin + basicLogFreq) / 2;
+        if (logFreq > logMax) logFreq = logMax;
+        if (logFreq < logMin) logFreq = logMin;
+        const offset = logFreq - this.initLogFreq;
+        pitch.logOffset = offset;
+
+        if (idx === 0 && traj.id === 0) {
+          const pitch2 = traj.pitches[1];
+          pitch2.logOffset = offset;
+        } else if (idx === 1 && traj.id === 0) {
+          const pitch1 = traj.pitches[0];
+          pitch1.logOffset = offset;
+        }
+
+        d3Select(`#transparentPhrase`).remove();
+        const data = this.makeTrajData(traj, phrase.startTime);
+        d3Select(`#p${pIdx}t${tIdx}`)
+          .datum(data)
+          .attr('d', this.codifiedPhraseLine())
+        d3Select(`#overlay__p${pIdx}t${tIdx}`)
+          .datum(data)
+          .attr('d', this.codifiedPhraseLine())
+        this.moveKrintin(traj, phrase.startTime);
+        this.moveSlides(traj, phrase.startTime);
+        this.codifiedRedrawDampener(traj, phrase.startTime);
+        if (this.vocal) {
+          this.moveStartingConsonant(traj, phrase.startTime, true);
+          this.moveEndingConsonant(traj, phrase.startTime, true);
+          this.moveVowel(traj, phrase.startTime, true);
+          this.moveConsonantSymbols(traj, phrase.startTime, true);
+        }
+        this.removePlucks(traj);
+        const g = d3Select(`#articulations__p${pIdx}t${tIdx}`);
+        this.codifiedAddPlucks(traj, phrase.startTime, g);
+        this.addAllDragDots();
+        this.unsavedChanges = true;
+
+
+      }
+    },
+
     
     cleanEmptyTrajs(phrase) {
       phrase.trajectories.forEach((traj, i) => {
@@ -7216,7 +7373,6 @@ export default {
     shiftTrajByOctave(traj, offset = 1) {
       // then remove the old trajectory and add the new one;
       traj.pitches.forEach(pitch => pitch.setOct(pitch.oct + offset));
-      traj.realignPitches();
       const trajID = `p${traj.phraseIdx}t${traj.num}`;
       d3Select(`#${trajID}`).remove();
       d3Select(`#overlay__${trajID}`).remove();
