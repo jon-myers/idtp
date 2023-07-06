@@ -655,9 +655,7 @@ export default {
       oscNode.frequency.linearRampToValueAtTime(newFreq, endTime);
       this.$parent.updateSargamLines();
     },
-    instantiateTuning() {
-      
-      this.$parent.piece.realignPitches();
+    instantiateTuning() {      
       this.$parent.resetZoom();
     },
     makeTuningSines() {
