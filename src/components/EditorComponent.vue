@@ -7180,10 +7180,10 @@ export default {
         const fund = this.piece.raga.fundamental;
         const logOverFund = freq => Math.log2(freq / fund);
         const saFilter = freq => Math.abs(logOverFund(freq) % 1) === 0;
-        const paFilter = freq => {
-          return Math.abs((logOverFund(freq) - (7 / 12)) % 1) === 0
+        const paFilter = idx => {
+          return this.visPitches[idx].swara === 4
         };
-        const strokeWidth = saFilter(s) || paFilter(s) ? 2 : 1;
+        const strokeWidth = saFilter(s) || paFilter(i) ? 2 : 1;
         this.phraseG.append('path')
           .classed(`sargamLine s${i}`, true)
           .attr("fill", "none")
@@ -7206,8 +7206,16 @@ export default {
         low: this.freqMin,
         high: this.freqMax
       })
+      const fund = this.piece.raga.fundamental;
+      const logOverFund = freq => Math.log2(freq / fund);
+      const saFilter = freq => Math.abs(logOverFund(freq) % 1) === 0;
+      const paFilter = idx => {
+        return this.visPitches[idx].swara === 4
+      };
       this.visibleSargam.forEach((s, i) => {
+        const strokeWidth = saFilter(s) || paFilter(i) ? 2 : 1;
         d3Select('.sargamLine.s' + i)
+          .attr('stroke-width', `${strokeWidth}px`)
           .attr('d', this.codifiedSargamLine(Math.log2(s)))
       });
       this.redraw();
@@ -7648,6 +7656,10 @@ export default {
     },
 
     getYTickLabels() {
+      this.visPitches = this.piece.raga.getPitches({
+        low: this.freqMin,
+        high: this.freqMax,
+      })
       const yTickLabels = this.visPitches.map(p => p.octavedSargamLetter)
       return yTickLabels
     },
