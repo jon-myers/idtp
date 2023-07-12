@@ -58,7 +58,7 @@
             v-model='magnetMode'
             @click='preventSpaceToggle'>
         </div>
-        <div class='cbRow'>
+        <div class='cbRow' v-if='vocal'>
           <label>Uniform Vowel</label>
           <input
             type='checkbox'
