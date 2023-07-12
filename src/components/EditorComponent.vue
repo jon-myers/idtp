@@ -59,6 +59,13 @@
             @click='preventSpaceToggle'>
         </div>
         <div class='cbRow'>
+          <label>Uniform Vowel</label>
+          <input
+            type='checkbox'
+            v-model='uniformVowel'
+            @click='preventSpaceToggle'>
+        </div>
+        <div class='cbRow'>
           <button @click='resetAudio'>Reset Audio</button>
           <button @click='resetZoom'>Reset Zoom</button>
           <button @click='savePiece'>Save</button>
@@ -102,6 +109,7 @@
   :controlsHeight='controlsHeight'
   :editable='editable'
   :windowWidth='fullWidth'
+  :uniformVowel='uniformVowel'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -288,7 +296,8 @@ export default {
       selBoxStartX: undefined,
       selBoxStartY: undefined,
       fullWidth: 0,
-      initLogFreq: undefined
+      initLogFreq: undefined,
+      uniformVowel: false,
     }
   },
   components: {
