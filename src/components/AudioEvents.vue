@@ -14,7 +14,7 @@
           @dblclick='toggleDisplay($event, ae, true)'
           >
           
-          <span @click='toggleDisplay($event, ae)'>&#9654;</span>
+          <span @click='toggleDisplay($event, ae, false)'>&#9654;</span>
           <label>{{ae.name}}</label>
         </div>
         <div 
@@ -27,33 +27,33 @@
           </div>
           <div class='audioRecordingCol'>
             <div 
-              :class='`audioRecordingRow height${raagHt(ae, recKey)}`' 
+              :class='`audioRecordingRow height${raagHt(ae, Number(recKey))}`' 
               v-for='recKey in Object.keys(ae.recordings)'
               :id='`arr${aeIdx}_${recKey}`'
-              :key='ae.recordings[recKey].audioFileId'
-              @dblclick='sendAudioSource($event, ae, aeIdx, recKey)'>
+              :key='ae.recordings[Number(recKey)].audioFileId'
+              @dblclick='sendAudioSource($event, ae, aeIdx, Number(recKey))'>
               <span class='recordingNum'>{{`${Number(recKey)+1}. `}}</span>
-              <div :class='`soloist height${raagHt(ae, recKey)}`'>
+              <div :class='`soloist height${raagHt(ae, Number(recKey))}`'>
                 <span>
-                  {{getSoloist(ae.recordings[recKey])}}
+                  {{getSoloist(ae.recordings[Number(recKey)])}}
                 </span>
               </div> 
-              <div :class='`raagNameCol height${raagHt(ae, recKey)}`'>
+              <div :class='`raagNameCol height${raagHt(ae, Number(recKey))}`'>
                 <div 
                   class='raagName' 
-                  v-for='raag in getRaags(ae.recordings[recKey])'
+                  v-for='raag in getRaags(ae.recordings[Number(recKey)])'
                   :key='raag'>
                   <span>{{raag}}
                   </span>
                 </div>
               </div>
-              <div :class='`performanceSectionCol height${raagHt(ae, recKey)}`'>
+              <div :class='`performanceSectionCol height${raagHt(ae, Number(recKey))}`'>
                 <div 
                   class='performanceSections' 
-                  v-for='raag in getRaags(ae.recordings[recKey])'
+                  v-for='raag in getRaags(ae.recordings[Number(recKey)])'
                   :key='raag'>
                   <span>
-                    {{getPSecs(ae.recordings[recKey].raags[raag])}}
+                    {{getPSecs(ae.recordings[Number(recKey)].raags[raag])}}
                   </span>
                 </div>
               </div>
@@ -66,7 +66,10 @@
       v-if='showAddEvent' 
       class='audioEventPopup' 
       ref='addAudioEvent'
-      :extUniqueId='editingId'/>
+      :extUniqueId='editingId'
+      :userID='userID'
+      @reset-parent='resetAddEvent'
+      />
     <AudioPlayer 
       v-if='true' 
       :audioSource='audioSource' 
@@ -100,14 +103,16 @@
   </div>
   
 </template>
-<script>
-import { getAllAudioEventMetadata, deleteAudioEvent } from '@/js/serverCalls.mjs';
+<script lang='ts'>
+import { getAllAudioEventMetadata, deleteAudioEvent } from '@/js/serverCalls.ts';
 import AddAudioEvent from '@/components/AddAudioEvent.vue';
 import AudioPlayer from '@/components/AudioPlayer.vue';
-const displayTime = dur => {
+import { defineComponent } from 'vue';
+
+const displayTime = (dur: number) => {
   const hours = Math.floor(dur / 3600);
-  let minutes = Math.floor((dur - hours * 3600) / 60);
-  let seconds = dur % 60;
+  let minutes: string | number = Math.floor((dur - hours * 3600) / 60);
+  let seconds: string | number = dur % 60;
   if (seconds.toString().length === 1) seconds = '0' + seconds;
   if (hours !== 0) {
     if (minutes.toString().length === 1) minutes = '0' + minutes;
@@ -117,10 +122,41 @@ const displayTime = dur => {
   }
 }
 
-export default {
+import type { AudioEventType, RecType, RaagType } from '@/components/AddAudioEvent.vue'
+
+type AudioEventsDataType = {
+  infoKeys: string[],
+  playingIdx?: number,
+  allAudioEvents?: AudioEventType[],
+  performers?: string[],
+  colHeight: number,
+  colWidths: number[],
+  showAddEvent: boolean,
+  recHeight: number,
+  editingId?: string,
+  audioSource?: string,
+  playing: number[],
+  saEstimate?: number,
+  saVerified?: boolean,
+  audioRecId?: string,
+  dropDownWidth: number,
+  clickedAE: boolean,
+  dropDownLeft: number,
+  dropDownTop: number,
+  selectedAE?: AudioEventType,
+  selectedUserID?: string,
+  clickedAF: boolean,
+  selectedAF?: RecType,
+  userID?: string,
+  toggle: string[],
+  audioEventId?: string,
+  recIdx?: number,
+}
+
+export default defineComponent({
   name: 'AudioEvents',
   
-  data() {
+  data(): AudioEventsDataType {
     return {
       infoKeys: [
         'Name', 
@@ -142,18 +178,21 @@ export default {
       dropDownWidth: 180,
       clickedAE: false,
       dropDownLeft: 200,
-      dropdownTop: 300,
+      dropDownTop: 300,
       selectedAE: undefined,
       selectedUserID: undefined,
       clickedAF: false,
-      selectedAF: false,
+      selectedAF: undefined,
       userID: undefined,
-      toggle: ['', 'inactive']
+      toggle: ['', 'inactive'],
+      recIdx: undefined,
+      audioEventId: undefined
     }
   },
   components: {
     AddAudioEvent, AudioPlayer
   },
+
   
   async created() {
     window.addEventListener('keydown', this.handleKeydown);
@@ -164,22 +203,9 @@ export default {
     this.allAudioEvents = await getAllAudioEventMetadata()
   },
   
-  computed: {
-  
-    
-  },
-  
-  mounted() { 
-    // add event listener for keydown, and then remove it in beforeUnmount
-    // also, for 'backspace', if the dropdown is open, close it
-
-
-    
-    
-  },
-  
   beforeUnmount() {
-    this.$refs.audioPlayer.audio.pause()
+    const audioPlayer = this.$refs.audioPlayer as typeof AudioPlayer;
+    audioPlayer.audio.pause()
   },
   
   unmounted() {
@@ -188,16 +214,27 @@ export default {
   
   methods: {
 
+    resetAddEvent() {
+      this.showAddEvent = false;
+      this.editingId = undefined;
+      this.reset();
+    },
+
     async reset() {
       this.allAudioEvents = await getAllAudioEventMetadata()
     },
 
-    getShorthand(rec) {
-      const out = [];
+    getShorthand(rec: RecType) {
+      const out: string[] = [];
       const raagNames = Object.keys(rec.raags);
       raagNames.forEach(rn => {
+        const raag = rec.raags[rn];
+        const pSecsObj = raag['performance sections'];
+        if (pSecsObj === undefined) {
+          throw new Error('no pSecsObj')
+        }
         out.push(rn, ' - ');
-        const pSecs = Object.keys(rec.raags[rn]['performance sections']);
+        const pSecs = Object.keys(pSecsObj);
         pSecs.forEach((pSec, i) => {
           out.push(pSec, i !== pSecs.length - 1 ? ', ' : '; ');
         })
@@ -206,8 +243,15 @@ export default {
     },
 
     handleNewTranscriptionClick() {
-      this.$refs.dropDown.classList.add('closed');
+      const dropDown = this.$refs.dropDown as HTMLDivElement;
+      dropDown.classList.add('closed');
+      if (this.selectedAE === undefined) {
+        throw new Error('selectedAE is undefined')
+      }
       const aeName = this.selectedAE.name;
+      if (this.selectedAF === undefined) {
+        throw new Error('selectedAF is undefined')
+      }
       const afName = this.getShorthand(this.selectedAF);
       this.$router.push({
         name: 'Files',
@@ -221,39 +265,49 @@ export default {
     },
 
     handleClick() {
-      if (!this.$refs.dropDown.classList.contains('closed')) {
-        this.$refs.dropDown.classList.add('closed');
+      const dropDown = this.$refs.dropDown as HTMLDivElement;
+      if (!dropDown.classList.contains('closed')) {
+        dropDown.classList.add('closed');
         this.clickedAE = false;
         this.clickedAF = false
       }
     },
 
-    handleKeydown(e) {
+    handleKeydown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         e.preventDefault();
-        this.$refs.dropDown.classList.add('closed');
+        const dropDown = this.$refs.dropDown as HTMLDivElement;
+        dropDown.classList.add('closed');
         this.clickedAE = false;
         this.clickedAF = false
       }
     },
 
     handleEditAEClick() {
-      if (this.clickedAE) {
-      this.openEditWindow(this.selectedAE._id);
-      this.$refs.dropDown.classList.add('closed');
-      this.clickedAE = false;
-      this.clickedAF = false
+      if (this.clickedAE && this.selectedAE !== undefined) {
+        this.openEditWindow(this.selectedAE._id);
+        const dropDown = this.$refs.dropDown as HTMLDivElement;
+        dropDown.classList.add('closed');
+        this.clickedAE = false;
+        this.clickedAF = false
       }
     },
 
-    handleRightClick(e) {
+    handleRightClick(e: MouseEvent) {
       e.preventDefault();
-      if (!this.$refs.dropDown.classList.contains('closed')) {
-        this.$refs.dropDown.classList.add('closed');
+      const dropDown = this.$refs.dropDown as HTMLDivElement;
+      if (this.allAudioEvents === undefined) {
+        throw new Error('allAudioEvents is undefined')
+      }
+      if (!dropDown.classList.contains('closed')) {
+        dropDown.classList.add('closed');
       } else {
       const el = document.elementFromPoint(e.clientX, e.clientY);
+      if (el === null) {
+        throw new Error('el is null')
+      }
       if (el.classList[0] === 'audioEventNameRow') {
-        this.selectedAE = this.allAudioEvents[el.id.slice(2)];
+        this.selectedAE = this.allAudioEvents[Number(el.id.slice(2))];
         this.selectedUserID = this.selectedAE.userID;
         this.clickedAE = true;
         this.clickedAF = false;
@@ -261,9 +315,9 @@ export default {
       } else if (el.classList[0] === 'audioRecordingRow') {
         const splits = el.id.split('_');
         const id = splits[0].slice(3);
-        this.selectedAE = this.allAudioEvents[id];
+        this.selectedAE = this.allAudioEvents[Number(id)];
         const selectedAFIdx = splits[1];
-        this.selectedAF = this.selectedAE.recordings[selectedAFIdx];
+        this.selectedAF = this.selectedAE.recordings[Number(selectedAFIdx)];
         this.clickedAE = true;
         this.clickedAF = true
       } else {
@@ -274,46 +328,62 @@ export default {
       }
       this.dropDownLeft = e.clientX;
       this.dropDownTop = e.clientY;
-      const rect = this.$refs.fileContainer.getBoundingClientRect();
+      const fileContainer = this.$refs.fileContainer as HTMLDivElement;
+      const rect = fileContainer.getBoundingClientRect();
       if (this.dropDownLeft + this.dropDownWidth > rect.width - 20) {
         this.dropDownLeft = rect.width - this.dropDownWidth - 20
       }
-      const dropDownRect = this.$refs.dropDown.getBoundingClientRect();
+      const dropDownRect = dropDown.getBoundingClientRect();
       const dropDownHeight = dropDownRect.height;
       if (this.dropDownTop + dropDownHeight > rect.height - 20) {
         this.dropDownTop = rect.height - dropDownHeight - 20
       }
-      this.$refs.dropDown.classList.remove('closed')  
+      dropDown.classList.remove('closed')  
       }
     },
     
-    sendAudioSource(e, audioEvent, aeIdx, recKey) {
+    sendAudioSource(e: MouseEvent, 
+                    audioEvent: AudioEventType, 
+                    aeIdx: number, 
+                    recKey: number) {
       const _id = audioEvent.recordings[recKey].audioFileId;
       this.playing = [aeIdx, recKey]
       const playing = document.querySelector('.playing');
       if (playing) playing.classList.remove('playing');
-      e.target.classList.add('playing');
+      const target = e.target as HTMLElement;
+      if (target === null) {
+        throw new Error('target is null')
+      }
+      target.classList.add('playing');
       const selected = document.querySelector('.selected');
       if (selected) selected.classList.remove('selected');
-      const aeRow = this.$refs.fileContainer.children[aeIdx].children[0];
+      const fileContainer = this.$refs.fileContainer as HTMLDivElement;
+      const aeRow = fileContainer.children[aeIdx].children[0];
       aeRow.classList.add('selected');
       this.audioSource = `https://swara.studio/audio/mp3/${_id}.mp3`;
       this.audioRecId = _id;
+      if (this.allAudioEvents === undefined) {
+        throw new Error('allAudioEvents is undefined')
+      }
       this.audioEventId = this.allAudioEvents[aeIdx]._id;
       this.recIdx = recKey;
       const rec = this.allAudioEvents[aeIdx].recordings[recKey];
       this.saEstimate = rec.saEstimate;
       this.saVerified = rec.saVerified;
-      this.$refs.audioPlayer.waKey ++;
+      const audioPlayer = this.$refs.audioPlayer as typeof AudioPlayer;
+      audioPlayer.waKey ++;
     },
     
-    nextTrack(shuffling, initial) {
+    nextTrack(shuffling: boolean, initial: boolean) {
       const aeIdx = this.playing[0];
       const recKey = this.playing[1];
       const playingElem = document.querySelector('.playing');
       if (playingElem) playingElem.classList.remove('playing');
       const selected = document.querySelector('.selected');
       if (selected) selected.classList.remove('selected');
+      if (this.allAudioEvents === undefined) {
+        throw new Error('allAudioEvents is undefined')
+      }
       const curEvent = this.allAudioEvents[aeIdx];
       const curTotRecs = Object.keys(curEvent.recordings).length;
       let newAeIdx;
@@ -343,21 +413,22 @@ export default {
       const theseRecs = this.allAudioEvents[newAeIdx].recordings;
       const _id = theseRecs[Number(newRecKey)].audioFileId;
       this.audioSource = `https://swara.studio/audio/mp3/${_id}.mp3`;
-      const newAEElem = this.$refs.fileContainer.children[newAeIdx];
+      const fileContainer = this.$refs.fileContainer as HTMLDivElement;
+      const newAEElem = fileContainer.children[newAeIdx];
       const grandChildren = newAEElem.children[1].children[1];
       const newRecElem = grandChildren.children[Number(newRecKey)];
       newRecElem.classList.add('playing')
-      const aeRow = this.$refs.fileContainer.children[newAeIdx].children[0];
+      const aeRow = fileContainer.children[newAeIdx].children[0];
       aeRow.classList.add('selected');
       this.playing = [newAeIdx, newRecKey]
       
     },
     
-    getRaags(recording) {
+    getRaags(recording: RecType) {
       return Object.keys(recording.raags)
     },
     
-    getSoloist(recording) {
+    getSoloist(recording: RecType) {
       // get soloist _and_ instrument
       const filtered = Object.entries(recording.musicians)
                         .filter(c => c[1].role === 'Soloist');
@@ -372,27 +443,25 @@ export default {
       }
     },
     
-    getPSecs(raag) {
-      return Object.keys(raag['performance sections']).join(', ')
+    getPSecs(raag: RaagType) {
+      const pSecsObj = raag['performance sections'];
+      if (pSecsObj === undefined) {
+        throw new Error('pSecsObj is undefined')
+      }
+      return Object.keys(pSecsObj).join(', ')
     },
-    
-    audioFileInfo(p) {
-      const raga = p.raag;
-      const performers = p.performers.map(obj => Object.keys(obj)[0]);
-      const instrumentation = p.performers.map(obj => Object.values(obj)[0]);
-      const year = p.year;
-      const duration = displayTime(p.duration);
-      return [raga, performers, instrumentation, year, duration]
-    },
-    
     
     toggleAddEvent() {
-      this.showAddEvent = Boolean(Math.abs(this.showAddEvent - 1))
+      this.showAddEvent = !this.showAddEvent
     },
     
-    toggleDisplay(t, audioEvent, parent) {
+    toggleDisplay(t: MouseEvent, audioEvent: AudioEventType, parent: boolean) {
       // console.log(t, audioEvent, parent)
-      const target = parent ? t.target.children.item(0) : t.target;
+      const preTarget = t.target as HTMLElement;
+      const target = parent ? preTarget.children.item(0) : preTarget;
+      if (target === null) {
+        throw new Error('target is null')
+      }
       if (target.className === '') {
         target.className = 'rotated';
         audioEvent.visible = true
@@ -402,7 +471,7 @@ export default {
       }
     },
     
-    getHeight(audioEvent) {
+    getHeight(audioEvent: AudioEventType) {
       let ct = 0;
       if (!audioEvent.recordings) return 0;
       Object.values(audioEvent.recordings).forEach(rec => {
@@ -411,26 +480,30 @@ export default {
       return ct
     },
     
-    raagHt(audioEvent, recKey) {
+    raagHt(audioEvent: AudioEventType, recKey: number) {
       const rec = audioEvent.recordings[recKey];
       return Object.keys(rec.raags).length
     },
     
-    openEditWindow(_id) {
+    openEditWindow(_id: string) {
       this.editingId = _id;
       this.showAddEvent = true
     },
     
     async deleteAE() {
+      if (this.selectedAE === undefined) {
+        throw new Error('selectedAE is undefined')
+      }
       const result = await deleteAudioEvent(this.selectedAE._id);
       console.log(result);
       if (result.deletedCount === 1) {
-        this.$refs.dropDown.classList.add('closed');
+        const dropDown = this.$refs.dropDown as HTMLDivElement;
+        dropDown.classList.add('closed');
         this.allAudioEvents = await getAllAudioEventMetadata()
       }
     }
   }
-}
+})
 </script>
 
 <style scoped>

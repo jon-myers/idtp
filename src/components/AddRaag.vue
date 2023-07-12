@@ -47,9 +47,9 @@
           type='text' 
           inputmode='numeric' 
           v-model='pSectionTimings[Number(sec)].start.hours'
-          v-if='$parent.duration && $parent.duration >= 3600'
+          v-if='parentDuration && parentDuration >= 3600'
           maxlength='2'>
-        <span v-if='$parent.duration && $parent.duration >= 3600'>:</span>
+        <span v-if='parentDuration && parentDuration >= 3600'>:</span>
         <input 
           type='text' 
           inputmode='numeric'
@@ -70,9 +70,9 @@
           type='text' 
           inputmode='numeric'
           v-model='pSectionTimings[Number(sec)].end.hours'
-          v-if='$parent.duration && $parent.duration >= 3600'
+          v-if='parentDuration && parentDuration >= 3600'
           maxlength='2'>
-        <span v-if='$parent.duration && $parent.duration >= 3600'>:</span>
+        <span v-if='parentDuration && parentDuration >= 3600'>:</span>
         <input 
           type='text' 
           inputmode='numeric'
@@ -90,20 +90,51 @@
   </div>
 </div>
 </template>
-<script>
+<script lang='ts'>
 import {
   getRagaNames,
   getPerformanceSections
-} from '@/js/serverCalls.mjs';
+} from '@/js/serverCalls.ts';
+
+export type { AddRaagDataType };
+type AddRaagDataType = {
+  raags?: string[],
+  selectedRaag?: string,
+  performanceSections?: string[],
+  selectedPSection?: string,
+  selectedPSections: (string | undefined)[],
+  addPSectionVisibility: (boolean | undefined)[],
+  numSections: number,
+  pSectionTimings: {
+    start: {
+      hours: string,
+      minutes: string,
+      seconds: string
+    },
+    end: {
+      hours: string,
+      minutes: string,
+      seconds: string
+    }
+  }[],
+  newAddedRaag?: string,
+  newAddedPSections: (string | undefined)[]
+}
 
 export default {
   name: 'AddRaag',
+  props: {
+    parentDuration: {
+      type: Number,
+      // required: true
+    }
+  },
 
-  data() {
+  data(): AddRaagDataType {
     return {
       raags: undefined,
       selectedRaag: undefined,
-      performanceSections: undefined,
+      performanceSections: [] as string[],
       selectedPSection: undefined,
       selectedPSections: Array(6).fill(undefined),
       addPSectionVisibility: Array(6).fill(undefined),
@@ -134,17 +165,21 @@ export default {
   },
 
   async mounted() {
-
-    this.raags = await getRagaNames()
-    this.raags.push('Unknown', 'Other (specify)')
-    this.performanceSections = await getPerformanceSections();
-    this.performanceSections.push('Unknown', 'Other (specify)')
+    try {
+      this.raags = await getRagaNames()
+      this.raags.push('Unknown', 'Other (specify)')
+      this.performanceSections = await getPerformanceSections();
+      this.performanceSections.push('Unknown', 'Other (specify)')
+    } catch (err) {
+      console.log(err)
+    }
+    
 
   },
 
   methods: {
 
-    updatePerformanceSections(i) {
+    updatePerformanceSections(i: number) {
       if (this.selectedPSections[i] === 'Other (specify)') {
         this.addPSectionVisibility[i] = true
       } else {
@@ -152,14 +187,18 @@ export default {
       }
     },
     
-    leadingZeros(input, secNum, position, timeType) {
-      if(!isNaN(input.target.value) && input.target.value.length === 1) {
-        input.target.value = '0' + input.target.value;
+    leadingZeros(input: Event, 
+                 secNum: number, 
+                 position: 'start' | 'end',
+                 timeType: 'hours' | 'minutes' | 'seconds') {
+                  const target = input.target as HTMLInputElement;
+      if(!isNaN(Number(target.value)) && target.value.length === 1) {
+        target.value = '0' + target.value;
       }
-      if (input.target.value > 59) {
-        input.target.value = 59
+      if (target && Number(target.value) > 59) {
+        target.value = '59'
       }
-      this.pSectionTimings[secNum][position][timeType] = input.target.value
+      this.pSectionTimings[secNum][position][timeType] = target.value
       
     }
 

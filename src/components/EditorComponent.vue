@@ -169,7 +169,7 @@ import {
   savePiece,
   makeSpectrograms,
   pieceExists
-} from '@/js/serverCalls.mjs';
+} from '@/js/serverCalls.ts';
 import { Meter } from '@/js/meter.ts';
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
 import TrajSelectPanel from '@/components/TrajSelectPanel.vue';
@@ -1448,7 +1448,7 @@ export default {
     },
     
     async makeSpectrograms() {
-      // use call from serverCalls.js to create new spectrograms on the server.
+      // use call from serverCalls.ts to create new spectrograms on the server.
       const recId = this.piece.audioID;
       const saEst = this.audioDBDoc.saEstimate;
       const octOffset = this.audioDBDoc.octOffset;

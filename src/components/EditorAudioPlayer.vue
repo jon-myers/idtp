@@ -271,7 +271,7 @@ import { AudioWorklet } from '@/audio-worklet';
 import tuningForkIcon from '@/assets/icons/tuning_fork.png';
 import downloadIcon from '@/assets/icons/download.svg';
 import meterIcon from '@/assets/icons/meter.svg';
-import { excelData, jsonData } from '@/js/serverCalls.mjs';
+import { excelData, jsonData } from '@/js/serverCalls.ts';
 import ksURL from '@/audioWorklets/karplusStrong.worklet.js?url';
 import cURL from '@/audioWorklets/chikaris.worklet.js?url';
 import caURL from '@/audioWorklets/captureAudio.worklet.js?url';
@@ -280,7 +280,6 @@ import rubberBandUrl from '@/audioWorklets/rubberband-processor.js?url';
 import { createRubberBandNode as createRBNode } from 'rubberband-web';
 import { detect } from 'detect-browser';
 import { drag as d3Drag, select as d3Select } from 'd3';
-import { Stretcher } from '@/js/stretcher.js';
 import stretcherURL from '@/js/bundledStretcherWorker.js?url';
 import MeterControls from '@/components/MeterControls.vue';
 

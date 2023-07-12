@@ -51,7 +51,7 @@ import {
   Raga,
 } from '@/js/classes.ts';
 
-import { getRaagRule } from '@/js/serverCalls.mjs';
+import { getRaagRule } from '@/js/serverCalls.ts';
 
 // import savedPiece from '@/assets/piece2.JSON';
 // import * as d3 from 'd3';

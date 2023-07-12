@@ -166,8 +166,8 @@
   </div>
 </template>
 
-<script>
-  const linSpace = (startValue, stopValue, cardinality) => {
+<script lang='ts'>
+  const linSpace = (startValue: number, stopValue: number, cardinality: number) => {
     var arr = [];
     var step = (stopValue - startValue) / (cardinality - 1);
     for (var i = 0; i < cardinality; i++) {
@@ -182,21 +182,28 @@
     durationsOfPitchOnsets,
     patternCounter,
     chromaSeqToCondensedPitchNums
-  } from '@/js/analysis.mjs';
+  } from '@/js/analysis.ts';
   import { 
     durationsOfFixedPitches, 
     Pitch, 
     pitchNumberToChroma,
-    Trajectory
+    Trajectory,
+    Piece
   } from '@/js/classes.ts';
-  import { pieceExists } from '@/js/serverCalls.mjs';
+  import { pieceExists } from '@/js/serverCalls.ts';
   import Gradient from 'javascript-color-gradient';
   import * as d3 from 'd3';
+import { defineComponent } from 'vue';
 
-  const displayTime = dur => {
+type PCountType = {
+  [key: number]: { pattern: number[], count: number }[],
+  maxSize: number
+}
+
+  const displayTime = (dur: number) => {
     const hours = Math.floor(dur / 3600);
-    let minutes = Math.floor((dur - hours * 3600) / 60);
-    let seconds = Math.round(dur % 60);
+    let minutes: number | string = Math.floor((dur - hours * 3600) / 60);
+    let seconds: number | string = Math.round(dur % 60);
     if (seconds.toString().length === 1) seconds = '0' + seconds;
     if (hours !== 0) {
       if (minutes.toString().length === 1) minutes = '0' + minutes;
@@ -206,14 +213,17 @@
     }
   }
 
-  function shouldTextBeBlack (backgroundcolor) {
+  function shouldTextBeBlack (backgroundcolor: string) {
     return computeLuminence(backgroundcolor) > 0.179;
   }
 
-  function computeLuminence(backgroundcolor) {
+  function computeLuminence(backgroundcolor: string) {
       var colors = hexToRgb(backgroundcolor);
+      if (!colors) {
+        throw new Error('Invalid color: ' + backgroundcolor);
+      }
       
-      var components = ['r', 'g', 'b'];
+      var components: ('r' | 'g' | 'b')[] = ['r', 'g', 'b'];
       for (var i in components) {
           var c = components[i];
           
@@ -231,7 +241,7 @@
       return luminence;
   }
 
-  function hexToRgb(hex) {
+  function hexToRgb(hex: string) {
       var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
       return result ? {
           r: parseInt(result[1], 16),
@@ -240,8 +250,42 @@
       } : null;
   }
 
-  export default {
-    data() {
+  type AnalyzerComponentDataType = {
+    piece?: Piece,
+    analysisTypes: string[],
+    selectedATIdx: number,
+    pitchPrevalenceTypes: string[],
+    patternCountTypes: string[],
+    pitchRepresentationTypes: string[],
+    segmentationType: string,
+    pitchRepresentation: string,
+    duration: number,
+    pitchChroma: boolean,
+    condensed: boolean,
+    heatmap: boolean,
+    fadeTime: number,
+    controlsHeight: number,
+    typeRowHeight: number,
+    graphHeight: number,
+    targetPitchChoices: (string | number)[],
+    targetPitchIdx: number,
+    pitchTypes: string[],
+    pitchType: string,
+    patternSizes: number[],
+    selectedPatternSizes: boolean[],
+    controlBoxWidth: number,
+    minPatternSize: boolean,
+    minPatternSizeValue: number,
+    targetPitchBool: boolean,
+    plot: boolean,
+    graphRowHeight?: number,
+    svg?: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>,
+    topSvg?: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>,
+
+  }
+
+  export default defineComponent({
+    data(): AnalyzerComponentDataType {
       return {
         piece: undefined,
         analysisTypes: ['Pitch Prevalence', 'Pitch Patterns'],
@@ -279,12 +323,18 @@
         minPatternSize: false,
         minPatternSizeValue: 1,
         targetPitchBool: true,
-        plot: false
+        plot: false,
+        graphRowHeight: undefined,
+        svg: undefined,
+        topSvg: undefined,
       }
     },
 
     watch: {
       pitchType(newVal) {
+        if (this.piece === undefined) {
+          throw new Error('Piece is undefined');
+        }
         const raga = this.piece.raga;
         if (newVal === 'Pitch Number') {
           if (this.pitchChroma) {
@@ -322,6 +372,9 @@
     methods: {
 
       updateChroma() {
+        if (this.piece === undefined) {
+          throw new Error('Piece is undefined');
+        }
         const raga = this.piece.raga;
         if (this.pitchType === 'Pitch Number') {
           if (this.pitchChroma) {
@@ -354,9 +407,12 @@
         }
       },
 
-      handleClickAnalysisType(atIdx) {
+      handleClickAnalysisType(atIdx: number) {
         this.selectedATIdx = atIdx;
-        if (this.svg) {
+        if (this.svg !== undefined) {
+          if (this.topSvg === undefined) {
+            throw new Error('Top SVG is undefined');
+          }
           this.topSvg.selectAll('*').remove();
           this.topSvg.remove();
           this.topSvg = undefined;
@@ -374,7 +430,18 @@
         h = undefined, 
         fill = 'none',
         stroke = 'none',
+      }: {
+        svg?: d3.Selection<SVGElement, any, any, any>,
+        x?: number,
+        y?: number,
+        w?: number,
+        h?: number,
+        fill?: string,
+        stroke?: string,
       } = {}) {
+        if (x === undefined || y === undefined || w === undefined || h === undefined) {
+          throw new Error('x, y, w, or h is undefined');
+        }
         return svg.append('rect')
           .attr('x', x)
           .attr('y', y)
@@ -391,7 +458,17 @@
         x2 = undefined,
         y2 = undefined,
         stroke = 'black',
+      }: {
+        svg?: d3.Selection<SVGElement, any, any, any>,
+        x1?: number,
+        y1?: number,
+        x2?: number,
+        y2?: number,
+        stroke?: string,
       } = {}) {
+        if (x1 === undefined || y1 === undefined || x2 === undefined || y2 === undefined) {
+          throw new Error('x1, y1, x2, or y2 is undefined');
+        }
         return svg.append('line')
           .attr('x1', x1)
           .attr('y1', y1)
@@ -409,7 +486,19 @@
         fWeight = 'normal',
         fill = 'black',
         anchor = 'middle'
+      }: {
+        svg?: d3.Selection<SVGElement, any, any, any>,
+        x?: number,
+        y?: number,
+        text?: string,
+        fSize?: string,
+        fWeight?: string,
+        fill?: string,
+        anchor?: string,
       } = {}) {
+        if (x === undefined || y === undefined || text === undefined) {
+          throw new Error('x, y, or text is undefined');
+        }
         return svg.append('text')
           .attr('x', x)
           .attr('y', y)
@@ -421,7 +510,7 @@
           .text(text)
       },
 
-      getHeatmapColor(val) {
+      getHeatmapColor(val: number) {
         const gradientArray = new Gradient()
           .setColorGradient('#ffffff', '#000000')
           .setMidpoint(100)
@@ -440,13 +529,21 @@
         heatmap = false,
         pitchRepresentation = 'Fixed Pitch',
       } = {}) {
-        let segments;
+        if (this.piece === undefined) {
+          throw new Error('Piece is undefined');
+        }
+        let segments: Trajectory[][];
+        if (this.piece === undefined) {
+          throw new Error('Piece is undefined');
+        }
         if (segmentation === 'Duration') {
           segments = segmentByDuration(this.piece, { duration: duration });
         } else if (segmentation === 'Phrase') {
           segments = this.piece.phrases.map(p => p.trajectories);
         } else if (segmentation === 'Section') {
           segments = this.piece.sections.map(s => s.trajectories);
+        } else {
+          throw new Error('Invalid segmentation');
         }
         const func = pitchRepresentation === 'Fixed Pitch' ? 
           durationsOfFixedPitches : 
@@ -457,8 +554,11 @@
           maxSilence: this.fadeTime,
 
         }));
-        let lowestKey, highestKey;
+        let lowestKey: number, highestKey: number;
         durs.forEach(dur => {
+          if (dur === undefined) {
+            throw new Error('dur is undefined');
+          }
           const keys = Object.keys(dur);
           keys.forEach(key => {
             if (lowestKey === undefined) lowestKey = Number(key);
@@ -472,15 +572,15 @@
           })
         })
         if (condensed) {
-          lowestKey = this.piece.raga.pitchNumberToScaleNumber(lowestKey);
-          highestKey = this.piece.raga.pitchNumberToScaleNumber(highestKey);
+          lowestKey = this.piece.raga.pitchNumberToScaleNumber(lowestKey!);
+          highestKey = this.piece.raga.pitchNumberToScaleNumber(highestKey!);
         }
         let totalWidth = 900;
         let totalHeight = 600;
         const pnLen = this.piece.raga.getPitchNumbers(0, 11).length;
         const ppOct = condensed ? pnLen : 12; 
-        const lkOct = Math.floor(lowestKey / ppOct);
-        const hOct = Math.floor(highestKey / ppOct);
+        const lkOct = Math.floor(lowestKey! / ppOct);
+        const hOct = Math.floor(highestKey! / ppOct);
         const mTop = segmentation === 'Duration' ? 90 : 110;
         const margin = { top: mTop, right: 30, bottom: 20, left: 80 };
         let width = totalWidth - margin.left - margin.right;
@@ -492,7 +592,7 @@
           width = widthPerSeg * durs.length;
           totalWidth = width + margin.left + margin.right;
         }
-        this.topSvg = d3.select(this.$refs.graph)
+        this.topSvg = d3.select('.graph')
           .append('svg')
           .attr('width', totalWidth)
           .attr('height', totalHeight)
@@ -771,11 +871,16 @@
       },
 
       createGraph() {
+        if (this.piece === undefined) {
+          throw new Error('Piece is undefined');
+        }
 
         if (this.svg) {
-          this.topSvg.selectAll('*').remove();
-          this.topSvg.remove();
-          this.topSvg = undefined;
+          if (this.topSvg !== undefined) {
+            this.topSvg.selectAll('*').remove();
+            this.topSvg.remove();
+            this.topSvg = undefined;
+          }
           this.svg = undefined;
         }
         if (this.selectedATIdx === 0) {
@@ -825,7 +930,19 @@
         minSize = 1,
         plot = false
 
+      }: {
+        segmentation?: string,
+        duration?: number,
+        pitchChroma?: boolean,
+        pitchType?: string,
+        fadeTime?: number,
+        targetPitch?: number | string,
+        minSize?: number,
+        plot?: boolean,
       } = {}) {
+        if (this.piece === undefined) {
+          throw new Error('Piece is undefined');
+        }
         const pSizes = this.patternSizes
             .filter((_, idx) => this.selectedPatternSizes[idx]);
         let segments, title;
@@ -842,9 +959,11 @@
         } else if (segmentation === 'Transcription') {
           segments = [this.piece.allTrajectories()];
           title = `Patterns of Size ${pSizes.join(', ')} in Full Transcription`;
+        } else {
+          throw new Error('Invalid segmentation type');
         }
         const pCounts = segments.map(s => {
-          const pCount = {};
+          const pCount: PCountType = { maxSize: 0 };
           let maxSize = 0;          
           pSizes.forEach(ps => {
               const options = {
@@ -862,6 +981,7 @@
           pCount['maxSize'] = maxSize;
           return pCount;
         })
+        console.log(pCounts)
         let verticalTot = 20 * pCounts
           .map(pCount => (plot ? pCount.maxSize * 4 : pCount.maxSize) + 3)
           .reduce((acc, v) => acc + v, 0);
@@ -870,7 +990,7 @@
         let totalWidth = (sum + 3 * pSizes.length) * 20 + margin.left;
         // let totalWidth = 900;
         let totalHeight = verticalTot + margin.top;
-        this.topSvg = d3.select(this.$refs.graph)
+        this.topSvg = d3.select('.graph')
           .append('svg')
           .attr('width', totalWidth)
           .attr('height', totalHeight)
@@ -1078,7 +1198,7 @@
         console.log(err);
       }
     }
-  }
+  })
 </script>
 
 <style lang="css" scoped>

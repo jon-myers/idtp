@@ -1401,8 +1401,9 @@ class Phrase {
   groupsGrid: Group[][];
   durTot?: number;
   durArray?: number[];
-  chikaris: object;
+  chikaris: { [key: string]: Chikari };
   pieceIdx?: number;
+  // trajectories: Trajectory[];
   
 
 
@@ -1824,6 +1825,28 @@ class Piece {
     sectionStarts = undefined,
     instrumentation = ['Sitar'],
     meters = [],
+  }: {
+    phrases?: Phrase[],
+    durTot?: number,
+    durArray?: number[],
+    raga?: Raga,
+    title?: string,
+    performers?: string[],
+    dateCreated?: Date,
+    dateModified?: Date,
+    location?: string,
+    transcriber?: string,
+    _id?: string,
+    audioID?: string,
+    audio_DB_ID?: string,
+    userID?: string,
+    name?: string,
+    family_name?: string,
+    given_name?: string,
+    permissions?: string,
+    sectionStarts?: number[],
+    instrumentation?: string[],
+    meters?: Meter[],
   } = {}) {
     this.meters = meters;
     this.phrases = phrases;
@@ -2208,6 +2231,11 @@ class Raga {
     fundamental = 261.63,
     ruleSet = yamanRuleSet,
     ratios = undefined,
+  }: {
+    name?: string,
+    fundamental?: number,
+    ruleSet?: RuleSetType,
+    ratios?: number[]
   } = {}) {
 
     this.name = name;

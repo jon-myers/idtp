@@ -111,7 +111,7 @@
     </div>
   </div>
 </template>
-<script>
+<script lang='ts'>
 import {
   getAllPieces,
   createNewPiece,
@@ -122,13 +122,49 @@ import {
   cloneTranscription,
   updateTranscriptionTitle,
   updateTranscriptionPermissions,
-} from '@/js/serverCalls.mjs';
+} from '@/js/serverCalls.ts';
 import NewPieceRegistrar from '@/components/NewPieceRegistrar.vue';
 import { Raga, Piece, Trajectory, Phrase } from '@/js/classes.ts';
 
-export default {
+import { defineComponent } from 'vue';
+
+type FileManagerType = {
+  infoKeys: string[];
+  designPieceModal: boolean;
+  selectedPiece?: Piece,
+  allPieces?: Piece[];
+  allPieceInfo: PieceInfoType[];
+  dropDownLeft: number;
+  dropDownTop: number;
+  dropDownWidth: number;
+  delete_: boolean;
+  open_: boolean;
+  deleteActive: boolean;
+  modalLeft: number;
+  modalTop: number;
+  modalWidth: number;
+  modalHeight: number;
+  titleModalWidth: number;
+  titleModalHeight: number;
+  permissionsModalWidth: number;
+  permissionsModalHeight: number;
+  sorts: number[];
+  selectedSort: number;
+  sortKeyNames: string[];
+  editTitleModal: boolean;
+  editPermissionsModal: boolean;
+  passedInDataObj?: {
+    [key: string]: string
+  },
+  editingTitle?: string,
+  editingPermissions?: string,
+}
+
+type PieceInfoType = [string?, string?, string?, string?, string?, string?];
+
+export default defineComponent({
   name: 'FileManager',
-  data() {
+  data(): FileManagerType {
     return {
       infoKeys: [
         'Title',
@@ -143,9 +179,9 @@ export default {
       allPieceInfo: [],
       dropDownLeft: 200,
       dropDownTop: 300,
+      dropDownWidth: 200,
       modalLeft: 200,
       modalTop: 200,
-      dropDownWidth: 200,
       delete_: true,
       open_: true,
       deleteActive: true,
@@ -183,10 +219,13 @@ export default {
     if (this.$store.state.userID === undefined) {
       this.$router.push('/');
     }
-    const id = this.$store.state.userID;
+    const id = this.$store.state.userID as string;
     const sortKey = this.sortKeyNames[this.selectedSort];
     const sortDir = this.sorts[this.selectedSort];
-    this.allPieces = await getAllPieces(id, sortKey, sortDir);
+    this.allPieces = await getAllPieces(id, sortKey, String(sortDir));
+    if (this.allPieces === undefined) {
+      throw new Error('this.allPieces is undefined');
+    }
     this.allPieces.forEach(() => {
       this.allPieceInfo.push([
         undefined,
@@ -276,7 +315,7 @@ export default {
   },
 
   methods: {
-    async toggleSort(idx) {
+    async toggleSort(idx: number) {
       if (this.sorts[idx] === 1) {
         this.sorts[idx] = -1;
       } else {
@@ -286,7 +325,7 @@ export default {
       await this.updateSort();
     },
 
-    pieceInfo(p) {
+    pieceInfo(p: Piece): PieceInfoType {
       const title = p.title;
       const raga = p.raga.name;
       let name = undefined;
@@ -311,9 +350,12 @@ export default {
       return month + '/' + day + '/' + year;
     },
 
-    openPieceAlt(piece) {
+    openPieceAlt(piece?: Piece) {
       if (piece === undefined) {
         piece = this.selectedPiece;
+      }
+      if (piece === undefined) {
+        throw new Error('piece is undefined')
       }
       this.$store.commit('update_id', piece._id);
       this.$cookies.set('currentPieceId', piece._id);
@@ -323,9 +365,12 @@ export default {
       });
     },
 
-    openInAnalyzer(piece) {
+    openInAnalyzer(piece: Piece | undefined) {
       if (piece === undefined) {
         piece = this.selectedPiece;
+      }
+      if (piece === undefined) {
+        throw new Error('piece is undefined')
       }
       this.$store.commit('update_id', piece._id);
       this.$cookies.set('currentPieceId', piece._id);
@@ -336,7 +381,8 @@ export default {
     },
 
     designNewPiece() {
-      this.$refs.dropDown.classList.add('closed');
+      const dropDown = this.$refs.dropDown as HTMLElement;
+      dropDown.classList.add('closed');
       this.designPieceModal = true;
     },
 
@@ -361,8 +407,14 @@ export default {
       this.closeDropDown();
     },
 
-    async clonePiece(piece) {
+    async clonePiece(piece?: Piece) {
       if (piece === undefined) piece = this.selectedPiece;
+      if (piece === undefined) {
+        throw new Error('piece is undefined')
+      }
+      if (piece.audioID === undefined) {
+        throw new Error('piece.audioId is undefined')
+      }
       try {
         const audioRecording = await getAudioRecording(piece.audioID);
         const audioEvent = await getAudioEvent(audioRecording.parentID);
@@ -389,7 +441,8 @@ export default {
     async deletePiece() {
       const isUser = this.$store.state.userID === this.selectedPiece.userID;
       if (this.delete_ && isUser) {
-        this.$refs.dropDown.classList.add('closed');
+        const dropDown = this.$refs.dropDown as HTMLElement;
+        dropDown.classList.add('closed');
         const res = await deletePiece(this.selectedPiece);
         if (res.deletedCount === 1) {
           const id = this.$store.state.userID;
@@ -537,7 +590,7 @@ export default {
       }
     },
   },
-};
+});
 </script>
 
 <style scoped>

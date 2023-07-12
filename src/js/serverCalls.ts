@@ -1,8 +1,10 @@
 const url = 'https://swara.studio/';
 import axios from 'axios';
+import { AxiosProgressEvent } from 'axios';
 import fetch from 'cross-fetch';
+import { Piece } from './classes.ts';
 
-const getPiece = async id => {
+const getPiece = async (id: string): Promise<Piece> => {
   let piece;
   const request = {
     method: "POST",
@@ -13,20 +15,18 @@ const getPiece = async id => {
       _id: id
     })
   };
-
-  await fetch(url + 'getOneTranscription', request)
-    .then(response => {
-      if (response.ok) {
-        return response.json()
-      }
-    }).then(data => {
-      piece = data;
-      if (!piece) throw 'no piece'
-    }).catch(err => console.error(err))
+  try {
+    const response = await fetch(url + 'getOneTranscription', request);
+    if (response.ok) {
+      piece = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
   return piece
 }
 
-const pieceExists = async id => {
+const pieceExists = async (id: string) => {
   const request = {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' }
@@ -42,7 +42,7 @@ const pieceExists = async id => {
   }
 }
 
-const excelData = async id => {
+const excelData = async (id: string) => {
   const request = {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' }
@@ -53,7 +53,7 @@ const excelData = async id => {
     let data;
     if (response.ok) data = await response.blob();
     const a = document.createElement('a');
-    a.href = window.URL.createObjectURL(data);
+    if (data) a.href = window.URL.createObjectURL(data);
     a.download = 'data.xlsx';
     a.click();
   } catch (err) {
@@ -61,7 +61,7 @@ const excelData = async id => {
   }
 }
 
-const jsonData = async id => {
+const jsonData = async (id: string) => {
   const request = {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' }
@@ -72,7 +72,7 @@ const jsonData = async id => {
     let data;
     if (response.ok) data = await response.blob();
     const a = document.createElement('a');
-    a.href = window.URL.createObjectURL(data);
+    if (data) a.href = window.URL.createObjectURL(data);
     a.download = 'data.json';
     a.click();
   } catch (err) {
@@ -80,7 +80,7 @@ const jsonData = async id => {
   }
 }
 
-const getAudioDBEntry = async _id => {
+const getAudioDBEntry = async (_id: string | number) => {
   let request = {
     method: 'POST',
     headers: {
@@ -96,7 +96,7 @@ const getAudioDBEntry = async _id => {
 }
 
 
-const savePiece = async piece => {
+const savePiece = async (piece: Piece) => {
   const data = JSON.stringify(piece);
   let result;
   let request = {
@@ -117,7 +117,11 @@ const savePiece = async piece => {
   }
 };
 
-const getAllPieces = async (userID, sortKey, sortDir) => {
+const getAllPieces = async (
+    userID: string, 
+    sortKey: string, 
+    sortDir: string
+  ): Promise<Piece[]> => {
   if (sortKey === undefined) {
     sortKey = 'title'
   }
@@ -136,16 +140,14 @@ const getAllPieces = async (userID, sortKey, sortDir) => {
     sortKey: JSON.stringify(sortKey),
     sortDir: JSON.stringify(sortDir)
   });
-  await fetch(url + 'getAllTranscriptions' + query, request)
-    .then(response => {
-      if (response.ok) {
-        return response.json();
-      }
-    }).then(data => {
-      if (data) {
-        allPieces = data
-      }
-    }).catch(err => console.error(err));
+  try {
+    const response = await fetch(url + 'getAllTranscriptions' + query, request);
+    if (response.ok) {
+      allPieces = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
   return allPieces
 };
 
@@ -190,7 +192,7 @@ const getAllAudioEventMetadata = async () => {
   }
 }
 
-const getAudioEvent = async _id => {
+const getAudioEvent = async (_id: string) => {
   let audioEvent;
   const suffix = '?' + new URLSearchParams({ _id: _id });
   const request = {
@@ -210,7 +212,7 @@ const getAudioEvent = async _id => {
   }
 }
 
-const getAudioRecording = async _id => {
+const getAudioRecording = async (_id: string) => {
   let audioRecording;
   const suffix = '?' + new URLSearchParams({ _id: _id });
   const request = {
@@ -231,52 +233,70 @@ const getAudioRecording = async _id => {
   }
 };
 
-const getSortedMusicians = async () => {
-  // query 'musicians' mongoDB collection to get all musicians in alphabetical 
-  // order
-  let allMusicians;
+// const getSortedMusicians = async () => {
+//   // query 'musicians' mongoDB collection to get all musicians in alphabetical 
+//   // order
+//   let allMusicians;
+//   let request = {
+//     method: 'GET',
+//     headers: {
+//       'Content-Type': 'application/json'
+//     },
+//   };
+//   await fetch(url + 'getSortedMusicians', request)
+//     .then(res => {
+//       if (res.ok) {
+//         return res.json();
+//       }
+//     }).then(data => {
+//       if (data) {
+//         allMusicians = data
+//       }
+//     }).catch(err => console.error(err))
+//   return allMusicians
+// };
+
+
+const getSortedMusicians = async (): Promise<string[]> => {
+  let allMusicians: string[] = [];
   let request = {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json'
     },
   };
-  await fetch(url + 'getSortedMusicians', request)
-    .then(res => {
-      if (res.ok) {
-        return res.json();
-      }
-    }).then(data => {
-      if (data) {
-        allMusicians = data
-      }
-    }).catch(err => console.error(err))
+  try {
+    const res = await fetch(url + 'getSortedMusicians', request);
+    if (res.ok) {
+      allMusicians = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
   return allMusicians
-};
+}
 
 const getEventTypes = async () => {
   // query 'audioEventTypes' mongoDB collection to get all event types
-  let allEventTypes;
+  let allEventTypes: string[] = []; 
   let request = {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json'
     },
   };
-  await fetch(url + 'getEventTypes', request)
-    .then(res => {
-      if (res.ok) {
-        return res.json();
-      }
-    }).then(data => {
-      if (data) {
-        allEventTypes = data
-      }
-    }).catch(err => console.error(err))
-    return allEventTypes
+  try {
+    const res = await fetch(url + 'getEventTypes', request);
+    if (res.ok) {
+      allEventTypes = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return allEventTypes
 };
 
-const getGharana = async initName => {
+const getGharana = async (initName: string) => {
   // get gharana from musician's name
   let gharana;
   let request = {
@@ -300,13 +320,10 @@ const getGharana = async initName => {
     return gharana  
 };
 
-const getInstruments = async melody => {
+const getInstruments = async (melody: boolean): Promise<string[]> => {
   melody = melody || false;
-  const suffix = melody ? 
-    '?' + new URLSearchParams({
-      melody: true
-    }) : 
-    '';
+  const searchParams = new URLSearchParams({ melody: 'true' });
+  const suffix = melody ? '?' + searchParams : '';
   let instruments;
   let request = {
     method: 'GET',
@@ -314,20 +331,19 @@ const getInstruments = async melody => {
       'Content-Type': 'application/json'
     },
   };
-  await fetch(url + 'getInstruments' + suffix, request)
-    .then(res => {
-      if (res.ok) {
-        return res.json();
-      }
-    }).then(data => {
-      if (data) {
-        instruments = data
-      }
-    }).catch(err => console.error(err))
-    return instruments
+
+  try {
+    const res = await fetch(url + 'getInstruments' + suffix, request);
+    if (res.ok) {
+      instruments = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return instruments
 };
 
-const getNumberOfSpectrograms = async id => {
+const getNumberOfSpectrograms = async (id: string) => {
   const suffix = '?' + new URLSearchParams({
     id: id
   });
@@ -349,7 +365,7 @@ const getNumberOfSpectrograms = async id => {
   }  
 };
 
-const makeSpectrograms = async (recId, saEst) => {
+const makeSpectrograms = async (recId: string, saEst: string | number) => {
   let out;
   // console.log('recId: ', recId, '; saEst: ', saEst)
   const request = {
@@ -370,7 +386,7 @@ const makeSpectrograms = async (recId, saEst) => {
   }
 };
 
-const getRagaNames = async () => {
+const getRagaNames = async (): Promise<string[]> => {
   // gets all raga names
   let ragas;
   const request = {
@@ -379,20 +395,18 @@ const getRagaNames = async () => {
       'Content-Type': 'application/json'
     },
   };
-  await fetch(url + 'getRagaNames', request)
-    .then(res => {
-      if (res.ok) {
-        return res.json()
-      }
-    }).then(data => {
-      if (data) {
-        ragas = data
-      }
-    }).catch(err => console.error(err))
-    return ragas
+  try {
+    const res = await fetch(url + 'getRagaNames', request);
+    if (res.ok) {
+      ragas = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return ragas
 };
 
-const getRaagRule = async name => {
+const getRaagRule = async (name: string) => {
   let rule;
   const request = {
     method: 'GET',
@@ -413,7 +427,17 @@ const getRaagRule = async name => {
   
 }
 
-const getLocationObject = async () => {
+type LocationType = {
+  _id: string,
+} & {
+  [key: string]: {
+    [key: string]: string[]
+  }
+}
+
+export type { LocationType };
+
+const getLocationObject = async (): Promise<LocationType> => {
   // gets location object
   let location;
   const request = {
@@ -422,20 +446,19 @@ const getLocationObject = async () => {
       'Content-Type': 'application/json'
     },
   };
-  await fetch(url+'getLocationObject', request)
-    .then(res => {
-      if (res.ok) {
-        return res.json()
-      }
-    }).then(data => {
-      if (data) {
-        location = data
-      }
-    }).catch(err => console.error(err))
+  try {
+    const res = await fetch(url + 'getLocationObject', request);
+    if (res.ok) {
+      location = await res.json();
+      
+    }
+  } catch (err) {
+    console.error(err)
+  }
   return location
 };
 
-const getPerformanceSections = async () => {
+const getPerformanceSections = async (): Promise<string[]> => {
   let performanceSections;
   const request = {
     method: 'GET',
@@ -443,20 +466,18 @@ const getPerformanceSections = async () => {
       'Content-Type': 'application/json'
     },
   };
-  await fetch(url + 'getPerformanceSections', request)
-    .then(res => {
-      if (res.ok) {
-        return res.json()
-      }
-    }).then(data => {
-      if (data) {
-        performanceSections = data
-      }
-    }).catch(err => console.error(err))
+  try {
+    const res = await fetch(url + 'getPerformanceSections', request);
+    if (res.ok) {
+      performanceSections = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
   return performanceSections
 };
 
-const createNewPiece = async obj => {
+const createNewPiece = async (obj: object) => {
   const data = JSON.stringify(obj);
   let out;
   let request = {
@@ -479,7 +500,7 @@ const createNewPiece = async obj => {
   return out
 };
 
-const deletePiece = async piece => {
+const deletePiece = async (piece: Piece) => {
   let out;
   let request = {
     method: 'DELETE',
@@ -502,7 +523,7 @@ const deletePiece = async piece => {
   return out
 };
 
-const deleteAudioEvent = async aeID => {
+const deleteAudioEvent = async (aeID: string) => {
   let out;
   let request = {
     method: 'DELETE',
@@ -524,7 +545,7 @@ const deleteAudioEvent = async aeID => {
   }
 }
 
-const initializeAudioEvent = async userID => {
+const initializeAudioEvent = async (userID: string) => {
   const request = {
     method: 'POST',
     headers: {
@@ -546,7 +567,7 @@ const initializeAudioEvent = async userID => {
   }  
 }
 
-const cleanEmptyDoc = async _id => {
+const cleanEmptyDoc = async (_id: string) => {
   const request = {
     method: 'DELETE',
     headers: {
@@ -568,7 +589,7 @@ const cleanEmptyDoc = async _id => {
   }
 }
 
-const saveAudioMetadata = async (_id, updates) => {
+const saveAudioMetadata = async (_id: string, updates: object) => {
   const request = {
     method: 'POST',
     headers: {
@@ -591,7 +612,14 @@ const saveAudioMetadata = async (_id, updates) => {
   }
 }
 
-const updateSaEstimate = async (recID, aeID, recIdx, saEst, ver, octOffset) => {
+const updateSaEstimate = async (
+  recID: string, 
+  aeID: string, 
+  recIdx: number | string, 
+  saEst: number | string, 
+  ver: boolean, 
+  octOffset: number
+  ) => {
   const request = {
     method: 'POST',
     headers: {
@@ -618,7 +646,7 @@ const updateSaEstimate = async (recID, aeID, recIdx, saEst, ver, octOffset) => {
   }
 }
 
-const getVerifiedStatus = async (aeID, recIdx) => {
+const getVerifiedStatus = async (aeID: string, recIdx: string) => {
   const request = {
     method: 'GET',
     headers: {
@@ -638,7 +666,7 @@ const getVerifiedStatus = async (aeID, recIdx) => {
   }
 }
 
-const saveRaagRules = async (name, rules, date) => {
+const saveRaagRules = async (name: string, rules: object, date: Date) => {
   const request = {
     method: 'POST',
     headers: {
@@ -662,25 +690,30 @@ const saveRaagRules = async (name, rules, date) => {
   }
 }
 
+type OnProgressType = (percent: number) => void;
 
-const uploadFile = async (file, onProgress, parentID, idx) => {
+const uploadFile = async (
+  file: File, 
+  onProgress: OnProgressType, 
+  parentID: string, 
+  idx: number) => {
   const formData = new FormData();
   formData.append('avatar', file);
   formData.append('parentID', parentID);
-  formData.append('idx', idx);
+  formData.append('idx', String(idx));
   const config = {
     headers: {
       'Content-Type': 'multipart/form-data'
     },
-    onUploadProgress: progressEvent => {
-      const progressPercent = 100 * progressEvent.loaded / progressEvent.total;
+    onUploadProgress: (progressEvent: AxiosProgressEvent) => {
+      const progressPercent = 100 * progressEvent.loaded / progressEvent.total!;
       if (onProgress) onProgress(progressPercent);
       return progressPercent
     }
   };
   try {
     const response = await axios.post(url+'upload-avatar', formData, config)
-    if (!response.statusText === 'OK') {
+    if (response.statusText !== 'OK') {
       throw new Error(`Error! status: ${response.status}`)
     }
     return response.data;
@@ -689,7 +722,16 @@ const uploadFile = async (file, onProgress, parentID, idx) => {
   }
 }
 
-const userLoginGoogle = async userData => {
+type UserDataType = {
+  sub: string,
+  picture: string,
+  email: string,
+  name: string,
+  given_name: string,
+  family_name: string
+}
+
+const userLoginGoogle = async (userData: UserDataType) => {
   const data = JSON.stringify({
     sub: userData.sub,
     picture: userData.picture,
@@ -717,7 +759,7 @@ const userLoginGoogle = async userData => {
   }
 }
 
-const agreeToWaiver = async userID => {
+const agreeToWaiver = async (userID: string) => {
   let out;
   const request = {
     method: 'POST',
@@ -737,7 +779,7 @@ const agreeToWaiver = async userID => {
   }
 }
 
-const nameFromUserID = async userID => {
+const nameFromUserID = async (userID: string) => {
   let out;
   const request = {
     method: 'GET',
@@ -757,7 +799,7 @@ const nameFromUserID = async userID => {
   }
 }
 
-const handleGoogleAuthCode = async (code, redirectURL) => {
+const handleGoogleAuthCode = async (code: string, redirectURL: string) => {
   let out;
   const request = {
     method: 'POST',
@@ -779,7 +821,7 @@ const handleGoogleAuthCode = async (code, redirectURL) => {
   }
 }
 
-const updateTranscriptionTitle = async (id, title) => {
+const updateTranscriptionTitle = async (id: string, title: string) => {
   let out;
   const request = {
     method: 'POST',
@@ -802,7 +844,7 @@ const updateTranscriptionTitle = async (id, title) => {
   }
 }
 
-const updateTranscriptionPermissions = async (id, permissions) => {
+const updateTranscriptionPermissions = async (id: string, permissions: string) => {
   let out;
   const request = {
     method: 'POST',
@@ -861,7 +903,7 @@ const updateTranscriptionPermissions = async (id, permissions) => {
   }
 }
 
-const getInstrumentation = async (audioID) => {
+const getInstrumentation = async (audioID: string) => {
   let out;
   const request = {
     method: 'GET',

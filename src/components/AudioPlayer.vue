@@ -56,7 +56,7 @@
   
   </div>
 </template>
-<script>
+<script lang='ts'>
 
 import beginningIcon from '@/assets/icons/beginning.svg';
 import endIcon from '@/assets/icons/end.svg';
@@ -67,14 +67,14 @@ import shuffleIcon from '@/assets/icons/shuffle.svg';
 import rulerIcon from '@/assets/icons/ruler.svg';
 import WaveformAnalyzer from '@/components/WaveformAnalyzer.vue';
 
-const structuredTime = dur => {
+const structuredTime = (dur: number) => {
   const hours = String(Math.floor(dur / 3600));
   const minutes = leadingZeros(Math.floor((dur % 3600) / 60));
   const seconds = leadingZeros(Math.round(dur % 60));
   return { hours: hours, minutes: minutes, seconds: seconds }
 };
 
-const leadingZeros = int => {
+const leadingZeros = (int: number) => {
   if (int < 10) {
     return '0'+int
   } else {
@@ -107,18 +107,12 @@ export default {
       circleDragging: false,
       formattedCurrentTime: '00:00',
       formattedTimeLeft: '00:00',
-      waKey: 0
+      waKey: 0,
     }
   },
   
   components: {
     WaveformAnalyzer
-    // beginningIcon,
-    // endIcon,
-    // loopIcon,
-    // pauseIcon,
-    // playIcon,
-    // shuffleIcon
   },
   
   props: [
@@ -150,7 +144,8 @@ export default {
       this.audio.src = newSrc;
       this.audio.play();
       this.playing = true;
-      this.$refs.playImg.className = 'playing';
+      const playImg = this.$refs.playImg as HTMLImageElement;
+      playImg.className = 'playing';
     }
   },
   

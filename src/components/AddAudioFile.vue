@@ -197,10 +197,11 @@
       v-show='raag === selectedRaag' 
       :key='raag' 
       class='addRaag'
-      :ref='`raag${raag-1}`'/>
+      :ref='`raag${raag-1}`'
+      :parentDuration='duration'/>
   </div>
 </template>
-<script>
+<script lang='ts'>
 
 import { 
   getSortedMusicians, 
@@ -209,14 +210,110 @@ import {
   getInstruments,
   getLocationObject,
   uploadFile
-} from '@/js/serverCalls.mjs';
+} from '@/js/serverCalls.ts';
 
 import AddRaag from '@/components/AddRaag.vue';
 
+import type { LocationType } from '@/js/serverCalls.ts';
+import { AddAudioEventDataType, RaagType } from '@/components/AddAudioEvent.vue';
+import type { AddRaagDataType } from '@/components/AddRaag.vue';
+
+type RaagTimingType = {
+  start: {
+    hours: string,
+    minutes: string,
+    seconds: string
+  },
+  end: {
+    hours: string,
+    minutes: string,
+    seconds: string
+  }
+}
+
+type RecObjType = {
+  musicians: {
+    [key: string]: {
+      instrument: string,
+      role: string,
+      gharana: string
+    }
+  },
+  date: {
+    year: string,
+    month: string,
+    day: string
+  },
+  location: {
+    continent: string,
+    country: string,
+    city: string
+  },
+  raags: {
+    [key: string]: RaagType
+  }
+}
+
+export type { RecObjType };
+
+type AddAudioFileDataType = {
+  allMusicians?: string[];
+  selectedMusician?: string;
+  selectedMusicians: (string | undefined)[];
+  selectedInstruments: (string | undefined)[];
+  selectedRoles: (string | undefined)[];
+  addMusicianVisibilty: boolean[];
+  addOtherInstrumentVisibility: boolean[];
+  newAddedMusicians: (string | undefined)[];
+  newAddedInstruments: (string | undefined)[];
+  gharana: (string | undefined)[];
+  newAddedGharanas: (string | undefined)[];
+  ragaNames?: string[];
+  melodyInstruments?: string[];
+  addMelodyInstrument: boolean;
+  allInstruments?: string[];
+  addInstrument: boolean;
+  selectedSoloInstrument?: string;
+  selectedCountry?: string;
+  selectedCity?: string;
+  location?: LocationType;
+  selectedContinent?: string;
+  addCountryVisibility: boolean;
+  addCityVisibility: boolean;
+  selectedYear?: string;
+  selectedMonth?: string;
+  selectedDay?: string;
+  numPerformers: number;
+  numRaags: number;
+  progressPercent: number;
+  progressWidth: number;
+  selectedRaag: number;
+  leftIsDisabled: boolean;
+  rightIsDisabled: boolean;
+  months: string[];
+  possibleRoles: string[];
+  audioFileId?: string;
+  uploadDone: boolean;
+  processingDone: boolean;
+  duration?: number;
+  audioLoaded: boolean;
+  displayDuration?: string;
+  raagTimings: RaagTimingType[];
+  newAddedCountry?: string;
+  newAddedCity?: string;
+}
+
 export default {
   name: 'AddAudioFile',
+
+  props: {
+    parentId: {
+      type: String,
+      // required: true
+    }
+  },
   
-  data() {
+  data(): AddAudioFileDataType {
     return {
       allMusicians: undefined,
       selectedMusician: undefined,
@@ -301,7 +398,12 @@ export default {
     getSortedMusicians()
       .then(result => {
         this.allMusicians = result;
-        this.allMusicians.push('Unknown', 'Other (specify)')
+        if (this.allMusicians === undefined) {
+          throw new Error('Could not get musicians')
+        } else {
+          this.allMusicians.push('Unknown', 'Other (specify)')
+        }
+        
       })
   
     getRagaNames()
@@ -350,7 +452,7 @@ export default {
       const sCont = this.selectedContinent;
       const loc = this.location;
       const sCoun = this.selectedCountry;
-      if (sCont && loc && loc[sCont][sCoun]) {
+      if (sCont && loc && sCoun && loc[sCont][sCoun]) {
         const cities = loc[sCont][sCoun];
         return cities.concat(['Unknown', 'Other (specify)'])
       } else {
@@ -361,7 +463,8 @@ export default {
     getYears() {
       const stop = (new Date()).getFullYear();
       const start = 1903;
-      const out = Array.from({length: stop - start + 1}, (_, i) => start + i);
+      const len = { length: stop - start + 1 };
+      const out: (string | number)[] = Array.from(len, (_, i) => start + i);
       out.push('Unknown')
       return out
     },
@@ -407,21 +510,25 @@ export default {
   
   methods: {
     
-    leadingZeros(input, secNum, position, timeType) {
+    leadingZeros(input: Event, 
+                 secNum: number, 
+                 position: 'start' | 'end', 
+                 timeType: 'hours' | 'minutes' | 'seconds') {
       secNum = Number(secNum) - 1;
-      if(!isNaN(input.target.value) && input.target.value.length === 1) {
-        input.target.value = '0' + input.target.value;
+      const target = input.target as HTMLInputElement;
+      if(!isNaN(Number(target.value)) && target.value.length === 1) {
+        target.value = '0' + target.value;
       }
-      if (input.target.value > 59) {
-        input.target.value = 59
+      if (target && Number(target.value) > 59) {
+        target.value = '59'
       }
-      this.raagTimings[secNum][position][timeType] = input.target.value
+      this.raagTimings[secNum][position][timeType] = target.value
     },
     
-    displayTime(dur) {
+    displayTime(dur: number) {
       const hours = Math.floor(dur / 3600);
-      let minutes = Math.floor((dur - hours * 3600) / 60);
-      let seconds = dur % 60;
+      let minutes: string | number = Math.floor((dur - hours * 3600) / 60);
+      let seconds: string | number = dur % 60;
       if (seconds.toString().length === 1) seconds = '0' + seconds;
       if (hours !== 0) {
         if (minutes.toString().length === 1) minutes = '0' + minutes;
@@ -432,7 +539,8 @@ export default {
     },
     
     loaded() {
-      this.duration = Math.round(this.$refs.audio.duration);
+      const audio = this.$refs.audio as HTMLAudioElement;
+      this.duration = Math.round(audio.duration);
       this.audioLoaded = true;
       this.displayDuration = this.displayTime(this.duration);
     },
@@ -445,7 +553,7 @@ export default {
       this.selectedRaag = this.selectedRaag - 1
     },
     
-    onProgress(percent) {
+    onProgress(percent: number) {
       this.progressWidth = 150 * percent / 100;
       if (percent === 100) this.uploadDone = true
     },
@@ -455,21 +563,21 @@ export default {
       this.selectedCity = undefined;
     },
     
-    updateMusicians(i) {
+    updateMusicians(i: number) {
       if (this.selectedMusicians[i] === 'Other (specify)') {
         this.addMusicianVisibilty[i] = true;
-        this.gharana[i] = null;
+        this.gharana[i] = undefined;
       } else {
         this.addMusicianVisibilty[i] = false;
         if (this.selectedMusicians[i] !== 'Unknown') {
-          getGharana(this.selectedMusicians[i])
+          getGharana(this.selectedMusicians[i] as string)
             .then(result => this.gharana[i] = result)
         }
       }
       
     },
     
-    updateOtherInstruments(i) {
+    updateOtherInstruments(i: number) {
       if (this.selectedInstruments[i] === 'Other (specify)') {
         this.addOtherInstrumentVisibility[i] = true
       } else{
@@ -478,9 +586,16 @@ export default {
     },
     
     handleFileUpload() {
-      const id = this.$parent.uniqueId;
+      const id = this.parentId;
+      if (id === undefined) {
+        throw new Error('no parentId')
+      }
       const idx = Number(this.$.vnode.key) - 1;
-      const file = this.$refs.file.files[0];
+      const fileElem = this.$refs.file as HTMLInputElement;
+      if (fileElem.files === null) {
+        throw new Error('No file selected!')
+      }
+      const file = fileElem.files[0];
       this.processingDone = false;
       this.uploadDone = false;
       this.progressWidth = 0;
@@ -497,13 +612,14 @@ export default {
     },
     
     makeRaagObject() {
-      const raagsObj = {};
+      const raagsObj: { [key: string]: RaagType } = {};
       for (let i = 0; i < this.numRaags; i++) {
-        const elem = this.$refs[`raag${i}`][0];
+        const arr = this.$refs[`raag${i}`] as typeof AddRaag;
+        const elem = arr[0];
         const key = elem.selectedRaag === 'Other (specify)' ?
                     elem.newAddedRaag :
                     elem.selectedRaag ;
-        const pSecs = {};
+        const pSecs: { [key: string]: RaagType } = {};
         for (let j = 0; j < elem.numSections; j++) {
           const pSecName = elem.selectedPSections[j] === 'Other (specify)' ?
                            elem.newAddedPSections[j] :
@@ -524,7 +640,7 @@ export default {
     },
     
     makeRecordingObject() {
-      const recObj = {};
+      const recObj = {} as RecObjType;
       recObj.musicians = {}
       for (let i = 0; i < this.numPerformers; i++) {
         const key = this.selectedMusicians[i] === 'Other (specify)' ?
@@ -536,11 +652,22 @@ export default {
         const gharana = this.gharana[i] === null ?
                         this.newAddedGharanas[i] :
                         this.gharana[i] ;
+        if (key === undefined ||
+            inst === undefined ||
+            gharana === undefined ||
+            this.selectedRoles[i] === undefined) {
+          throw new Error('Musician name is undefined!')
+        }
         recObj.musicians[key] = {
           instrument: inst,
-          role: this.selectedRoles[i],
+          role: this.selectedRoles[i]!,
           gharana: gharana
         }
+      }
+      if (this.selectedYear === undefined ||
+          this.selectedMonth === undefined ||
+          this.selectedDay === undefined) {
+        throw new Error('Date is undefined!')
       }
       recObj.date = {
         year: this.selectedYear,
@@ -553,6 +680,11 @@ export default {
       const selectedCity = this.selectedCity === 'Other (specify)' ?
                            this.newAddedCity :
                            this.selectedCity ;
+      if (this.selectedContinent === undefined ||
+          selectedCountry === undefined ||
+          selectedCity === undefined) {
+        throw new Error('Location is undefined!')
+      }
       recObj.location = {
         continent: this.selectedContinent,
         country: selectedCountry,
@@ -562,7 +694,7 @@ export default {
       return recObj
     },
     
-    getSeconds(obj) {
+    getSeconds(obj: {hours: string, minutes: string, seconds: string}) {
       const hrs = Number(obj.hours) * 3600;
       const mins = Number(obj.minutes) * 60;
       const secs = Number(obj.seconds);
