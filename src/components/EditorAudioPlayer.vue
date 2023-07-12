@@ -404,7 +404,8 @@ export default {
     'playerHeight', 
     'controlsHeight',
     'editable',
-    'windowWidth'
+    'windowWidth',
+    'uniformVowel',
   ],
   components: {
     MeterControls
@@ -1237,7 +1238,10 @@ export default {
       freq.setValueCurveAtTime(envelope, startTime, duration);
       const vowels = ['a', 'ā', 'i', 'ī', 'u', 'ū', 'ē', 'ai','ō', 'au'];
       const vpIdxs = [7, 6, 1, 0, 9, 10, 2, 3, 8, 5];
-      const vIdx = traj.vowel ? vowels.indexOf(traj.vowel) : 0;
+      let vIdx = traj.vowel ? vowels.indexOf(traj.vowel) : 0;
+      if (this.uniformVowel) {
+        vIdx = 0
+      }
       const params = ['f1', 'f2', 'f3', 'b1', 'b2', 'b3'];
       params.forEach((param, pIdx) => {
         const idx = vpIdxs[vIdx];
