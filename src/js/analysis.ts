@@ -590,8 +590,6 @@ const patternCounter = (trajs: Trajectory[], {
             throw new Error('sel[pitch] is not a number')
           }      
         }
-        console.log(sel, sel[pitch])
-        console.log('')
         sel = sel[pitch];
       })
     }
@@ -669,7 +667,7 @@ const analyze = async () => {
 }
 
 
-analyze();
+// analyze();
 
 export { 
   instantiatePiece, 
