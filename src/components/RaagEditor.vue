@@ -114,7 +114,7 @@
 </template>
 <script>
  
-import { getRagaNames, getRaagRule, saveRaagRules } from '@/js/serverCalls.mjs';
+import { getRagaNames, getRaagRule, saveRaagRules } from '@/js/serverCalls.ts';
 
 export default {
   name: 'RaagEditor',
