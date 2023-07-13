@@ -1666,7 +1666,7 @@ class Phrase {
     return swara
   }
 
-  allPitches(repetition=true) {
+  allPitches(repetition: boolean = true) {
     let allPitches: Pitch[] = [];
     this.trajectories.forEach(traj => {
       if (traj.id !== 12) {
