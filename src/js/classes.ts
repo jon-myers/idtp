@@ -1324,7 +1324,6 @@ class Group {
     trajectories?: Trajectory[],
     id?: string,
   } = {}) {
-    console.log('NEW GROUP')
     this.trajectories = trajectories;
 
     this.trajectories.sort((a, b) => {
@@ -1346,7 +1345,6 @@ class Group {
     this.id = id;
     this.trajectories.forEach(traj => {
       traj.groupId = this.id;
-      console.log('is it this somehow?')
     })
   }
 
@@ -1358,6 +1356,25 @@ class Group {
   get maxFreq() {
     const out = Math.max(...this.trajectories.map(t => t.maxFreq));
     return out
+  }
+
+  allPitches(repetition: boolean = true) {
+    let allPitches: Pitch[] = [];
+    this.trajectories.forEach(traj => {
+      if (traj.id !== 12) {
+        allPitches.push(...traj.pitches)
+      }
+    });
+    if (!repetition) {
+      allPitches = allPitches.filter((pitch, i) => {
+        const c1 = i === 0;
+        const c2 = pitch.swara === allPitches[i-1]?.swara;
+        const c3 = pitch.oct === allPitches[i-1]?.oct;
+        const c4 = pitch.raised === allPitches[i-1]?.raised;
+        return c1 || !(c2 && c3 && c4)
+      })
+    }
+    return allPitches
   }
 
   testForAdjacency() {
@@ -1962,6 +1979,15 @@ class Piece {
 
   get trajIdxs() {
     return this.possibleTrajs[this.instrumentation[0]]
+  }
+
+  allGroups({ instrumentIdx = 0 }: { instrumentIdx?: number } = {}) {
+    const allGroups: Group[] = [];
+    this.phrases.forEach(p => {
+      allGroups.push(...p.getGroups(instrumentIdx))
+    });
+    return allGroups
+
   }
 
   updateStartTimes() {
