@@ -16,7 +16,8 @@ class Query {
     pitch = undefined,
     sequenceLength = undefined,
     trajectoryID = undefined,
-    vowel = undefined
+    vowel = undefined,
+    consonant = undefined,
   }: {
     type?: (
     'phrase' | 
@@ -25,11 +26,12 @@ class Query {
     'connectedSequenceOfTrajectories'
     ),
     designator?: 'includes' | 'excludes' | 'startsWith' | 'endsWith',
-    category?: 'trajectoryID'| 'pitch' | 'vowel',
+    category?: 'trajectoryID'| 'pitch' | 'vowel' | 'startingConsonant',
     pitch?: Pitch,
     sequenceLength?: number,
     trajectoryID?: number,
-    vowel?: string
+    vowel?: string,
+    consonant?: string
   } = {}) {
     this.identifier = [];
     this.instrumentIdx = 0;
@@ -242,6 +244,71 @@ class Query {
           }
         });
       }
+    } else if (category === 'startingConsonant') {
+      const inst = piece.instrumentation[this.instrumentIdx];
+      if (!(inst === 'Vocal (F)' || inst === 'Vocal (M)')) {
+        throw new Error('category startingConsonant is only for vocal instruments');
+      }
+      if (consonant === undefined) {
+        throw new Error('consonant is required when category is startingConsonant');
+      }
+      if (type === 'phrase') {
+        const phrases = piece.phrases;
+        const filteredPhrases = phrases.filter(phrase => {
+          const trajs = phrase.trajectories;
+          const consonants = trajs.map(traj => traj.startConsonant);
+          return this.consonantDifferentiate(consonant, designator, consonants);
+        });
+        this.trajectories = filteredPhrases.map(phrase => phrase.trajectories);
+        this.identifier = filteredPhrases.map(phrase => phrase.pieceIdx!);
+      } else if (type === 'group') {
+        const groups = piece.allGroups({ instrumentIdx: this.instrumentIdx });
+        const filteredGroups = groups.filter(group => {
+          const trajs = group.trajectories;
+          const consonants = trajs.map(traj => traj.startConsonant);
+          const boolean = this.consonantDifferentiate(consonant, designator, consonants);
+          if (boolean) {
+            this.identifier.push(group.id);
+          }
+          return boolean;
+        })
+        this.trajectories = filteredGroups.map(group => group.trajectories);
+      } else if (type === 'sequenceOfTrajectories') {
+        if (sequenceLength === undefined) {
+          throw new Error('sequenceLength is required when type is ' + 
+            'sequenceOfTrajectories');
+        }
+        const allTrajs = piece.allTrajectories(this.instrumentIdx);
+        this.trajectories = [];
+        for (let i = 0; i < allTrajs.length - sequenceLength + 1; i++) {
+          const trajSeq = allTrajs.slice(i, i + sequenceLength);
+          const consonants = trajSeq.map(traj => traj.startConsonant);
+          const boolean = this.consonantDifferentiate(consonant, designator, consonants);
+          if (boolean) {
+            this.trajectories.push(trajSeq);
+            const idObj = {
+              phraseIdx: trajSeq[0].phraseIdx!,
+              trajIdx: trajSeq[0].num!
+            }
+            this.identifier.push(idObj);
+          }
+        }
+      } else if (type === 'connectedSequenceOfTrajectories') {
+        const allTrajs = piece.allTrajectories(this.instrumentIdx);
+        const subGroups = this.splitTrajsBySilences(allTrajs)
+        subGroups.forEach(trajs => {
+          const consonants = trajs.map(traj => traj.startConsonant);
+          const boolean = this.consonantDifferentiate(consonant, designator, consonants);
+          if (boolean) {
+            this.trajectories.push(trajs);
+            const idObj = {
+              phraseIdx: trajs[0].phraseIdx!,
+              trajIdx: trajs[0].num!
+            }
+            this.identifier.push(idObj);
+          }
+        });
+      }
     }
   }
 
@@ -298,6 +365,19 @@ class Query {
     return boolean;
   }
 
+  private consonantDifferentiate(consonant: string, designator: string, 
+            consonants: (string | undefined)[]) {
+    let boolean: boolean = false;
+    if (designator === 'includes') {
+      boolean = consonants.includes(consonant);
+    } else if (designator === 'excludes') {
+      boolean = !consonants.includes(consonant);
+    } else if (designator === 'startsWith') {
+      boolean = consonants[0] === consonant;
+    }
+    return boolean;
+  }
+
   public static async create({
     transcriptionID = '63445d13dc8b9023a09747a6',
     type = 'phrase',
@@ -307,6 +387,7 @@ class Query {
     sequenceLength = undefined,
     trajectoryID = undefined,
     vowel = undefined,
+    consonant = undefined,
   }: {
     type?: (
       'phrase' | 
@@ -316,11 +397,12 @@ class Query {
     ),
     transcriptionID?: string,
     designator?: 'includes' | 'excludes' | 'startsWith' | 'endsWith',
-    category?: 'trajectoryID'| 'pitch' | 'vowel',
+    category?: 'trajectoryID'| 'pitch' | 'vowel' | 'startingConsonant',
     pitch?: Pitch,
     sequenceLength?: number,
     trajectoryID?: number,
     vowel?: string,
+    consonant?: string,
   } = {}) {
     try {
       const piece = await instantiatePiece(transcriptionID);
@@ -331,7 +413,8 @@ class Query {
         pitch, 
         sequenceLength,
         trajectoryID,
-        vowel
+        vowel,
+        consonant,
       };
       return new Query(piece, queryObj);
     } catch (error) {
@@ -345,11 +428,10 @@ class Query {
 const transcriptionID = '645ff354deeaf2d1e33b3c44';// beghum akhtar - babul mora
 Query.create({ 
   type: 'phrase', 
-  category: 'vowel', 
+  category: 'startingConsonant', 
   designator: 'startsWith',
-  trajectoryID: 13,
   transcriptionID,
-  vowel: 'ō'
+  consonant: 'cha',
 })
   .then(q => {
     if (q !== undefined) {
