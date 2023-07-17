@@ -35,6 +35,7 @@ class Query {
   phraseIdxs: number[] = [];
   instrumentIdx: number;
   identifier: (number | string | { phraseIdx: number, trajIdx: number })[] = [];
+  stringifiedIdentifier: string[] = [];
   sequenceLength?: number;
   repetition: boolean;
   piece: Piece;
@@ -114,6 +115,7 @@ class Query {
       }
     }
     this.allTypeFilters();
+    this.stringifiedIdentifier = this.identifier.map(id => JSON.stringify(id))
   }
 
   private phraseFilter() {
@@ -429,15 +431,17 @@ class Query {
       const answers = queryObjs.map((queryObj: QueryType ) => {
         return new Query(piece, queryObj)
       });
+      // console.log('answer: ', answers.map(a => a.identifier));
       const outputIdentifiers = answers.reduce((acc, answer) => {
-        const ids = answer.identifier.filter(id => acc.includes(id));
+        const ids = answer.stringifiedIdentifier.filter(id => acc.includes(id));
         return ids.length > 0 ? ids : [];
-      }, answers[0].identifier);
+      }, answers[0].stringifiedIdentifier);
       const idxs = outputIdentifiers.map(id => {
-        return answers[0].identifier.indexOf(id);
+        return answers[0].stringifiedIdentifier.indexOf(id);
       });
       const outputTrajectories = idxs.map(idx => answers[0].trajectories[idx]);
-      return [outputTrajectories, outputIdentifiers];
+      const nonStringifiedOutputIdentifiers = idxs.map(idx => answers[0].identifier[idx]);
+      return [outputTrajectories, nonStringifiedOutputIdentifiers];
     } catch (error) {
       console.log(error);
     }
@@ -483,7 +487,11 @@ const query_3 = {
 }
 
 
-Query.multiple([query_1, query_2, query_3], { transcriptionID })
+Query.multiple([query_1, query_2, query_3], { 
+  transcriptionID,
+  segmentation: 'sequenceOfTrajectories',
+  sequenceLength: 50,
+})
   .then(q => {
     console.log(q)
   })
