@@ -10,6 +10,26 @@ type CategoryType = (
   'endingConsonant' |
   'anyConsonant'
 )
+
+type DesignatorType = 'includes' | 'excludes' | 'startsWith' | 'endsWith';
+
+type SegmentationType = (
+  'phrase' |
+  'group' |
+  'sequenceOfTrajectories' |
+  'connectedSequenceOfTrajectories'
+)
+
+
+type QueryType = {
+  category: CategoryType,
+  designator: DesignatorType,
+  pitch?: Pitch,
+  trajectoryID?: number,
+  vowel?: string,
+  consonant?: string,
+}
+
 class Query {
   trajectories: Trajectory[][] = [];
   phraseIdxs: number[] = [];
@@ -22,17 +42,12 @@ class Query {
   vowel?: string;
   trajectoryID?: number;
   pitch?: Pitch;
-  designator: 'includes' | 'excludes' | 'startsWith' | 'endsWith'; 
+  designator: DesignatorType; 
   category: CategoryType;
-  type: (
-    'phrase' |
-    'group' |
-    'sequenceOfTrajectories' |
-    'connectedSequenceOfTrajectories'
-  );
+  segmentation: SegmentationType;
 
   private constructor(piece: Piece, {
-    type = 'phrase',
+    segmentation = 'phrase',
     designator = 'includes',
     category = 'trajectoryID',
     pitch = undefined,
@@ -41,13 +56,8 @@ class Query {
     vowel = undefined,
     consonant = undefined,
   }: {
-    type?: (
-    'phrase' | 
-    'group' | 
-    'sequenceOfTrajectories' | 
-    'connectedSequenceOfTrajectories'
-    ),
-    designator?: 'includes' | 'excludes' | 'startsWith' | 'endsWith',
+    segmentation?: SegmentationType,
+    designator?: DesignatorType,
     category?: CategoryType,
     pitch?: Pitch,
     sequenceLength?: number,
@@ -67,8 +77,8 @@ class Query {
     this.instrumentIdx = 0;
     this.repetition = false;
     this.sequenceLength = sequenceLength;
-    this.type = type;
-    if (type === 'sequenceOfTrajectories') {
+    this.segmentation = segmentation;
+    if (segmentation === 'sequenceOfTrajectories') {
       if (sequenceLength === undefined) {
         throw new Error('sequenceLength is required when type is ' + 
           'sequenceOfTrajectories');
@@ -274,13 +284,13 @@ class Query {
   }
 
   private allTypeFilters() {
-    if (this.type === 'phrase') {
+    if (this.segmentation === 'phrase') {
       this.phraseFilter();
-    } else if (this.type === 'group') {
+    } else if (this.segmentation === 'group') {
       this.groupFilter();
-    } else if (this.type === 'sequenceOfTrajectories') {
+    } else if (this.segmentation === 'sequenceOfTrajectories') {
       this.sequenceOfTrajectoriesFilter();
-    } else if (this.type === 'connectedSequenceOfTrajectories') {
+    } else if (this.segmentation === 'connectedSequenceOfTrajectories') {
       this.connectedSequenceOfTrajectoriesFilter();
     }
   }
@@ -351,9 +361,9 @@ class Query {
     return boolean;
   }
 
-  public static async create({
+  public static async single({
     transcriptionID = '63445d13dc8b9023a09747a6',
-    type = 'phrase',
+    segmentation = 'phrase',
     designator = 'includes',
     category = 'trajectoryID',
     pitch = undefined,
@@ -362,14 +372,9 @@ class Query {
     vowel = undefined,
     consonant = undefined,
   }: {
-    type?: (
-      'phrase' | 
-      'group' | 
-      'sequenceOfTrajectories' | 
-      'connectedSequenceOfTrajectories'
-    ),
+    segmentation?: SegmentationType,
     transcriptionID?: string,
-    designator?: 'includes' | 'excludes' | 'startsWith' | 'endsWith',
+    designator?: DesignatorType,
     category?: CategoryType,
     pitch?: Pitch,
     sequenceLength?: number,
@@ -380,7 +385,7 @@ class Query {
     try {
       const piece = await instantiatePiece(transcriptionID);
       const queryObj = { 
-        type, 
+        segmentation, 
         designator, 
         category, 
         pitch, 
@@ -394,25 +399,91 @@ class Query {
       console.log(error);
     }
   }
+
+  public static async multiple(queries: QueryType[] = [], {
+    transcriptionID = '63445d13dc8b9023a09747a6',
+    segmentation = 'phrase',
+    sequenceLength = undefined
+  }:{
+    transcriptionID?: string,
+    segmentation?: SegmentationType,
+    sequenceLength?: number,
+  }={}) {
+    if (queries.length === 0) {
+      throw new Error('No queries provided');
+    }
+    try {
+      const piece = await instantiatePiece(transcriptionID);
+      const queryObjs = queries.map(query => {
+        return { 
+          segmentation, 
+          designator: query.designator, 
+          category: query.category, 
+          pitch: query.pitch, 
+          sequenceLength: sequenceLength,
+          trajectoryID: query.trajectoryID,
+          vowel: query.vowel,
+          consonant: query.consonant,
+        };
+      });
+      const answers = queryObjs.map((queryObj: QueryType ) => {
+        return new Query(piece, queryObj)
+      });
+      const outputIdentifiers = answers.reduce((acc, answer) => {
+        const ids = answer.identifier.filter(id => acc.includes(id));
+        return ids.length > 0 ? ids : [];
+      }, answers[0].identifier);
+      const idxs = outputIdentifiers.map(id => {
+        return answers[0].identifier.indexOf(id);
+      });
+      const outputTrajectories = idxs.map(idx => answers[0].trajectories[idx]);
+      return [outputTrajectories, outputIdentifiers];
+    } catch (error) {
+      console.log(error);
+    }
+  }
 }
 
-const pitch = new Pitch({ swara: 'ma', oct: 0 });
 
 const transcriptionID = '645ff354deeaf2d1e33b3c44';// beghum akhtar - babul mora
-Query.create({ 
-  type: 'connectedSequenceOfTrajectories', 
-  category: 'anyConsonant', 
-  designator: 'includes',
-  transcriptionID,
-  consonant: 'la',
-  vowel: 'a',
-  pitch,
-  trajectoryID: 1,
-  sequenceLength: 23,
-})
+// Query.single({ 
+//   segmentation: 'connectedSequenceOfTrajectories', 
+//   category: 'anyConsonant', 
+//   designator: 'includes',
+//   transcriptionID,
+//   consonant: 'ra',
+//   vowel: 'a',
+//   pitch,
+//   trajectoryID: 1,
+//   sequenceLength: 23,
+// })
+//   .then(q => {
+//     if (q !== undefined) {
+//       console.log(q.trajectories.length)
+//       console.log(q.identifier)
+//     }
+//   });
+
+const query_1 = {
+  designator: 'startsWith' as DesignatorType,
+  category: 'startingConsonant' as CategoryType,
+  consonant: 'ma',
+}
+
+const query_2 = {
+  designator: 'startsWith' as DesignatorType,
+  category: 'pitch' as CategoryType,
+  pitch: new Pitch({ swara: 'pa', oct: -1 }),
+}
+
+const query_3 = {
+  designator: 'includes' as DesignatorType,
+  category: 'pitch' as CategoryType,
+  pitch: new Pitch({ swara: 'ga', oct: 0 }),
+}
+
+
+Query.multiple([query_1, query_2, query_3], { transcriptionID })
   .then(q => {
-    if (q !== undefined) {
-      console.log(q.trajectories.length)
-      console.log(q.identifier)
-    }
-  });
+    console.log(q)
+  })
