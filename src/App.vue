@@ -40,7 +40,7 @@
     </div>
   </div>
   <div class='routerViewContainer' @click='handleNavClick'>
-    <router-view ref='routerView'/>
+    <router-view ref='routerView' :navHeight='navHeight'/>
   </div>
   
   <!-- <GoogleLogin :callback='loggedIn' v-show='false' prompt auto-login/> -->
