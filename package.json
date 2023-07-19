@@ -56,6 +56,7 @@
   },
   "devDependencies": {
     "@types/d3": "^7.4.0",
+    "@types/detect-browser": "^4.0.0",
     "@types/javascript-color-gradient": "^2.4.0",
     "@types/lodash": "^4.14.194",
     "@types/uuid": "^9.0.1",

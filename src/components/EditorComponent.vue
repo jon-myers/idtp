@@ -102,6 +102,20 @@
   :controlsHeight='controlsHeight'
   :editable='editable'
   :windowWidth='fullWidth'
+  :piece='piece'
+  :regionStartTime='regionStartTime'
+  :audioDBDoc='audioDBDoc'
+  :regionEndTime='regionEndTime'
+  :playheadReturn='playheadReturn'
+  @resizeHeightEmit='resizeHeight'
+  @movePlayheadsEmit='movePlayheads'
+  @currentTimeEmit='setCurrentTime'
+  @startStretchedAnimationEmit='startStretchedAnimationFrame'
+  @stopStretchedAnimationEmit='stopStretchedAnimationFrame'
+  @stopAnimationFrameEmit='stopAnimationFrame'
+  @startAnimationFrameEmit='startAnimationFrame'
+  @setAnimationStartEmit='setAnimationStart'
+  @setStretchedAnimationStartEmit='setStretchedAnimationStart'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -839,6 +853,18 @@ export default {
 
   methods: {
 
+    setAnimationStart(time) {
+      this.animationStart = time
+    },
+
+    setStretchedAnimationStart(time) {
+      this.stretchedAnimationStart = time
+    },
+
+    setCurrentTime(newTime) {
+      this.currentTime = newTime;
+    },
+
     beforeUnload(event) {
       if (this.unsavedChanges) {
         const txt = 'You have unsaved changes. Are you sure you want to leave ' +
@@ -847,6 +873,17 @@ export default {
         return txt;
       } else {
         return undefined;
+      }
+    },
+
+    movePlayheads(msg=undefined) {
+      if (msg === 'justPlayhead') {
+        this.movePlayhead();
+      } else if (msg === 'justShadowPlayhead') {
+        this.moveShadowPlayhead();
+      } else {
+        this.movePlayhead();
+        this.moveShadowPlayhead();
       }
     },
 

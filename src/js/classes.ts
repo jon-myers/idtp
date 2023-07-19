@@ -1271,7 +1271,6 @@ class Group {
     trajectories?: Trajectory[],
     id?: string,
   } = {}) {
-    console.log('NEW GROUP')
     this.trajectories = trajectories;
 
     this.trajectories.sort((a, b) => {
@@ -1293,7 +1292,6 @@ class Group {
     this.id = id;
     this.trajectories.forEach(traj => {
       traj.groupId = this.id;
-      console.log('is it this somehow?')
     })
   }
 
@@ -2476,5 +2474,9 @@ export {
   getEnds,
   Group,
   durationsOfFixedPitches,
-  pitchNumberToChroma
+  pitchNumberToChroma,
+}
+
+export type {
+  RuleSetType
 }
