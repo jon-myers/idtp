@@ -28,7 +28,7 @@
           </div>
         </div>
         <div class='controlBox'>
-          <div v-for='ppType in pitchPrevalenceTypes' :key='pptype'>
+          <div v-for='ppType in pitchPrevalenceTypes' :key='ppType'>
             <input 
               type='radio' 
               :id='ppType' 
@@ -64,7 +64,7 @@
       </div>
       <div class='controls' v-if='selectedATIdx === 1'>
         <div class='controlBox'>
-          <div v-for='ppType in patternCountTypes' :key='pptype'>
+          <div v-for='ppType in patternCountTypes' :key='ppType'>
             <input 
               type='radio' 
               :id='ppType' 
@@ -79,7 +79,7 @@
           </div>
         </div>
         <div class='controlBox'>
-          <div v-for='pType in pitchTypes' :key='prType'>
+          <div v-for='pType in pitchTypes' :key='pType'>
             <input 
               type='radio' 
               :id='pType' 
@@ -89,7 +89,11 @@
               <label :for='pType'>{{ pType }}</label>
           </div>
           <div>
-            <input type='checkbox' v-model='pitchChroma' @change='updateChroma'/>
+            <input 
+              type='checkbox' 
+              v-model='pitchChroma' 
+              @change='updateChroma'
+              />
             <label>Chroma</label>
           </div>
         </div>
@@ -97,7 +101,11 @@
           <div class='rightInputRow'>
             <label for='targetPitch'>Target</label>
             <input type='checkbox' v-model='targetPitchBool'>
-            <select v-model='targetPitchIdx' id='targetPitch' v-if='targetPitchBool'>
+            <select 
+              v-model='targetPitchIdx' 
+              id='targetPitch' 
+              v-if='targetPitchBool'
+              >
               <option 
                 v-for='(tpc, idx) in targetPitchChoices' 
                 :key='tpc' 
@@ -167,7 +175,11 @@
 </template>
 
 <script lang='ts'>
-  const linSpace = (startValue: number, stopValue: number, cardinality: number) => {
+  const linSpace = (
+    startValue: number, 
+    stopValue: number, 
+    cardinality: number
+  ) => {
     var arr = [];
     var step = (stopValue - startValue) / (cardinality - 1);
     for (var i = 0; i < cardinality; i++) {
@@ -330,6 +342,13 @@ type PCountType = {
       }
     },
 
+    props: {
+      navHeight: {
+        type: Number,
+        required: true
+      }
+    },
+
     watch: {
       pitchType(newVal) {
         if (this.piece === undefined) {
@@ -423,7 +442,6 @@ type PCountType = {
       },
 
       addRect({
-        svg = this.svg, 
         x = undefined, 
         y = undefined, 
         w = undefined, 
@@ -431,7 +449,6 @@ type PCountType = {
         fill = 'none',
         stroke = 'none',
       }: {
-        svg?: d3.Selection<SVGElement, any, any, any>,
         x?: number,
         y?: number,
         w?: number,
@@ -439,10 +456,15 @@ type PCountType = {
         fill?: string,
         stroke?: string,
       } = {}) {
-        if (x === undefined || y === undefined || w === undefined || h === undefined) {
+        if (
+          x === undefined || 
+          y === undefined || 
+          w === undefined || 
+          h === undefined
+        ) {
           throw new Error('x, y, w, or h is undefined');
         }
-        return svg.append('rect')
+        return this.svg!.append('rect')
           .attr('x', x)
           .attr('y', y)
           .attr('width', w)
@@ -452,14 +474,12 @@ type PCountType = {
       },
 
       addLine({
-        svg = this.svg,
         x1 = undefined,
         y1 = undefined,
         x2 = undefined,
         y2 = undefined,
         stroke = 'black',
       }: {
-        svg?: d3.Selection<SVGElement, any, any, any>,
         x1?: number,
         y1?: number,
         x2?: number,
@@ -469,7 +489,7 @@ type PCountType = {
         if (x1 === undefined || y1 === undefined || x2 === undefined || y2 === undefined) {
           throw new Error('x1, y1, x2, or y2 is undefined');
         }
-        return svg.append('line')
+        return this.svg!.append('line')
           .attr('x1', x1)
           .attr('y1', y1)
           .attr('x2', x2)
@@ -478,7 +498,6 @@ type PCountType = {
       },
 
       addText({
-        svg = this.svg,
         x = undefined,
         y = undefined,
         text = '',
@@ -487,10 +506,9 @@ type PCountType = {
         fill = 'black',
         anchor = 'middle'
       }: {
-        svg?: d3.Selection<SVGElement, any, any, any>,
         x?: number,
         y?: number,
-        text?: string,
+        text?: string | number,
         fSize?: string,
         fWeight?: string,
         fill?: string,
@@ -499,7 +517,7 @@ type PCountType = {
         if (x === undefined || y === undefined || text === undefined) {
           throw new Error('x, y, or text is undefined');
         }
-        return svg.append('text')
+        return this.svg!.append('text')
           .attr('x', x)
           .attr('y', y)
           .attr('font-size', fSize)
@@ -554,7 +572,7 @@ type PCountType = {
           maxSilence: this.fadeTime,
 
         }));
-        let lowestKey: number, highestKey: number;
+        let lowestKey: number = 10000, highestKey: number= -10000;
         durs.forEach(dur => {
           if (dur === undefined) {
             throw new Error('dur is undefined');
@@ -603,17 +621,19 @@ type PCountType = {
         let y = d3.scaleLinear()
           .domain([lowestKey-1, highestKey+1])
           .range([height, 0]);
-
+        if (this.svg === undefined) {
+          throw new Error('svg is undefined');
+        }
         const axisNode = this.svg.append('g')
         const pitchNumbers = condensed ? 
           [...Array(1 + highestKey - lowestKey)].map((_, i) => i + lowestKey) : 
           this.piece.raga.getPitchNumbers(lowestKey, highestKey) ;
         const tickLabels =  condensed ? 
           pitchNumbers.map(sn => {
-            return this.piece.raga.scaleNumberToSargamLetter(sn);
+            return this.piece!.raga.scaleNumberToSargamLetter(sn);
           }) : 
           pitchNumbers.map(pn => {
-          return this.piece.raga.pitchNumberToSargamLetter(pn)
+          return this.piece!.raga.pitchNumberToSargamLetter(pn)
         }) 
         axisNode
           .call(d3.axisLeft(y)
@@ -628,9 +648,12 @@ type PCountType = {
         if (condensed) {
           // transform durs
           durs.forEach((dur, dIdx) => {
+            if (dur === undefined) {
+              throw new Error('dur is undefined');
+            }
             const keys = Object.keys(dur);
             keys.forEach(key => {
-              const sn = this.piece.raga.pitchNumberToScaleNumber(Number(key));
+              const sn = this.piece!.raga.pitchNumberToScaleNumber(Number(key));
               dur[sn] = dur[key];
               if (Number(key) !== Number(sn)) delete dur[key];
             })
@@ -638,7 +661,13 @@ type PCountType = {
         }
 
         durs.forEach((dur, dIdx) => {
-          let minVal, maxVal, modeIdx=undefined, modeVal=0;
+          let minVal: (number | undefined) = undefined; 
+          let maxVal: (number | undefined) = undefined;
+          let modeIdx: number | undefined = undefined; 
+          let modeVal = 0;
+          if (dur === undefined) {
+            throw new Error('dur is undefined');
+          }
           const keys = Object.keys(dur);
           if (keys.length > 0) {
             keys.forEach(key => {
@@ -656,11 +685,17 @@ type PCountType = {
               }
               if (Number(dur[key]) > modeVal) {
                 modeVal = Number(dur[key]);
-                modeIdx = key;
+                modeIdx = Number(key);
               }
             })
-            maxVal += 0.5;
-            minVal -= 0.5;  
+            if (maxVal === undefined) {
+              throw new Error('maxVal is undefined');
+            }
+            if (minVal === undefined) {
+              throw new Error('minVal is undefined');
+            }
+            maxVal = maxVal + 0.5;
+            minVal = minVal - 0.5;  
             const x_ = dIdx * width / durs.length;
             const y_ = y(maxVal);
             const w_ = width / durs.length;
@@ -690,7 +725,7 @@ type PCountType = {
                   fill: dur[key] > 0.5 ? 'white' : 'black' 
                 })
               } else {
-                if (key === modeIdx) {
+                if (Number(key) === modeIdx) {
                   fillColor = 'white'
                   this.addRect({ x: x_, y: mY_, w: w_, h: mH_, fill: 'grey' })
                 } else if (this.pitchChroma) {
@@ -735,21 +770,21 @@ type PCountType = {
           if (i === hOct) {
             highY = highestKey+ 1.5;
           }
-          this.addText({ x: '-45', y: y((lowY + highY) / 2 - 0.5), text: i })
+          this.addText({ x: -45, y: y((lowY + highY) / 2 - 0.5), text: i })
           const h_ = y(lowY) - y(highY);
           const y_ = y(highY - 0.5);
-          this.addRect({ x: '-60', y: y_, w: '30', h: h_, stroke: 'black' })
+          this.addRect({ x: -60, y: y_, w: 30, h: h_, stroke: 'black' })
           const lY_ = y(lowY - 0.5);
-          this.addLine({ x1: '-30', y1: lY_, x2: width, y2: lY_ })
-          if (i === hOct) this.addLine({ x1: '-30', y1: y_, x2: width, y2: y_ })
+          this.addLine({ x1: -30, y1: lY_, x2: width, y2: lY_ })
+          if (i === hOct) this.addLine({ x1: -30, y1: y_, x2: width, y2: y_ })
           this.addLine({ x1: width, y1: lY_, x2: width, y2: y_ })
           if (segmentation === 'Duration') {
-            this.addLine({ x1: '-30', y1: '-20', x2: width, y2: '-20' })
-            this.addLine({ x1: '-30', y1: '-40', x2: width, y2: '-40' })
+            this.addLine({ x1: -30, y1: -20, x2: width, y2: -20 })
+            this.addLine({ x1: -30, y1: -40, x2: width, y2: -40 })
             this.addText({ x: -15, y: -10, text: 'End' })
             this.addText({ x: -15, y: -30, text: 'Start' })
-            this.addLine({ x1: '-30', y1: '0', x2: '-30', y2: '-70' })
-            this.addLine({ x1: 0, y1: 0, x2: 0, y2: '-40' })
+            this.addLine({ x1: -30, y1: 0, x2: -30, y2: -70 })
+            this.addLine({ x1: 0, y1: 0, x2: 0, y2: -40 })
             this.addLine({ x1: -30, y1: -70, x2: width, y2: -70 })
             this.addLine({ x1: width, y1: -70, x2: width, y2: 0 })
             const text = `Pitch Range and Percentage of Duration on each ` + 
@@ -783,7 +818,7 @@ type PCountType = {
               }
             })
           } else if (segmentation === 'Section') {
-            this.addLine({ x1: '-30', y1: '-20', x2: width, y2: '-20' })
+            this.addLine({ x1: -30, y1: -20, x2: width, y2: -20 })
             this.addLine({ x1: -60, y1: -40, x2: width, y2: -40 })
             this.addLine({ x1: -60, y1: -60, x2: width, y2: -60 })
             this.addLine({ x1: -60, y1: 0, x2: -60, y2: -90 })
@@ -805,10 +840,10 @@ type PCountType = {
             this.addText({ x: -30, y: -50, text: 'Section' })
             this.addText({ x: -45, y: -20, text: 'Oct.' })
             durs.forEach((dur, dIdx) => {
-              const secPhrases = this.piece.sections[dIdx].phrases;
-              const st = secPhrases[0].startTime;
+              const secPhrases = this.piece!.sections[dIdx].phrases;
+              const st = secPhrases[0].startTime!;
               const lastPhrase = secPhrases[secPhrases.length - 1];
-              const et = lastPhrase.startTime + lastPhrase.durTot;
+              const et = lastPhrase.startTime! + lastPhrase.durTot!;
               const x_ = widthPerSeg * (dIdx + 0.5);
               this.addText({ x: x_, y: -30, text: displayTime(st) });
               this.addText({ x: x_, y: -10, text: displayTime(et) });
@@ -825,7 +860,7 @@ type PCountType = {
               }           
             })
           } else if (segmentation === 'Phrase') {
-            this.addLine({ x1: '-30', y1: '-20', x2: width, y2: '-20' })
+            this.addLine({ x1: -30, y1: -20, x2: width, y2: -20 })
             this.addLine({ x1: -60, y1: -40, x2: width, y2: -40 })
             this.addLine({ x1: -60, y1: -60, x2: width, y2: -60 })
             this.addLine({ x1: -60, y1: 0, x2: -60, y2: -90 })
@@ -847,9 +882,9 @@ type PCountType = {
             this.addText({ x: -30, y: -50, text: 'Phrase' })
             this.addText({ x: -45, y: -20, text: 'Oct.' })
             durs.forEach((dur, dIdx) => {
-              const phrase = this.piece.phrases[dIdx];
-              const st = phrase.startTime;
-              const et = st + phrase.durTot;
+              const phrase = this.piece!.phrases[dIdx];
+              const st = phrase.startTime!;
+              const et = st + phrase.durTot!;
               const x_ = widthPerSeg * (dIdx + 0.5);
               this.addText({ x: x_, y: -30, text: displayTime(st) });
               this.addText({ x: x_, y: -10, text: displayTime(et) });
@@ -911,7 +946,6 @@ type PCountType = {
             segmentation: this.segmentationType,
             duration: this.duration,
             pitchChroma: this.pitchChroma,
-            fadeTime: this.fadeTime,
             targetPitch: targetPitch,
             minSize: minPatSize,
             pitchType: this.pitchType,
@@ -925,7 +959,6 @@ type PCountType = {
         duration = 30,
         pitchChroma = false,
         pitchType = 'Pitch Number',
-        fadeTime = this.fadeTime,
         targetPitch = undefined,
         minSize = 1,
         plot = false
@@ -935,7 +968,6 @@ type PCountType = {
         duration?: number,
         pitchChroma?: boolean,
         pitchType?: string,
-        fadeTime?: number,
         targetPitch?: number | string,
         minSize?: number,
         plot?: boolean,
@@ -969,7 +1001,7 @@ type PCountType = {
               const options = {
                 size: ps,
                 outputType: pitchChroma ? 'chroma' : 'pitchNumber',
-                maxLagTime: fadeTime,
+                maxLagTime: this.fadeTime,
                 sort: true,
                 targetPitch: targetPitch,
                 minSize: minSize
@@ -1041,7 +1073,7 @@ type PCountType = {
           const sizes = Object.keys(pCount).filter(k => k !== 'maxSize');
           let ct = 0;
           sizes.forEach((size, sIdx) => {
-            const arr = pCount[size];
+            const arr = pCount[Number(size)];
             arr.forEach((patternObj, aIdx) => {
               const y = plot ? 
                   (4 * aIdx + verticalOffset) * 20 : 
@@ -1078,7 +1110,7 @@ type PCountType = {
                 }
                 this.addText({ x: x_, y: y_, text: txt, fill: txtColor })
               })
-              const x = size * 20 + ct * 20 + 15;
+              const x = Number(size) * 20 + ct * 20 + 15;
               // const y = (verticalOffset + aIdx) * 20 + 10;
               this.addRect({ x: x-10, y: y, w: 20, h: 20, fill: 'black' })
               this.addText({ x: x, y: y + 10, text: patternObj.count, fill: 'white' })
@@ -1113,7 +1145,7 @@ type PCountType = {
                 // const x_end = x_ + 20 * pCount.maxSize;
                 const xScale = d3.scaleLinear()
                   .domain([0, 1])
-                  .range([x_ + 10, x_ + 20 * size - 10])
+                  .range([x_ + 10, x_ + 20 * Number(size) - 10])
                 const y = (4 * aIdx + verticalOffset) * 20 + 30;
                 const yScale = d3.scaleLinear()
                   .domain([0, 1])
@@ -1123,7 +1155,7 @@ type PCountType = {
                 
                 const line = d3.line()
                   .x((d, i) => xScale(pts[i]))
-                  .y((d, i) => yScale(d))
+                  .y((d) => yScale(d))
                   
                 
                 
@@ -1131,11 +1163,12 @@ type PCountType = {
                   const nps = pitches.map(p => p.numberedPitch)
                   const minP = Math.min(...nps);
                   const maxP = Math.max(...nps);
-                  const pns = this.piece.raga.getPitchNumbers(minP, maxP);
+                  const pns = this.piece!.raga.getPitchNumbers(minP, maxP);
                   const ps = pns.map(p => Pitch.fromPitchNumber(p));
                   const lines = ps.map(p => {
                     return (p.logFreq - min) / (initMax - min)
                   })
+                  
                   lines.forEach(l => {
                     this.svg.append('line')
                       .attr('x1', x_)
@@ -1146,6 +1179,9 @@ type PCountType = {
                       .attr('stroke-width', 1)
                   })
                 }
+                if (this.svg === undefined) {
+                    throw new Error('svg is undefined')
+                  }
                 this.svg.append('path')
                   .datum(computes)
                   .attr('d', line)
@@ -1171,8 +1207,7 @@ type PCountType = {
     },
 
     async mounted() {
-      const navHeight = this.$parent.$parent.navHeight;
-      const aboveHeight = this.controlsHeight + this.typeRowHeight + navHeight;
+      const aboveHeight = this.controlsHeight + this.typeRowHeight + this.navHeight;
       this.graphRowHeight = window.innerHeight - aboveHeight;
       try {
         const storedId = this.$store.state._id;

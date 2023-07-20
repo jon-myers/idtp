@@ -32,7 +32,7 @@
             <div class='playCircle' @click='togglePlay'>
               <img 
                 ref='playImg' 
-                :src='[icons.play, icons.pause][Number(this.playing)]'
+                :src='[icons.play, icons.pause][Number(playing)]'
                 />
             </div>
             <img :src='icons.end' @click='trackEnd'/>
@@ -82,19 +82,42 @@ const leadingZeros = (int: number) => {
   }
 }
 
+
+type AudioPlayerData = {
+  progress: number,
+  playing: boolean,
+  looping: boolean,
+  shuffling: boolean,
+  showWaveform: boolean,
+  audio?: HTMLAudioElement,
+  icons: {
+    beginning: string,
+    end: string,
+    loop: string,
+    pause: string,
+    play: string,
+    shuffle: string,
+    ruler: string
+  },
+  circleDragging: boolean,
+  formattedCurrentTime: string,
+  formattedTimeLeft: string,
+  waKey: number,
+  dragStart: number,
+}
+
+
 export default {
   name: 'AudioPlayer',
   
-  data() {
+  data(): AudioPlayerData {
     return {
       progress: 0.0,
       playing: false,
       looping: false,
       shuffling: false,
       showWaveform: false,
-      audio: {
-        paused: false
-      },
+      audio: undefined,
       icons: {
         beginning: beginningIcon,
         end: endIcon,
@@ -108,6 +131,7 @@ export default {
       formattedCurrentTime: '00:00',
       formattedTimeLeft: '00:00',
       waKey: 0,
+      dragStart: 0
     }
   },
   
@@ -116,21 +140,21 @@ export default {
   },
   
   props: [
-    'audioSource', 
+    'audioSource',
     'saEstimate',
     'saVerified',
     'id'
   ],
   
   mounted() {
-    this.audio = new Audio();
+    this.audio = new Audio() as HTMLAudioElement;
     this.audio.ontimeupdate = () => {
-      this.progress = this.audio.currentTime / this.audio.duration;
-      const pbi = document.querySelector('.progressBarInner');
+      this.progress = this.audio!.currentTime / this.audio!.duration;
+      const pbi = document.querySelector('.progressBarInner') as HTMLDivElement;
       const pbo = document.querySelector('.progressBarOuter');
       if (pbo) {
         const totWidth = pbo.getBoundingClientRect().width;
-        pbi.style.width = this.progress * totWidth + 'px'
+        pbi!.style.width = this.progress * totWidth + 'px'
         this.updateFormattedCurrentTime();
         this.updateFormattedTimeLeft();
       }
@@ -141,6 +165,9 @@ export default {
   
   watch: {
     audioSource(newSrc) {
+      if (this.audio === undefined) {
+        throw new Error('audio is undefined')
+      }
       this.audio.src = newSrc;
       this.audio.play();
       this.playing = true;
@@ -152,17 +179,24 @@ export default {
   methods: {
     trackEnd() {
       if (this.looping) {
+        if (this.audio === undefined) {
+          throw new Error('audio is undefined')
+        }
         this.audio.currentTime = 0;
         this.audio.play();
       } else {
-        this.$parent.nextTrack(this.shuffling, false)
+        console.log('huh')
+        this.$emit('emitNextTrack', this.shuffling, false)
       }
     },
     
     togglePlay() {
+      if (this.audio === undefined) {
+        throw new Error('audio is undefined')
+      }
       if (this.audio.paused) {
         if (this.audio.currentSrc === '') {
-          this.$parent.nextTrack(this.shuffling, true)
+          this.$emit('emitNextTrack', this.shuffling, true)
         } else {
           this.audio.play();
           this.playing = true
@@ -173,36 +207,47 @@ export default {
       }
     },
     
-    toggleLoop(e) {
-      const cl = e.target.classList;
+    toggleLoop(e: MouseEvent) {
+      const target = e.target as HTMLImageElement;
+      const cl = target.classList;
       cl.toggle('looping');
       this.looping = this.looping ? false : true;
     },
     
-    toggleShuffle(e) {
-      const cl = e.target.classList;
+    toggleShuffle(e: MouseEvent) {
+      const target = e.target as HTMLImageElement;
+      const cl = target.classList;
       cl.toggle('shuffling');
       this.shuffling = this.shuffling ? false : true;
     },
     
-    toggleWaveform(e) {
-      const cl = e.target.classList;
+    toggleWaveform(e: MouseEvent) {
+      const target = e.target as HTMLImageElement;
+      const cl = target.classList;
       cl.toggle('showWaveform');
       this.showWaveform = this.showWaveform ? false: true;
     },
     
     goToBeginning() {
+      if (this.audio === undefined) {
+        throw new Error('audio is undefined')
+      }
       this.audio.currentTime = 0
     },
     
-    handleProgressClick(e) {
-      const bb = this.$refs.pbOuter.getBoundingClientRect();
+    handleProgressClick(e: MouseEvent) {
+      if (this.audio === undefined) {
+        throw new Error('audio is undefined')
+      }
+      const pbOuter = this.$refs.pbOuter as HTMLDivElement;
+      const bb = pbOuter.getBoundingClientRect();
       this.audio.currentTime = this.audio.duration * e.clientX / bb.width
     },
     
     tooLeftLimit() {
       if (this.$refs.pbOuter && this.progress) {
-        const bb = this.$refs.pbOuter.getBoundingClientRect();
+        const pbOuter = this.$refs.pbOuter as HTMLDivElement;
+        const bb = pbOuter.getBoundingClientRect();
         return this.progress < 35 / bb.width
       } else {
         return true
@@ -211,7 +256,8 @@ export default {
     
     tooRightLimit() {
       if (this.$refs.pbOuter && this.progress) {
-        const bb = this.$refs.pbOuter.getBoundingClientRect();
+        const pbOuter = this.$refs.pbOuter as HTMLDivElement;
+        const bb = pbOuter.getBoundingClientRect();
         return this.progress >= 1 - (90 / bb.width)
       } else {
         return false
@@ -219,8 +265,11 @@ export default {
     },
     
     updateFormattedCurrentTime() {
+      if (this.audio === undefined) {
+        throw new Error('audio is undefined')
+      }
       const st = structuredTime(this.audio.currentTime);
-      if (st.hours !== 0) {
+      if (st.hours !== '0') {
         this.formattedCurrentTime = st.minutes + ':' + st.seconds
       } else {
         this.formattedCurrentTime = [st.hours, st.minutes, st.seconds].join(':')
@@ -228,12 +277,15 @@ export default {
     },
     
     updateFormattedTimeLeft() {
+      if (this.audio === undefined) {
+        throw new Error('audio is undefined')
+      }
       if (isNaN(this.audio.duration)) {
         return '00:00'
       } else {
         const au = this.audio;
         const st = structuredTime(Number(au.duration) - Number(au.currentTime))
-        if (st.hours !== 0) {
+        if (st.hours !== '0') {
           this.formattedTimeLeft = st.minutes + ':' + st.seconds
         } else {
           this.formattedTimeLeft = [st.hours, st.minutes, st.seconds].join(':')
@@ -242,14 +294,14 @@ export default {
     
     },
     
-    hoverTrigger(bool) {
+    hoverTrigger(bool: boolean) {
       const classes_ = [
         '.currentTime', 
         '.progressCircle', 
         '.timeLeft', 
         '.invisibleProgressCircle'
       ];
-      const cls = classes_.map(cl => document.querySelector(cl).classList);
+      const cls = classes_.map(cl => document.querySelector(cl)!.classList);
       if (bool) {
         cls.forEach(cl => {
           if (!cl.contains('hovering')) cl.add('hovering')
@@ -261,17 +313,20 @@ export default {
       }
     },
     
-    handleCircleMouseDown(e) {
+    handleCircleMouseDown(e: MouseEvent) {
       this.circleDragging = true;
-      // console.log(e)
       this.dragStart = e.clientX;
-      this.$refs.main.classList.toggle('hovering')
-      
+      const main = this.$refs.main as HTMLDivElement;
+      main.classList.toggle('hovering')
     },
     
-    handleCircleMouseUp(e) {
+    handleCircleMouseUp(e: MouseEvent) {
       if (this.circleDragging) {
-        const bb = this.$refs.pbOuter.getBoundingClientRect()
+        const pbOuter = this.$refs.pbOuter as HTMLDivElement;
+        const bb = pbOuter.getBoundingClientRect()
+        if (this.audio === undefined) {
+          throw new Error('audio is undefined')
+        }
         let offset = this.audio.duration * (e.clientX - this.dragStart) 
         offset /= bb.width;
         const newTime = this.audio.currentTime + offset;
@@ -280,24 +335,25 @@ export default {
         } else {
           this.audio.currentTime = newTime
         }
-        const pc = document.querySelector('.progressCircle');
+        const pc = document.querySelector('.progressCircle') as HTMLDivElement;
         pc.style.right = '-7px';
         this.circleDragging = false;
-        this.$refs.main.classList.toggle('hovering');
+        const main = this.$refs.main as HTMLDivElement;
+        main.classList.toggle('hovering');
       }
     },
     
-    handleCircleMouseMove(e) {
+    handleCircleMouseMove(e: MouseEvent) {
       if (this.circleDragging) {
         const diff = this.dragStart - e.clientX;
-        const pbi = document.querySelector('.progressBarInner');
-        const pbo = document.querySelector('.progressBarOuter');
+        const pbi = document.querySelector('.progressBarInner') as HTMLDivElement;
+        const pbo = document.querySelector('.progressBarOuter') as HTMLDivElement;
         const pboBox = pbo.getBoundingClientRect()
         pbi.style.width = pboBox.width * this.progress - diff + 'px';
       }
     },
 
-    handleRightClick(e) {
+    handleRightClick(e: MouseEvent) {
       e.preventDefault();
     },
   }

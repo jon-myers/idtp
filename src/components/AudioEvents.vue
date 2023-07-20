@@ -76,7 +76,8 @@
       :saEstimate='saEstimate'
       :saVerified='saVerified'
       :id='audioRecId'
-      ref='audioPlayer'/>
+      ref='audioPlayer'
+      @emitNextTrack='nextTrack'/>
   </div>
   <div class='dropDown closed' ref='dropDown'>
     <div 
@@ -211,6 +212,17 @@ export default defineComponent({
   unmounted() {
     window.removeEventListener('keydown', this.handleKeydown);
   },
+
+  // mounted() {
+  //   this.emitter.on('nextTrack', arr => {
+  //     console.log('got a next track')
+  //     this.nextTrack(arr[0], arr[1])
+  //   })
+  // },
+
+
+
+
   
   methods: {
 
