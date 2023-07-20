@@ -3912,7 +3912,11 @@ export default {
         }
         this.mouseUpUpdateLoop();
         this.setUpRegion();
-        if (this.audioDBDoc) this.$refs.audioPlayer.updateStretchBuf();
+        if (this.audioDBDoc) {
+          if (!this.$refs.audioPlayer.loading) {
+            this.$refs.audioPlayer.updateStretchBuf();
+          }
+        }
       }
     },
 
@@ -4271,8 +4275,11 @@ export default {
           this.mouseUpUpdateLoop();
           this.setUpRegion();
           if (this.audioDBDoc) {
-            this.$nextTick(() => this.$refs.audioPlayer.updateStretchBuf())
-
+            this.$nextTick(() => {
+              if (!this.$refs.audioPlayer.loading) {
+                this.$refs.audioPlayer.updateStretchBuf()
+              }
+            })
           }
         }
       }
