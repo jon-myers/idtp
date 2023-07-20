@@ -147,7 +147,7 @@
           :disabled='playing || !shiftOn || !readyToShift'
           />
       </div>
-      <div class='cbBoxSmall' v-if='$parent.audioDBDoc'>
+      <div class='cbBoxSmall' v-if='audioDBDoc'>
         <label>Region Speed <br>({{ (2 ** regionSpeed).toFixed(2) }})</label>
         <input 
           type='checkbox' 
@@ -406,8 +406,12 @@ type EditorAudioPlayerData = {
   chikariNodes: ChikariNodeType[];
   requestId?: number;
   rubberBandNode?: RubberBandNodeType;
-
-
+  ETRatios: number[];
+  initFreqs: number[];
+  currentFreqs: number[];
+  tuningMasterGainNode?: GainNode;
+  tuningGainNodes: GainNode[];
+  tuningSines: OscillatorNode[];
 }
 
 interface RubberBandNodeType extends AudioWorkletNode {
@@ -487,6 +491,12 @@ interface KlattNodeType extends AudioWorkletNode {
   // [key: string]: AudioParam;
 
 
+}
+
+type MusicianType = {
+  gharana: string,
+  instrument: string,
+  role: string,
 }
 
 const structuredTime = (dur: number) => {
@@ -632,6 +642,12 @@ export default defineComponent({
       audioBuffer: undefined,
       gainNode: undefined,
       synthLoopBufSourceNode: undefined,
+      ETRatios: [],
+      initFreqs: [],
+      currentFreqs: [],
+      tuningMasterGainNode: undefined,
+      tuningGainNodes: [],
+      tuningSines: [],
 
 
 
@@ -681,6 +697,14 @@ export default defineComponent({
     playheadReturn: {
       type: Boolean
     },
+    parentCurrentTime: {
+      type: Number,
+      required: true
+    },
+    durTot: {
+      type: Number,
+      required: true
+    }
   },
 
   components: {
@@ -770,43 +794,43 @@ export default defineComponent({
       this.loading = true;
       this.audioBuffer = await this.getAudio(newSrc, false);
       this.loading = false;
-      this.pausedAt = this.$parent.currentTime;
+      this.pausedAt = this.parentCurrentTime;
       this.updateProgress();
       this.updateFormattedCurrentTime();
       this.updateFormattedTimeLeft();
       
     },
     recGain(newGain) {
-      if (this.ac.state === 'suspended') this.ac.resume();
-      const currentGain = this.gainNode.gain.value;
-      const gain = this.gainNode.gain;
+      if (this.ac!.state === 'suspended') this.ac!.resume();
+      const currentGain = this.gainNode!.gain.value;
+      const gain = this.gainNode!.gain;
       gain.setValueAtTime(currentGain, this.now());
       gain.linearRampToValueAtTime(newGain, this.now() + this.lagTime);
     },
     synthGain(newGain) {
-      if (this.ac.state === 'suspended') this.ac.resume();
-      const currentGain = this.synthGainNode.gain.value;
-      const gain = this.synthGainNode.gain;
+      if (this.ac!.state === 'suspended') this.ac!.resume();
+      const currentGain = this.synthGainNode!.gain.value;
+      const gain = this.synthGainNode!.gain;
       gain.setValueAtTime(currentGain, this.now());
       gain.linearRampToValueAtTime(newGain, this.now() + this.lagTime);
     },
     synthDamp(newVal) {
-      if (this.ac.state === 'suspended') this.ac.resume();
-      const currentDamp = this.pluckNode.cutoff.value;
-      const cutoff = this.pluckNode.cutoff;
+      if (this.ac!.state === 'suspended') this.ac!.resume();
+      const currentDamp = this.pluckNode!.cutoff!.value;
+      const cutoff = this.pluckNode!.cutoff!;
       cutoff.setValueAtTime(currentDamp, this.now());
       cutoff.linearRampToValueAtTime(newVal, this.now() + this.lagTime);
     },
     chikariGain(newVal) {
-      if (this.ac.state === 'suspended') this.ac.resume();
-      const currentGain = this.chikariGainNode.gain.value;
-      const gain = this.chikariGainNode.gain;
+      if (this.ac!.state === 'suspended') this.ac!.resume();
+      const currentGain = this.chikariGainNode!.gain.value;
+      const gain = this.chikariGainNode!.gain;
       gain.setValueAtTime(currentGain, this.now());
       gain.linearRampToValueAtTime(newVal, this.now() + this.lagTime);
     },
     transposition(cents) {
       const newVal = 2 ** (cents / 1200);
-      this.rubberBandNode.setPitch(newVal);
+      this.rubberBandNode!.setPitch(newVal);
       this.preSetFirstEnvelope(256);
       if (this.playing) {
         this.cancelPlayTrajs(this.now(), false);
@@ -816,13 +840,16 @@ export default defineComponent({
       const freqs = raga.chikariPitches.map((p) => p.frequency);
       const transp = 2 ** (this.transposition / 1200);
       if (this.string) {
-        const curFreq0 = this.otherNode.freq0.value;
-        const curFreq1 = this.otherNode.freq1.value;
-        this.otherNode.freq0.setValueAtTime(curFreq0, this.now());
-        this.otherNode.freq1.setValueAtTime(curFreq1, this.now());
+        if (this.otherNode === undefined) {
+          throw new Error('otherNode is undefined');
+        }
+        const curFreq0 = this.otherNode.freq0!.value;
+        const curFreq1 = this.otherNode.freq1!.value;
+        this.otherNode.freq0!.setValueAtTime(curFreq0, this.now());
+        this.otherNode.freq1!.setValueAtTime(curFreq1, this.now());
         const et = this.now() + this.lagTime;
-        this.otherNode.freq0.linearRampToValueAtTime(freqs[0] * transp, et);
-        this.otherNode.freq1.linearRampToValueAtTime(freqs[1] * transp, et);
+        this.otherNode.freq0!.linearRampToValueAtTime(freqs[0] * transp, et);
+        this.otherNode.freq1!.linearRampToValueAtTime(freqs[1] * transp, et);
       }
     }
   },
@@ -870,28 +897,30 @@ export default defineComponent({
         .call(drag);
     },
 
-    dragStart(e) {
+    dragStart(e: DragEvent) {
       console.log('drag start');
       this.dragStartX = e.x;
     },
 
-    dragging(e) {
-      const diff = this.dragStartX - e.x;
-      const pbi = document.querySelector('.progressBarInner');
+    dragging(e: DragEvent) {
+      const diff = this.dragStartX! - e.x;
+      const pbi = document.querySelector('.progressBarInner') as HTMLElement;
       const pbo = document.querySelector('.progressBarOuter');
-      const pboBox = pbo.getBoundingClientRect();
-      pbi.style.width = pboBox.width * this.progress - diff + 'px';
+      const pboBox = pbo!.getBoundingClientRect();
+      pbi!.style.width = pboBox.width * this.progress - diff + 'px';
       const ct = this.getCurrentTime();
-      const dur = this.audioBuffer.duration;
-      const newTime = ct + (dur * (e.x - this.dragStartX)) / pboBox.width;      
+      const dur = this.audioBuffer!.duration;
+      const newTime = ct + (dur * (e.x - this.dragStartX!)) / pboBox.width;      
       this.updateFormattedCurrentTime(newTime);
       this.updateFormattedTimeLeft(newTime);
     },
-    dragEnd(e) {
-      const bb = this.$refs.pbOuter.getBoundingClientRect();
+
+    dragEnd(e: DragEvent) {
+      const pbOuter = this.$refs.pbOuter as HTMLElement;
+      const bb = pbOuter.getBoundingClientRect();
       const ct = this.getCurrentTime();
-      const dur = this.audioBuffer.duration;
-      const newTime = ct + (dur * (e.x - this.dragStartX)) / bb.width;
+      const dur = this.audioBuffer!.duration;
+      const newTime = ct + (dur * (e.x - this.dragStartX!)) / bb.width;
       if (!this.playing) {
           this.pausedAt = newTime;
           this.$emit('currentTimeEmit', this.pausedAt)
@@ -905,21 +934,23 @@ export default defineComponent({
         this.updateFormattedCurrentTime();
         this.updateFormattedTimeLeft();
     },
+
     resetTunings() {
       this.centDevs = this.centDevs.map(() => 0);
-      const ratios = this.initFreqs.map(if_ => if_ / this.raga.fundamental);
-      this.raga.ratios = ratios;
-      this.$parent.updateSargamLines();
+      const ratios = this.initFreqs.map(if_ => if_ / this.raga!.fundamental);
+      this.raga!.ratios = ratios;
+      this.$emit('updateSargamLinesEmit')
       this.instantiateTuning();
       this.tuningSines.forEach((oscNode, i) => {
         const curVal = oscNode.frequency.value;
         oscNode.frequency.setValueAtTime(curVal, this.now());
-        const newVal = this.raga.fundamental * this.raga.ratios[i];
+        const newVal = this.raga!.fundamental * this.raga!.ratios[i];
         oscNode.frequency.setValueAtTime(newVal, this.now() + this.lagTime);
       })
     },
-    updateTuningGain(sIdx) {
-      if (this.ac.suspended) this.ac.resume();
+
+    updateTuningGain(sIdx: number) {
+      if (this.ac!.state === 'suspended') this.ac!.resume();
       const gainNode = this.tuningGainNodes[sIdx];
       const curGain = gainNode.gain.value;
       gainNode.gain.setValueAtTime(curGain, this.now());
@@ -927,35 +958,37 @@ export default defineComponent({
       const newGain = this.tuningGains[sIdx];
       gainNode.gain.linearRampToValueAtTime(newGain, endTime);
     },
-    updateTuning(sIdx) {
+
+    updateTuning(sIdx: number) {
       const oscNode = this.tuningSines[sIdx];
       const curFreq = oscNode.frequency.value;
       oscNode.frequency.setValueAtTime(curFreq, this.now());
       const endTime = this.now() + this.lagTime;
       const initFreq = this.initFreqs[sIdx];
       const newFreq = initFreq * 2 ** (this.centDevs[sIdx] / 1200);
-      const newRatio = newFreq / this.raga.fundamental;
-      this.raga.ratios[sIdx] = newRatio;
+      const newRatio = newFreq / this.raga!.fundamental;
+      this.raga!.ratios[sIdx] = newRatio;
       oscNode.frequency.linearRampToValueAtTime(newFreq, endTime);
-      this.$parent.updateSargamLines();
+      this.$emit('updateSargamLinesEmit')
     },
+
     instantiateTuning() {
-      
       this.piece.realignPitches();
-      this.$parent.resetZoom();
+      this.$emit('resetZoomEmit')
     },
+
     makeTuningSines() {
       this.tuningGainNodes = [...Array(this.sargam.length)].map(() => {
-        return this.ac.createGain()
+        return this.ac!.createGain()
       });
       this.tuningSines = [...Array(this.sargam.length)].map(() => {
-          return this.ac.createOscillator()
+          return this.ac!.createOscillator()
       });
-      this.tuningMasterGainNode = this.ac.createGain();
-      this.tuningMasterGainNode.connect(this.ac.destination);
+      this.tuningMasterGainNode = this.ac!.createGain();
+      this.tuningMasterGainNode.connect(this.ac!.destination);
       this.tuningMasterGainNode.gain.setValueAtTime(0.25, this.now());
       this.tuningGainNodes.forEach((gainNode, i) => {
-        gainNode.connect(this.tuningMasterGainNode);
+        gainNode.connect(this.tuningMasterGainNode!);
         gainNode.gain.setValueAtTime(0, this.now());
         const osc = this.tuningSines[i];
         osc.frequency.setValueAtTime(this.currentFreqs[i], this.now());
@@ -964,10 +997,10 @@ export default defineComponent({
       });
     },
     // addKlattModule(url = this.ksUrl)
-    async setUpKlattNode(url, destination) {
+    async setUpKlattNode(url: string, destination: GainNode) {
       try {
-        await this.ac.audioWorklet.addModule(url, destination);
-        this.klattNode = new AudioWorkletNode(this.ac, 'klatt-synth');
+        await this.ac!.audioWorklet.addModule(url);
+        this.klattNode = new AudioWorkletNode(this.ac!, 'klatt-synth');
         const params = this.klattNode.parameters;
         const kn = this.klattNode;
         kn.f0 = params.get('f0');
@@ -1039,7 +1072,7 @@ export default defineComponent({
       this.string = stringInsts.includes(instrumentation);
       this.vocal = vocInsts.includes(instrumentation);
       if (this.string) {
-        this.ac.audioWorklet.addModule(AudioWorklet(ksURL))
+        this.ac!.audioWorklet.addModule(AudioWorklet(ksURL))
           .then(() => {
             this.moduleCt++;
             if (this.moduleCt === 3) {
@@ -1050,7 +1083,7 @@ export default defineComponent({
           .catch((err) => {
             console.log(err);
           });
-        this.ac.audioWorklet.addModule(AudioWorklet(cURL))
+        this.ac!.audioWorklet.addModule(AudioWorklet(cURL))
           .then(() => {
             this.moduleCt++;
             if (this.moduleCt === 3) {
@@ -1063,7 +1096,7 @@ export default defineComponent({
           });
       } 
       
-      this.ac.audioWorklet.addModule(AudioWorklet(caURL))
+      this.ac!.audioWorklet.addModule(AudioWorklet(caURL))
         .then(() => {
           this.moduleCt++;
           let trialNum = this.string ? 3 : 1;
@@ -1119,18 +1152,18 @@ export default defineComponent({
         const left = this.stretchBuf.getChannelData(0);
         const right = this.stretchBuf.numberOfChannels > 1 ?
           this.stretchBuf.getChannelData(1) : left;
-        this.stretchWorker.postMessage({
+        this.stretchWorker!.postMessage({
           name: 'stretch',
           tempo: tempo,
           left: left,
           right: right,
         });
-        this.stretchWorker.onmessage = e => {
+        this.stretchWorker!.onmessage = e => {
           if (e.data.name === 'stretched') {
-            this.stretchedBuffer = this.ac.createBuffer(
+            this.stretchedBuffer = this.ac!.createBuffer(
               2,
               e.data.left.length,
-              this.ac.sampleRate
+              this.ac!.sampleRate
             );
             this.stretchedBuffer.copyToChannel(e.data.left, 0);
             this.stretchedBuffer.copyToChannel(e.data.right, 1);
@@ -1163,16 +1196,16 @@ export default defineComponent({
         this.$emit('movePlayheadsEmit')
         this.synthGainDisabled = true;
         this.chikariGainDisabled = true;
-        const curSG = this.synthGainNode.gain.value;
-        this.synthGainNode.gain.setValueAtTime(curSG, this.now());
+        const curSG = this.synthGainNode!.gain.value;
+        this.synthGainNode!.gain.setValueAtTime(curSG, this.now());
         this.synthGain = 0;
-        this.synthGainNode.gain
+        this.synthGainNode!.gain
           .linearRampToValueAtTime(0, this.now() + this.lagTime);
         this.savedSynthGain = curSG;
-        const curCG = this.chikariGainNode.gain.value;
-        this.chikariGainNode.gain.setValueAtTime(curCG, this.now());
+        const curCG = this.chikariGainNode!.gain.value;
+        this.chikariGainNode!.gain.setValueAtTime(curCG, this.now());
         this.chikariGain = 0;
-        this.chikariGainNode.gain
+        this.chikariGainNode!.gain
           .linearRampToValueAtTime(0, this.now() + this.lagTime);
         this.savedChikariGain = curCG;
 
@@ -1182,16 +1215,16 @@ export default defineComponent({
         this.synthGainDisabled = false;
         this.chikariGainDisabled = false;
         if (this.savedSynthGain !== undefined) {
-          this.synthGainNode.gain.setValueAtTime(0, this.now());
+          this.synthGainNode!.gain.setValueAtTime(0, this.now());
           const ssg = this.savedSynthGain;
-          this.synthGainNode.gain
+          this.synthGainNode!.gain
             .linearRampToValueAtTime(ssg, this.now() + this.lagTime);
           this.synthGain = this.savedSynthGain;
         }
         if (this.savedChikariGain !== undefined) {
-          this.chikariGainNode.gain.setValueAtTime(0, this.now());
+          this.chikariGainNode!.gain.setValueAtTime(0, this.now());
           const scg = this.savedChikariGain;
-          this.chikariGainNode.gain
+          this.chikariGainNode!.gain
             .linearRampToValueAtTime(scg, this.now() + this.lagTime);
           this.chikariGain = this.savedChikariGain;
         }
@@ -1199,19 +1232,19 @@ export default defineComponent({
     },
 
     updateStretchBuf() {
-      const start = this.regionStartTime;
-      const end = this.regionEndTime;
-      const startSample = Math.round(start * this.ac.sampleRate);
-      const endSample = Math.round(end * this.ac.sampleRate);
+      const start = this.regionStartTime!;
+      const end = this.regionEndTime!;
+      const startSample = Math.round(start * this.ac!.sampleRate);
+      const endSample = Math.round(end * this.ac!.sampleRate);
       // make new audio buffer
-      const sr = this.ac.sampleRate;
-      this.stretchBuf = this.ac.createBuffer(2, endSample - startSample, sr);
+      const sr = this.ac!.sampleRate;
+      this.stretchBuf = this.ac!.createBuffer(2, endSample - startSample, sr);
       // copy data over
-      const left = this.audioBuffer
+      const left = this.audioBuffer!
         .getChannelData(0)
         .slice(startSample, endSample+1);
-      const right = this.audioBuffer.numberOfChannels > 1 ?
-        this.audioBuffer.getChannelData(1).slice(startSample, endSample+1) :
+      const right = this.audioBuffer!.numberOfChannels > 1 ?
+        this.audioBuffer!.getChannelData(1).slice(startSample, endSample+1) :
         left;
       this.stretchBuf.copyToChannel(left, 0);
       this.stretchBuf.copyToChannel(right, 1);
@@ -1228,7 +1261,7 @@ export default defineComponent({
         const c2 = browser!.name === 'firefox' && Number(version) >= 113;
         const c3 = browser!.name === 'edge-chromium';
         if (c1 || c2 || c3) {
-          this.setUpKlattNode(klattURL, this.intSynthGainNode);
+          this.setUpKlattNode(klattURL, this.intSynthGainNode!);
           this.klattActive = true
         } else {
           this.initializeVocalNode()
@@ -1263,10 +1296,10 @@ export default defineComponent({
       this.ruleSet = this.piece.raga.ruleSet;
       this.ETRatios = this.raga.setRatios(this.ruleSet); // equal temperement
       this.initFreqs = this.ETRatios.map(ratio => {
-        return this.raga.fundamental * ratio
+        return this.raga!.fundamental * ratio
       })
       this.currentFreqs = this.raga.ratios.map(ratio => {
-        return this.raga.fundamental * ratio
+        return this.raga!.fundamental * ratio
       })
       this.sargam = this.raga.sargamLetters;
       this.centDevs = this.currentFreqs.map((cf, i) => {
@@ -1274,17 +1307,17 @@ export default defineComponent({
       })
       this.tuningGains = [...Array(this.sargam.length)].fill(0);
     },
-    getRoleRank(musician) {
+    getRoleRank(musician: MusicianType) {
       const roles = ['Soloist', 'Percussionist', 'Accompanist', 'Drone'];
       return roles.indexOf(musician.role);
     },
-    playChikaris(curPlayTime, now, otherNode) {
-      const gain = this.intChikariGainNode.gain;
+    playChikaris(curPlayTime: number, now: number, otherNode: ChikariNodeType) {
+      const gain = this.intChikariGainNode!.gain;
       gain.setValueAtTime(0, now);
       gain.linearRampToValueAtTime(1, now + this.slowRamp);
       this.piece.phrases.forEach((phrase: Phrase) => {
         Object.keys(phrase.chikaris).forEach((key) => {
-          const time = now + phrase.startTime + Number(key) - curPlayTime;
+          const time = now + phrase.startTime! + Number(key) - curPlayTime;
           if (time >= this.now()) {
             this.sendNoiseBurst(time, 0.01, otherNode, 0.025, 0.2);
           }
@@ -1308,7 +1341,7 @@ export default defineComponent({
       const allStarts = getStarts(allTrajs.map((t) => t.durTot));
       const allEnds = getEnds(allTrajs.map((t) => t.durTot));
       const startIdx = allStarts.findIndex((s) => s >= curPlayTime);
-      const gain = this.intSynthGainNode.gain;
+      const gain = this.intSynthGainNode!.gain;
       gain.setValueAtTime(0, now);
       gain.linearRampToValueAtTime(1, now + this.slowRamp);
       const remainingTrajs = allTrajs.slice(startIdx);
@@ -1349,35 +1382,35 @@ export default defineComponent({
         const dampens = keys.filter(key => arts[key].name === 'dampen');
         plucks.forEach((time) => {
           const when = Number(startTime) + Number(time) * Number(traj.durTot);
-          this.sendNoiseBurst(when, 0.01, this.pluckNode, 0.05, 1);
+          this.sendNoiseBurst(when, 0.01, this.pluckNode!, 0.05, 1);
         });
         hammerOffs.forEach((time) => {
           const when = Number(startTime) + Number(time) * Number(traj.durTot);
-          this.sendNoiseBurst(when, 0.01, this.pluckNode, 0.05, 0.5);
+          this.sendNoiseBurst(when, 0.01, this.pluckNode!, 0.05, 0.5);
         });
         hammerOns.forEach((time) => {
           const when = Number(startTime) + Number(time) * Number(traj.durTot);
-          this.sendNoiseBurst(when, 0.01, this.pluckNode, 0.05, 0.3);
+          this.sendNoiseBurst(when, 0.01, this.pluckNode!, 0.05, 0.3);
         });
         slides.forEach((time) => {
           const when = Number(startTime) + Number(time) * Number(traj.durTot);
-          this.sendNoiseBurst(when, 0.01, this.pluckNode, 0.05, 0.1);
+          this.sendNoiseBurst(when, 0.01, this.pluckNode!, 0.05, 0.1);
         });
         dampens.forEach(time => {
           const when = Number(startTime) + Number(time) * Number(traj.durTot);
-          const curVal = this.pluckNode.cutoff.value;
-          this.pluckNode.cutoff
+          const curVal = this.pluckNode!.cutoff!.value;
+          this.pluckNode!.cutoff!
             .setValueAtTime(curVal, when);
-          this.pluckNode.cutoff
+          this.pluckNode!.cutoff!
             .linearRampToValueAtTime(0, when + 1 * this.lagTime);
-          this.pluckNode.cutoff
+          this.pluckNode!.cutoff!
             .setValueAtTime(0, when + this.lagTime + 0.05)
-          this.pluckNode.cutoff
+          this.pluckNode!.cutoff!
             .linearRampToValueAtTime(curVal, when + this.lagTime + 0.1);
         })
       }
     },
-    createCurveVals(start, duration) {
+    createCurveVals(start: number, duration: number) {
       // time in transcription, not this.ac
       const env = new Float32Array(Math.round(duration * this.valueCurveMinim));
       const computeTimes = env.map((_, i) => this.valueCurveMinim * i + start);
@@ -1388,7 +1421,7 @@ export default defineComponent({
       for (let i = 0; i < computeTimes.length; i++) {
         const time = computeTimes[i];
         const traj = allTrajs[allStarts.findIndex((s) => s >= time)];
-        const trajX = (time - traj.startTime) / traj.durTot;
+        const trajX = (time - traj.startTime!) / traj.durTot;
         let val;
         if (traj.id === 12) {
           val = lastVal;
@@ -1614,7 +1647,7 @@ export default defineComponent({
       this.chikariDCOffsetNode.frequency.setValueAtTime(5, this.now());
       this.intChikariGainNode
         .connect(this.chikariDCOffsetNode)
-        .connect(this.chikariGainNode);
+        .connect(this.chikariGainNode!);
       const raga = this.piece.raga;
       const freqs = raga.chikariPitches.map((p) => p.frequency);
       const transp = 2 ** (this.transposition / 1200);
@@ -1628,52 +1661,52 @@ export default defineComponent({
         this.pluckNode = null;
       }
       if (this.lowPassNode) this.lowPassNode.disconnect();
-      this.pluckNode = new AudioWorkletNode(this.ac, 'karplusStrong');
-      this.pluckDCOffsetNode = this.ac.createBiquadFilter();
+      this.pluckNode = new AudioWorkletNode(this.ac!, 'karplusStrong');
+      this.pluckDCOffsetNode = this.ac!.createBiquadFilter();
       this.pluckDCOffsetNode.type = 'highpass';
       this.pluckDCOffsetNode.frequency.setValueAtTime(5, this.now());
-      this.lowPassNode = this.ac.createBiquadFilter();
+      this.lowPassNode = this.ac!.createBiquadFilter();
       this.lowPassNode.type = 'lowpass';
       const fund = this.piece.raga.fundamental;
       this.lowPassNode.frequency.setValueAtTime(fund * 2 ** 3, this.now());
       this.pluckNode
         .connect(this.pluckDCOffsetNode)
         .connect(this.lowPassNode)
-        .connect(this.intSynthGainNode);
+        .connect(this.intSynthGainNode!);
       this.pluckNode.frequency = this.pluckNode.parameters.get('Frequency');
       this.pluckNode.cutoff = this.pluckNode.parameters.get('Cutoff');
       this.pluckNode.cutoff!.setValueAtTime(Number(this.synthDamp), this.now());
     },
     initializeVocalNode() {
       if (this.vocalNode) this.vocalNode.disconnect();
-      this.vocalNode = this.ac.createOscillator();
+      this.vocalNode = this.ac!.createOscillator();
       this.vocalNode.type = 'triangle';
-      this.vocalGainNode = this.ac.createGain();
+      this.vocalGainNode = this.ac!.createGain();
       this.vocalGainNode.gain.setValueAtTime(0, this.now());
       this.vocalNode
         .connect(this.vocalGainNode)
-        .connect(this.intSynthGainNode);
+        .connect(this.intSynthGainNode!);
       this.vocalNode.start();
     },  
     initializeBufferRecorder() {
       // the buffer source node
-      this.synthLoopSource = this.ac.createBufferSource();
+      this.synthLoopSource = this.ac!.createBufferSource();
       this.synthLoopSource.loop = true;
-      this.synthLoopGainNode = this.ac.createGain();
+      this.synthLoopGainNode = this.ac!.createGain();
       this.synthLoopGainNode.gain.setValueAtTime(1, this.now());
       this.synthLoopSource
         .connect(this.synthLoopGainNode)
-        .connect(this.synthGainNode);
-      this.chikLoopSource = this.ac.createBufferSource();
+        .connect(this.synthGainNode!);
+      this.chikLoopSource = this.ac!.createBufferSource();
       this.chikLoopSource.loop = true;
-      this.chikLoopGainNode = this.ac.createGain();
+      this.chikLoopGainNode = this.ac!.createGain();
       this.chikLoopGainNode.gain.setValueAtTime(1, this.now());
       this.chikLoopSource
         .connect(this.chikLoopGainNode)
-        .connect(this.chikariGainNode);
+        .connect(this.chikariGainNode!);
       // the recorder
       const options = { numberOfInputs: 2, numberOfOutputs: 0 };
-      this.capture = new AudioWorkletNode(this.ac, 'captureAudio', options);
+      this.capture = new AudioWorkletNode(this.ac!, 'captureAudio', options);
       this.capture.bufferSize = this.capture.parameters.get('BufferSize');
       this.capture.active = this.capture.parameters.get('Active');
       this.capture.cancel = this.capture.parameters.get('Cancel');
@@ -1685,13 +1718,13 @@ export default defineComponent({
       }
       this.capture.port.onmessage = e => {
         const synthArr = new Float32Array(e.data[0]);
-        const sr = this.ac.sampleRate;
-        const synthBuffer = this.ac.createBuffer(1, synthArr.length, sr);
+        const sr = this.ac!.sampleRate;
+        const synthBuffer = this.ac!.createBuffer(1, synthArr.length, sr);
         synthBuffer.copyToChannel(synthArr, 0);
         const chikArr = new Float32Array(e.data[1]);
-        const chikBuffer = this.ac.createBuffer(1, chikArr.length, sr);
+        const chikBuffer = this.ac!.createBuffer(1, chikArr.length, sr);
         chikBuffer.copyToChannel(chikArr, 0);
-        const offset = this.now() - this.endRecTime;
+        const offset = this.now() - this.endRecTime!;
         if (this.synthLoopSource === undefined) {
           throw new Error('synthLoopSource is undefined');
         }
@@ -1723,7 +1756,7 @@ export default defineComponent({
         const arrayBuffer = await res.arrayBuffer();
         const midpoint = (await performance.now()) - start;
         if (verbose) console.log('array buffd: ', midpoint / 1000);
-        const audioBuffer = await this.ac.decodeAudioData(arrayBuffer);
+        const audioBuffer = await this.ac!.decodeAudioData(arrayBuffer);
         const endpoint = (await performance.now()) - start;
         if (verbose) console.log('done: ', endpoint / 1000);
         return audioBuffer;
@@ -1747,8 +1780,8 @@ export default defineComponent({
     },
     forward_15() {
       let newTime = this.getCurrentTime() + 15;
-      if (newTime > this.audioBuffer.duration) {
-        newTime = this.audioBuffer.duration;
+      if (newTime > this.audioBuffer!.duration) {
+        newTime = this.audioBuffer!.duration;
       }
       if (!this.playing) {
         this.pausedAt = newTime;
@@ -1763,7 +1796,7 @@ export default defineComponent({
     },
 
     trackEnd() {
-      let newTime = this.$parent.durtot;
+      let newTime = this.durTot;
       if (!this.playing) {
         this.$emit('currentTimeEmit', newTime);
         this.$emit('movePlayheadsEmit')
@@ -1777,15 +1810,15 @@ export default defineComponent({
     },
     
     now() {
-      return this.ac.currentTime;
+      return this.ac!.currentTime;
     },
 
     playStretched() {
-      const offset = (this.$parent.currentTime - this.regionStartTime);
+      const offset = (this.parentCurrentTime - this.regionStartTime!);
       const scaledOffset = offset / (2 ** this.regionSpeed);
-      this.sourceNode = this.ac.createBufferSource();
-      this.sourceNode.connect(this.gainNode);
-      this.sourceNode.buffer = this.stretchedBuffer;
+      this.sourceNode = this.ac!.createBufferSource();
+      this.sourceNode.connect(this.gainNode!);
+      this.sourceNode.buffer = this.stretchedBuffer!;
       this.sourceNode.loop = this.loop;
       this.sourceNode.start(this.now(), scaledOffset);
       this.sourceNode.addEventListener('ended', () => {
@@ -1832,9 +1865,9 @@ export default defineComponent({
     play() {
       const offset = this.pausedAt;
       this.startingDelta = this.pausedAt;
-      this.sourceNode = this.ac.createBufferSource();
-      this.sourceNode.connect(this.gainNode);
-      this.sourceNode.buffer = this.audioBuffer;
+      this.sourceNode = this.ac!.createBufferSource();
+      this.sourceNode.connect(this.gainNode!);
+      this.sourceNode.buffer = this.audioBuffer!;
       this.sourceNode.start(this.now(), offset);
       if (this.loop && this.loopStart && this.loopEnd && this.pausedAt < this.loopEnd) {
         this.sourceNode.loop = this.loop;
@@ -1846,23 +1879,23 @@ export default defineComponent({
           this.cancelPlayTrajs();
           this.cancelBursts();
           this.bufferSourceNodes = [];
-          const curGain = this.intSynthGainNode.gain.value;
-          this.intSynthGainNode.gain.setValueAtTime(curGain, this.now());
+          const curGain = this.intSynthGainNode!.gain.value;
+          this.intSynthGainNode!.gain.setValueAtTime(curGain, this.now());
           const endTime = this.now() + this.lagTime;
-          this.intSynthGainNode.gain.setValueAtTime(0, endTime);
+          this.intSynthGainNode!.gain.setValueAtTime(0, endTime);
         } else {
           const startRecTime = this.now() + this.loopStart - offset;
           const duration = this.loopEnd - this.loopStart;
           this.endRecTime = startRecTime + duration;
-          const bufSize = duration * this.ac.sampleRate;
-          this.capture.bufferSize!.setValueAtTime(bufSize, this.now());
-          this.capture.active!.setValueAtTime(1, startRecTime);
-          this.capture.active!.setValueAtTime(0, this.endRecTime);
-          const curGain = this.intSynthGainNode.gain.value;
-          this.intSynthGainNode.gain.setValueAtTime(curGain, this.endRecTime);
-          this.intSynthGainNode.gain
+          const bufSize = duration * this.ac!.sampleRate;
+          this.capture!.bufferSize!.setValueAtTime(bufSize, this.now());
+          this.capture!.active!.setValueAtTime(1, startRecTime);
+          this.capture!.active!.setValueAtTime(0, this.endRecTime);
+          const curGain = this.intSynthGainNode!.gain.value;
+          this.intSynthGainNode!.gain.setValueAtTime(curGain, this.endRecTime);
+          this.intSynthGainNode!.gain
             .setValueAtTime(0, this.endRecTime + this.lagTime);
-          this.synthLoopGainNode.gain.setValueAtTime(1, this.endRecTime);
+          this.synthLoopGainNode!.gain.setValueAtTime(1, this.endRecTime);
           // the following synth stuff needs to be cancelled ...
           this.cancelPlayTrajs(this.endRecTime + this.lagTime);
           this.cancelBursts(this.endRecTime + this.lagTime);
@@ -1887,36 +1920,36 @@ export default defineComponent({
         throw new Error('chikLoopSource is undefined')
       }
       if (this.synthLoopSource.playing) {
-        const curSynthGain = this.synthLoopGainNode.gain.value;
-        this.synthLoopGainNode.gain.setValueAtTime(curSynthGain, this.now());
+        const curSynthGain = this.synthLoopGainNode!.gain.value;
+        this.synthLoopGainNode!.gain.setValueAtTime(curSynthGain, this.now());
         const endTime = this.now() + this.lagTime;
-        this.synthLoopGainNode.gain.linearRampToValueAtTime(0, endTime)
+        this.synthLoopGainNode!.gain.linearRampToValueAtTime(0, endTime)
         this.synthLoopSource.stop(this.now() + this.lagTime);
         this.synthLoopSource.onended = () => {
           this.synthLoopSource!.disconnect();
-          this.synthLoopSource = this.ac.createBufferSource();
+          this.synthLoopSource = this.ac!.createBufferSource();
           this.synthLoopSource.loop = true;
           this.synthLoopSource
-            .connect(this.synthLoopGainNode)
-            .connect(this.synthGainNode);
+            .connect(this.synthLoopGainNode!)
+            .connect(this.synthGainNode!);
         }
-        const curChikGain = this.chikLoopGainNode.gain.value;
-        this.chikLoopGainNode.gain.setValueAtTime(curChikGain, this.now());
-        this.chikLoopGainNode.gain.linearRampToValueAtTime(0, endTime)
+        const curChikGain = this.chikLoopGainNode!.gain.value;
+        this.chikLoopGainNode!.gain.setValueAtTime(curChikGain, this.now());
+        this.chikLoopGainNode!.gain.linearRampToValueAtTime(0, endTime)
         this.chikLoopSource.stop(this.now() + this.lagTime);
         this.chikLoopSource.onended = () => {
           this.chikLoopSource!.disconnect();
-          this.chikLoopSource = this.ac.createBufferSource();
+          this.chikLoopSource = this.ac!.createBufferSource();
           this.chikLoopSource.loop = true;
           this.chikLoopSource
-            .connect(this.chikLoopGainNode)
-            .connect(this.chikariGainNode);
+            .connect(this.chikLoopGainNode!)
+            .connect(this.chikariGainNode!);
         }
       }
-      if (this.capture.active!.value === 1) {
-        this.capture.active!.setValueAtTime(0, this.now());
-        this.capture.cancel!.setValueAtTime(1, this.now());
-        this.capture.cancel!.setValueAtTime(0, this.now() + 0.1);
+      if (this.capture!.active!.value === 1) {
+        this.capture!.active!.setValueAtTime(0, this.now());
+        this.capture!.cancel!.setValueAtTime(1, this.now());
+        this.capture!.cancel!.setValueAtTime(0, this.now() + 0.1);
       }
       this.pausedAt = 0;
       this.startedAt = 0;
@@ -2063,7 +2096,7 @@ export default defineComponent({
           this.startPlayCursorAnimation();
           this.playTrajs(this.getCurrentTime(), this.now());
           if (this.string) {
-            this.playChikaris(this.getCurrentTime(), this.now(), this.otherNode);
+            this.playChikaris(this.getCurrentTime(), this.now(), this.otherNode!);
           }
           
         } else {
@@ -2271,12 +2304,12 @@ export default defineComponent({
         return false;
       }
     },
-    updateFormattedCurrentTime(ct = undefined) {
+    updateFormattedCurrentTime(ct?: number) {
       const st = structuredTime(ct ? ct : this.getCurrentTime());
       const ms = st.minutes + ':' + st.seconds;
       this.formattedCurrentTime = st.hours !== '0' ? ms : st.hours + ':' + ms;
     },
-    updateFormattedTimeLeft(ct = undefined) {
+    updateFormattedTimeLeft(ct?: number) {
       if (this.audioBuffer && isNaN(this.audioBuffer.duration)) {
         return '00:00';
       } else {

@@ -107,6 +107,8 @@
   :audioDBDoc='audioDBDoc'
   :regionEndTime='regionEndTime'
   :playheadReturn='playheadReturn'
+  :parentCurrentTime='currentTime'
+  :durTot='durTot'
   @resizeHeightEmit='resizeHeight'
   @movePlayheadsEmit='movePlayheads'
   @currentTimeEmit='setCurrentTime'
@@ -116,6 +118,8 @@
   @startAnimationFrameEmit='startAnimationFrame'
   @setAnimationStartEmit='setAnimationStart'
   @setStretchedAnimationStartEmit='setStretchedAnimationStart'
+  @updateSargamLinesEmit='updateSargamLines'
+  @resetZoomEmit='resetZoom'
   />
   <ContextMenu 
     :x='contextMenuX'
