@@ -794,7 +794,7 @@ export default defineComponent({
       this.loading = true;
       this.audioBuffer = await this.getAudio(newSrc, false);
       this.loading = false;
-      this.updateStretchBuf();
+      if (this.regionStartTime && this.regionEndTime) this.updateStretchBuf();
       this.pausedAt = this.parentCurrentTime;
       this.updateProgress();
       this.updateFormattedCurrentTime();
