@@ -4280,6 +4280,7 @@ export default {
         const highFreq = this.yr().invert(y);
         await this.selectTrajectories(startTime, endTime, lowFreq, highFreq);
         this.groupable = this.selectedTrajsGroupable();
+        d3Select('#selBox').remove();
       } else {
         // console.log('here')
         if (e.y < this.xAxHeight && this.drawingRegion) {
@@ -6807,41 +6808,53 @@ export default {
           const pIdx = id.split('t')[0].slice(1);
           const tIdx = id.split('t')[1];
           const newTraj = this.piece.phrases[pIdx].trajectories[tIdx];
-          if (newTraj.groupId === undefined) {
-            // if (this.selectedTrajs.each(traj => traj.groupId === undefined)) {
-              
-            // }
-            this.selectedTrajs.push(newTraj);
-            this.groupable = this.selectedTrajsGroupable();
-            this.$refs.trajSelectPanel.grouped = false;
-            // clear selected traj visually
-            if (this.selectedTraj && this.selectedTrajID && id !== this.selectedTrajID) {
-              this.setTrajColor(this.selectedTrajID, this.trajColor, 'black');
-              d3SelectAll('.dragDots').remove();
-              this.selectedTrajID = undefined;
-              this.selectedTraj = undefined;
-              this.clearTrajSelectPanel();
-            }
-            this.selectedTrajs.forEach(traj => {
-              const id = `p${traj.phraseIdx}t${traj.num}`;
-              this.setTrajColor(id, this.selectedTrajColor, this.selectedArtColor);
-              this.updateArtColors(traj, true)
-            })
-            let minFreq = Math.min(...this.selectedTrajs.map(t => t.minFreq));
-            let maxFreq = Math.max(...this.selectedTrajs.map(t => t.maxFreq));
-            if ((minFreq / 2) < this.freqMin) {
-              this.$refs.trajSelectPanel.canShiftDown = false
+          if (!this.selectedTrajs.includes(newTraj)) {
+            if (newTraj.groupId === undefined) {
+              this.selectedTrajs.push(newTraj);
+              this.groupable = this.selectedTrajsGroupable();
+              this.$refs.trajSelectPanel.grouped = false;
+              // clear selected traj visually
+              if (this.selectedTraj && this.selectedTrajID && id !== this.selectedTrajID) {
+                this.setTrajColor(this.selectedTrajID, this.trajColor, 'black');
+                d3SelectAll('.dragDots').remove();
+                this.selectedTrajID = undefined;
+                this.selectedTraj = undefined;
+                this.clearTrajSelectPanel();
+              }
+              this.selectedTrajs.forEach(traj => {
+                const id = `p${traj.phraseIdx}t${traj.num}`;
+                this.setTrajColor(id, this.selectedTrajColor, this.selectedArtColor);
+                this.updateArtColors(traj, true)
+              })
+              let minFreq = Math.min(...this.selectedTrajs.map(t => t.minFreq));
+              let maxFreq = Math.max(...this.selectedTrajs.map(t => t.maxFreq));
+              if ((minFreq / 2) < this.freqMin) {
+                this.$refs.trajSelectPanel.canShiftDown = false
+              } else {
+                this.$refs.trajSelectPanel.canShiftDown = true
+              }
+              if ((maxFreq * 2) > this.freqMax) {
+                this.$refs.trajSelectPanel.canShiftUp = false
+              } else {
+                this.$refs.trajSelectPanel.canShiftUp = true
+              }
             } else {
-              this.$refs.trajSelectPanel.canShiftDown = true
-            }
-            if ((maxFreq * 2) > this.freqMax) {
-              this.$refs.trajSelectPanel.canShiftUp = false
-            } else {
-              this.$refs.trajSelectPanel.canShiftUp = true
+              // need to actually make stuff happen here
             }
           } else {
-            // need to actually make stuff happen here
+            // remove traj from selectedTrajs
+            // const idx = this.selectedTrajs.indexOf(newTraj);
+            // this.selectedTrajs.splice(idx, 1);
+            // // turn color of newtraj back to normal
+            // const newTrajID = `p${newTraj.phraseIdx}t${newTraj.num}`;
+            // this.setTrajColor(newTrajID, this.trajColor, 'black');
+            this.groupable = this.selectedTrajsGroupable();
+            // if (this.selectedTrajs.length === 1) {
+
+            // }
+            
           }
+          
         } else {
           if (this.selectedTrajs.length > 1) {
             this.selectedTrajs.forEach(traj => {
