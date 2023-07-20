@@ -58,6 +58,13 @@
             v-model='magnetMode'
             @click='preventSpaceToggle'>
         </div>
+        <div class='cbRow' v-if='vocal'>
+          <label>Uniform Vowel</label>
+          <input
+            type='checkbox'
+            v-model='uniformVowel'
+            @click='preventSpaceToggle'>
+        </div>
         <div class='cbRow'>
           <button @click='resetAudio'>Reset Audio</button>
           <button @click='resetZoom'>Reset Zoom</button>
@@ -109,6 +116,7 @@
   :playheadReturn='playheadReturn'
   :parentCurrentTime='currentTime'
   :durTot='durTot'
+  :uniformVowel='uniformVowel'
   @resizeHeightEmit='resizeHeight'
   @movePlayheadsEmit='movePlayheads'
   @currentTimeEmit='setCurrentTime'
@@ -306,6 +314,8 @@ export default {
       selBoxStartX: undefined,
       selBoxStartY: undefined,
       fullWidth: 0,
+      initLogFreq: undefined,
+      uniformVowel: false,
     }
   },
   components: {
@@ -1406,11 +1416,40 @@ export default {
           .attr('r', 4)
           .style('fill', 'purple')
           .style('cursor', 'pointer')
+          .on('contextmenu', this.dragDotContextMenuClick)
         if (this.editable) {
           d3Select(`#dragDot${i}`)
             .call(drag())  
         }          
       }
+    },
+
+    dragDotContextMenuClick(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      this.contextMenuX = e.x;
+      this.contextMenuY = e.y;
+      const traj = this.selectedTraj;
+      const ddIdx = Number(e.target.id.slice(7));
+      
+      this.contextMenuChoices = [];
+      this.contextMenuChoices.push({
+        text: 'Offset Frequency',
+        action: () => {
+          e.target.style.fill = '#398BB9';
+          this.contextMenuClosed = true;
+          const newDrag = () => {
+            return d3Drag()
+              .on('start', this.verticalDragDotStart)
+              .on('drag', this.verticalDragDotDragging)
+              .on('end', this.verticalDragDotEnd)
+          }
+          d3Select(`#dragDot${ddIdx}`)
+            .on('.drag', null)
+            .call(newDrag())
+        }
+      })
+      this.contextMenuClosed = false;
     },
 
     async resizeHeight(controlsOpenOverride = undefined) {
@@ -1464,7 +1503,6 @@ export default {
       const trajStart = this.selectedTraj.startTime;
       const idx = e.sourceEvent.target.id.split('dragDot')[1];
       this.dragIdx = idx;
-      // const time = this.xr().invert(e.x);
       const logFreq = this.codifiedYR.invert(e.y);
       this.selectedTraj.logFreqs[idx] = logFreq;
       const st = phraseStart + trajStart;
@@ -1943,6 +1981,134 @@ export default {
         this.moveVowel(followingTraj, phrase.startTime, true);
       }
     },
+
+    verticalDragDotStart(e) {
+      if (this.editable) {
+        const phrase = this.piece.phrases[this.selectedTraj.phraseIdx]; 
+        const phraseStart = phrase.startTime;
+        const trajStart = this.selectedTraj.startTime;
+        const idx = e.sourceEvent.target.id.split('dragDot')[1];
+        this.dragIdx = idx;
+        const logFreq = this.codifiedYR.invert(e.y);
+        this.initLogFreq = this.selectedTraj.pitches[idx].nonOffsetLogFreq;
+        // this.selectedTraj.logFreqs[idx] = logFreq;
+        const st = phraseStart + trajStart;
+        const endTime = st + this.selectedTraj.durTot;
+        const timePts = Math.round((endTime - st) / this.minDrawDur);
+        const drawTimes = linSpace(st, endTime, timePts);
+        const mp = t => (t - st) / (endTime - st);
+        const trajDrawXs = drawTimes.map(mp);
+        const trajDrawYs = trajDrawXs.map(x => this.selectedTraj.compute(x))
+        const data = trajDrawYs.map((y, i) => {
+          return {
+            x: drawTimes[i],
+            y: y
+          }
+        });
+        this.phraseG.append('path')
+          .datum(data)
+          .attr('id', 'transparentPhrase')
+          .attr('stroke', this.trajColor)
+          .attr('fill', 'none')
+          .attr('stroke-width', '3px')
+          .attr('stroke-linejoin', 'round')
+          .attr('stroke-linecap', 'round')
+          .attr('d', this.codifiedPhraseLine())
+          .style('opacity', '0.35')
+      }
+    },
+
+    verticalDragDotDragging(e) {
+      if (this.editable) {
+        const idx = Number(this.dragIdx);
+
+        
+        const traj = this.selectedTraj;
+        const tIdx = traj.num;
+        const pIdx = traj.phraseIdx;
+        const phrase = this.piece.phrases[traj.phraseIdx];
+        const pitch = traj.pitches[idx];
+        const basicLogFreq = pitch.logFreq - pitch.logOffset;
+        const logSGLines = this.visibleSargam.map(s => Math.log2(s));
+        const closest = getClosest(logSGLines, basicLogFreq);
+        const lIdx = logSGLines.indexOf(closest);
+        let logMax = logSGLines.length > lIdx + 1 ? logSGLines[lIdx + 1] : logSGLines[lIdx];
+        logMax = (logMax + basicLogFreq) / 2;
+        let logMin = lIdx > 0 ? logSGLines[lIdx - 1] : logSGLines[lIdx];
+        logMin = (logMin + basicLogFreq) / 2;
+        let logFreq = this.codifiedYR.invert(e.y);
+        if (logFreq > logMax) logFreq = logMax;
+        if (logFreq < logMin) logFreq = logMin;
+        const yPxl = this.codifiedYR(logFreq);
+        const offset = logFreq - this.initLogFreq;
+        pitch.logOffset = offset;
+        
+        d3Select(`#dragDot${idx}`)
+          .attr('cy', yPxl)
+        const data = this.makeTrajData(traj, phrase.startTime);
+        d3Select(`#transparentPhrase`)
+          .datum(data)
+          .attr('d', this.codifiedPhraseLine())
+      } 
+    },
+
+    verticalDragDotEnd(e) {
+      if (this.editable) {
+        const idx = Number(this.dragIdx);
+        const traj = this.selectedTraj;
+        const tIdx = traj.num;
+        const pIdx = traj.phraseIdx;
+        const phrase = this.piece.phrases[traj.phraseIdx];
+        const pitch = traj.pitches[idx];
+        let logFreq = this.codifiedYR.invert(e.y);
+        const basicLogFreq = pitch.logFreq - pitch.logOffset;
+        const logSGLines = this.visibleSargam.map(s => Math.log2(s));
+        const closest = getClosest(logSGLines, basicLogFreq);
+        const lIdx = logSGLines.indexOf(closest);
+        let logMax = logSGLines.length > lIdx + 1 ? logSGLines[lIdx + 1] : logSGLines[lIdx];
+        logMax = (logMax + basicLogFreq) / 2;
+        let logMin = lIdx > 0 ? logSGLines[lIdx - 1] : logSGLines[lIdx];
+        logMin = (logMin + basicLogFreq) / 2;
+        if (logFreq > logMax) logFreq = logMax;
+        if (logFreq < logMin) logFreq = logMin;
+        const offset = logFreq - this.initLogFreq;
+        pitch.logOffset = offset;
+
+        if (idx === 0 && traj.id === 0) {
+          const pitch2 = traj.pitches[1];
+          pitch2.logOffset = offset;
+        } else if (idx === 1 && traj.id === 0) {
+          const pitch1 = traj.pitches[0];
+          pitch1.logOffset = offset;
+        }
+
+        d3Select(`#transparentPhrase`).remove();
+        const data = this.makeTrajData(traj, phrase.startTime);
+        d3Select(`#p${pIdx}t${tIdx}`)
+          .datum(data)
+          .attr('d', this.codifiedPhraseLine())
+        d3Select(`#overlay__p${pIdx}t${tIdx}`)
+          .datum(data)
+          .attr('d', this.codifiedPhraseLine())
+        this.moveKrintin(traj, phrase.startTime);
+        this.moveSlides(traj, phrase.startTime);
+        this.codifiedRedrawDampener(traj, phrase.startTime);
+        if (this.vocal) {
+          this.moveStartingConsonant(traj, phrase.startTime, true);
+          this.moveEndingConsonant(traj, phrase.startTime, true);
+          this.moveVowel(traj, phrase.startTime, true);
+          this.moveConsonantSymbols(traj, phrase.startTime, true);
+        }
+        this.removePlucks(traj);
+        const g = d3Select(`#articulations__p${pIdx}t${tIdx}`);
+        this.codifiedAddPlucks(traj, phrase.startTime, g);
+        this.addAllDragDots();
+        this.unsavedChanges = true;
+
+
+      }
+    },
+
     
     cleanEmptyTrajs(phrase) {
       phrase.trajectories.forEach((traj, i) => {
@@ -2498,7 +2664,7 @@ export default {
           .filter((d, i, nodes) => !d3Select(nodes[i]).classed('overlay'))
           .attr('stroke', this.meterColor)
         }
-        this.svg.style('cursor', 'wait')
+        this.svg.style('cursor', 'crosshair')
       }
     },
 
@@ -3421,9 +3587,9 @@ export default {
         } else {
           this.clearAll();
           this.meterMode = true;
-          this.svg.style('cursor', 'wait');
-          d3SelectAll('.phrase').style('cursor', 'wait');
-          d3SelectAll('.articulation').selectAll('*').style('cursor', 'wait');
+          this.svg.style('cursor', 'crosshair');
+          d3SelectAll('.phrase').style('cursor', 'crosshair');
+          d3SelectAll('.articulation').selectAll('*').style('cursor', 'crosshair');
         }
         
         // this.svg.style('cursor', 'crosshair');
@@ -4792,6 +4958,135 @@ export default {
       this.resetZoom();
     },
 
+    insertFixedTrajRight(traj, dur=0.1) {
+      if (traj.durTot < 0.2) dur = 0.1 * traj.durTot;
+      const pIdx = traj.phraseIdx;
+      const tIdx = traj.num;
+      const phrase = this.piece.phrases[pIdx];
+      if (traj.id === 0) {
+        throw new Error('traj is already fixed');
+      }
+      const newPitch = new Pitch(traj.pitches[traj.pitches.length - 1]);
+      const newTraj = new Trajectory({
+        id: 0,
+        durTot: dur,
+        pitches: [newPitch],
+        articulations: {},
+        vowel: traj.vowel,
+        vowelEngTrans: traj.vowelEngTrans,
+        vowelHindi: traj.vowelHindi,
+        vowelIpa: traj.vowelIpa,
+        endConsonant: traj.endConsonant,
+        endConsonantEngTrans: traj.endConsonantEngTrans,
+        endConsonantHindi: traj.endConsonantHindi,
+        endConsonantIpa: traj.endConsonantIpa,
+      });
+      traj.endConsonant = undefined;
+      traj.endConsonantEngTrans = undefined;
+      traj.endConsonantHindi = undefined;
+      traj.endConsonantIpa = undefined;
+      const art = traj.articulations['1.00'];
+      if (art && art.name === 'consonant') {
+        delete traj.articulations['1.00'];
+      }
+
+      if (traj.durArray.length === 1) {
+        traj.durTot -= dur;
+      } else {
+        const durs = traj.durArray.map(d => d * traj.durTot);
+        durs[0] -= dur;
+        traj.durTot -= dur;
+        traj.durArray = durs.map(d => d / traj.durTot);
+      }
+      phrase.trajectories.splice(tIdx+1, 0, newTraj);
+      phrase.reset();
+
+      const origTrajData = this.makeTrajData(traj, phrase.startTime);
+      d3Select(`#p${pIdx}t${tIdx}`)
+        .datum(origTrajData)
+        .attr('d', this.codifiedPhraseLine())
+      d3Select(`#overlay__p${pIdx}t${tIdx}`)
+        .datum(origTrajData)
+        .attr('d', this.codifiedPhraseLine())
+      const vowelIdxs = phrase.firstTrajIdxs();
+      this.codifiedAddTraj(newTraj, phrase.startTime, vowelIdxs);
+      for (let i = phrase.trajectories.length-1; i > tIdx + 1; i--) {
+        const oldId = `p${pIdx}t${i-1}`;
+        const newId = `p${pIdx}t${i}`;
+        this.reIdAllReps(oldId, newId);
+      }
+      this.resetZoom();
+    },
+
+    insertFixedTrajLeft(traj, dur=0.1) {
+      if (traj.durTot < 0.2) dur = 0.1 * traj.durTot;
+      const pIdx = traj.phraseIdx;
+      const tIdx = traj.num;
+      const phrase = this.piece.phrases[pIdx];
+      if (traj.id === 0) {
+        throw new Error('traj is already fixed');
+      }
+      const newPitch = new Pitch(traj.pitches[0]);
+      const art = traj.articulations['0.00'];
+      const newArts = art && art.name === 'pluck' ? 
+            { '0.00': new Articulation('pluck') } : 
+            {};
+      const newTraj = new Trajectory({
+        id: 0,
+        durTot: dur,
+        pitches: [newPitch],
+        articulations: newArts,
+        vowel: traj.vowel,
+        vowelEngTrans: traj.vowelEngTrans,
+        vowelHindi: traj.vowelHindi,
+        vowelIpa: traj.vowelIpa,
+        startConsonant: traj.startConsonant,
+        startConsonantEngTrans: traj.startConsonantEngTrans,
+        startConsonantHindi: traj.startConsonantHindi,
+        startConsonantIpa: traj.startConsonantIpa,
+      });
+      traj.startConsonant = undefined;
+      traj.startConsonantEngTrans = undefined;
+      traj.startConsonantHindi = undefined;
+      traj.startConsonantIpa = undefined;
+      if (art && art.name === 'consonant') {
+        delete traj.articulations['0.00'];
+      }
+      if (art && art.name === 'pluck') {
+        delete traj.articulations['0.00'];
+      }
+      if (traj.durArray.length === 1) {
+        traj.durTot -= dur;
+      } else {
+        const durs = traj.durArray.map(d => d * traj.durTot);
+        durs[0] -= dur;
+        traj.durTot -= dur;
+        traj.durArray = durs.map(d => d / traj.durTot);
+      }
+      phrase.trajectories.splice(tIdx, 0, newTraj);
+      phrase.reset();
+
+      const origTrajData = this.makeTrajData(traj, phrase.startTime);
+      d3Select(`#p${pIdx}t${tIdx}`)
+        .datum(origTrajData)
+        .attr('d', this.codifiedPhraseLine())
+      d3Select(`#overlay__p${pIdx}t${tIdx}`)
+        .datum(origTrajData)
+        .attr('d', this.codifiedPhraseLine())
+      
+      const vowelIdxs = phrase.firstTrajIdxs();
+      this.codifiedAddTraj(newTraj, phrase.startTime, vowelIdxs);
+      for (let i = phrase.trajectories.length - 2; i >= tIdx; i--) {
+        const oldId = `p${pIdx}t${i}`;
+        const newId = `p${pIdx}t${i + 1}`;
+        this.reIdAllReps(oldId, newId);
+      }
+      this.selectedTrajID = `p${pIdx}t${tIdx + 1}`;
+      this.resetZoom();
+
+
+    },
+
     scrollYDragStart(e) {
       const elem = d3Select('.scrollYDragger');
       const transform = elem.attr('transform');
@@ -5058,38 +5353,52 @@ export default {
         const pIdx = Number(trajID.split('t')[0].split('p')[1]);
         const phrase = this.piece.phrases[pIdx];
         const traj = phrase.trajectories[tIdx];
-        let insertRight = false;
-        let insertLeft = false;
+        let insertSilenceLeft = false;
+        let insertSilenceRight = false;
+        let insertFixedLeft = false;
+        let insertFixedRight = false;
         if (phrase.trajectories.length > tIdx + 1) {
           const nextTraj = phrase.trajectories[tIdx + 1];
           if (nextTraj.id !== 12) {
-            insertRight = true;
+            insertSilenceRight = true;
+          }
+          if (nextTraj.id !== 0 && traj.id !== 0) {
+            insertFixedRight = true;
           }
         } else if (this.piece.phrases.length > pIdx + 1) {
           const nextPhrase = this.piece.phrases[pIdx + 1];
           if (nextPhrase.trajectories.length > 0) {
             const nextTraj = nextPhrase.trajectories[0];
             if (nextTraj.id !== 12) {
-              insertRight = true;
+              insertSilenceRight = true;
+            }
+            if (nextTraj.id !== 0 && traj.id !== 0) {
+              insertFixedRight = true;
             }
           }
         }
         if (tIdx > 0) {
           const prevTraj = phrase.trajectories[tIdx - 1];
           if (prevTraj.id !== 12) {
-            insertLeft = true;
+            insertSilenceLeft = true;
+          }
+          if (prevTraj.id !== 0 && traj.id !== 0) {
+            insertFixedLeft = true;
           }
         } else if (pIdx > 0) {
           const prevPhrase = this.piece.phrases[pIdx - 1];
           if (prevPhrase.trajectories.length > 0) {
             const prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
             if (prevTraj.id !== 12) {
-              insertLeft = true;
+              insertSilenceLeft = true;
+            }
+            if (prevTraj.id !== 0 && traj.id !== 0) {
+              insertFixedLeft = true;
             }
           }
         }
         this.contextMenuChoices = [];
-        if (insertLeft) {
+        if (insertSilenceLeft) {
           this.contextMenuChoices.push({
             text: 'Insert Silence Left',
             action: () => {
@@ -5098,7 +5407,7 @@ export default {
             }
           })
         }
-        if (insertRight) {
+        if (insertSilenceRight) {
           this.contextMenuChoices.push({
             text: 'Insert Silence Right',
             action: () => {
@@ -5107,6 +5416,24 @@ export default {
             }
           })
         } 
+        if (insertFixedLeft) {
+          this.contextMenuChoices.push({
+            text: 'Insert Fixed Left',
+            action: () => {
+              this.insertFixedTrajLeft(traj);
+              this.contextMenuClosed = true;
+            }
+          })
+        }
+        if (insertFixedRight) {
+          this.contextMenuChoices.push({
+            text: 'Insert Fixed Right',
+            action: () => {
+              this.insertFixedTrajRight(traj);
+              this.contextMenuClosed = true;
+            }
+          })
+        }
         if (this.contextMenuChoices.length > 0) {
           this.contextMenuClosed = false;
         }
@@ -5438,51 +5765,51 @@ export default {
         const pxlOffset = 12;
         const timeOffset = this.xr().invert(pxlOffset) - this.xr().invert(0);
         const leftTime = phraseStart + traj.startTime - timeOffset;
-        let leftTraj, halfLeftTraj, leftPhrase, halfLeftPhrase, halfLeftTime;
-        if (leftTime >=0) {
-          const leftPhraseIdx = this.phraseIdxFromTime(leftTime, true);
-          leftPhrase = this.piece.phrases[leftPhraseIdx];
-          const leftTrajIdx = this.trajIdxFromTime(leftPhrase, leftTime);
-          leftTraj = leftPhrase.trajectories[leftTrajIdx];
-          halfLeftTime = phraseStart + traj.startTime - timeOffset / 2;
-          const halfLeftPhraseIdx = this.phraseIdxFromTime(halfLeftTime, true);
-          halfLeftPhrase = this.piece.phrases[halfLeftPhraseIdx];
-          const halfLeftTrajIdx = this.trajIdxFromTime(halfLeftPhrase, halfLeftTime);
-          halfLeftTraj = halfLeftPhrase.trajectories[halfLeftTrajIdx];            
-        }
-        let trajProp = timeOffset / traj.durTot;
-        if (trajProp > 1) trajProp = 1;
-        let rightCompute = traj.compute(trajProp, true);
-        rightCompute = y({y:rightCompute});
-        let halfRightCompute = traj.compute(trajProp / 2, true);
-        halfRightCompute = y({y:halfRightCompute});
+        // let leftTraj, halfLeftTraj, leftPhrase, halfLeftPhrase, halfLeftTime;
+        // if (leftTime >=0) {
+        //   const leftPhraseIdx = this.phraseIdxFromTime(leftTime, true);
+        //   leftPhrase = this.piece.phrases[leftPhraseIdx];
+        //   const leftTrajIdx = this.trajIdxFromTime(leftPhrase, leftTime);
+        //   leftTraj = leftPhrase.trajectories[leftTrajIdx];
+        //   halfLeftTime = phraseStart + traj.startTime - timeOffset / 2;
+        //   const halfLeftPhraseIdx = this.phraseIdxFromTime(halfLeftTime, true);
+        //   halfLeftPhrase = this.piece.phrases[halfLeftPhraseIdx];
+        //   const halfLeftTrajIdx = this.trajIdxFromTime(halfLeftPhrase, halfLeftTime);
+        //   halfLeftTraj = halfLeftPhrase.trajectories[halfLeftTrajIdx];            
+        // }
+        // let trajProp = timeOffset / traj.durTot;
+        // if (trajProp > 1) trajProp = 1;
+        // let rightCompute = traj.compute(trajProp, true);
+        // rightCompute = y({y:rightCompute});
+        // let halfRightCompute = traj.compute(trajProp / 2, true);
+        // halfRightCompute = y({y:halfRightCompute});
         let ctrCompute = traj.compute(0, true);
         ctrCompute = y({y:ctrCompute});
         let yVal = ctrCompute;
-        if (rightCompute < yVal) {
-          yVal = rightCompute;
-        }
-        if (halfRightCompute < yVal) {
-          yVal = halfRightCompute;
-        }
-        if (leftTime >= 0 && leftTraj && leftTraj.id !== 12) {
-          const leftTrajStart = leftPhrase.startTime + leftTraj.startTime;
-          const leftTrajCptProp = (leftTime - leftTrajStart) / leftTraj.durTot;
-          let leftCompute = leftTraj.compute(leftTrajCptProp, true);
-          leftCompute = y({y:leftCompute});
-          if (leftCompute < yVal) {
-            yVal = leftCompute;
-          }
-        }
-        if (leftTime >= 0 && halfLeftTraj && halfLeftTraj.id !== 12) {
-          const halfLeftTrajStart = halfLeftPhrase.startTime + halfLeftTraj.startTime;
-          const halfLeftTrajCptProp = (halfLeftTime - halfLeftTrajStart) / halfLeftTraj.durTot;
-          let halfLeftCompute = halfLeftTraj.compute(halfLeftTrajCptProp, true);
-          halfLeftCompute = y({y:halfLeftCompute});
-          if (halfLeftCompute < yVal) {
-            yVal = halfLeftCompute;
-          }
-        }
+        // if (rightCompute < yVal) {
+        //   yVal = rightCompute;
+        // }
+        // if (halfRightCompute < yVal) {
+        //   yVal = halfRightCompute;
+        // }
+        // if (leftTime >= 0 && leftTraj && leftTraj.id !== 12) {
+        //   const leftTrajStart = leftPhrase.startTime + leftTraj.startTime;
+        //   const leftTrajCptProp = (leftTime - leftTrajStart) / leftTraj.durTot;
+        //   let leftCompute = leftTraj.compute(leftTrajCptProp, true);
+        //   leftCompute = y({y:leftCompute});
+        //   if (leftCompute < yVal) {
+        //     yVal = leftCompute;
+        //   }
+        // }
+        // if (leftTime >= 0 && halfLeftTraj && halfLeftTraj.id !== 12) {
+        //   const halfLeftTrajStart = halfLeftPhrase.startTime + halfLeftTraj.startTime;
+        //   const halfLeftTrajCptProp = (halfLeftTime - halfLeftTrajStart) / halfLeftTraj.durTot;
+        //   let halfLeftCompute = halfLeftTraj.compute(halfLeftTrajCptProp, true);
+        //   halfLeftCompute = y({y:halfLeftCompute});
+        //   if (halfLeftCompute < yVal) {
+        //     yVal = halfLeftCompute;
+        //   }
+        // }
         
         const txtElem = g.append('text')
           .text(cd.text)
@@ -5551,53 +5878,53 @@ export default {
         const pxlOffset = 12;
         const timeOffset = this.xr().invert(pxlOffset) - this.xr().invert(0);
         const leftTime = phraseStart + traj.startTime - timeOffset;
-        let leftTraj, halfLeftTraj, leftPhrase, halfLeftPhrase, halfLeftTime;
+        // let leftTraj, halfLeftTraj, leftPhrase, halfLeftPhrase, halfLeftTime;
 
-        if (leftTime >= 0) {
-          const leftPhraseIdx = this.phraseIdxFromTime(leftTime, true);
-          leftPhrase = this.piece.phrases[leftPhraseIdx];
-          const leftTrajIdx = this.trajIdxFromTime(leftPhrase, leftTime);
-          leftTraj = leftPhrase.trajectories[leftTrajIdx]; 
-          halfLeftTime = phraseStart + traj.startTime - timeOffset / 2;
-          const halfLeftPhraseIdx = this.phraseIdxFromTime(halfLeftTime, true);
-          halfLeftPhrase = this.piece.phrases[halfLeftPhraseIdx];
-          // const halfLeftTrajIdx = this.trajIdxFromTime(halfLeftPhrase, halfLeftTime);
-          // halfLeftTraj = halfLeftPhrase.trajectories[halfLeftTrajIdx]; 
-        }
+        // if (leftTime >= 0) {
+        //   const leftPhraseIdx = this.phraseIdxFromTime(leftTime, true);
+        //   leftPhrase = this.piece.phrases[leftPhraseIdx];
+        //   const leftTrajIdx = this.trajIdxFromTime(leftPhrase, leftTime);
+        //   leftTraj = leftPhrase.trajectories[leftTrajIdx]; 
+        //   halfLeftTime = phraseStart + traj.startTime - timeOffset / 2;
+        //   const halfLeftPhraseIdx = this.phraseIdxFromTime(halfLeftTime, true);
+        //   halfLeftPhrase = this.piece.phrases[halfLeftPhraseIdx];
+        //   // const halfLeftTrajIdx = this.trajIdxFromTime(halfLeftPhrase, halfLeftTime);
+        //   // halfLeftTraj = halfLeftPhrase.trajectories[halfLeftTrajIdx]; 
+        // }
              
-        let trajProp = timeOffset / traj.durTot;
-        if (trajProp > 1) trajProp = 1;
-        let rightCompute = traj.compute(trajProp, true);
-        rightCompute = y({y:rightCompute});
-        let halfRightCompute = traj.compute(trajProp / 2, true);
-        halfRightCompute = y({y:halfRightCompute});
+        // let trajProp = timeOffset / traj.durTot;
+        // if (trajProp > 1) trajProp = 1;
+        // let rightCompute = traj.compute(trajProp, true);
+        // rightCompute = y({y:rightCompute});
+        // let halfRightCompute = traj.compute(trajProp / 2, true);
+        // halfRightCompute = y({y:halfRightCompute});
         let ctrCompute = traj.compute(0, true);
         ctrCompute = y({y:ctrCompute});
         let yVal = ctrCompute;
-        if (rightCompute < yVal) {
-          yVal = rightCompute;
-        }
-        if (halfRightCompute < yVal) {
-          yVal = halfRightCompute;
-        }
-        if (leftTime >= 0 && leftTraj && leftTraj.id !== 12) {
-          const leftTrajStart = leftPhrase.startTime + leftTraj.startTime;
-          const leftTrajCptProp = (leftTime - leftTrajStart) / leftTraj.durTot;
-          let leftCompute = leftTraj.compute(leftTrajCptProp, true);
-          leftCompute = y({y:leftCompute});
-          if (leftCompute < yVal) {
-            yVal = leftCompute;
-          }
-        }
-        if (leftTime >= 0 && halfLeftTraj && halfLeftTraj.id !== 12) {
-          const halfLeftTrajStart = halfLeftPhrase.startTime + halfLeftTraj.startTime;
-          const halfLeftTrajCptProp = (halfLeftTime - halfLeftTrajStart) / halfLeftTraj.durTot;
-          let halfLeftCompute = halfLeftTraj.compute(halfLeftTrajCptProp, true);
-          halfLeftCompute = y({y:halfLeftCompute});
-          if (halfLeftCompute < yVal) {
-            yVal = halfLeftCompute;
-          }
-        }
+        // if (rightCompute < yVal) {
+        //   yVal = rightCompute;
+        // }
+        // if (halfRightCompute < yVal) {
+        //   yVal = halfRightCompute;
+        // }
+        // if (leftTime >= 0 && leftTraj && leftTraj.id !== 12) {
+        //   const leftTrajStart = leftPhrase.startTime + leftTraj.startTime;
+        //   const leftTrajCptProp = (leftTime - leftTrajStart) / leftTraj.durTot;
+        //   let leftCompute = leftTraj.compute(leftTrajCptProp, true);
+        //   leftCompute = y({y:leftCompute});
+        //   if (leftCompute < yVal) {
+        //     yVal = leftCompute;
+        //   }
+        // }
+        // if (leftTime >= 0 && halfLeftTraj && halfLeftTraj.id !== 12) {
+        //   const halfLeftTrajStart = halfLeftPhrase.startTime + halfLeftTraj.startTime;
+        //   const halfLeftTrajCptProp = (halfLeftTime - halfLeftTrajStart) / halfLeftTraj.durTot;
+        //   let halfLeftCompute = halfLeftTraj.compute(halfLeftTrajCptProp, true);
+        //   halfLeftCompute = y({y:halfLeftCompute});
+        //   if (halfLeftCompute < yVal) {
+        //     yVal = halfLeftCompute;
+        //   }
+        // }
         const id = `#vowelp${traj.phraseIdx}t${traj.num}`;
         d3Select(`#vowelp${traj.phraseIdx}t${traj.num}`)
           .data([cd])
@@ -6906,10 +7233,10 @@ export default {
         const fund = this.piece.raga.fundamental;
         const logOverFund = freq => Math.log2(freq / fund);
         const saFilter = freq => Math.abs(logOverFund(freq) % 1) === 0;
-        const paFilter = freq => {
-          return Math.abs((logOverFund(freq) - (7 / 12)) % 1) === 0
+        const paFilter = idx => {
+          return this.visPitches[idx].swara === 4
         };
-        const strokeWidth = saFilter(s) || paFilter(s) ? 2 : 1;
+        const strokeWidth = saFilter(s) || paFilter(i) ? 2 : 1;
         this.phraseG.append('path')
           .classed(`sargamLine s${i}`, true)
           .attr("fill", "none")
@@ -6932,8 +7259,16 @@ export default {
         low: this.freqMin,
         high: this.freqMax
       })
+      const fund = this.piece.raga.fundamental;
+      const logOverFund = freq => Math.log2(freq / fund);
+      const saFilter = freq => Math.abs(logOverFund(freq) % 1) === 0;
+      const paFilter = idx => {
+        return this.visPitches[idx].swara === 4
+      };
       this.visibleSargam.forEach((s, i) => {
+        const strokeWidth = saFilter(s) || paFilter(i) ? 2 : 1;
         d3Select('.sargamLine.s' + i)
+          .attr('stroke-width', `${strokeWidth}px`)
           .attr('d', this.codifiedSargamLine(Math.log2(s)))
       });
       this.redraw();
@@ -7099,7 +7434,6 @@ export default {
     shiftTrajByOctave(traj, offset = 1) {
       // then remove the old trajectory and add the new one;
       traj.pitches.forEach(pitch => pitch.setOct(pitch.oct + offset));
-      traj.realignPitches();
       const trajID = `p${traj.phraseIdx}t${traj.num}`;
       d3Select(`#${trajID}`).remove();
       d3Select(`#overlay__${trajID}`).remove();
@@ -7375,6 +7709,10 @@ export default {
     },
 
     getYTickLabels() {
+      this.visPitches = this.piece.raga.getPitches({
+        low: this.freqMin,
+        high: this.freqMax,
+      })
       const yTickLabels = this.visPitches.map(p => p.octavedSargamLetter)
       return yTickLabels
     },

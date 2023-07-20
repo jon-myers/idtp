@@ -135,7 +135,7 @@ class Pitch {
   swara: string | number = 'sa';
   oct: number;
   fundamental: number;
-  frequency: number;
+  logOffset: number;
 
   constructor({
     swara = 'sa',
@@ -150,13 +150,15 @@ class Pitch {
       2 ** (7 / 12),
       [2 ** (8 / 12), 2 ** (9 / 12)],
       [2 ** (10 / 12), 2 ** (11 / 12)]
-    ]
+    ],
+    logOffset = 0
   }: {
     swara?: string | number,
     oct?: number,
     raised?: boolean,
     fundamental?: number,
     ratios?: (number | number[])[]
+    logOffset?: number
   } = {}) {
     // """
     // swara: str or int, can be either sargam or number from 0 - 6 as follows
@@ -173,6 +175,7 @@ class Pitch {
     //   otherwise, komal (or suddha, for ma)
     // fundamental: float, frequency (in hz) of center sa
     // """
+    this.logOffset = logOffset;
     this.sargam = ['sa', 're', 'ga', 'ma', 'pa', 'dha', 'ni'];
     const sargamLetters = this.sargam.map(s => s.slice(0, 1));
     this.ratios = ratios;
@@ -231,21 +234,21 @@ class Pitch {
     else {
       this.fundamental = fundamental
     }
-    let ratio;
-    if (this.swara === 0 || this.swara === 4) {
-      ratio = this.ratios[this.swara]
-      if (typeof ratio !== 'number') {
-        throw new SyntaxError(`invalid ratio type, must be float: ${ratio}`)
-      }
-    } else {
-      const nestedRatios = this.ratios[this.swara];
-      if (typeof nestedRatios !== 'object') {
-        throw new SyntaxError(`invalid nestedRatios type, ` + 
-          `must be array: ${nestedRatios}`)
-      }
-      ratio = nestedRatios[Number(this.raised)]
-    }
-    this.frequency = ratio * this.fundamental * (2 ** this.oct);
+    // let ratio;
+    // if (this.swara === 0 || this.swara === 4) {
+    //   ratio = this.ratios[this.swara]
+    //   if (typeof ratio !== 'number') {
+    //     throw new SyntaxError(`invalid ratio type, must be float: ${ratio}`)
+    //   }
+    // } else {
+    //   const nestedRatios = this.ratios[this.swara];
+    //   if (typeof nestedRatios !== 'object') {
+    //     throw new SyntaxError(`invalid nestedRatios type, ` + 
+    //       `must be array: ${nestedRatios}`)
+    //   }
+    //   ratio = nestedRatios[Number(this.raised)]
+    // }
+    // this.frequency = ratio * this.fundamental * (2 ** this.oct);
   }
 
   static fromPitchNumber(pitchNumber: number, fundamental: number  = 261.63) {
@@ -262,6 +265,53 @@ class Pitch {
       raised: raised,
       fundamental: fundamental
     })
+  }
+
+  get frequency() {
+    let ratio;
+    if (this.swara === 0 || this.swara === 4) {
+      ratio = this.ratios[this.swara]
+      if (typeof ratio !== 'number') {
+        throw new SyntaxError(`invalid ratio type, must be float: ${ratio}`)
+      }
+    } else {
+      if (typeof this.swara !== 'number') {
+        throw new SyntaxError(`invalid swara type, must be number: ${this.swara}`)
+      }
+      const nestedRatios = this.ratios[this.swara];
+      if (typeof nestedRatios !== 'object') {
+        throw new SyntaxError(`invalid nestedRatios type, ` + 
+          `must be array: ${nestedRatios}`)
+      }
+      ratio = nestedRatios[Number(this.raised)]
+    }
+    return ratio * this.fundamental * (2 ** this.oct) * (2 ** this.logOffset);
+  }
+
+  get nonOffsetFrequency() {
+
+    let ratio;
+    if (this.swara === 0 || this.swara === 4) {
+      ratio = this.ratios[this.swara]
+      if (typeof ratio !== 'number') {
+        throw new SyntaxError(`invalid ratio type, must be float: ${ratio}`)
+      }
+    } else {
+      if (typeof this.swara !== 'number') {
+        throw new SyntaxError(`invalid swara type, must be number: ${this.swara}`)
+      }
+      const nestedRatios = this.ratios[this.swara];
+      if (typeof nestedRatios !== 'object') {
+        throw new SyntaxError(`invalid nestedRatios type, ` + 
+          `must be array: ${nestedRatios}`)
+      }
+      ratio = nestedRatios[Number(this.raised)]
+    }
+    return ratio * this.fundamental * (2 ** this.oct);
+  }
+
+  get nonOffsetLogFreq() {
+    return Math.log2(this.nonOffsetFrequency)
   }
 
   setOct(newOct: number) {
@@ -283,7 +333,7 @@ class Pitch {
       }
       ratio = nestedRatios[Number(this.raised)]
     }
-    this.frequency = ratio * this.fundamental * (2 ** this.oct);
+    // this.frequency = ratio * this.fundamental * (2 ** this.oct);
   }
 
   get sargamLetter() {
@@ -355,6 +405,7 @@ class Pitch {
       oct: this.oct,
       ratios: this.ratios,
       fundamental: this.fundamental,
+      logOffset: this.logOffset,
     }
   }
 }
@@ -464,8 +515,8 @@ class Trajectory {
   endConsonantIpa: string | undefined;
   endConsonantEngTrans: string | undefined;
   groupId?: string;
-  freqs: number[];
-  logFreqs: number[];
+  // freqs: number[];
+  // logFreqs: number[];
   ids: IdFunction[];
   structuredNames: object;
   cIpas: string[];
@@ -478,6 +529,14 @@ class Trajectory {
   vEngTrans: string[];
   startTime: number | undefined;
   phraseIdx: number | undefined;
+
+  get freqs() {
+    return this.pitches.map(p => p.frequency)
+  }
+
+  get logFreqs() {
+    return this.pitches.map(p => Math.log2(p.frequency))
+  }
 
   constructor({
     id = 0,
@@ -589,8 +648,8 @@ class Trajectory {
       throw new SyntaxError(`invalid articulations type, must be object: ` + 
         `${articulations}`)
     }
-    this.freqs = this.pitches.map(p => p.frequency);
-    this.logFreqs = this.freqs.map(f => Math.log2(f));
+    // this.freqs = this.pitches.map(p => p.frequency);
+    // this.logFreqs = this.freqs.map(f => Math.log2(f));
     this.num = num;
     this.name = name;
     this.name = this.name_;
@@ -795,12 +854,6 @@ class Trajectory {
     ];
     return names[this.id]
   }
-
-  realignPitches() {
-    this.logFreqs = this.pitches.map(p => Math.log2(p.frequency));
-    this.freqs = this.pitches.map(p => p.frequency);
-  }
-
 
   compute(x: number, logScale = false) {
     const value = this.ids[this.id](x);
@@ -1472,7 +1525,6 @@ class Phrase {
         p.ratios = this.raga!.stratifiedRatios;
         return new Pitch(p)
       })
-      traj.realignPitches()
     })
   }
 
