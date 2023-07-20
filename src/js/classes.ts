@@ -1900,7 +1900,7 @@ class Piece {
     if (sectionStarts === undefined) {
       this.sectionStarts = [0];
     } else {
-      this.sectionStarts = sectionStarts;
+      this.sectionStarts = sectionStarts.sort((a, b) => a - b);
     }
     this.instrumentation = instrumentation;
     // this is really confusing becuase id12 is silent. The current solution 
