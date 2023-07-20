@@ -3609,7 +3609,6 @@ export default {
           audioPlayer.openMeterControls();
           d3SelectAll('.phrase').style('cursor', 's-resize');
           d3SelectAll('.articulation').selectAll('*').style('cursor', 's-resize');
-
         } else {
           this.clearAll();
           this.meterMode = true;
@@ -3617,11 +3616,6 @@ export default {
           d3SelectAll('.phrase').style('cursor', 'crosshair');
           d3SelectAll('.articulation').selectAll('*').style('cursor', 'crosshair');
         }
-        
-        // this.svg.style('cursor', 'crosshair');
-        // d3SelectAll('.metricGrid').style('cursor', 'pointer')
-        
-
       }
       if (this.setNewTraj || this.selectedTraj) {
         const keyNums = this.$refs.trajSelectPanel.kNumsFiltered;

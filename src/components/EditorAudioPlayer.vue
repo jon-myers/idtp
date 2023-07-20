@@ -551,7 +551,7 @@ export default defineComponent({
       slowRamp: 1,
       bufferSourceNodes: [],
       chikariGain: 0,
-      lagTime: 0.1,
+      lagTime: 0.025,
       showControls: true,
       recGain: 1,
       synthGain: 0,
@@ -1405,9 +1405,9 @@ export default defineComponent({
           this.pluckNode!.cutoff!
             .linearRampToValueAtTime(0, when + 1 * this.lagTime);
           this.pluckNode!.cutoff!
-            .setValueAtTime(0, when + this.lagTime + 0.05)
+            .setValueAtTime(0, when + this.lagTime + 0.025)
           this.pluckNode!.cutoff!
-            .linearRampToValueAtTime(curVal, when + this.lagTime + 0.1);
+            .linearRampToValueAtTime(curVal, when + this.lagTime + 0.03);
         })
       }
     },
