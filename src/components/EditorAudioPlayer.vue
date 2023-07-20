@@ -1967,34 +1967,25 @@ export default defineComponent({
         this.$emit('currentTimeEmit', this.startingDelta);
         this.$emit('movePlayheadsEmit', 'justPlayhead')
       } else {
-        if (this.loopTime === undefined) {
-          throw new Error('loopTime is undefined')
-        }
-        this.pausedAt = this.loop ? this.loopTime : elapsed;
+        this.pausedAt = this.loop ? this.loopTime! : elapsed;
         this.$emit('movePlayheadsEmit', 'justShadowPlayhead')
       } 
     },
 
     getCurrentTime() {
-      if (this.loopEnd === undefined) {
-        throw new Error('loopEnd is undefined')
-      }
-      if (this.loopStart === undefined) {
-        throw new Error('loopStart is undefined')
-      }
       if (this.pausedAt) {
         return this.pausedAt;
       } else if (this.playing) {
         if (this.startingDelta === undefined) {
           throw new Error('startingDelta is undefined')
         }
-        if (this.loop && this.startingDelta < this.loopEnd) {
-          const dur = this.loopEnd - this.loopStart;
+        if (this.loop && this.startingDelta < this.loopEnd!) {
+          const dur = this.loopEnd! - this.loopStart!;
           const realTime = this.now() - this.startedAt;
           this.loopTime = realTime;
-          if (realTime > this.loopEnd) {
+          if (realTime > this.loopEnd!) {
             this.loopTime =
-              this.loopStart + ((realTime - this.loopStart) % dur);
+              this.loopStart! + ((realTime - this.loopStart!) % dur);
           }
           return this.loopTime;
         } else {
@@ -2079,7 +2070,7 @@ export default defineComponent({
           this.playStretched();
           const playImg = this.$refs.playImg as HTMLImageElement;
           playImg.classList.add('playing');
-          this.$emit('startStretchedAnimationStartEmit', this.getStretchedCurrentTime())
+          this.$emit('startStretchedAnimationEmit', this.getStretchedCurrentTime())
         } else {
           this.pauseStretched();
           const playImg = this.$refs.playImg as HTMLImageElement;

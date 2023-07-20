@@ -4104,7 +4104,10 @@ export default {
           }
           this.mouseUpUpdateLoop();
           this.setUpRegion();
-          if (this.audioDBDoc) this.$refs.audioPlayer.updateStretchBuf();
+          if (this.audioDBDoc) {
+            this.$nextTick(() => this.$refs.audioPlayer.updateStretchBuf())
+
+          }
         }
       }
     },
