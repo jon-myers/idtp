@@ -288,7 +288,7 @@ type PCountType = {
     data(): AnalyzerComponentDataType {
       return {
         piece: undefined,
-        analysisTypes: ['Pitch Prevalence', 'Pitch Patterns'],
+        analysisTypes: ['Pitch Prevalence', 'Pitch Patterns', 'Query Display'],
         selectedATIdx: 0,
         pitchPrevalenceTypes: ['Section', 'Phrase', 'Duration'],
         patternCountTypes: ['Transcription', 'Section', 'Duration'],
