@@ -109,7 +109,25 @@
   :controlsHeight='controlsHeight'
   :editable='editable'
   :windowWidth='fullWidth'
+  :piece='piece'
+  :regionStartTime='regionStartTime'
+  :audioDBDoc='audioDBDoc'
+  :regionEndTime='regionEndTime'
+  :playheadReturn='playheadReturn'
+  :parentCurrentTime='currentTime'
+  :durTot='durTot'
   :uniformVowel='uniformVowel'
+  @resizeHeightEmit='resizeHeight'
+  @movePlayheadsEmit='movePlayheads'
+  @currentTimeEmit='setCurrentTime'
+  @startStretchedAnimationEmit='startStretchedAnimationFrame'
+  @stopStretchedAnimationEmit='stopStretchedAnimationFrame'
+  @stopAnimationFrameEmit='stopAnimationFrame'
+  @startAnimationFrameEmit='startAnimationFrame'
+  @setAnimationStartEmit='setAnimationStart'
+  @setStretchedAnimationStartEmit='setStretchedAnimationStart'
+  @updateSargamLinesEmit='updateSargamLines'
+  @resetZoomEmit='resetZoom'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -849,6 +867,18 @@ export default {
 
   methods: {
 
+    setAnimationStart(time) {
+      this.animationStart = time
+    },
+
+    setStretchedAnimationStart(time) {
+      this.stretchedAnimationStart = time
+    },
+
+    setCurrentTime(newTime) {
+      this.currentTime = newTime;
+    },
+
     beforeUnload(event) {
       if (this.unsavedChanges) {
         const txt = 'You have unsaved changes. Are you sure you want to leave ' +
@@ -857,6 +887,17 @@ export default {
         return txt;
       } else {
         return undefined;
+      }
+    },
+
+    movePlayheads(msg=undefined) {
+      if (msg === 'justPlayhead') {
+        this.movePlayhead();
+      } else if (msg === 'justShadowPlayhead') {
+        this.moveShadowPlayhead();
+      } else {
+        this.movePlayhead();
+        this.moveShadowPlayhead();
       }
     },
 
@@ -2280,6 +2321,7 @@ export default {
           .on('end', this.phraseDivDragEnd(idx))
       }; 
       const dontClick = e => {
+        e.preventDefault();
         e.stopPropagation();
       };
       const realPhraseStartIdx = idx + 1;
@@ -2307,6 +2349,7 @@ export default {
       if (this.editable) {
         d3Select(`#overlay__phraseLine${idx}`)
           .call(drag())
+          .on('click', dontClick)
       } 
       // reId all trajs and articulations in following phrases
       for (let i = this.piece.phrases.length-1; i > 1 + idx; i--) {
@@ -2677,6 +2720,10 @@ export default {
                 .on('drag', this.phraseDivDragDragging(i))
                 .on('end', this.phraseDivDragEnd(i))
             }
+            const dontClick = e => {
+              e.preventDefault();
+              e.stopPropagation();
+            };
             const sectionDiv = this.piece.sectionStarts.includes(i + 1);
             this.phraseG
               .append('path')
@@ -2694,6 +2741,7 @@ export default {
               .attr('stroke', 'black')
               .attr('stroke-width', '4px')
               .attr('d', this.playheadLine())
+              .on('click', dontClick)
               .style('opacity', '0')
               .attr('transform', `translate(${this.codifiedXR(endTime)},0)`)
               .style('cursor', 'pointer')
@@ -2713,301 +2761,317 @@ export default {
     
     phraseDivDragStart(i) {
       return e => {
-        let time = this.xr().invert(e.sourceEvent.clientX);
-        this.phraseG
-          .append('path')
-          .attr('id', `transparentPhraseLine${i}`)
-          .attr('stroke', 'black')
-          .attr('stroke-width', '2px')
-          .attr('d', this.playheadLine())
-          .style('opacity', '0.4')
-          .attr('transform', `translate(${this.codifiedXR(time)},0)`)        
-        this.svg.style('cursor', 'col-resize')
+        e.sourceEvent.preventDefault();
+        e.sourceEvent.stopPropagation();
+        if (this.selectedPhraseDivIdx !== undefined) {
+          let time = this.xr().invert(e.sourceEvent.clientX);
+          this.phraseG
+            .append('path')
+            .attr('id', `transparentPhraseLine${i}`)
+            .attr('stroke', 'black')
+            .attr('stroke-width', '2px')
+            .attr('d', this.playheadLine())
+            .style('opacity', '0.4')
+            .attr('transform', `translate(${this.codifiedXR(time)},0)`)        
+          this.svg.style('cursor', 'col-resize')
+        }
       }
     },
     
     phraseDivDragDragging(i) {
       return e => {
-        let time = this.xr().invert(e.sourceEvent.clientX);
-        d3Select(`#transparentPhraseLine${i}`)
-          .attr('transform', `translate(${this.codifiedXR(time)},0)`)
+        if (this.selectedPhraseDivIdx !== undefined) {
+          let time = this.xr().invert(e.sourceEvent.clientX);
+          d3Select(`#transparentPhraseLine${i}`)
+            .attr('transform', `translate(${this.codifiedXR(time)},0)`)
+        }
       }
     },
     
     phraseDivDragEnd(i) {
       return e => {
-        this.justEnded = true;
-        d3Select(`#transparentPhraseLine${i}`).remove();
-        const time = this.xr().invert(e.sourceEvent.clientX);
-        const tempPIdx = this.phraseIdxFromTime(time);
-        const tPhrase = this.piece.phrases[tempPIdx];
-        const tempTIdx = this.trajIdxFromTime(tPhrase, time);        
-        const tTraj = tPhrase.trajectories[tempTIdx];
-        let doNormal = true;
-        if (tTraj.id === 12) {
-           // this is hard
-           if (i === tempPIdx && tempTIdx === tPhrase.trajectories.length - 1) {         
-             const phraseA = this.piece.phrases[i];
-             const phraseB = this.piece.phrases[i+1];
-             const origDivTime = phraseA.startTime + phraseA.durTot;
-             if (phraseB.trajectories[0].id === 12) { // if next is also silent
-               doNormal = false;
-               const pATrajs = phraseA.trajectories;
-               const prevTraj = pATrajs[pATrajs.length-1];
-               const nextTraj = phraseB.trajectories[0];
-               prevTraj.durTot -= origDivTime - time;
-               nextTraj.durTot += origDivTime - time;
-               phraseA.durTotFromTrajectories();
-               phraseA.durArrayFromTrajectories();
-               phraseB.durTotFromTrajectories();
-               phraseB.durArrayFromTrajectories();
-               phraseB.assignStartTimes();
-               this.piece.durTotFromPhrases();
-               this.piece.durArrayFromPhrases();
-               this.piece.updateStartTimes();
-             } else {
-               doNormal = false;  
-               const pATrajs = phraseA.trajectories;        
-               const prevTraj = pATrajs[pATrajs.length-1];
-               const nntObj = { 
-                 id: 12, 
-                 durTot: origDivTime - time,
-                 fundID12: this.piece.raga.fundamental
-               };
-               if (this.piece.instrumentation) {
-                nntObj.instrumentation = this.piece.instrumentation[0];
-               }
-               const newNextTraj = new Trajectory(nntObj);
-               prevTraj.durTot -= origDivTime - time;
-               phraseA.durTotFromTrajectories();
-               phraseA.durArrayFromTrajectories();
-               phraseB.trajectories.splice(0, 0, newNextTraj);
-               phraseB.durTotFromTrajectories();
-               phraseB.durArrayFromTrajectories();
-               phraseB.assignStartTimes();
-               phraseB.assignTrajNums();
-               this.piece.durTotFromPhrases();
-               this.piece.durArrayFromPhrases();
-               this.piece.updateStartTimes();
-               phraseB.trajectories.slice().reverse()
-                .forEach((traj, idx, arr) => {
-                 if (idx !== arr.length-1) {
-                   const oldId = `p${phraseB.pieceIdx}t${traj.num-1}`;
-                   const newId = `p${phraseB.pieceIdx}t${traj.num}`;
-                   this.reIdAllReps(oldId, newId)
-                 }
-               }) 
-             }
-             Object.keys(phraseB.chikaris).forEach(key => {
-               const delta = origDivTime - time;
-               const newKey = (Number(key) + delta).toFixed(2);
-               phraseB.chikaris[newKey] = phraseB.chikaris[key];
-               delete phraseB.chikaris[key];
-               this.reIdChikari(key, newKey, phraseB, phraseB)
-             });
-             Object.keys(phraseA.chikaris).forEach(key => {
-               if (Number(key) > phraseA.durTot) {
-                 const newKey = (Number(key) - phraseA.durTot);
-                 phraseB.chikaris[newKey] = phraseA.chikaris[key];
-                 delete phraseA.chikaris[key];
-                 this.reIdChikari(key, newKey, phraseA, phraseB)           
-               }
-             })
-           } else if (i + 1 === tempPIdx && tempTIdx === 0) {
-             const phraseA = this.piece.phrases[i];
-             const phraseB = this.piece.phrases[i+1];
-             const origDivTime = phraseA.startTime + phraseA.durTot;
-             const pATrajs = phraseA.trajectories;
-             if (pATrajs[pATrajs.length-1].id === 12) {
-               doNormal = false       
-               const prevTraj = pATrajs[pATrajs.length-1];
-               const nextTraj = phraseB.trajectories[0];
-               prevTraj.durTot -= origDivTime - time;
-               nextTraj.durTot += origDivTime - time;
-               phraseA.durTotFromTrajectories();
-               phraseA.durArrayFromTrajectories();
-               phraseB.durTotFromTrajectories();
-               phraseB.durArrayFromTrajectories();
-               phraseB.assignStartTimes();
-               this.piece.durTotFromPhrases();
-               this.piece.durArrayFromPhrases();
-               this.piece.updateStartTimes();             
-             } else {
-               doNormal = false;
-               const nptObj = {
-                 id: 12,
-                 durTot: time - origDivTime,
-                 fundID12: this.piece.raga.fundamental
-               };
-                if (this.piece.instrumentation) {
-                  nptObj.instrumentation = this.piece.instrumentation[0];
+        e.sourceEvent.preventDefault();
+        e.sourceEvent.stopPropagation();
+        if (this.selectedPhraseDivIdx !== undefined) {
+          this.justEnded = true;
+          d3Select(`#transparentPhraseLine${i}`).remove();
+          const time = this.xr().invert(e.sourceEvent.clientX);
+          const tempPIdx = this.phraseIdxFromTime(time);
+          const tPhrase = this.piece.phrases[tempPIdx];
+          const tempTIdx = this.trajIdxFromTime(tPhrase, time);        
+          const tTraj = tPhrase.trajectories[tempTIdx];
+          let doNormal = true;
+          if (tTraj.id === 12) {
+              // this is hard
+              if (i === tempPIdx && tempTIdx === tPhrase.trajectories.length - 1) {         
+                const phraseA = this.piece.phrases[i];
+                const phraseB = this.piece.phrases[i+1];
+                const origDivTime = phraseA.startTime + phraseA.durTot;
+                if (phraseB.trajectories[0].id === 12) { // if next is also silent
+                  doNormal = false;
+                  const pATrajs = phraseA.trajectories;
+                  const prevTraj = pATrajs[pATrajs.length-1];
+                  const nextTraj = phraseB.trajectories[0];
+                  prevTraj.durTot -= origDivTime - time;
+                  nextTraj.durTot += origDivTime - time;
+                  phraseA.durTotFromTrajectories();
+                  phraseA.durArrayFromTrajectories();
+                  phraseB.durTotFromTrajectories();
+                  phraseB.durArrayFromTrajectories();
+                  phraseB.assignStartTimes();
+                  this.piece.durTotFromPhrases();
+                  this.piece.durArrayFromPhrases();
+                  this.piece.updateStartTimes();
+                } else {
+                  doNormal = false;  
+                  const pATrajs = phraseA.trajectories;        
+                  const prevTraj = pATrajs[pATrajs.length-1];
+                  const nntObj = { 
+                    id: 12, 
+                    durTot: origDivTime - time,
+                    fundID12: this.piece.raga.fundamental
+                  };
+                  if (this.piece.instrumentation) {
+                  nntObj.instrumentation = this.piece.instrumentation[0];
+                  }
+                  const newNextTraj = new Trajectory(nntObj);
+                  prevTraj.durTot -= origDivTime - time;
+                  phraseA.durTotFromTrajectories();
+                  phraseA.durArrayFromTrajectories();
+                  phraseB.trajectories.splice(0, 0, newNextTraj);
+                  phraseB.durTotFromTrajectories();
+                  phraseB.durArrayFromTrajectories();
+                  phraseB.assignStartTimes();
+                  phraseB.assignTrajNums();
+                  this.piece.durTotFromPhrases();
+                  this.piece.durArrayFromPhrases();
+                  this.piece.updateStartTimes();
+                  phraseB.trajectories.slice().reverse()
+                  .forEach((traj, idx, arr) => {
+                    if (idx !== arr.length-1) {
+                      const oldId = `p${phraseB.pieceIdx}t${traj.num-1}`;
+                      const newId = `p${phraseB.pieceIdx}t${traj.num}`;
+                      this.reIdAllReps(oldId, newId)
+                    }
+                  }) 
                 }
-               const newPrevTraj = new Trajectory(nptObj);
-               const nextTraj = phraseB.trajectories[0];
-               nextTraj.durTot -= time - origDivTime;
-               phraseA.trajectories
-                .splice(phraseA.trajectories.length, 0, newPrevTraj);
-               phraseA.durTotFromTrajectories();
-               phraseA.durArrayFromTrajectories();
-               phraseA.assignStartTimes();
-               phraseA.assignTrajNums();
-               phraseB.durTotFromTrajectories();
-               phraseB.durArrayFromTrajectories();
-               phraseB.assignStartTimes();
-               this.piece.durTotFromPhrases();
-               this.piece.durArrayFromPhrases();
-               this.piece.updateStartTimes();   
-             }
-             Object.keys(phraseB.chikaris).forEach(key => {
-               const delta = time - origDivTime;
-               if (Number(key) < delta) {
-                 const newKey = (phraseA.durTot - ((delta) - key)).toFixed(2);
-                 phraseA.chikaris[newKey] = phraseB.chikaris[key];
-                 delete phraseB.chikaris[key];
-                 this.reIdChikari(key, newKey, phraseB, phraseA);
-               } else {
-                 const newKey = (Number(key) - (delta)).toFixed(2);
-                 phraseB.chikaris[newKey] = phraseB.chikaris[key];
-                 delete phraseB.chikaris[key];
-                 this.reIdChikari(key, newKey, phraseB, phraseB)
-               }
-             })
-           }
-        }
-        const phraseA = this.piece.phrases[i];
-        const phraseB = this.piece.phrases[i+1]
-        if (doNormal) {
-          const possibleTimes = this.possibleTrajDivs(i);
-          const finalTime = getClosest(possibleTimes, time);
-          const ftIdx = possibleTimes.indexOf(finalTime);          
-          let pIdx, tIdx;
-          const lenA = phraseA.trajectories.length;
-          if (ftIdx < lenA) {
-            pIdx = i;
-            tIdx = ftIdx
-          } else {
-            pIdx = i + 1;
-            tIdx = Math.round(((ftIdx / lenA) - 1) * lenA);
+                Object.keys(phraseB.chikaris).forEach(key => {
+                  const delta = origDivTime - time;
+                  const newKey = (Number(key) + delta).toFixed(2);
+                  phraseB.chikaris[newKey] = phraseB.chikaris[key];
+                  delete phraseB.chikaris[key];
+                  this.reIdChikari(key, newKey, phraseB, phraseB)
+                });
+                Object.keys(phraseA.chikaris).forEach(key => {
+                  if (Number(key) > phraseA.durTot) {
+                    const newKey = (Number(key) - phraseA.durTot);
+                    phraseB.chikaris[newKey] = phraseA.chikaris[key];
+                    delete phraseA.chikaris[key];
+                    this.reIdChikari(key, newKey, phraseA, phraseB)           
+                  }
+                })
+              } else if (i + 1 === tempPIdx && tempTIdx === 0) {
+                const phraseA = this.piece.phrases[i];
+                const phraseB = this.piece.phrases[i+1];
+                const origDivTime = phraseA.startTime + phraseA.durTot;
+                const pATrajs = phraseA.trajectories;
+                if (pATrajs[pATrajs.length-1].id === 12) {
+                  doNormal = false       
+                  const prevTraj = pATrajs[pATrajs.length-1];
+                  const nextTraj = phraseB.trajectories[0];
+                  prevTraj.durTot -= origDivTime - time;
+                  nextTraj.durTot += origDivTime - time;
+                  phraseA.durTotFromTrajectories();
+                  phraseA.durArrayFromTrajectories();
+                  phraseB.durTotFromTrajectories();
+                  phraseB.durArrayFromTrajectories();
+                  phraseB.assignStartTimes();
+                  this.piece.durTotFromPhrases();
+                  this.piece.durArrayFromPhrases();
+                  this.piece.updateStartTimes();             
+                } else {
+                  doNormal = false;
+                  const nptObj = {
+                    id: 12,
+                    durTot: time - origDivTime,
+                    fundID12: this.piece.raga.fundamental
+                  };
+                  if (this.piece.instrumentation) {
+                    nptObj.instrumentation = this.piece.instrumentation[0];
+                  }
+                  const newPrevTraj = new Trajectory(nptObj);
+                  const nextTraj = phraseB.trajectories[0];
+                  nextTraj.durTot -= time - origDivTime;
+                  phraseA.trajectories
+                  .splice(phraseA.trajectories.length, 0, newPrevTraj);
+                  phraseA.durTotFromTrajectories();
+                  phraseA.durArrayFromTrajectories();
+                  phraseA.assignStartTimes();
+                  phraseA.assignTrajNums();
+                  phraseB.durTotFromTrajectories();
+                  phraseB.durArrayFromTrajectories();
+                  phraseB.assignStartTimes();
+                  this.piece.durTotFromPhrases();
+                  this.piece.durArrayFromPhrases();
+                  this.piece.updateStartTimes();   
+                }
+                Object.keys(phraseB.chikaris).forEach(key => {
+                  const delta = time - origDivTime;
+                  if (Number(key) < delta) {
+                    const newKey = (phraseA.durTot - ((delta) - key)).toFixed(2);
+                    phraseA.chikaris[newKey] = phraseB.chikaris[key];
+                    delete phraseB.chikaris[key];
+                    this.reIdChikari(key, newKey, phraseB, phraseA);
+                  } else {
+                    const newKey = (Number(key) - (delta)).toFixed(2);
+                    phraseB.chikaris[newKey] = phraseB.chikaris[key];
+                    delete phraseB.chikaris[key];
+                    this.reIdChikari(key, newKey, phraseB, phraseB)
+                  }
+                })
+              }
           }
-          if (pIdx === i) {
-            if (tIdx < phraseA.trajectories.length-1) {
-              const ctA = phraseA.trajectories.length - 1 - tIdx;
+          const phraseA = this.piece.phrases[i];
+          const phraseB = this.piece.phrases[i+1]
+          if (doNormal) {
+            const possibleTimes = this.possibleTrajDivs(i);
+            const finalTime = getClosest(possibleTimes, time);
+            const ftIdx = possibleTimes.indexOf(finalTime);          
+            let pIdx, tIdx;
+            const lenA = phraseA.trajectories.length;
+            if (ftIdx < lenA) {
+              pIdx = i;
+              tIdx = ftIdx
+            } else {
+              pIdx = i + 1;
+              tIdx = Math.round(((ftIdx / lenA) - 1) * lenA);
+            }
+            if (pIdx === i) {
+              if (tIdx < phraseA.trajectories.length-1) {
+                const ctA = phraseA.trajectories.length - 1 - tIdx;
+                const ctB = phraseB.trajectories.length;
+                const transfers = phraseA.trajectories.splice(tIdx+1);
+                phraseB.trajectories.splice(0, 0, ...transfers);
+                phraseA.durTotFromTrajectories();
+                phraseA.durArrayFromTrajectories();
+                phraseB.durTotFromTrajectories();
+                phraseB.durArrayFromTrajectories();
+                phraseB.assignStartTimes();
+                phraseB.assignTrajNums();
+                this.piece.durTotFromPhrases();
+                this.piece.durArrayFromPhrases();
+                this.piece.updateStartTimes();          
+                for (let j = ctB-1; j >= 0; j--) {
+                  const oldId = `p${phraseB.pieceIdx}t${j}`;
+                  const newId = `p${phraseB.pieceIdx}t${j + ctA}`;
+                  this.reIdAllReps(oldId, newId)
+                }
+                for (let j = ctA-1; j >= 0; j--) {
+                  const oldId = `p${phraseA.pieceIdx}t${tIdx + j + 1}`;
+                  const newId = `p${phraseB.pieceIdx}t${j}`;
+                  this.reIdAllReps(oldId, newId)
+                }
+                // fix chikaris
+                Object.keys(phraseB.chikaris).forEach(key => {
+                  const delta = transfers
+                    .map(t => t.durTot)
+                    .reduce((a, b) => a + b, 0);
+                  const newKey = (Number(key) + delta).toFixed(2);
+                  phraseB.chikaris[newKey] = phraseB.chikaris[key];
+                  delete phraseB.chikaris[key];
+                  this.reIdChikari(key, newKey, phraseB, phraseB);    
+                });
+                Object.keys(phraseA.chikaris).forEach(key => {
+                  if (Number(key) >= phraseA.durTot) {
+                    const obj = phraseA.chikaris[key];
+                    const newKey = (Number(key) - phraseA.durTot).toFixed(2);
+                    delete phraseA.chikaris[key];
+                    phraseB.chikaris[newKey] = obj;
+                    this.reIdChikari(key, newKey, phraseA, phraseB);
+                  }
+                })
+              }
+            } else {
               const ctB = phraseB.trajectories.length;
-              const transfers = phraseA.trajectories.splice(tIdx+1);
-              phraseB.trajectories.splice(0, 0, ...transfers);
+              const ctA = phraseA.trajectories.length;
+              const transfers = phraseB.trajectories.splice(0, tIdx+1);
+              const pATrajs = phraseA.trajectories;
+              phraseA.trajectories.splice(pATrajs.length, 0, ...transfers);
               phraseA.durTotFromTrajectories();
               phraseA.durArrayFromTrajectories();
+              phraseA.assignStartTimes();
+              phraseA.assignTrajNums();
               phraseB.durTotFromTrajectories();
               phraseB.durArrayFromTrajectories();
               phraseB.assignStartTimes();
               phraseB.assignTrajNums();
               this.piece.durTotFromPhrases();
               this.piece.durArrayFromPhrases();
-              this.piece.updateStartTimes();          
-              for (let j = ctB-1; j >= 0; j--) {
+              this.piece.updateStartTimes();            
+              for (let j = 0; j <= tIdx; j++) {
                 const oldId = `p${phraseB.pieceIdx}t${j}`;
-                const newId = `p${phraseB.pieceIdx}t${j + ctA}`;
-                this.reIdAllReps(oldId, newId)
+                const newId = `p${phraseA.pieceIdx}t${ctA+j}`;
+                this.reIdAllReps(oldId, newId);
               }
-              for (let j = ctA-1; j >= 0; j--) {
-                const oldId = `p${phraseA.pieceIdx}t${tIdx + j + 1}`;
-                const newId = `p${phraseB.pieceIdx}t${j}`;
-                this.reIdAllReps(oldId, newId)
+              for (let j = tIdx+1; j < ctB; j++) {
+                const oldId = `p${phraseB.pieceIdx}t${j}`;
+                const newId = `p${phraseB.pieceIdx}t${j-(tIdx+1)}`;
+                this.reIdAllReps(oldId, newId);
               }
-              // fix chikaris
+              //fix chikaris
               Object.keys(phraseB.chikaris).forEach(key => {
                 const delta = transfers
                   .map(t => t.durTot)
                   .reduce((a, b) => a + b, 0);
-                const newKey = (Number(key) + delta).toFixed(2);
-                phraseB.chikaris[newKey] = phraseB.chikaris[key];
-                delete phraseB.chikaris[key];
-                this.reIdChikari(key, newKey, phraseB, phraseB);    
-              });
-              Object.keys(phraseA.chikaris).forEach(key => {
-                if (Number(key) >= phraseA.durTot) {
-                  const obj = phraseA.chikaris[key];
-                  const newKey = (Number(key) - phraseA.durTot).toFixed(2);
-                  delete phraseA.chikaris[key];
-                  phraseB.chikaris[newKey] = obj;
-                  this.reIdChikari(key, newKey, phraseA, phraseB);
+                if (Number(key) < delta) {
+                  const newKey = (phraseA.durTot - (delta - Number(key)))
+                    .toFixed(2);
+                  phraseA.chikaris[newKey] = phraseB.chikaris[key];
+                  delete phraseB.chikaris[key];
+                  this.reIdChikari(key, newKey, phraseB, phraseA);
+                } else {
+                  const newKey = (Number(key) - delta).toFixed(2);
+                  phraseB.chikaris[newKey] = phraseB.chikaris[key];
+                  delete phraseB.chikaris[key];
+                  this.reIdChikari(key, newKey, phraseB, phraseB);
                 }
               })
             }
-          } else {
-            const ctB = phraseB.trajectories.length;
-            const ctA = phraseA.trajectories.length;
-            const transfers = phraseB.trajectories.splice(0, tIdx+1);
-            const pATrajs = phraseA.trajectories;
-            phraseA.trajectories.splice(pATrajs.length, 0, ...transfers);
-            phraseA.durTotFromTrajectories();
-            phraseA.durArrayFromTrajectories();
-            phraseA.assignStartTimes();
-            phraseA.assignTrajNums();
-            phraseB.durTotFromTrajectories();
-            phraseB.durArrayFromTrajectories();
-            phraseB.assignStartTimes();
-            phraseB.assignTrajNums();
-            this.piece.durTotFromPhrases();
-            this.piece.durArrayFromPhrases();
-            this.piece.updateStartTimes();            
-            for (let j = 0; j <= tIdx; j++) {
-              const oldId = `p${phraseB.pieceIdx}t${j}`;
-              const newId = `p${phraseA.pieceIdx}t${ctA+j}`;
-              this.reIdAllReps(oldId, newId);
-            }
-            for (let j = tIdx+1; j < ctB; j++) {
-              const oldId = `p${phraseB.pieceIdx}t${j}`;
-              const newId = `p${phraseB.pieceIdx}t${j-(tIdx+1)}`;
-              this.reIdAllReps(oldId, newId);
-            }
-            //fix chikaris
-            Object.keys(phraseB.chikaris).forEach(key => {
-              const delta = transfers
-                .map(t => t.durTot)
-                .reduce((a, b) => a + b, 0);
-              if (Number(key) < delta) {
-                const newKey = (phraseA.durTot - (delta - Number(key)))
-                  .toFixed(2);
-                phraseA.chikaris[newKey] = phraseB.chikaris[key];
-                delete phraseB.chikaris[key];
-                this.reIdChikari(key, newKey, phraseB, phraseA);
-              } else {
-                const newKey = (Number(key) - delta).toFixed(2);
-                phraseB.chikaris[newKey] = phraseB.chikaris[key];
-                delete phraseB.chikaris[key];
-                this.reIdChikari(key, newKey, phraseB, phraseB);
-              }
-            })
+            d3Select(`#phraseLine${i}`)
+              .attr('transform', `translate(${this.codifiedXR(finalTime)},0)`)
+              .attr('stroke', 'red')
+            d3Select(`#overlay__phraseLine${i}`)
+              .attr('transform', `translate(${this.codifiedXR(finalTime)},0)`)  
+          }  
+          if (this.selectedPhraseDivIdx !== phraseA.pieceIdx) {
+            this.clearSelectedPhraseDiv();
+          }    
+          if (!doNormal) {
+            d3Select(`#phraseLine${i}`)
+              .attr('transform', `translate(${this.codifiedXR(time)},0)`)
+              .attr('stroke', 'red')
+            d3Select(`#overlay__phraseLine${i}`)
+              .attr('transform', `translate(${this.codifiedXR(time)},0)`)
           }
-          d3Select(`#phraseLine${i}`)
-            .attr('transform', `translate(${this.codifiedXR(finalTime)},0)`)
-            .attr('stroke', 'red')
-          d3Select(`#overlay__phraseLine${i}`)
-            .attr('transform', `translate(${this.codifiedXR(finalTime)},0)`)  
-        }  
-        if (this.selectedPhraseDivIdx !== phraseA.pieceIdx) {
-          this.clearSelectedPhraseDiv();
-        }    
-        if (!doNormal) {
-          d3Select(`#phraseLine${i}`)
-            .attr('transform', `translate(${this.codifiedXR(time)},0)`)
-            .attr('stroke', 'red')
-          d3Select(`#overlay__phraseLine${i}`)
-            .attr('transform', `translate(${this.codifiedXR(time)},0)`)
-        }
-        this.svg.style('cursor', 'auto');
-        this.selectedPhraseDivIdx = i;
-        const realPhraseStartIdx = i + 1;
-        if (this.piece.sectionStarts.includes(realPhraseStartIdx)) {
-          this.$refs.trajSelectPanel.phraseDivType = 'section';
+          this.svg.style('cursor', 'auto');
+          this.selectedPhraseDivIdx = i;
+          const realPhraseStartIdx = i + 1;
+          if (this.piece.sectionStarts.includes(realPhraseStartIdx)) {
+            this.$refs.trajSelectPanel.phraseDivType = 'section';
+          } else {
+            this.$refs.trajSelectPanel.phraseDivType = 'phrase';
+          }
+          this.clearSelectedTraj();
+          this.clearSelectedChikari();
+          this.clearTrajSelectPanel();
+          this.$refs.trajSelectPanel.showPhraseRadio = true;  
         } else {
-          this.$refs.trajSelectPanel.phraseDivType = 'phrase';
+          this.selectedPhraseDivIdx = i;
+          d3Select(`#phraseLine${i}`)
+            .attr('stroke', 'red')
+
         }
-        this.clearSelectedTraj();
-        this.clearSelectedChikari();
-        this.clearTrajSelectPanel();
-        this.$refs.trajSelectPanel.showPhraseRadio = true;  
+        
       }
     },
     
@@ -3439,6 +3503,9 @@ export default {
           // if selectedPhraseDivIdx - 1 is less than any of the items in 
           // piece.sectionStarts, then subtract one from those items in 
           // piece.sectionStarts
+          const sectionStart = this.selectedPhraseDivIdx + 1;
+          const ssIdx = this.piece.sectionStarts.indexOf(sectionStart);
+          this.piece.sectionStarts.splice(ssIdx, 1);
           this.piece.sectionStarts = this.piece.sectionStarts.map((item) => {
             if (item > this.selectedPhraseDivIdx + 1) {
               return item - 1;
@@ -3542,7 +3609,6 @@ export default {
           audioPlayer.openMeterControls();
           d3SelectAll('.phrase').style('cursor', 's-resize');
           d3SelectAll('.articulation').selectAll('*').style('cursor', 's-resize');
-
         } else {
           this.clearAll();
           this.meterMode = true;
@@ -3550,11 +3616,6 @@ export default {
           d3SelectAll('.phrase').style('cursor', 'crosshair');
           d3SelectAll('.articulation').selectAll('*').style('cursor', 'crosshair');
         }
-        
-        // this.svg.style('cursor', 'crosshair');
-        // d3SelectAll('.metricGrid').style('cursor', 'pointer')
-        
-
       }
       if (this.setNewTraj || this.selectedTraj) {
         const keyNums = this.$refs.trajSelectPanel.kNumsFiltered;
@@ -3871,7 +3932,11 @@ export default {
         }
         this.mouseUpUpdateLoop();
         this.setUpRegion();
-        if (this.audioDBDoc) this.$refs.audioPlayer.updateStretchBuf();
+        if (this.audioDBDoc) {
+          if (!this.$refs.audioPlayer.loading) {
+            this.$refs.audioPlayer.updateStretchBuf();
+          }
+        }
       }
     },
 
@@ -4215,6 +4280,7 @@ export default {
         const highFreq = this.yr().invert(y);
         await this.selectTrajectories(startTime, endTime, lowFreq, highFreq);
         this.groupable = this.selectedTrajsGroupable();
+        d3Select('#selBox').remove();
       } else {
         // console.log('here')
         if (e.y < this.xAxHeight && this.drawingRegion) {
@@ -4229,7 +4295,13 @@ export default {
           }
           this.mouseUpUpdateLoop();
           this.setUpRegion();
-          if (this.audioDBDoc) this.$refs.audioPlayer.updateStretchBuf();
+          if (this.audioDBDoc) {
+            this.$nextTick(() => {
+              if (!this.$refs.audioPlayer.loading) {
+                this.$refs.audioPlayer.updateStretchBuf()
+              }
+            })
+          }
         }
       }
     },
@@ -6736,41 +6808,53 @@ export default {
           const pIdx = id.split('t')[0].slice(1);
           const tIdx = id.split('t')[1];
           const newTraj = this.piece.phrases[pIdx].trajectories[tIdx];
-          if (newTraj.groupId === undefined) {
-            // if (this.selectedTrajs.each(traj => traj.groupId === undefined)) {
-              
-            // }
-            this.selectedTrajs.push(newTraj);
-            this.groupable = this.selectedTrajsGroupable();
-            this.$refs.trajSelectPanel.grouped = false;
-            // clear selected traj visually
-            if (this.selectedTraj && this.selectedTrajID && id !== this.selectedTrajID) {
-              this.setTrajColor(this.selectedTrajID, this.trajColor, 'black');
-              d3SelectAll('.dragDots').remove();
-              this.selectedTrajID = undefined;
-              this.selectedTraj = undefined;
-              this.clearTrajSelectPanel();
-            }
-            this.selectedTrajs.forEach(traj => {
-              const id = `p${traj.phraseIdx}t${traj.num}`;
-              this.setTrajColor(id, this.selectedTrajColor, this.selectedArtColor);
-              this.updateArtColors(traj, true)
-            })
-            let minFreq = Math.min(...this.selectedTrajs.map(t => t.minFreq));
-            let maxFreq = Math.max(...this.selectedTrajs.map(t => t.maxFreq));
-            if ((minFreq / 2) < this.freqMin) {
-              this.$refs.trajSelectPanel.canShiftDown = false
+          if (!this.selectedTrajs.includes(newTraj)) {
+            if (newTraj.groupId === undefined) {
+              this.selectedTrajs.push(newTraj);
+              this.groupable = this.selectedTrajsGroupable();
+              this.$refs.trajSelectPanel.grouped = false;
+              // clear selected traj visually
+              if (this.selectedTraj && this.selectedTrajID && id !== this.selectedTrajID) {
+                this.setTrajColor(this.selectedTrajID, this.trajColor, 'black');
+                d3SelectAll('.dragDots').remove();
+                this.selectedTrajID = undefined;
+                this.selectedTraj = undefined;
+                this.clearTrajSelectPanel();
+              }
+              this.selectedTrajs.forEach(traj => {
+                const id = `p${traj.phraseIdx}t${traj.num}`;
+                this.setTrajColor(id, this.selectedTrajColor, this.selectedArtColor);
+                this.updateArtColors(traj, true)
+              })
+              let minFreq = Math.min(...this.selectedTrajs.map(t => t.minFreq));
+              let maxFreq = Math.max(...this.selectedTrajs.map(t => t.maxFreq));
+              if ((minFreq / 2) < this.freqMin) {
+                this.$refs.trajSelectPanel.canShiftDown = false
+              } else {
+                this.$refs.trajSelectPanel.canShiftDown = true
+              }
+              if ((maxFreq * 2) > this.freqMax) {
+                this.$refs.trajSelectPanel.canShiftUp = false
+              } else {
+                this.$refs.trajSelectPanel.canShiftUp = true
+              }
             } else {
-              this.$refs.trajSelectPanel.canShiftDown = true
-            }
-            if ((maxFreq * 2) > this.freqMax) {
-              this.$refs.trajSelectPanel.canShiftUp = false
-            } else {
-              this.$refs.trajSelectPanel.canShiftUp = true
+              // need to actually make stuff happen here
             }
           } else {
-            // need to actually make stuff happen here
+            // remove traj from selectedTrajs
+            // const idx = this.selectedTrajs.indexOf(newTraj);
+            // this.selectedTrajs.splice(idx, 1);
+            // // turn color of newtraj back to normal
+            // const newTrajID = `p${newTraj.phraseIdx}t${newTraj.num}`;
+            // this.setTrajColor(newTrajID, this.trajColor, 'black');
+            this.groupable = this.selectedTrajsGroupable();
+            // if (this.selectedTrajs.length === 1) {
+
+            // }
+            
           }
+          
         } else {
           if (this.selectedTrajs.length > 1) {
             this.selectedTrajs.forEach(traj => {

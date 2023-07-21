@@ -460,7 +460,7 @@ export default {
           const piece = this.$parent.piece;
           const starts = piece.sectionStarts;
           piece.sectionStarts = [...starts, realPhraseStart];
-          piece.sectionStarts.sort();
+          piece.sectionStarts.sort((a, b) => a - b);
           d3Select(`#phraseLine${realPhraseStart-1}`)
             .attr('stroke-width', '3px')
         }
