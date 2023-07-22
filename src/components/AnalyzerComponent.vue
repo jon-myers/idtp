@@ -166,6 +166,7 @@
           </button>
         </div>   
       </div>
+      <SegmentDisplay v-if='selectedATIdx === 2'/>
 
     </div>
     <div class='graphContainer'>
@@ -175,37 +176,39 @@
 </template>
 
 <script lang='ts'>
-  const linSpace = (
-    startValue: number, 
-    stopValue: number, 
-    cardinality: number
-  ) => {
-    var arr = [];
-    var step = (stopValue - startValue) / (cardinality - 1);
-    for (var i = 0; i < cardinality; i++) {
-      arr.push(startValue + (step * i));
-    }
-    return arr;
-  };
+const linSpace = (
+  startValue: number, 
+  stopValue: number, 
+  cardinality: number
+) => {
+  var arr = [];
+  var step = (stopValue - startValue) / (cardinality - 1);
+  for (var i = 0; i < cardinality; i++) {
+    arr.push(startValue + (step * i));
+  }
+  return arr;
+};
 
-  import { 
-    instantiatePiece, 
-    segmentByDuration, 
-    durationsOfPitchOnsets,
-    patternCounter,
-    chromaSeqToCondensedPitchNums
-  } from '@/js/analysis.ts';
-  import { 
-    durationsOfFixedPitches, 
-    Pitch, 
-    pitchNumberToChroma,
-    Trajectory,
-    Piece
-  } from '@/js/classes.ts';
-  import { pieceExists } from '@/js/serverCalls.ts';
-  import Gradient from 'javascript-color-gradient';
-  import * as d3 from 'd3';
+import { 
+  instantiatePiece, 
+  segmentByDuration, 
+  durationsOfPitchOnsets,
+  patternCounter,
+  chromaSeqToCondensedPitchNums
+} from '@/js/analysis.ts';
+import { 
+  durationsOfFixedPitches, 
+  Pitch, 
+  pitchNumberToChroma,
+  Trajectory,
+  Piece
+} from '@/js/classes.ts';
+import { pieceExists } from '@/js/serverCalls.ts';
+import Gradient from 'javascript-color-gradient';
+import * as d3 from 'd3';
 import { defineComponent } from 'vue';
+
+import SegmentDisplay from '@/components/SegmentDisplay.vue';
 
 type PCountType = {
   [key: number]: { pattern: number[], count: number }[],
@@ -349,6 +352,10 @@ type PCountType = {
       }
     },
 
+    components: {
+      SegmentDisplay
+    },
+
     watch: {
       pitchType(newVal) {
         if (this.piece === undefined) {
@@ -437,8 +444,9 @@ type PCountType = {
           this.topSvg = undefined;
           this.svg = undefined;
         }
-        this.createGraph();
-
+        if (this.selectedATIdx !== 2) {
+          this.createGraph()
+        }
       },
 
       addRect({
