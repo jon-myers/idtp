@@ -166,10 +166,33 @@
           </button>
         </div>   
       </div>
-      <SegmentDisplay v-if='selectedATIdx === 2'/>
-
     </div>
-    <div class='graphContainer'>
+    <div class='segmentDisplayHolder' v-if='piece && displayTrajs && selectedATIdx === 2'>
+      <!-- <SegmentDisplay
+        class='segmentDisplay'
+        :piece='piece'
+        :trajectories='piece!.phrases[6].trajectories'
+        :displayWidth='segmentDisplayWidth'
+        :displayHeight='segmentDisplayHeight'
+        />
+      <SegmentDisplay
+        class='segmentDisplay'
+        :piece='piece'
+        :trajectories='piece!.phrases[10].trajectories'
+        :displayWidth='segmentDisplayWidth'
+        :displayHeight='segmentDisplayHeight'
+        /> -->
+        <SegmentDisplay
+          v-for='(trajectories, idx) in displayTrajs'
+          :key='idx'
+          class='segmentDisplay'
+          :piece='piece'
+          :trajectories='trajectories'
+          :displayWidth='segmentDisplayWidth'
+          :displayHeight='segmentDisplayHeight'
+          />
+    </div>
+    <div class='graphContainer' v-if='selectedATIdx <= 1'>
       <div class='graph' ref='graph'></div>
     </div>
   </div>
@@ -209,6 +232,8 @@ import * as d3 from 'd3';
 import { defineComponent } from 'vue';
 
 import SegmentDisplay from '@/components/SegmentDisplay.vue';
+
+import { Query, QueryType } from '@/js/query.ts';
 
 type PCountType = {
   [key: number]: { pattern: number[], count: number }[],
@@ -296,6 +321,9 @@ type PCountType = {
     graphRowHeight?: number,
     svg?: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>,
     topSvg?: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>,
+    segmentDisplayHeight: number,
+    segmentDisplayWidth: number,
+    displayTrajs?: Trajectory[][],
 
   }
 
@@ -304,7 +332,7 @@ type PCountType = {
       return {
         piece: undefined,
         analysisTypes: ['Pitch Prevalence', 'Pitch Patterns', 'Query Display'],
-        selectedATIdx: 0,
+        selectedATIdx: 2,
         pitchPrevalenceTypes: ['Section', 'Phrase', 'Duration'],
         patternCountTypes: ['Transcription', 'Section', 'Duration'],
         pitchRepresentationTypes: ['Fixed Pitch', 'Pitch Onsets'],
@@ -342,6 +370,9 @@ type PCountType = {
         graphRowHeight: undefined,
         svg: undefined,
         topSvg: undefined,
+        segmentDisplayHeight: 200,
+        segmentDisplayWidth: 400,
+        displayTrajs: undefined,
       }
     },
 
@@ -1236,7 +1267,25 @@ type PCountType = {
         } else {
           this.targetPitchChoices = raga.getPitchNumbers(low, high).reverse()
           this.targetPitchIdx = this.targetPitchChoices.indexOf(0)
-        }  
+        }
+        const options = { 
+          segmentation: 'phrase',
+          piece: this.piece,
+        };
+        const query1: QueryType = {
+          designator: 'startsWith',
+          category: 'pitch',
+          pitch: new Pitch()
+        };
+        const query2: QueryType = {
+          designator: 'includes',
+          category: 'pitch',
+          pitch: new Pitch({ swara: 'ga', oct: 0 })
+        }
+        const queries = [query1, query2];
+        const res = await Query.multiple(queries, options)  ;
+        this.displayTrajs = res[0];
+        // console.log(this.displayTrajs)
       } catch (err) {
         console.log(err);
       }
@@ -1444,5 +1493,31 @@ type PCountType = {
     width: 30px;
     min-width: 30px;
     max-width: 30px;
+  }
+
+  .segmentDisplay {
+    width: v-bind(segmentDisplayWidth + 'px');
+    min-width: v-bind(segmentDisplayWidth + 'px');
+    height: v-bind(segmentDisplayHeight + 'px');
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border-right: 1px dotted black;
+
+    /* white-space: nowrap; */
+    /* overflow: none; */
+  }
+
+  .segmentDisplayHolder {
+    width: 100vw;
+    height: v-bind(segmentDisplayHeight + 'px');
+    background-color: white;
+    display: flex;
+    flex-direction: row;
+    overflow-x: scroll;
+    /* justify-content: center; */
+    /* align-items: center; */
   }
 </style>

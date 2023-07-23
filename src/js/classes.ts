@@ -66,8 +66,39 @@ const pitchNumberToChroma = (pitchNumber: number) => {
   return chroma
 }
 
+/**
+ * Generates an array of evenly spaced values between startValue and stopValue.
+ * The number of values in the array is determined by cardinality.
+ *
+ * @param {number} startValue - The start value of the sequence.
+ * @param {number} stopValue - The end value of the sequence.
+ * @param {number} cardinality - The number of values to generate.
+ * @returns {number[]} An array of evenly spaced values.
+ */
+const linSpace = (startValue: number, stopValue: number, cardinality: number) => {
+  var arr = [];
+  var step = (stopValue - startValue) / (cardinality - 1);
+  for (var i = 0; i < cardinality; i++) {
+    arr.push(startValue + (step * i));
+  }
+  return arr;
+};
+
 type OutputType = 'pitchNumber' | 'chroma' | 'pitch' | 'pitchClass';
 
+/**
+ * Calculates the durations of fixed pitches in a set of trajectories.
+ *
+ * @param {Trajectory[]} trajs - An array of Trajectory objects.
+ * @param {Object} options - An object containing optional parameters.
+ * @param {number} options.inst - The instrument number. Default is 0.
+ * @param {OutputType} options.outputType - The type of output. Can be 'pitchNumber', 'chroma', 'pitch', or 'pitchClass'. Default is 'pitchNumber'.
+ * @param {'cumulative' | 'proportional'} options.countType - The type of count. Can be 'cumulative' or 'proportional'. Default is 'cumulative'.
+ *
+ * @returns {NumObj} An object where the keys are pitch numbers and the values are their corresponding durations.
+ *
+ * @throws {SyntaxError} If the durations of fixed pitches in a trajectory is not an object.
+ */
 const durationsOfFixedPitches = (trajs: Trajectory[], {
   inst = 0, 
   outputType = 'pitchNumber',
@@ -855,6 +886,14 @@ class Trajectory {
     return names[this.id]
   }
 
+  /**
+    * Computes the value of a function identified by its id at a given point.
+    * 
+    * @param x - The point (on a scale from 0 to 1) at which the function is evaluated.
+    * @param logScale - A boolean indicating whether the result should be in logarithmic scale. Default is false.
+    * 
+    * @returns The value of the function at point x. If logScale is true, the result is in logarithmic scale.
+    */
   compute(x: number, logScale = false) {
     const value = this.ids[this.id](x);
     return logScale ? Math.log2(value) : value;
@@ -2555,6 +2594,7 @@ export {
   Group,
   durationsOfFixedPitches,
   pitchNumberToChroma,
+  linSpace
 }
 
 export type {

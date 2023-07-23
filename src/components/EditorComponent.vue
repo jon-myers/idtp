@@ -153,14 +153,15 @@ const structuredTime = dur => {
   }
 };
 const cumsum = sum => (sum = 0, n => sum += n);
-const linSpace = (startValue, stopValue, cardinality) => {
-  var arr = [];
-  var step = (stopValue - startValue) / (cardinality - 1);
-  for (var i = 0; i < cardinality; i++) {
-    arr.push(startValue + (step * i));
-  }
-  return arr;
-};
+
+// const linSpace = (startValue, stopValue, cardinality) => {
+//   var arr = [];
+//   var step = (stopValue - startValue) / (cardinality - 1);
+//   for (var i = 0; i < cardinality; i++) {
+//     arr.push(startValue + (step * i));
+//   }
+//   return arr;
+// };
 const leadingZeros = int => {
   if (int < 10) {
     return '0' + int
@@ -176,7 +177,8 @@ import {
   Articulation,
   Raga,
   Chikari,
-  Group
+  Group,
+  linSpace
 } from '@/js/classes.ts';
 
 import {
@@ -1004,6 +1006,13 @@ export default {
         this.resetZoom();
         this.redraw();
       }
+    },
+
+    findKrintin() {
+      const krintinTrajs = this.piece.allTrajectories().filter(traj => {
+        const artVals = Object.values(traj.articulations);
+        return artVals.some(art => art.name === 'hammer-on' || art.name === 'hammer-off');
+      })
     },
 
     cleanPhrases() {
@@ -6042,6 +6051,9 @@ export default {
       hammerOffData.forEach(obj => {
         const x = d => this.xr()(d.x);
         const y = d => this.yr()(d.y);
+        if (x(obj) === undefined) {
+          console.log(traj)
+        }
         g.append('path')
           .classed('articulation', true)
           .classed('hammer-off', true)

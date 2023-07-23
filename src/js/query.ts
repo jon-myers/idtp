@@ -404,18 +404,22 @@ class Query {
 
   public static async multiple(queries: QueryType[] = [], {
     transcriptionID = '63445d13dc8b9023a09747a6',
+    piece = undefined,
     segmentation = 'phrase',
     sequenceLength = undefined
   }:{
     transcriptionID?: string,
     segmentation?: SegmentationType,
     sequenceLength?: number,
+    piece?: Piece,
   }={}) {
     if (queries.length === 0) {
       throw new Error('No queries provided');
     }
     try {
-      const piece = await instantiatePiece(transcriptionID);
+      if (piece === undefined) {
+        piece = await instantiatePiece(transcriptionID);
+      }
       const queryObjs = queries.map(query => {
         return { 
           segmentation, 
@@ -429,7 +433,7 @@ class Query {
         };
       });
       const answers = queryObjs.map((queryObj: QueryType ) => {
-        return new Query(piece, queryObj)
+        return new Query(piece!, queryObj)
       });
       // console.log('answer: ', answers.map(a => a.identifier));
       const outputIdentifiers = answers.reduce((acc, answer) => {
@@ -487,11 +491,15 @@ const query_3 = {
 }
 
 
-Query.multiple([query_1, query_2, query_3], { 
-  transcriptionID,
-  segmentation: 'sequenceOfTrajectories',
-  sequenceLength: 50,
-})
-  .then(q => {
-    console.log(q)
-  })
+// Query.multiple([query_1, query_2, query_3], { 
+//   transcriptionID,
+//   segmentation: 'sequenceOfTrajectories',
+//   sequenceLength: 50,
+// })
+//   .then(q => {
+//     console.log(q)
+//   })
+
+  export { Query }
+
+  export type { QueryType }

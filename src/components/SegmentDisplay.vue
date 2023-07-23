@@ -1,5 +1,5 @@
 <template>
-  <div class='graph'>
+  <div ref='graph'>
 
   </div>
 
@@ -7,37 +7,148 @@
 <script lang='ts'>
 
 import { defineComponent, PropType } from 'vue';
-import { Trajectory, Piece, Phrase } from '@/js/classes.ts';
+import { Trajectory, Piece, Phrase, Pitch, linSpace } from '@/js/classes.ts';
 
-import d3 from 'd3';
+import * as d3 from 'd3';
 
 type SegmentDisplayDataType = {
   svg?: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>,
   verticalPadding: number,
-  horizontalPadding: number
-}
+  horizontalPadding: number,
+  verticalMargin: number,
+  horizontalMargin: number,
+  innerMargin: {
+    top: number,
+    bottom: number,
+    left: number,
+    right: number
+  },
+  xScale?: d3.ScaleLinear<number, number>,
+  xAxis?: d3.Axis<d3.NumberValue>,
+  yScale?: d3.ScaleLinear<number, number>,
+  yAxis?: d3.Axis<d3.NumberValue>,
+  visibleSargam?: number[],
+  visiblePitches?: Pitch[],
+  divsPerPxl: number,
+};
 
 export default defineComponent({
   name: 'SegmentDisplay',
 
   data(): SegmentDisplayDataType {
     return {
+      verticalMargin: 0.2,
+      horizontalMargin: 0.1,
       verticalPadding: 0.1,
       horizontalPadding: 0.1,
-      svg: undefined
+      innerMargin: {
+        top: 20,
+        bottom: 0,
+        left: 30,
+        right: 0
+      },
+      svg: undefined,
+      xScale: undefined,
+      xAxis: undefined,
+      yScale: undefined,
+      yAxis: undefined,
+      visibleSargam: [],
+      visiblePitches: [],
+      divsPerPxl: 1
     }
   },
 
   mounted() {
-    this.svg = d3.select('.graph')
+    this.svg = d3.select(this.$refs.graph)
       .append('svg')
-      .attr('width', '100%')
-      .attr('height', '100%')
-      .style('background-color', 'white')
+      .classed('svg', true)
+      .attr('width', this.displayWidth * (1 - this.horizontalMargin) + 'px')
+      .attr('height', this.displayHeight * (1 - this.verticalMargin) + 'px')
+      .style('background-color', 'lightgrey')
       .style('border', '1px solid black')
       .style('box-sizing', 'border-box')
-      .style('padding', '10px')
-      .style('overflow', 'visible');
+    
+    let totWidth = this.displayWidth * (1 - this.horizontalMargin);
+    totWidth -= this.innerMargin.left + this.innerMargin.right;
+    let totHeight = this.displayHeight * (1 - this.verticalMargin);
+    totHeight -= this.innerMargin.top + this.innerMargin.bottom;
+    this.visibleSargam = this.piece.raga.getFrequencies({
+      low: 2 ** this.minLogFreq,
+      high: 2 ** this.maxLogFreq
+    });
+    this.visiblePitches = this.piece.raga.getPitches({
+      low: 2 ** this.minLogFreq,
+      high: 2 ** this.maxLogFreq
+    });
+
+    const yTickTexts = this.visiblePitches.map(pitch => {
+      return pitch.octavedSargamLetter
+    });
+    const yTickVals = this.visibleSargam.map(freq => Math.log2(freq));
+
+    // coloring the background of the graph blue, excluding the axes
+    this.svg.append('rect')
+      .attr('x', this.innerMargin.left)
+      .attr('y', this.innerMargin.top)
+      .attr('width', totWidth)
+      .attr('height', totHeight)
+      .style('fill', 'lightblue')
+
+    // adding the axes
+    this.xScale = d3.scaleLinear()
+      .domain([this.minTime, this.maxTime])
+      .range([0, totWidth]);
+    this.xAxis = d3.axisTop(this.xScale);
+    const xTickVals = this.xAxis.scale().ticks(7)!;
+    const xTickTexts = xTickVals.map(x => {
+      const date = d3.timeSecond.offset(new Date(0), Number(x));
+      const minutes = date.getUTCMinutes();
+      const seconds = date.getUTCSeconds();
+      return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+    })
+    this.xAxis.tickValues(xTickVals)
+      .tickFormat((_, i) => xTickTexts[i]);
+    this.svg.append('g')
+      .attr('transform', `translate(${this.innerMargin.left}, ${this.innerMargin.top})`)
+      .call(this.xAxis)
+      .style('color', 'black')
+    this.yScale = d3.scaleLinear()
+      .domain([this.minLogFreq, this.maxLogFreq])
+      .range([totHeight, 0]);
+    this.yAxis = d3.axisLeft(this.yScale)
+      .tickValues(yTickVals)
+      .tickFormat((_, i) => yTickTexts[i]);
+    this.svg.append('g')
+      .attr('transform', `translate(${this.innerMargin.left}, ${this.innerMargin.top})`)
+      .call(this.yAxis)
+      .style('color', 'black')
+
+    // add the sargam lines
+    const strokeWidths = this.visiblePitches.map(pitch => {
+      const condition = pitch.swara === 0 || pitch.swara === 4;
+      return condition ? '1.5px' : '1px';
+    });
+    this.svg.append('g')
+      .attr('transform', `translate(${this.innerMargin.left}, ${this.innerMargin.top})`)
+      .selectAll('line')
+      .data(this.visibleSargam)
+      .join('line')
+      .attr('x1', 0)
+      .attr('x2', totWidth)
+      .attr('y1', d => this.yScale!(Math.log2(d)))
+      .attr('y2', d => this.yScale!(Math.log2(d)))
+      .style('stroke', 'grey')
+      .style('stroke-width', d => strokeWidths[this.visibleSargam!.indexOf(d)])
+    
+    // add the trajectories
+    this.trajectories
+      .filter(traj => traj.id !== 12)
+      .forEach(traj => this.addTrajectory(traj));
+     
+
+    
+
+
   },
 
   props: {
@@ -45,9 +156,16 @@ export default defineComponent({
       type: Array as PropType<Trajectory[]>,
       required: true
     },
-
     piece: {
       type: Object as PropType<Piece>,
+      required: true
+    },
+    displayWidth: {
+      type: Number,
+      required: true
+    },
+    displayHeight: {
+      type: Number,
       required: true
     }
   },
@@ -93,6 +211,10 @@ export default defineComponent({
       return endPhrase.startTime! + endTraj.startTime! + endTraj.durTot;
     },
 
+    durTot() {
+      return this.maxTime - this.minTime;
+    },
+
     minTime() {
       const timeDelta = this.maxTrajTime - this.minTrajTime;
       return this.minTrajTime - timeDelta * this.horizontalPadding;
@@ -102,7 +224,65 @@ export default defineComponent({
       const timeDelta = this.maxTrajTime - this.minTrajTime;
       return this.maxTrajTime + timeDelta * this.horizontalPadding;
     },
+  },
+
+  methods: {
+
+    addTrajectory(traj: Trajectory) {
+      let totWidth = this.displayWidth * (1 - this.horizontalMargin);
+      totWidth -= this.innerMargin.left + this.innerMargin.right;
+      const trajWidth = traj.durTot / this.durTot * totWidth;
+      const numDivs = Math.ceil(trajWidth * this.divsPerPxl);
+      const phrase = this.piece.phrases[traj.phraseIdx!];
+      const phraseStart = phrase.startTime!;
+      const startTime = phraseStart + traj.startTime!;
+      const times = linSpace(startTime, startTime + traj.durTot, numDivs);
+      const sampleXs = linSpace(0, 1, numDivs);
+      const sampleYs = sampleXs.map(x => traj.compute(x, true))
+      const samplePoints = times.map((x, i) => {
+        return {
+          x: this.xScale!(x),
+          y: this.yScale!(sampleYs[i])
+        }
+      });
+      const line = (d3.line() as d3.Line<{x: number, y: number}>)
+        .x(d => d.x)
+        .y(d => d.y)
+        .curve(d3.curveLinear);
+      this.svg!.append('path')
+        .datum(samplePoints)
+        .attr('d', line)
+        .attr('fill', 'none')
+        .attr('stroke', 'black')
+        .attr('stroke-width', '1px')
+        .attr('transform', `translate(${this.innerMargin.left}, ${this.innerMargin.top})`)
+        
+
+      // const numDivs = Math.ceil( * this.divsPerPxl);
+    }
   }
 })
 
 </script>
+
+<style scoped>
+.graph {
+  padding: 0px;
+  margin: 0px;
+  overflow: none;
+  width: 100px;
+  height: 80px;
+}
+
+
+/* .svg {
+  padding: 0px;
+  margin: 0px;
+  border: 0px;
+  box-sizing: border-box;
+  overflow: none;
+  width: 100px;
+  height: 72px;
+} */
+
+</style>
