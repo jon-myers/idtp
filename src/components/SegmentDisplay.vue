@@ -270,7 +270,7 @@ export default defineComponent({
   padding: 0px;
   margin: 0px;
   overflow: none;
-  width: 100px;
+  /* width: 100px; */
   height: 80px;
 }
 

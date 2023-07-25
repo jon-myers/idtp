@@ -168,28 +168,18 @@
       </div>
     </div>
     <div class='segmentDisplayHolder' v-if='piece && displayTrajs && selectedATIdx === 2'>
-      <!-- <SegmentDisplay
-        class='segmentDisplay'
-        :piece='piece'
-        :trajectories='piece!.phrases[6].trajectories'
-        :displayWidth='segmentDisplayWidth'
-        :displayHeight='segmentDisplayHeight'
-        />
-      <SegmentDisplay
-        class='segmentDisplay'
-        :piece='piece'
-        :trajectories='piece!.phrases[10].trajectories'
-        :displayWidth='segmentDisplayWidth'
-        :displayHeight='segmentDisplayHeight'
-        /> -->
         <SegmentDisplay
           v-for='(trajectories, idx) in displayTrajs'
           :key='idx'
           class='segmentDisplay'
           :piece='piece'
           :trajectories='trajectories'
-          :displayWidth='segmentDisplayWidth'
+          :displayWidth='segmentDisplayWidths[idx]'
           :displayHeight='segmentDisplayHeight'
+          :style="{ 
+            width: segmentDisplayWidths[idx] + 'px', 
+            minWidth: segmentDisplayWidths[idx] + 'px' 
+            }"
           />
     </div>
     <div class='graphContainer' v-if='selectedATIdx <= 1'>
@@ -233,7 +223,7 @@ import { defineComponent } from 'vue';
 
 import SegmentDisplay from '@/components/SegmentDisplay.vue';
 
-import { Query, QueryType } from '@/js/query.ts';
+import { Query, QueryType, MultipleOptionType } from '@/js/query.ts';
 
 type PCountType = {
   [key: number]: { pattern: number[], count: number }[],
@@ -324,6 +314,9 @@ type PCountType = {
     segmentDisplayHeight: number,
     segmentDisplayWidth: number,
     displayTrajs?: Trajectory[][],
+    segmentDisplayWidths: number[],
+    proportionalDisplay: boolean,
+
 
   }
 
@@ -373,6 +366,8 @@ type PCountType = {
         segmentDisplayHeight: 200,
         segmentDisplayWidth: 400,
         displayTrajs: undefined,
+        segmentDisplayWidths: [],
+        proportionalDisplay: false,
       }
     },
 
@@ -1268,7 +1263,7 @@ type PCountType = {
           this.targetPitchChoices = raga.getPitchNumbers(low, high).reverse()
           this.targetPitchIdx = this.targetPitchChoices.indexOf(0)
         }
-        const options = { 
+        const options: MultipleOptionType = { 
           segmentation: 'phrase',
           piece: this.piece,
         };
@@ -1284,8 +1279,34 @@ type PCountType = {
         }
         const queries = [query1, query2];
         const res = await Query.multiple(queries, options)  ;
-        this.displayTrajs = res[0];
-        // console.log(this.displayTrajs)
+        this.displayTrajs = res[0] as Trajectory[][];
+        if (this.proportionalDisplay) {
+          let durAvg = this.displayTrajs
+            .map(t => {
+              const initP = this.piece!.phrases[t[0].phraseIdx!];
+              const initStart = initP.startTime! + t[0].startTime!;
+              const lastP = this.piece!.phrases[t[t.length - 1].phraseIdx!];
+              const lastStart = lastP.startTime! + t[t.length - 1].startTime!;
+              const lastEnd = lastStart + t[t.length - 1].durTot!;
+              return lastEnd - initStart;
+            })
+            .reduce((acc, v) => acc + v, 0)
+          durAvg /= this.displayTrajs.length;
+          this.segmentDisplayWidths = this.displayTrajs.map(t => {
+            const initP = this.piece!.phrases[t[0].phraseIdx!];
+            const initStart = initP.startTime! + t[0].startTime!;
+            const lastP = this.piece!.phrases[t[t.length - 1].phraseIdx!];
+            const lastStart = lastP.startTime! + t[t.length - 1].startTime!;
+            const lastEnd = lastStart + t[t.length - 1].durTot!;
+            const dur = lastEnd - initStart;
+            return this.segmentDisplayWidth * dur / durAvg;
+          })
+        } else {
+          this.segmentDisplayWidths = this.displayTrajs.map(_ => {
+            return this.segmentDisplayWidth
+          });
+        }
+        
       } catch (err) {
         console.log(err);
       }
@@ -1496,8 +1517,8 @@ type PCountType = {
   }
 
   .segmentDisplay {
-    width: v-bind(segmentDisplayWidth + 'px');
-    min-width: v-bind(segmentDisplayWidth + 'px');
+    /* width: v-bind(segmentDisplayWidth + 'px'); */
+    /* min-width: v-bind(segmentDisplayWidth + 'px'); */
     height: v-bind(segmentDisplayHeight + 'px');
     box-sizing: border-box;
     display: flex;

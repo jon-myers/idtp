@@ -402,20 +402,20 @@ class Query {
     }
   }
 
+  
+
   public static async multiple(queries: QueryType[] = [], {
     transcriptionID = '63445d13dc8b9023a09747a6',
     piece = undefined,
     segmentation = 'phrase',
     sequenceLength = undefined
-  }:{
-    transcriptionID?: string,
-    segmentation?: SegmentationType,
-    sequenceLength?: number,
-    piece?: Piece,
-  }={}) {
+  }: MultipleOptionType = {}): Promise<[Trajectory[][], (number | string | { phraseIdx: number, trajIdx: number })[]]> {
     if (queries.length === 0) {
       throw new Error('No queries provided');
     }
+    let outputTrajectories: Trajectory[][] = [];
+    let outputIdentifiers: (number | string | { phraseIdx: number, trajIdx: number })[] = [];
+    let nonStringifiedOutputIdentifiers: (number | string | { phraseIdx: number, trajIdx: number })[] = [];
     try {
       if (piece === undefined) {
         piece = await instantiatePiece(transcriptionID);
@@ -436,20 +436,28 @@ class Query {
         return new Query(piece!, queryObj)
       });
       // console.log('answer: ', answers.map(a => a.identifier));
-      const outputIdentifiers = answers.reduce((acc, answer) => {
+      outputIdentifiers = answers.reduce((acc, answer) => {
         const ids = answer.stringifiedIdentifier.filter(id => acc.includes(id));
         return ids.length > 0 ? ids : [];
       }, answers[0].stringifiedIdentifier);
       const idxs = outputIdentifiers.map(id => {
         return answers[0].stringifiedIdentifier.indexOf(id);
       });
-      const outputTrajectories = idxs.map(idx => answers[0].trajectories[idx]);
-      const nonStringifiedOutputIdentifiers = idxs.map(idx => answers[0].identifier[idx]);
-      return [outputTrajectories, nonStringifiedOutputIdentifiers];
+      outputTrajectories = idxs.map(idx => answers[0].trajectories[idx]);
+      nonStringifiedOutputIdentifiers = idxs.map(idx => answers[0].identifier[idx]);
+      
     } catch (error) {
       console.log(error);
     }
+    return [outputTrajectories, nonStringifiedOutputIdentifiers];
   }
+}
+
+type MultipleOptionType = {
+  transcriptionID?: string,
+  segmentation?: SegmentationType,
+  sequenceLength?: number,
+  piece?: Piece,
 }
 
 
@@ -502,4 +510,4 @@ const query_3 = {
 
   export { Query }
 
-  export type { QueryType }
+  export type { QueryType, MultipleOptionType }
