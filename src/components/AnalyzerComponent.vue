@@ -363,11 +363,11 @@ type PCountType = {
         graphRowHeight: undefined,
         svg: undefined,
         topSvg: undefined,
-        segmentDisplayHeight: 200,
-        segmentDisplayWidth: 400,
+        segmentDisplayHeight: 300,
+        segmentDisplayWidth: 500,
         displayTrajs: undefined,
         segmentDisplayWidths: [],
-        proportionalDisplay: false,
+        proportionalDisplay: true,
       }
     },
 

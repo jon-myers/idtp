@@ -30,6 +30,7 @@ type SegmentDisplayDataType = {
   visibleSargam?: number[],
   visiblePitches?: Pitch[],
   divsPerPxl: number,
+  defs?: d3.Selection<SVGDefsElement, unknown, HTMLElement, any> 
 };
 
 export default defineComponent({
@@ -54,7 +55,8 @@ export default defineComponent({
       yAxis: undefined,
       visibleSargam: [],
       visiblePitches: [],
-      divsPerPxl: 1
+      divsPerPxl: 1,
+      defs: undefined
     }
   },
 
@@ -67,6 +69,7 @@ export default defineComponent({
       .style('background-color', 'lightgrey')
       .style('border', '1px solid black')
       .style('box-sizing', 'border-box')
+    this.addMarkers();
     
     let totWidth = this.displayWidth * (1 - this.horizontalMargin);
     totWidth -= this.innerMargin.left + this.innerMargin.right;
@@ -99,7 +102,7 @@ export default defineComponent({
       .domain([this.minTime, this.maxTime])
       .range([0, totWidth]);
     this.xAxis = d3.axisTop(this.xScale);
-    const xTickVals = this.xAxis.scale().ticks(7)!;
+    const xTickVals = this.xAxis.scale().ticks(5)!;
     const xTickTexts = xTickVals.map(x => {
       const date = d3.timeSecond.offset(new Date(0), Number(x));
       const minutes = date.getUTCMinutes();
@@ -256,10 +259,91 @@ export default defineComponent({
         .attr('stroke', 'black')
         .attr('stroke-width', '1px')
         .attr('transform', `translate(${this.innerMargin.left}, ${this.innerMargin.top})`)
-        
 
-      // const numDivs = Math.ceil( * this.divsPerPxl);
-    }
+      // add articulations
+      const artKeys = Object.keys(traj.articulations);
+      artKeys.forEach(artKey => {
+        const art = traj.articulations[artKey];
+        const artTime = Number(artKey) * traj.durTot + startTime;
+        
+        // plucks
+        if (art.name === 'pluck') {
+          const artX = this.xScale!(artTime);
+          const artY = this.yScale!(traj.compute(Number(artKey), true));
+          const sym = d3.symbol().type(d3.symbolTriangle).size(20);
+          const tX = this.innerMargin.left + artX;
+          const tY = this.innerMargin.top + artY;
+          this.svg!.append('path')
+            .attr('d', sym)
+            .attr('fill', 'black')
+            .attr('transform', `translate(${tX}, ${tY}) rotate(90)`)
+        } else if (art.name === 'hammer-off') {
+          const artX = this.xScale!(artTime);
+          const artY = this.yScale!(traj.compute(Number(artKey) - 0.01, true));
+          const tX = this.innerMargin.left + artX;
+          const tY = this.innerMargin.top + artY;
+          this.svg!.append('path')
+            .attr('d', d3.line()([[-10, 0], [0, 0], [0, 10]]))
+            .attr('stroke', 'black')
+            .attr('stroke-width', 1.5)
+            .attr('fill', 'none')
+            .attr('marker-end', 'url(#arrow)')
+            .attr('transform', `translate(${tX}, ${tY})`)
+        } else if (art.name === 'hammer-on') {
+          const artX = this.xScale!(artTime);
+          const artY = this.yScale!(traj.compute(Number(artKey) - 0.01, true));
+          const tX = this.innerMargin.left + artX;
+          const tY = this.innerMargin.top + artY;
+          this.svg!.append('path')
+            .attr('d', d3.line()([[-10, 0], [0, 0], [0, 10]]))
+            .attr('stroke', 'black')
+            .attr('stroke-width', 1.5)
+            .attr('fill', 'none')
+            .attr('marker-end', 'url(#arrow)')
+            .attr('transform', `translate(${tX}, ${tY})`)
+        } else if (art.name === 'dampen') {
+          const artX = this.xScale!(artTime);
+          const artY = this.yScale!(traj.compute(Number(artKey), true));
+          const tX = this.innerMargin.left + artX;
+          const tY = this.innerMargin.top + artY;
+          this.svg!.append('path')
+            .attr('d', d3.line()([[-2, -8], [0, -8], [0, 8], [-2, 8]]))
+            .attr('stroke', 'black')
+            .attr('stroke-width', 1.5)
+            .attr('fill', 'none')
+            .attr('stroke-linecap', 'round')
+            .attr('stroke-linejoin', 'round')
+            .attr('transform', `translate(${tX}, ${tY})`)            
+        }
+      })
+    },
+
+    addMarkers() {
+      this.defs = this.svg?.append('defs')
+      const markerBoxWidth = 4;
+      const markerBoxHeight = 4;
+      const refX = markerBoxWidth / 2;
+      const refY = markerBoxHeight / 2;
+      const arrowPoints = [
+        [0, 0],
+        [0, 4],
+        [4, 2]
+      ];
+      this.defs!
+        .append('marker')
+        .attr('id', 'arrow')
+        .attr('viewBox', [0, 0, markerBoxWidth, markerBoxHeight])
+        .attr('refX', refX)
+        .attr('refY', refY)
+        .attr('markerWidth', markerBoxWidth)
+        .attr('markerHeight', markerBoxHeight)
+        .attr('orient', 'auto-start-reverse')
+        .append('path')
+        .attr('d', d3.line()(arrowPoints))
+        .attr('fill', 'black')
+    },
+
+
   }
 })
 

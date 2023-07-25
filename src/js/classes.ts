@@ -441,8 +441,12 @@ class Pitch {
   }
 }
 
+type ArtNameType = (
+  'pluck' | 'hammer-off' | 'hammer-on' | 'slide' | 'dampen' | 'consonant'
+)
+
 class Articulation {
-  name: string;
+  name: ArtNameType;
   stroke: string | undefined;
   hindi: string | undefined;
   ipa: string | undefined;
@@ -456,7 +460,7 @@ class Articulation {
     ipa = undefined,
     engTrans = undefined,
   }: {
-    name?: string,
+    name?: ArtNameType,
     stroke?: string,
     hindi?: string,
     ipa?: string,
