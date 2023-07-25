@@ -363,7 +363,7 @@ type PCountType = {
         graphRowHeight: undefined,
         svg: undefined,
         topSvg: undefined,
-        segmentDisplayHeight: 300,
+        segmentDisplayHeight: 400,
         segmentDisplayWidth: 500,
         displayTrajs: undefined,
         segmentDisplayWidths: [],
@@ -1270,7 +1270,7 @@ type PCountType = {
         const query1: QueryType = {
           designator: 'startsWith',
           category: 'pitch',
-          pitch: new Pitch()
+          pitch: new Pitch({ swara: 'pa', oct: -1 })
         };
         const query2: QueryType = {
           designator: 'includes',

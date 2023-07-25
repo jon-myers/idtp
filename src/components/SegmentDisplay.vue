@@ -10,6 +10,7 @@ import { defineComponent, PropType } from 'vue';
 import { Trajectory, Piece, Phrase, Pitch, linSpace } from '@/js/classes.ts';
 
 import * as d3 from 'd3';
+import { last } from 'lodash';
 
 type SegmentDisplayDataType = {
   svg?: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>,
@@ -30,7 +31,8 @@ type SegmentDisplayDataType = {
   visibleSargam?: number[],
   visiblePitches?: Pitch[],
   divsPerPxl: number,
-  defs?: d3.Selection<SVGDefsElement, unknown, HTMLElement, any> 
+  defs?: d3.Selection<SVGDefsElement, unknown, HTMLElement, any>,
+  phonemeRepresentation: 'IPA' | 'Devanagari' | 'English'
 };
 
 export default defineComponent({
@@ -56,7 +58,8 @@ export default defineComponent({
       visibleSargam: [],
       visiblePitches: [],
       divsPerPxl: 1,
-      defs: undefined
+      defs: undefined,
+      phonemeRepresentation: 'English'
     }
   },
 
@@ -102,9 +105,9 @@ export default defineComponent({
       .domain([this.minTime, this.maxTime])
       .range([0, totWidth]);
     this.xAxis = d3.axisTop(this.xScale);
-    const xTickVals = this.xAxis.scale().ticks(5)!;
+    const xTickVals = this.xAxis.scale().ticks(5)! as number[];
     const xTickTexts = xTickVals.map(x => {
-      const date = d3.timeSecond.offset(new Date(0), Number(x));
+      const date = d3.timeSecond.offset(new Date(0), x);
       const minutes = date.getUTCMinutes();
       const seconds = date.getUTCSeconds();
       return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
@@ -147,6 +150,13 @@ export default defineComponent({
     this.trajectories
       .filter(traj => traj.id !== 12)
       .forEach(traj => this.addTrajectory(traj));
+    
+    const vowelIdxs = this.firstTrajIdxs();  
+    this.trajectories.forEach((traj, idx) => {
+      if (vowelIdxs.includes(idx)) {
+        this.addVowel(traj)
+      }
+    })
      
 
     
@@ -265,8 +275,6 @@ export default defineComponent({
       artKeys.forEach(artKey => {
         const art = traj.articulations[artKey];
         const artTime = Number(artKey) * traj.durTot + startTime;
-        
-        // plucks
         if (art.name === 'pluck') {
           const artX = this.xScale!(artTime);
           const artY = this.yScale!(traj.compute(Number(artKey), true));
@@ -314,6 +322,17 @@ export default defineComponent({
             .attr('stroke-linecap', 'round')
             .attr('stroke-linejoin', 'round')
             .attr('transform', `translate(${tX}, ${tY})`)            
+        } else if (art.name === 'consonant') {
+          const artX = this.xScale!(artTime);
+          const artY = this.yScale!(traj.compute(Number(artKey), true));
+          const sym = d3.symbol().type(d3.symbolDiamond).size(25);
+          const tX = this.innerMargin.left + artX;
+          const tY = this.innerMargin.top + artY;
+          this.svg!.append('path')
+            .attr('d', sym)
+            .attr('fill', 'black')
+            .attr('transform', `translate(${tX}, ${tY})`)
+
         }
       })
     },
@@ -342,6 +361,63 @@ export default defineComponent({
         .attr('d', d3.line()(arrowPoints))
         .attr('fill', 'black')
     },
+
+    firstTrajIdxs() {
+      const idxs: number[] = [];
+      let ct = 0;
+      let silentTrigger = false;
+      let lastVowel: string | undefined = undefined;
+      let endConsonantTrigger: boolean | undefined = undefined;
+      this.trajectories.forEach((traj, tIdx) => {
+        if (traj.id !== 12) {
+          const c1 = ct === 0;
+          const c2 = silentTrigger;
+          const c3 = traj.startConsonant !== undefined;
+          const c4 = endConsonantTrigger;
+          const c5 = traj.vowel !== lastVowel;
+          if (c1 || c2 || c3 || c4 || c5) {
+            idxs.push(tIdx);
+          }
+          ct += 1;
+          endConsonantTrigger = traj.endConsonant !== undefined;
+          lastVowel = traj.vowel;
+        }
+        silentTrigger = traj.id === 12;
+      });
+      return idxs;
+    },
+
+    addVowel(traj: Trajectory) {
+      if (traj.id !== 12) {
+        const phrase = this.piece.phrases[traj.phraseIdx!];
+        const phraseStart = phrase.startTime!;
+        const withC = traj.startConsonant !== undefined;
+        const art = withC ? traj.articulations['0.00'] : undefined;
+        let text: string;
+        if (this.phonemeRepresentation === 'IPA') {
+          text = withC ? art!.ipa + ' ' + traj.vowelIpa : traj.vowelIpa!;
+        } else if (this.phonemeRepresentation === 'Devanagari') {
+          text = withC ? art!.hindi + ' ' + traj.vowelHindi : traj.vowelHindi!;
+        } else if (this.phonemeRepresentation === 'English') {
+          text = withC ?
+            art!.engTrans + ' ' + traj.vowelEngTrans :
+            traj.vowelEngTrans!;
+        }
+        let xPos = this.xScale!(phraseStart + traj.startTime!) 
+        xPos += this.innerMargin.left;
+        let yPos = this.yScale!(traj.compute(0, true));
+        yPos += this.innerMargin.top - 10;
+        this.svg?.append('text')
+          .text(text!)
+          // .attr('stroke', 'black')
+          .attr('font-size', '12px')
+          .attr('text-anchor', 'left')
+          .attr('transform', `translate(${xPos}, ${yPos})`)
+
+
+      }
+
+    }
 
 
   }

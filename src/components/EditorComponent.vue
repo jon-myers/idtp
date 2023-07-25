@@ -5375,8 +5375,7 @@ export default {
         })
       });
       this.addChikaris();
-      this.addPlayhead();
-      
+      this.addPlayhead();   
     },
 
     trajContextMenuClick(e) {
