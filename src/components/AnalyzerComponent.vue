@@ -180,6 +180,8 @@
             width: segmentDisplayWidths[idx] + 'px', 
             minWidth: segmentDisplayWidths[idx] + 'px' 
             }"
+          :proportion='proportions[idx]'
+          :logFreqOverride='logFreqOverride'
           />
     </div>
     <div class='graphContainer' v-if='selectedATIdx <= 1'>
@@ -315,7 +317,11 @@ type PCountType = {
     segmentDisplayWidth: number,
     displayTrajs?: Trajectory[][],
     segmentDisplayWidths: number[],
-    proportionalDisplay: boolean,
+    horizontalProportionalDisplay: boolean,
+    verticalProportionalDisplay: boolean,
+    durAvg: number,
+    proportions: number[],
+    logFreqOverride?: { low: number, high: number },
 
 
   }
@@ -367,7 +373,11 @@ type PCountType = {
         segmentDisplayWidth: 500,
         displayTrajs: undefined,
         segmentDisplayWidths: [],
-        proportionalDisplay: true,
+        horizontalProportionalDisplay: true,
+        verticalProportionalDisplay: false,
+        durAvg: 0,
+        proportions: [],
+        logFreqOverride: undefined,
       }
     },
 
@@ -1176,23 +1186,16 @@ type PCountType = {
 
 
                 const x_ = ct * 20;
-                // const x_end = x_ + 20 * pCount.maxSize;
                 const xScale = d3.scaleLinear()
                   .domain([0, 1])
                   .range([x_ + 10, x_ + 20 * Number(size) - 10])
                 const y = (4 * aIdx + verticalOffset) * 20 + 30;
                 const yScale = d3.scaleLinear()
                   .domain([0, 1])
-                  .range([y + 40, y])
-                
-                
-                
+                  .range([y + 40, y])     
                 const line = d3.line()
                   .x((d, i) => xScale(pts[i]))
                   .y((d) => yScale(d))
-                  
-                
-                
                 if (min !== initMax) {
                   const nps = pitches.map(p => p.numberedPitch)
                   const minP = Math.min(...nps);
@@ -1228,16 +1231,10 @@ type PCountType = {
             ct += 3;
           })
           const offset = plot ? 3 * pCount.maxSize : pCount.maxSize;
-
           verticalOffset += offset;
           verticalOffset += 3;
-        })
-        
-
-
-        
+        }) 
       }
-
     },
 
     async mounted() {
@@ -1268,20 +1265,20 @@ type PCountType = {
           piece: this.piece,
         };
         const query1: QueryType = {
-          designator: 'startsWith',
-          category: 'pitch',
-          pitch: new Pitch({ swara: 'pa', oct: -1 })
-        };
-        const query2: QueryType = {
           designator: 'includes',
-          category: 'pitch',
-          pitch: new Pitch({ swara: 'ga', oct: 0 })
-        }
-        const queries = [query1, query2];
+          category: 'endingConsonant',
+          consonant: 'ra'
+        };
+        // const query2: QueryType = {
+        //   designator: 'includes',
+        //   category: 'pitch',
+        //   pitch: new Pitch({ swara: 'ga', oct: 0 })
+        // }
+        const queries = [query1];
         const res = await Query.multiple(queries, options)  ;
         this.displayTrajs = res[0] as Trajectory[][];
-        if (this.proportionalDisplay) {
-          let durAvg = this.displayTrajs
+        if (this.horizontalProportionalDisplay) {
+          this.durAvg = this.displayTrajs
             .map(t => {
               const initP = this.piece!.phrases[t[0].phraseIdx!];
               const initStart = initP.startTime! + t[0].startTime!;
@@ -1291,7 +1288,7 @@ type PCountType = {
               return lastEnd - initStart;
             })
             .reduce((acc, v) => acc + v, 0)
-          durAvg /= this.displayTrajs.length;
+          this.durAvg /= this.displayTrajs.length;
           this.segmentDisplayWidths = this.displayTrajs.map(t => {
             const initP = this.piece!.phrases[t[0].phraseIdx!];
             const initStart = initP.startTime! + t[0].startTime!;
@@ -1299,12 +1296,54 @@ type PCountType = {
             const lastStart = lastP.startTime! + t[t.length - 1].startTime!;
             const lastEnd = lastStart + t[t.length - 1].durTot!;
             const dur = lastEnd - initStart;
-            return this.segmentDisplayWidth * dur / durAvg;
+            this.proportions.push(dur / this.durAvg);
+            return this.segmentDisplayWidth * dur / this.durAvg;
           })
         } else {
           this.segmentDisplayWidths = this.displayTrajs.map(_ => {
             return this.segmentDisplayWidth
           });
+        }
+        if (this.verticalProportionalDisplay) {
+          const max = this.displayTrajs.map(trajs => {
+            const logFreqs = trajs.map(traj => traj.logFreqs).flat();
+            const testXs = linSpace(0, 1, 25);
+            return trajs.reduce((acc, traj) => {
+              const yVals = testXs.map(x => traj.compute(x, true));
+              const max = Math.max(...yVals);
+              if (max > acc) {
+                return max;
+              } else {
+                return acc;
+              }
+            }, logFreqs[0])
+          }).reduce((acc, v) => {
+            if (v > acc) {
+              return v;
+            } else {
+              return acc;
+            }
+          }, 0);
+          const min = this.displayTrajs.map(trajs => {
+            const logFreqs = trajs.map(traj => traj.logFreqs).flat();
+            const testXs = linSpace(0, 1, 25);
+            return trajs.reduce((acc, traj) => {
+              const yVals = testXs.map(x => traj.compute(x, true));
+              const min = Math.min(...yVals);
+              if (min < acc) {
+                return min;
+              } else {
+                return acc;
+              }
+            }, logFreqs[0])
+          }).reduce((acc, v) => {
+            if (v < acc) {
+              return v;
+            } else {
+              return acc;
+            }
+          }, 1000);
+          this.logFreqOverride = { low: min, high: max }
         }
         
       } catch (err) {

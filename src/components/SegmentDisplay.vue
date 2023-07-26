@@ -105,12 +105,19 @@ export default defineComponent({
       .domain([this.minTime, this.maxTime])
       .range([0, totWidth]);
     this.xAxis = d3.axisTop(this.xScale);
-    const xTickVals = this.xAxis.scale().ticks(5)! as number[];
+
+    const numTicks = Math.round(3 * this.proportion);
+    const xTickVals = this.xAxis.scale().ticks(numTicks)! as number[];
     const xTickTexts = xTickVals.map(x => {
       const date = d3.timeSecond.offset(new Date(0), x);
       const minutes = date.getUTCMinutes();
       const seconds = date.getUTCSeconds();
-      return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+      const milliseconds = 10 * (x % 1);
+      if (milliseconds === 5) {
+        return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}.5`;
+      } else {
+        return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+      }
     })
     this.xAxis.tickValues(xTickVals)
       .tickFormat((_, i) => xTickTexts[i]);
@@ -156,6 +163,7 @@ export default defineComponent({
       if (vowelIdxs.includes(idx)) {
         this.addVowel(traj)
       }
+      this.addEndingConsonant(traj);
     })
      
 
@@ -180,18 +188,58 @@ export default defineComponent({
     displayHeight: {
       type: Number,
       required: true
+    },
+    proportion: {
+      type: Number,
+      required: true
+    },
+    logFreqOverride: {
+      type: Object as PropType<{low: number, high: number}>,
+      required: false
     }
   },
 
   computed: {
     maxTrajLogFreq() {
-      const logFreqs = this.trajectories.map(traj => traj.logFreqs).flat();
-      return Math.max(...logFreqs);
+      if (this.logFreqOverride) {
+        return this.logFreqOverride.high
+      } else {
+        const logFreqs = this.trajectories.map(traj => traj.logFreqs).flat();
+        const testXs = linSpace(0, 1, 25);
+        return this.trajectories.reduce((acc, traj) => {
+          const yVals = testXs.map(x => traj.compute(x, true));
+          const max = Math.max(...yVals);
+          if (max > acc) {
+            return max;
+          } else {
+            return acc;
+          }
+        }, logFreqs[0])
+      }
     },
 
     minTrajLogFreq() {
-      const logFreqs = this.trajectories.map(traj => traj.logFreqs).flat();
-      return Math.min(...logFreqs);
+      if (this.logFreqOverride) {
+        return this.logFreqOverride.low
+      } else {
+        const logFreqs = this.trajectories.map(traj => traj.logFreqs).flat();
+        const testXs = linSpace(0, 1, 25);
+        return this.trajectories.reduce((acc, traj) => {
+          const yVals = testXs.map(x => traj.compute(x, true));
+          const min = Math.min(...yVals);
+          if (min < acc) {
+            return min;
+          } else {
+            return acc;
+          }
+        }, logFreqs[0])
+      }
+     
+      
+
+      
+
+
     },
 
     maxLogFreq() {
@@ -267,7 +315,7 @@ export default defineComponent({
         .attr('d', line)
         .attr('fill', 'none')
         .attr('stroke', 'black')
-        .attr('stroke-width', '1px')
+        .attr('stroke-width', '1.5px')
         .attr('transform', `translate(${this.innerMargin.left}, ${this.innerMargin.top})`)
 
       // add articulations
@@ -388,6 +436,7 @@ export default defineComponent({
     },
 
     addVowel(traj: Trajectory) {
+      // this includes adding first vowel, if there is one
       if (traj.id !== 12) {
         const phrase = this.piece.phrases[traj.phraseIdx!];
         const phraseStart = phrase.startTime!;
@@ -412,14 +461,38 @@ export default defineComponent({
           // .attr('stroke', 'black')
           .attr('font-size', '12px')
           .attr('text-anchor', 'left')
+          .attr('font-weight', '600')
           .attr('transform', `translate(${xPos}, ${yPos})`)
-
-
       }
+    },
 
+    addEndingConsonant(traj: Trajectory) {
+      if (traj.id !== 12) {
+        const arts = traj.articulations;
+        if (arts['1.00'] && arts['1.00'].name === 'consonant') {
+          const phrase = this.piece.phrases[traj.phraseIdx!];
+          const xTime = phrase.startTime! + traj.startTime! + traj.durTot;
+          const yVal = traj.compute(1, true);
+          const xPos = this.xScale!(xTime) + this.innerMargin.left;
+          const yPos = this.yScale!(yVal) + this.innerMargin.top;
+          let text: string;
+          if (this.phonemeRepresentation === 'IPA') {
+            text = arts['1.00'].ipa!;
+          } else if (this.phonemeRepresentation === 'Devanagari') {
+            text = arts['1.00'].hindi!;
+          } else if (this.phonemeRepresentation === 'English') {
+            text = arts['1.00'].engTrans!;
+          }
+          this.svg?.append('text')
+            .text(text!)
+            .attr('font-size', '12px')
+            .attr('text-anchor', 'right')
+            .attr('font-weight', '600')
+            .attr('transform', `translate(${xPos - 10}, ${yPos - 10})`)
+
+        }
+      }
     }
-
-
   }
 })
 
