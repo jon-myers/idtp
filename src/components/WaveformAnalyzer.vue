@@ -106,7 +106,7 @@ export default {
     this.oscNode.start();
     
     const aeElem = this.$parent.$parent;
-    if (aeElem.audioEventId && aeElem.recIdx) {
+    if (aeElem.audioEventId !== undefined && aeElem.recIdx !== undefined) {
       const res = await getVerifiedStatus(aeElem.audioEventId, aeElem.recIdx);
       this.saEstimate = res.saEstimate;
       this.saVerified = res.saVerified;
@@ -117,7 +117,7 @@ export default {
         .exponentialRampToValueAtTime(this.saEstimate, this.now() + this.lag);    
       this.coarse = this.linSaVal(this.saEstimate);
     }  
-    if (this.$parent.id) this.newChart();      
+    if (this.$parent.id !== undefined) this.newChart();      
   },
   
   beforeUnmount() {
