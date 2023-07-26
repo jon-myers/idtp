@@ -105,8 +105,12 @@ export default defineComponent({
       .domain([this.minTime, this.maxTime])
       .range([0, totWidth]);
     this.xAxis = d3.axisTop(this.xScale);
-
-    const numTicks = Math.round(3 * this.proportion);
+    let numTicks;
+    if (this.$parent.horizontalProportionalDisplay) {
+      numTicks = Math.round(3 * this.proportion);
+    } else {
+      numTicks = 3
+    }
     const xTickVals = this.xAxis.scale().ticks(numTicks)! as number[];
     const xTickTexts = xTickVals.map(x => {
       const date = d3.timeSecond.offset(new Date(0), x);
