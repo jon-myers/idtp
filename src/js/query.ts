@@ -46,6 +46,8 @@ class Query {
   designator: DesignatorType; 
   category: CategoryType;
   segmentation: SegmentationType;
+  maxDur: number = 60;
+  minDur: number = 0;
 
   private constructor(piece: Piece, {
     segmentation = 'phrase',
@@ -56,6 +58,8 @@ class Query {
     trajectoryID = undefined,
     vowel = undefined,
     consonant = undefined,
+    maxDur = 60,
+    minDur = 0,
   }: {
     segmentation?: SegmentationType,
     designator?: DesignatorType,
@@ -64,7 +68,9 @@ class Query {
     sequenceLength?: number,
     trajectoryID?: number,
     vowel?: string,
-    consonant?: string
+    consonant?: string,
+    maxDur?: number,
+    minDur?: number,
   } = {}) {
     this.category = category;
     this.designator = designator;
@@ -79,6 +85,8 @@ class Query {
     this.repetition = false;
     this.sequenceLength = sequenceLength;
     this.segmentation = segmentation;
+    this.maxDur = maxDur;
+    this.minDur = minDur;
     if (segmentation === 'sequenceOfTrajectories') {
       if (sequenceLength === undefined) {
         throw new Error('sequenceLength is required when type is ' + 
@@ -115,6 +123,7 @@ class Query {
       }
     }
     this.allTypeFilters();
+    this.filterByDuration();
     this.stringifiedIdentifier = this.identifier.map(id => JSON.stringify(id))
   }
 
@@ -363,6 +372,30 @@ class Query {
     return boolean;
   }
 
+  private filterByDuration() {
+    const removeIdxs = [] as number[];
+    this.trajectories.map((trajSeq, tIdx) => {
+      const firstPhrase = this.piece.phrases[trajSeq[0].phraseIdx!];
+      const start = trajSeq[0].startTime! + firstPhrase.startTime!;
+      const lastPIdx = trajSeq[trajSeq.length - 1].phraseIdx!;
+      const lastPhrase = this.piece.phrases[lastPIdx];
+      const end = trajSeq[trajSeq.length - 1].endTime! + lastPhrase.startTime!;
+      if (end - start > this.maxDur) {
+        removeIdxs.push(tIdx);
+      }
+      if (end - start < this.minDur) {
+        removeIdxs.push(tIdx);
+      }
+    });
+    this.trajectories = this.trajectories.filter((_, tIdx) => {
+      return !removeIdxs.includes(tIdx)
+    });
+    this.identifier = this.identifier.filter((_, tIdx) => {
+      return !removeIdxs.includes(tIdx)
+    });
+
+  }
+
   public static async single({
     transcriptionID = '63445d13dc8b9023a09747a6',
     segmentation = 'phrase',
@@ -408,7 +441,9 @@ class Query {
     transcriptionID = '63445d13dc8b9023a09747a6',
     piece = undefined,
     segmentation = 'phrase',
-    sequenceLength = undefined
+    sequenceLength = undefined,
+    minDur = 0,
+    maxDur = 60,
   }: MultipleOptionType = {}): Promise<[Trajectory[][], (number | string | { phraseIdx: number, trajIdx: number })[]]> {
     if (queries.length === 0) {
       throw new Error('No queries provided');
@@ -430,6 +465,8 @@ class Query {
           trajectoryID: query.trajectoryID,
           vowel: query.vowel,
           consonant: query.consonant,
+          minDur,
+          maxDur,
         };
       });
       const answers = queryObjs.map((queryObj: QueryType ) => {
@@ -458,6 +495,8 @@ type MultipleOptionType = {
   segmentation?: SegmentationType,
   sequenceLength?: number,
   piece?: Piece,
+  minDur?: number,
+  maxDur?: number,
 }
 
 
@@ -510,4 +549,10 @@ const query_3 = {
 
   export { Query }
 
-  export type { QueryType, MultipleOptionType }
+  export type { 
+    QueryType, 
+    MultipleOptionType, 
+    SegmentationType,
+    CategoryType,
+    DesignatorType,
+  }

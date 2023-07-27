@@ -10,7 +10,6 @@ import { defineComponent, PropType } from 'vue';
 import { Trajectory, Piece, Phrase, Pitch, linSpace } from '@/js/classes.ts';
 
 import * as d3 from 'd3';
-import { last } from 'lodash';
 
 type SegmentDisplayDataType = {
   svg?: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>,
@@ -41,7 +40,7 @@ export default defineComponent({
   data(): SegmentDisplayDataType {
     return {
       verticalMargin: 0.2,
-      horizontalMargin: 0.1,
+      horizontalMargin: 20,
       verticalPadding: 0.1,
       horizontalPadding: 0.1,
       innerMargin: {
@@ -67,14 +66,14 @@ export default defineComponent({
     this.svg = d3.select(this.$refs.graph)
       .append('svg')
       .classed('svg', true)
-      .attr('width', this.displayWidth * (1 - this.horizontalMargin) + 'px')
+      .attr('width', this.displayWidth - 2 * this.horizontalMargin + 'px')
       .attr('height', this.displayHeight * (1 - this.verticalMargin) + 'px')
       .style('background-color', 'lightgrey')
       .style('border', '1px solid black')
       .style('box-sizing', 'border-box')
     this.addMarkers();
     
-    let totWidth = this.displayWidth * (1 - this.horizontalMargin);
+    let totWidth = this.displayWidth  - 2 * this.horizontalMargin;
     totWidth -= this.innerMargin.left + this.innerMargin.right;
     let totHeight = this.displayHeight * (1 - this.verticalMargin);
     totHeight -= this.innerMargin.top + this.innerMargin.bottom;
@@ -86,6 +85,7 @@ export default defineComponent({
       low: 2 ** this.minLogFreq,
       high: 2 ** this.maxLogFreq
     });
+
 
     const yTickTexts = this.visiblePitches.map(pitch => {
       return pitch.octavedSargamLetter
@@ -162,18 +162,15 @@ export default defineComponent({
       .filter(traj => traj.id !== 12)
       .forEach(traj => this.addTrajectory(traj));
     
-    const vowelIdxs = this.firstTrajIdxs();  
-    this.trajectories.forEach((traj, idx) => {
-      if (vowelIdxs.includes(idx)) {
-        this.addVowel(traj)
-      }
-      this.addEndingConsonant(traj);
-    })
-     
-
-    
-
-
+    if (this.vocal) {
+      const vowelIdxs = this.firstTrajIdxs();  
+      this.trajectories.forEach((traj, idx) => {
+        if (vowelIdxs.includes(idx)) {
+          this.addVowel(traj)
+        }
+        this.addEndingConsonant(traj);
+      })
+    }
   },
 
   props: {
@@ -200,7 +197,15 @@ export default defineComponent({
     logFreqOverride: {
       type: Object as PropType<{low: number, high: number}>,
       required: false
-    }
+    },
+    id: {
+      type: String,
+      required: true
+    },
+    vocal: {
+      type: Boolean,
+      required: true
+    },
   },
 
   computed: {
@@ -208,17 +213,22 @@ export default defineComponent({
       if (this.logFreqOverride) {
         return this.logFreqOverride.high
       } else {
-        const logFreqs = this.trajectories.map(traj => traj.logFreqs).flat();
-        const testXs = linSpace(0, 1, 25);
-        return this.trajectories.reduce((acc, traj) => {
-          const yVals = testXs.map(x => traj.compute(x, true));
-          const max = Math.max(...yVals);
-          if (max > acc) {
-            return max;
-          } else {
-            return acc;
-          }
-        }, logFreqs[0])
+        if (this.trajectories.every(traj => traj.id === 12)) {
+          const fund = this.piece.raga.fundamental;
+          return Math.log2(fund) + 0.5;
+        } else {
+          const logFreqs = this.trajectories.map(traj => traj.logFreqs).flat();
+          const testXs = linSpace(0, 1, 25);
+          return this.trajectories.reduce((acc, traj) => {
+            const yVals = testXs.map(x => traj.compute(x, true));
+            const max = Math.max(...yVals);
+            if (max > acc) {
+              return max;
+            } else {
+              return acc;
+            }
+          }, logFreqs[0])
+        }
       }
     },
 
@@ -226,24 +236,23 @@ export default defineComponent({
       if (this.logFreqOverride) {
         return this.logFreqOverride.low
       } else {
-        const logFreqs = this.trajectories.map(traj => traj.logFreqs).flat();
-        const testXs = linSpace(0, 1, 25);
-        return this.trajectories.reduce((acc, traj) => {
-          const yVals = testXs.map(x => traj.compute(x, true));
-          const min = Math.min(...yVals);
-          if (min < acc) {
-            return min;
-          } else {
-            return acc;
-          }
-        }, logFreqs[0])
+        if (this.trajectories.every(traj => traj.id === 12)) {
+          const fund = this.piece.raga.fundamental;
+          return Math.log2(fund) - 0.5;
+        } else {
+          const logFreqs = this.trajectories.map(traj => traj.logFreqs).flat();
+          const testXs = linSpace(0, 1, 25);
+          return this.trajectories.reduce((acc, traj) => {
+            const yVals = testXs.map(x => traj.compute(x, true));
+            const min = Math.min(...yVals);
+            if (min < acc) {
+              return min;
+            } else {
+              return acc;
+            }
+          }, logFreqs[0])
+        }
       }
-     
-      
-
-      
-
-
     },
 
     maxLogFreq() {
@@ -294,10 +303,13 @@ export default defineComponent({
   methods: {
 
     addTrajectory(traj: Trajectory) {
-      let totWidth = this.displayWidth * (1 - this.horizontalMargin);
+      let totWidth = this.displayWidth - 2 * this.horizontalMargin;
       totWidth -= this.innerMargin.left + this.innerMargin.right;
       const trajWidth = traj.durTot / this.durTot * totWidth;
-      const numDivs = Math.ceil(trajWidth * this.divsPerPxl);
+      let numDivs = Math.ceil(trajWidth * this.divsPerPxl);
+      if (numDivs < 4) {
+        numDivs = 4;
+      }
       const phrase = this.piece.phrases[traj.phraseIdx!];
       const phraseStart = phrase.startTime!;
       const startTime = phraseStart + traj.startTime!;
@@ -355,7 +367,22 @@ export default defineComponent({
           const tX = this.innerMargin.left + artX;
           const tY = this.innerMargin.top + artY;
           this.svg!.append('path')
-            .attr('d', d3.line()([[-10, 0], [0, 0], [0, 10]]))
+            .attr('d', d3.line()([[-10, 0], [0, 0], [0, -10]]))
+            .attr('stroke', 'black')
+            .attr('stroke-width', 1.5)
+            .attr('fill', 'none')
+            .attr('marker-end', 'url(#arrow)')
+            .attr('transform', `translate(${tX}, ${tY})`)
+        } else if (art.name === 'slide') { 
+          const artX = this.xScale!(artTime);
+          const artY = this.yScale!(traj.compute(Number(artKey) - 0.01, true));
+          const tX = this.innerMargin.left + artX;
+          const tY = this.innerMargin.top + artY;
+          const curY = this.yScale!(traj.compute(Number(artKey), true));
+          let line = [[0, -10], [0, 10]] as [number, number][];
+          if (curY < artY) line = [[0, 10], [0, -10]] as [number, number][];
+          this.svg!.append('path')
+            .attr('d', d3.line()(line))
             .attr('stroke', 'black')
             .attr('stroke-width', 1.5)
             .attr('fill', 'none')
@@ -507,19 +534,6 @@ export default defineComponent({
   padding: 0px;
   margin: 0px;
   overflow: none;
-  /* width: 100px; */
   height: 80px;
 }
-
-
-/* .svg {
-  padding: 0px;
-  margin: 0px;
-  border: 0px;
-  box-sizing: border-box;
-  overflow: none;
-  width: 100px;
-  height: 72px;
-} */
-
 </style>

@@ -564,6 +564,7 @@ class Trajectory {
   vEngTrans: string[];
   startTime: number | undefined;
   phraseIdx: number | undefined;
+  names: string[];
 
   get freqs() {
     return this.pitches.map(p => p.frequency)
@@ -624,6 +625,22 @@ class Trajectory {
     endConsonantEngTrans?: string,
     groupId?: string,
   } = {}) {
+    this.names = [
+      'Fixed',
+      'Bend: Simple',
+      'Bend: Sloped Start',
+      'Bend: Sloped End',
+      'Bend: Ladle',
+      'Bend: Reverse Ladle',
+      'Bend: Simple Multiple',
+      'Krintin',
+      'Krintin Slide',
+      'Krintin Slide Hammer',
+      'Dense Krintin Slide Hammer',
+      'Slide',
+      'Silent',
+      'Vibrato'
+    ];
     if (typeof(id) === 'number' && Number.isInteger(id)) {
       this.id = id
     } else {
@@ -732,6 +749,7 @@ class Trajectory {
     this.endConsonantIpa = endConsonantIpa;
     this.endConsonantEngTrans = endConsonantEngTrans;
     this.groupId = groupId;
+    
 
     if (this.startConsonant !== undefined) {
       this.articulations['0.00'] = new Articulation({
@@ -868,26 +886,16 @@ class Trajectory {
     return Math.max(...this.freqs)
   }
 
+  get endTime() {
+    if (this.startTime === undefined) return undefined
+    return this.startTime + this.durTot
+  }
+
 
   get name_() {
     // eventually this will replace regular `name`, just testing for now
-    const names = [
-      'Fixed',
-      'Bend: Simple',
-      'Bend: Sloped Start',
-      'Bend: Sloped End',
-      'Bend: Ladle',
-      'Bend: Reverse Ladle',
-      'Bend: Yoyo',
-      'Krintin',
-      'Krintin Slide',
-      'Krintin Slide Hammer',
-      'Spiffy Krintin Slide Hammer',
-      'Slide',
-      'Silent',
-      'Vibrato'
-    ];
-    return names[this.id]
+    
+    return this.names[this.id]
   }
 
   /**
@@ -1338,6 +1346,11 @@ class Trajectory {
       endConsonantEngTrans: this.endConsonantEngTrans,
       groupId: this.groupId
     }
+  }
+
+  static names() {
+    const traj = new Trajectory();
+    return traj.names
   }
   // skip id 11, same code as id 7, just different articulation
 }

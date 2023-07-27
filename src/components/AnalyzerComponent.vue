@@ -166,9 +166,17 @@
           </button>
         </div>   
       </div>
+      <QueryControls 
+        class='controls' 
+        v-if='piece && selectedATIdx === 2' 
+        @runQuery='runQuery'
+        :vocal='vocal'
+        :raga='piece.raga'
+        />
     </div>
     <div class='segmentDisplayHolder' v-if='piece && displayTrajs && selectedATIdx === 2'>
         <SegmentDisplay
+          :id='`segmentDisplay${idx}`'
           v-for='(trajectories, idx) in displayTrajs'
           :key='idx'
           class='segmentDisplay'
@@ -182,6 +190,7 @@
             }"
           :proportion='proportions[idx]'
           :logFreqOverride='logFreqOverride'
+          :vocal='vocal'
           />
     </div>
     <div class='graphContainer' v-if='selectedATIdx <= 1'>
@@ -224,6 +233,7 @@ import * as d3 from 'd3';
 import { defineComponent } from 'vue';
 
 import SegmentDisplay from '@/components/SegmentDisplay.vue';
+import QueryControls from '@/components/QueryControls.vue';
 
 import { Query, QueryType, MultipleOptionType } from '@/js/query.ts';
 
@@ -317,6 +327,7 @@ type PCountType = {
     segmentDisplayWidth: number,
     displayTrajs?: Trajectory[][],
     segmentDisplayWidths: number[],
+    minSegmentDisplayWidth: number,
     horizontalProportionalDisplay: boolean,
     verticalProportionalDisplay: boolean,
     durAvg: number,
@@ -371,6 +382,7 @@ type PCountType = {
         topSvg: undefined,
         segmentDisplayHeight: 400,
         segmentDisplayWidth: 500,
+        minSegmentDisplayWidth: 200,
         displayTrajs: undefined,
         segmentDisplayWidths: [],
         horizontalProportionalDisplay: true,
@@ -389,7 +401,8 @@ type PCountType = {
     },
 
     components: {
-      SegmentDisplay
+      SegmentDisplay,
+      QueryControls,
     },
 
     watch: {
@@ -431,7 +444,34 @@ type PCountType = {
       }
     },
 
+    computed: {
+
+      vocal() {
+        const inst = this.piece?.instrumentation[0];
+        if (inst == 'Vocal (M)' || inst == 'Vocal (F)') {
+          return true;
+        } else {
+          return false;
+        }
+      }
+    },
+
     methods: {
+
+
+
+      async runQuery(queries: QueryType[], options: MultipleOptionType) {
+        options.piece = this.piece;
+        this.displayTrajs = [];
+        try {
+          const res = await Query.multiple(queries, options);
+          this.displayTrajs = res[0];
+          this.setProportions();
+        } catch (err) {
+          console.log(err);
+        }
+
+      },
 
       updateChroma() {
         if (this.piece === undefined) {
@@ -1234,49 +1274,12 @@ type PCountType = {
           verticalOffset += offset;
           verticalOffset += 3;
         }) 
-      }
-    },
+      },
 
-    async mounted() {
-      const aboveHeight = this.controlsHeight + this.typeRowHeight + this.navHeight;
-      this.graphRowHeight = window.innerHeight - aboveHeight;
-      try {
-        const storedId = this.$store.state._id;
-        const pieceDoesExist = await pieceExists(storedId);
-        const id = pieceDoesExist ? storedId : '63445d13dc8b9023a09747a6';
-        this.$router.push({
-          name: 'AnalyzerComponent', 
-          query: { 'id': id },
-        })
-        this.piece = await instantiatePiece(id);
-        this.createGraph();
-        const low = this.piece.lowestPitchNumber;
-        const high = this.piece.highestPitchNumber;
-        const raga = this.piece.raga;
-        if (this.pitchChroma) {
-          this.targetPitchChoices = raga.getPitchNumbers(0, 11).reverse();
-          this.targetPitchIdx = this.targetPitchChoices.indexOf(0);
-        } else {
-          this.targetPitchChoices = raga.getPitchNumbers(low, high).reverse()
-          this.targetPitchIdx = this.targetPitchChoices.indexOf(0)
+      setProportions() {
+        if (this.displayTrajs === undefined) {
+          throw new Error('displayTrajs is undefined');
         }
-        const options: MultipleOptionType = { 
-          segmentation: 'phrase',
-          piece: this.piece,
-        };
-        const query1: QueryType = {
-          designator: 'includes',
-          category: 'endingConsonant',
-          consonant: 'ra'
-        };
-        // const query2: QueryType = {
-        //   designator: 'includes',
-        //   category: 'pitch',
-        //   pitch: new Pitch({ swara: 'ga', oct: 0 })
-        // }
-        const queries = [query1];
-        const res = await Query.multiple(queries, options)  ;
-        this.displayTrajs = res[0] as Trajectory[][];
         if (this.horizontalProportionalDisplay) {
           this.durAvg = this.displayTrajs
             .map(t => {
@@ -1297,7 +1300,12 @@ type PCountType = {
             const lastEnd = lastStart + t[t.length - 1].durTot!;
             const dur = lastEnd - initStart;
             this.proportions.push(dur / this.durAvg);
-            return this.segmentDisplayWidth * dur / this.durAvg;
+            const out = this.segmentDisplayWidth * dur / this.durAvg;
+            if (out < this.minSegmentDisplayWidth) {
+              return this.minSegmentDisplayWidth;
+            } else {
+              return out;
+            }
           })
         } else {
           this.segmentDisplayWidths = this.displayTrajs.map(_ => {
@@ -1345,6 +1353,50 @@ type PCountType = {
           }, 1000);
           this.logFreqOverride = { low: min, high: max }
         }
+      }
+    },
+
+    async mounted() {
+      const aboveHeight = this.controlsHeight + this.typeRowHeight + this.navHeight;
+      this.graphRowHeight = window.innerHeight - aboveHeight;
+      try {
+        const storedId = this.$store.state._id;
+        const pieceDoesExist = await pieceExists(storedId);
+        const id = pieceDoesExist ? storedId : '63445d13dc8b9023a09747a6';
+        this.$router.push({
+          name: 'AnalyzerComponent', 
+          query: { 'id': id },
+        })
+        this.piece = await instantiatePiece(id);
+        this.createGraph();
+        const low = this.piece.lowestPitchNumber;
+        const high = this.piece.highestPitchNumber;
+        const raga = this.piece.raga;
+        if (this.pitchChroma) {
+          this.targetPitchChoices = raga.getPitchNumbers(0, 11).reverse();
+          this.targetPitchIdx = this.targetPitchChoices.indexOf(0);
+        } else {
+          this.targetPitchChoices = raga.getPitchNumbers(low, high).reverse()
+          this.targetPitchIdx = this.targetPitchChoices.indexOf(0)
+        }
+        // const options: MultipleOptionType = { 
+        //   segmentation: 'phrase',
+        //   piece: this.piece,
+        // };
+        // const query1: QueryType = {
+        //   designator: 'includes',
+        //   category: 'endingConsonant',
+        //   consonant: 'ra'
+        // };
+        // // const query2: QueryType = {
+        // //   designator: 'includes',
+        // //   category: 'pitch',
+        // //   pitch: new Pitch({ swara: 'ga', oct: 0 })
+        // // }
+        // const queries = [query1];
+        // const res = await Query.multiple(queries, options)  ;
+        // this.displayTrajs = res[0] as Trajectory[][];
+        // this.setProportions();
         
       } catch (err) {
         console.log(err);
