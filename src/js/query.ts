@@ -20,7 +20,6 @@ type SegmentationType = (
   'connectedSequenceOfTrajectories'
 )
 
-
 type QueryType = {
   category: CategoryType,
   designator: DesignatorType,
@@ -29,6 +28,12 @@ type QueryType = {
   vowel?: string,
   consonant?: string,
 }
+
+type MultipleReturnType = [
+  Trajectory[][], 
+  (number | string | { phraseIdx: number, trajIdx: number })[]
+];
+
 
 class Query {
   trajectories: Trajectory[][] = [];
@@ -48,6 +53,7 @@ class Query {
   segmentation: SegmentationType;
   maxDur: number = 60;
   minDur: number = 0;
+  startTimes: number[];
 
   private constructor(piece: Piece, {
     segmentation = 'phrase',
@@ -124,7 +130,11 @@ class Query {
     }
     this.allTypeFilters();
     this.filterByDuration();
-    this.stringifiedIdentifier = this.identifier.map(id => JSON.stringify(id))
+    this.stringifiedIdentifier = this.identifier.map(id => JSON.stringify(id));
+    this.startTimes = this.trajectories.map(traj => {
+      const phrase = this.piece.phrases[traj[0].phraseIdx!];
+      return traj[0].startTime! + phrase.startTime!;
+    })
   }
 
   private phraseFilter() {
@@ -435,7 +445,6 @@ class Query {
     }
   }
 
-  
 
   public static async multiple(queries: QueryType[] = [], {
     transcriptionID = '63445d13dc8b9023a09747a6',
@@ -444,12 +453,13 @@ class Query {
     sequenceLength = undefined,
     minDur = 0,
     maxDur = 60,
-  }: MultipleOptionType = {}): Promise<[Trajectory[][], (number | string | { phraseIdx: number, trajIdx: number })[]]> {
+    every = true // if false, then any (in other words, all vs. any)
+  }: MultipleOptionType = {}): Promise<MultipleReturnType> {
     if (queries.length === 0) {
       throw new Error('No queries provided');
     }
     let outputTrajectories: Trajectory[][] = [];
-    let outputIdentifiers: (number | string | { phraseIdx: number, trajIdx: number })[] = [];
+    let outputIdentifiers: string[] = [];
     let nonStringifiedOutputIdentifiers: (number | string | { phraseIdx: number, trajIdx: number })[] = [];
     try {
       if (piece === undefined) {
@@ -472,17 +482,34 @@ class Query {
       const answers = queryObjs.map((queryObj: QueryType ) => {
         return new Query(piece!, queryObj)
       });
-      // console.log('answer: ', answers.map(a => a.identifier));
-      outputIdentifiers = answers.reduce((acc, answer) => {
-        const ids = answer.stringifiedIdentifier.filter(id => acc.includes(id));
-        return ids.length > 0 ? ids : [];
-      }, answers[0].stringifiedIdentifier);
-      const idxs = outputIdentifiers.map(id => {
-        return answers[0].stringifiedIdentifier.indexOf(id);
-      });
-      outputTrajectories = idxs.map(idx => answers[0].trajectories[idx]);
-      nonStringifiedOutputIdentifiers = idxs.map(idx => answers[0].identifier[idx]);
-      
+      if (every) { // only selects trajectories that are in all answers
+        outputIdentifiers = answers.reduce((acc, answer) => {
+          const ids = answer.stringifiedIdentifier.filter(id => acc.includes(id));
+          return ids.length > 0 ? ids : [];
+        }, answers[0].stringifiedIdentifier);
+        const idxs = outputIdentifiers.map(id => {
+          return answers[0].stringifiedIdentifier.indexOf(id);
+        });
+        outputTrajectories = idxs.map(idx => answers[0].trajectories[idx]);
+        nonStringifiedOutputIdentifiers = idxs.map(idx => answers[0].identifier[idx]);
+      } else { // selects trajectories that are in any answer
+        // const stringifiedIds = [] as string[];
+        const startTimes = [] as number[];
+        answers.forEach(answer => {
+          answer.stringifiedIdentifier.forEach((sID,  sIDidx) => {
+            if (!outputIdentifiers.includes(sID)) {
+              outputIdentifiers.push(sID);
+              outputTrajectories.push(answer.trajectories[sIDidx]);
+              nonStringifiedOutputIdentifiers.push(answer.identifier[sIDidx]);
+              startTimes.push(answer.startTimes[sIDidx]);
+            }
+          })
+        })
+        const sortIdxs = Array.from({length: startTimes.length}, (_, i) => i);
+        sortIdxs.sort((a, b) => startTimes[a] - startTimes[b]);
+        outputTrajectories = sortIdxs.map(idx => outputTrajectories[idx]);
+        nonStringifiedOutputIdentifiers = sortIdxs.map(idx => nonStringifiedOutputIdentifiers[idx]);
+      }   
     } catch (error) {
       console.log(error);
     }
@@ -497,6 +524,7 @@ type MultipleOptionType = {
   piece?: Piece,
   minDur?: number,
   maxDur?: number,
+  every?: boolean,
 }
 
 

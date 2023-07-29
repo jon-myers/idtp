@@ -36,9 +36,9 @@
           @keypress='preventDecimal'
           />
         <label class='everySome'>Every</label>
-        <input type='radio' value='all' v-model='allOrSome' />
+        <input type='radio' :value='true' v-model='all' />
         <label class='everySome'>Some</label>
-        <input type='radio' value='some' v-model='allOrSome' />
+        <input type='radio' :value='false' v-model='all' />
       </div>
       <div class='controlsRow dur'>
         <label>Min Dur: </label>
@@ -180,7 +180,7 @@ type QueryControlsDataType = {
   consonants: string[],
   possibleSegmentations: { value: SegmentationType, text: string }[],
   possibleDesignators: { value: DesignatorType, text: string }[],
-  allOrSome: 'all' | 'some',
+  all: boolean,
   sequenceLength: number,
   minDur: number,
   maxDur: number,
@@ -224,7 +224,7 @@ export default defineComponent({
         { value: 'startsWith', text: 'Starts With' },
         { value: 'endsWith', text: 'Ends With' }
       ],
-      allOrSome: 'all',
+      all: true,
       sequenceLength: 20,
       minDur: 0,
       maxDur: 60,
@@ -323,6 +323,7 @@ export default defineComponent({
         sequenceLength: this.sequenceLength,
         minDur: this.minDur,
         maxDur: this.maxDur,
+        every: this.all,
       }
     },
 
