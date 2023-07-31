@@ -1,7 +1,18 @@
 <template>
-  <div ref='graph'>
-
+  <div 
+    ref='graph' 
+    @contextmenu='handleContextClick'
+    @click='handleClick'
+    >
+  <ContextMenu 
+      ref='contextMenu' 
+      :x='contextMenuX'
+      :y='contextMenuY'
+      :closed='contextMenuClosed'
+      :choices='contextMenuChoices'
+      />
   </div>
+  
 
 </template>
 <script lang='ts'>
@@ -39,8 +50,14 @@ type SegmentDisplayDataType = {
   visiblePitches?: Pitch[],
   divsPerPxl: number,
   defs?: d3.Selection<SVGDefsElement, unknown, HTMLElement, any>,
-  phonemeRepresentation: 'IPA' | 'Devanagari' | 'English'
+  phonemeRepresentation: 'IPA' | 'Devanagari' | 'English',
+  contextMenuX: number,
+  contextMenuY: number,
+  contextMenuClosed: boolean,
+  contextMenuChoices: { text: string, action: (e) => void }[],
 };
+
+import ContextMenu from '@/components/ContextMenu.vue';
 
 export default defineComponent({
   name: 'SegmentDisplay',
@@ -73,7 +90,12 @@ export default defineComponent({
       visiblePitches: [],
       divsPerPxl: 1,
       defs: undefined,
-      phonemeRepresentation: 'English'
+      phonemeRepresentation: 'English',
+      contextMenuX: 0,
+      contextMenuY: 0,
+      contextMenuClosed: true,
+      contextMenuChoices: [
+      ],
     }
   },
 
@@ -86,9 +108,6 @@ export default defineComponent({
       .classed('svg', true)
       .attr('width', this.displayWidth - horizontalMargin + 'px')
       .attr('height', this.displayHeight - verticalMargin + 'px')
-      // .style('background-color', 'lightgrey')
-      // .style('border', '1px solid black')
-      // .style('box-sizing', 'border-box')
     
     this.svg
       .append('rect')
@@ -207,6 +226,13 @@ export default defineComponent({
       .attr('dominant-baseline', 'middle')
       .style('font-size', '20px')
       .text(this.queryAnswer.title);
+
+    window.addEventListener('keydown', this.handleKeydown);
+    
+  },
+  
+  unmounted() {
+    window.removeEventListener('keydown', this.handleKeydown);
   },
 
   props: {
@@ -246,6 +272,10 @@ export default defineComponent({
       type: Object as PropType<QueryAnswerType>,
       required: true
     }
+  },
+
+  components: {
+    ContextMenu
   },
 
   computed: {
@@ -341,6 +371,51 @@ export default defineComponent({
   },
 
   methods: {
+
+    handleKeydown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        this.contextMenuClosed = true;
+      }
+    },
+
+    handleClick(e: MouseEvent) {
+      this.contextMenuClosed = true;
+    },
+
+    handleContextClick(e: MouseEvent) {
+      e.preventDefault();
+      this.contextMenuX = e.clientX;
+      this.contextMenuY = e.clientY;
+      this.contextMenuClosed = false;
+      this.contextMenuChoices = [];
+      this.contextMenuChoices.push({
+        text: 'Open in Editor',
+        action: () => {
+          this.contextMenuClosed = true;
+          this.$router.push({
+            name: 'EditorComponent',
+            query: {
+              id: this.piece._id,
+              pIdx: this.trajectories[0].phraseIdx
+            }
+          })
+        }
+      });
+      this.contextMenuChoices.push({
+        text: 'Open in new tab',
+        action: () => {
+          this.contextMenuClosed = true;
+          const routeData = this.$router.resolve({
+            name: 'EditorComponent',
+            query: {
+              id: this.piece._id,
+              pIdx: this.trajectories[0].phraseIdx
+            }
+          });
+          window.open(routeData.href, '_blank');
+        }
+      })
+    },
 
     addTrajectory(traj: Trajectory) {
       const horizontalMargin = this.outerMargin.left + this.outerMargin.right;
@@ -576,5 +651,6 @@ export default defineComponent({
   margin: 0px;
   overflow: none;
   height: 80px;
+  width: v-bind(displayWidth + 'px')
 }
 </style>

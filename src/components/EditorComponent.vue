@@ -784,7 +784,11 @@ export default {
       }
     } catch (err) {
       console.error(err)
-    } 
+    }
+    console.log('about to reset zoom')
+    this.$nextTick(() => {
+      this.resetZoom();
+    })
   },
 
   unmounted() {

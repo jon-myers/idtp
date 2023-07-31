@@ -43,6 +43,7 @@ type QueryAnswerType = {
   startTime: number,
   endTime: number,
   duration: number,
+  segmentation: SegmentationType,
 }
 
 class Query {
@@ -190,6 +191,7 @@ class Query {
         duration,
         trajectories: trajs,
         identifier: this.identifier[tIdx],
+        segmentation: this.segmentation,
       }
     })
   }
