@@ -753,10 +753,14 @@ export default {
       this.vocal = tsp.vocal;
       await this.initializePiece();
       this.$refs.audioPlayer.parentLoaded();
-      if (this.$route.query.pIdx) {
-        this.moveToPhrase(this.$route.query.pIdx);
+      const q = this.$route.query;
+      if (q.pIdx) {
+        this.moveToPhrase(q.pIdx);
       } else {
-        this.$router.push({ query: { id: this.$route.query.id, pIdx: 0 } });
+        this.$router.push({ query: { id: q.id, pIdx: 0 } });
+      }
+      if (q.regionStart && q.regionEnd) {
+        this.setRegionToTimes(q.regionStart, q.regionEnd);
       }
       const silentDur = this.durTot - piece.durTot;
       if (silentDur >= 0.00001) {
@@ -933,6 +937,27 @@ export default {
       const phrase = this.piece.phrases[pIdx];
       const startTime = phrase.startTime;
       const endTime = startTime + phrase.durTot;
+      this.regionStartTime = startTime;
+      this.regionEndTime = endTime;
+      this.regionStartPx = this.xr()(startTime);
+      this.regionEndPx = this.xr()(endTime);
+      this.setUpRegion();
+      this.currentTime = startTime;
+        if (!this.$refs.audioPlayer.playing) {
+          this.$refs.audioPlayer.pausedAt = startTime;
+          this.$refs.audioPlayer.updateProgress();
+          this.$refs.audioPlayer.updateFormattedCurrentTime();
+          this.$refs.audioPlayer.updateFormattedTimeLeft();
+        } else {
+          this.$refs.audioPlayer.stop();
+          this.$refs.audioPlayer.pausedAt = startTime;
+          this.$refs.audioPlayer.play();
+        }
+        this.movePlayhead();
+        this.moveShadowPlayhead();
+    },
+
+    setRegionToTimes(startTime, endTime) {
       this.regionStartTime = startTime;
       this.regionEndTime = endTime;
       this.regionStartPx = this.xr()(startTime);

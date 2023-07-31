@@ -396,7 +396,9 @@ export default defineComponent({
             name: 'EditorComponent',
             query: {
               id: this.piece._id,
-              pIdx: this.trajectories[0].phraseIdx
+              pIdx: this.trajectories[0].phraseIdx,
+              regionStart: this.queryAnswer.startTime,
+              regionEnd: this.queryAnswer.endTime
             }
           })
         }
@@ -409,7 +411,9 @@ export default defineComponent({
             name: 'EditorComponent',
             query: {
               id: this.piece._id,
-              pIdx: this.trajectories[0].phraseIdx
+              pIdx: this.trajectories[0].phraseIdx,
+              regionStart: this.queryAnswer.startTime,
+              regionEnd: this.queryAnswer.endTime
             }
           });
           window.open(routeData.href, '_blank');
