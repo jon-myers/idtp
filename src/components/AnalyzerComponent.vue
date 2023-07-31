@@ -191,6 +191,7 @@
           :proportion='proportions[idx]'
           :logFreqOverride='logFreqOverride'
           :vocal='vocal'
+          :queryAnswer='queryAnswers[idx]'
           />
     </div>
     <div class='graphContainer' v-if='selectedATIdx <= 1'>
@@ -235,7 +236,12 @@ import { defineComponent } from 'vue';
 import SegmentDisplay from '@/components/SegmentDisplay.vue';
 import QueryControls from '@/components/QueryControls.vue';
 
-import { Query, QueryType, MultipleOptionType } from '@/js/query.ts';
+import { 
+  Query, 
+  QueryType, 
+  MultipleOptionType, 
+  QueryAnswerType 
+} from '@/js/query.ts';
 
 type PCountType = {
   [key: number]: { pattern: number[], count: number }[],
@@ -333,6 +339,7 @@ type PCountType = {
     durAvg: number,
     proportions: number[],
     logFreqOverride?: { low: number, high: number },
+    queryAnswers: QueryAnswerType[],
 
 
   }
@@ -390,6 +397,7 @@ type PCountType = {
         durAvg: 0,
         proportions: [],
         logFreqOverride: undefined,
+        queryAnswers: [],
       }
     },
 
@@ -466,6 +474,7 @@ type PCountType = {
         try {
           const res = await Query.multiple(queries, options);
           this.displayTrajs = res[0];
+          this.queryAnswers = res[2];
           this.setProportions();
         } catch (err) {
           console.log(err);

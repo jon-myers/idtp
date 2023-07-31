@@ -31,9 +31,19 @@ type QueryType = {
 
 type MultipleReturnType = [
   Trajectory[][], 
-  (number | string | { phraseIdx: number, trajIdx: number })[]
+  (number | string | { phraseIdx: number, trajIdx: number })[],
+  QueryAnswerType[],
 ];
 
+
+type QueryAnswerType = {
+  trajectories: Trajectory[],
+  identifier: (number | string | { phraseIdx: number, trajIdx: number }),
+  title: string,
+  startTime: number,
+  endTime: number,
+  duration: number,
+}
 
 class Query {
   trajectories: Trajectory[][] = [];
@@ -54,6 +64,7 @@ class Query {
   maxDur: number = 60;
   minDur: number = 0;
   startTimes: number[];
+  queryAnswers: QueryAnswerType[];
 
   private constructor(piece: Piece, {
     segmentation = 'phrase',
@@ -134,6 +145,52 @@ class Query {
     this.startTimes = this.trajectories.map(traj => {
       const phrase = this.piece.phrases[traj[0].phraseIdx!];
       return traj[0].startTime! + phrase.startTime!;
+    });
+    this.queryAnswers = this.trajectories.map((trajs, tIdx) => {
+      const startPhrase = this.piece.phrases[trajs[0].phraseIdx!];
+      const startTime = trajs[0].startTime! + startPhrase.startTime!;
+      const endPhrase = this.piece.phrases[trajs[trajs.length - 1].phraseIdx!];
+      const endTime = trajs[trajs.length - 1].endTime! + endPhrase.startTime!;
+      const duration = endTime - startTime;
+      let title: string = '';
+      if (this.segmentation === 'phrase') {
+        title = 'Phrase ' + startPhrase.pieceIdx
+      } else if (this.segmentation === 'group') {
+        const group = startPhrase.getGroupFromId(trajs[0].groupId!);
+        if (group === undefined) throw new Error('group is undefined');
+        const groupIdx = startPhrase.groupsGrid[0].indexOf(group);
+        title = `Phrase ${startPhrase.pieceIdx} Group ${groupIdx}`;
+      } else if (this.segmentation === 'sequenceOfTrajectories') {
+        const pIdxs = trajs.map(t => t.phraseIdx!);
+        const phraseIdxs = [...new Set(pIdxs)];
+        const firstTIdx = trajs[0].num;
+        const lastTIdx = trajs[trajs.length - 1].num;
+        if (phraseIdxs.length === 1) {
+          title = `Phrase ${phraseIdxs[0]} Traj ${firstTIdx}-${lastTIdx}`;
+        } else {
+          title = `Phrase ${phraseIdxs[0]} Traj ${firstTIdx} - Phrase ` + 
+            `${phraseIdxs[phraseIdxs.length - 1]} Traj ${lastTIdx} `
+        }
+      } else if (this.segmentation === 'connectedSequenceOfTrajectories') {
+        const pIdxs = trajs.map(t => t.phraseIdx!);
+        const phraseIdxs = [...new Set(pIdxs)];
+        const firstTIdx = trajs[0].num;
+        const lastTIdx = trajs[trajs.length - 1].num;
+        if (phraseIdxs.length === 1) {
+          title = `Phrase ${phraseIdxs[0]} Traj ${firstTIdx}-${lastTIdx}`;
+        } else {
+          title = `Phrase ${phraseIdxs[0]} Traj ${firstTIdx} - Phrase ` + 
+            `${phraseIdxs[phraseIdxs.length - 1]} Traj ${lastTIdx} `
+        }
+      }
+      return {
+        title,
+        startTime,
+        endTime,
+        duration,
+        trajectories: trajs,
+        identifier: this.identifier[tIdx],
+      }
     })
   }
 
@@ -341,6 +398,16 @@ class Query {
     return boolean;
   }
 
+  /**
+    * Differentiates a trajectory ID based on a given designator.
+    * 
+    * @param {number} trajID - The trajectory ID to differentiate.
+    * @param {string} designator - The designator to use for differentiation. 
+    *                              It can be 'includes', 'excludes', 'startsWith', or 'endsWith'.
+    * @param {Trajectory[]} trajectories - The array of trajectories to check against.
+    * 
+    * @returns {boolean} - Returns true if the trajectory ID matches the condition specified by the designator, false otherwise.
+    */
   private trajIDDifferentiate(trajID: number, designator: string, trajectories: Trajectory[]) {
     let boolean: boolean = false;
     if (designator === 'includes') {
@@ -460,6 +527,7 @@ class Query {
     }
     let outputTrajectories: Trajectory[][] = [];
     let outputIdentifiers: string[] = [];
+    let queryAnswers: QueryAnswerType[] = [];
     let nonStringifiedOutputIdentifiers: (number | string | { phraseIdx: number, trajIdx: number })[] = [];
     try {
       if (piece === undefined) {
@@ -492,8 +560,9 @@ class Query {
         });
         outputTrajectories = idxs.map(idx => answers[0].trajectories[idx]);
         nonStringifiedOutputIdentifiers = idxs.map(idx => answers[0].identifier[idx]);
+        queryAnswers = idxs.map(idx => answers[0].queryAnswers[idx]);
+
       } else { // selects trajectories that are in any answer
-        // const stringifiedIds = [] as string[];
         const startTimes = [] as number[];
         answers.forEach(answer => {
           answer.stringifiedIdentifier.forEach((sID,  sIDidx) => {
@@ -501,6 +570,7 @@ class Query {
               outputIdentifiers.push(sID);
               outputTrajectories.push(answer.trajectories[sIDidx]);
               nonStringifiedOutputIdentifiers.push(answer.identifier[sIDidx]);
+              queryAnswers.push(answer.queryAnswers[sIDidx]);
               startTimes.push(answer.startTimes[sIDidx]);
             }
           })
@@ -509,11 +579,12 @@ class Query {
         sortIdxs.sort((a, b) => startTimes[a] - startTimes[b]);
         outputTrajectories = sortIdxs.map(idx => outputTrajectories[idx]);
         nonStringifiedOutputIdentifiers = sortIdxs.map(idx => nonStringifiedOutputIdentifiers[idx]);
+        queryAnswers = sortIdxs.map(idx => queryAnswers[idx]);
       }   
     } catch (error) {
       console.log(error);
     }
-    return [outputTrajectories, nonStringifiedOutputIdentifiers];
+    return [outputTrajectories, nonStringifiedOutputIdentifiers, queryAnswers];
   }
 }
 
@@ -583,4 +654,5 @@ const query_3 = {
     SegmentationType,
     CategoryType,
     DesignatorType,
+    QueryAnswerType
   }

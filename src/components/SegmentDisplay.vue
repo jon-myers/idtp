@@ -8,6 +8,7 @@
 
 import { defineComponent, PropType } from 'vue';
 import { Trajectory, Piece, Phrase, Pitch, linSpace } from '@/js/classes.ts';
+import { QueryAnswerType } from '@/js/query.ts';
 
 import * as d3 from 'd3';
 
@@ -15,8 +16,15 @@ type SegmentDisplayDataType = {
   svg?: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>,
   verticalPadding: number,
   horizontalPadding: number,
-  verticalMargin: number,
-  horizontalMargin: number,
+  // verticalMargin: number,
+  // horizontalMargin: number,
+  titleMargin: number,
+  outerMargin: {
+    top: number,
+    bottom: number,
+    left: number,
+    right: number
+  }
   innerMargin: {
     top: number,
     bottom: number,
@@ -39,12 +47,19 @@ export default defineComponent({
 
   data(): SegmentDisplayDataType {
     return {
-      verticalMargin: 0.2,
-      horizontalMargin: 20,
+      // verticalMargin: 0.2,
+      titleMargin: 30,
+      outerMargin: {
+        top: 20,
+        bottom: 20,
+        left: 20,
+        right: 20
+      },
+      // horizontalMargin: 20,
       verticalPadding: 0.1,
       horizontalPadding: 0.1,
       innerMargin: {
-        top: 20,
+        top: 40,
         bottom: 0,
         left: 30,
         right: 0
@@ -63,19 +78,33 @@ export default defineComponent({
   },
 
   mounted() {
+    const horizontalMargin = this.outerMargin.left + this.outerMargin.right;
+    const verticalMargin = this.outerMargin.top + this.outerMargin.bottom;
+    this
     this.svg = d3.select(this.$refs.graph)
       .append('svg')
       .classed('svg', true)
-      .attr('width', this.displayWidth - 2 * this.horizontalMargin + 'px')
-      .attr('height', this.displayHeight * (1 - this.verticalMargin) + 'px')
-      .style('background-color', 'lightgrey')
-      .style('border', '1px solid black')
+      .attr('width', this.displayWidth - horizontalMargin + 'px')
+      .attr('height', this.displayHeight - verticalMargin + 'px')
+      // .style('background-color', 'lightgrey')
+      // .style('border', '1px solid black')
+      // .style('box-sizing', 'border-box')
+    
+    this.svg
+      .append('rect')
+      .attr('width', this.displayWidth - horizontalMargin + 'px')
+      .attr('height', this.displayHeight - verticalMargin - this.titleMargin + 'px')
+      .attr('x', 0)
+      .attr('y', this.titleMargin + 'px')
+      .style('fill', 'lightgrey')
+      .style('stroke', 'black')
+      .style('stroke-width', '1px')
       .style('box-sizing', 'border-box')
     this.addMarkers();
     
-    let totWidth = this.displayWidth  - 2 * this.horizontalMargin;
+    let totWidth = this.displayWidth  - horizontalMargin;
     totWidth -= this.innerMargin.left + this.innerMargin.right;
-    let totHeight = this.displayHeight * (1 - this.verticalMargin);
+    let totHeight = this.displayHeight - verticalMargin;
     totHeight -= this.innerMargin.top + this.innerMargin.bottom;
     this.visibleSargam = this.piece.raga.getFrequencies({
       low: 2 ** this.minLogFreq,
@@ -85,8 +114,6 @@ export default defineComponent({
       low: 2 ** this.minLogFreq,
       high: 2 ** this.maxLogFreq
     });
-
-
     const yTickTexts = this.visiblePitches.map(pitch => {
       return pitch.octavedSargamLetter
     });
@@ -95,9 +122,9 @@ export default defineComponent({
     // coloring the background of the graph blue, excluding the axes
     this.svg.append('rect')
       .attr('x', this.innerMargin.left)
-      .attr('y', this.innerMargin.top)
+      .attr('y', this.innerMargin.top + this.titleMargin + 'px')
       .attr('width', totWidth)
-      .attr('height', totHeight)
+      .attr('height', totHeight - this.titleMargin)
       .style('fill', 'lightblue')
 
     // adding the axes
@@ -126,17 +153,17 @@ export default defineComponent({
     this.xAxis.tickValues(xTickVals)
       .tickFormat((_, i) => xTickTexts[i]);
     this.svg.append('g')
-      .attr('transform', `translate(${this.innerMargin.left}, ${this.innerMargin.top})`)
+      .attr('transform', `translate(${this.innerMargin.left}, ${this.innerMargin.top + this.titleMargin})`)
       .call(this.xAxis)
       .style('color', 'black')
     this.yScale = d3.scaleLinear()
       .domain([this.minLogFreq, this.maxLogFreq])
-      .range([totHeight, 0]);
+      .range([totHeight - this.titleMargin, 0]);
     this.yAxis = d3.axisLeft(this.yScale)
       .tickValues(yTickVals)
       .tickFormat((_, i) => yTickTexts[i]);
     this.svg.append('g')
-      .attr('transform', `translate(${this.innerMargin.left}, ${this.innerMargin.top})`)
+      .attr('transform', `translate(${this.innerMargin.left}, ${this.innerMargin.top + this.titleMargin})`)
       .call(this.yAxis)
       .style('color', 'black')
 
@@ -146,7 +173,7 @@ export default defineComponent({
       return condition ? '1.5px' : '1px';
     });
     this.svg.append('g')
-      .attr('transform', `translate(${this.innerMargin.left}, ${this.innerMargin.top})`)
+      .attr('transform', `translate(${this.innerMargin.left}, ${this.innerMargin.top + this.titleMargin})`)
       .selectAll('line')
       .data(this.visibleSargam)
       .join('line')
@@ -171,6 +198,15 @@ export default defineComponent({
         this.addEndingConsonant(traj);
       })
     }
+
+    // add the title
+    this.svg.append('text')
+      .attr('x', this.innerMargin.left + totWidth / 2)
+      .attr('y', this.titleMargin / 2)
+      .attr('text-anchor', 'middle')
+      .attr('dominant-baseline', 'middle')
+      .style('font-size', '20px')
+      .text(this.queryAnswer.title);
   },
 
   props: {
@@ -206,6 +242,10 @@ export default defineComponent({
       type: Boolean,
       required: true
     },
+    queryAnswer: {
+      type: Object as PropType<QueryAnswerType>,
+      required: true
+    }
   },
 
   computed: {
@@ -303,7 +343,8 @@ export default defineComponent({
   methods: {
 
     addTrajectory(traj: Trajectory) {
-      let totWidth = this.displayWidth - 2 * this.horizontalMargin;
+      const horizontalMargin = this.outerMargin.left + this.outerMargin.right;
+      let totWidth = this.displayWidth - horizontalMargin;
       totWidth -= this.innerMargin.left + this.innerMargin.right;
       const trajWidth = traj.durTot / this.durTot * totWidth;
       let numDivs = Math.ceil(trajWidth * this.divsPerPxl);
@@ -332,7 +373,7 @@ export default defineComponent({
         .attr('fill', 'none')
         .attr('stroke', 'black')
         .attr('stroke-width', '1.5px')
-        .attr('transform', `translate(${this.innerMargin.left}, ${this.innerMargin.top})`)
+        .attr('transform', `translate(${this.innerMargin.left}, ${this.innerMargin.top + this.titleMargin})`)
 
       // add articulations
       const artKeys = Object.keys(traj.articulations);
@@ -344,7 +385,7 @@ export default defineComponent({
           const artY = this.yScale!(traj.compute(Number(artKey), true));
           const sym = d3.symbol().type(d3.symbolTriangle).size(20);
           const tX = this.innerMargin.left + artX;
-          const tY = this.innerMargin.top + artY;
+          const tY = this.innerMargin.top + this.titleMargin + artY;
           this.svg!.append('path')
             .attr('d', sym)
             .attr('fill', 'black')
@@ -353,7 +394,7 @@ export default defineComponent({
           const artX = this.xScale!(artTime);
           const artY = this.yScale!(traj.compute(Number(artKey) - 0.01, true));
           const tX = this.innerMargin.left + artX;
-          const tY = this.innerMargin.top + artY;
+          const tY = this.innerMargin.top + this.titleMargin + artY;
           this.svg!.append('path')
             .attr('d', d3.line()([[-10, 0], [0, 0], [0, 10]]))
             .attr('stroke', 'black')
@@ -365,7 +406,7 @@ export default defineComponent({
           const artX = this.xScale!(artTime);
           const artY = this.yScale!(traj.compute(Number(artKey) - 0.01, true));
           const tX = this.innerMargin.left + artX;
-          const tY = this.innerMargin.top + artY;
+          const tY = this.innerMargin.top + this.titleMargin + artY;
           this.svg!.append('path')
             .attr('d', d3.line()([[-10, 0], [0, 0], [0, -10]]))
             .attr('stroke', 'black')
@@ -377,7 +418,7 @@ export default defineComponent({
           const artX = this.xScale!(artTime);
           const artY = this.yScale!(traj.compute(Number(artKey) - 0.01, true));
           const tX = this.innerMargin.left + artX;
-          const tY = this.innerMargin.top + artY;
+          const tY = this.innerMargin.top + this.titleMargin + artY;
           const curY = this.yScale!(traj.compute(Number(artKey), true));
           let line = [[0, -10], [0, 10]] as [number, number][];
           if (curY < artY) line = [[0, 10], [0, -10]] as [number, number][];
@@ -392,7 +433,7 @@ export default defineComponent({
           const artX = this.xScale!(artTime);
           const artY = this.yScale!(traj.compute(Number(artKey), true));
           const tX = this.innerMargin.left + artX;
-          const tY = this.innerMargin.top + artY;
+          const tY = this.innerMargin.top + this.titleMargin + artY;
           this.svg!.append('path')
             .attr('d', d3.line()([[-2, -8], [0, -8], [0, 8], [-2, 8]]))
             .attr('stroke', 'black')
@@ -406,7 +447,7 @@ export default defineComponent({
           const artY = this.yScale!(traj.compute(Number(artKey), true));
           const sym = d3.symbol().type(d3.symbolDiamond).size(25);
           const tX = this.innerMargin.left + artX;
-          const tY = this.innerMargin.top + artY;
+          const tY = this.innerMargin.top + this.titleMargin + artY;
           this.svg!.append('path')
             .attr('d', sym)
             .attr('fill', 'black')
