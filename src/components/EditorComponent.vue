@@ -153,14 +153,15 @@ const structuredTime = dur => {
   }
 };
 const cumsum = sum => (sum = 0, n => sum += n);
-const linSpace = (startValue, stopValue, cardinality) => {
-  var arr = [];
-  var step = (stopValue - startValue) / (cardinality - 1);
-  for (var i = 0; i < cardinality; i++) {
-    arr.push(startValue + (step * i));
-  }
-  return arr;
-};
+
+// const linSpace = (startValue, stopValue, cardinality) => {
+//   var arr = [];
+//   var step = (stopValue - startValue) / (cardinality - 1);
+//   for (var i = 0; i < cardinality; i++) {
+//     arr.push(startValue + (step * i));
+//   }
+//   return arr;
+// };
 const leadingZeros = int => {
   if (int < 10) {
     return '0' + int
@@ -176,7 +177,8 @@ import {
   Articulation,
   Raga,
   Chikari,
-  Group
+  Group,
+  linSpace
 } from '@/js/classes.ts';
 
 import {
@@ -751,10 +753,14 @@ export default {
       this.vocal = tsp.vocal;
       await this.initializePiece();
       this.$refs.audioPlayer.parentLoaded();
-      if (this.$route.query.pIdx) {
-        this.moveToPhrase(this.$route.query.pIdx);
+      const q = this.$route.query;
+      if (q.pIdx) {
+        this.moveToPhrase(q.pIdx);
       } else {
-        this.$router.push({ query: { id: this.$route.query.id, pIdx: 0 } });
+        this.$router.push({ query: { id: q.id, pIdx: 0 } });
+      }
+      if (q.regionStart && q.regionEnd) {
+        this.setRegionToTimes(q.regionStart, q.regionEnd);
       }
       const silentDur = this.durTot - piece.durTot;
       if (silentDur >= 0.00001) {
@@ -782,7 +788,11 @@ export default {
       }
     } catch (err) {
       console.error(err)
-    } 
+    }
+    console.log('about to reset zoom')
+    this.$nextTick(() => {
+      this.resetZoom();
+    })
   },
 
   unmounted() {
@@ -947,6 +957,27 @@ export default {
         this.moveShadowPlayhead();
     },
 
+    setRegionToTimes(startTime, endTime) {
+      this.regionStartTime = startTime;
+      this.regionEndTime = endTime;
+      this.regionStartPx = this.xr()(startTime);
+      this.regionEndPx = this.xr()(endTime);
+      this.setUpRegion();
+      this.currentTime = startTime;
+        if (!this.$refs.audioPlayer.playing) {
+          this.$refs.audioPlayer.pausedAt = startTime;
+          this.$refs.audioPlayer.updateProgress();
+          this.$refs.audioPlayer.updateFormattedCurrentTime();
+          this.$refs.audioPlayer.updateFormattedTimeLeft();
+        } else {
+          this.$refs.audioPlayer.stop();
+          this.$refs.audioPlayer.pausedAt = startTime;
+          this.$refs.audioPlayer.play();
+        }
+        this.movePlayhead();
+        this.moveShadowPlayhead();
+    },
+
     toggleSpectrogram() {
       if (this.spectrogramOpacity === 0) {
         this.spectrogramOpacity = 1;
@@ -1004,6 +1035,13 @@ export default {
         this.resetZoom();
         this.redraw();
       }
+    },
+
+    findKrintin() {
+      const krintinTrajs = this.piece.allTrajectories().filter(traj => {
+        const artVals = Object.values(traj.articulations);
+        return artVals.some(art => art.name === 'hammer-on' || art.name === 'hammer-off');
+      })
     },
 
     cleanPhrases() {
@@ -5366,8 +5404,7 @@ export default {
         })
       });
       this.addChikaris();
-      this.addPlayhead();
-      
+      this.addPlayhead();   
     },
 
     trajContextMenuClick(e) {
@@ -6042,6 +6079,9 @@ export default {
       hammerOffData.forEach(obj => {
         const x = d => this.xr()(d.x);
         const y = d => this.yr()(d.y);
+        if (x(obj) === undefined) {
+          console.log(traj)
+        }
         g.append('path')
           .classed('articulation', true)
           .classed('hammer-off', true)

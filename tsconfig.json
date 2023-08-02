@@ -8,6 +8,8 @@
     "target": "esnext",
     "module": "esnext",
     "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
     "importHelpers": true,
     "isolatedModules": true,
     "noEmit": true,

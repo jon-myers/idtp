@@ -1,0 +1,546 @@
+[{
+  "_id": {
+    "$oid": "640247fef92e5e1c5f57bb5a"
+  },
+  "type": "vowel",
+  "ipa": "ə",
+  "iso_15919": "a",
+  "hindi": {
+    "initial": "अ",
+    "final": null
+  },
+  "urdu": {
+    "initial": "اَ",
+    "medial": "ـ◌َـ",
+    "final": "ـہ"
+  },
+  "english": "a&#818;bout",
+  "eng_trans": "a"
+},
+{
+  "_id": {
+    "$oid": "64024b75f92e5e1c5f57bb5b"
+  },
+  "type": "vowel",
+  "ipa": "aː",
+  "iso_15919": "ā",
+  "hindi": {
+    "initial": "आ",
+    "final": "ा"
+  },
+  "urdu": {
+    "initial": "آ",
+    "medial": "ـا",
+    "final": "ـا"
+  },
+  "english": "fa&#818;r",
+  "eng_trans": "ā"
+},
+{
+  "_id": {
+    "$oid": "64024cc4f92e5e1c5f57bb5d"
+  },
+  "type": "vowel",
+  "ipa": "ɪ",
+  "iso_15919": "i",
+  "hindi": {
+    "initial": "इ",
+    "final": "ि"
+  },
+  "urdu": {
+    "initial": "اِ",
+    "medial": "ـ◌ِ",
+    "final": "ـی"
+  },
+  "english": "sti&#818;ll",
+  "eng_trans": "i"
+},
+{
+  "_id": {
+    "$oid": "6402536ef92e5e1c5f57bb5e"
+  },
+  "type": "vowel",
+  "ipa": "iː",
+  "iso_15919": "ī",
+  "hindi": {
+    "initial": "ई",
+    "final": "ी"
+  },
+  "urdu": {
+    "initial": "اِیـ",
+    "final": "ـی"
+  },
+  "english": "fe&#818;e&#818;",
+  "eng_trans": "ī"
+},
+{
+  "_id": {
+    "$oid": "64025389f92e5e1c5f57bb5f"
+  },
+  "type": "vowel",
+  "ipa": "ʊ",
+  "iso_15919": "u",
+  "hindi": {
+    "initial": "उ",
+    "final": "ु"
+  },
+  "urdu": {
+    "initial": "اُ",
+    "final": "ـو"
+  },
+  "english": "bo&#818;o&#818;k",
+  "eng_trans": "u"
+},
+{
+  "_id": {
+    "$oid": "6402539ef92e5e1c5f57bb60"
+  },
+  "type": "vowel",
+  "ipa": "uː",
+  "iso_15919": "ū",
+  "hindi": {
+    "initial": "ऊ",
+    "final": "ू"
+  },
+  "urdu": {
+    "initial": "اُو",
+    "final": "◌ُـو"
+  },
+  "english": "mo&#818;o&#818;n",
+  "eng_trans": "ū"
+},
+{
+  "_id": {
+    "$oid": "640253b2f92e5e1c5f57bb61"
+  },
+  "type": "vowel",
+  "ipa": "eː",
+  "iso_15919": "ē",
+  "hindi": {
+    "initial": "ए",
+    "final": "े"
+  },
+  "urdu": {
+    "initial": "ایـ",
+    "final": "ـے"
+  },
+  "english": "ma&#818;te",
+  "eng_trans": "ē"
+},
+{
+  "_id": {
+    "$oid": "640253cff92e5e1c5f57bb62"
+  },
+  "type": "vowel",
+  "ipa": "ɛː",
+  "iso_15919": "ai",
+  "hindi": {
+    "initial": "ऐ",
+    "final": "ै"
+  },
+  "urdu": {
+    "initial": "اَیـ",
+    "final": "◌َـے"
+  },
+  "english": "fa&#818;i&#818;ry",
+  "eng_trans": "ai"
+},
+{
+  "_id": {
+    "$oid": "640253daf92e5e1c5f57bb63"
+  },
+  "type": "vowel",
+  "ipa": "oː",
+  "iso_15919": "ō",
+  "hindi": {
+    "initial": "ओ",
+    "final": "ो"
+  },
+  "urdu": {
+    "initial": "او",
+    "final": "ـو"
+  },
+  "english": "fo&#818;rce",
+  "eng_trans": "ō"
+},
+{
+  "_id": {
+    "$oid": "640253f6f92e5e1c5f57bb64"
+  },
+  "type": "vowel",
+  "ipa": "ɔː",
+  "iso_15919": "au",
+  "hindi": {
+    "initial": "औ",
+    "final": "ौ"
+  },
+  "urdu": {
+    "initial": "اَو",
+    "final": "◌َـو"
+  },
+  "english": "lo&#818;t",
+  "eng_trans": "au"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66c2"
+  },
+  "type": "consonant",
+  "ipa": "k",
+  "iso_15919": "ka",
+  "hindi": "क",
+  "example": "k&#818;ite",
+  "eng_trans": "k"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66c3"
+  },
+  "type": "consonant",
+  "ipa": "kʰ",
+  "iso_15919": "kha",
+  "hindi": "ख",
+  "example": "k&#818;h&#818;aki",
+  "eng_trans": "kh"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66c4"
+  },
+  "type": "consonant",
+  "ipa": "g",
+  "iso_15919": "ga",
+  "hindi": "ग",
+  "example": "g&#818;oat",
+  "eng_trans": "g"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66c5"
+  },
+  "type": "consonant",
+  "ipa": "gʱ",
+  "iso_15919": "gha",
+  "hindi": "घ",
+  "example": "g&#818;h&#818;ost",
+  "eng_trans": "gh"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66c6"
+  },
+  "type": "consonant",
+  "ipa": "ŋ",
+  "iso_15919": "ṅa",
+  "hindi": "ङ",
+  "example": "sin&#818;g&#818;",
+  "eng_trans": "ṅ"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66c7"
+  },
+  "type": "consonant",
+  "ipa": "c",
+  "iso_15919": "ca",
+  "hindi": "च",
+  "example": "c&#818;h&#818;urch",
+  "eng_trans": "c"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66c8"
+  },
+  "type": "consonant",
+  "ipa": "cʰ",
+  "iso_15919": "cha",
+  "hindi": "छ",
+  "example": "c&#818;h&#818;at",
+  "eng_trans": "ch"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66c9"
+  },
+  "type": "consonant",
+  "ipa": "ɟ",
+  "iso_15919": "ja",
+  "hindi": "ज",
+  "example": "j&#818;ump",
+  "eng_trans": "j"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66ca"
+  },
+  "type": "consonant",
+  "ipa": "ɟʱ",
+  "iso_15919": "jha",
+  "hindi": "झ",
+  "example": "j&#818;h&#818;atka",
+  "eng_trans": "jh"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66cb"
+  },
+  "type": "consonant",
+  "ipa": "ɲ",
+  "iso_15919": "ña",
+  "hindi": "ञ",
+  "example": "can&#818;y&#818;on",
+  "eng_trans": "ñ"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66cc"
+  },
+  "type": "consonant",
+  "ipa": "ʈ",
+  "iso_15919": "ṭa",
+  "hindi": "ट",
+  "example": "t&#818;op",
+  "eng_trans": "ṭ"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66cd"
+  },
+  "type": "consonant",
+  "ipa": "ʈʰ",
+  "iso_15919": "ṭha",
+  "hindi": "ठ",
+  "example": "t&#818;h&#818;at",
+  "eng_trans": "ṭh"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66ce"
+  },
+  "type": "consonant",
+  "ipa": "ɖ",
+  "iso_15919": "ḍa",
+  "hindi": "ड",
+  "example": "d&#818;og",
+  "eng_trans": "ḍ"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66cf"
+  },
+  "type": "consonant",
+  "ipa": "ɖʱ",
+  "iso_15919": "ḍha",
+  "hindi": "ढ",
+  "example": "d&#818;h&#818;arma",
+  "eng_trans": "ḍh"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66d0"
+  },
+  "type": "consonant",
+  "ipa": "n",
+  "iso_15919": "na",
+  "hindi": "न",
+  "example": "n&#818;o",
+  "eng_trans": "n"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66d1"
+  },
+  "type": "consonant",
+  "ipa": "t",
+  "iso_15919": "ta",
+  "hindi": "त",
+  "example": "t&#818;op",
+  "eng_trans": "t"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66d2"
+  },
+  "type": "consonant",
+  "ipa": "tʰ",
+  "iso_15919": "tha",
+  "hindi": "थ",
+  "example": "t&#818;h&#818;ump",
+  "eng_trans": "th"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66d3"
+  },
+  "type": "consonant",
+  "ipa": "d",
+  "iso_15919": "da",
+  "hindi": "द",
+  "example": "d&#818;og",
+  "eng_trans": "d"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66d4"
+  },
+  "type": "consonant",
+  "ipa": "dʱ",
+  "iso_15919": "dha",
+  "hindi": "ध",
+  "example": "d&#818;h&#818;arma",
+  "eng_trans": "dh"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66d5"
+  },
+  "type": "consonant",
+  "ipa": "n̪",
+  "iso_15919": "na",
+  "hindi": "न",
+  "example": "n&#818;o",
+  "eng_trans": "n"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66d6"
+  },
+  "type": "consonant",
+  "ipa": "p",
+  "iso_15919": "pa",
+  "hindi": "प",
+  "example": "p&#818;ot",
+  "eng_trans": "p"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66d7"
+  },
+  "type": "consonant",
+  "ipa": "pʰ",
+  "iso_15919": "pha",
+  "hindi": "फ़",
+  "example": "p&#818;otato",
+  "eng_trans": "ph"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66d8"
+  },
+  "type": "consonant",
+  "ipa": "b",
+  "iso_15919": "ba",
+  "hindi": "ब",
+  "example": "b&#818;oat",
+  "eng_trans": "b"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66d9"
+  },
+  "type": "consonant",
+  "ipa": "bʱ",
+  "iso_15919": "bha",
+  "hindi": "भ",
+  "example": "b&#818;h&#818;akti",
+  "eng_trans": "bh"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66da"
+  },
+  "type": "consonant",
+  "ipa": "m",
+  "iso_15919": "ma",
+  "hindi": "म",
+  "example": "m&#818;an",
+  "eng_trans": "m"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66db"
+  },
+  "type": "consonant",
+  "ipa": "j",
+  "iso_15919": "ya",
+  "hindi": "य",
+  "example": "y&#818;es",
+  "eng_trans": "y"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66dc"
+  },
+  "type": "consonant",
+  "ipa": "r",
+  "iso_15919": "ra",
+  "hindi": "र",
+  "example": "r&#818;ed",
+  "eng_trans": "r"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66dd"
+  },
+  "type": "consonant",
+  "ipa": "l",
+  "iso_15919": "la",
+  "hindi": "ल",
+  "example": "l&#818;et",
+  "eng_trans": "l"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66de"
+  },
+  "type": "consonant",
+  "ipa": "v",
+  "iso_15919": "va",
+  "hindi": "व",
+  "example": "v&#818;ictory",
+  "eng_trans": "v"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66df"
+  },
+  "type": "consonant",
+  "ipa": "ʃ",
+  "iso_15919": "śa",
+  "hindi": "श",
+  "example": "s&#818;h&#818;ip",
+  "eng_trans": "ś"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66e0"
+  },
+  "type": "consonant",
+  "ipa": "ʂ",
+  "iso_15919": "ṣa",
+  "hindi": "ष",
+  "example": "s&#818;h&#818;are",
+  "eng_trans": "ṣ"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66e1"
+  },
+  "type": "consonant",
+  "ipa": "s",
+  "iso_15919": "sa",
+  "hindi": "स",
+  "example": "s&#818;it",
+  "eng_trans": "s"
+},
+{
+  "_id": {
+    "$oid": "6403f67c93e0655812ba66e2"
+  },
+  "type": "consonant",
+  "ipa": "h",
+  "iso_15919": "ha",
+  "hindi": "ह",
+  "example": "h&#818;at",
+  "eng_trans": "h"
+}]

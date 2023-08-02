@@ -66,8 +66,39 @@ const pitchNumberToChroma = (pitchNumber: number) => {
   return chroma
 }
 
+/**
+ * Generates an array of evenly spaced values between startValue and stopValue.
+ * The number of values in the array is determined by cardinality.
+ *
+ * @param {number} startValue - The start value of the sequence.
+ * @param {number} stopValue - The end value of the sequence.
+ * @param {number} cardinality - The number of values to generate.
+ * @returns {number[]} An array of evenly spaced values.
+ */
+const linSpace = (startValue: number, stopValue: number, cardinality: number) => {
+  var arr = [];
+  var step = (stopValue - startValue) / (cardinality - 1);
+  for (var i = 0; i < cardinality; i++) {
+    arr.push(startValue + (step * i));
+  }
+  return arr;
+};
+
 type OutputType = 'pitchNumber' | 'chroma' | 'pitch' | 'pitchClass';
 
+/**
+ * Calculates the durations of fixed pitches in a set of trajectories.
+ *
+ * @param {Trajectory[]} trajs - An array of Trajectory objects.
+ * @param {Object} options - An object containing optional parameters.
+ * @param {number} options.inst - The instrument number. Default is 0.
+ * @param {OutputType} options.outputType - The type of output. Can be 'pitchNumber', 'chroma', 'pitch', or 'pitchClass'. Default is 'pitchNumber'.
+ * @param {'cumulative' | 'proportional'} options.countType - The type of count. Can be 'cumulative' or 'proportional'. Default is 'cumulative'.
+ *
+ * @returns {NumObj} An object where the keys are pitch numbers and the values are their corresponding durations.
+ *
+ * @throws {SyntaxError} If the durations of fixed pitches in a trajectory is not an object.
+ */
 const durationsOfFixedPitches = (trajs: Trajectory[], {
   inst = 0, 
   outputType = 'pitchNumber',
@@ -410,8 +441,12 @@ class Pitch {
   }
 }
 
+type ArtNameType = (
+  'pluck' | 'hammer-off' | 'hammer-on' | 'slide' | 'dampen' | 'consonant'
+)
+
 class Articulation {
-  name: string;
+  name: ArtNameType;
   stroke: string | undefined;
   hindi: string | undefined;
   ipa: string | undefined;
@@ -425,7 +460,7 @@ class Articulation {
     ipa = undefined,
     engTrans = undefined,
   }: {
-    name?: string,
+    name?: ArtNameType,
     stroke?: string,
     hindi?: string,
     ipa?: string,
@@ -529,6 +564,7 @@ class Trajectory {
   vEngTrans: string[];
   startTime: number | undefined;
   phraseIdx: number | undefined;
+  names: string[];
 
   get freqs() {
     return this.pitches.map(p => p.frequency)
@@ -589,6 +625,22 @@ class Trajectory {
     endConsonantEngTrans?: string,
     groupId?: string,
   } = {}) {
+    this.names = [
+      'Fixed',
+      'Bend: Simple',
+      'Bend: Sloped Start',
+      'Bend: Sloped End',
+      'Bend: Ladle',
+      'Bend: Reverse Ladle',
+      'Bend: Simple Multiple',
+      'Krintin',
+      'Krintin Slide',
+      'Krintin Slide Hammer',
+      'Dense Krintin Slide Hammer',
+      'Slide',
+      'Silent',
+      'Vibrato'
+    ];
     if (typeof(id) === 'number' && Number.isInteger(id)) {
       this.id = id
     } else {
@@ -697,6 +749,7 @@ class Trajectory {
     this.endConsonantIpa = endConsonantIpa;
     this.endConsonantEngTrans = endConsonantEngTrans;
     this.groupId = groupId;
+    
 
     if (this.startConsonant !== undefined) {
       this.articulations['0.00'] = new Articulation({
@@ -833,28 +886,26 @@ class Trajectory {
     return Math.max(...this.freqs)
   }
 
+  get endTime() {
+    if (this.startTime === undefined) return undefined
+    return this.startTime + this.durTot
+  }
+
 
   get name_() {
     // eventually this will replace regular `name`, just testing for now
-    const names = [
-      'Fixed',
-      'Bend: Simple',
-      'Bend: Sloped Start',
-      'Bend: Sloped End',
-      'Bend: Ladle',
-      'Bend: Reverse Ladle',
-      'Bend: Yoyo',
-      'Krintin',
-      'Krintin Slide',
-      'Krintin Slide Hammer',
-      'Spiffy Krintin Slide Hammer',
-      'Slide',
-      'Silent',
-      'Vibrato'
-    ];
-    return names[this.id]
+    
+    return this.names[this.id]
   }
 
+  /**
+    * Computes the value of a function identified by its id at a given point.
+    * 
+    * @param x - The point (on a scale from 0 to 1) at which the function is evaluated.
+    * @param logScale - A boolean indicating whether the result should be in logarithmic scale. Default is false.
+    * 
+    * @returns The value of the function at point x. If logScale is true, the result is in logarithmic scale.
+    */
   compute(x: number, logScale = false) {
     const value = this.ids[this.id](x);
     return logScale ? Math.log2(value) : value;
@@ -1296,6 +1347,11 @@ class Trajectory {
       groupId: this.groupId
     }
   }
+
+  static names() {
+    const traj = new Trajectory();
+    return traj.names
+  }
   // skip id 11, same code as id 7, just different articulation
 }
 
@@ -1356,6 +1412,25 @@ class Group {
   get maxFreq() {
     const out = Math.max(...this.trajectories.map(t => t.maxFreq));
     return out
+  }
+
+  allPitches(repetition: boolean = true) {
+    let allPitches: Pitch[] = [];
+    this.trajectories.forEach(traj => {
+      if (traj.id !== 12) {
+        allPitches.push(...traj.pitches)
+      }
+    });
+    if (!repetition) {
+      allPitches = allPitches.filter((pitch, i) => {
+        const c1 = i === 0;
+        const c2 = pitch.swara === allPitches[i-1]?.swara;
+        const c3 = pitch.oct === allPitches[i-1]?.oct;
+        const c4 = pitch.raised === allPitches[i-1]?.raised;
+        return c1 || !(c2 && c3 && c4)
+      })
+    }
+    return allPitches
   }
 
   testForAdjacency() {
@@ -1664,7 +1739,7 @@ class Phrase {
     return swara
   }
 
-  allPitches(repetition=true) {
+  allPitches(repetition: boolean = true) {
     let allPitches: Pitch[] = [];
     this.trajectories.forEach(traj => {
       if (traj.id !== 12) {
@@ -1960,6 +2035,15 @@ class Piece {
 
   get trajIdxs() {
     return this.possibleTrajs[this.instrumentation[0]]
+  }
+
+  allGroups({ instrumentIdx = 0 }: { instrumentIdx?: number } = {}) {
+    const allGroups: Group[] = [];
+    this.phrases.forEach(p => {
+      allGroups.push(...p.getGroups(instrumentIdx))
+    });
+    return allGroups
+
   }
 
   updateStartTimes() {
@@ -2527,6 +2611,7 @@ export {
   Group,
   durationsOfFixedPitches,
   pitchNumberToChroma,
+  linSpace
 }
 
 export type {
