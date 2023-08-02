@@ -7,6 +7,7 @@
           <option 
             v-for='segmentation in possibleSegmentations' 
             :value='segmentation.value'
+            :key='segmentation.value'
             >
             {{ segmentation.text }}
           </option>
@@ -51,7 +52,11 @@
       </div>
     </div>
     <div class='queriesContainer'>
-      <div class='controlsBox' v-for='(q, qIdx) in numQueries'>
+      <div 
+        class='controlsBox' 
+        v-for='(q, qIdx) in numQueries'
+        :key='qIdx'
+      >
         <div class='controlsRow title'>
           Query {{ q }}
         </div>  
@@ -61,6 +66,7 @@
             <option 
               v-for='category in possibleCategories' 
               :value='category.value'
+              :key='category.value'
               >
               {{ category.text }}
             </option>
@@ -73,15 +79,19 @@
             v-model='pitchNames[qIdx]' 
             >
             <option 
-              v-for='pitchName in raga.sargamNames.reverse()' 
+              v-for='pitchName in reversedSargamNames' 
               :value='pitchName'
+              :key='pitchName'
               >
               {{ pitchName }}
             </option>
           </select>
           <label>Octave: </label>
           <select name='octave' v-model='octs[qIdx]'>
-            <option v-for='oct in range(-2, 4, true)' :value='oct'>
+            <option 
+              v-for='oct in range(-2, 4, true)' 
+              :value='oct'
+              :key='oct'>
               {{ oct }}
             </option>
           </select>
@@ -190,6 +200,7 @@ type QueryControlsDataType = {
   Trajectory: typeof Trajectory,
   possibleVowels: string[],
   possibleConsonants: string[],
+  octRange: number[],
 
 
 }
@@ -236,7 +247,31 @@ export default defineComponent({
       possibleConsonants: phonemes.filter(p => {
         return p.type === 'consonant'
       }).map(p => p.iso_15919),
+      octRange: [-2, -1, 0, 1, 2, 3],
     }
+  },
+
+  created() {
+    // console.log('QueryControls created');
+    // console.log('possibleVowels', this.possibleVowels);
+    // console.log('possibleConsonants', this.possibleConsonants);
+    console.log('numQueries', this.numQueries);
+    // console.log('possibleSegmentations', this.possibleSegmentations);
+    // console.log('possibleDesignators', this.possibleDesignators);
+    // console.log('categories', this.categories);
+    // console.log('designators', this.designators);
+    // console.log('pitchNames', this.pitchNames);
+    // console.log('octs', this.octs);
+    // console.log('trajectoryIDs', this.trajectoryIDs);
+    // console.log('vowels', this.vowels);
+    // console.log('consonants', this.consonants);
+    // console.log('possibleCategories', this.possibleCategories);
+    // console.log('segmentation', this.segmentation)
+
+  },
+
+  mounted() {
+    console.log('QueryControls mounted')
   },
 
   props: {
@@ -254,6 +289,7 @@ export default defineComponent({
 
   watch: {
     numQueries(newVal, oldVal) {
+      console.log('numQueries changed from', oldVal, 'to', newVal)
       if (newVal > oldVal) {
         const catPreset = { value: 'pitch', text: 'Pitch' };
         const catAdd = Array(newVal - oldVal).fill(catPreset);
@@ -285,6 +321,10 @@ export default defineComponent({
   },
 
   computed: {
+
+    reversedSargamNames() {
+      return this.raga.sargamNames.slice().reverse()
+    },
 
     isConsonantCategory() {
       return this.categories.map(cat => {

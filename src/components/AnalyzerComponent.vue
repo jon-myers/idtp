@@ -169,7 +169,7 @@
       <QueryControls 
         class='controls' 
         v-if='piece && selectedATIdx === 2' 
-        @runQuery='runQuery'
+        @runQuery='handleRunQuery'
         :vocal='vocal'
         :raga='piece.raga'
         />
@@ -468,7 +468,7 @@ type PCountType = {
 
 
 
-      async runQuery(queries: QueryType[], options: MultipleOptionType) {
+      async handleRunQuery(queries: QueryType[], options: MultipleOptionType) {
         options.piece = this.piece;
         this.displayTrajs = [];
         try {
@@ -1366,9 +1366,11 @@ type PCountType = {
     },
 
     async mounted() {
+      console.log('mounting analyzer component')
       const aboveHeight = this.controlsHeight + this.typeRowHeight + this.navHeight;
       this.graphRowHeight = window.innerHeight - aboveHeight;
       try {
+        console.log('trying to get the piece')
         const storedId = this.$store.state._id;
         const pieceDoesExist = await pieceExists(storedId);
         const id = pieceDoesExist ? storedId : '63445d13dc8b9023a09747a6';
@@ -1410,6 +1412,11 @@ type PCountType = {
       } catch (err) {
         console.log(err);
       }
+      console.log('done mounting analyzer component')
+      console.log(this.piece)
+      console.log(this.selectedATIdx)
+      console.log(this.vocal)
+      console.log(this.piece.raga)
     }
   })
 </script>

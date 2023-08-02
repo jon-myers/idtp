@@ -3,7 +3,9 @@ import vue from '@vitejs/plugin-vue';
 import path from 'path';
 console.log(__dirname)
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [
+    vue(),
+  ],
   build: {
     sourcemap: true
   },
@@ -15,4 +17,5 @@ export default defineConfig({
   server: {
     port: 3000,
   },
+  // logLevel: 'warn'
 });
