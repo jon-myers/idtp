@@ -606,7 +606,7 @@ export default defineComponent({
         let xPos = this.xScale!(phraseStart + traj.startTime!) 
         xPos += this.innerMargin.left;
         let yPos = this.yScale!(traj.compute(0, true));
-        yPos += this.innerMargin.top - 10;
+        yPos += this.innerMargin.top + this.titleMargin - 10;
         this.svg?.append('text')
           .text(text!)
           // .attr('stroke', 'black')
@@ -625,7 +625,7 @@ export default defineComponent({
           const xTime = phrase.startTime! + traj.startTime! + traj.durTot;
           const yVal = traj.compute(1, true);
           const xPos = this.xScale!(xTime) + this.innerMargin.left;
-          const yPos = this.yScale!(yVal) + this.innerMargin.top;
+          const yPos = this.yScale!(yVal) + this.innerMargin.top + this.titleMargin;
           let text: string;
           if (this.phonemeRepresentation === 'IPA') {
             text = arts['1.00'].ipa!;
