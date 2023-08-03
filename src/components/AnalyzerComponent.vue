@@ -360,7 +360,7 @@ type PCountType = {
         condensed: false,
         heatmap: false,
         fadeTime: 5,
-        controlsHeight: 150,
+        controlsHeight: 180,
         typeRowHeight: 30,
         graphHeight: 1000,
         targetPitchChoices: [0],
@@ -1366,11 +1366,9 @@ type PCountType = {
     },
 
     async mounted() {
-      console.log('mounting analyzer component')
       const aboveHeight = this.controlsHeight + this.typeRowHeight + this.navHeight;
       this.graphRowHeight = window.innerHeight - aboveHeight;
       try {
-        console.log('trying to get the piece')
         const storedId = this.$store.state._id;
         const pieceDoesExist = await pieceExists(storedId);
         const id = pieceDoesExist ? storedId : '63445d13dc8b9023a09747a6';
@@ -1412,11 +1410,6 @@ type PCountType = {
       } catch (err) {
         console.log(err);
       }
-      console.log('done mounting analyzer component')
-      console.log(this.piece)
-      console.log(this.selectedATIdx)
-      console.log(this.vocal)
-      console.log(this.piece.raga)
     }
   })
 </script>
