@@ -9,7 +9,8 @@ type CategoryType = (
   'startingConsonant' |
   'endingConsonant' |
   'anyConsonant' |
-  'pitchSequenceStrict'
+  'pitchSequenceStrict' |
+  'pitchSequenceLoose'
 )
 
 type DesignatorType = 'includes' | 'excludes' | 'startsWith' | 'endsWith';
@@ -79,6 +80,28 @@ const findSequenceIndexes = (sequence: number[], longerSequence: number[]) => {
   }
   return indexes;
 }
+
+const testLooseSequenceIndexes = (sequence: number[], longerSequence: number[]) => {
+  let ct = 0;
+  let out = false;
+  let firstIdx: number | undefined = undefined;
+  let lastIdx: number | undefined = undefined;
+  for (let i = 0; i < longerSequence.length; i++) {
+    const el = longerSequence[i];
+    if (el === sequence[ct]) {
+      if (ct === 0) {
+        firstIdx = i;
+      }
+      ct++;
+    }
+    if (ct > sequence.length - 1) {
+      out = true;
+      lastIdx = i;
+      break;
+    }
+  }
+  return { truth: out, firstIdx: firstIdx, lastIdx: lastIdx };
+};
 
 
 
@@ -226,7 +249,11 @@ class Query {
         const trialArr = phrase.allPitches(this.repetition)
           .map(pitch => pitch.numberedPitch);
         return this.pitchSeqStrictDifferentiate(this.pitchSequence!, this.designator, trialArr);
-      }
+      } else if (this.category === 'pitchSequenceLoose') {
+        const trialArr = phrase.allPitches(this.repetition)
+          .map(pitch => pitch.numberedPitch);
+        return this.pitchSeqLooseDifferentiate(this.pitchSequence!, this.designator, trialArr);
+      } 
     });
     this.trajectories = filteredPhrases.map(phrase => phrase.trajectories);
     this.identifier = filteredPhrases.map(phrase => phrase.pieceIdx!);
@@ -263,6 +290,10 @@ class Query {
         const trialArr = group.allPitches(this.repetition)
           .map(pitch => pitch.numberedPitch);
         bool = this.pitchSeqStrictDifferentiate(this.pitchSequence!, this.designator, trialArr);
+      } else if (this.category === 'pitchSequenceLoose') {
+        const trialArr = group.allPitches(this.repetition)
+          .map(pitch => pitch.numberedPitch);
+        bool = this.pitchSeqLooseDifferentiate(this.pitchSequence!, this.designator, trialArr);
       }
       if (bool) {
         this.identifier.push(group.id);
@@ -373,6 +404,20 @@ class Query {
           });
         };
         boolean = this.pitchSeqStrictDifferentiate(this.pitchSequence!, this.designator, nPitches);
+      } else if (this.category === 'pitchSequenceLoose') {
+        const pitches = trajSeq.map(traj => traj.pitches).flat();
+        let nPitches = pitches.map(pitch => pitch.numberedPitch);
+        if (!this.repetition) {
+          let lastPitch: number | undefined = undefined;
+          nPitches = nPitches.filter(pitch => {
+            if (pitch === lastPitch) {
+              return false;
+            }
+            lastPitch = pitch;
+            return true;
+          });
+        }
+        boolean = this.pitchSeqLooseDifferentiate(this.pitchSequence!, this.designator, nPitches);
       }
       if (boolean) {
         this.trajectories.push(trajSeq);
@@ -436,6 +481,20 @@ class Query {
           });
         };
         boolean = this.pitchSeqStrictDifferentiate(this.pitchSequence!, this.designator, nPitches);
+      } else if (this.category === 'pitchSequenceLoose') {
+        let nPitches = trajSeq.map(traj => traj.pitches).flat()
+          .map(pitch => pitch.numberedPitch);
+        if (!this.repetition) {
+          let lastPitch: number | undefined = undefined;
+          nPitches = nPitches.filter(pitch => {
+            if (pitch === lastPitch) {
+              return false;
+            }
+            lastPitch = pitch;
+            return true;
+          });
+        }
+        boolean = this.pitchSeqLooseDifferentiate(this.pitchSequence!, this.designator, nPitches);
       }
       if (boolean) {
         this.trajectories.push(trajSeq);
@@ -497,6 +556,25 @@ class Query {
     } else if (designator === 'endsWith') {
       const startIdx = nPitches.length - numPitchSeq.length;
       boolean = numPitchSeq.every((pitch, idx) => pitch === nPitches[startIdx + idx]);
+    }
+    return boolean;
+  }
+
+  private pitchSeqLooseDifferentiate(pitchSeq: Pitch[], designator: string, nPitches: number[]) {
+    let boolean: boolean = false;
+    const numPitchSeq = pitchSeq.map(pitch => pitch.numberedPitch);
+    if (designator === 'includes') {
+      const looseObj = testLooseSequenceIndexes(numPitchSeq, nPitches);
+      boolean = looseObj.truth;
+    } else if (designator === 'exclues') {
+      const looseObj = testLooseSequenceIndexes(numPitchSeq, nPitches);
+      boolean = !looseObj.truth;
+    } else if (designator === 'startsWith') {
+      const looseObj = testLooseSequenceIndexes(numPitchSeq, nPitches);
+      boolean = looseObj.truth && looseObj.firstIdx === 0;
+    } else if (designator === 'endsWith') {
+      const looseObj = testLooseSequenceIndexes(numPitchSeq, nPitches);
+      boolean = looseObj.truth && looseObj.lastIdx === nPitches.length - 1;
     }
     return boolean;
   }
@@ -615,7 +693,6 @@ class Query {
     }
   }
 
-
   public static async multiple(queries: QueryType[] = [], {
     transcriptionID = '63445d13dc8b9023a09747a6',
     piece = undefined,
@@ -702,26 +779,6 @@ type MultipleOptionType = {
   every?: boolean,
 }
 
-
-// const transcriptionID = '645ff354deeaf2d1e33b3c44';// beghum akhtar - babul mora
-// Query.single({ 
-//   segmentation: 'connectedSequenceOfTrajectories', 
-//   category: 'anyConsonant', 
-//   designator: 'includes',
-//   transcriptionID,
-//   consonant: 'ra',
-//   vowel: 'a',
-//   pitch,
-//   trajectoryID: 1,
-//   sequenceLength: 23,
-// })
-//   .then(q => {
-//     if (q !== undefined) {
-//       console.log(q.trajectories.length)
-//       console.log(q.identifier)
-//     }
-//   });
-
 const query_1 = {
   designator: 'includes' as DesignatorType,
   category: 'pitch' as CategoryType,
@@ -740,15 +797,7 @@ const query_2 = {
   ],
 }
 
-// const query_3 = {
-//   designator: 'includes' as DesignatorType,
-//   category: 'pitch' as CategoryType,
-//   pitch: new Pitch({ swara: 'ga', oct: 0 }),
-// }
-
-
 Query.multiple([query_1, query_2], { 
-  // transcriptionID,
   segmentation: 'phrase',
 })
   .then(q => {

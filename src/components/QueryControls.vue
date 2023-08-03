@@ -98,7 +98,7 @@
         </div>
         <div 
           class='controlsRow' 
-          v-if='categories[qIdx].value === "pitchSequenceStrict"'
+          v-if='categories[qIdx].value.slice(0, 13) === "pitchSequence"'
           >
           <label>Number of Pitches: </label>
           <select 
@@ -118,7 +118,7 @@
         </div>
         <div 
           class='controlsRow'
-          v-if='categories[qIdx].value === "pitchSequenceStrict"'
+          v-if='categories[qIdx].value.slice(0, 13) === "pitchSequence"'
           >
           <label>Sequence: </label>
           <div 
@@ -390,7 +390,7 @@ export default defineComponent({
           query.pitch = this.pitches[i]
         } else if (category.value === 'vowel') {
           query.vowel = this.vowels[i]
-        } else if (category.value === 'pitchSequenceStrict') {
+        } else if (category.value.slice(0, 13) === 'pitchSequence') {
           query.pitchSequence = this.pitchSeqObjs[i].map(p => {
             return new Pitch({ swara: p.swara, oct: p.oct })
           })
@@ -414,7 +414,8 @@ export default defineComponent({
       if (this.vocal) {
         return [
           { value: 'pitch', text: 'Pitch' },
-          { value: 'pitchSequenceStrict', text: 'Strict Pitch Sequence'},
+          { value: 'pitchSequenceStrict', text: 'Strict Pitch Sequence' },
+          { value: 'pitchSequenceLoose', text: 'Loose Pitch Sequence' },
           { value: 'trajectoryID', text: 'Trajectory' },
           { value: 'vowel', text: 'Vowel' },
           { value: 'startingConsonant', text: 'Starting Consonant' },
@@ -425,6 +426,7 @@ export default defineComponent({
         return [
           { value: 'pitch', text: 'Pitch' },
           { value: 'pitchSequenceStrict', text: 'Strict Pitch Sequence'},
+          { value: 'pitchSequenceLoose', text: 'Loose Pitch Sequence' },
           { value: 'trajectoryID', text: 'Trajectory' },
         ]
       }
