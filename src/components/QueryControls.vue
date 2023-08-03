@@ -1,6 +1,6 @@
 <template>
   <div class='controlsOuter'>
-    <div class='controlsBox'>
+    <div class='controlsBox primary'>
       <div class='controlsRow'>
         <label for='segmentation'>Segmentation: </label>
         <select name='segmentation' v-model='segmentation'>
@@ -98,6 +98,61 @@
         </div>
         <div 
           class='controlsRow' 
+          v-if='categories[qIdx].value.slice(0, 13) === "pitchSequence"'
+          >
+          <label>Number of Pitches: </label>
+          <select 
+            name='numPitches' 
+            v-model='numPitches[qIdx]' 
+            @change='updateNumPitches(qIdx)'
+            >
+            <option 
+              v-for='numP in range(2, 7, true)' 
+              :value='numP'
+              :key='numP'
+              >
+              {{ numP }}
+            </option>
+          </select>
+
+        </div>
+        <div 
+          class='controlsRow'
+          v-if='categories[qIdx].value.slice(0, 13) === "pitchSequence"'
+          >
+          <label>Sequence: </label>
+          <div 
+            class='pitchOct' 
+            v-for='(_, seqIdx) in pitchSeqObjs[qIdx].length' 
+            :key='seqIdx'
+            >
+            <select 
+              name='pitch' 
+              v-model='pitchSeqObjs[qIdx][seqIdx].swara' 
+              >
+              <option 
+                v-for='pitchName in reversedSargamNames' 
+                :value='pitchName'
+                :key='pitchName'
+                >
+                {{ pitchName }}
+              </option>
+            </select>
+            <select name='octave' v-model='pitchSeqObjs[qIdx][seqIdx].oct'>
+              <option 
+                v-for='oct in range(-2, 4, true)' 
+                :value='oct'
+                :key='oct'>
+                {{ oct }}
+              </option>
+            </select>
+
+          </div>
+
+
+        </div>
+        <div 
+          class='controlsRow' 
           v-if='categories[qIdx].value === "trajectoryID"'
           >
           <label>Trajectory: </label>
@@ -180,10 +235,8 @@ import {
 type QueryControlsDataType = {
   segmentation: SegmentationType,
   numQueries: number,
-  // queries: QueryType[],
   categories: { value: CategoryType, text: string }[],
   designators: { value: DesignatorType, text: string }[],
-  // pitches: Pitch[],
   trajectoryIDs: number[],
   trajectoryNames: string[],
   vowels: string[],
@@ -194,15 +247,30 @@ type QueryControlsDataType = {
   sequenceLength: number,
   minDur: number,
   maxDur: number,
-  pitchNames: ('Sa' | 're' | 'Re' | 'ga' | 'Ga' | 'ma' | 'Ma' | 'Pa' | 'dha' | 
-    'Dha' | 'ni' | 'Ni')[],
+  pitchNames: PitchNameType[],
   octs: number[],
   Trajectory: typeof Trajectory,
   possibleVowels: string[],
   possibleConsonants: string[],
-  octRange: number[],
+  numPitches: number[],
+  pitchSeqObjs: PitchSeqObjType[][],
 
 
+}
+type PitchNameType = 'Sa' | 're' | 'Re' | 'ga' | 'Ga' | 'ma' | 'Ma' | 'Pa' | 'dha' | 
+  'Dha' | 'ni' | 'Ni';
+type ParamType = (
+  number | 
+  { value: (CategoryType | DesignatorType), text: string } | 
+  PitchNameType |
+  string |
+  PitchSeqObjType[] | 
+  PitchSeqObjType
+  );
+
+type PitchSeqObjType = {
+  swara: PitchNameType,
+  oct: number,
 }
 
 export default defineComponent({
@@ -247,31 +315,9 @@ export default defineComponent({
       possibleConsonants: phonemes.filter(p => {
         return p.type === 'consonant'
       }).map(p => p.iso_15919),
-      octRange: [-2, -1, 0, 1, 2, 3],
+      numPitches: [2],
+      pitchSeqObjs: [[{ swara: 'Sa', oct: 0 }, { swara: 'Sa', oct: 0 }]]
     }
-  },
-
-  created() {
-    // console.log('QueryControls created');
-    // console.log('possibleVowels', this.possibleVowels);
-    // console.log('possibleConsonants', this.possibleConsonants);
-    console.log('numQueries', this.numQueries);
-    // console.log('possibleSegmentations', this.possibleSegmentations);
-    // console.log('possibleDesignators', this.possibleDesignators);
-    // console.log('categories', this.categories);
-    // console.log('designators', this.designators);
-    // console.log('pitchNames', this.pitchNames);
-    // console.log('octs', this.octs);
-    // console.log('trajectoryIDs', this.trajectoryIDs);
-    // console.log('vowels', this.vowels);
-    // console.log('consonants', this.consonants);
-    // console.log('possibleCategories', this.possibleCategories);
-    // console.log('segmentation', this.segmentation)
-
-  },
-
-  mounted() {
-    console.log('QueryControls mounted')
   },
 
   props: {
@@ -291,31 +337,23 @@ export default defineComponent({
     numQueries(newVal, oldVal) {
       console.log('numQueries changed from', oldVal, 'to', newVal)
       if (newVal > oldVal) {
-        const catPreset = { value: 'pitch', text: 'Pitch' };
-        const catAdd = Array(newVal - oldVal).fill(catPreset);
-        this.categories.splice(oldVal, 0, ...catAdd);
-        const pitchNamePreset = 'Sa';
-        const pitchNameAdd = Array(newVal - oldVal).fill(pitchNamePreset);
-        this.pitchNames.splice(oldVal, 0, ...pitchNameAdd);
-        const octPreset = 0;
-        const octAdd = Array(newVal - oldVal).fill(octPreset);
-        this.octs.splice(oldVal, 0, ...octAdd);
-        const desPreset = { value: 'includes', text: 'Includes' };
-        const desAdd = Array(newVal - oldVal).fill(desPreset);
-        this.designators.splice(oldVal, 0, ...desAdd);
-        const trajNamePreset = 'Fixed';
-        const trajNameAdd = Array(newVal - oldVal).fill(trajNamePreset);
-        this.trajectoryNames.splice(oldVal, 0, ...trajNameAdd);
-        const trajIDPreset = 0;
-        const trajIDAdd = Array(newVal - oldVal).fill(trajIDPreset);
-        this.trajectoryIDs.splice(oldVal, 0, ...trajIDAdd);
-
+        this.growParam(this.categories, { value: 'pitch', text: 'Pitch' }, newVal, oldVal);
+        this.growParam(this.pitchNames, 'Sa', newVal, oldVal);
+        this.growParam(this.octs, 0, newVal, oldVal);
+        this.growParam(this.designators, { value: 'includes', text: 'Includes' }, newVal, oldVal);
+        this.growParam(this.trajectoryNames, 'Fixed', newVal, oldVal);
+        this.growParam(this.trajectoryIDs, 0, newVal, oldVal);
+        this.growParam(this.numPitches, 2, newVal, oldVal);
+        this.growParam(this.pitchSeqObjs, [{ swara: 'Sa', oct: 0 }, { swara: 'Sa', oct: 0 }], newVal, oldVal);
       } else {
         this.categories.splice(newVal, oldVal - newVal);
         this.pitchNames.splice(newVal, oldVal - newVal);
         this.octs.splice(newVal, oldVal - newVal);
         this.designators.splice(newVal, oldVal - newVal);
         this.trajectoryNames.splice(newVal, oldVal - newVal);
+        this.trajectoryIDs.splice(newVal, oldVal - newVal);
+        this.numPitches.splice(newVal, oldVal - newVal);
+        this.pitchSeqObjs.splice(newVal, oldVal - newVal);
       }
     }
   },
@@ -352,6 +390,10 @@ export default defineComponent({
           query.pitch = this.pitches[i]
         } else if (category.value === 'vowel') {
           query.vowel = this.vowels[i]
+        } else if (category.value.slice(0, 13) === 'pitchSequence') {
+          query.pitchSequence = this.pitchSeqObjs[i].map(p => {
+            return new Pitch({ swara: p.swara, oct: p.oct })
+          })
         }
         return query
       })
@@ -372,6 +414,8 @@ export default defineComponent({
       if (this.vocal) {
         return [
           { value: 'pitch', text: 'Pitch' },
+          { value: 'pitchSequenceStrict', text: 'Strict Pitch Sequence' },
+          { value: 'pitchSequenceLoose', text: 'Loose Pitch Sequence' },
           { value: 'trajectoryID', text: 'Trajectory' },
           { value: 'vowel', text: 'Vowel' },
           { value: 'startingConsonant', text: 'Starting Consonant' },
@@ -381,6 +425,8 @@ export default defineComponent({
       } else {
         return [
           { value: 'pitch', text: 'Pitch' },
+          { value: 'pitchSequenceStrict', text: 'Strict Pitch Sequence'},
+          { value: 'pitchSequenceLoose', text: 'Loose Pitch Sequence' },
           { value: 'trajectoryID', text: 'Trajectory' },
         ]
       }
@@ -394,6 +440,27 @@ export default defineComponent({
   },
 
   methods: {
+
+    updateNumPitches(qIdx: number) {
+      const n = this.numPitches[qIdx];
+      const oldLen = this.pitchSeqObjs[qIdx].length;
+      if (n > oldLen) {
+        this.growParam(this.pitchSeqObjs[qIdx], { swara: 'Sa', oct: 0 }, n, oldLen);
+      } else {
+        this.pitchSeqObjs[qIdx].splice(n, oldLen - n);
+      }
+    },
+    
+
+    growParam(param: ParamType[], preset: ParamType, newVal: number, oldVal: number) {
+      let add = [];
+      if (preset instanceof Object) {
+        add = Array.from({ length: newVal - oldVal }, () => ({ ...preset }));
+      } else {
+        add = Array(newVal - oldVal).fill(preset);
+      }
+      param.splice(oldVal, 0, ...add);
+    },
 
     runQuery() {
       this.$emit('runQuery', this.queries, this.options)
@@ -434,14 +501,19 @@ export default defineComponent({
 }
 
 .controlsBox {
-  width: 300px;
-  min-width: 300px;
+  width: 350px;
+  min-width: 350px;
   height: 100%;
   /* background-color: green; */
   box-sizing: border-box;
   border-right: 1px solid white;
   display: flex;
   flex-direction: column;
+}
+
+.primary {
+  width: 300px;
+  min-width: 300px
 }
 
 .controlsRow {
@@ -502,4 +574,19 @@ label {
   /* background-color: red; */
 }
 
+.pitchOct {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 50px;
+  max-width: 50px;
+}
+
+.pitchOct > select {
+  width: 40px;
+  min-width: 40px;
+  outline: none;
+  user-select: none;
+}
 </style>
