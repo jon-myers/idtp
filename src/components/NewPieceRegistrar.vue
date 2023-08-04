@@ -241,7 +241,8 @@ export default {
       });
       const parsed = JSON.parse(this.$route.query.afName);
       this.recording = allRecNames.indexOf(parsed);
-      this.raga = Object.keys(recs[this.recording].raags)[0]
+      this.raga = Object.keys(recs[this.recording].raags)[0];
+      this.instrumentation = this.getInstrumentation();
     }
     this.instruments = await getInstruments();
   },
@@ -353,11 +354,24 @@ export default {
         if (this.aeIdx !== undefined && this.recording !== undefined) {
           const ae = this.allEvents[this.aeIdx];
           newPieceInfo.audioID = ae.recordings[this.recording].audioFileId;
+          // newPieceInfo.instrumentation = this.getInstrumentation()
         }
         this.emitter.emit('newPieceInfo', newPieceInfo);
         this.$parent.designPieceModal = false
       }
       
+    },
+
+    getInstrumentation() {
+      const rec = this.allEvents[this.aeIdx].recordings[this.recording];
+      const musicians = Object.keys(rec.musicians);
+      const instrumentation = [];
+      musicians.forEach(m => {
+        if (rec.musicians[m].role === 'Soloist') {
+          instrumentation.push(rec.musicians[m].instrument)
+        }
+      })
+      return instrumentation
     },
   
     

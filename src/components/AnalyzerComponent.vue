@@ -166,46 +166,82 @@
           </button>
         </div>   
       </div>
-
+      <QueryControls 
+        class='controls' 
+        v-if='piece && selectedATIdx === 2' 
+        @runQuery='handleRunQuery'
+        :vocal='vocal'
+        :raga='piece.raga'
+        />
     </div>
-    <div class='graphContainer'>
+    <div class='segmentDisplayHolder' v-if='piece && displayTrajs && selectedATIdx === 2'>
+        <SegmentDisplay
+          :id='`segmentDisplay${idx}`'
+          v-for='(trajectories, idx) in displayTrajs'
+          :key='idx'
+          class='segmentDisplay'
+          :piece='piece'
+          :trajectories='trajectories'
+          :displayWidth='segmentDisplayWidths[idx]'
+          :displayHeight='segmentDisplayHeight'
+          :style="{ 
+            width: segmentDisplayWidths[idx] + 'px', 
+            minWidth: segmentDisplayWidths[idx] + 'px' 
+            }"
+          :proportion='proportions[idx]'
+          :logFreqOverride='logFreqOverride'
+          :vocal='vocal'
+          :queryAnswer='queryAnswers[idx]'
+          />
+    </div>
+    <div class='graphContainer' v-if='selectedATIdx <= 1'>
       <div class='graph' ref='graph'></div>
     </div>
   </div>
 </template>
 
 <script lang='ts'>
-  const linSpace = (
-    startValue: number, 
-    stopValue: number, 
-    cardinality: number
-  ) => {
-    var arr = [];
-    var step = (stopValue - startValue) / (cardinality - 1);
-    for (var i = 0; i < cardinality; i++) {
-      arr.push(startValue + (step * i));
-    }
-    return arr;
-  };
+const linSpace = (
+  startValue: number, 
+  stopValue: number, 
+  cardinality: number
+) => {
+  var arr = [];
+  var step = (stopValue - startValue) / (cardinality - 1);
+  for (var i = 0; i < cardinality; i++) {
+    arr.push(startValue + (step * i));
+  }
+  return arr;
+};
 
-  import { 
-    instantiatePiece, 
-    segmentByDuration, 
-    durationsOfPitchOnsets,
-    patternCounter,
-    chromaSeqToCondensedPitchNums
-  } from '@/js/analysis.ts';
-  import { 
-    durationsOfFixedPitches, 
-    Pitch, 
-    pitchNumberToChroma,
-    Trajectory,
-    Piece
-  } from '@/js/classes.ts';
-  import { pieceExists } from '@/js/serverCalls.ts';
-  import Gradient from 'javascript-color-gradient';
-  import * as d3 from 'd3';
+import { 
+  instantiatePiece, 
+  segmentByDuration, 
+  durationsOfPitchOnsets,
+  patternCounter,
+  chromaSeqToCondensedPitchNums
+} from '@/js/analysis.ts';
+import { 
+  durationsOfFixedPitches, 
+  Pitch, 
+  pitchNumberToChroma,
+  Trajectory,
+  Piece
+} from '@/js/classes.ts';
+import { pieceExists } from '@/js/serverCalls.ts';
+import Gradient from 'javascript-color-gradient';
+import * as d3 from 'd3';
 import { defineComponent } from 'vue';
+
+import SegmentDisplay from '@/components/SegmentDisplay.vue';
+import QueryControls from '@/components/QueryControls.vue';
+
+import { 
+  Query, 
+  QueryType, 
+  MultipleOptionType, 
+  QueryAnswerType 
+} from '@/js/query.ts';
 
 type PCountType = {
   [key: number]: { pattern: number[], count: number }[],
@@ -293,6 +329,18 @@ type PCountType = {
     graphRowHeight?: number,
     svg?: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>,
     topSvg?: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>,
+    segmentDisplayHeight: number,
+    segmentDisplayWidth: number,
+    displayTrajs?: Trajectory[][],
+    segmentDisplayWidths: number[],
+    minSegmentDisplayWidth: number,
+    horizontalProportionalDisplay: boolean,
+    verticalProportionalDisplay: boolean,
+    durAvg: number,
+    proportions: number[],
+    logFreqOverride?: { low: number, high: number },
+    queryAnswers: QueryAnswerType[],
+
 
   }
 
@@ -300,8 +348,8 @@ type PCountType = {
     data(): AnalyzerComponentDataType {
       return {
         piece: undefined,
-        analysisTypes: ['Pitch Prevalence', 'Pitch Patterns'],
-        selectedATIdx: 0,
+        analysisTypes: ['Pitch Prevalence', 'Pitch Patterns', 'Query Display'],
+        selectedATIdx: 2,
         pitchPrevalenceTypes: ['Section', 'Phrase', 'Duration'],
         patternCountTypes: ['Transcription', 'Section', 'Duration'],
         pitchRepresentationTypes: ['Fixed Pitch', 'Pitch Onsets'],
@@ -312,7 +360,7 @@ type PCountType = {
         condensed: false,
         heatmap: false,
         fadeTime: 5,
-        controlsHeight: 150,
+        controlsHeight: 180,
         typeRowHeight: 30,
         graphHeight: 1000,
         targetPitchChoices: [0],
@@ -339,6 +387,17 @@ type PCountType = {
         graphRowHeight: undefined,
         svg: undefined,
         topSvg: undefined,
+        segmentDisplayHeight: 400,
+        segmentDisplayWidth: 500,
+        minSegmentDisplayWidth: 200,
+        displayTrajs: undefined,
+        segmentDisplayWidths: [],
+        horizontalProportionalDisplay: true,
+        verticalProportionalDisplay: false,
+        durAvg: 0,
+        proportions: [],
+        logFreqOverride: undefined,
+        queryAnswers: [],
       }
     },
 
@@ -347,6 +406,11 @@ type PCountType = {
         type: Number,
         required: true
       }
+    },
+
+    components: {
+      SegmentDisplay,
+      QueryControls,
     },
 
     watch: {
@@ -388,7 +452,35 @@ type PCountType = {
       }
     },
 
+    computed: {
+
+      vocal() {
+        const inst = this.piece?.instrumentation[0];
+        if (inst == 'Vocal (M)' || inst == 'Vocal (F)') {
+          return true;
+        } else {
+          return false;
+        }
+      }
+    },
+
     methods: {
+
+
+
+      async handleRunQuery(queries: QueryType[], options: MultipleOptionType) {
+        options.piece = this.piece;
+        this.displayTrajs = [];
+        try {
+          const res = await Query.multiple(queries, options);
+          this.displayTrajs = res[0];
+          this.queryAnswers = res[2];
+          this.setProportions();
+        } catch (err) {
+          console.log(err);
+        }
+
+      },
 
       updateChroma() {
         if (this.piece === undefined) {
@@ -437,8 +529,9 @@ type PCountType = {
           this.topSvg = undefined;
           this.svg = undefined;
         }
-        this.createGraph();
-
+        if (this.selectedATIdx !== 2) {
+          this.createGraph()
+        }
       },
 
       addRect({
@@ -1142,23 +1235,16 @@ type PCountType = {
 
 
                 const x_ = ct * 20;
-                // const x_end = x_ + 20 * pCount.maxSize;
                 const xScale = d3.scaleLinear()
                   .domain([0, 1])
                   .range([x_ + 10, x_ + 20 * Number(size) - 10])
                 const y = (4 * aIdx + verticalOffset) * 20 + 30;
                 const yScale = d3.scaleLinear()
                   .domain([0, 1])
-                  .range([y + 40, y])
-                
-                
-                
+                  .range([y + 40, y])     
                 const line = d3.line()
                   .x((d, i) => xScale(pts[i]))
                   .y((d) => yScale(d))
-                  
-                
-                
                 if (min !== initMax) {
                   const nps = pitches.map(p => p.numberedPitch)
                   const minP = Math.min(...nps);
@@ -1194,16 +1280,89 @@ type PCountType = {
             ct += 3;
           })
           const offset = plot ? 3 * pCount.maxSize : pCount.maxSize;
-
           verticalOffset += offset;
           verticalOffset += 3;
-        })
-        
+        }) 
+      },
 
-
-        
+      setProportions() {
+        if (this.displayTrajs === undefined) {
+          throw new Error('displayTrajs is undefined');
+        }
+        if (this.horizontalProportionalDisplay) {
+          this.durAvg = this.displayTrajs
+            .map(t => {
+              const initP = this.piece!.phrases[t[0].phraseIdx!];
+              const initStart = initP.startTime! + t[0].startTime!;
+              const lastP = this.piece!.phrases[t[t.length - 1].phraseIdx!];
+              const lastStart = lastP.startTime! + t[t.length - 1].startTime!;
+              const lastEnd = lastStart + t[t.length - 1].durTot!;
+              return lastEnd - initStart;
+            })
+            .reduce((acc, v) => acc + v, 0)
+          this.durAvg /= this.displayTrajs.length;
+          this.segmentDisplayWidths = this.displayTrajs.map(t => {
+            const initP = this.piece!.phrases[t[0].phraseIdx!];
+            const initStart = initP.startTime! + t[0].startTime!;
+            const lastP = this.piece!.phrases[t[t.length - 1].phraseIdx!];
+            const lastStart = lastP.startTime! + t[t.length - 1].startTime!;
+            const lastEnd = lastStart + t[t.length - 1].durTot!;
+            const dur = lastEnd - initStart;
+            this.proportions.push(dur / this.durAvg);
+            const out = this.segmentDisplayWidth * dur / this.durAvg;
+            if (out < this.minSegmentDisplayWidth) {
+              return this.minSegmentDisplayWidth;
+            } else {
+              return out;
+            }
+          })
+        } else {
+          this.segmentDisplayWidths = this.displayTrajs.map(_ => {
+            return this.segmentDisplayWidth
+          });
+        }
+        if (this.verticalProportionalDisplay) {
+          const max = this.displayTrajs.map(trajs => {
+            const logFreqs = trajs.map(traj => traj.logFreqs).flat();
+            const testXs = linSpace(0, 1, 25);
+            return trajs.reduce((acc, traj) => {
+              const yVals = testXs.map(x => traj.compute(x, true));
+              const max = Math.max(...yVals);
+              if (max > acc) {
+                return max;
+              } else {
+                return acc;
+              }
+            }, logFreqs[0])
+          }).reduce((acc, v) => {
+            if (v > acc) {
+              return v;
+            } else {
+              return acc;
+            }
+          }, 0);
+          const min = this.displayTrajs.map(trajs => {
+            const logFreqs = trajs.map(traj => traj.logFreqs).flat();
+            const testXs = linSpace(0, 1, 25);
+            return trajs.reduce((acc, traj) => {
+              const yVals = testXs.map(x => traj.compute(x, true));
+              const min = Math.min(...yVals);
+              if (min < acc) {
+                return min;
+              } else {
+                return acc;
+              }
+            }, logFreqs[0])
+          }).reduce((acc, v) => {
+            if (v < acc) {
+              return v;
+            } else {
+              return acc;
+            }
+          }, 1000);
+          this.logFreqOverride = { low: min, high: max }
+        }
       }
-
     },
 
     async mounted() {
@@ -1228,7 +1387,26 @@ type PCountType = {
         } else {
           this.targetPitchChoices = raga.getPitchNumbers(low, high).reverse()
           this.targetPitchIdx = this.targetPitchChoices.indexOf(0)
-        }  
+        }
+        // const options: MultipleOptionType = { 
+        //   segmentation: 'phrase',
+        //   piece: this.piece,
+        // };
+        // const query1: QueryType = {
+        //   designator: 'includes',
+        //   category: 'endingConsonant',
+        //   consonant: 'ra'
+        // };
+        // // const query2: QueryType = {
+        // //   designator: 'includes',
+        // //   category: 'pitch',
+        // //   pitch: new Pitch({ swara: 'ga', oct: 0 })
+        // // }
+        // const queries = [query1];
+        // const res = await Query.multiple(queries, options)  ;
+        // this.displayTrajs = res[0] as Trajectory[][];
+        // this.setProportions();
+        
       } catch (err) {
         console.log(err);
       }
@@ -1436,5 +1614,31 @@ type PCountType = {
     width: 30px;
     min-width: 30px;
     max-width: 30px;
+  }
+
+  .segmentDisplay {
+    /* width: v-bind(segmentDisplayWidth + 'px'); */
+    /* min-width: v-bind(segmentDisplayWidth + 'px'); */
+    height: v-bind(segmentDisplayHeight + 'px');
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border-right: 1px dotted black;
+
+    /* white-space: nowrap; */
+    /* overflow: none; */
+  }
+
+  .segmentDisplayHolder {
+    width: 100vw;
+    height: v-bind(segmentDisplayHeight + 'px');
+    background-color: white;
+    display: flex;
+    flex-direction: row;
+    overflow-x: scroll;
+    /* justify-content: center; */
+    /* align-items: center; */
   }
 </style>

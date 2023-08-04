@@ -146,7 +146,7 @@ const instantiatePiece = async (queryId = testQueryId)=> {
     }
     if (phrase.groupsGrid !== undefined) {
       phrase.groupsGrid.forEach(groups => {
-        groups.forEach((group)=> {
+        groups.forEach((group, gIdx) => {
           group.trajectories.forEach((traj, idx) => {
             if (traj.num === undefined) {
               throw new Error('traj.num is undefined');
@@ -155,6 +155,7 @@ const instantiatePiece = async (queryId = testQueryId)=> {
             const realTraj = phrase.trajectoryGrid[0][tIdx];
             group.trajectories[idx] = realTraj;
           })
+          groups[gIdx] = new Group(group);
         })
       })
     }

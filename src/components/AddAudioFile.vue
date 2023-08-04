@@ -652,9 +652,11 @@ export default {
         const gharana = this.gharana[i] === null ?
                         this.newAddedGharanas[i] :
                         this.gharana[i] ;
+        console.log(this.gharana[i])
+        console.log(key, inst, gharana, this.selectedRoles[i])
         if (key === undefined ||
             inst === undefined ||
-            gharana === undefined ||
+            // gharana === undefined ||
             this.selectedRoles[i] === undefined) {
           throw new Error('Musician name is undefined!')
         }
@@ -664,11 +666,11 @@ export default {
           gharana: gharana
         }
       }
-      if (this.selectedYear === undefined ||
-          this.selectedMonth === undefined ||
-          this.selectedDay === undefined) {
-        throw new Error('Date is undefined!')
-      }
+      // if (this.selectedYear === undefined ||
+      //     this.selectedMonth === undefined ||
+      //     this.selectedDay === undefined) {
+      //   throw new Error('Date is undefined!')
+      // }
       recObj.date = {
         year: this.selectedYear,
         month: this.selectedMonth,
@@ -680,11 +682,11 @@ export default {
       const selectedCity = this.selectedCity === 'Other (specify)' ?
                            this.newAddedCity :
                            this.selectedCity ;
-      if (this.selectedContinent === undefined ||
-          selectedCountry === undefined ||
-          selectedCity === undefined) {
-        throw new Error('Location is undefined!')
-      }
+      // if (this.selectedContinent === undefined ||
+      //     selectedCountry === undefined ||
+      //     selectedCity === undefined) {
+      //   throw new Error('Location is undefined!')
+      // }
       recObj.location = {
         continent: this.selectedContinent,
         country: selectedCountry,

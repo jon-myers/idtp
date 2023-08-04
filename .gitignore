@@ -36,3 +36,4 @@ credentials
 /dist_electron
 
 .envrc
+docs
