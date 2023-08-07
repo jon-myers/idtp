@@ -6202,24 +6202,28 @@ export default defineComponent({
       }
     },
 
-    addKrintin(traj, phraseStart, g) {
+    addKrintin(
+        traj: Trajectory, 
+        phraseStart: number, 
+        g: d3.Selection<SVGGElement, any, any, any>
+        ) {
       // hammer-offs
       const keys = Object.keys(traj.articulations);
       const hammerOffKeys = keys.filter(key => {
         return traj.articulations[key].name === 'hammer-off'
       });
       const hammerOffData = hammerOffKeys.map((p, i) => {
-        const normedX = (p) * traj.durTot;
-        const y = traj.compute(p - 0.01, true);
+        const normedX = Number(p) * traj.durTot;
+        const y = traj.compute(Number(p) - 0.01, true);
         return {
-          x: phraseStart + traj.startTime + Number(normedX),
+          x: phraseStart + traj.startTime! + Number(normedX),
           y: y,
           i: i
         }
       });
       hammerOffData.forEach(obj => {
-        const x = d => this.xr()(d.x);
-        const y = d => this.yr()(d.y);
+        const x = (d: DrawDataType) => this.xr()(d.x);
+        const y = (d: DrawDataType) => this.yr()(d.y);
         if (x(obj) === undefined) {
           console.log(traj)
         }
@@ -6246,14 +6250,14 @@ export default defineComponent({
         const normedX = Number(p) * traj.durTot;
         const y = traj.compute(Number(p) - 0.01, true);
         return {
-          x: phraseStart + traj.startTime + Number(normedX),
+          x: phraseStart + traj.startTime! + Number(normedX),
           y: y,
           i: i
         }
       });
       hammerOnData.forEach(obj => {
-        const x = d => this.xr()(d.x);
-        const y = d => this.yr()(d.y);
+        const x = (d: DrawDataType) => this.xr()(d.x);
+        const y = (d: DrawDataType) => this.yr()(d.y);
         g.append('path')
           .classed('articulation', true)
           .classed('hammer-on', true)
@@ -6270,23 +6274,27 @@ export default defineComponent({
       })
     },
 
-    codifiedAddKrintin(traj, phraseStart, g) {
+    codifiedAddKrintin(
+        traj: Trajectory, 
+        phraseStart: number, 
+        g: d3.Selection<SVGGElement, any, any, any>
+        ) {
       // hammer-offs
       const keys = Object.keys(traj.articulations);
       const hammerOffKeys = keys.filter(key => {
         return traj.articulations[key].name === 'hammer-off'
       });
       const hammerOffData = hammerOffKeys.map((p, i) => {
-        const normedX = (p) * traj.durTot;
-        const y = traj.compute(p - 0.01, true);
+        const normedX = Number(p) * traj.durTot;
+        const y = traj.compute(Number(p) - 0.01, true);
         return {
-          x: phraseStart + traj.startTime + Number(normedX),
+          x: phraseStart + traj.startTime! + Number(normedX),
           y: y,
           i: i
         }
       });
-      const x = d => this.codifiedXR(d.x);
-      const y = d => this.codifiedYR(d.y);
+      const x = (d: DrawDataType) => this.codifiedXR!(d.x);
+      const y = (d: DrawDataType) => this.codifiedYR!(d.y);
       hammerOffData.forEach(obj => {
         g.append('path')
           .classed('articulation', true)
@@ -6311,7 +6319,7 @@ export default defineComponent({
         const normedX = Number(p) * traj.durTot;
         const y = traj.compute(Number(p) - 0.01, true);
         return {
-          x: phraseStart + traj.startTime + Number(normedX),
+          x: phraseStart + traj.startTime! + Number(normedX),
           y: y,
           i: i
         }
@@ -6333,7 +6341,7 @@ export default defineComponent({
       })
     },
 
-    moveKrintin(traj, phraseStart) {
+    moveKrintin(traj: Trajectory, phraseStart: number) {
       // hammer-offs
       const keys = Object.keys(traj.articulations);
       const hammerOffKeys = keys.filter(key => {
@@ -6343,13 +6351,13 @@ export default defineComponent({
         const normedX = Number(p) * traj.durTot;
         const y = traj.compute(Number(p) - 0.01, true);
         return {
-          x: phraseStart + traj.startTime + Number(normedX),
+          x: phraseStart + traj.startTime! + Number(normedX),
           y: y,
           i: i
         }
       });
-      const x = d => this.codifiedXR(d.x);
-      const y = d => this.codifiedYR(d.y);
+      const x = (d: DrawDataType) => this.codifiedXR!(d.x);
+      const y = (d: DrawDataType) => this.codifiedYR!(d.y);
       hammerOffData.forEach(obj => {
         d3Select(`#hammeroffp${traj.phraseIdx}t${traj.num}i${obj.i}`)
           .attr('transform', `translate(${x(obj)},${y(obj)})`)
@@ -6359,10 +6367,10 @@ export default defineComponent({
         return traj.articulations[key].name === 'hammer-on'
       });
       const hammerOnData = hammerOnKeys.map((p, i) => {
-        const normedX = (p) * traj.durTot;
-        const y = traj.compute(p - 0.01, true);
+        const normedX = Number(p) * traj.durTot;
+        const y = traj.compute(Number(p) - 0.01, true);
         return {
-          x: phraseStart + traj.startTime + Number(normedX),
+          x: phraseStart + traj.startTime! + Number(normedX),
           y: y,
           i: i
         }
@@ -6374,12 +6382,12 @@ export default defineComponent({
       })
     },
 
-    makeTrajData(traj, phraseStart) {
-      const startTime = traj.startTime + phraseStart;
+    makeTrajData(traj: Trajectory, phraseStart: number) {
+      const startTime = traj.startTime! + phraseStart;
       const endTime = startTime + traj.durTot;
       const timePts = Math.round((endTime - startTime) / this.minDrawDur);
       const drawTimes = linSpace(startTime, endTime, timePts);
-      const mp = t => (t - startTime) / (endTime - startTime);
+      const mp = (t: number) => (t - startTime) / (endTime - startTime);
       const trajDrawXs = drawTimes.map(mp);
       const trajDrawYs = trajDrawXs.map(x => traj.compute(x))
       return trajDrawYs.map((y, i) => {
@@ -6390,24 +6398,28 @@ export default defineComponent({
       });
     },
 
-    addSlide(traj, phraseStart, g) {
+    addSlide(
+      traj: Trajectory, 
+      phraseStart: number, 
+      g: d3.Selection<SVGGElement, any, any, any>
+    ) {
       const keys = Object.keys(traj.articulations);
       const relKeys = keys.filter(key => {
         return traj.articulations[key].name === 'slide'
       });
       const data = relKeys.map((p, i) => {
-        const normedX = (p) * traj.durTot;
-        const y = traj.compute(p - 0.01, true);
-        const dirUp = y < traj.compute(p, true);
+        const normedX = Number(p) * traj.durTot;
+        const y = traj.compute(Number(p) - 0.01, true);
+        const dirUp = y < traj.compute(Number(p), true);
         return {
-          x: phraseStart + traj.startTime + Number(normedX),
+          x: phraseStart + traj.startTime! + Number(normedX),
           y: y,
           dirUp: dirUp,
           i: i
         }
       });
-      const x = d => this.xr()(d.x);
-      const y = d => this.yr()(d.y);
+      const x = (d: DrawDataType) => this.xr()(d.x);
+      const y = (d: DrawDataType) => this.yr()(d.y);
       data.forEach(obj => {
         const yMotion = obj.dirUp ? [10, -10] : [-10, 10];
         g.append('path')
@@ -6427,24 +6439,28 @@ export default defineComponent({
       })
     },
 
-    codifiedAddSlide(traj, phraseStart, g) {
+    codifiedAddSlide(
+        traj: Trajectory, 
+        phraseStart: number, 
+        g: d3.Selection<SVGGElement, any, any, any>
+        ) {
       const keys = Object.keys(traj.articulations);
       const relKeys = keys.filter(key => {
         return traj.articulations[key].name === 'slide'
       });
       const data = relKeys.map((p, i) => {
-        const normedX = (p) * traj.durTot;
-        const y = traj.compute(p - 0.01, true);
-        const dirUp = y < traj.compute(p, true);
+        const normedX = Number(p) * traj.durTot;
+        const y = traj.compute(Number(p) - 0.01, true);
+        const dirUp = y < traj.compute(Number(p), true);
         return {
-          x: phraseStart + traj.startTime + Number(normedX),
+          x: phraseStart + traj.startTime! + Number(normedX),
           y: y,
           dirUp: dirUp,
           i: i
         }
       });
-      const x = d => this.codifiedXR(d.x);
-      const y = d => this.codifiedYR(d.y);
+      const x = (d: DrawDataType) => this.codifiedXR!(d.x);
+      const y = (d: DrawDataType) => this.codifiedYR!(d.y);
       data.forEach(obj => {
         const yMotion = obj.dirUp ? [10, -10] : [-10, 10];
         g.append('path')
@@ -6463,24 +6479,24 @@ export default defineComponent({
       })
     },
 
-    moveSlides(traj, phraseStart) {
+    moveSlides(traj: Trajectory, phraseStart: number) {
       const keys = Object.keys(traj.articulations);
       const relKeys = keys.filter(key => {
         return traj.articulations[key].name === 'slide'
       });
       const data = relKeys.map((p, i) => {
-        const normedX = (p) * traj.durTot;
-        const y = traj.compute(p - 0.01, true);
-        const dirUp = y < traj.compute(p, true);
+        const normedX = Number(p) * traj.durTot;
+        const y = traj.compute(Number(p) - 0.01, true);
+        const dirUp = y < traj.compute(Number(p), true);
         return {
-          x: phraseStart + traj.startTime + Number(normedX),
+          x: phraseStart + traj.startTime! + Number(normedX),
           y: y,
           dirUp: dirUp,
           i: i
         }
       });
-      const x = d => this.codifiedXR(d.x);
-      const y = d => this.codifiedYR(d.y);
+      const x = (d: DrawDataType) => this.codifiedXR!(d.x);
+      const y = (d: DrawDataType) => this.codifiedYR!(d.y);
       data.forEach(obj => {
         const yMotion = obj.dirUp ? [10, -10] : [-10, 10];
         d3Select(`#slidep${traj.phraseIdx}t${traj.num}i${obj.i}`)
@@ -6494,7 +6510,7 @@ export default defineComponent({
       const markerBoxHeight = 4;
       const refX = markerBoxWidth / 2;
       const refY = markerBoxHeight / 2;
-      const arrowPoints = [
+      const arrowPoints: [number, number][] = [
         [0, 0],
         [0, 4],
         [4, 2]
@@ -6526,7 +6542,7 @@ export default defineComponent({
         .attr('fill', this.selArtColor)
     },
     
-    idFromKey(key, idx) {
+    idFromKey(key: string | number, idx: number) {
       const sec = Math.floor(Number(key));
       const dec = (Number(key) % 1).toFixed(2).toString().slice(2);
       return `p${idx}_${sec}_${dec}`;
@@ -6536,14 +6552,17 @@ export default defineComponent({
       const sym = d3Symbol().type(d3SymbolX).size(80);
       this.piece.phrases.forEach(phrase => {
         Object.keys(phrase.chikaris).forEach(key => {
-          const scaledX = Number(key) / phrase.durTot;
+          const scaledX = Number(key) / phrase.durTot!;
           const dataObj = {
-            x: Number(key) + phrase.startTime,
+            x: Number(key) + phrase.startTime!,
             y: phrase.compute(scaledX, true)
           };
-          const id = this.idFromKey(key, phrase.pieceIdx);
-          const x = d => this.xr()(d.x);
-          const y = d => this.yr()(d.y);
+          const id = this.idFromKey(key, phrase.pieceIdx!);
+          const x: valueFn = (d: DrawDataType) => this.xr()(d.x);
+          const y: valueFn = (d: DrawDataType) => this.yr()(d.y);
+          const tFunc: valueFn = (d: DrawDataType) => {
+            return `translate(${x(d)}, ${y(d)})`
+          };
           this.phraseG.append('g') // actual chikari
             .classed('chikari', true)
             .append('path')
@@ -6553,7 +6572,7 @@ export default defineComponent({
             .attr('stroke-width', 3)
             .attr('stroke-linecap', 'round')
             .data([dataObj])
-            .attr('transform', d => `translate(${x(d)}, ${y(d)})`)
+            .attr('transform', tFunc)
           this.phraseG.append('g') // for clicking
             .classed('chikari', true)
             .append('circle')
@@ -6561,8 +6580,8 @@ export default defineComponent({
             .classed('chikariCircle', true)
             .style('opacity', '0')
             .data([dataObj])
-            .attr('cx', d => this.xr()(d.x))
-            .attr('cy', d => this.yr()(d.y))
+            .attr('cx', x)
+            .attr('cy', y)
             .attr('r', 6)
             .on('mouseover', this.handleMouseOver)
             .on('mouseout', this.handleMouseOut)
@@ -6575,14 +6594,17 @@ export default defineComponent({
       const sym = d3Symbol().type(d3SymbolX).size(80);
       this.piece.phrases.forEach(phrase => {
         Object.keys(phrase.chikaris).forEach(key => {
-          const scaledX = Number(key) / phrase.durTot;
+          const scaledX = Number(key) / phrase.durTot!;
           const dataObj = {
-            x: Number(key) + phrase.startTime,
+            x: Number(key) + phrase.startTime!,
             y: phrase.compute(scaledX, true)
           };
-          const id = this.idFromKey(key, phrase.pieceIdx);
-          const x = d => this.codifiedXR(d.x);
-          const y = d => this.codifiedYR(d.y);
+          const id = this.idFromKey(key, phrase.pieceIdx!);
+          const x = (d: DrawDataType) => this.codifiedXR!(d.x);
+          const y = (d: DrawDataType) => this.codifiedYR!(d.y);
+          const tFunc: valueFn = (d: DrawDataType) => {
+            return `translate(${x(d)}, ${y(d)})`
+          };
           this.phraseG.append('g')
             .classed('chikari', true)
             .append('path')
@@ -6592,9 +6614,7 @@ export default defineComponent({
             .attr('stroke-width', 3)
             .attr('stroke-linecap', 'round')
             .data([dataObj])
-            .attr('transform', d => {
-              return `translate(${x(d)}, ${y(d)})`
-            })  
+            .attr('transform', tFunc)  
           this.phraseG.append('g') // for clicking
             .classed('chikari', true)
             .append('circle')
@@ -6602,8 +6622,8 @@ export default defineComponent({
             .classed('chikariCircle', true)
             .style('opacity', '0')
             .data([dataObj])
-            .attr('cx', d => this.codifiedXR(d.x))
-            .attr('cy', d => this.codifiedYR(d.y))
+            .attr('cx', ((d: DrawDataType) => this.codifiedXR!(d.x)) as valueFn)
+            .attr('cy', ((d: DrawDataType) => this.codifiedYR!(d.y)) as valueFn)
             .attr('r', 6)
             .on('mouseover', this.handleMouseOver)
             .on('mouseout', this.handleMouseOut)
@@ -6612,16 +6632,19 @@ export default defineComponent({
       })
     },
 
-    codifiedAddOneChikari(phrase, key, selected=true) {
+    codifiedAddOneChikari(phrase: Phrase, key: string | number, selected=true) {
       const sym = d3Symbol().type(d3SymbolX).size(80);
-      const scaledX = Number(key) / phrase.durTot;
+      const scaledX = Number(key) / phrase.durTot!;
       const dataObj = {
-        x: Number(key) + phrase.startTime,
+        x: Number(key) + phrase.startTime!,
         y: phrase.compute(scaledX, true)
       };
-      const id = this.idFromKey(key, phrase.pieceIdx);
-      const x = d => this.codifiedXR(d.x);
-      const y = d => this.codifiedYR(d.y);
+      const id = this.idFromKey(key, phrase.pieceIdx!);
+      const x = (d: DrawDataType) => this.codifiedXR!(d.x);
+      const y = (d: DrawDataType) => this.codifiedYR!(d.y);
+      const tFunc: valueFn = (d: DrawDataType) => {
+        return `translate(${x(d)}, ${y(d)})`
+      };
       this.phraseG.append('g')
         .classed('chikari', true)
         .append('path')
@@ -6631,9 +6654,7 @@ export default defineComponent({
         .attr('stroke-width', 3)
         .attr('stroke-linecap', 'round')
         .data([dataObj])
-        .attr('transform', d => {
-          return `translate(${x(d)}, ${y(d)})`
-        })  
+        .attr('transform', tFunc)  
       this.phraseG.append('g') // for clicking
         .classed('chikari', true)
         .append('circle')
@@ -6641,69 +6662,71 @@ export default defineComponent({
         .classed('chikariCircle', true)
         .style('opacity', '0')
         .data([dataObj])
-        .attr('cx', d => this.codifiedXR(d.x))
-        .attr('cy', d => this.codifiedYR(d.y))
+        .attr('cx', ((d: DrawDataType) => this.codifiedXR!(d.x)) as valueFn)
+        .attr('cy', ((d: DrawDataType) => this.codifiedYR!(d.y)) as valueFn)
         .attr('r', 6)
         .on('mouseover', this.handleMouseOver)
         .on('mouseout', this.handleMouseOut)
         .on('click', this.handleClickChikari)
     },
 
-    getIdFromTrajClick(e) {
-      const c1 = e.target.id.slice(0, 9) === 'overlay__';
-      const c2 = e.target.id.slice(0, 5) === 'pluck';
-      const c3 = e.target.id.slice(0, 9) === 'hammeroff';
-      const c4 = e.target.id.slice(0, 8) === 'hammeron';
-      const c5 = e.target.id.slice(0, 5) === 'slide';
+    getIdFromTrajClick(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      const c1 = target.id.slice(0, 9) === 'overlay__';
+      const c2 = target.id.slice(0, 5) === 'pluck';
+      const c3 = target.id.slice(0, 9) === 'hammeroff';
+      const c4 = target.id.slice(0, 8) === 'hammeron';
+      const c5 = target.id.slice(0, 5) === 'slide';
       let id;
         if (c1) {
-          id = e.target.id.slice(9);
+          id = target.id.slice(9);
         } else if (c2) {
-          id = e.target.id.slice(5);
+          id = target.id.slice(5);
         } else if (c3) {
-          id = e.target.id.slice(9);
+          id = target.id.slice(9);
           id = id.split('i')[0]
         } else if (c4) {
-          id = e.target.id.slice(8);
+          id = target.id.slice(8);
           id = id.split('i')[0];
         } else if (c5) {
-          id = e.target.id.slice(5);
+          id = target.id.slice(5);
           id = id.split('i')[0];
         }
       return id;
     },
 
-    handleMouseOver(e) {
+    handleMouseOver(e: MouseEvent) {
+      const target = e.target as SVGElement;
       if (!(this.meterMode || this.insertPulseMode)) {
-        const c1 = e.target.id.slice(0, 9) === 'overlay__';
-        const c2 = e.target.id.slice(0, 5) === 'pluck';
-        const c3 = e.target.id.slice(0, 9) === 'hammeroff';
-        const c4 = e.target.id.slice(0, 8) === 'hammeron';
-        const c5 = e.target.id.slice(0, 5) === 'slide';
-        if (e.target.id.slice(0, 8) === 'circle__') {
-          const id = e.target.id.slice(8)
+        const c1 = target.id.slice(0, 9) === 'overlay__';
+        const c2 = target.id.slice(0, 5) === 'pluck';
+        const c3 = target.id.slice(0, 9) === 'hammeroff';
+        const c4 = target.id.slice(0, 8) === 'hammeron';
+        const c5 = target.id.slice(0, 5) === 'slide';
+        if (target.id.slice(0, 8) === 'circle__') {
+          const id = target.id.slice(8)
           d3Select(`#${id}`)
             .attr('stroke', this.selectedChikariColor)
-          d3Select(`#${e.target.id}`)
+          d3Select(`#${target.id}`)
             .style('cursor', 'pointer')
         } else if (c1 || c2 || c3 || c4 || c5) {
           let id;
           if (c1) {
-            id = e.target.id.slice(9);
+            id = target.id.slice(9);
           } else if (c2) {
-            id = e.target.id.slice(5);
+            id = target.id.slice(5);
           } else if (c3) {
-            id = e.target.id.slice(9);
+            id = target.id.slice(9);
             id = id.split('i')[0]
           } else if (c4) {
-            id = e.target.id.slice(8);
+            id = target.id.slice(8);
             id = id.split('i')[0];
           } else if (c5) {
-            id = e.target.id.slice(5);
+            id = target.id.slice(5);
             id = id.split('i')[0];
           }
-          const pIdx = Number(id.split('t')[0].slice(1));
-          const tIdx = Number(id.split('t')[1]);
+          const pIdx = Number(id!.split('t')[0].slice(1));
+          const tIdx = Number(id!.split('t')[1]);
           const traj = this.piece.phrases[pIdx].trajectories[tIdx];
           if (traj.groupId === undefined) {
             let color = this.selTrajColor;
@@ -6712,10 +6735,10 @@ export default defineComponent({
             d3Select(`#dampenp${pIdx}t${tIdx}`)
               .attr('stroke', color)
             if (this.selectedTraj && traj !== this.selectedTraj) {
-              d3Select(`#${e.target.id}`)
+              d3Select(`#${target.id}`)
                 .style('cursor', 'pointer')
             } else {
-              d3Select(`#${e.target.id}`)
+              d3Select(`#${target.id}`)
                 .style('cursor', 'pointer')
             }
             d3Select(`#pluck${id}`)
@@ -6724,7 +6747,7 @@ export default defineComponent({
             this.updateArtColors(traj, true)
           } else {
             const group = this.piece.phrases[pIdx].getGroupFromId(traj.groupId);
-            group.trajectories.forEach(traj => {
+            group!.trajectories.forEach(traj => {
               const id = `p${traj.phraseIdx}t${traj.num}`;
               d3Select(`#${id}`)
                 .attr('stroke', this.selTrajColor)
@@ -6733,8 +6756,6 @@ export default defineComponent({
               d3Select(`#pluck${id}`)
                 .attr('stroke', this.selArtColor)
                 .attr('fill', this.selArtColor)
-              // d3Select(`#overlay__${id}`)
-              //   .attr('cursor', 'pointer')
               this.updateArtColors(traj, true)
             })
           }
@@ -6742,15 +6763,15 @@ export default defineComponent({
       }
     },
 
-    alterSlope(newSlope) {
+    alterSlope(newSlope: number) {
       this.unsavedChanges = true;
-      const trajObj = this.selectedTraj.toJSON();
+      const trajObj = this.selectedTraj!.toJSON();
       trajObj.slope = Number(newSlope);
       const newTraj = new Trajectory(trajObj);
-      const pIdx = this.selectedTraj.phraseIdx;
-      const tIdx = this.selectedTraj.num;
-      const phrase = this.piece.phrases[pIdx];
-      phrase.trajectories[tIdx] = newTraj;
+      const pIdx = this.selectedTraj!.phraseIdx;
+      const tIdx = this.selectedTraj!.num;
+      const phrase = this.piece.phrases[Number(pIdx)];
+      phrase.trajectories[Number(tIdx)] = newTraj;
       phrase.assignStartTimes();
       phrase.assignPhraseIdx();
       phrase.assignTrajNums();
@@ -6766,7 +6787,7 @@ export default defineComponent({
       if (this.vocal) {
         const pIdx = this.selectedTraj.phraseIdx;
         const tIdx = this.selectedTraj.num;
-        const phrase = this.piece.phrases[pIdx];
+        const phrase = this.piece.phrases[Number(pIdx)];
         const g = d3Select(`#articulations__p${pIdx}t${tIdx}`);
         const selected = d3Select(`#vowelp${pIdx}t${tIdx}`);
         if (selected.node() === null) {
@@ -6778,15 +6799,16 @@ export default defineComponent({
       }
     },
 
-    handleMouseOut(e) {
+    handleMouseOut(e: MouseEvent) {
+      const target = e.target as HTMLElement;
       if (!(this.meterMode || this.insertPulseMode)) {
-        const c1 = e.target.id.slice(0, 9) === 'overlay__';
-        const c2 = e.target.id.slice(0, 5) === 'pluck';
-        const c3 = e.target.id.slice(0, 9) === 'hammeroff';
-        const c4 = e.target.id.slice(0, 8) === 'hammeron';
-        const c5 = e.target.id.slice(0, 5) === 'slide';
-        if (e.target.id.slice(0, 8) === 'circle__') {
-          const id = e.target.id.slice(8)
+        const c1 = target.id.slice(0, 9) === 'overlay__';
+        const c2 = target.id.slice(0, 5) === 'pluck';
+        const c3 = target.id.slice(0, 9) === 'hammeroff';
+        const c4 = target.id.slice(0, 8) === 'hammeron';
+        const c5 = target.id.slice(0, 5) === 'slide';
+        if (target.id.slice(0, 8) === 'circle__') {
+          const id = target.id.slice(8)
           if (id !== this.selectedChikariID) {
             d3Select(`#${id}`)
               .attr('stroke', this.chikariColor)
@@ -6795,23 +6817,23 @@ export default defineComponent({
         if (c1 || c2 || c3 || c4 || c5) {
           let id;
           if (c1) {
-            id = e.target.id.slice(9);
+            id = target.id.slice(9);
           } else if (c2) {
-            id = e.target.id.slice(5);
+            id = target.id.slice(5);
           } else if (c3) {
-            id = e.target.id.slice(9);
+            id = target.id.slice(9);
             id = id.split('i')[0]
           } else if (c4) {
-            id = e.target.id.slice(8);
+            id = target.id.slice(8);
             id = id.split('i')[0];
           } else if (c5) {
-            id = e.target.id.slice(5);
+            id = target.id.slice(5);
             id = id.split('i')[0];
           }
           if (this.selectedTrajs.length < 2) {
             if (id !== this.selectedTrajID) {
-              const pIdx = Number(id.split('t')[0].slice(1));
-              const tIdx = Number(id.split('t')[1]);
+              const pIdx = Number(id!.split('t')[0].slice(1));
+              const tIdx = Number(id!.split('t')[1]);
               const traj = this.piece.phrases[pIdx].trajectories[tIdx];
               if (traj.groupId === undefined) {
                 d3Select(`#${id}`)
@@ -6825,7 +6847,7 @@ export default defineComponent({
               } else {
                 const group = this.piece.phrases[pIdx]
                   .getGroupFromId(traj.groupId);
-                group.trajectories.forEach(traj_ => {
+                group!.trajectories.forEach(traj_ => {
                   const id_ = `p${traj_.phraseIdx}t${traj_.num}`;
                   d3Select(`#${id_}`)
                     .attr('stroke', this.trajColor)
@@ -6839,8 +6861,8 @@ export default defineComponent({
               } 
             }
           } else {
-            const pIdx = Number(id.split('t')[0].slice(1));
-            const tIdx = Number(id.split('t')[1]);
+            const pIdx = Number(id!.split('t')[0].slice(1));
+            const tIdx = Number(id!.split('t')[1]);
             const traj = this.piece.phrases[pIdx].trajectories[tIdx];
             if (!this.selectedTrajs.includes(traj)) {
               if (traj.groupId === undefined) {
@@ -6855,7 +6877,7 @@ export default defineComponent({
               } else {
                 const group = this.piece.phrases[pIdx]
                   .getGroupFromId(traj.groupId);
-                group.trajectories.forEach(traj_ => {
+                group!.trajectories.forEach(traj_ => {
                   const id_ = `p${traj_.phraseIdx}t${traj_.num}`;
                   d3Select(`#${id_}`)
                     .attr('stroke', this.trajColor)
@@ -6873,14 +6895,15 @@ export default defineComponent({
       }
     },
 
-    handleClickChikari(e) {
+    handleClickChikari(e: MouseEvent) {
+      const target = e.target as HTMLElement;
       e.stopPropagation();
-      const id = e.target.id.split('__')[1];
+      const id = target.id.split('__')[1];
       if (this.selectedChikariID && this.selectedChikariID !== id) {
         d3Select('#' + this.selectedChikariID)
           .attr('stroke', this.chikariColor)
       }
-      this.selectedChikariID = e.target.id.split('__')[1];
+      this.selectedChikariID = target.id.split('__')[1];
       d3Select(`#${this.selectedChikariID}`)
         .attr('stroke', this.selectedChikariColor)
       if (this.selectedTrajID) {
@@ -6894,14 +6917,14 @@ export default defineComponent({
     adjustChikari(left = true) {
       // first, adjust the actual chikari in phrase object, 
       const offset = 0.02;
-      const pIdx = this.selectedChikariID.split('_')[0].slice(1);
-      const sec = this.selectedChikariID.split('_')[1];
-      const cSec = this.selectedChikariID.split('_')[2];
+      const pIdx = this.selectedChikariID!.split('_')[0].slice(1);
+      const sec = this.selectedChikariID!.split('_')[1];
+      const cSec = this.selectedChikariID!.split('_')[2];
       const time = Number(sec) + Number(cSec) / 100;
-      const phrase = this.piece.phrases[pIdx];
+      const phrase = this.piece.phrases[Number(pIdx)];
       if (time < offset && left ) {
         return 
-      } else if (phrase.durTot - time < offset && !left) {
+      } else if (phrase.durTot! - time < offset && !left) {
         return
       } else {
         const selectedChikari = phrase.chikaris[time.toFixed(2)];
@@ -6939,7 +6962,8 @@ export default defineComponent({
         adjustment = this.codifiedXR!(0.02) - this.codifiedXR!(0);
       }
       const selected = d3SelectAll(`.meterId_${this.selectedMeter.uniqueId}`);
-      selected.nodes().forEach(node => {
+      const nodes = selected.nodes() as SVGPathElement[];
+      nodes.forEach(node => {
         console.log(node)
         const curX = node!.transform.baseVal[0].matrix.e;
         const newX = curX + adjustment;
@@ -6992,10 +7016,10 @@ export default defineComponent({
         e.stopPropagation();
         this.groupable = false;
         if (this.shifted && this.selectedTrajs.length >= 1) {
-          const id = this.getIdFromTrajClick(e);
+          const id = this.getIdFromTrajClick(e)!;
           const pIdx = id.split('t')[0].slice(1);
           const tIdx = id.split('t')[1];
-          const newTraj = this.piece.phrases[pIdx].trajectories[tIdx];
+          const newTraj = this.piece.phrases[Number(pIdx)].trajectories[Number(tIdx)];
           if (!this.selectedTrajs.includes(newTraj)) {
             if (newTraj.groupId === undefined) {
               this.selectedTrajs.push(newTraj);
