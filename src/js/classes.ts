@@ -605,7 +605,7 @@ class Trajectory {
     durTot?: number,
     durArray?: number[],
     slope?: number,
-    articulations?: { [key: string]: Articulation },
+    articulations?: { [key: string]: Articulation } | {},
     num?: number,
     name?: string,
     fundID12?: number,
