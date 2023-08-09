@@ -310,7 +310,7 @@
   </div>
 </div>
 </template>
-<script>
+<script lang='ts'>
 import t1 from '@/assets/thumbnails/1.png';
 import t2 from '@/assets/thumbnails/2.png';
 import t3 from '@/assets/thumbnails/3.png';
@@ -326,16 +326,59 @@ import t12 from '@/assets/thumbnails/12.png';
 import t13 from '@/assets/thumbnails/13.png';
 import { select as d3Select } from 'd3';
 import { getIpaVowels, getConsonants } from '@/js/serverCalls.ts';
-export default {
+import { defineComponent } from 'vue';
+
+type TrajSelectPanelDataType = {
+  urls: string[],
+  kNums: string[],
+  pluckBool: boolean,
+  intraTrajDursBool: boolean,
+  selectedIdx?: number,
+  parentSelected: boolean,
+  slope: number,
+  showSlope: boolean,
+  showVibObj: boolean,
+  periods: number,
+  offset: number,
+  initUp: boolean,
+  extent: number,
+  dampen: boolean,
+  showTrajChecks: boolean,
+  showPhraseRadio: boolean,
+  phraseDivType?: 'phrase' | 'section',
+  trajIdxs: number[],
+  urlsFiltered: string[],
+  kNumsFiltered: string[],
+  vocal: boolean,
+  vowel: string,
+  ipaVowels: string[],
+  englishWords: string[],
+  hindiVowels: string[],
+  iso_15919: string[],
+  cIpa: string[],
+  cExample: string[],
+  cIso_15919: string[],
+  hindiConsonants: string[],
+  consonantList: string[],
+  startConsonant?: string,
+  endConsonant?: string,
+  grouped: boolean,
+  panelHeight: number,
+  vib: boolean,
+  octShiftTop: number,
+  canShiftUp: boolean,
+  canShiftDown: boolean
+}
+
+export default defineComponent({
   name: 'TrajSelectPanel',
 
-  data() {
+  data(): TrajSelectPanelDataType {
     return {
       urls: [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13],
       kNums: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'e'],
       pluckBool: true,
       intraTrajDursBool: false,
-      selectedIcon: undefined,
       selectedIdx: undefined,
       parentSelected: false,
       slope: 1,
@@ -361,7 +404,7 @@ export default {
       cIpa: [],
       cExample: [],
       cIso_15919: [],
-      hindi_consonants: [],
+      hindiConsonants: [],
       consonantList: [],
       startConsonant: undefined,
       endConsonant: undefined,
@@ -420,11 +463,11 @@ export default {
         t.classList.remove('selected')
       })
       if (newVal !== undefined) {
-        const el = document.querySelector(`#id${newVal}`)
+        const el = document.querySelector(`#id${newVal}`)!
         el.classList.add('selected')
         const slopeIdxs = [2, 3, 4, 5]
-        this.showSlope = slopeIdxs.includes(this.trajIdxs[this.selectedIdx]);
-        this.showVibObj = this.trajIdxs[this.selectedIdx] === 12;
+        this.showSlope = slopeIdxs.includes(this.trajIdxs[newVal]);
+        this.showVibObj = this.trajIdxs[newVal] === 12;
         if (this.vocal && this.vowel === undefined) {
           this.vowel = 'a'
         }
@@ -705,7 +748,7 @@ export default {
       this.emitter.emit('vibObj', vibObj);
     },
   }
-}
+})
 </script>
 
 <style scoped>
