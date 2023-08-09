@@ -328,6 +328,7 @@ import { select as d3Select } from 'd3';
 import { getIpaVowels, getConsonants } from '@/js/serverCalls.ts';
 import { defineComponent } from 'vue';
 
+
 type TrajSelectPanelDataType = {
   urls: string[],
   kNums: string[],
