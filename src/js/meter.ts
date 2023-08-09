@@ -473,8 +473,12 @@ class Meter {
     if (relCorpLims !== undefined) {
       if (propCorpLims !== undefined) {
         const translated = propCorpLims.map(p => p * this.durTot);
-        const equalArrs = translated.every((t, i) => t === relCorpLims[i]);
+        const equalArrs = translated.every((t, i) => {
+          const diff = Math.abs(t - relCorpLims[i]);
+          return diff < 0.000000001
+        });
         if (!equalArrs) {
+          console.log(translated, relCorpLims)
           throw new Error('Cannot specify both relative and proportional ' + 
             'corporeal limits')
         }
