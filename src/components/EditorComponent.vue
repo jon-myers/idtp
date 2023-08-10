@@ -54,7 +54,7 @@
         <div class='cbRow'>
           <label>Magnet Mode</label>
           <input
-            type='chekbox'
+            type='checkbox'
             v-model='magnetMode'
             @click='preventSpaceToggle'>
         </div>
@@ -716,7 +716,6 @@ export default defineComponent({
     } catch (err) {
       console.error(err)
     }
-    console.log('about to reset zoom')
     this.$nextTick(() => {
       this.resetZoom();
     })
@@ -1117,7 +1116,6 @@ export default defineComponent({
     },
 
     mutateTrajEmit(newIdx: number) {
-      console.log('yes?')
       if (!this.selectedTraj) {
         console.log('no selected traj')
       } else {
@@ -4520,7 +4518,6 @@ export default defineComponent({
       }
       if (this.specBox) {
         this.specBox.remove();
-        console.log('there was still a specbox')
       }
     },
 
@@ -4668,7 +4665,6 @@ export default defineComponent({
         this.groupable = this.selectedTrajsGroupable();
         d3Select('#selBox').remove();
       } else {
-        // console.log('here')
         if (e.y < this.xAxHeight && this.drawingRegion) {
           if (e.x < this.regionStartPx) {
             this.regionEndPx = this.regionStartPx;
@@ -6821,7 +6817,7 @@ export default defineComponent({
       const scaledX = Number(key) / phrase.durTot!;
       const dataObj: DrawDataType = {
         x: Number(key) + phrase.startTime!,
-        y: phrase.compute(scaledX, true)
+        y: phrase.compute(scaledX, true)!
       };
       const id = this.idFromKey(key, phrase.pieceIdx!);
       const x = (d: DrawDataType) => this.codifiedXR!(d.x);
@@ -6973,7 +6969,7 @@ export default defineComponent({
         const pIdx = this.selectedTraj.phraseIdx;
         const tIdx = this.selectedTraj.num;
         const phrase = this.piece.phrases[Number(pIdx)];
-        const g = d3Select(`#articulations__p${pIdx}t${tIdx}`);
+        const g: Selection<SVGGElement, unknown, any, any> = d3Select(`#articulations__p${pIdx}t${tIdx}`);
         const selected = d3Select(`#vowelp${pIdx}t${tIdx}`);
         if (selected.node() === null) {
           this.addVowel(this.selectedTraj, phrase.startTime!, g, true)
@@ -7511,11 +7507,14 @@ export default defineComponent({
         };
         Object.keys(phrase.chikaris).forEach(key => {
           const id = this.idFromKey(key, phrase.pieceIdx!);
-          
+          const sel = d3Select(`#${id}`)
+          const datum = sel.datum();
+
           d3Select(`#${id}`)
-            .transition()
-            .duration(this.transitionTime)
             .attr('transform', tFunc)
+            .transition()
+            .duration(this.transitionTime)            
+            
           d3Select(`#circle__${id}`)
             .transition()
             .duration(this.transitionTime)
@@ -8106,7 +8105,6 @@ export default defineComponent({
         } else {
           // just for in initial this.zoomX setting
           const x = (this.yAxWidth * k - this.yAxWidth) / k;
-          console.log(this.gx)
           this.zoomX!.scaleBy(this.gx!, k, point);    
           this.gx!.call(this.zoomX!.translateTo, x, 0, [0, 0]);
           this.gy!.call(this.zoomY!.scaleBy, this.initYScale, point);
@@ -8367,7 +8365,6 @@ export default defineComponent({
     },
 
     codifiedRedrawPhrase(pIdx: number) {
-      console.log('this happening')
       const phrase = this.piece.phrases[pIdx];
       const st = phrase.startTime!;
       phrase.trajectories.forEach((traj, tIdx) => {
