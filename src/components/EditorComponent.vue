@@ -343,8 +343,8 @@ type EditorDataType = {
   codifiedYR?: d3.ScaleLinear<number, number>,
   requestId?: number,
   stretchedAnimationStart?: number,
-  gx: Selection<SVGGElement, undefined, null, undefined>,
-  gy: Selection<SVGGElement, undefined, null, undefined>,
+  gx: d3.Selection<SVGGElement, unknown, any, any>,
+  gy: d3.Selection<SVGGElement, unknown, any, any>,
   zoomX?: d3.ZoomBehavior<Element, unknown>,
   zoomY?: d3.ZoomBehavior<Element, unknown>,
   animationStart: number,
@@ -946,7 +946,7 @@ export default defineComponent({
       let piece, pieceDoesExist;
       
 
-      const queryId = this.$route.query.id!.toString();
+      const queryId = this.$route.query.id! as string;
       if (queryId) {
         pieceDoesExist = await pieceExists(queryId);
         if (pieceDoesExist) {
@@ -7829,8 +7829,8 @@ export default defineComponent({
     resetZoom() {
       // clear everything
       const selects = this.phraseG.selectAll('*');
-      this.codifiedXScale = this.tx().k;
-      this.codifiedYScale = this.ty().k;
+      this.codifiedXScale = this.tx!().k;
+      this.codifiedYScale = this.ty!().k;
       this.codifiedYOffset = this.yr().invert(0);
       this.codifiedXOffset = this.xr().invert(0);
       this.codifiedXR = this.xr();
@@ -7843,8 +7843,8 @@ export default defineComponent({
       this.slidePhrases(
         this.xr()(this.codifiedXOffset),
         this.yr()(this.codifiedYOffset),
-        this.tx().k / this.codifiedXScale,
-        this.ty().k / this.codifiedYScale,
+        this.tx!().k / this.codifiedXScale,
+        this.ty!().k / this.codifiedYScale,
         0
       );
       if (this.selectedTraj && this.selectedTrajID) {
@@ -7940,11 +7940,11 @@ export default defineComponent({
     },
 
     xr() {
-      return this.tx().rescaleX(this.x!)
+      return this.tx!().rescaleX(this.x!)
     },
 
     yr() {
-      return this.ty().rescaleY(this.y!)
+      return this.ty!().rescaleY(this.y!)
     },
 
     phraseLine() {
@@ -8107,6 +8107,7 @@ export default defineComponent({
         } else {
           // just for in initial this.zoomX setting
           const x = (this.yAxWidth * k - this.yAxWidth) / k;
+          console.log(this.gx)
           this.zoomX!.scaleBy(this.gx!, k, point);    
           this.gx!.call(this.zoomX!.translateTo, x, 0, [0, 0]);
           this.gy!.call(this.zoomY!.scaleBy, this.initYScale, point);
@@ -8133,7 +8134,8 @@ export default defineComponent({
 
     verticalZoomOut() {
       const pt = [this.yAxWidth, this.rect().height / 2];
-      this.gy!.call(this.zoomY!.scaleBy, 1/1.1, pt);
+      this.zoomY!.scaleBy(this.gy!, 1/1.1, pt);
+      // this.gy!.call(this.zoomY!.scaleBy, 1/1.1, pt);
       this.redraw();
       this.transformScrollYDragger();
     },
