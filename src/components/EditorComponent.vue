@@ -161,7 +161,8 @@ const structuredTime = (dur: number) => {
     return `${minutes}:${seconds}`
   }
 };
-const cumsum = (sum: number) => (sum = 0, (n: number) => sum += n);
+const cumsum = (sum: number = 0) => (sum = 0, (n: number) => sum += n);
+
 type DrawDataType = {
   x: number,
   y: number,
