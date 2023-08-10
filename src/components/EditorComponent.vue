@@ -352,15 +352,15 @@ type EditorDataType = {
   codifiedYR?: d3.ScaleLinear<number, number>,
   requestId?: number,
   stretchedAnimationStart?: number,
-  gx: d3.Selection<SVGGElement, unknown, any, any>,
-  gy: d3.Selection<SVGGElement, unknown, any, any>,
+  gx: d3.Selection<SVGGElement, undefined, any, any>,
+  gy: d3.Selection<SVGGElement, undefined, any, any>,
   zoomX?: d3.ZoomBehavior<Element, unknown>,
   zoomY?: d3.ZoomBehavior<Element, unknown>,
   animationStart: number,
   visPitches: Pitch[],
   svg: Selection<SVGSVGElement, undefined, null, undefined>,
   z?: ZoomTransform,
-  defs: Selection<SVGDefsElement, unknown, null, undefined>,
+  defs: Selection<SVGDefsElement, undefined, null, undefined>,
   phraseG: Selection<SVGGElement, undefined, null, undefined>,
   selectedTrajID?: string,
   codifiedXOffset: number,
@@ -368,8 +368,14 @@ type EditorDataType = {
   codifiedXScale: number,
   codifiedYScale: number,
   visibleSargam: number[],
-  yAxis?: Selection<SVGGElement, unknown, null, undefined>,
-  xAxis?: Selection<SVGGElement, unknown, null, undefined>,
+  yAxis?: (
+    g: Selection<SVGGElement, any, HTMLElement, any>,
+    scale: d3.ScaleLinear<number, number>
+    ) => Selection<SVGGElement, any, HTMLElement, any>,
+  xAxis?: (
+    g: Selection<SVGGElement, any, HTMLElement, any>,
+    scale: d3.ScaleLinear<number, number>
+    ) => Selection<SVGGElement, any, HTMLElement, any>,
   selectedPhraseDivIdx?: number,
   clipG: Selection<SVGGElement, undefined, null, undefined>,
   scrollXWidth: number,
@@ -546,16 +552,6 @@ export default defineComponent({
       imgs: [],
       browser: detect() as BrowserInfo,
       dragIdx: '',
-
-
-
-
-
-
-
-
-
-
     }
   },
   components: {
@@ -798,7 +794,7 @@ export default defineComponent({
 
   methods: {
 
-    endConsonanEmit(endConsonant: string) {
+    endConsonantEmit(endConsonant: string) {
       const selT = this.selectedTraj!;
       this.unsavedChanges = true;
       const pIdx = selT.phraseIdx!;
@@ -883,7 +879,7 @@ export default defineComponent({
           name: 'dampen',
         });
         const phrase = this.piece!.phrases[pIdx];
-        const g = d3Select(`#articulations__p${pIdx}t${tIdx}`);
+        const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as Selection<SVGGElement, any, any, any> ;
         this.codifiedAddDampener(selT, phrase.startTime!, g);
         d3Select(`#dampen${this.selectedTrajID}`)
           .attr('stroke', this.selTrajColor)
@@ -1103,7 +1099,7 @@ export default defineComponent({
           const pIdx = selT.phraseIdx!;
           const tIdx = selT.num!;
           const phrase = this.piece!.phrases[pIdx];
-          const g = d3Select(`#articulations__p${pIdx}t${tIdx}`)
+          const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as Selection<SVGGElement, any, any, any>
           this.codifiedAddPlucks(selT, phrase.startTime!, g)
         }
       } else {
@@ -1189,9 +1185,8 @@ export default defineComponent({
         phrase.trajectories.forEach(traj => {
           const pIdx = phrase.pieceIdx;
           const tIdx = traj.num;
-          const g = d3Select(`#articulations__p${pIdx}t${tIdx}`);
+          const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as Selection<SVGGElement, any, any, any>;
           if (traj.id !== 12) {
-            // this.addStartingConsonant(traj, phrase.startTime, g, true);
             this.addEndingConsonant(traj, phrase.startTime!, g, true);
             if (vowelIdxs.includes(traj.num!)) {
               this.addVowel(traj, phrase.startTime!, g, true);
@@ -1467,7 +1462,7 @@ export default defineComponent({
         const bPhraseStart = bPhrase.startTime;
         const bStart = b.startTime! + bPhraseStart!;
         return aStart - bStart;
-      }, 0);
+      });
 
       // make sure they all fit within a single silent traj, otherwise indicate
       // somehow that they don't fit
@@ -1731,6 +1726,7 @@ export default defineComponent({
       };
       const dragDotsG = this.phraseG.append('g').classed('dragDots', true);
       let times = [0, ...sTraj.durArray!.map(cumsum())];
+      console.log(times)
       const phraseStart = phrase.startTime!;
       const ts = sTraj.startTime!;
       times = times.map(a => a * sTraj.durTot + phraseStart + ts);
@@ -5695,7 +5691,7 @@ export default defineComponent({
           ) => g
         .attr('transform', `translate(0,${this.xAxHeight})`)
         .style('font-size', '13px')
-        .call(d3AxisTop(scale).ticks(10).tickFormat(d => structuredTime(d)))
+        .call(d3AxisTop(scale).ticks(10).tickFormat(d => structuredTime(Number(d))))
         .call(g => g.select('.domain'))
       const yTickLabels = this.getYTickLabels();
       this.yAxis = (
