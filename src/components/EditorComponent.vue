@@ -54,7 +54,7 @@
         <div class='cbRow'>
           <label>Magnet Mode</label>
           <input
-            type='checkbox'
+            type='chekbox'
             v-model='magnetMode'
             @click='preventSpaceToggle'>
         </div>
@@ -94,7 +94,16 @@
       <TrajSelectPanel 
         ref='trajSelectPanel' 
         :editable='editable' 
-        :ctrlBoxWidth='controlBoxWidth' />
+        :ctrlBoxWidth='controlBoxWidth' 
+        @mutateTraj='mutateTrajEmit'
+        @pluckBool='pluckBoolEmit'
+        @newTraj='newTrajEmit'
+        @vibObj='vibObjEmit'
+        @dampen='dampenEmit'
+        @vowel='vowelEmit'
+        @startConsonant='startConsonantEmit'
+        @endConsonant='endConsonantEmit' 
+        />
     </div>
   </div>
 </div>
@@ -588,37 +597,323 @@ export default defineComponent({
     window.addEventListener('resize', this.resize);
     window.addEventListener('beforeunload', this.beforeUnload);
     this.fullWidth = window.innerWidth;
-    this.emitter.on('mutateTraj', (newIdx: number) => {
-      if (!this.selectedTraj) {
-        console.log('no selected traj')
+
+    try {
+      // if there's a query id, 1. check if exists, 2. if so, load it, else:
+      // send some sort of message that entered piece didn't exist and go to files.
+      // check if stored piece esists. if so, load it, else: load default piece.
+      // push the id to router. 
+      
+      let piece, pieceDoesExist;
+      const queryId = this.$route.query.id! as string;
+      if (queryId) {
+        pieceDoesExist = await pieceExists(queryId);
+        if (pieceDoesExist) {
+          piece = await getPiece(queryId);
+
+        } else {
+          await this.$router.push({ name: 'Files' });
+          throw 'IDTP logger: Piece does not exist, or you do not have \
+          permission to view.'
+        }
       } else {
-        this.unsavedChanges = true;
-        const trajObj = this.selectedTraj.toJSON();
-        trajObj.id = newIdx;
-        const newTraj = new Trajectory(trajObj);
-        const pIdx = this.selectedTraj.phraseIdx!;
-        const phrase = this.piece.phrases[pIdx];
-
-        const tIdx = this.selectedTraj.num!;
-        phrase.trajectories[tIdx] = newTraj;
-        phrase.assignStartTimes();
-        phrase.assignPhraseIdx();
-        phrase.assignTrajNums();
-        this.selectedTraj = newTraj;
-        this.selectedTrajs = [this.selectedTraj];
-        const data = this.makeTrajData(this.selectedTraj, phrase.startTime!);
-        d3Select(`#p${pIdx}t${tIdx}`)
-          .datum(data)
-          .attr('d', this.codifiedPhraseLine())
-        d3Select(`#overlay__p${pIdx}t${tIdx}`)
-          .datum(data)
-          .attr('d', this.codifiedPhraseLine())
+        const storedId = this.$store.state._id;
+        pieceDoesExist = await pieceExists(storedId);
+        const id = pieceDoesExist ? storedId : '63445d13dc8b9023a09747a6';
+        this.$router.push({ 
+          name: 'EditorComponent',
+          query: { 'id': id }
+        })
+        piece = await getPiece(id);
       }
-      d3SelectAll('.dragDots').remove();
-      this.addAllDragDots();
-    });
+      this.browser = detect() as BrowserInfo;
+      
+      if (piece.audioID) {
+        
+        this.audioSource = this.browser.name === 'safari' ?
+          `https://swara.studio/audio/mp3/${piece.audioID}.mp3` :
+          `https://swara.studio/audio/opus/${piece.audioID}.opus`;         
+        this.audioDBDoc = await getAudioRecording(piece.audioID);
+        
+        this.durTot = this.audioDBDoc!.duration;
+        // if pieceDurTot is less than this, add silent phrase to make the two 
+        // the same
+      } else {
+        this.durTot = piece.durTot!;
+      }
+      this.initXScale = this.durTot / this.initViewDur;
+      let fund = 246;
+      if (this.audioDBDoc && this.audioDBDoc.saEstimate) {
+        fund = 2 * this.audioDBDoc.saEstimate * 2 ** this.audioDBDoc.octOffset;
+      }
+      this.freqMin = 2 ** (Math.log2(fund / 2) - this.rangeOffset);
+      this.freqMax = 2 ** (Math.log2(fund * 4) + this.rangeOffset);
+      await this.getPieceFromJson(piece, fund);
+      const c1 = this.$store.state.userID === this.piece.userID;
+      const c2 = this.piece.permissions === 'Publicly Editable';
+      const c3 = this.piece.permissions === 'Private';
+      if (c1 || c2) {
+        this.editable = true
+      }
+      if (!c1 && c3) {
+        await this.$router.push({ name: 'Files' });
+          throw 'IDTP logger: Piece does not exist, or you do not have \
+          permission to view.'
+      }
+      this.oldHeight = window.innerHeight;
+      const tsp = this.$refs.trajSelectPanel as typeof TrajSelectPanel;
+      tsp.trajIdxs = this.piece.trajIdxs;
+      const vox = ['Vocal (M)', 'Vocal (F)'];
+      tsp.vocal = vox.includes(this.piece.instrumentation[0]);
+      this.vocal = tsp.vocal;
+      const leftTime = this.leftTime;
+      await this.initializePiece();
+      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+      ap.parentLoaded();
+      const q = this.$route.query;
+      if (q.pIdx) {
+        this.moveToPhrase(Number(q.pIdx));
+      } else {
+        this.$router.push({ query: { id: q.id, pIdx: 0 } });
+      }
+      if (q.regionStart && q.regionEnd) {
+        this.setRegionToTimes(Number(q.regionStart), Number(q.regionEnd));
+      }
+      const silentDur = this.durTot - piece.durTot!;
+      if (silentDur >= 0.00001) {
+        const stTrajObj: {
+          id: number,
+          pitches: Pitch[],
+          durTot: number,
+          fundID12: number,
+          instrumentation?: string
+        } = {
+          id: 12,
+          pitches: [],
+          durTot: silentDur,
+          fundID12: this.piece.raga.fundamental
+        };
+        if (this.piece.instrumentation) {
+          stTrajObj.instrumentation = this.piece.instrumentation[0];
+        }
+        const silentTraj = new Trajectory(stTrajObj);
+        const phraseObj: {
+          trajectories: Trajectory[],
+          durTot: number,
+          instrumentation?: string[]
+        } = {
+          trajectories: [silentTraj],
+          durTot: silentDur,
+        };
+        if (this.piece.instrumentation) {
+          phraseObj.instrumentation = this.piece.instrumentation;
+        }
+        const silentPhrase = new Phrase(phraseObj);
+        this.piece.phrases.push(silentPhrase);
+        this.piece.durArrayFromPhrases();
+        this.piece.updateStartTimes();
+      }
+    } catch (err) {
+      console.error(err)
+    }
+    console.log('about to reset zoom')
+    this.$nextTick(() => {
+      this.resetZoom();
+    })
+  },
 
-    this.emitter.on('newTraj', (idx: number) => {
+  unmounted() {
+    window.removeEventListener('resize', this.resize);
+    window.removeEventListener('keydown', this.handleKeydown);
+    window.removeEventListener('keyup', this.handleKeyup);
+    window.removeEventListener('beforeunload', this.beforeUnload);
+  },
+
+  watch: {
+    spectrogramOpacity(newVal) {
+      d3SelectAll('.spectrogram')
+        .style('opacity', newVal)
+    },
+
+    loop() {
+      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+      if (this.loop) {
+        ap.loop = true;
+        ap.loopStart = this.regionStartTime;
+        ap.loopEnd = this.regionEndTime;
+        if (ap.sourceNode) {
+          ap.sourceNode.loopStart = this.regionStartTime;
+          ap.sourceNode.loopEnd = this.regionEndTime;
+        }
+      } else {
+        ap.loop = false;
+        ap.loopStart = undefined;
+        ap.loopEnd = undefined;
+      }
+    },
+
+    showSargam(newVal) {
+      if (newVal) {
+        d3SelectAll('.sargamLabels')
+          .style('opacity', '1')
+      } else {
+        d3SelectAll('.sargamLabels')
+          .style('opacity', '0')
+      }
+    },
+
+    regionStartTime(newVal) {
+      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+      if (this.loop) {
+        ap.loopStart = newVal;
+        if (ap.sourceNode) {
+          ap.sourceNode.loopStart = newVal;
+        }
+      }
+    },
+
+    regionEndTime(newVal) {
+      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+      if (this.loop) {
+        ap.loopEnd = newVal;
+        if (ap.sourceNode) {
+          ap.sourceNode.loopEnd = newVal;
+        }
+      }
+    },
+
+    playheadReturn(newVal) {
+      d3Select('.playheadShadow')
+        .attr('opacity', Number(newVal))
+    },
+
+    setNewRegion(newVal) {
+      if (newVal) {
+        this.svg.style('cursor', 'alias');
+      } else {
+        this.svg.style('cursor', 'default');
+      }
+    },
+  },
+
+
+  methods: {
+
+    endConsonanEmit(endConsonant: string) {
+      const selT = this.selectedTraj!;
+      this.unsavedChanges = true;
+      const pIdx = selT.phraseIdx!;
+      const tIdx = selT.num!;
+      const id = `p${pIdx}t${tIdx}`;
+      const phrase = this.piece.phrases[pIdx];
+      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as Selection<SVGGElement, any, any, any>;
+      if (endConsonant === undefined) {
+        // false indicates that this is the end consonant
+        selT.removeConsonant(false);
+        this.removeConsonantSymbol(id, false);
+      } else if (selT.endConsonant === undefined) {
+        selT.addConsonant(endConsonant, false);
+        this.addConsonantSymbols(selT, phrase.startTime!, g, true, false, true)
+      } else {
+        selT.changeConsonant(endConsonant, false)
+      }
+      const selected = d3Select(`#endConsonantp${pIdx}t${tIdx}`);
+      selected.remove();
+      this.addEndingConsonant(selT, phrase.startTime!, g, true)
+    },
+
+    startConsonantEmit(startConsonant: string) {
+      const selT = this.selectedTraj!;
+      this.unsavedChanges = true;
+      const pIdx = selT.phraseIdx!;
+      const tIdx = selT.num!;
+      const id = `p${pIdx}t${tIdx}`;
+      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as Selection<SVGGElement, any, any, any>;
+      const phrase = this.piece.phrases[pIdx];
+      if (startConsonant === undefined) {
+        selT.removeConsonant();   
+        this.removeConsonantSymbol(id, true);
+      } else if (selT.startConsonant === undefined) {
+        selT.addConsonant(startConsonant);
+        this.addConsonantSymbols(selT, phrase.startTime!, g, true, true, false)
+      } else {
+        selT.changeConsonant(startConsonant)
+      } 
+      const selected = d3Select(`#vowelp${pIdx}t${tIdx}`);
+      selected.remove();
+      const vowelIdxs = phrase.firstTrajIdxs();
+      if (vowelIdxs.includes(selT.num!)) {
+        this.addVowel(selT, phrase.startTime!, g, true)
+      } 
+    },
+
+    vowelEmit(vowel: string) {
+      const selT = this.selectedTraj!;
+      this.unsavedChanges = true;
+      selT.updateVowel(vowel)
+      const pIdx = selT.phraseIdx!;
+      const tIdx = selT.num!;
+      const phrase = this.piece.phrases[pIdx];
+      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as Selection<SVGGElement, any, any, any>;
+      const selected = d3Select(`#vowelp${pIdx}t${tIdx}`);
+      if (selected.node() === null) {
+        this.addVowel(selT, phrase.startTime!, g, true)
+      } else {
+        selected.remove();
+        this.addVowel(selT, phrase.startTime!, g, true)
+      }
+      // if there is a next traj, check its vowel, and change it if necessary
+      const nextTraj = phrase.trajectories[tIdx + 1];
+      if (nextTraj) {
+        const sel = d3Select(`#vowelp${pIdx}t${tIdx + 1}`);
+        sel.remove();
+        const vowelIdxs = phrase.firstTrajIdxs();
+        if (vowelIdxs.includes(nextTraj.num!)) {
+          this.addVowel(nextTraj, phrase.startTime!, g, true)
+        }
+      }
+    },
+
+    dampenEmit(dampen: boolean) {
+      const selT = this.selectedTraj!;
+      this.unsavedChanges = true;
+      const pIdx = selT.phraseIdx!;
+      const tIdx = selT.num!;
+      if (dampen) {
+        selT.articulations['1.00'] = new Articulation({
+          name: 'dampen',
+        });
+        const phrase = this.piece!.phrases[pIdx];
+        const g = d3Select(`#articulations__p${pIdx}t${tIdx}`);
+        this.codifiedAddDampener(selT, phrase.startTime!, g);
+        d3Select(`#dampen${this.selectedTrajID}`)
+          .attr('stroke', this.selTrajColor)
+
+      } else {
+        if (selT.articulations['1.00']) {
+          delete selT.articulations['1.00'];
+        }
+        d3Select(`#dampenp${pIdx}t${tIdx}`).remove();
+      }
+    },
+
+    vibObjEmit(vibObj: VibObjType) {
+      const selT = this.selectedTraj!;
+      this.unsavedChanges = true;
+      selT.vibObj = vibObj;
+      const phrase = this.piece.phrases[selT.phraseIdx!];
+      const data = this.makeTrajData(selT, phrase.startTime!);
+      const pIdx = selT.phraseIdx;
+      const tIdx = selT.num;
+      d3Select(`#p${pIdx}t${tIdx}`)
+        .datum(data)
+        .attr('d', this.codifiedPhraseLine())
+      d3Select(`#overlay__p${pIdx}t${tIdx}`)
+        .datum(data)
+        .attr('d', this.codifiedPhraseLine())
+    },
+
+    newTrajEmit(idx: number) {
       this.unsavedChanges = true;
       this.trajTimePts.sort((a, b) => a.time - b.time);
       const logSGLines = this.visibleSargam.map(s => Math.log2(s));
@@ -797,9 +1092,9 @@ export default defineComponent({
       } else {
         tsp.canShiftUp = true;
       }
-    });
+    },
 
-    this.emitter.on('pluckBool', (pluckBool: boolean) => {
+    pluckBoolEmit(pluckBool: boolean) {
       this.unsavedChanges = true;
       const selT = this.selectedTraj!;
       const c1 = selT.articulations[0] || selT.articulations['0.00'];
@@ -819,334 +1114,38 @@ export default defineComponent({
           this.removePlucks(selT)
         }
       }
-    });
-
-    this.emitter.on('dampen', (dampen: boolean) => {
-      const selT = this.selectedTraj!;
-      this.unsavedChanges = true;
-      const pIdx = selT.phraseIdx!;
-      const tIdx = selT.num!;
-      if (dampen) {
-        selT.articulations['1.00'] = new Articulation({
-          name: 'dampen',
-        });
-        const phrase = this.piece!.phrases[pIdx];
-        const g = d3Select(`#articulations__p${pIdx}t${tIdx}`);
-        this.codifiedAddDampener(selT, phrase.startTime!, g);
-        d3Select(`#dampen${this.selectedTrajID}`)
-          .attr('stroke', this.selTrajColor)
-
-      } else {
-        if (selT.articulations['1.00']) {
-          delete selT.articulations['1.00'];
-        }
-        d3Select(`#dampenp${pIdx}t${tIdx}`).remove();
-      }
-    });
-
-    this.emitter.on('vibObj', (vibObj: VibObjType) => {
-      const selT = this.selectedTraj!;
-      this.unsavedChanges = true;
-      selT.vibObj = vibObj;
-      const phrase = this.piece.phrases[selT.phraseIdx!];
-      const data = this.makeTrajData(selT, phrase.startTime!);
-      const pIdx = selT.phraseIdx;
-      const tIdx = selT.num;
-      d3Select(`#p${pIdx}t${tIdx}`)
-        .datum(data)
-        .attr('d', this.codifiedPhraseLine())
-      d3Select(`#overlay__p${pIdx}t${tIdx}`)
-        .datum(data)
-        .attr('d', this.codifiedPhraseLine())
-
-      // this.resetZoom();
-    });
-
-    this.emitter.on('vowel', (vowel: string) => {
-      const selT = this.selectedTraj!;
-      this.unsavedChanges = true;
-      selT.updateVowel(vowel)
-      const pIdx = selT.phraseIdx!;
-      const tIdx = selT.num!;
-      const phrase = this.piece.phrases[pIdx];
-      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as Selection<SVGGElement, any, any, any>;
-      const selected = d3Select(`#vowelp${pIdx}t${tIdx}`);
-      if (selected.node() === null) {
-        this.addVowel(selT, phrase.startTime!, g, true)
-      } else {
-        selected.remove();
-        this.addVowel(selT, phrase.startTime!, g, true)
-      }
-      // if there is a next traj, check its vowel, and change it if necessary
-      const nextTraj = phrase.trajectories[tIdx + 1];
-      if (nextTraj) {
-        const sel = d3Select(`#vowelp${pIdx}t${tIdx + 1}`);
-        sel.remove();
-        const vowelIdxs = phrase.firstTrajIdxs();
-        if (vowelIdxs.includes(nextTraj.num!)) {
-          this.addVowel(nextTraj, phrase.startTime!, g, true)
-        }
-      }
-    });
-
-    this.emitter.on('startConsonant', (startConsonant: string) => {
-      const selT = this.selectedTraj!;
-      this.unsavedChanges = true;
-      const pIdx = selT.phraseIdx!;
-      const tIdx = selT.num!;
-      const id = `p${pIdx}t${tIdx}`;
-      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as Selection<SVGGElement, any, any, any>;
-      const phrase = this.piece.phrases[pIdx];
-      if (startConsonant === undefined) {
-        selT.removeConsonant();   
-        this.removeConsonantSymbol(id, true);
-      } else if (selT.startConsonant === undefined) {
-        selT.addConsonant(startConsonant);
-        this.addConsonantSymbols(selT, phrase.startTime!, g, true, true, false)
-      } else {
-        selT.changeConsonant(startConsonant)
-      } 
-      const selected = d3Select(`#vowelp${pIdx}t${tIdx}`);
-      selected.remove();
-      const vowelIdxs = phrase.firstTrajIdxs();
-      if (vowelIdxs.includes(selT.num!)) {
-        this.addVowel(selT, phrase.startTime!, g, true)
-      }      
-    });
-
-    this.emitter.on('endConsonant', (endConsonant: string) => {
-      const selT = this.selectedTraj!;
-      this.unsavedChanges = true;
-      const pIdx = selT.phraseIdx!;
-      const tIdx = selT.num!;
-      const id = `p${pIdx}t${tIdx}`;
-      const phrase = this.piece.phrases[pIdx];
-      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as Selection<SVGGElement, any, any, any>;
-      if (endConsonant === undefined) {
-        // false indicates that this is the end consonant
-        selT.removeConsonant(false);
-        this.removeConsonantSymbol(id, false);
-      } else if (selT.endConsonant === undefined) {
-        selT.addConsonant(endConsonant, false);
-        this.addConsonantSymbols(selT, phrase.startTime!, g, true, false, true)
-      } else {
-        selT.changeConsonant(endConsonant, false)
-      }
-      const selected = d3Select(`#endConsonantp${pIdx}t${tIdx}`);
-      selected.remove();
-      this.addEndingConsonant(selT, phrase.startTime!, g, true)
-    });
-
-    try {
-      // if there's a query id, 1. check if exists, 2. if so, load it, else:
-      // send some sort of message that entered piece didn't exist and go to files.
-      // check if stored piece esists. if so, load it, else: load default piece.
-      // push the id to router. 
-      
-      let piece, pieceDoesExist;
-      
-
-      const queryId = this.$route.query.id! as string;
-      if (queryId) {
-        pieceDoesExist = await pieceExists(queryId);
-        if (pieceDoesExist) {
-          piece = await getPiece(queryId);
-
-        } else {
-          await this.$router.push({ name: 'Files' });
-          throw 'IDTP logger: Piece does not exist, or you do not have \
-          permission to view.'
-        }
-      } else {
-        const storedId = this.$store.state._id;
-        pieceDoesExist = await pieceExists(storedId);
-        const id = pieceDoesExist ? storedId : '63445d13dc8b9023a09747a6';
-        this.$router.push({ 
-          name: 'EditorComponent',
-          query: { 'id': id }
-        })
-        piece = await getPiece(id);
-      }
-      this.browser = detect() as BrowserInfo;
-      
-      if (piece.audioID) {
-        
-        this.audioSource = this.browser.name === 'safari' ?
-          `https://swara.studio/audio/mp3/${piece.audioID}.mp3` :
-          `https://swara.studio/audio/opus/${piece.audioID}.opus`;         
-        this.audioDBDoc = await getAudioRecording(piece.audioID);
-        
-        this.durTot = this.audioDBDoc!.duration;
-        // if pieceDurTot is less than this, add silent phrase to make the two 
-        // the same
-      } else {
-        this.durTot = piece.durTot!;
-      }
-      this.initXScale = this.durTot / this.initViewDur;
-      let fund = 246;
-      if (this.audioDBDoc && this.audioDBDoc.saEstimate) {
-        fund = 2 * this.audioDBDoc.saEstimate * 2 ** this.audioDBDoc.octOffset;
-      }
-      this.freqMin = 2 ** (Math.log2(fund / 2) - this.rangeOffset);
-      this.freqMax = 2 ** (Math.log2(fund * 4) + this.rangeOffset);
-      await this.getPieceFromJson(piece, fund);
-      const c1 = this.$store.state.userID === this.piece.userID;
-      const c2 = this.piece.permissions === 'Publicly Editable';
-      const c3 = this.piece.permissions === 'Private';
-      if (c1 || c2) {
-        this.editable = true
-      }
-      if (!c1 && c3) {
-        await this.$router.push({ name: 'Files' });
-          throw 'IDTP logger: Piece does not exist, or you do not have \
-          permission to view.'
-      }
-      this.oldHeight = window.innerHeight;
-      const tsp = this.$refs.trajSelectPanel as typeof TrajSelectPanel;
-      tsp.trajIdxs = this.piece.trajIdxs;
-      const vox = ['Vocal (M)', 'Vocal (F)'];
-      tsp.vocal = vox.includes(this.piece.instrumentation[0]);
-      this.vocal = tsp.vocal;
-      const leftTime = this.leftTime;
-      await this.initializePiece();
-      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-      ap.parentLoaded();
-      const q = this.$route.query;
-      if (q.pIdx) {
-        this.moveToPhrase(Number(q.pIdx));
-      } else {
-        this.$router.push({ query: { id: q.id, pIdx: 0 } });
-      }
-      if (q.regionStart && q.regionEnd) {
-        this.setRegionToTimes(Number(q.regionStart), Number(q.regionEnd));
-      }
-      const silentDur = this.durTot - piece.durTot!;
-      if (silentDur >= 0.00001) {
-        const stTrajObj: {
-          id: number,
-          pitches: Pitch[],
-          durTot: number,
-          fundID12: number,
-          instrumentation?: string
-        } = {
-          id: 12,
-          pitches: [],
-          durTot: silentDur,
-          fundID12: this.piece.raga.fundamental
-        };
-        if (this.piece.instrumentation) {
-          stTrajObj.instrumentation = this.piece.instrumentation[0];
-        }
-        const silentTraj = new Trajectory(stTrajObj);
-        const phraseObj: {
-          trajectories: Trajectory[],
-          durTot: number,
-          instrumentation?: string[]
-        } = {
-          trajectories: [silentTraj],
-          durTot: silentDur,
-        };
-        if (this.piece.instrumentation) {
-          phraseObj.instrumentation = this.piece.instrumentation;
-        }
-        const silentPhrase = new Phrase(phraseObj);
-        this.piece.phrases.push(silentPhrase);
-        this.piece.durArrayFromPhrases();
-        this.piece.updateStartTimes();
-      }
-    } catch (err) {
-      console.error(err)
-    }
-    console.log('about to reset zoom')
-    this.$nextTick(() => {
-      this.resetZoom();
-    })
-  },
-
-  unmounted() {
-    window.removeEventListener('resize', this.resize);
-    window.removeEventListener('keydown', this.handleKeydown);
-    window.removeEventListener('keyup', this.handleKeyup);
-    window.removeEventListener('beforeunload', this.beforeUnload);
-    this.emitter.off('pluckBool');
-    this.emitter.off('mutateTraj');
-    this.emitter.off('newTraj');
-    this.emitter.off('vibObj');
-    this.emitter.off('dampen');
-    this.emitter.off('vowel');
-    this.emitter.off('startConsonant');
-    this.emitter.off('endConsonant');
-  },
-
-  watch: {
-    spectrogramOpacity(newVal) {
-      d3SelectAll('.spectrogram')
-        .style('opacity', newVal)
     },
 
-    loop() {
-      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-      if (this.loop) {
-        ap.loop = true;
-        ap.loopStart = this.regionStartTime;
-        ap.loopEnd = this.regionEndTime;
-        if (ap.sourceNode) {
-          ap.sourceNode.loopStart = this.regionStartTime;
-          ap.sourceNode.loopEnd = this.regionEndTime;
-        }
+    mutateTrajEmit(newIdx: number) {
+      console.log('yes?')
+      if (!this.selectedTraj) {
+        console.log('no selected traj')
       } else {
-        ap.loop = false;
-        ap.loopStart = undefined;
-        ap.loopEnd = undefined;
+        this.unsavedChanges = true;
+        const trajObj = this.selectedTraj.toJSON();
+        trajObj.id = newIdx;
+        const newTraj = new Trajectory(trajObj);
+        const pIdx = this.selectedTraj.phraseIdx!;
+        const phrase = this.piece.phrases[pIdx];
+
+        const tIdx = this.selectedTraj.num!;
+        phrase.trajectories[tIdx] = newTraj;
+        phrase.assignStartTimes();
+        phrase.assignPhraseIdx();
+        phrase.assignTrajNums();
+        this.selectedTraj = newTraj;
+        this.selectedTrajs = [this.selectedTraj];
+        const data = this.makeTrajData(this.selectedTraj, phrase.startTime!);
+        d3Select(`#p${pIdx}t${tIdx}`)
+          .datum(data)
+          .attr('d', this.codifiedPhraseLine())
+        d3Select(`#overlay__p${pIdx}t${tIdx}`)
+          .datum(data)
+          .attr('d', this.codifiedPhraseLine())
       }
+      d3SelectAll('.dragDots').remove();
+      this.addAllDragDots();
     },
-
-    showSargam(newVal) {
-      if (newVal) {
-        d3SelectAll('.sargamLabels')
-          .style('opacity', '1')
-      } else {
-        d3SelectAll('.sargamLabels')
-          .style('opacity', '0')
-      }
-    },
-
-    regionStartTime(newVal) {
-      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-      if (this.loop) {
-        ap.loopStart = newVal;
-        if (ap.sourceNode) {
-          ap.sourceNode.loopStart = newVal;
-        }
-      }
-    },
-
-    regionEndTime(newVal) {
-      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-      if (this.loop) {
-        ap.loopEnd = newVal;
-        if (ap.sourceNode) {
-          ap.sourceNode.loopEnd = newVal;
-        }
-      }
-    },
-
-    playheadReturn(newVal) {
-      d3Select('.playheadShadow')
-        .attr('opacity', Number(newVal))
-    },
-
-    setNewRegion(newVal) {
-      if (newVal) {
-        this.svg.style('cursor', 'alias');
-      } else {
-        this.svg.style('cursor', 'default');
-      }
-    },
-  },
-
-
-  methods: {
 
     setAnimationStart(time: number) {
       this.animationStart = time

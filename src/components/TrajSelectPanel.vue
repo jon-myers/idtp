@@ -571,7 +571,7 @@ export default defineComponent({
             this.selectedIdx = idx;
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
-            this.emitter.emit('mutateTraj', outIdx);
+            this.$emit('mutateTraj', outIdx)
             document.querySelectorAll('.thumb').forEach(t => {
               t.classList.remove('selected')
             })
@@ -584,7 +584,7 @@ export default defineComponent({
                 this.selectedIdx = idx;
                 let outIdx = this.trajIdxs[this.selectedIdx];
                 if (outIdx >= 12) outIdx += 1;
-                this.emitter.emit('mutateTraj', outIdx);
+                this.$emit('mutateTraj', outIdx)
                 document.querySelectorAll('.thumb').forEach(t => {
                   t.classList.remove('selected')
                 })
@@ -594,7 +594,7 @@ export default defineComponent({
               this.selectedIdx = idx;
               let outIdx = this.trajIdxs[this.selectedIdx];
               if (outIdx >= 12) outIdx += 1;
-              this.emitter.emit('mutateTraj', outIdx);
+              this.$emit('mutateTraj', outIdx)
               document.querySelectorAll('.thumb').forEach(t => {
                 t.classList.remove('selected')
               })
@@ -606,7 +606,7 @@ export default defineComponent({
             this.selectedIdx = idx;
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
-            this.emitter.emit('mutateTraj', outIdx);
+            this.$emit('mutateTraj', outIdx)
             document.querySelectorAll('.thumb').forEach(t => {
               t.classList.remove('selected')
             })
@@ -624,7 +624,7 @@ export default defineComponent({
             document.querySelector(selectId).classList.add('selected')
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
-            this.emitter.emit('newTraj', outIdx);
+            this.$emit('newTraj', outIdx)
           }
         } else if (timePts.length === 3) {
           const options = [4, 5, 6];
@@ -639,7 +639,7 @@ export default defineComponent({
             document.querySelector(selectId).classList.add('selected')
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
-            this.emitter.emit('newTraj', outIdx);
+            this.$emit('newTraj', outIdx)
           }
         } else if (timePts.length === 4) {
           const options = [6];
@@ -653,7 +653,7 @@ export default defineComponent({
             document.querySelector(selectId).classList.add('selected')
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
-            this.emitter.emit('newTraj', outIdx);
+            this.$emit('newTraj', outIdx)
           }
         } else if (timePts.length === 5) {
           const options = [6];
@@ -667,7 +667,7 @@ export default defineComponent({
             document.querySelector(selectId).classList.add('selected')
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
-            this.emitter.emit('newTraj', outIdx);
+            this.$emit('newTraj', outIdx)
           }
         } else if (timePts.length === 6) {
           const options = [6];
@@ -676,7 +676,7 @@ export default defineComponent({
             document.querySelector(selectId).classList.add('selected')
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
-            this.emitter.emit('newTraj', outIdx);
+            this.$emit('newTraj', outIdx)
           }
         } else if (timePts.length === 7) {
           const options = [6];
@@ -699,7 +699,7 @@ export default defineComponent({
             document.querySelector(selectId).classList.add('selected')
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
-            this.emitter.emit('newTraj', outIdx);
+            this.$emit('newTraj', outIdx)
           }
         }
       } 
@@ -711,31 +711,31 @@ export default defineComponent({
     
     updateBool() {
       if (this.parentSelected) {
-        this.emitter.emit('pluckBool', this.pluckBool)
+        this.$emit('pluckBool', this.pluckBool)
       }
     },
 
     updateDampen() {
       if (this.parentSelected) {
-        this.emitter.emit('dampen', this.dampen)
+        this.$emit('dampen', this.dampen)
       }
     },
 
     updateVowel() {
       if (this.parentSelected) {
-        this.emitter.emit('vowel', this.vowel)
+        this.$emit('vowel', this.vowel);
       }
     },
 
     updateStartConsonant() {
       if (this.parentSelected) {
-        this.emitter.emit('startConsonant', this.startConsonant)
+        this.$emit('startConsonant', this.startConsonant)
       }
     },
 
     updateEndConsonant() {
       if (this.parentSelected) {
-        this.emitter.emit('endConsonant', this.endConsonant)
+        this.$emit('endConsonant', this.endConsonant)
       }
     },
 
@@ -746,7 +746,7 @@ export default defineComponent({
         initUp: this.initUp,
         extent: this.extent,
       };
-      this.emitter.emit('vibObj', vibObj);
+      this.$emit('vibObj', vibObj);
     },
   }
 })
