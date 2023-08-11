@@ -484,6 +484,7 @@ export default defineComponent({
           { value: 'pitchSequenceLoose', text: 'Loose Pitch Sequence' },
           { value: 'trajectoryID', text: 'Trajectory' },
           { value: 'trajSequenceStrict', text: 'Strict Traj Sequence' },
+          { value: 'trajSequenceLoose', text: 'Loose Traj Sequence' },
           { value: 'vowel', text: 'Vowel' },
           { value: 'startingConsonant', text: 'Starting Consonant' },
           { value: 'endingConsonant', text: 'Ending Consonant' },
@@ -496,6 +497,7 @@ export default defineComponent({
           { value: 'pitchSequenceLoose', text: 'Loose Pitch Sequence' },
           { value: 'trajectoryID', text: 'Trajectory' },
           { value: 'trajSequenceStrict', text: 'Strict Trajectory Sequence' },
+          { value: 'trajSequenceLoose', text: 'Loose Traj Sequence' },
         ]
       }
     },

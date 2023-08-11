@@ -61,8 +61,10 @@
     "@types/javascript-color-gradient": "^2.4.0",
     "@types/lodash": "^4.14.194",
     "@types/uuid": "^9.0.1",
+    "@typescript-eslint/eslint-plugin": "^6.3.0",
+    "@typescript-eslint/parser": "^6.3.0",
     "@vitejs/plugin-vue": "^4.1.0",
-    "eslint": "^8.35.0",
+    "eslint": "^8.47.0",
     "eslint-plugin-vue": "^9.9.0",
     "vite": "^4.4.8"
   },

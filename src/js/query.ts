@@ -1,5 +1,5 @@
 import { instantiatePiece } from './analysis.ts';
-import { Piece, Pitch, Trajectory, Group } from './classes.ts';
+import { Piece, Pitch, Trajectory } from './classes.ts';
 
 
 type CategoryType = (
@@ -11,7 +11,8 @@ type CategoryType = (
   'anyConsonant' |
   'pitchSequenceStrict' |
   'pitchSequenceLoose' |
-  'trajSequenceStrict'
+  'trajSequenceStrict' | 
+  'trajSequenceLoose'
 )
 
 type DesignatorType = 'includes' | 'excludes' | 'startsWith' | 'endsWith';
@@ -231,7 +232,6 @@ class Query {
   private phraseFilter() {
     const phrases = this.piece.phrases;
     const filteredPhrases = phrases.filter(phrase => {
-      const trajs = phrase.trajectories;
       if (this.category === 'pitch') {
         const trialArr = phrase.allPitches(this.repetition)
           .map(pitch => pitch.numberedPitch);
@@ -266,6 +266,9 @@ class Query {
       } else if (this.category === 'trajSequenceStrict') {
         const trialArr = phrase.trajectories.map(traj => traj.id);
         return this.trajSeqStrictDifferentiate(this.trajIdSequence!, this.designator, trialArr);
+      } else if (this.category === 'trajSequenceLoose') {
+        const trialArr = phrase.trajectories.map(traj => traj.id);
+        return this.trajSeqLooseDifferentiate(this.trajIdSequence!, this.designator, trialArr);
       }
     });
     this.trajectories = filteredPhrases.map(phrase => phrase.trajectories);
@@ -310,6 +313,9 @@ class Query {
       } else if (this.category === 'trajSequenceStrict') {
         const trialArr = group.trajectories.map(traj => traj.id);
         bool = this.trajSeqStrictDifferentiate(this.trajIdSequence!, this.designator, trialArr);
+      } else if (this.category === 'trajSequenceLoose') {
+        const trialArr = group.trajectories.map(traj => traj.id);
+        bool = this.trajSeqLooseDifferentiate(this.trajIdSequence!, this.designator, trialArr);
       }
       if (bool) {
         this.identifier.push(group.id);
@@ -418,7 +424,7 @@ class Query {
             lastPitch = pitch;
             return true;
           });
-        };
+        }
         boolean = this.pitchSeqStrictDifferentiate(this.pitchSequence!, this.designator, nPitches);
       } else if (this.category === 'pitchSequenceLoose') {
         const pitches = trajSeq.map(traj => traj.pitches).flat();
@@ -437,6 +443,9 @@ class Query {
       } else if (this.category === 'trajSequenceStrict') {
         const trajIDs = trajSeq.map(traj => traj.id);
         boolean = this.trajSeqStrictDifferentiate(this.trajSequence!, this.designator, trajIDs);
+      } else if (this.category === 'trajSequenceLoose') {
+        const trajIDs = trajSeq.map(traj => traj.id);
+        boolean = this.trajSeqLooseDifferentiate(this.trajSequence!, this.designator, trajIDs);
       }
       if (boolean) {
         this.trajectories.push(trajSeq);
@@ -498,7 +507,7 @@ class Query {
             lastPitch = pitch;
             return true;
           });
-        };
+        }
         boolean = this.pitchSeqStrictDifferentiate(this.pitchSequence!, this.designator, nPitches);
       } else if (this.category === 'pitchSequenceLoose') {
         let nPitches = trajSeq.map(traj => traj.pitches).flat()
@@ -517,6 +526,9 @@ class Query {
       } else if (this.category === 'trajSequenceStrict') {
         const trajIDs = trajSeq.map(traj => traj.id);
         boolean = this.trajSeqStrictDifferentiate(this.trajSequence!, this.designator, trajIDs);
+      } else if (this.category === 'trajSequenceLoose') {
+        const trajIDs = trajSeq.map(traj => traj.id);
+        boolean = this.trajSeqLooseDifferentiate(this.trajSequence!, this.designator, trajIDs);
       }
       if (boolean) {
         this.trajectories.push(trajSeq);
@@ -610,8 +622,26 @@ class Query {
     } else if (designator === 'startsWith') {
       boolean = findSequenceIndexes(trajIdSeq, fullTrajList)[0] === 0;
     } else if (designator === 'endsWith') {
-      const startIdx = fullTrajListIDs.length - trajIdSeq.length;
+      const startIdx = fullTrajList.length - trajIdSeq.length;
       boolean = findSequenceIndexes(trajIdSeq, fullTrajList)[0] === startIdx;
+    }
+    return boolean;
+  }
+
+  private trajSeqLooseDifferentiate(trajIdSeq: number[], designator: string, fullTrajList: Trajectory[]) {
+    let boolean: boolean = false;
+    if (designator === 'includes') {
+      const looseObj = testLooseSequenceIndexes(trajIdSeq, fullTrajList);
+      boolean = looseObj.truth;
+    } else if (designator === 'excludes') {
+      const looseObj = testLooseSequenceIndexes(trajIdSeq, fullTrajList);
+      boolean = !looseObj.truth;
+    } else if (designator === 'startsWith') {
+      const looseObj = testLooseSequenceIndexes(trajIdSeq, fullTrajList);
+      boolean = looseObj.truth && looseObj.firstIdx === 0;
+    } else if (designator === 'endsWith') {
+      const looseObj = testLooseSequenceIndexes(trajIdSeq, fullTrajList);
+      boolean = looseObj.truth && looseObj.lastIdx === fullTrajList.length - 1;
     }
     return boolean;
   }
@@ -712,22 +742,18 @@ class Query {
     vowel?: string,
     consonant?: string,
   } = {}) {
-    try {
-      const piece = await instantiatePiece(transcriptionID);
-      const queryObj = { 
-        segmentation, 
-        designator, 
-        category, 
-        pitch, 
-        sequenceLength,
-        trajectoryID,
-        vowel,
-        consonant,
-      };
-      return new Query(piece, queryObj);
-    } catch (error) {
-      console.log(error);
-    }
+    const piece = await instantiatePiece(transcriptionID);
+    const queryObj = { 
+      segmentation, 
+      designator, 
+      category, 
+      pitch, 
+      sequenceLength,
+      trajectoryID,
+      vowel,
+      consonant,
+    };
+    return new Query(piece, queryObj);
   }
 
   public static async multiple(queries: QueryType[] = [], {
@@ -750,7 +776,6 @@ class Query {
       if (piece === undefined) {
         piece = await instantiatePiece(transcriptionID);
       }
-      console.log(queries)
       const queryObjs = queries.map(query => {
         return { 
           segmentation, 
@@ -802,7 +827,7 @@ class Query {
         queryAnswers = sortIdxs.map(idx => queryAnswers[idx]);
       }   
     } catch (error) {
-      console.log(error);
+      throw new Error(error);
     }
     return [outputTrajectories, nonStringifiedOutputIdentifiers, queryAnswers];
   }
@@ -818,30 +843,30 @@ type MultipleOptionType = {
   every?: boolean,
 }
 
-const query_1 = {
-  designator: 'includes' as DesignatorType,
-  category: 'pitch' as CategoryType,
-  pitch: new Pitch({ swara: 'sa', oct: 0 }),
-  // consonant: 'ma',
-}
+// const query_1 = {
+//   designator: 'includes' as DesignatorType,
+//   category: 'pitch' as CategoryType,
+//   pitch: new Pitch({ swara: 'sa', oct: 0 }),
+//   // consonant: 'ma',
+// }
 
-const query_2 = {
-  designator: 'includes' as DesignatorType,
-  category: 'pitchSequenceStrict' as CategoryType,
-  pitchSequence: [
-    new Pitch({ swara: 'dha', oct: -1}), 
-    new Pitch({ swara: 'sa'}),
-    new Pitch({ swara: 'ni', oct: -1}),
-    new Pitch({ swara: 'sa'}),
-  ],
-}
+// const query_2 = {
+//   designator: 'includes' as DesignatorType,
+//   category: 'pitchSequenceStrict' as CategoryType,
+//   pitchSequence: [
+//     new Pitch({ swara: 'dha', oct: -1}), 
+//     new Pitch({ swara: 'sa'}),
+//     new Pitch({ swara: 'ni', oct: -1}),
+//     new Pitch({ swara: 'sa'}),
+//   ],
+// }
 
-Query.multiple([query_1, query_2], { 
-  segmentation: 'phrase',
-})
-  .then(q => {
-    console.log(q)
-  })
+// Query.multiple([query_1, query_2], { 
+//   segmentation: 'phrase',
+// })
+//   .then(q => {
+//     console.log(q)
+//   })
 
   export { Query }
 
