@@ -10,7 +10,8 @@ type CategoryType = (
   'endingConsonant' |
   'anyConsonant' |
   'pitchSequenceStrict' |
-  'pitchSequenceLoose'
+  'pitchSequenceLoose' |
+  'trajSequenceStrict'
 )
 
 type DesignatorType = 'includes' | 'excludes' | 'startsWith' | 'endsWith';
@@ -30,6 +31,7 @@ type QueryType = {
   vowel?: string,
   consonant?: string,
   pitchSequence?: Pitch[],
+  trajIdSequence?: number[],
 }
 
 type MultipleReturnType = [
@@ -126,6 +128,7 @@ class Query {
   minDur: number = 0;
   startTimes: number[];
   pitchSequence?: Pitch[];
+  trajIdSequence?: number[];
   // queryAnswers: QueryAnswerType[];
 
 
@@ -141,6 +144,7 @@ class Query {
     maxDur = 60,
     minDur = 0,
     pitchSequence = undefined,
+    trajIdSequence = undefined,
   }: {
     segmentation?: SegmentationType,
     designator?: DesignatorType,
@@ -153,6 +157,7 @@ class Query {
     maxDur?: number,
     minDur?: number,
     pitchSequence?: Pitch[],
+    trajIdSequence?: number[],
   } = {}) {
     this.category = category;
     this.designator = designator;
@@ -170,6 +175,7 @@ class Query {
     this.maxDur = maxDur;
     this.minDur = minDur;
     this.pitchSequence = pitchSequence;
+    this.trajIdSequence = trajIdSequence;
     if (segmentation === 'sequenceOfTrajectories') {
       if (sequenceLength === undefined) {
         throw new Error('sequenceLength is required when type is ' + 
@@ -204,9 +210,13 @@ class Query {
       if (consonant === undefined) {
         throw new Error('consonant is required when category is consonant');
       }
-    } else if (category === 'pitchSequenceStrict') {
+    } else if (category === 'pitchSequenceStrict' || category === 'pitchSequenceLoose') {
       if (this.pitchSequence === undefined) {
-        throw new Error('pitchSequence is required when category is pitchSequence');
+        throw new Error('pitchSequence is required');
+      }
+    } else if (category === 'trajSequenceStrict' || category === 'trajSequenceLoose') {
+      if (this.trajIdSequence === undefined) {
+        throw new Error('trajIdSequence is required');
       }
     }
     this.allTypeFilters();
@@ -253,7 +263,10 @@ class Query {
         const trialArr = phrase.allPitches(this.repetition)
           .map(pitch => pitch.numberedPitch);
         return this.pitchSeqLooseDifferentiate(this.pitchSequence!, this.designator, trialArr);
-      } 
+      } else if (this.category === 'trajSequenceStrict') {
+        const trialArr = phrase.trajectories.map(traj => traj.id);
+        return this.trajSeqStrictDifferentiate(this.trajIdSequence!, this.designator, trialArr);
+      }
     });
     this.trajectories = filteredPhrases.map(phrase => phrase.trajectories);
     this.identifier = filteredPhrases.map(phrase => phrase.pieceIdx!);
@@ -294,6 +307,9 @@ class Query {
         const trialArr = group.allPitches(this.repetition)
           .map(pitch => pitch.numberedPitch);
         bool = this.pitchSeqLooseDifferentiate(this.pitchSequence!, this.designator, trialArr);
+      } else if (this.category === 'trajSequenceStrict') {
+        const trialArr = group.trajectories.map(traj => traj.id);
+        bool = this.trajSeqStrictDifferentiate(this.trajIdSequence!, this.designator, trialArr);
       }
       if (bool) {
         this.identifier.push(group.id);
@@ -418,6 +434,9 @@ class Query {
           });
         }
         boolean = this.pitchSeqLooseDifferentiate(this.pitchSequence!, this.designator, nPitches);
+      } else if (this.category === 'trajSequenceStrict') {
+        const trajIDs = trajSeq.map(traj => traj.id);
+        boolean = this.trajSeqStrictDifferentiate(this.trajSequence!, this.designator, trajIDs);
       }
       if (boolean) {
         this.trajectories.push(trajSeq);
@@ -495,6 +514,9 @@ class Query {
           });
         }
         boolean = this.pitchSeqLooseDifferentiate(this.pitchSequence!, this.designator, nPitches);
+      } else if (this.category === 'trajSequenceStrict') {
+        const trajIDs = trajSeq.map(traj => traj.id);
+        boolean = this.trajSeqStrictDifferentiate(this.trajSequence!, this.designator, trajIDs);
       }
       if (boolean) {
         this.trajectories.push(trajSeq);
@@ -575,6 +597,21 @@ class Query {
     } else if (designator === 'endsWith') {
       const looseObj = testLooseSequenceIndexes(numPitchSeq, nPitches);
       boolean = looseObj.truth && looseObj.lastIdx === nPitches.length - 1;
+    }
+    return boolean;
+  }
+
+  private trajSeqStrictDifferentiate(trajIdSeq: number[], designator: string, fullTrajList: Trajectory[]) {
+    let boolean: boolean = false;
+    if (designator === 'includes') {
+      boolean = findSequenceIndexes(trajIdSeq, fullTrajList).length > 0;
+    } else if (designator === 'excludes') {
+      boolean = findSequenceIndexes(trajIdSeq, fullTrajList).length === 0;
+    } else if (designator === 'startsWith') {
+      boolean = findSequenceIndexes(trajIdSeq, fullTrajList)[0] === 0;
+    } else if (designator === 'endsWith') {
+      const startIdx = fullTrajListIDs.length - trajIdSeq.length;
+      boolean = findSequenceIndexes(trajIdSeq, fullTrajList)[0] === startIdx;
     }
     return boolean;
   }
@@ -713,6 +750,7 @@ class Query {
       if (piece === undefined) {
         piece = await instantiatePiece(transcriptionID);
       }
+      console.log(queries)
       const queryObjs = queries.map(query => {
         return { 
           segmentation, 
@@ -724,6 +762,7 @@ class Query {
           vowel: query.vowel,
           consonant: query.consonant,
           pitchSequence: query.pitchSequence,
+          trajIdSequence: query.trajIdSequence,
           minDur,
           maxDur,
         };

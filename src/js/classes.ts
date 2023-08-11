@@ -661,14 +661,6 @@ class Trajectory {
     } else {
       throw new SyntaxError(`invalid durTot type, must be number: ${durTot}`)
     }
-    // isArr = Array.isArray(durArray) && durArray.length > 0;
-    // const condition = isArr && durArray.every(a => typeof(a) === 'number');
-    // if (durArray === undefined || condition) {
-    //   this.durArray = durArray
-    // } else {
-    //   throw new SyntaxError(`invalid durArray type, must be array of numbers:` + 
-    //     `${durArray}`)
-    // }
     this.durArray = durArray;
 
     if (slope === undefined) {
@@ -1981,22 +1973,22 @@ class Piece {
     // this is really confusing becuase id12 is silent. The current solution 
     // is to just skip that number; so 12 listed below is really id13
     this.possibleTrajs = {
-      'Sitar': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 
-      'Vocal (M)': [0, 1, 2, 3, 4, 5, 6, 12],
-      'Vocal (F)': [0, 1, 2, 3, 4, 5, 6, 12],
-      'Bansuri': [0, 1, 2, 3, 4, 5, 6, 12],
-      'Esraj': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      'Sarangi': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      'Rabab': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      'Santoor': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      'Sarod': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      'Shehnai': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      'Surbahar': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      'Veena (Saraswati)': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      'Veena (Vichitra)': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      'Veena, Rudra (Bin)': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      'Violin': [0, 1, 2, 3, 4, 5, 6, 12],
-      'Harmonium': [0, 12],
+      'Sitar': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 
+      'Vocal (M)': [0, 1, 2, 3, 4, 5, 6, 12, 13],
+      'Vocal (F)': [0, 1, 2, 3, 4, 5, 6, 12, 13],
+      'Bansuri': [0, 1, 2, 3, 4, 5, 6, 12, 13],
+      'Esraj': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      'Sarangi': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      'Rabab': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      'Santoor': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      'Sarod': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      'Shehnai': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      'Surbahar': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      'Veena (Saraswati)': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      'Veena (Vichitra)': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      'Veena, Rudra (Bin)': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      'Violin': [0, 1, 2, 3, 4, 5, 6, 12, 13],
+      'Harmonium': [0, 12, 13],
     }
   }
 
