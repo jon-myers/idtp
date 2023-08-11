@@ -151,6 +151,51 @@
 
 
         </div>
+        <div
+          class='controlsRow'
+          v-if='categories[qIdx].value.slice(0, 12) === "trajSequence"'
+          >
+          <label>Number of Trajectories: </label>
+          <select
+            name='numTrajs'
+            v-model='numTrajs[qIdx]'
+            @change='updateNumTrajs(qIdx)'
+            >
+            <option
+              v-for='numT in range(2, 5, true)'
+              :value='numT'
+              :key='numT'
+              >
+              {{ numT }}
+            </option>
+          </select>
+        </div>
+        <div 
+          class='controlsRow big'
+          v-if='categories[qIdx].value.slice(0, 12) === "trajSequence"'
+          >
+          <label>Sequence: </label>
+          <div class='seqCol'>
+            <div 
+              v-for='(_, seqIdx) in trajIdSeqs[qIdx].length'
+              >
+              <select
+                v-model='trajIdSeqs[qIdx][seqIdx]'
+                >
+                <option
+                  v-for='trajName in trajNames'
+                  :value='trajName.value'
+                  :key='trajName.value'
+                  >
+                  {{ trajName.name }}
+                </option>
+              </select>
+
+
+            </div>
+          </div>
+        </div>
+
         <div 
           class='controlsRow' 
           v-if='categories[qIdx].value === "trajectoryID"'
@@ -160,10 +205,11 @@
             name='trajectory' v-model='trajectoryIDs[qIdx]'
             >
             <option 
-              v-for='(trajName, trajID) in Trajectory.names()' 
-              :value='trajID'
+              v-for='(trajName) in trajNames' 
+              :value='trajName.value'
+              :key='trajName.value'
               >
-              {{ trajName }}
+              {{ trajName.name }}
             </option>
           </select>
 
@@ -253,7 +299,9 @@ type QueryControlsDataType = {
   possibleVowels: string[],
   possibleConsonants: string[],
   numPitches: number[],
+  numTrajs: number[],
   pitchSeqObjs: PitchSeqObjType[][],
+  trajIdSeqs: number[][],
 
 
 }
@@ -265,7 +313,8 @@ type ParamType = (
   PitchNameType |
   string |
   PitchSeqObjType[] | 
-  PitchSeqObjType
+  PitchSeqObjType |
+  number[]
   );
 
 type PitchSeqObjType = {
@@ -316,7 +365,9 @@ export default defineComponent({
         return p.type === 'consonant'
       }).map(p => p.iso_15919),
       numPitches: [2],
-      pitchSeqObjs: [[{ swara: 'Sa', oct: 0 }, { swara: 'Sa', oct: 0 }]]
+      numTrajs: [2],
+      pitchSeqObjs: [[{ swara: 'Sa', oct: 0 }, { swara: 'Sa', oct: 0 }]],
+      trajIdSeqs: [[0, 0]],
     }
   },
 
@@ -328,6 +379,11 @@ export default defineComponent({
 
     raga: {
       type: Object as PropType<Raga>,
+      required: true,
+    },
+
+    trajIdxs: {
+      type: Array as PropType<number[]>,
       required: true,
     }
     
@@ -345,6 +401,7 @@ export default defineComponent({
         this.growParam(this.trajectoryIDs, 0, newVal, oldVal);
         this.growParam(this.numPitches, 2, newVal, oldVal);
         this.growParam(this.pitchSeqObjs, [{ swara: 'Sa', oct: 0 }, { swara: 'Sa', oct: 0 }], newVal, oldVal);
+        this.growParam(this.trajIdSeqs, [0, 0], newVal, oldVal);
       } else {
         this.categories.splice(newVal, oldVal - newVal);
         this.pitchNames.splice(newVal, oldVal - newVal);
@@ -359,6 +416,12 @@ export default defineComponent({
   },
 
   computed: {
+
+    trajNames() {
+      return this.trajIdxs.map(ti => {
+        return { name: Trajectory.names()[ti], value: ti }
+      })
+    },
 
     reversedSargamNames() {
       return this.raga.sargamNames.slice().reverse()
@@ -394,6 +457,9 @@ export default defineComponent({
           query.pitchSequence = this.pitchSeqObjs[i].map(p => {
             return new Pitch({ swara: p.swara, oct: p.oct })
           })
+        } else if (category.value.slice(0, 12) === 'trajSequence') {
+          console.log('this')
+          query.trajIdSequence = this.trajIdSeqs[i]
         }
         return query
       })
@@ -417,6 +483,8 @@ export default defineComponent({
           { value: 'pitchSequenceStrict', text: 'Strict Pitch Sequence' },
           { value: 'pitchSequenceLoose', text: 'Loose Pitch Sequence' },
           { value: 'trajectoryID', text: 'Trajectory' },
+          { value: 'trajSequenceStrict', text: 'Strict Traj Sequence' },
+          { value: 'trajSequenceLoose', text: 'Loose Traj Sequence' },
           { value: 'vowel', text: 'Vowel' },
           { value: 'startingConsonant', text: 'Starting Consonant' },
           { value: 'endingConsonant', text: 'Ending Consonant' },
@@ -428,6 +496,8 @@ export default defineComponent({
           { value: 'pitchSequenceStrict', text: 'Strict Pitch Sequence'},
           { value: 'pitchSequenceLoose', text: 'Loose Pitch Sequence' },
           { value: 'trajectoryID', text: 'Trajectory' },
+          { value: 'trajSequenceStrict', text: 'Strict Trajectory Sequence' },
+          { value: 'trajSequenceLoose', text: 'Loose Traj Sequence' },
         ]
       }
     },
@@ -450,7 +520,16 @@ export default defineComponent({
         this.pitchSeqObjs[qIdx].splice(n, oldLen - n);
       }
     },
-    
+
+    updateNumTrajs(qIdx: number) {
+      const n = this.numTrajs[qIdx];
+      const oldLen = this.trajIdSeqs[qIdx].length;
+      if (n > oldLen) {
+        this.growParam(this.trajIdSeqs[qIdx], 0, n, oldLen);
+      } else {
+        this.trajIdSeqs[qIdx].splice(n, oldLen - n);
+      }
+    },
 
     growParam(param: ParamType[], preset: ParamType, newVal: number, oldVal: number) {
       let add = [];
@@ -526,6 +605,12 @@ export default defineComponent({
   align-items: center;
 }
 
+.controlsRow.big {
+  height: 100px;
+  min-height: 40px;
+  /* min-height: 100px; */
+}
+
 .controlsRow.title {
   justify-content: center
 }
@@ -588,5 +673,10 @@ label {
   min-width: 40px;
   outline: none;
   user-select: none;
+}
+
+.seqCol {
+  display: flex;
+  flex-direction: column;
 }
 </style>

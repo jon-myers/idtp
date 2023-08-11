@@ -450,8 +450,7 @@ export default defineComponent({
     this.consonantList.push('none');
 
     this.cIso_15919.push(undefined);
-    // const vox = ['Vocal (M)', 'Vocal (F)'];
-    // this.vocal = vox.includes(this.$parent.piece.instrumentation[0])
+
     if (this.vocal) this.octShiftTop = 75;
     if (this.vocal && this.showSlope) this.octShiftTop = 97
 
