@@ -1727,7 +1727,6 @@ export default defineComponent({
       };
       const dragDotsG = this.phraseG.append('g').classed('dragDots', true);
       let times = [0, ...sTraj.durArray!.map(cumsum())];
-      console.log(times)
       const phraseStart = phrase.startTime!;
       const ts = sTraj.startTime!;
       times = times.map(a => a * sTraj.durTot + phraseStart + ts);
