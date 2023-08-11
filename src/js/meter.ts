@@ -1168,6 +1168,6 @@ class Meter {
 // const a = Meter.fromTimePoints({ timePoints: tp, hierarchy, repetitions })
 // console.log(a.realTimes) 
 
-export { Meter }
+export { Meter, Pulse }
 
  

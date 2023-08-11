@@ -507,7 +507,7 @@ class Chikari {
   }
 }
 
-type VibObj = {
+type VibObjType = {
   periods: number;
   vertOffset: number;
   initUp: boolean;
@@ -535,7 +535,7 @@ class Trajectory {
   num: number | undefined;
   name: string | undefined;
   fundID12: number | undefined;
-  vibObj: VibObj;
+  vibObj: VibObjType;
   instrumentation: string;
   vowel: string | undefined;
   vowelIpa: string | undefined;
@@ -605,11 +605,11 @@ class Trajectory {
     durTot?: number,
     durArray?: number[],
     slope?: number,
-    articulations?: { [key: string]: Articulation },
+    articulations?: { [key: string]: Articulation } | {},
     num?: number,
     name?: string,
     fundID12?: number,
-    vibObj?: VibObj,
+    vibObj?: VibObjType,
     instrumentation?: string,
     vowel?: string,
     vowelIpa?: string,
@@ -1354,6 +1354,8 @@ class Trajectory {
   }
   // skip id 11, same code as id 7, just different articulation
 }
+
+
 
 class Group { 
   trajectories: Trajectory[];
@@ -2615,5 +2617,6 @@ export {
 }
 
 export type {
-  RuleSetType
+  RuleSetType,
+  VibObjType
 }

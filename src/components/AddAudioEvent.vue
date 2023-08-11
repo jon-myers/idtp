@@ -141,6 +141,7 @@ type RecType = {
   },
   saEstimate: number,
   saVerified: boolean,
+  _id?: string,
 }
 
 type AudioEventType = {

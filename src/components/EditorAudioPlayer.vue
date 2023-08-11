@@ -292,7 +292,7 @@ import { BrowserInfo, detect } from 'detect-browser';
 import { drag as d3Drag, select as d3Select } from 'd3';
 import stretcherURL from '@/js/bundledStretcherWorker.js?url';
 import MeterControls from '@/components/MeterControls.vue';
-
+import { RecType } from '@/components/AddAudioEvent.vue'
 
 
 type EditorAudioPlayerData = {
@@ -688,7 +688,7 @@ export default defineComponent({
       type: Number
     },
     audioDBDoc: {
-      type: Object,
+      type: Object as PropType< RecType | undefined>,
       required: true
     },
     regionEndTime: {

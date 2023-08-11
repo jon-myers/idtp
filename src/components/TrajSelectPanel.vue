@@ -310,7 +310,7 @@
   </div>
 </div>
 </template>
-<script>
+<script lang='ts'>
 import t1 from '@/assets/thumbnails/1.png';
 import t2 from '@/assets/thumbnails/2.png';
 import t3 from '@/assets/thumbnails/3.png';
@@ -326,16 +326,60 @@ import t12 from '@/assets/thumbnails/12.png';
 import t13 from '@/assets/thumbnails/13.png';
 import { select as d3Select } from 'd3';
 import { getIpaVowels, getConsonants } from '@/js/serverCalls.ts';
-export default {
+import { defineComponent } from 'vue';
+
+
+type TrajSelectPanelDataType = {
+  urls: string[],
+  kNums: string[],
+  pluckBool: boolean,
+  intraTrajDursBool: boolean,
+  selectedIdx?: number,
+  parentSelected: boolean,
+  slope: number,
+  showSlope: boolean,
+  showVibObj: boolean,
+  periods: number,
+  offset: number,
+  initUp: boolean,
+  extent: number,
+  dampen: boolean,
+  showTrajChecks: boolean,
+  showPhraseRadio: boolean,
+  phraseDivType?: 'phrase' | 'section',
+  trajIdxs: number[],
+  urlsFiltered: string[],
+  kNumsFiltered: string[],
+  vocal: boolean,
+  vowel: string,
+  ipaVowels: string[],
+  englishWords: string[],
+  hindiVowels: string[],
+  iso_15919: string[],
+  cIpa: string[],
+  cExample: string[],
+  cIso_15919: string[],
+  hindiConsonants: string[],
+  consonantList: string[],
+  startConsonant?: string,
+  endConsonant?: string,
+  grouped: boolean,
+  panelHeight: number,
+  vib: boolean,
+  octShiftTop: number,
+  canShiftUp: boolean,
+  canShiftDown: boolean
+}
+
+export default defineComponent({
   name: 'TrajSelectPanel',
 
-  data() {
+  data(): TrajSelectPanelDataType {
     return {
       urls: [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13],
       kNums: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'e'],
       pluckBool: true,
       intraTrajDursBool: false,
-      selectedIcon: undefined,
       selectedIdx: undefined,
       parentSelected: false,
       slope: 1,
@@ -361,7 +405,7 @@ export default {
       cIpa: [],
       cExample: [],
       cIso_15919: [],
-      hindi_consonants: [],
+      hindiConsonants: [],
       consonantList: [],
       startConsonant: undefined,
       endConsonant: undefined,
@@ -420,11 +464,11 @@ export default {
         t.classList.remove('selected')
       })
       if (newVal !== undefined) {
-        const el = document.querySelector(`#id${newVal}`)
+        const el = document.querySelector(`#id${newVal}`)!
         el.classList.add('selected')
         const slopeIdxs = [2, 3, 4, 5]
-        this.showSlope = slopeIdxs.includes(this.trajIdxs[this.selectedIdx]);
-        this.showVibObj = this.trajIdxs[this.selectedIdx] === 12;
+        this.showSlope = slopeIdxs.includes(this.trajIdxs[newVal]);
+        this.showVibObj = this.trajIdxs[newVal] === 12;
         if (this.vocal && this.vowel === undefined) {
           this.vowel = 'a'
         }
@@ -527,7 +571,7 @@ export default {
             this.selectedIdx = idx;
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
-            this.emitter.emit('mutateTraj', outIdx);
+            this.$emit('mutateTraj', outIdx)
             document.querySelectorAll('.thumb').forEach(t => {
               t.classList.remove('selected')
             })
@@ -540,7 +584,7 @@ export default {
                 this.selectedIdx = idx;
                 let outIdx = this.trajIdxs[this.selectedIdx];
                 if (outIdx >= 12) outIdx += 1;
-                this.emitter.emit('mutateTraj', outIdx);
+                this.$emit('mutateTraj', outIdx)
                 document.querySelectorAll('.thumb').forEach(t => {
                   t.classList.remove('selected')
                 })
@@ -550,7 +594,7 @@ export default {
               this.selectedIdx = idx;
               let outIdx = this.trajIdxs[this.selectedIdx];
               if (outIdx >= 12) outIdx += 1;
-              this.emitter.emit('mutateTraj', outIdx);
+              this.$emit('mutateTraj', outIdx)
               document.querySelectorAll('.thumb').forEach(t => {
                 t.classList.remove('selected')
               })
@@ -562,7 +606,7 @@ export default {
             this.selectedIdx = idx;
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
-            this.emitter.emit('mutateTraj', outIdx);
+            this.$emit('mutateTraj', outIdx)
             document.querySelectorAll('.thumb').forEach(t => {
               t.classList.remove('selected')
             })
@@ -580,7 +624,7 @@ export default {
             document.querySelector(selectId).classList.add('selected')
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
-            this.emitter.emit('newTraj', outIdx);
+            this.$emit('newTraj', outIdx)
           }
         } else if (timePts.length === 3) {
           const options = [4, 5, 6];
@@ -595,7 +639,7 @@ export default {
             document.querySelector(selectId).classList.add('selected')
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
-            this.emitter.emit('newTraj', outIdx);
+            this.$emit('newTraj', outIdx)
           }
         } else if (timePts.length === 4) {
           const options = [6];
@@ -609,7 +653,7 @@ export default {
             document.querySelector(selectId).classList.add('selected')
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
-            this.emitter.emit('newTraj', outIdx);
+            this.$emit('newTraj', outIdx)
           }
         } else if (timePts.length === 5) {
           const options = [6];
@@ -623,7 +667,7 @@ export default {
             document.querySelector(selectId).classList.add('selected')
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
-            this.emitter.emit('newTraj', outIdx);
+            this.$emit('newTraj', outIdx)
           }
         } else if (timePts.length === 6) {
           const options = [6];
@@ -632,7 +676,7 @@ export default {
             document.querySelector(selectId).classList.add('selected')
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
-            this.emitter.emit('newTraj', outIdx);
+            this.$emit('newTraj', outIdx)
           }
         } else if (timePts.length === 7) {
           const options = [6];
@@ -655,7 +699,7 @@ export default {
             document.querySelector(selectId).classList.add('selected')
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
-            this.emitter.emit('newTraj', outIdx);
+            this.$emit('newTraj', outIdx)
           }
         }
       } 
@@ -667,31 +711,31 @@ export default {
     
     updateBool() {
       if (this.parentSelected) {
-        this.emitter.emit('pluckBool', this.pluckBool)
+        this.$emit('pluckBool', this.pluckBool)
       }
     },
 
     updateDampen() {
       if (this.parentSelected) {
-        this.emitter.emit('dampen', this.dampen)
+        this.$emit('dampen', this.dampen)
       }
     },
 
     updateVowel() {
       if (this.parentSelected) {
-        this.emitter.emit('vowel', this.vowel)
+        this.$emit('vowel', this.vowel);
       }
     },
 
     updateStartConsonant() {
       if (this.parentSelected) {
-        this.emitter.emit('startConsonant', this.startConsonant)
+        this.$emit('startConsonant', this.startConsonant)
       }
     },
 
     updateEndConsonant() {
       if (this.parentSelected) {
-        this.emitter.emit('endConsonant', this.endConsonant)
+        this.$emit('endConsonant', this.endConsonant)
       }
     },
 
@@ -702,10 +746,10 @@ export default {
         initUp: this.initUp,
         extent: this.extent,
       };
-      this.emitter.emit('vibObj', vibObj);
+      this.$emit('vibObj', vibObj);
     },
   }
-}
+})
 </script>
 
 <style scoped>

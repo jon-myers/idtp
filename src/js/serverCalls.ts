@@ -3,6 +3,7 @@ import axios from 'axios';
 import { AxiosProgressEvent } from 'axios';
 import fetch from 'cross-fetch';
 import { Piece } from './classes.ts';
+import { RecType } from './components/AddAudioEvent.vue';
 
 const getPiece = async (id: string): Promise<Piece> => {
   let piece;
@@ -80,7 +81,7 @@ const jsonData = async (id: string) => {
   }
 }
 
-const getAudioDBEntry = async (_id: string | number) => {
+const getAudioDBEntry = async (_id: string): Promise<RecType> => {
   let request = {
     method: 'POST',
     headers: {
@@ -212,7 +213,7 @@ const getAudioEvent = async (_id: string) => {
   }
 }
 
-const getAudioRecording = async (_id: string) => {
+const getAudioRecording = async (_id: string): Promise<RecType> => {
   let audioRecording;
   const suffix = '?' + new URLSearchParams({ _id: _id });
   const request = {
