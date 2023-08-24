@@ -486,10 +486,10 @@ export default defineComponent({
       vocal: false,
       controlsHeight: 200,
       unsavedChanges: false,
-      selectedMeterColor: 'red',
+      selectedMeterColor: '#3dcc63',
       meterMode: false,
       selectedMeter: undefined,
-      meterColor: '#9368b3',
+      meterColor: '#1f6331',
       pulseDragEnabled: false,
       pulseDragInitX: undefined,
       insertPulseMode: false,
@@ -5241,7 +5241,7 @@ export default defineComponent({
           .append('path')
           .classed('insertPulse', true)
           .attr('id', `insertPulse${this.insertPulses.length - 1}`)
-          .attr('stroke', 'red')
+          .attr('stroke', this.selectedMeterColor)
           .attr('stroke-width', 2)
           .attr('d', this.playheadLine(true))
           .attr('transform', `translate(${this.codifiedXR!(time)}, 0)`)

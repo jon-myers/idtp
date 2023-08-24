@@ -373,7 +373,7 @@ class Meter {
     repetitions?: number,
     relCorpLims?: number[],
     propCorpLims?: number[],
-  }) {
+  } = {}) {
     this.repetitions = repetitions;
     this.hierarchy = hierarchy;
     this.startTime = startTime;
@@ -423,7 +423,7 @@ class Meter {
       } else {
         if (typeof h === 'number') {
           this.pulseStructures[i - 1].forEach(parentPS => {
-            parentPS.pulses.forEach((p, j) => {
+            parentPS.pulses.forEach(p => {
               let duration = parentPS.pulseDur;
               // const tempo = 60 * h / duration;
               // let startTime = p.realTime + parentPS.pulseDur * j;
@@ -478,7 +478,7 @@ class Meter {
           return diff < 0.000000001
         });
         if (!equalArrs) {
-          console.log(translated, relCorpLims)
+          // console.log(translated, relCorpLims)
           throw new Error('Cannot specify both relative and proportional ' + 
             'corporeal limits')
         }
@@ -561,7 +561,7 @@ class Meter {
       } else {
         if (typeof h === 'number') {
           newPSs[i-1].forEach(parentPS => {
-            parentPS.pulses.forEach((p, j) => {
+            parentPS.pulses.forEach(p => {
               let duration = parentPS.pulseDur;
               const ps = PulseStructure.fromPulse(p, duration, h, {
                 layer: i
@@ -788,12 +788,12 @@ class Meter {
       throw new Error('Must provide at least one hierarchy')
     }
     let diffs = timePoints.slice(0, timePoints.length - 1).map((tp, i) => {
-      return timePoints[i+1] - tp;
+      return timePoints![i+1] - tp;
     })
     const initTimepoints = timePoints.slice(0, timePoints.length);
     let pulseDur = sum(diffs) / diffs.length;
 
-    let zerodTPs = timePoints.map(tp => tp - timePoints[0]);
+    let zerodTPs = timePoints.map(tp => tp - timePoints![0]);
     let norms = timePoints.map((_, i) => pulseDur * i);
     let tpDiffs = zerodTPs.map((tp, i) => (tp - norms[i]) / pulseDur);
     while (tpDiffs.some(d => Math.abs(d) > 0.4)) {
@@ -808,16 +808,16 @@ class Meter {
         timePoints.splice(biggestIdx+1, 0, newTP);
       }
       diffs = timePoints.slice(0, timePoints.length - 1).map((tp, i) => {
-        return timePoints[i+1] - tp;
+        return timePoints![i+1] - tp;
       });
       pulseDur = sum(diffs) / diffs.length;
-      zerodTPs = timePoints.map(tp => tp - timePoints[0]);
+      zerodTPs = timePoints.map(tp => tp - timePoints![0]);
       norms = timePoints.map((_, i) => pulseDur * i);
       tpDiffs = zerodTPs.map((tp, i) => (tp - norms[i]) / pulseDur);
     }
 
     if (layer === 1) {
-      console.log('got here')
+      // console.log('got here')
       let sum = 0;
       if (typeof hierarchy[1] === 'number') {
         sum = hierarchy[1] as number;
@@ -836,7 +836,7 @@ class Meter {
       }
     }
     diffs = timePoints.slice(0, timePoints.length - 1).map((tp, i) => {
-      return timePoints[i+1] - tp;
+      return timePoints![i+1] - tp;
     });
     pulseDur = sum(diffs) / diffs.length;
 
