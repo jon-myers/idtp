@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { Meter } from './meter';
 
-test('meter reset tempo for hierarchy.length === 1', () => {
+test('meter reset tempo for hierarchy.length === 1 (and 2)', () => {
   const m = new Meter();
   expect(m).toBeInstanceOf(Meter);
   expect(m.realTimes).toEqual([
@@ -33,6 +33,19 @@ test('meter reset tempo for hierarchy.length === 1', () => {
   b.realTimes.forEach((rt, i) => {
     expect(rt).toBeCloseTo(times[i], 8)
   })
+
+  const c = new Meter({ hierarchy: [2, 2], tempo: 30 });
+  expect(c.realTimes).toEqual([0, 1, 2, 3]);
+  const cLastPulse = c.allPulses[c.allPulses.length - 1];
+  c.offsetPulse(cLastPulse, -0.5)
+  expect(c.realTimes).toEqual([0, 1, 2, 2.5]);
+  c.resetTempo();
+  expect(c.realTimes).toEqual([0, 1, 2, 2.5]);
+  c.growCycle();
+  c.realTimes.forEach((rt, i) => {
+    expect(rt).toBeCloseTo(times[i], 8)
+  })
+
 
 })
 

@@ -1058,9 +1058,9 @@ class Meter {
       const summed = typeof this.hierarchy[0] === 'number' ?
         this.hierarchy[0] as number :
         sum(this.hierarchy[0] as number[]);
-      const lastPulseNum = summed - 1;
+      const lastPulseNum = this.allPulses.length - 1;
       const lastPulse = this.allPulses[lastPulseNum];
-      const pulseProp = (this.repetitions - 1 + lastPulseNum) / 
+      const pulseProp =  lastPulseNum / 
         (this.repetitions * summed);
       const propDur = lastPulse.realTime - this.startTime;
       const newDurTot = propDur / pulseProp;
@@ -1100,6 +1100,76 @@ class Meter {
         ps.adjustLinearOffsets(linOffsets[i])
       })
       this.tempo = newTempo;
+    } else if (this.hierarchy.length === 2) {
+      const lastPulseNum = this.allPulses.length - 1;
+      const lastPulse = this.allPulses[lastPulseNum];
+      const pulseProp = lastPulseNum / this.allPulses.length;
+      const propDur = lastPulse.realTime - this.startTime;
+      const newDurTot = propDur / pulseProp;
+      const newCycleDur = newDurTot / this.repetitions;
+      const bifurcated = typeof this.hierarchy[0] !== 'number';
+      const summed = !bifurcated ?
+        this.hierarchy[0] as number :
+        sum(this.hierarchy[0] as number[]);
+      const newTopTempo = 60 * summed / newCycleDur;
+      const newLowTempo = newTopTempo * (this.hierarchy[1] as number);
+      const newTopDefaultTimes = this.pulseStructures[0].map((ps, i) => {
+        const bit = newCycleDur / summed;
+        const topHIdx = bifurcated ? 
+          i % (this.hierarchy[0] as number[]).length :
+          0;
+        const cyNum = bifurcated ? 
+          Math.floor(i / (this.hierarchy[0] as number[]).length) :
+          i;
+        return ps.pulses.map((_, idx) => {
+          const partialTime = bifurcated ? 
+            newCycleDur * sum((this.hierarchy[0] as number[]).slice(0, topHIdx)) / summed :
+            0;
+          return bit * idx + cyNum * newCycleDur + partialTime + this.startTime
+        })
+      });
+      const realTopTimes = this.pulseStructures[0]
+        .map(ps => ps.pulses.map(p => p.realTime))
+        .flat();
+      const topLinOffsets = newTopDefaultTimes.map((times, i) => {
+        const topHIdx = bifurcated ? 
+          i % (this.hierarchy[0] as number[]).length :
+          0;
+        const cyNum = bifurcated ? 
+          Math.floor(i / (this.hierarchy[0] as number[]).length) :
+          i;
+        const p = bifurcated ? 
+          sum((this.hierarchy[0] as number[]).slice(0, topHIdx)) :
+          0;
+        return times.map((t, tIdx) => -t + realTopTimes[cyNum * summed + p + tIdx])
+      });
+      console.log('topLinOffsets', topLinOffsets)
+      this.pulseStructures[0].forEach((ps, i) => {
+        ps.setTempo(newTopTempo);
+        ps.setStartTime(newTopDefaultTimes[i][0]);
+        
+        ps.adjustLinearOffsets(topLinOffsets[i])
+      })
+      let ct = 0;
+      const newLowDefaultTimes = this.pulseStructures[1].map(ps => {
+        const bit = newCycleDur / (summed * (this.hierarchy[1] as number));
+        return ps.pulses.map(() => {
+          const out = bit * ct + this.startTime;
+          ct += 1;
+          return out
+        })
+      })
+      const realLowTimes = this.pulseStructures[1]
+        .map(ps => ps.pulses.map(p => p.realTime))
+      const lowLinOffsets = newLowDefaultTimes.map((times, i) => {
+        return times.map((t, tIdx) => -t + realLowTimes[i][tIdx])
+      });
+      this.pulseStructures[1].forEach((ps, i) => {
+        ps.setTempo(newLowTempo);
+        ps.setStartTime(newLowDefaultTimes[i][0]);
+        ps.adjustLinearOffsets(lowLinOffsets[i])
+      });
+      this.tempo = newTopTempo;
     }
   }
 
