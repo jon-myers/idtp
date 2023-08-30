@@ -1,5 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
-const approxEqual = (v1: number, v2: number, epsilon = 0.001) => Math.abs(v1 - v2) <= epsilon;
+const approxEqual = (v1: number, v2: number, epsilon = 0.001) => {
+  return Math.abs(v1 - v2) <= epsilon
+};
 
 type AffiliationType = { 
     psId: string, 
@@ -8,10 +10,6 @@ type AffiliationType = {
     segmentedMeterIdx: number,
     strong: boolean,
 };
-
-const indexOfAll = (arr: any[], val: any): number[] => arr.reduce((acc, el, i) => {
-  return (el === val ? [...acc, i] : acc)
-}, []);
 
 class Pulse {
   realTime: number;
@@ -1001,8 +999,6 @@ class Meter {
           replacePSs.push(newPS);
         })
       } else {
-        console.log(h)
-        console.log('this one then?')
         const summed = sum(h);
         const prevPulseAff = prevPulse.affiliations.find(aff => {
           return aff.layer === relLayer - 1
@@ -1060,7 +1056,8 @@ class Meter {
       deletedPSs.forEach(ps => {
         ps.pulses.forEach(p => p.removeAffiliation(ps.uniqueId))
       })
-      const nextLps = this.pulseStructures[relLayer].map(ps => ps.pulses).flat();
+      // const nextLps = this.pulseStructures[relLayer].map(ps => ps.pulses).flat();
+
     })
   }
 
@@ -1322,7 +1319,7 @@ class Meter {
         this.pulseStructures[1].forEach((ps, i) => {
           ps.setTempo(newMidTempo);
           ps.setStartTime(newMidDefaultTimes[i][0]);
-          ps.adjustLinearOffsets(midLinOffsets[i], tru)
+          ps.adjustLinearOffsets(midLinOffsets[i], true)
         });
         let lowCt = 0;
         const newLowDefaultTimes = this.pulseStructures[2].map(ps => {
@@ -1478,7 +1475,7 @@ class Meter {
     const oldStartTime = this.startTime;
     const offset = newStartTime - oldStartTime;
     this.pulseStructures.forEach(psLayer => {
-      psLayer.forEach((ps, idx) => {
+      psLayer.forEach(ps => {
         const newSt = ps.startTime + offset;
         ps.setStartTime(newSt);
       })
