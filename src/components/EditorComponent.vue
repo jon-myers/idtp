@@ -3544,6 +3544,9 @@ export default defineComponent({
       this.piece.phrases.forEach(phrase => {
         phrase.consolidateSilentTrajs()
       });
+      this.piece.meters.forEach(meter => {
+        meter.resetTempo();
+      })
       this.cleanPhrases();
       this.piece.sectionStarts = [...new Set(this.piece.sectionStarts)]
       const result = await savePiece(this.piece);

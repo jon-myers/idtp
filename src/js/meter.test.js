@@ -46,7 +46,50 @@ test('meter reset tempo for hierarchy.length === 1 (and 2)', () => {
     expect(rt).toBeCloseTo(times[i], 8)
   })
 
+  const d = new Meter({ hierarchy: [2, 2, 2], tempo: 30 });
+  expect(d.realTimes).toEqual([0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5]);
+  const dLastPulse = d.allPulses[d.allPulses.length - 1];
+  d.offsetPulse(dLastPulse, -0.25)
+  expect(d.realTimes).toEqual([0, 0.5, 1, 1.5, 2, 2.5, 3, 3.25]);
+  d.resetTempo();
+  expect(d.realTimes).toEqual([0, 0.5, 1, 1.5, 2, 2.5, 3, 3.25]);
+  d.growCycle();
+  const end1 = 3.25 * 8 / 7;
+  const bit = end1 / 8;
+  const nextTimes = Array(8).fill(0).map((_, i) => end1 + bit * i);
+  const allTimes = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.25, ...nextTimes];
+  d.realTimes.forEach((rt, i) => {
+    expect(rt).toBeCloseTo(allTimes[i], 8)
+  })
 
+  const e = new Meter({ hierarchy: [2, 2, 2, 2], tempo: 15 });
+  expect(e.realTimes).toEqual([
+    0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5,
+    4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5
+  ]);
+  const eLastPulse = e.allPulses[e.allPulses.length - 1];
+  e.offsetPulse(eLastPulse, -0.25)
+  const targetTimes = [
+    0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5,
+    4, 4.5, 5, 5.5, 6, 6.5, 7, 7.25
+  ];
+  expect(e.realTimes).toEqual(targetTimes);
+  e.resetTempo();
+  
+  e.realTimes.forEach((rt, i) => {
+    expect(rt).toBeCloseTo(targetTimes[i], 8)
+  })
+  e.growCycle();
+  const end2 = 7.25 * 16 / 15;
+  const bit2 = end2 / 16;
+  const nextTimes2 = Array(16).fill(0).map((_, i) => end2 + bit2 * i);
+  const allTimes2 = [
+    0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5,
+    4, 4.5, 5, 5.5, 6, 6.5, 7, 7.25, ...nextTimes2
+  ];
+  e.realTimes.forEach((rt, i) => {
+    expect(rt).toBeCloseTo(allTimes2[i], 8)
+  })
 })
 
 test('meter reset tempo for more compplicated single layer hierarchy', () => {
