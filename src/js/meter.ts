@@ -822,6 +822,46 @@ class Meter {
     return outPS
   }
 
+  addTimePoints(timePoints: number[], layer: number = 1) {
+    timePoints = timePoints.sort((a, b) => a - b);
+    const lastRealTime = this.realTimes[this.realTimes.length - 1];
+    if (timePoints[0] < lastRealTime) {
+      throw new Error('timePoints must be greater than last realTime')
+    }
+    const curEndTime = this.durTot + this.startTime;
+    let summed = this.hierarchy[0] instanceof Array ? 
+      sum(this.hierarchy[0] as number[]) : 
+      this.hierarchy[0] as number;
+    if (layer > 0) {
+      const hierarchySlice = this.hierarchy.slice(1, layer + 1) as number[]
+      const mult = hierarchySlice.reduce((a, b) => a * b, 1);
+      summed = summed * mult;
+    }
+    const beatDur = this.cycleDur / summed;
+    const predictedTimes: number[] = [];
+    let cTime = curEndTime; 
+    while (cTime < timePoints[timePoints.length-1] + beatDur) {
+      predictedTimes.push(cTime);
+      cTime += beatDur
+    }
+    const idxs = findClosestIdxs(timePoints, predictedTimes);
+    const cycleNums = idxs.map(idx => {
+      return Math.floor(idx / summed)
+    });
+    const prevNumPulses = this.pulseStructures[layer].map(ps => ps.pulses).flat().length;
+    this.growCycles(Math.max(...cycleNums) + 1);
+    for (let l = 0; l <= layer; l++) {
+      idxs.forEach((idx, i) => {
+        const layerPulses = this.pulseStructures[layer].map(ps => ps.pulses).flat();
+        const pulse = layerPulses[prevNumPulses + idx];
+        const offset = timePoints[i] - pulse.realTime;
+        if (l === pulse.lowestLayer) {
+          this.offsetPulse(pulse, offset)
+        }
+      })
+    }
+  }
+
   static fromTimePoints({
     timePoints = undefined,
     hierarchy = undefined,
@@ -878,7 +918,6 @@ class Meter {
     }
 
     if (layer === 1) {
-      // console.log('got here')
       let sum = 0;
       if (typeof hierarchy[1] === 'number') {
         sum = hierarchy[1] as number;
@@ -1078,8 +1117,6 @@ class Meter {
     const first = pulse.affiliations[0].idx === 0;
     const firstSeg = pulseStructure.segmentedMeterIdx === 0;
     if (layer === 0 && psIdx > 0 && firstSeg && first) {
-      // console.log('gotta update previous one too!')
-      // if (typeof this.hierarchy[0] === 'number') {
         const prevPS = this.pulseStructures[0][psIdx - 1];
         const prevDurTot = prevPS.durTot;
         const newDurTot = prevDurTot + offset;
@@ -1099,7 +1136,6 @@ class Meter {
     } else {
       /* eslint-disable no-undef */
       /* eslint-disable no-console */
-      // console.log('somethign else here?')
     }
     // first, adjust the pulse structure
     const pulseIdx = pulseStructure.getPulseIdxFromId(pulse.uniqueId);
@@ -1164,10 +1200,11 @@ class Meter {
             Math.floor(i / (this.hierarchy[0] as number[]).length) :
             i;
           return ps.pulses.map((_, idx) => {
-            const pSum = sum((this.hierarchy[0] as number[]).slice(0, topHIdx));
-            const partialTime = bifurcated ? 
-              newCyDur * pSum / summed :
-              0;
+            let partialTime = 0;
+            if (bifurcated) {
+              const h = this.hierarchy[0] as number[];
+              partialTime = newCyDur * sum(h.slice(0, topHIdx)) / summed;
+            }
             return bit * idx + cyNum * newCyDur + partialTime + this.startTime
           })
         });
@@ -1214,10 +1251,11 @@ class Meter {
             Math.floor(i / (this.hierarchy[0] as number[]).length) :
             i;
           return ps.pulses.map((_, idx) => {
-            const pSum = sum((this.hierarchy[0] as number[]).slice(0, topHIdx));
-            const partialTime = bifurcated ? 
-              newCyDur * pSum / summed :
-              0;
+            let partialTime = 0;
+            if (bifurcated) {
+              const h = this.hierarchy[0] as number[];
+              partialTime = newCyDur * sum(h.slice(0, topHIdx)) / summed;
+            }
             return bit * idx + cyNum * newCyDur + partialTime + this.startTime
           })
         });
@@ -1286,10 +1324,11 @@ class Meter {
             Math.floor(i / (this.hierarchy[0] as number[]).length) :
             i;
           return ps.pulses.map((_, idx) => {
-            const pSum = sum((this.hierarchy[0] as number[]).slice(0, topHIdx));
-            const partialTime = bifurcated ? 
-              newCyDur * pSum / summed :
-              0;
+            let partialTime = 0;
+            if (bifurcated) {
+              const h = this.hierarchy[0] as number[];
+              partialTime = newCyDur * sum(h.slice(0, topHIdx)) / summed;
+            }
             return bit * idx + cyNum * newCyDur + partialTime + this.startTime
           })
         });
@@ -1380,10 +1419,11 @@ class Meter {
             Math.floor(i / (this.hierarchy[0] as number[]).length) :
             i;
           return ps.pulses.map((_, idx) => {
-            const pSum = sum((this.hierarchy[0] as number[]).slice(0, topHIdx));
-            const partialTime = bifurcated ?
-              newCyDur * pSum / summed :
-              0;
+            let partialTime = 0;
+            if (bifurcated) {
+              const h = this.hierarchy[0] as number[];
+              partialTime = newCyDur * sum(h.slice(0, topHIdx)) / summed;
+            }
             return bit * idx + cyNum * newCyDur + partialTime + this.startTime
           });
         });
@@ -1605,6 +1645,30 @@ class Meter {
   }
 }
 
-export { Meter, Pulse, PulseStructure }
+const findClosestIdxs = (trials: number[], items: number[]) => {
+  // if (trials.length === 1) {
+  //   return [findClosestIdx(trials[0], items)];
+  // }
+  const usedIndexes = new Set();
+  return trials.map(trial => {
+    let diffs = items.map((item, index) => [Math.abs(trial - item), index]);
+    diffs = diffs.filter((_, index) => !usedIndexes.has(index));
+    diffs.sort((a, b) => a[0] - b[0]);
+    usedIndexes.add(diffs[0][1]);
+    return diffs[0][1];
+  });
+}
+
+// const findClosestIdx = (trial: number, items: number[]) => {
+//   let diffs = items.map((item, index) => [Math.abs(trial - item), index]);
+//   diffs.sort((a, b) => a[0] - b[0]);
+//   console.log(diffs, items)
+//   return diffs[0][1];
+// }
+
+
+
+export { Meter, Pulse, PulseStructure, findClosestIdxs }
+
 
  
