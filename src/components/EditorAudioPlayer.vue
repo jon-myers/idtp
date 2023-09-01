@@ -194,7 +194,6 @@
         </div>
       </fieldset>
       <button @click='handleDownload'>Download</button>
-
     </div>
     <div class='tuningControls' v-if='showTuning'>
       <div class='buttons'>
@@ -252,7 +251,16 @@
         :height='controlsHeight'
         :playerHeight='playerHeight'
         :editable='editable'
+        :currentTime='parentCurrentTime'
+        :insertPulses='insertPulses'
         ref='meterControls'
+        @passthroughResetZoomEmit='passthroughResetZoom'
+        @passthroughSelectMeterEmit='passthroughSelectMeter'
+        @passthroughAddMeterEmit='passthroughAddMeter'
+        @passthroughAddMetricGridEmit='passthroughAddMetricGrid'
+        @passthroughRemoveMeterEmit='passthroughRemoveMeter'
+        @passthroughUnsavedChangesEmit='passthroughUnsavedChanges'
+        @passthroughAssignPrevMeterEmit='passthroughAssignPrevMeter'
         />
   </div>
 </template>
@@ -293,6 +301,7 @@ import { drag as d3Drag, select as d3Select } from 'd3';
 import stretcherURL from '@/js/bundledStretcherWorker.js?url';
 import MeterControls from '@/components/MeterControls.vue';
 import { RecType } from '@/components/AddAudioEvent.vue'
+import { Meter } from '@/js/meter.ts'
 
 
 type EditorAudioPlayerData = {
@@ -672,7 +681,8 @@ export default defineComponent({
       required: true
     },
     playerHeight: {
-      type: Number
+      type: Number,
+      required: true
     },
     controlsHeight: {
       type: Number,
@@ -703,6 +713,14 @@ export default defineComponent({
     },
     durTot: {
       type: Number,
+      required: true
+    },
+    insertPulses: {
+      type: Array as PropType<number[]>,
+      required: true
+    },
+    uniformVowel: {
+      type: Boolean,
       required: true
     }
   },
@@ -976,6 +994,34 @@ export default defineComponent({
     instantiateTuning() {
       this.piece.realignPitches();
       this.$emit('resetZoomEmit')
+    },
+
+    passthroughResetZoom() {
+      this.$emit('resetZoomEmit')
+    },
+
+    passthroughSelectMeter(pulseUniqueId: string, turnMeterModeOn: boolean = false) {
+      this.$emit('selectMeterEmit', pulseUniqueId, turnMeterModeOn)
+    },
+
+    passthroughAddMeter(meter: Meter) {
+      this.$emit('addMeterEmit', meter)
+    },
+
+    passthroughAddMetricGrid(codified: boolean = true) {
+      this.$emit('addMetricGridEmit', codified)
+    },
+
+    passthroughRemoveMeter(meter: Meter) {
+      this.$emit('removeMeterEmit', meter)
+    },
+
+    passthroughUnsavedChanges(truth: boolean) {
+      this.$emit('unsavedChangesEmit', truth)
+    },
+
+    passthroughAssignPrevMeter() {
+      this.$emit('assignPrevMeterEmit')
     },
 
     makeTuningSines() {
@@ -1285,7 +1331,7 @@ export default defineComponent({
         this.performers = keys;
         const raags = Object.keys(obj.raags);
         const pSecs = raags.map((raag) => {
-          const pSec = obj.raags[raag]['performance sections'];
+          const pSec = obj.raags[raag]['performance sections']!;
           const localPSecs = Object.keys(pSec);
           return localPSecs.join(', ');
         });
@@ -1588,7 +1634,8 @@ export default defineComponent({
       if (this.uniformVowel) {
         vIdx = 0
       }
-      const params = ['f1', 'f2', 'f3', 'b1', 'b2', 'b3'];
+      type Param = 'f1' | 'f2' | 'f3' | 'b1' | 'b2' | 'b3';
+      const params: Param[] = ['f1', 'f2', 'f3', 'b1', 'b2', 'b3'];
       params.forEach((param, pIdx) => {
         const idx = vpIdxs[vIdx];
         const s0 = this.vowelParams[idx][0][pIdx];

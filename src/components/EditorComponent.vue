@@ -102,7 +102,7 @@
         @dampen='dampenEmit'
         @vowel='vowelEmit'
         @startConsonant='startConsonantEmit'
-        @endConsonant='endConsonantEmit' 
+        @endConsonant='endConsonantEmit'
         />
     </div>
   </div>
@@ -126,6 +126,7 @@
   :parentCurrentTime='currentTime'
   :durTot='durTot'
   :uniformVowel='uniformVowel'
+  :insertPulses='insertPulses'
   @resizeHeightEmit='resizeHeight'
   @movePlayheadsEmit='movePlayheads'
   @currentTimeEmit='setCurrentTime'
@@ -137,6 +138,12 @@
   @setStretchedAnimationStartEmit='setStretchedAnimationStart'
   @updateSargamLinesEmit='updateSargamLines'
   @resetZoomEmit='resetZoom'
+  @selectMeterEmit='selectMeter'
+  @addMeterEmit='addMeter'
+  @addMetricGridEmit='addMetricGrid'
+  @removeMeterEmit='removeMeter'
+  @unsavedChangesEmit='updateUnsavedChanges'
+  @assignPrevMeterEmit='assignPrevMeter'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -839,6 +846,25 @@ export default defineComponent({
 
 
   methods: {
+
+    assignPrevMeter() {
+      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+      const meterControls = ap.$refs.meterControls as typeof MeterControls;
+      const meterStarts = this.piece.meters.map(m => m.startTime);
+      const mIdx = findClosestStartTime(meterStarts, this.insertPulses[0]);
+      meterControls.meter = this.piece.meters[mIdx];
+    },
+
+    updateUnsavedChanges(truth: boolean) {
+      this.unsavedChanges = truth;
+    },
+
+    addMeter(meter: Meter) {
+      this.piece.addMeter(meter);
+      this.unsavedChanges = true;
+      this.selectedMeter = meter;
+      this.meterMode = true;
+    },
 
     timeWithinMeter(time: number): boolean {
       let out = false;
@@ -2841,6 +2867,7 @@ export default defineComponent({
     },
 
     addMetricGrid(codified=true) {
+      this.insertPulseMode = false;
       d3SelectAll('.metricGrid').remove();
       const allPulses: Pulse[] = [];
       this.piece.meters.forEach(meter => {
@@ -3108,15 +3135,21 @@ export default defineComponent({
       }
     },
 
-    selectMeter(id: string) {
+    selectMeter(id: string, turnMeterModeOn: boolean = false) {
+      if (turnMeterModeOn) {
+        this.meterMode = true;
+        this.insertPulseMode = false;
+        d3SelectAll('.insertPulse').remove();
+      }
       if (this.meterMode) {
+        console.log('getting to here')
         const allPulses: Pulse[] = []
         this.piece.meters.forEach(meter => {
           allPulses.push(...meter.allPulses)
         });
         const pulse = allPulses.find(pulse => pulse.uniqueId === id)!;
         const audioPlayer = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-        const meterControls = audioPlayer.$refs.meterControls;
+        const meterControls = audioPlayer.$refs.meterControls as typeof MeterControls;
         meterControls.meterSelected = true;
         const meter = this.piece.meters.find(meter => {
           return meter.uniqueId === pulse.meterId
@@ -3127,21 +3160,24 @@ export default defineComponent({
         audioPlayer.openMeterControls();
         d3SelectAll('.metricGrid')
           .attr('stroke', this.meterColor)
-        const selecteds = d3SelectAll(`.meterId_${pulse.meterId}`)
+        d3SelectAll(`.meterId_${pulse.meterId}`)
           .filter((d, i, nodes) => !d3Select(nodes[i]).classed('overlay'))
           .attr('stroke', this.selectedMeterColor)
         meterControls.assignData();
       }   
     },
 
-
-    async removeMeter(id: string) { // the specific graph
-      d3SelectAll('#metricGrid_' + id)
-        .remove();
+    async removeMeter(meter: Meter) { // the specific graph
+      const meterIdx = this.piece.meters.indexOf(meter);
+      if (meterIdx !== -1) {
+        this.piece.meters.splice(meterIdx, 1);
+      }
+      d3SelectAll('#metricGrid_' + meter.uniqueId).remove();
       await this.$nextTick();
       this.resetZoom();
       this.meterMode = false;
-      this.svg.style('cursor', 'default')
+      this.svg.style('cursor', 'default');
+      this.unsavedChanges = true;
     },
 
     updatePhraseDivs() {
