@@ -79,6 +79,14 @@
       <label>Duration</label>
       {{ getDuration() }}
     </div>
+    <div class='controlsRow' v-if='insertPulseMode && prevMeter'>
+    <label class='wide'>Attach to Prev Meter</label>
+    <input 
+      type='checkbox' 
+      v-model='attachToPrevMeter' 
+      @change='updateAttachToPrevMeter'/>
+    
+    </div>
     <div class='controlsRow' v-if='insertPulseMode'>
       <div v-if='numLayers === 1' class='row'>
         <label>Layer {{ 0 }}</label>
@@ -104,10 +112,16 @@
         Insert Meter at Playhead
       </button>
       <button 
-        v-if='insertPulseMode' 
+        v-if='insertPulseMode && !attachToPrevMeter' 
         @click='insertMeterFromPulses'
         :disabled='!editable'>
         Insert Meter from Pulses
+      </button>
+      <button
+        v-if='insertPulseMode && prevMeter && attachToPrevMeter'
+        @click='addTimePointsToPrevMeter'
+        :disabled='!editable'>
+        Add Time Points to Prev Meter
       </button>
     </div>
   </div>
@@ -131,14 +145,15 @@
 <script lang='ts'>
 
 import { Meter } from '@/js/meter.ts';
-import { h } from 'vue';
-
+import { Piece } from '@/js/classes.ts';
+import { findClosestStartTime } from '@/components/EditorComponent.vue'
 import { 
   selectAll as d3SelectAll,
   select as d3Select,
  } from 'd3';
 
 import { defineComponent } from 'vue';
+import EditorComponent from '@/components/EditorComponent.vue';
  
 
 type MeterControlsDataType = {
@@ -155,6 +170,8 @@ type MeterControlsDataType = {
   maxLayer: number,
   insertPulseMode: boolean,
   insertLayer: number,
+  attachToPrevMeter: boolean,
+  prevMeter: boolean,
 }
 
 export default defineComponent({
@@ -179,6 +196,8 @@ export default defineComponent({
       maxLayer: 3,
       insertPulseMode: false,
       insertLayer: 0,
+      attachToPrevMeter: false,
+      prevMeter: false,
     }
   },
   props: ['height', 'playerHeight', 'editable'],
@@ -200,6 +219,7 @@ export default defineComponent({
         editor.unsavedChanges = true;
       }
     },
+
 
     decreaseCompounds(i: number) {
       this.layerCompounds[i]--;
@@ -433,14 +453,13 @@ export default defineComponent({
           hierarchy.push(layer)
         }
       }
-      timePoints.sort((a: number, b: number) => a - b, 0);
+      timePoints.sort((a: number, b: number) => a - b);
       const meter = Meter.fromTimePoints( {
         timePoints,
         hierarchy,
         repetitions: this.cycles,
       })
       editor.piece.addMeter(meter);
-      editor.unsavedChanges = true;
       editor.addMetricGrid(true);
       editor.selectedMeter = meter;
       editor.insertPulseMode = false;
@@ -449,6 +468,49 @@ export default defineComponent({
       editor.selectMeter(meter.allPulses[0].uniqueId);
       editor.unsavedChanges = true;
       d3SelectAll('.insertPulse').remove();
+    },
+
+    addTimePointsToPrevMeter() {
+      const editor = this.$parent!.$parent!;
+      const timePoints: number[] = editor.insertPulses;
+      timePoints.sort((a: number, b: number) => a - b);
+      this.meter?.addTimePoints(timePoints, this.insertLayer);
+      editor.addMetricGrid(true);
+      editor.selectedMeter = this.meter;
+      editor.insertPulseMode = false;
+      this.meterSelected = true;
+      editor.meterMode = true;
+      editor.selectMeter(this.meter.allPulses[0].uniqueId);
+      editor.unsavedChanges = true;
+      d3SelectAll('.insertPulse').remove();
+    },
+
+    updateAttachToPrevMeter() {
+      if (this.attachToPrevMeter === true) {
+        const editor = this.$parent!.$parent! as typeof EditorComponent;
+        const piece = editor.piece as Piece;
+        const meterStarts = piece.meters.map(m => m.startTime);
+        const mIdx = findClosestStartTime(meterStarts, editor.insertPulses![0]);
+        this.meter = piece.meters[mIdx];
+        this.numLayers = this.meter.hierarchy.length;
+        if (typeof this.meter.hierarchy[0] === 'number') {
+          this.layerCompounds[0] = 1;
+          this.pulseDivisions[0][0] = this.meter.hierarchy[0];
+        } else {
+          this.layerCompounds[0] = this.meter.hierarchy[0].length;
+          this.meter.hierarchy[0].map((div, i) => {
+            this.pulseDivisions[0][i] = div;
+          })
+        }
+        (this.meter.hierarchy.slice(1) as number[]).forEach((h, hIdx) => {
+          this.pulseDivisions[hIdx + 1][0] = h;
+        })
+      }
+      
+      // const layer = 1;
+      // prevMeter.addTimePoints(editor.insertPulses, 1);
+
+
     }
   },
 })
@@ -482,6 +544,13 @@ export default defineComponent({
 label {
   width: 60px;
   min-width: 60px;
+  margin-right: 10px;
+  text-align: right;
+}
+
+.wide {
+  width: 150px;
+  min-width: 150px;
   margin-right: 10px;
   text-align: right;
 }

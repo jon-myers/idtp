@@ -2016,6 +2016,11 @@ class Piece {
     }
   }
 
+  removeMeter(meter: Meter) {
+    const idx = this.meters.indexOf(meter);
+    this.meters.splice(idx, 1);
+  }
+
   get durStarts() {
     if (this.durArray === undefined) {
       throw new Error('durArray is undefined')

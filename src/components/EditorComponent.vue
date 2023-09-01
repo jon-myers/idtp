@@ -201,6 +201,7 @@ import {
 } from '@/js/serverCalls.ts';
 import { Meter, Pulse } from '@/js/meter.ts';
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
+import MeterControls from '@/components/MeterControls.vue';
 import TrajSelectPanel from '@/components/TrajSelectPanel.vue';
 import ContextMenu from'@/components/ContextMenu.vue';
 import instructionsText from '@/assets/texts/editor_instructions.html?raw';
@@ -243,6 +244,40 @@ import {
   D3DragEvent,
   Selection,
 } from 'd3';
+
+const  findClosestStartTime = (startTimes: number[], timepoint: number) => {
+  let closestIndex = -1;
+  let closestDiff = Infinity;
+
+  for (let i = 0; i < startTimes.length; i++) {
+    if (startTimes[i] > timepoint) continue; // Skip start times after the timepoint
+
+    const diff = timepoint - startTimes[i];
+    if (diff < closestDiff) {
+      closestDiff = diff;
+      closestIndex = i;
+    }
+  }
+
+  return closestIndex;
+}
+
+function findClosestStartTimeAfter(startTimes, timepoint) {
+  let closestIndex = -1;
+  let closestDiff = Infinity;
+
+  for (let i = 0; i < startTimes.length; i++) {
+    if (startTimes[i] <= timepoint) continue; // Skip start times before or at the timepoint
+
+    const diff = startTimes[i] - timepoint;
+    if (diff < closestDiff) {
+      closestDiff = diff;
+      closestIndex = i;
+    }
+  }
+
+  return closestIndex;
+}
 
 // import { D3ZoomEvent } from '@types/d3-zoom';
 // import { SelectionFn } from '@types/d3-selection';
@@ -412,7 +447,10 @@ type EditorDataType = {
   specBox: Selection<SVGGElement, undefined, null, undefined>,
   browser: BrowserInfo,
   dragIdx: string,
+  IPLims: [number, number]
 }
+
+export { findClosestStartTime }
 
 export default defineComponent({
   name: 'EditorComponent',
@@ -553,6 +591,7 @@ export default defineComponent({
       imgs: [],
       browser: detect() as BrowserInfo,
       dragIdx: '',
+      IPLims: [0, 0]
     }
   },
   components: {
@@ -792,8 +831,67 @@ export default defineComponent({
     },
   },
 
+  computed: {
+    newPulseLims() {
+      this.insertPulses
+    }
+  },
+
 
   methods: {
+
+    timeWithinMeter(time: number): boolean {
+      let out = false;
+      this.piece.meters.forEach(meter => {
+        const start = meter.startTime;
+        const end = start + meter.durTot;
+        if (time >= start && time <= end) {
+          out = true;
+        }
+      })
+      return out;
+    },
+
+    updateIPLims() {
+      const meterStarts = this.piece.meters
+        .map(m => m.startTime)
+      const ip = this.insertPulses[0];
+      if (Math.min(...meterStarts) > ip) {
+        const afterIdx = findClosestStartTimeAfter(meterStarts, ip);
+        const after = this.piece.meters[afterIdx];
+        this.IPLims = [0, after.startTime];
+      } else if (Math.max(...meterStarts) < ip) {
+        const beforeIdx = findClosestStartTime(meterStarts, ip);
+        const before = this.piece.meters[beforeIdx];
+        this.IPLims = [before.startTime + before.durTot, this.durTot];
+      } else {
+        const beforeIdx = findClosestStartTime(meterStarts, ip);
+        const afterIdx = findClosestStartTimeAfter(meterStarts, ip);
+        const before = this.piece.meters[beforeIdx];
+        const after = this.piece.meters[afterIdx];
+        this.IPLims = [before.startTime + before.durTot, after.startTime];
+      }
+      const eAP = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+      const meterControls = eAP.$refs.meterControls as typeof MeterControls;
+      if (this.insertPulses.length === 0) {
+        meterControls.prevMeter = false;
+      } else {
+        meterControls.prevMeter = Math.min(...meterStarts) < this.insertPulses[0];
+      }
+
+    //   prevMeter() {
+    //   if (editor.insertPulses.length === 0) {
+    //     return false
+    //   }
+    //   const editor = this.$parent!.$parent!;
+    //   const meterStarts = editor.piece.meters.map(m => m.startTime);
+    //   return Math.min(meterStarts) < editor.insertPulses[0];
+
+
+    // }
+      
+
+    },
 
     endConsonantEmit(endConsonant: string) {
       const selT = this.selectedTraj!;
@@ -2743,6 +2841,7 @@ export default defineComponent({
     },
 
     addMetricGrid(codified=true) {
+      d3SelectAll('.metricGrid').remove();
       const allPulses: Pulse[] = [];
       this.piece.meters.forEach(meter => {
         allPulses.push(...meter.allCorporealPulses)
@@ -3715,7 +3814,10 @@ export default defineComponent({
     },
     
     clearAll(regionToo = true) {
-      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer
+      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+      const mc = ap.$refs.meterControls as typeof MeterControls;
+      mc.prevMeter = false;
+      mc.attachToPrevMeter = false;
       this.clearSelectedChikari();
       this.clearSelectedTraj();
       this.clearTrajSelectPanel();
@@ -3976,6 +4078,7 @@ export default defineComponent({
           const audioPlayer = this.$refs.audioPlayer;
           const meterControls = ap.$refs.meterControls;
           meterControls.insertPulseMode = true;
+          meterControls.prevMeter = false;
           ap.openMeterControls();
           d3SelectAll('.phrase').style('cursor', 's-resize');
           d3SelectAll('.articulation').selectAll('*').style('cursor', 's-resize');
@@ -5239,15 +5342,29 @@ export default defineComponent({
         this.setNewPhraseDiv = false;
         this.svg.style('cursor', 'auto');        
       } else if (this.insertPulseMode) {
-        this.insertPulses.push(time);
-        this.phraseG
-          .append('path')
-          .classed('insertPulse', true)
-          .attr('id', `insertPulse${this.insertPulses.length - 1}`)
-          .attr('stroke', this.selectedMeterColor)
-          .attr('stroke-width', 2)
-          .attr('d', this.playheadLine(true))
-          .attr('transform', `translate(${this.codifiedXR!(time)}, 0)`)
+        let continue_ = false;
+        if (!this.timeWithinMeter(time)) {
+          if (this.insertPulses.length > 0) {
+            if (time >= this.IPLims[0] && time < this.IPLims[1]) {
+              this.insertPulses.push(time);
+              continue_ = true
+            }
+          } else {
+            this.insertPulses.push(time);
+            this.updateIPLims();
+            continue_ = true
+          }
+          if (continue_) {
+            this.phraseG
+            .append('path')
+            .classed('insertPulse', true)
+            .attr('id', `insertPulse${this.insertPulses.length - 1}`)
+            .attr('stroke', this.selectedMeterColor)
+            .attr('stroke-width', 2)
+            .attr('d', this.playheadLine(true))
+            .attr('transform', `translate(${this.codifiedXR!(time)}, 0)`)
+          }
+        }   
       } else if (this.setNewRegion) {
         this.setRegionToPhrase(pIdx);
         this.setNewRegion = false;
