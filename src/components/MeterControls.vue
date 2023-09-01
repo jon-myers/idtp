@@ -228,7 +228,6 @@ export default defineComponent({
       this.layerCompounds[i]++;
       // this.updateMeter();
       if (this.meter !== undefined) {
-        const editor = this.$parent!.$parent!;
         if (i === 0) {
           this.updateMeter();
         } else {
@@ -241,12 +240,10 @@ export default defineComponent({
       }
     },
 
-
     decreaseCompounds(i: number) {
       this.layerCompounds[i]--;
       // this.updateMeter();
       if (this.meter !== undefined) {
-        const editor = this.$parent!.$parent!;
         if (i === 0) {
           this.updateMeter();
         } else {
@@ -270,7 +267,6 @@ export default defineComponent({
         const startTime = this.meter!.startTime;
         await this.removeMeter();
         this.insertMeter(undefined, startTime)
-        const editor = this.$parent!.$parent!;
         await this.$nextTick();
         this.$emit('passthroughSelectMeterEmit', this.meter.allPulses[0].uniqueId)
       }
@@ -281,7 +277,6 @@ export default defineComponent({
         const oldDepth = this.meter.hierarchy.length;
         const newDepth = this.numLayers;
         const diff = newDepth - oldDepth;
-        const editor = this.$parent!.$parent!;
         if (diff < 0) {
           this.meter.shrinkLayers(-diff);
         } else {
@@ -312,7 +307,6 @@ export default defineComponent({
         } else if (diff < 0) {
           this.meter.shrinkCycles(-diff);
         }
-        const editor = this.$parent!.$parent!;
         this.$emit('passthroughResetZoomEmit')
         this.$emit('passthroughSelectMeterEmit', this.meter.allPulses[0].uniqueId)
         this.$emit('passthroughUnsavedChangesEmit', true)
@@ -321,7 +315,6 @@ export default defineComponent({
 
     updatePulseDivs(i: number, kIdx: number) {
       if (this.meter !== undefined) {
-        const editor = this.$parent!.$parent!;
         const newHierarchy = [];
         for (let i = 0; i < this.numLayers; i++) {
           const lc = this.layerCompounds[i];
@@ -383,7 +376,6 @@ export default defineComponent({
       this.tempo = Math.round(Math.exp(logTempo));
       if (this.meter !== undefined) {
         this.meter?.adjustTempo(this.tempo);
-        const editor = this.$parent!.$parent!;
         this.$emit('passthroughResetZoomEmit')
         this.$emit('passthroughSelectMeterEmit', this.meter.allPulses[0].uniqueId)
       }
@@ -404,7 +396,6 @@ export default defineComponent({
       if (this.meter !== undefined) {
         return this.displayTime(this.meter.startTime);
       } else {
-        const editor = this.$parent!.$parent!;
         return this.displayTime(this.currentTime)
       }
     },
@@ -423,7 +414,6 @@ export default defineComponent({
     },
 
     insertMeter(_?: MouseEvent, startTime_?: number) {
-      const editor = this.$parent!.$parent!;
       const startTime = startTime_ !== undefined ? 
                         startTime_ : 
                         this.currentTime;
@@ -471,20 +461,19 @@ export default defineComponent({
       this.meterSelected = true;
       this.$emit('passthroughSelectMeterEmit', meter.allPulses[0].uniqueId)
       d3SelectAll('.insertPulse').remove();
+      this.insertPulseMode = false;
     },
 
     addTimePointsToPrevMeter() {
-      const editor = this.$parent!.$parent!;
       const timePoints = this.insertPulses;
       timePoints.sort((a: number, b: number) => a - b);
       this.meter!.addTimePoints(timePoints, this.insertLayer);
       this.$emit('passthroughAddMetricGridEmit', true);
-      // editor.selectedMeter = this.meter;
       this.meterSelected = true;
-      // editor.meterMode = true;
       this.$emit('passthroughSelectMeterEmit', this.meter!.allPulses[0].uniqueId, true)
       this.$emit('passthroughUnsavedChangesEmit', true)
       d3SelectAll('.insertPulse').remove();
+      this.insertPulseMode = false;
     },
 
     updateAttachToPrevMeter() {
