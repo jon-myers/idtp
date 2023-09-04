@@ -2921,8 +2921,9 @@ export default defineComponent({
             if (this.meterMode) {
               e.preventDefault();
               e.stopPropagation();
+              this.selectMeter(pulse.uniqueId)
             }
-            this.selectMeter(pulse.uniqueId)
+            
           })
           .on('contextmenu', (e: MouseEvent) => {
             const target = e.target as SVGPathElement;
@@ -2986,6 +2987,42 @@ export default defineComponent({
           .on('mouseout', () => this.unhoverMeter(pulse.uniqueId))
           .attr('transform', `translate(${x},0)`)
           .call(drag(pulse))
+      });
+      this.piece.meters.forEach(meter => {
+        const endTime = meter.startTime + meter.durTot;
+        const x = codified ? 
+            this.codifiedXR!(endTime) : 
+            this.xr()(endTime);
+        this.phraseG
+          .append('path')
+          .classed('metricGrid', true)
+          .classed(`meterId_${meter.uniqueId}`, true)
+          .attr('id', `metricGrid_${meter.uniqueId}`)
+          .attr('stroke', this.meterColor)
+          .attr('stroke-width', '1px')
+          .attr('stroke-dasharray', ('5,5'))
+          .attr('d', this.playheadLine(codified))
+          .attr('transform', `translate(${x},0)`)
+
+        this.phraseG
+          .append('path')
+          .classed('metricGrid', true)
+          .classed(`meterId_${meter.uniqueId}`, true)
+          .attr('id', `metricGrid_${meter.uniqueId}`)
+          .attr('stroke', this.meterColor)
+          .attr('stroke-width', '5px')
+          .style('opacity', '0')
+          .attr('d', this.playheadLine(codified))
+          .attr('transform', `translate(${x},0)`)
+          .on('mouseover', () => this.hoverMeter(meter.uniqueId, false))
+          .on('mouseout', () => this.unhoverMeter(meter.uniqueId, false))
+          .on('click', (e: MouseEvent) => {
+            if (this.meterMode) {
+              e.preventDefault();
+              e.stopPropagation();
+              this.selectMeter(meter.uniqueId, false, false)
+            }
+          })
       })
     },
 
@@ -3094,38 +3131,63 @@ export default defineComponent({
       }
     },
 
-    hoverMeter(id: string) {
+    hoverMeter(id: string, pulseId: boolean = true) {
       if (this.meterMode) {
-        const allPulses: Pulse[] = [];
-        this.piece.meters.forEach(meter => {
-          allPulses.push(...meter.allCorporealPulses)
-        });
-        const pulse = allPulses.find(pulse => pulse.uniqueId === id)!;
-        const meter = this.piece.meters.find(meter => {
-          return meter.uniqueId === pulse.meterId
-        });
+        let meter: Meter;
+        let pulse: Pulse;
+        if (pulseId) {
+          const allPulses: Pulse[] = [];
+          this.piece.meters.forEach(meter => {
+            allPulses.push(...meter.allCorporealPulses)
+          });
+          pulse = allPulses.find(pulse => pulse.uniqueId === id)!;
+          meter = this.piece.meters.find(meter => {
+            return meter.uniqueId === pulse.meterId
+          })!;
+        } else {
+          meter = this.piece.meters.find(meter => {
+            return meter.uniqueId === id
+          })!;
+          pulse = meter.allPulses[0];
+        }
+        
+        console.log(pulse.meterId === meter.uniqueId)
         if (this.selectedMeter !== meter) {
           this.svg.style('cursor', 'pointer')
           d3SelectAll(`.meterId_${pulse.meterId}`)
             .filter((d, i, nodes) => !d3Select(nodes[i]).classed('overlay'))
             .attr('stroke', this.selectedMeterColor)
         } else {
-          this.svg.style('cursor', 'col-resize')
+          if (pulseId) { 
+            // prevents final dotted ghost pulse from hovering as col resize
+            this.svg.style('cursor', 'col-resize')
+          }
+          
         }
       }
     },
 
-    unhoverMeter(id: string) {
+    unhoverMeter(id: string, pulseId: boolean = true) {
       if (this.meterMode) {
-        this.svg.style('cursor', 'default')
-        const allPulses: Pulse[] = [];
-        this.piece.meters.forEach(meter => {
-          allPulses.push(...meter.allCorporealPulses)
-        });
-        const pulse = allPulses.find(pulse => pulse.uniqueId === id)!;
-        const meter = this.piece.meters.find(meter => {
-          return meter.uniqueId === pulse.meterId
-        });
+        let pulse: Pulse;
+        let meter: Meter;
+        this.svg.style('cursor', 'default');
+        if (pulseId) {
+          const allPulses: Pulse[] = [];
+          this.piece.meters.forEach(meter => {
+            allPulses.push(...meter.allCorporealPulses)
+          });
+          pulse = allPulses.find(pulse => pulse.uniqueId === id)!;
+          meter = this.piece.meters.find(meter => {
+            return meter.uniqueId === pulse.meterId
+          })!;
+        } else {
+          meter = this.piece.meters.find(meter => {
+            return meter.uniqueId === id
+          })!;
+          pulse = meter.allPulses[0];
+        }
+        
         if (this.selectedMeter !== meter) {
           d3SelectAll(`.meterId_${pulse.meterId}`)
           .filter((d, i, nodes) => !d3Select(nodes[i]).classed('overlay'))
@@ -3135,7 +3197,7 @@ export default defineComponent({
       }
     },
 
-    selectMeter(id: string, turnMeterModeOn: boolean = false) {
+    selectMeter(id: string, turnMeterModeOn: boolean = false, pulseId: boolean = true) {
       if (turnMeterModeOn) {
         this.meterMode = true;
         this.insertPulseMode = false;
@@ -3147,13 +3209,24 @@ export default defineComponent({
         this.piece.meters.forEach(meter => {
           allPulses.push(...meter.allPulses)
         });
-        const pulse = allPulses.find(pulse => pulse.uniqueId === id)!;
+        
         const audioPlayer = this.$refs.audioPlayer as typeof EditorAudioPlayer;
         const meterControls = audioPlayer.$refs.meterControls as typeof MeterControls;
         meterControls.meterSelected = true;
-        const meter = this.piece.meters.find(meter => {
-          return meter.uniqueId === pulse.meterId
-        });
+        let pulse: Pulse;
+        let meter: Meter;
+        if (pulseId) {
+          pulse = allPulses.find(pulse => pulse.uniqueId === id)!;
+          meter = this.piece.meters.find(meter => {
+            return meter.uniqueId === pulse.meterId
+          })!;
+        } else {
+          meter = this.piece.meters.find(meter => {
+            return meter.uniqueId === id
+          })!;
+          pulse = meter.allPulses[0];
+        }
+        
         this.selectedMeter = meter;
         meterControls.meter = meter;
         //should go to the meter controls, if not selected
