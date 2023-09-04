@@ -654,12 +654,6 @@ export default {
                         this.gharana[i] ;
         console.log(this.gharana[i])
         console.log(key, inst, gharana, this.selectedRoles[i])
-        if (key === undefined ||
-            inst === undefined ||
-            // gharana === undefined ||
-            this.selectedRoles[i] === undefined) {
-          throw new Error('Musician name is undefined!')
-        }
         recObj.musicians[key] = {
           instrument: inst,
           role: this.selectedRoles[i]!,

@@ -33,6 +33,10 @@ const getSuffix = mimetype => {
     return '.m4a'
   } else if (end === 'flac' || end === 'x-flac') {
     return '.flac'
+  } else if (end === 'ogg' || end === 'x-ogg') {
+    return '.opus'
+  } else if (end === 'opus' || end === 'x-opus') {
+    return '.opus'
   }
 };
 
@@ -839,10 +843,26 @@ const runServer = async () => {
           const update = { $set: { [tempString]: newUniqueId } };
           const options = { upsert: true };
           await audioEvents.updateOne(query, update, options)
-          const fileName = newUniqueId + getSuffix(avatar.mimetype);
+          const suffix = getSuffix(avatar.mimetype);
+          let fileName = newUniqueId + suffix;
           avatar.mv('./uploads/' + fileName);
+          if (suffix === '.opus') {
+            const newFileName = newUniqueId + '.wav';
+            const spawnArgs = ['-i', './uploads/' + fileName, './uploads/' + newFileName];
+            const convertToOpus = spawn('ffmpeg', spawnArgs)
+            fileName = newFileName;
+            convertToOpus.stderr.on('data', data => {
+              console.error(`stderr: ${data}`)
+            });
+            await convertToOpus.on('close', () => {
+              console.log('opus conversion finished')
+            })
+          }
           const spawnArr = ['process_audio.py', fileName, parentId, idx];
           const processAudio = spawn('python3', spawnArr);
+          processAudio.stderr.on('data', data => {
+            console.error(`stderr: ${data}`)
+          });
           await processAudio.on('close', () => {
             console.log('python closed, finally')
             res.send({
