@@ -3149,8 +3149,7 @@ export default defineComponent({
             return meter.uniqueId === id
           })!;
           pulse = meter.allPulses[0];
-        }
-        
+        }     
         console.log(pulse.meterId === meter.uniqueId)
         if (this.selectedMeter !== meter) {
           this.svg.style('cursor', 'pointer')
@@ -3162,7 +3161,6 @@ export default defineComponent({
             // prevents final dotted ghost pulse from hovering as col resize
             this.svg.style('cursor', 'col-resize')
           }
-          
         }
       }
     },
