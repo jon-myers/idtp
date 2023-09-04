@@ -234,6 +234,30 @@ const getAudioRecording = async (_id: string): Promise<RecType> => {
   }
 };
 
+const getAllTransOfAudioFile = async (audioID: string, userID: string) => {
+  let allTrans;
+  const suffix = '?' + new URLSearchParams({
+    audioID: audioID,
+    userID: userID
+  });
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const extUrl = url + 'getAllTranscriptionsOfAudioFile' + suffix;
+    const response = await fetch(extUrl, request);
+    if (response.ok) {
+      allTrans = await response.json()
+    }
+    return allTrans
+  } catch (err) {
+    console.error(err)
+  }
+};
+
 // const getSortedMusicians = async () => {
 //   // query 'musicians' mongoDB collection to get all musicians in alphabetical 
 //   // order
@@ -1004,5 +1028,6 @@ export {
   updateTranscriptionPermissions,
   getInstrumentation,
   getIpaVowels,
-  getConsonants
+  getConsonants,
+  getAllTransOfAudioFile
 }

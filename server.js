@@ -198,6 +198,28 @@ const runServer = async () => {
       }
     });
 
+    app.get('/getAllTranscriptionsOfAudioFile', async (req, res) => {
+      const query = {
+        audioID: ObjectId(req.query.audioID),
+        $or: [
+          { userID: req.query.userID },
+          { permissions: { $in: ['Public', 'Publicly Editable'] } }
+        ]
+      };
+      const projection = {
+        title: 1,
+        name: 1,
+      };
+      try {
+        const result = await transcriptions.find(query)
+          .project(projection).toArray();
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
+
     app.get('/nameFromUserID', async (req, res) => {
       // retrieve a user's name from their associated userID in the users db
       const query = {
