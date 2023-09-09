@@ -1459,6 +1459,48 @@ class Group {
   }
 }
 
+type PhraseCategorizationType = {
+  "Phrase": {
+    "Pre-Chiz Alap": boolean,
+    "Mohra": boolean,
+    "Mukra": boolean,
+    "Asthai": boolean,
+    "Antara": boolean,
+    "Manjha": boolean,
+    "Abhog": boolean,
+    "Sanchari": boolean,
+    "Jhala": boolean
+  },
+  "Elaboration": {
+    "Vistar": boolean,
+    "Barhat": boolean,
+    "Prastar": boolean,
+    "Bol Banao": boolean,
+    "Bol Bandt": boolean,
+    "Tan (Sapat)": boolean,
+    "Tan (Gamak)": boolean,
+    "Laykari": boolean,
+    "Tihai": boolean
+  },
+  "Vocal Articulation": {
+    "Bol": boolean,
+    "Non-Tom": boolean,
+    "Tarana": boolean,
+    "Aakar": boolean,
+    "Sargam": boolean
+  },
+  "Instrumental Articulation": {
+    "Bol": boolean,
+    "Non-Bol": boolean
+  },
+  "Incidental": {
+    "Talk/Conversation": boolean,
+      "Praise ('Vah')": boolean,
+      "Tuning": boolean,
+      "Pause": boolean,
+  }
+}
+
 
 class Phrase {
   startTime?: number;
@@ -1470,7 +1512,7 @@ class Phrase {
   durArray?: number[];
   chikaris: { [key: string]: Chikari };
   pieceIdx?: number;
-  // trajectories: Trajectory[];
+  categorizationGrid: PhraseCategorizationType[];
   
 
 
@@ -1484,21 +1526,22 @@ class Phrase {
     trajectoryGrid = undefined,
     instrumentation = ['Sitar'],
     groupsGrid = undefined,
+    categorizationGrid = undefined,
   }: {
     trajectories?: Trajectory[],
     durTot?: number,
     durArray?: number[],
-    chikaris?: object,
+    chikaris?: { [key: string]: Chikari },
     raga?: Raga,
     startTime?: number,
     trajectoryGrid?: Trajectory[][],
     instrumentation?: string[],
     groupsGrid?: Group[][],
+    categorizationGrid?: PhraseCategorizationType[],
   } = {}) {
 
     this.startTime = startTime;
     this.raga = raga;
-    // this.trajectories = trajectories;
     if (trajectoryGrid !== undefined) {
       this.trajectoryGrid = trajectoryGrid;
     } else {
@@ -1538,6 +1581,53 @@ class Phrase {
     } else {
       this.groupsGrid = this.instrumentation.map(() => []);
     }
+    this.categorizationGrid = categorizationGrid || [];
+    if (this.categorizationGrid.length === 0) {
+      for (let i = 0; i < this.trajectoryGrid.length; i++) {
+        this.categorizationGrid.push({
+          "Phrase": {
+            "Pre-Chiz Alap": false,
+            "Mohra": false,
+            "Mukra": false,
+            "Asthai": false,
+            "Antara": false,
+            "Manjha": false,
+            "Abhog": false,
+            "Sanchari": false,
+            "Jhala": false
+          },
+          "Elaboration": {
+            "Vistar": false,
+            "Barhat": false,
+            "Prastar": false,
+            "Bol Banao": false,
+            "Bol Bandt": false,
+            "Tan (Sapat)": false,
+            "Tan (Gamak)": false,
+            "Laykari": false,
+            "Tihai": false
+          },
+          "Vocal Articulation": {
+            "Bol": false,
+            "Non-Tom": false,
+            "Tarana": false,
+            "Aakar": false,
+            "Sargam": false
+          },
+          "Instrumental Articulation": {
+            "Bol": false,
+            "Non-Bol": false
+          },
+          "Incidental": {
+            "Talk/Conversation": false,
+              "Praise ('Vah')": false,
+              "Tuning": false,
+              "Pause": false,
+          }
+        })
+      }
+    }
+
   }
 
   getGroups(idx = 0) {
@@ -1792,6 +1882,7 @@ class Phrase {
       trajectoryGrid: this.trajectoryGrid,
       instrumentation: this.instrumentation,
       groupsGrid: this.groupsGrid,
+      categorizationGrid: this.categorizationGrid,
     }
   }
 
@@ -2610,10 +2701,11 @@ export {
   Group,
   durationsOfFixedPitches,
   pitchNumberToChroma,
-  linSpace
+  linSpace,
 }
 
 export type {
   RuleSetType,
-  VibObjType
+  VibObjType,
+  PhraseCategorizationType
 }
