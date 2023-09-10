@@ -505,7 +505,7 @@ export default defineComponent({
           piece.sectionStarts = [...starts, realPhraseStart];
           piece.sectionStarts.sort((a, b) => a - b);
           d3Select(`#phraseLine${realPhraseStart-1}`)
-            .attr('stroke-width', '3px')
+            .attr('stroke-width', '4px')
         }
       }
     },
