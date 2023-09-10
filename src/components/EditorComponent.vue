@@ -3623,6 +3623,16 @@ export default defineComponent({
           tsp.showPhraseRadio = true;  
         } else {
           this.selectedPhraseDivIdx = i;
+          const realPhraseStartIdx = i + 1;
+          if (this.piece.sectionStarts!.includes(realPhraseStartIdx)) {
+            tsp.phraseDivType = 'section';
+          } else {
+            tsp.phraseDivType = 'phrase';
+          }
+          this.clearSelectedTraj();
+          this.clearSelectedChikari();
+          this.clearTrajSelectPanel();
+          tsp.showPhraseRadio = true; 
           d3Select(`#phraseLine${i}`)
             .attr('stroke', 'red')
         }   
