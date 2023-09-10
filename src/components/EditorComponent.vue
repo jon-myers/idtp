@@ -3344,8 +3344,10 @@ export default defineComponent({
     },
     
     phraseDivDragEnd(i: number) {
+      
       const tsp = this.$refs.trajSelectPanel as typeof TrajSelectPanel;
       return (e: D3DragEvent<HTMLDivElement, any, MouseEvent>) => {
+        console.log('phrase div drag end')
         e.sourceEvent.preventDefault();
         e.sourceEvent.stopPropagation();
         if (this.selectedPhraseDivIdx !== undefined) {

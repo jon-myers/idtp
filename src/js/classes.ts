@@ -2,6 +2,45 @@ import { findLastIndex } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 import { Meter } from './meter.ts';
 
+const initSectionCategorization = {
+  "Pre-Chiz Alap": {
+    "Pre-Chiz Alap": false
+  },
+  "Alap": {
+    "Alap": false,
+    "Jor": false,
+    "Alap-Jhala": false
+  },
+  "Composition Type": {
+    "Dhrupad": false,
+    "Bandish": false,
+    "Thumri": false,
+    "Ghazal": false,
+    "Qawwali": false,
+    "Dhun": false,
+    "Tappa": false,
+    "Bhajan": false,
+    "Kirtan": false,
+    "Kriti": false,
+    "Masitkhani Gat": false,
+    "Razakhani Gat": false,
+    "Ferozkhani Gat": false,
+  },
+  "Composition-section/Tempo": {
+    "Ati Vilambit": false,
+    "Vilambit": false,
+    "Madhya": false,
+    "Drut": false,
+    "Ati Drut": false,
+    "Jhala": false,
+  },
+  "Tala": {
+    "Ektal": false,
+    "Tintal": false,
+    "Rupak": false,
+  }
+};
+
 const chromaToScaleDegree = (chroma: number): [number, boolean] => {
     let scaleDegree = 0;
     let raised = true;
@@ -1461,7 +1500,6 @@ class Group {
 
 type PhraseCategorizationType = {
   "Phrase": {
-    "Pre-Chiz Alap": boolean,
     "Mohra": boolean,
     "Mukra": boolean,
     "Asthai": boolean,
@@ -1477,10 +1515,13 @@ type PhraseCategorizationType = {
     "Prastar": boolean,
     "Bol Banao": boolean,
     "Bol Bandt": boolean,
+    "Behlava": boolean,
+    "Gat-kari": boolean,
     "Tan (Sapat)": boolean,
     "Tan (Gamak)": boolean,
     "Laykari": boolean,
-    "Tihai": boolean
+    "Tihai": boolean,
+    "Chakradar": boolean,
   },
   "Vocal Articulation": {
     "Bol": boolean,
@@ -1501,6 +1542,45 @@ type PhraseCategorizationType = {
   }
 }
 
+type SectionCategorizationType = {
+  "Pre-Chiz Alap": {
+    "Pre-Chiz Alap": boolean,
+  },
+  "Alap": {
+    "Alap": boolean,
+    "Jor": boolean,
+    "Alap-Jhala": boolean,
+  },
+  "Composition Type": {
+    "Dhrupad": boolean,
+    "Bandish": boolean,
+    "Thumri": boolean,
+    "Ghazal": boolean,
+    "Qawwali": boolean,
+    "Dhun": boolean,
+    "Tappa": boolean,
+    "Bhajan": boolean,
+    "Kirtan": boolean,
+    "Kriti": boolean,
+    "Masitkhani Gat": boolean,
+    "Razakhani Gat": boolean,
+    "Ferozkhani Gat": boolean,
+  },
+  "Composition-section/Tempo": {
+    "Ati Vilambit": boolean,
+    "Vilambit": boolean,
+    "Madhya": boolean,
+    "Drut": boolean,
+    "Ati Drut": boolean,
+    "Jhala": boolean,
+  },
+  "Tala": {
+    "Ektal": boolean,
+    "Tintal": boolean,
+    "Rupak": boolean
+  }
+}
+
 
 class Phrase {
   startTime?: number;
@@ -1514,8 +1594,6 @@ class Phrase {
   pieceIdx?: number;
   categorizationGrid: PhraseCategorizationType[];
   
-
-
   constructor({
     trajectories = [],
     durTot = undefined,
@@ -1586,7 +1664,6 @@ class Phrase {
       for (let i = 0; i < this.trajectoryGrid.length; i++) {
         this.categorizationGrid.push({
           "Phrase": {
-            "Pre-Chiz Alap": false,
             "Mohra": false,
             "Mukra": false,
             "Asthai": false,
@@ -1602,10 +1679,13 @@ class Phrase {
             "Prastar": false,
             "Bol Banao": false,
             "Bol Bandt": false,
+            "Behlava": false,
+            "Gat-kari": false,
             "Tan (Sapat)": false,
             "Tan (Gamak)": false,
             "Laykari": false,
-            "Tihai": false
+            "Tihai": false,
+            "Chakradar": false,
           },
           "Vocal Articulation": {
             "Bol": false,
@@ -1959,6 +2039,7 @@ class Piece {
   instrumentation: string[];
   possibleTrajs: { [key: string]: number[] };
   meters: Meter[];
+  sectionCategorization: SectionCategorizationType[];
 
 
   constructor({
@@ -1983,6 +2064,7 @@ class Piece {
     sectionStarts = undefined,
     instrumentation = ['Sitar'],
     meters = [],
+    sectionCategorization = undefined,
   }: {
     phrases?: Phrase[],
     durTot?: number,
@@ -2005,6 +2087,7 @@ class Piece {
     sectionStarts?: number[],
     instrumentation?: string[],
     meters?: Meter[],
+    sectionCategorization?: SectionCategorizationType[],
   } = {}) {
     this.meters = meters;
     this.phrases = phrases;
@@ -2082,6 +2165,13 @@ class Piece {
       'Veena, Rudra (Bin)': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
       'Violin': [0, 1, 2, 3, 4, 5, 6, 12, 13],
       'Harmonium': [0, 12, 13],
+    }
+    if (sectionCategorization !== undefined) {
+      this.sectionCategorization = sectionCategorization;
+    } else {
+      this.sectionCategorization = this.sectionStarts.map(() => {
+        return initSectionCategorization
+      })
     }
   }
 
@@ -2180,7 +2270,10 @@ class Piece {
         slice = this.phrases.slice(s, this.sectionStarts![i + 1])
         // sections.push(this.phrases.slice(s, this.sectionStarts[i + 1]))
       }
-      sections.push(new Section({ phrases: slice }))
+      sections.push(new Section({ 
+        phrases: slice, 
+        categorization: this.sectionCategorization[i] 
+      }))
     });
     return sections
   }
@@ -2321,7 +2414,8 @@ class Piece {
       given_name: this.given_name,
       sectionStarts: this.sectionStarts,
       instrumentation: this.instrumentation,
-      meters: this.meters
+      meters: this.meters,
+      sectionCategorization: this.sectionCategorization,
     }
   }
 
@@ -2354,13 +2448,21 @@ const yamanRuleSet = {
 
 class Section {
   phrases: Phrase[];
+  categorization: SectionCategorizationType;
 
   constructor({
-    phrases = []
+    phrases = [],
+    categorization = undefined
   }: {
-    phrases?: Phrase[]
+    phrases?: Phrase[],
+    categorization?: SectionCategorizationType
   } = {}) {
-    this.phrases = phrases
+    this.phrases = phrases;
+    if (categorization !== undefined) {
+      this.categorization = categorization;
+    } else {
+      this.categorization = initSectionCategorization;
+    }
   }
 
   allPitches(repetition=true) {

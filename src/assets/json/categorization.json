@@ -1,6 +1,8 @@
 {
   "Section": {
-    "Pre-Chiz Alap": "Pre-Chiz Alap",
+    "Pre-Chiz Alap": [
+      "Pre-Chiz Alap"
+    ],
     "Alap": [
       "Alap",
       "Jor",
@@ -39,7 +41,6 @@
   },
   "Phrase": {
     "Phrase Type": [
-      "Pre-Chiz Alap",
       "Mohra",
       "Mukra",
       "Asthai",
