@@ -1,5 +1,6 @@
 {
   "Section": {
+    "Pre-Chiz Alap": "Pre-Chiz Alap",
     "Alap": [
       "Alap",
       "Jor",
@@ -21,12 +22,13 @@
         "Razakhani Gat",
         "Ferozkhani Gat"
       ],
-      "Composition Tempo": [
+      "Composition-section/Tempo": [
         "Ati Vilambit",
         "Vilambit",
         "Madhya",
         "Drut",
-        "Ati Drut"
+        "Ati Drut",
+        "Jhala"
       ],
       "Tala": [
         "Ektal",
@@ -53,10 +55,13 @@
       "Prastar",
       "Bol Banao",
       "Bol Bandt",
+      "Behlava",
+      "Gat-kari",
       "Tan (Sapat)",
       "Tan (Gamak)",
       "Laykari",
-      "Tihai"
+      "Tihai",
+      "Chakradar"
     ],
     "Articulation Type": {
       "Vocal": [
