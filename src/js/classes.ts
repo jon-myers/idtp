@@ -2804,6 +2804,7 @@ export {
   durationsOfFixedPitches,
   pitchNumberToChroma,
   linSpace,
+  initSectionCategorization
 }
 
 export type {
