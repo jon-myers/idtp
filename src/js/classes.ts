@@ -2,44 +2,46 @@ import { findLastIndex } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 import { Meter } from './meter.ts';
 
-const initSectionCategorization = {
-  "Pre-Chiz Alap": {
-    "Pre-Chiz Alap": false
-  },
-  "Alap": {
-    "Alap": false,
-    "Jor": false,
-    "Alap-Jhala": false
-  },
-  "Composition Type": {
-    "Dhrupad": false,
-    "Bandish": false,
-    "Thumri": false,
-    "Ghazal": false,
-    "Qawwali": false,
-    "Dhun": false,
-    "Tappa": false,
-    "Bhajan": false,
-    "Kirtan": false,
-    "Kriti": false,
-    "Masitkhani Gat": false,
-    "Razakhani Gat": false,
-    "Ferozkhani Gat": false,
-  },
-  "Composition-section/Tempo": {
-    "Ati Vilambit": false,
-    "Vilambit": false,
-    "Madhya": false,
-    "Drut": false,
-    "Ati Drut": false,
-    "Jhala": false,
-  },
-  "Tala": {
-    "Ektal": false,
-    "Tintal": false,
-    "Rupak": false,
+const initSectionCategorization = () => {
+  return {
+    "Pre-Chiz Alap": {
+      "Pre-Chiz Alap": false
+    },
+    "Alap": {
+      "Alap": false,
+      "Jor": false,
+      "Alap-Jhala": false
+    },
+    "Composition Type": {
+      "Dhrupad": false,
+      "Bandish": false,
+      "Thumri": false,
+      "Ghazal": false,
+      "Qawwali": false,
+      "Dhun": false,
+      "Tappa": false,
+      "Bhajan": false,
+      "Kirtan": false,
+      "Kriti": false,
+      "Masitkhani Gat": false,
+      "Razakhani Gat": false,
+      "Ferozkhani Gat": false,
+    },
+    "Composition-section/Tempo": {
+      "Ati Vilambit": false,
+      "Vilambit": false,
+      "Madhya": false,
+      "Drut": false,
+      "Ati Drut": false,
+      "Jhala": false,
+    },
+    "Tala": {
+      "Ektal": false,
+      "Tintal": false,
+      "Rupak": false,
+    }
   }
-};
+}
 
 const chromaToScaleDegree = (chroma: number): [number, boolean] => {
     let scaleDegree = 0;
@@ -2170,8 +2172,14 @@ class Piece {
       this.sectionCategorization = sectionCategorization;
     } else {
       this.sectionCategorization = this.sectionStarts.map(() => {
-        return initSectionCategorization
+        return initSectionCategorization()
       })
+    }
+    if (this.sectionStarts.length > this.sectionCategorization.length) {
+      const diff = this.sectionStarts.length - this.sectionCategorization.length;
+      for (let i = 0; i < diff; i++) {
+        this.sectionCategorization.push(initSectionCategorization())
+      }
     }
   }
 
@@ -2461,7 +2469,7 @@ class Section {
     if (categorization !== undefined) {
       this.categorization = categorization;
     } else {
-      this.categorization = initSectionCategorization;
+      this.categorization = initSectionCategorization();
     }
   }
 
@@ -2798,6 +2806,7 @@ export {
   Articulation,
   Chikari,
   Raga,
+  Section,
   getStarts,
   getEnds,
   Group,

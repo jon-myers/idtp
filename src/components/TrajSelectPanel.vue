@@ -513,7 +513,7 @@ export default defineComponent({
           piece.sectionStarts.sort((a, b) => a - b);
           const newIdx = piece.sectionStarts.indexOf(realPhraseStart);
           piece.sectionCategorization
-            .splice(newIdx, 0, initSectionCategorization);
+            .splice(newIdx, 0, initSectionCategorization());
           d3Select(`#phraseLine${realPhraseStart-1}`)
             .attr('stroke-width', '4px')
         }

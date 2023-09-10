@@ -14,6 +14,9 @@
       <SectionLabelEditor 
       v-for='(section, i) in piece.sections'
       :sectionNum='i'
+      :piece='piece'
+      @unsavedChanges='$emit("unsavedChanges")'
+      :section='section'
       />
     </div>
     <div 
@@ -76,6 +79,9 @@ export default defineComponent({
   components: {
     SectionLabelEditor,
     PhraseLabelEditor
+  },
+  mounted() {
+    console.log('now')
   },
   methods: {
     goToPhrase(e: MouseEvent, pIdx: number) {

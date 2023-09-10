@@ -179,6 +179,7 @@ export default defineComponent({
   width: 650px;
   min-width: 650px;
   border: 1px solid black;
+  border-left: none;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -204,7 +205,9 @@ export default defineComponent({
   flex-direction: row;
   align-items: center;
   justify-content: left;
-  overflow-y: scroll;
+  overflow-y: auto;
+  margin-bottom: 10px;
+  scrollbar-width: none;
 }
 
 .checkColumn {

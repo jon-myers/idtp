@@ -4110,6 +4110,7 @@ export default defineComponent({
           console.log(ssIdx)
           if (ssIdx !== -1) {
             this.piece.sectionStarts!.splice(ssIdx, 1);
+            this.piece.sectionCategorization!.splice(ssIdx, 1);
           }
           this.piece.sectionStarts = this.piece.sectionStarts!.map((item) => {
             if (item > this.selectedPhraseDivIdx! + 1) {

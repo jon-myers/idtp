@@ -271,7 +271,7 @@
         @passthroughAssignPrevMeterEmit='passthroughAssignPrevMeter'
         />
       <LabelEditor
-        v-show='showLabelControls'
+        v-if='showLabelControls'
         :height='controlsHeight'
         :playerHeight='playerHeight'
         :editable='editable'
