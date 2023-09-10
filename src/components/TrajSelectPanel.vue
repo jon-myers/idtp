@@ -515,7 +515,7 @@ export default defineComponent({
           piece.sectionCategorization
             .splice(newIdx, 0, initSectionCategorization);
           d3Select(`#phraseLine${realPhraseStart-1}`)
-            .attr('stroke-width', '3px')
+            .attr('stroke-width', '4px')
         }
       }
     },

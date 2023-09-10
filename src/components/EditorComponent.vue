@@ -4107,7 +4107,10 @@ export default defineComponent({
           // piece.sectionStarts
           const sectionStart = this.selectedPhraseDivIdx + 1;
           const ssIdx = this.piece.sectionStarts!.indexOf(sectionStart);
-          this.piece.sectionStarts!.splice(ssIdx, 1);
+          console.log(ssIdx)
+          if (ssIdx !== -1) {
+            this.piece.sectionStarts!.splice(ssIdx, 1);
+          }
           this.piece.sectionStarts = this.piece.sectionStarts!.map((item) => {
             if (item > this.selectedPhraseDivIdx! + 1) {
               return item - 1;
