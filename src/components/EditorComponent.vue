@@ -5414,13 +5414,16 @@ export default defineComponent({
         const newTrajs = phrase_.trajectories.splice(trajIdx+1, end);
         phrase_.durTotFromTrajectories();
         phrase_.durArrayFromTrajectories();
-        const newPhraseObj = {
+        const newPhraseObj: {
+          trajectories: Trajectory[],
+          raga: Raga,
+          instrumentation?: string[]
+        } = {
           trajectories: newTrajs,
-          raga: phrase_.raga
+          raga: phrase_.raga!
         };
         if (this.piece.instrumentation) {
-          throw new Error('instrumentation, instead of instrumentatinoGrid?');
-          // newPhraseObj.instrumentation = this.piece.instrumentation;
+          newPhraseObj.instrumentation = this.piece.instrumentation;
         }
         const newPhrase = new Phrase(newPhraseObj)
         this.piece.phrases.splice(phrase_.pieceIdx! + 1, 0, newPhrase);
