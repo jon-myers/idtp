@@ -144,6 +144,8 @@
   @removeMeterEmit='removeMeter'
   @unsavedChangesEmit='updateUnsavedChanges'
   @assignPrevMeterEmit='assignPrevMeter'
+  @goToPhraseEmit='moveToPhrase'
+  @goToSectionEmit='moveToSection'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -211,6 +213,7 @@ import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
 import MeterControls from '@/components/MeterControls.vue';
 import TrajSelectPanel from '@/components/TrajSelectPanel.vue';
 import ContextMenu from'@/components/ContextMenu.vue';
+import LabelEditor from '@/components/LabelEditor.vue';
 import instructionsText from '@/assets/texts/editor_instructions.html?raw';
 import { detect, BrowserInfo } from 'detect-browser';
 
@@ -609,9 +612,13 @@ export default defineComponent({
   created() {
     window.addEventListener('keydown', this.handleKeydown);
     window.addEventListener('keyup', this.handleKeyup);
-    const offset = this.navHeight + this.playerHeight + this.controlsHeight + 1;
+    let offset = this.navHeight + this.playerHeight + this.controlsHeight + 1;
+    if (window.innerHeight < 800) {
+      offset = this.navHeight + this.playerHeight + 1;
+      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+      // ap.showControls = false;
+    }
     this.editorHeight = window.innerHeight - offset  ;
-    // this.editorHeight = 800;
     if (this.$store.state.userID === undefined) {
       if (this.$route.query) {
         this.$store.commit('update_query', this.$route.query)
@@ -1920,6 +1927,10 @@ export default defineComponent({
         const currentHeight = backColorElem.getBoundingClientRect().height;
         const scalingParam = currentYK * currentHeight;
         await this.initializePiece(leftTime, currentXK, scalingParam, yProp);
+        const scrollY = this.getScrollYVal(yProp);
+        this.gy.call(this.zoomY!.translateTo, 0, scrollY, [0, 0]);
+        this.transformScrollYDragger();
+
         this.resize();
 
       } catch (err) {
@@ -2019,7 +2030,7 @@ export default defineComponent({
           phrase.startTime! += delta;
           // update the chikari times
           Object.keys(phrase.chikaris).forEach(key => {
-            const newKey = (Math.round(100 * (Number(key) - delta)) / 100).toString();
+            let newKey = (Math.round(100 * (Number(key) - delta)) / 100).toString();
             if (newKey !== key) {
               phrase.chikaris[newKey] = phrase.chikaris[key];
               delete phrase.chikaris[key];
@@ -3334,8 +3345,10 @@ export default defineComponent({
     },
     
     phraseDivDragEnd(i: number) {
+      
       const tsp = this.$refs.trajSelectPanel as typeof TrajSelectPanel;
       return (e: D3DragEvent<HTMLDivElement, any, MouseEvent>) => {
+        console.log('phrase div drag end')
         e.sourceEvent.preventDefault();
         e.sourceEvent.stopPropagation();
         if (this.selectedPhraseDivIdx !== undefined) {
@@ -4098,6 +4111,7 @@ export default defineComponent({
           console.log(ssIdx)
           if (ssIdx !== -1) {
             this.piece.sectionStarts!.splice(ssIdx, 1);
+            this.piece.sectionCategorization!.splice(ssIdx, 1);
           }
           this.piece.sectionStarts = this.piece.sectionStarts!.map((item) => {
             if (item > this.selectedPhraseDivIdx! + 1) {
@@ -4517,7 +4531,6 @@ export default defineComponent({
     },
 
     handleMouseup(e: MouseEvent) {
-      console.log('this mouseup event is probably no longer reachable')
       if (e.offsetY < this.xAxHeight && this.drawingRegion) {
         if (e.offsetX < this.regionStartPx) {
           this.regionEndPx = this.regionStartPx;
@@ -4772,6 +4785,7 @@ export default defineComponent({
         .classed('noSelect', true)
         .attr('viewBox', [0, 0, rect.width, rect.height])
         .on('click', this.handleClick)
+        .on('contextmenu', this.backgroundContextMenuClick)
         .on('mousedown', this.handleMousedown)
         .on('mouseup', this.handleMouseup)
         .style('border-bottom', '1px solid black')
@@ -5849,6 +5863,11 @@ export default defineComponent({
       this.$router.push({ query: { id: query.id, pIdx: pIdx.toString() } });
     },
 
+    moveToSection(sIdx: number) {
+      const pIdx = this.piece.sectionStarts[sIdx];
+      this.moveToPhrase(pIdx);
+    },
+
     moveToTime(time: number, point: [number, number], redraw=false) {
       if (point === undefined) {
         point = [0, 0];
@@ -6012,6 +6031,49 @@ export default defineComponent({
       });
       this.addChikaris();
       this.addPlayhead();   
+    },
+
+    backgroundContextMenuClick(e: MouseEvent) {
+      e.preventDefault();
+      e.stopPropagation();
+      this.contextMenuX = e.x;
+      this.contextMenuY = e.y;
+
+      const time = this.xr().invert(e.x);
+      const pIdx = this.phraseIdxFromTime(time, true)!;
+      const ss = this.piece.sectionStarts!;
+      const sectionIdx = ss.findLastIndex(x => pIdx >= x);
+      this.contextMenuChoices = [];
+      this.contextMenuChoices.push({
+        text: `Edit Section ${sectionIdx} labels`,
+        action: () => {
+          this.contextMenuClosed = true;
+          const eap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+          if (eap.showLabelControls === false) eap.toggleLabelControls();
+          this.$nextTick(() => {
+            const labelEditor = eap.$refs.labelControls as typeof LabelEditor;
+            labelEditor.selectedHierarchy = 'Section';
+            labelEditor.scrollToSection(sectionIdx);
+          })
+        }
+      });
+      this.contextMenuChoices.push({
+        text: `Edit Phrase ${pIdx} labels`,
+        action: () => {
+          this.contextMenuClosed = true;
+          const eap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+          if (eap.showLabelControls === false) eap.toggleLabelControls();
+          this.$nextTick(() => {
+            const labelEditor = eap.$refs.labelControls as typeof LabelEditor;
+            labelEditor.selectedHierarchy = 'Phrase';
+            labelEditor.scrollToPhrase(pIdx);
+          })
+
+        }
+      })
+      this.contextMenuClosed = false;
+      
+
     },
 
     trajContextMenuClick(e: MouseEvent) {

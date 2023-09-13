@@ -327,6 +327,7 @@ import t13 from '@/assets/thumbnails/13.png';
 import { select as d3Select } from 'd3';
 import { getIpaVowels, getConsonants } from '@/js/serverCalls.ts';
 import { defineComponent } from 'vue';
+import { initSectionCategorization } from '@/js/classes.ts';
 
 
 type TrajSelectPanelDataType = {
@@ -496,7 +497,13 @@ export default defineComponent({
         if (newVal === 'phrase' && oldVal == 'section') {
           const piece = this.$parent.piece;
           const starts = piece.sectionStarts;
-          piece.sectionStarts = starts.filter(s => s !== realPhraseStart);
+          piece.sectionStarts = starts.filter((s, sIdx) => {
+            const bool = s !== realPhraseStart;
+            if (!bool) {
+              piece.sectionCategorization.splice(sIdx, 1);
+            }
+            return bool
+          });
           d3Select(`#phraseLine${realPhraseStart-1}`)
             .attr('stroke-width', '2px')
         } else if (newVal === 'section' && oldVal == 'phrase') {
@@ -504,6 +511,9 @@ export default defineComponent({
           const starts = piece.sectionStarts;
           piece.sectionStarts = [...starts, realPhraseStart];
           piece.sectionStarts.sort((a, b) => a - b);
+          const newIdx = piece.sectionStarts.indexOf(realPhraseStart);
+          piece.sectionCategorization
+            .splice(newIdx, 0, initSectionCategorization());
           d3Select(`#phraseLine${realPhraseStart-1}`)
             .attr('stroke-width', '4px')
         }

@@ -1,0 +1,97 @@
+{
+  "Section": {
+    "Pre-Chiz Alap": [
+      "Pre-Chiz Alap"
+    ],
+    "Alap": [
+      "Alap",
+      "Jor",
+      "Alap-Jhala"
+    ],
+    "Composition": {
+      "Composition Type": [
+        "Dhrupad",
+        "Bandish",
+        "Thumri",
+        "Ghazal",
+        "Qawwali",
+        "Dhun",
+        "Tappa",
+        "Bhajan",
+        "Kirtan",
+        "Kriti",
+        "Masitkhani Gat",
+        "Razakhani Gat",
+        "Ferozkhani Gat"
+      ],
+      "Composition-section/Tempo": [
+        "Ati Vilambit",
+        "Vilambit",
+        "Madhya",
+        "Drut",
+        "Ati Drut",
+        "Jhala"
+      ],
+      "Tala": [
+        "Ektal",
+        "Tintal",
+        "Rupak"
+      ]
+    }
+  },
+  "Phrase": {
+    "Phrase Type": [
+      "Mohra",
+      "Mukra",
+      "Asthai",
+      "Antara",
+      "Manjha",
+      "Abhog",
+      "Sanchari",
+      "Jhala"
+    ],
+    "Elaboration Type": [
+      "Vistar",
+      "Barhat",
+      "Prastar",
+      "Bol Banao",
+      "Bol Bandt",
+      "Behlava",
+      "Gat-kari",
+      "Tan (Sapat)",
+      "Tan (Gamak)",
+      "Laykari",
+      "Tihai",
+      "Chakradar"
+    ],
+    "Articulation Type": {
+      "Vocal": [
+        "Bol",
+        "Non-Tom",
+        "Tarana",
+        "Aakar",
+        "Sargam"
+      ],
+      "Instrumental": [
+        "Bol",
+        "Non-Bol"
+      ]
+    },
+    "Incidental": [
+      "Talk/Conversation",
+      "Praise ('Vah')",
+      "Tuning",
+      "Pause"
+    ]
+  },
+  "Group/Trajectory": {
+    "Alankars": [
+      "Meend",
+      "Gamak",
+      "Murki",
+      "Zamzama",
+      "Krintin",
+      "Kan"
+    ]
+  }
+}
