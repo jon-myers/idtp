@@ -279,6 +279,7 @@
         :vocal='vocal!'
         @unsavedChanges='$emit("unsavedChangesEmit", true)'
         @goToPhraseEmit='goToPhrase'
+        @goToSectionEmit='goToSection'
         ref='labelControls'
       />
   </div>
@@ -907,6 +908,10 @@ export default defineComponent({
 
     goToPhrase(pIdx: number) {
       this.$emit('goToPhraseEmit', pIdx)
+    },
+
+    goToSection(sIdx: number) {
+      this.$emit('goToSectionEmit', sIdx)
     },
 
     reinitializeAC() {

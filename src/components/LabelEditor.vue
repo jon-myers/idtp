@@ -10,13 +10,18 @@
         Phrase
       </label>
     </div>
-    <div class='sectionLabelHolder' v-show='selectedHierarchy === "Section"'>
+    <div 
+      class='sectionLabelHolder' 
+      v-show='selectedHierarchy === "Section"'
+      ref='sectionLabelHolder'>
       <SectionLabelEditor 
       v-for='(section, i) in piece.sections'
       :sectionNum='i'
       :piece='piece'
       @unsavedChanges='$emit("unsavedChanges")'
       :section='section'
+      @dblclick='goToSection($event, i)'
+      ref='sectionLabelEditors'
       />
     </div>
     <div 
@@ -80,25 +85,39 @@ export default defineComponent({
     SectionLabelEditor,
     PhraseLabelEditor
   },
-  mounted() {
-    console.log('now')
-  },
   methods: {
     goToPhrase(e: MouseEvent, pIdx: number) {
       this.$emit('goToPhraseEmit', pIdx);
+    },
+
+    goToSection(e: MouseEvent, sIdx: number) {
+      this.$emit('goToSectionEmit', sIdx);
     },
 
     scrollToPhrase(pIdx: number) {
       this.selectedHierarchy = 'Phrase';
       const pLabelEditors = this.$refs.phraseLabelEditors as typeof PhraseLabelEditor[];
       const pLabelEditor = pLabelEditors[pIdx];
-      const container = this.$refs.phraseLabelHolder as HTMLElement;
-      console.log(pLabelEditor.$el.offsetLeft)
+      this.$nextTick(() => {
+        const container = this.$refs.phraseLabelHolder as HTMLElement;
+        container.scrollTo({
+          left: pLabelEditor.$el.offsetLeft,
+          // behavior: 'smooth'
+        })
+      })
+      
+
+    },
+
+    scrollToSection(sIdx: number) {
+      this.selectedHierarchy = 'Section';
+      const sLabelEditors = this.$refs.sectionLabelEditors as typeof SectionLabelEditor[];
+      const sLabelEditor = sLabelEditors[sIdx];
+      const container = this.$refs.sectionLabelHolder as HTMLElement;
       container.scrollTo({
-        left: pLabelEditor.$el.offsetLeft,
+        left: sLabelEditor.$el.offsetLeft,
         // behavior: 'smooth'
       })
-
     }
   }
 });

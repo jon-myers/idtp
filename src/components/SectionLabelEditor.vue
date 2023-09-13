@@ -131,12 +131,17 @@ export default defineComponent({
     if (cat['Pre-Chiz Alap']['Pre-Chiz Alap']) {
       this.topLevel = 'Pre-Chiz Alap'
     } else if (someTrue(cat['Alap'])) {
-      console.log('this')
       this.topLevel = 'Alap';
       const keys = Object.keys(cat['Alap']) as AlapType[];
       this.alapType = keys.find(key => cat['Alap'][key]);
     } else if (someTrue(com) || someTrue(comSecTemp) || someTrue(tala)) {
-      this.topLevel = 'Composition'
+      this.topLevel = 'Composition';
+      const comKeys = Object.keys(com) as CompositionType[];
+      this.compositionType = comKeys.find(key => com[key]);
+      const comSecTempKeys = Object.keys(comSecTemp) as Section_TempoType[];
+      this.section_tempo = comSecTempKeys.find(key => comSecTemp[key]);
+      const talaKeys = Object.keys(tala) as TalaType[];
+      this.tala = talaKeys.find(key => tala[key]);
     } else {
       this.topLevel = 'None'
     }

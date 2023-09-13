@@ -145,6 +145,7 @@
   @unsavedChangesEmit='updateUnsavedChanges'
   @assignPrevMeterEmit='assignPrevMeter'
   @goToPhraseEmit='moveToPhrase'
+  @goToSectionEmit='moveToSection'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -5862,6 +5863,11 @@ export default defineComponent({
       this.$router.push({ query: { id: query.id, pIdx: pIdx.toString() } });
     },
 
+    moveToSection(sIdx: number) {
+      const pIdx = this.piece.sectionStarts[sIdx];
+      this.moveToPhrase(pIdx);
+    },
+
     moveToTime(time: number, point: [number, number], redraw=false) {
       if (point === undefined) {
         point = [0, 0];
@@ -6041,8 +6047,14 @@ export default defineComponent({
       this.contextMenuChoices.push({
         text: `Edit Section ${sectionIdx} labels`,
         action: () => {
-          console.log('opens up section label editor');
-          this.contextMenuClosed = true
+          this.contextMenuClosed = true;
+          const eap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+          if (eap.showLabelControls === false) eap.toggleLabelControls();
+          this.$nextTick(() => {
+            const labelEditor = eap.$refs.labelControls as typeof LabelEditor;
+            labelEditor.selectedHierarchy = 'Section';
+            labelEditor.scrollToSection(sectionIdx);
+          })
         }
       });
       this.contextMenuChoices.push({
@@ -6051,9 +6063,9 @@ export default defineComponent({
           this.contextMenuClosed = true;
           const eap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
           if (eap.showLabelControls === false) eap.toggleLabelControls();
-          const labelEditor = eap.$refs.labelControls as typeof LabelEditor;
-          labelEditor.selectedHierarchy = 'Phrase';
           this.$nextTick(() => {
+            const labelEditor = eap.$refs.labelControls as typeof LabelEditor;
+            labelEditor.selectedHierarchy = 'Phrase';
             labelEditor.scrollToPhrase(pIdx);
           })
 
