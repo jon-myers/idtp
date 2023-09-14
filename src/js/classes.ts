@@ -1492,6 +1492,20 @@ class Group {
     }
   }
 
+  addTraj(traj: Trajectory) {
+    this.trajectories.push(traj);
+    this.trajectories.sort((a, b) => {
+      if (a.num === undefined || b.num === undefined) {
+        throw new Error('Trajectory must have a num')
+      }
+      return a.num - b.num
+    });
+    if (!this.testForAdjacency()) {
+      throw new Error('Trajectories are not adjacent')
+    }
+    traj.groupId = this.id;
+  }
+
   toJSON() {
     return {
       trajectories: this.trajectories,
