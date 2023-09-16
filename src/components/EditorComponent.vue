@@ -6048,10 +6048,6 @@ export default defineComponent({
               .on('contextmenu', this.trajContextMenuClick)
           }
           const vowelIdxs = phrase.firstTrajIdxs();
-          if (isNaN(phrase.startTime)) {
-            console.log(phrase.startTime)
-            console.log(phrase)
-          }
           this.addArticulations(traj, phrase.startTime!, vowelIdxs)
         })
       });
