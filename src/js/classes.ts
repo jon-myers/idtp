@@ -2270,6 +2270,15 @@ class Piece {
     this.durArray = this.phrases.map(p => {
       if (p.durTot === undefined) {
         throw new Error('p.durTot is undefined')
+      } else if (isNaN(p.durTot)) {
+        const removes = p.trajectories.filter(t => isNaN(t.durTot))
+        removes.forEach(r => {
+          const idx = p.trajectories.indexOf(r);
+          p.trajectories.splice(idx, 1)
+        })
+        p.durTot = p.trajectories.map(t => {
+          return t.durTot
+        }).reduce((a, b) => a + b, 0)
       }
       return p.durTot / this.durTot!
     });

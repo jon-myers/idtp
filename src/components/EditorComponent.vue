@@ -6048,6 +6048,10 @@ export default defineComponent({
               .on('contextmenu', this.trajContextMenuClick)
           }
           const vowelIdxs = phrase.firstTrajIdxs();
+          if (isNaN(phrase.startTime)) {
+            console.log(phrase.startTime)
+            console.log(phrase)
+          }
           this.addArticulations(traj, phrase.startTime!, vowelIdxs)
         })
       });
@@ -6377,6 +6381,7 @@ export default defineComponent({
           return traj.articulations[key].name === 'pluck'
         });
         if (relKeys.length > 0) {
+          
           const pluckData = relKeys.map(p => {
           const normedX = Number(p) * traj.durTot;
           const y = traj.compute(normedX, true);
@@ -6385,6 +6390,7 @@ export default defineComponent({
             y: y
           }
         });
+        
         const sym = d3Symbol().type(d3SymbolTriangle).size(size);
         const x = (d: DrawDataType) => this.xr()(d.x);
         const y = (d: DrawDataType) => this.yr()(d.y);
