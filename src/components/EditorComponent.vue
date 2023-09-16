@@ -5328,6 +5328,15 @@ export default defineComponent({
               setIt = false;
             }
           }
+          
+          // if point is too close in time to other trajTimePts, seit should be
+          // false. Less than 0.05 to be exact.
+          const diffs = this.trajTimePts.map(ttp => {
+            return Math.abs(ttp.time - time)
+          })
+          const minDiff = Math.min(...diffs);
+          setIt = minDiff > 0.05 ? true : false;
+
           if (setIt) {
             let fixedTime = time;
             const startTime = phrase.startTime! + traj.startTime!;
