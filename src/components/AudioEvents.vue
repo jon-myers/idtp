@@ -8,58 +8,61 @@
         class='audioEventRow' 
         v-for='(ae, aeIdx) in allAudioEvents'
         :key='ae.name'>
-        <div 
-          class='audioEventNameRow'
-          :id='`ae${aeIdx}`'
-          @dblclick='toggleDisplay($event, ae, true)'
-          >
-          
-          <span @click='toggleDisplay($event, ae, false)'>&#9654;</span>
-          <label>{{ae.name}}</label>
-        </div>
-        <div 
-          :class='`audioRecordingRowOuter height${getHeight(ae)}`' 
-          v-show='ae.visible'
-          >
+        <div v-if='ae.recordings !== undefined'>
           <div 
-            :class='`audioRecordingRowSpacer height${getHeight(ae)}`'
+            class='audioEventNameRow'
+            :id='`ae${aeIdx}`'
+            @dblclick='toggleDisplay($event, ae, true)'
             >
+            
+            <span @click='toggleDisplay($event, ae, false)'>&#9654;</span>
+            <label>{{ae.name}}</label>
           </div>
-          <div class='audioRecordingCol'>
+          <div 
+            :class='`audioRecordingRowOuter height${getHeight(ae)}`' 
+            v-show='ae.visible'
+            >
             <div 
-              :class='`audioRecordingRow height${raagHt(ae, Number(recKey))}`' 
-              v-for='recKey in Object.keys(ae.recordings)'
-              :id='`arr${aeIdx}_${recKey}`'
-              :key='ae.recordings[Number(recKey)].audioFileId'
-              @dblclick='sendAudioSource($event, ae, aeIdx, Number(recKey))'>
-              <span class='recordingNum'>{{`${Number(recKey)+1}. `}}</span>
-              <div :class='`soloist height${raagHt(ae, Number(recKey))}`'>
-                <span>
-                  {{getSoloist(ae.recordings[Number(recKey)])}}
-                </span>
-              </div> 
-              <div :class='`raagNameCol height${raagHt(ae, Number(recKey))}`'>
-                <div 
-                  class='raagName' 
-                  v-for='raag in getRaags(ae.recordings[Number(recKey)])'
-                  :key='raag'>
-                  <span>{{raag}}
-                  </span>
-                </div>
-              </div>
-              <div :class='`performanceSectionCol height${raagHt(ae, Number(recKey))}`'>
-                <div 
-                  class='performanceSections' 
-                  v-for='raag in getRaags(ae.recordings[Number(recKey)])'
-                  :key='raag'>
-                  <span>
-                    {{getPSecs(ae.recordings[Number(recKey)].raags[raag])}}
-                  </span>
-                </div>
-              </div>
+              :class='`audioRecordingRowSpacer height${getHeight(ae)}`'
+              >
             </div>
-          </div>      
+            <div class='audioRecordingCol'>
+              <div 
+                :class='`audioRecordingRow height${raagHt(ae, Number(recKey))}`' 
+                v-for='recKey in Object.keys(ae.recordings)'
+                :id='`arr${aeIdx}_${recKey}`'
+                :key='ae.recordings[Number(recKey)].audioFileId'
+                @dblclick='sendAudioSource($event, ae, aeIdx, Number(recKey))'>
+                <span class='recordingNum'>{{`${Number(recKey)+1}. `}}</span>
+                <div :class='`soloist height${raagHt(ae, Number(recKey))}`'>
+                  <span>
+                    {{getSoloist(ae.recordings[Number(recKey)])}}
+                  </span>
+                </div> 
+                <div :class='`raagNameCol height${raagHt(ae, Number(recKey))}`'>
+                  <div 
+                    class='raagName' 
+                    v-for='raag in getRaags(ae.recordings[Number(recKey)])'
+                    :key='raag'>
+                    <span>{{raag}}
+                    </span>
+                  </div>
+                </div>
+                <div :class='`performanceSectionCol height${raagHt(ae, Number(recKey))}`'>
+                  <div 
+                    class='performanceSections' 
+                    v-for='raag in getRaags(ae.recordings[Number(recKey)])'
+                    :key='raag'>
+                    <span>
+                      {{getPSecs(ae.recordings[Number(recKey)].raags[raag])}}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>      
+          </div>
         </div>
+        
       </div>
     </div>    
     <AddAudioEvent 
@@ -79,7 +82,7 @@
       ref='audioPlayer'
       @emitNextTrack='nextTrack'/>
   </div>
-  <div class='dropDown closed' ref='dropDown'>
+  <!-- <div class='dropDown closed' ref='dropDown'>
     <div 
       :class='`dropDownRow`'
       @click='toggleAddEvent'>
@@ -88,7 +91,6 @@
     <div 
       :class='`dropDownRow ${toggle[Number(!clickedAE)]}`' 
       @click='handleEditAEClick'>
-      <!-- '`${[undefined, "handleEditAEClick"][Number(clickedAE)]}`'> -->
       Edit Audio Event
     </div>
     <div
@@ -101,7 +103,13 @@
       @click='handleNewTranscriptionClick'>
       New Transcription
     </div>
-  </div>
+  </div> -->
+  <ContextMenu
+    :x='dropDownLeft'
+    :y='dropDownTop'
+    :closed='contextMenuClosed'
+    :choices='contextMenuChoices'
+    />
   
 </template>
 <script lang='ts'>
@@ -113,6 +121,7 @@ import {
 import AddAudioEvent from '@/components/AddAudioEvent.vue';
 import AudioPlayer from '@/components/AudioPlayer.vue';
 import { defineComponent } from 'vue';
+import ContextMenu from '@/components/ContextMenu.vue';
 
 const displayTime = (dur: number) => {
   const hours = Math.floor(dur / 3600);
@@ -145,17 +154,17 @@ type AudioEventsDataType = {
   saVerified?: boolean,
   audioRecId?: string,
   dropDownWidth: number,
-  clickedAE: boolean,
   dropDownLeft: number,
   dropDownTop: number,
   selectedAE?: AudioEventType,
   selectedUserID?: string,
-  clickedAF: boolean,
   selectedAF?: RecType,
   userID?: string,
   toggle: string[],
   audioEventId?: string,
   recIdx?: number,
+  contextMenuClosed: boolean,
+  contextMenuChoices: { text: string, action: () => void }[],
 }
 
 export default defineComponent({
@@ -181,21 +190,21 @@ export default defineComponent({
       saVerified: undefined,
       audioRecId: undefined,
       dropDownWidth: 180,
-      clickedAE: false,
       dropDownLeft: 200,
       dropDownTop: 300,
       selectedAE: undefined,
       selectedUserID: undefined,
-      clickedAF: false,
       selectedAF: undefined,
       userID: undefined,
       toggle: ['', 'inactive'],
       recIdx: undefined,
-      audioEventId: undefined
+      audioEventId: undefined,
+      contextMenuClosed: true,
+      contextMenuChoices: [],
     }
   },
   components: {
-    AddAudioEvent, AudioPlayer
+    AddAudioEvent, AudioPlayer, ContextMenu
   },
 
   
@@ -205,7 +214,13 @@ export default defineComponent({
       this.$router.push('/')
     }
     this.userID = this.$store.state.userID;
-    this.allAudioEvents = await getAllAudioEventMetadata()
+    try {
+      this.allAudioEvents = await getAllAudioEventMetadata();
+      this.allAudioEvents?.sort((a, b) => a.name.localeCompare(b.name));
+    } catch (err) {
+      console.log(err)
+    }
+    
   },
   
   beforeUnmount() {
@@ -220,16 +235,6 @@ export default defineComponent({
   
   methods: {
 
-    async testFromAF() {
-      const audioID = this.allAudioEvents![0].recordings[0].audioFileId;
-      const userID = this.$store.state.userID!;
-      try {
-        this.testRes = await getAllTransOfAudioFile(audioID, userID);
-      } catch (err) {
-        console.log(err)
-      }
-    },
-
     resetAddEvent() {
       this.showAddEvent = false;
       this.editingId = undefined;
@@ -237,7 +242,8 @@ export default defineComponent({
     },
 
     async reset() {
-      this.allAudioEvents = await getAllAudioEventMetadata()
+      this.allAudioEvents = await getAllAudioEventMetadata();
+      this.allAudioEvents?.sort((a, b) => a.name.localeCompare(b.name));
     },
 
     getShorthand(rec: RecType) {
@@ -276,57 +282,36 @@ export default defineComponent({
           afName: JSON.stringify(afName)
         }
       })
-      this.clickedAE = false;
-      this.clickedAF = false
     },
 
     handleClick() {
-      const dropDown = this.$refs.dropDown as HTMLDivElement;
-      if (!dropDown.classList.contains('closed')) {
-        dropDown.classList.add('closed');
-        this.clickedAE = false;
-        this.clickedAF = false
-      }
+      this.contextMenuClosed = true;
     },
 
     handleKeydown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         e.preventDefault();
-        const dropDown = this.$refs.dropDown as HTMLDivElement;
-        dropDown.classList.add('closed');
-        this.clickedAE = false;
-        this.clickedAF = false
+        this.contextMenuClosed = true;
+
       }
     },
 
-    handleEditAEClick() {
-      if (this.clickedAE && this.selectedAE !== undefined) {
-        this.openEditWindow(this.selectedAE._id);
-        const dropDown = this.$refs.dropDown as HTMLDivElement;
-        dropDown.classList.add('closed');
-        this.clickedAE = false;
-        this.clickedAF = false
-      }
-    },
-
-    handleRightClick(e: MouseEvent) {
+    async handleRightClick(e: MouseEvent) {
       e.preventDefault();
-      const dropDown = this.$refs.dropDown as HTMLDivElement;
+      this.dropDownLeft = e.clientX;
+      this.dropDownTop = e.clientY;
       if (this.allAudioEvents === undefined) {
         throw new Error('allAudioEvents is undefined')
       }
-      if (!dropDown.classList.contains('closed')) {
-        dropDown.classList.add('closed');
-      } else {
+      this.contextMenuClosed = !this.contextMenuClosed;
       const el = document.elementFromPoint(e.clientX, e.clientY);
       if (el === null) {
         throw new Error('el is null')
       }
+      this.contextMenuChoices = [];
       if (el.classList[0] === 'audioEventNameRow') {
         this.selectedAE = this.allAudioEvents[Number(el.id.slice(2))];
         this.selectedUserID = this.selectedAE.userID;
-        this.clickedAE = true;
-        this.clickedAF = false;
         this.selectedAF = undefined;
       } else if (el.classList[0] === 'audioRecordingRow') {
         const splits = el.id.split('_');
@@ -334,28 +319,75 @@ export default defineComponent({
         this.selectedAE = this.allAudioEvents[Number(id)];
         const selectedAFIdx = splits[1];
         this.selectedAF = this.selectedAE.recordings[Number(selectedAFIdx)];
-        this.clickedAE = true;
-        this.clickedAF = true
       } else {
-        this.clickedAE = false;
-        this.clickedAF = false;
         this.selectedAE = undefined;
         this.selectedAF = undefined;
       }
-      this.dropDownLeft = e.clientX;
-      this.dropDownTop = e.clientY;
+      this.contextMenuChoices.push({
+        text: 'Add Audio Event',
+        action: () => {
+          this.toggleAddEvent();
+          this.contextMenuClosed = true;
+        }
+      });
+      this.contextMenuChoices.push({
+        text: 'Edit Audio Event',
+        action: () => {
+          this.openEditWindow(this.selectedAE!._id);
+          this.contextMenuClosed = true;
+        }
+      });
+      this.contextMenuChoices.push({
+        text: 'Delete Audio Event',
+        action: () => {
+          this.deleteAE();
+          this.contextMenuClosed = true;
+        }
+      })
+      if (this.selectedAF !== undefined) {
+        this.contextMenuChoices.push({
+          text: 'New Transcription',
+          action: () => {
+            const aeName = this.selectedAE!.name;
+            const afName = this.getShorthand(this.selectedAF!);
+            this.$router.push({
+              name: 'Files',
+              query: {
+                aeName: JSON.stringify(aeName),
+                afName: JSON.stringify(afName)
+              }
+            })
+            this.contextMenuClosed = true;
+          }
+        });
+        try {
+          const tChoices = await getAllTransOfAudioFile(
+            this.selectedAF.audioFileId, this.$store.state.userID!
+          );
+          tChoices.forEach(tc => {
+            this.contextMenuChoices.push({
+              text: `Open file: "${tc.title}" by ${tc.name}`,
+              action: () => { 
+                this.$store.commit('update_id', tc._id);
+                this.$cookies.set('currentPieceId', tc._id);
+                this.$router.push({
+                  name: 'EditorComponent',
+                  query: { id: tc._id }
+                })
+              }
+            })
+          })
+        } catch (err) {
+          console.log(err)
+        }
+
+      }
       const fileContainer = this.$refs.fileContainer as HTMLDivElement;
       const rect = fileContainer.getBoundingClientRect();
       if (this.dropDownLeft + this.dropDownWidth > rect.width - 20) {
         this.dropDownLeft = rect.width - this.dropDownWidth - 20
       }
-      const dropDownRect = dropDown.getBoundingClientRect();
-      const dropDownHeight = dropDownRect.height;
-      if (this.dropDownTop + dropDownHeight > rect.height - 20) {
-        this.dropDownTop = rect.height - dropDownHeight - 20
-      }
-      dropDown.classList.remove('closed')  
-      }
+
     },
     
     sendAudioSource(e: MouseEvent, 
@@ -513,9 +545,8 @@ export default defineComponent({
       const result = await deleteAudioEvent(this.selectedAE._id);
       console.log(result);
       if (result.deletedCount === 1) {
-        const dropDown = this.$refs.dropDown as HTMLDivElement;
-        dropDown.classList.add('closed');
-        this.allAudioEvents = await getAllAudioEventMetadata()
+        this.allAudioEvents = await getAllAudioEventMetadata();
+        this.allAudioEvents?.sort((a, b) => a.name.localeCompare(b.name));
       }
     }
   }
@@ -793,56 +824,5 @@ button {
   /* border-radius: 8px; */
 }
 
-.dropDown {
-  position: absolute;
-  width: v-bind(dropDownWidth+'px');
-  background-color: black;
-  left: v-bind(dropDownLeft+'px');
-  top: v-bind(dropDownTop+'px');
-  border: 1px solid grey;
-  border-radius: 5px;
-  display: flex;
-  flex-direction: column;
-  user-select: none;
-}
-
-.dropDown.closed {
-  visibility: hidden;
-  opacity: 0;
-  transition: visibility 0s 0.15s, opacity 0.15s linear;
-}
-
-.dropDownRow {
-  color: white;
-  border-radius: 5px;
-  height: 20px;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: left;
-  padding-left: 8px;
-  margin-left: 8px;
-  margin-right: 8px;
-  margin-top: 6px;
-  width: v-bind(dropDownWidth-24+'px')
-}
-
-.dropDownRow:hover {
-  background-color: blue;
-  cursor: pointer
-}
-
-.dropDownRow.last {
-  margin-bottom: 6px;
-}
-
-.dropDownRow.inactive:hover {
-  background-color: black;
-  cursor: auto;
-}
-
-.dropDownRow.inactive {
-  color: grey;
-}
 
 </style>

@@ -8,7 +8,10 @@
       v-for='(choice, cIdx) in choices' 
       @click='choice.action'
       >
-      {{ choice.text }}
+      <div class='overflowX'>
+        {{ choice.text }}
+      </div>
+      
     </div>
   </div>
 
@@ -75,6 +78,24 @@ export default defineComponent({
   margin-top: 6px;
   width: v-bind(dropDownWidth - 24 + 'px');
 }
+
+.overflowX {
+  white-space: nowrap;
+  text-align: left;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.overflowX::-webkit-scrollbar {
+  width: 0em;
+  height: 0em;
+}
+
+.overflowX::-webkit-scrollbar-thumb {
+  background-color: #888;
+  border-radius: 0em;
+}
+
 
 .dropDownRow:hover {
   background-color: blue;

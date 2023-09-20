@@ -201,7 +201,7 @@ const runServer = async () => {
 
     app.get('/getAllTranscriptionsOfAudioFile', async (req, res) => {
       const query = {
-        audioID: ObjectId(req.query.audioID),
+        audioID: req.query.audioID,
         $or: [
           { userID: req.query.userID },
           { permissions: { $in: ['Public', 'Publicly Editable'] } }
