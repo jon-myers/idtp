@@ -10,7 +10,7 @@
         v-for="(ik, idx) in infoKeys"
         :key="ik"
         :class="`infoKey ${['', 'first'][Number(idx === 0)]}`"
-      >
+        >
         {{ ik }}
         <span
           :class="`sorter ${['', 'selectedTri'][Number(selectedSort === idx)]}`"
@@ -34,7 +34,9 @@
           v-for="(info, idx) in allPieceInfo[i]"
           :key="info"
           >
-          {{ info }}
+          <div class='overflowX'>
+            {{ info }}
+          </div>
         </div>
       </div>
     </div>
@@ -208,8 +210,8 @@ export default defineComponent({
         'Title',
         'Transcriber',
         'Raga',
-        'Date Created',
-        'Date Modified',
+        'Created',
+        'Modified',
         'Permissions',
       ],
       designPieceModal: false,
@@ -564,7 +566,10 @@ export default defineComponent({
           el.classList.remove('selected');
         });
         this.$refs.dropDown.classList.remove('closed');
-        const el = document.elementFromPoint(e.clientX, e.clientY);
+        let el = document.elementFromPoint(e.clientX, e.clientY);
+        if (el.classList[0] === 'overflowX') {
+          el = el.parentElement;
+        }
         if (el.classList[0] === 'fileInfoRow') {
           const num = el.id.slice(3);
           el.classList.add('selected');
@@ -751,6 +756,8 @@ export default defineComponent({
 
 .infoKey.first {
   width: 220px;
+  min-width: 220px;
+  max-width: 220px;
 }
 
 .addNewPiece {
@@ -898,5 +905,25 @@ button {
 
 .sorter.selectedTri {
   color: white;
+}
+
+.overflowX {
+  white-space: nowrap;
+  text-align: left;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+.overflowX::-webkit-scrollbar {
+  width: 0em;
+  height: 0em;
+}
+
+.overflowX::-webkit-scrollbar-thumb {
+  background-color: #888;
+  border-radius: 0em;
 }
 </style>
