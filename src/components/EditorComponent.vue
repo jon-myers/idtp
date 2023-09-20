@@ -144,6 +144,8 @@
   @removeMeterEmit='removeMeter'
   @unsavedChangesEmit='updateUnsavedChanges'
   @assignPrevMeterEmit='assignPrevMeter'
+  @goToPhraseEmit='moveToPhrase'
+  @goToSectionEmit='moveToSection'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -211,6 +213,7 @@ import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
 import MeterControls from '@/components/MeterControls.vue';
 import TrajSelectPanel from '@/components/TrajSelectPanel.vue';
 import ContextMenu from'@/components/ContextMenu.vue';
+import LabelEditor from '@/components/LabelEditor.vue';
 import instructionsText from '@/assets/texts/editor_instructions.html?raw';
 import { detect, BrowserInfo } from 'detect-browser';
 
@@ -609,9 +612,13 @@ export default defineComponent({
   created() {
     window.addEventListener('keydown', this.handleKeydown);
     window.addEventListener('keyup', this.handleKeyup);
-    const offset = this.navHeight + this.playerHeight + this.controlsHeight + 1;
+    let offset = this.navHeight + this.playerHeight + this.controlsHeight + 1;
+    if (window.innerHeight < 800) {
+      offset = this.navHeight + this.playerHeight + 1;
+      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+      // ap.showControls = false;
+    }
     this.editorHeight = window.innerHeight - offset  ;
-    // this.editorHeight = 800;
     if (this.$store.state.userID === undefined) {
       if (this.$route.query) {
         this.$store.commit('update_query', this.$route.query)
@@ -846,6 +853,28 @@ export default defineComponent({
 
 
   methods: {
+
+    addTrajToSelectedGroup(traj: Trajectory) {
+      if (this.selectedTrajs.length > 1 && this.selectedTrajs[0].groupId !== undefined) {
+        const pIdx = this.selectedTrajs[0].phraseIdx!;
+        const phrase = this.piece.phrases[pIdx];
+        const group = phrase.getGroupFromId(this.selectedTrajs[0].groupId!)!;
+        group.addTraj(traj);
+        this.selectedTrajs.push(traj);
+        const tIdx = traj.num!;
+        const id = `p${pIdx}t${tIdx}`;
+        d3Select(`#${id}`)
+          .attr('stroke', this.selTrajColor)
+        d3Select(`#dampen${id}`)
+          .attr('stroke', this.selTrajColor)
+        d3Select(`#pluck${id}`)
+          .attr('fill', this.selArtColor)
+          .attr('stroke', this.selArtColor)
+        d3Select('#overlay__' + id)
+          .attr('cursor', 'default')
+        this.updateArtColors(traj, true)
+      }
+    },
 
     assignPrevMeter() {
       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
@@ -1920,6 +1949,10 @@ export default defineComponent({
         const currentHeight = backColorElem.getBoundingClientRect().height;
         const scalingParam = currentYK * currentHeight;
         await this.initializePiece(leftTime, currentXK, scalingParam, yProp);
+        const scrollY = this.getScrollYVal(yProp);
+        this.gy.call(this.zoomY!.translateTo, 0, scrollY, [0, 0]);
+        this.transformScrollYDragger();
+
         this.resize();
 
       } catch (err) {
@@ -2019,7 +2052,7 @@ export default defineComponent({
           phrase.startTime! += delta;
           // update the chikari times
           Object.keys(phrase.chikaris).forEach(key => {
-            const newKey = (Math.round(100 * (Number(key) - delta)) / 100).toString();
+            let newKey = (Math.round(100 * (Number(key) - delta)) / 100).toString();
             if (newKey !== key) {
               phrase.chikaris[newKey] = phrase.chikaris[key];
               delete phrase.chikaris[key];
@@ -3334,8 +3367,10 @@ export default defineComponent({
     },
     
     phraseDivDragEnd(i: number) {
+      
       const tsp = this.$refs.trajSelectPanel as typeof TrajSelectPanel;
       return (e: D3DragEvent<HTMLDivElement, any, MouseEvent>) => {
+        console.log('phrase div drag end')
         e.sourceEvent.preventDefault();
         e.sourceEvent.stopPropagation();
         if (this.selectedPhraseDivIdx !== undefined) {
@@ -3623,6 +3658,16 @@ export default defineComponent({
           tsp.showPhraseRadio = true;  
         } else {
           this.selectedPhraseDivIdx = i;
+          const realPhraseStartIdx = i + 1;
+          if (this.piece.sectionStarts!.includes(realPhraseStartIdx)) {
+            tsp.phraseDivType = 'section';
+          } else {
+            tsp.phraseDivType = 'phrase';
+          }
+          this.clearSelectedTraj();
+          this.clearSelectedChikari();
+          this.clearTrajSelectPanel();
+          tsp.showPhraseRadio = true; 
           d3Select(`#phraseLine${i}`)
             .attr('stroke', 'red')
         }   
@@ -4085,7 +4130,11 @@ export default defineComponent({
           // piece.sectionStarts
           const sectionStart = this.selectedPhraseDivIdx + 1;
           const ssIdx = this.piece.sectionStarts!.indexOf(sectionStart);
-          this.piece.sectionStarts!.splice(ssIdx, 1);
+          console.log(ssIdx)
+          if (ssIdx !== -1) {
+            this.piece.sectionStarts!.splice(ssIdx, 1);
+            this.piece.sectionCategorization!.splice(ssIdx, 1);
+          }
           this.piece.sectionStarts = this.piece.sectionStarts!.map((item) => {
             if (item > this.selectedPhraseDivIdx! + 1) {
               return item - 1;
@@ -4504,7 +4553,6 @@ export default defineComponent({
     },
 
     handleMouseup(e: MouseEvent) {
-      console.log('this mouseup event is probably no longer reachable')
       if (e.offsetY < this.xAxHeight && this.drawingRegion) {
         if (e.offsetX < this.regionStartPx) {
           this.regionEndPx = this.regionStartPx;
@@ -4759,6 +4807,7 @@ export default defineComponent({
         .classed('noSelect', true)
         .attr('viewBox', [0, 0, rect.width, rect.height])
         .on('click', this.handleClick)
+        .on('contextmenu', this.backgroundContextMenuClick)
         .on('mousedown', this.handleMousedown)
         .on('mouseup', this.handleMouseup)
         .style('border-bottom', '1px solid black')
@@ -5279,6 +5328,15 @@ export default defineComponent({
               setIt = false;
             }
           }
+          
+          // if point is too close in time to other trajTimePts, seit should be
+          // false. Less than 0.05 to be exact.
+          const diffs = this.trajTimePts.map(ttp => {
+            return Math.abs(ttp.time - time)
+          })
+          const minDiff = Math.min(...diffs);
+          setIt = minDiff > 0.05 ? true : false;
+
           if (setIt) {
             let fixedTime = time;
             const startTime = phrase.startTime! + traj.startTime!;
@@ -5414,13 +5472,16 @@ export default defineComponent({
         const newTrajs = phrase_.trajectories.splice(trajIdx+1, end);
         phrase_.durTotFromTrajectories();
         phrase_.durArrayFromTrajectories();
-        const newPhraseObj = {
+        const newPhraseObj: {
+          trajectories: Trajectory[],
+          raga: Raga,
+          instrumentation?: string[]
+        } = {
           trajectories: newTrajs,
-          raga: phrase_.raga
+          raga: phrase_.raga!
         };
         if (this.piece.instrumentation) {
-          throw new Error('instrumentation, instead of instrumentatinoGrid?');
-          // newPhraseObj.instrumentation = this.piece.instrumentation;
+          newPhraseObj.instrumentation = this.piece.instrumentation;
         }
         const newPhrase = new Phrase(newPhraseObj)
         this.piece.phrases.splice(phrase_.pieceIdx! + 1, 0, newPhrase);
@@ -5833,6 +5894,11 @@ export default defineComponent({
       this.$router.push({ query: { id: query.id, pIdx: pIdx.toString() } });
     },
 
+    moveToSection(sIdx: number) {
+      const pIdx = this.piece.sectionStarts[sIdx];
+      this.moveToPhrase(pIdx);
+    },
+
     moveToTime(time: number, point: [number, number], redraw=false) {
       if (point === undefined) {
         point = [0, 0];
@@ -5998,6 +6064,49 @@ export default defineComponent({
       this.addPlayhead();   
     },
 
+    backgroundContextMenuClick(e: MouseEvent) {
+      e.preventDefault();
+      e.stopPropagation();
+      this.contextMenuX = e.x;
+      this.contextMenuY = e.y;
+
+      const time = this.xr().invert(e.x);
+      const pIdx = this.phraseIdxFromTime(time, true)!;
+      const ss = this.piece.sectionStarts!;
+      const sectionIdx = ss.findLastIndex(x => pIdx >= x);
+      this.contextMenuChoices = [];
+      this.contextMenuChoices.push({
+        text: `Edit Section ${sectionIdx} labels`,
+        action: () => {
+          this.contextMenuClosed = true;
+          const eap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+          if (eap.showLabelControls === false) eap.toggleLabelControls();
+          this.$nextTick(() => {
+            const labelEditor = eap.$refs.labelControls as typeof LabelEditor;
+            labelEditor.selectedHierarchy = 'Section';
+            labelEditor.scrollToSection(sectionIdx);
+          })
+        }
+      });
+      this.contextMenuChoices.push({
+        text: `Edit Phrase ${pIdx} labels`,
+        action: () => {
+          this.contextMenuClosed = true;
+          const eap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+          if (eap.showLabelControls === false) eap.toggleLabelControls();
+          this.$nextTick(() => {
+            const labelEditor = eap.$refs.labelControls as typeof LabelEditor;
+            labelEditor.selectedHierarchy = 'Phrase';
+            labelEditor.scrollToPhrase(pIdx);
+          })
+
+        }
+      })
+      this.contextMenuClosed = false;
+      
+
+    },
+
     trajContextMenuClick(e: MouseEvent) {
       if (!this.meterMode) {
         e.preventDefault();
@@ -6010,87 +6119,199 @@ export default defineComponent({
         const pIdx = Number(trajID.split('t')[0].split('p')[1]);
         const phrase = this.piece.phrases[pIdx];
         const traj = phrase.trajectories[tIdx];
-        let insertSilenceLeft = false;
-        let insertSilenceRight = false;
-        let insertFixedLeft = false;
-        let insertFixedRight = false;
-        if (phrase.trajectories.length > tIdx + 1) {
-          const nextTraj = phrase.trajectories[tIdx + 1];
-          if (nextTraj.id !== 12) {
-            insertSilenceRight = true;
-          }
-          if (nextTraj.id !== 0 && traj.id !== 0) {
-            insertFixedRight = true;
-          }
-        } else if (this.piece.phrases.length > pIdx + 1) {
-          const nextPhrase = this.piece.phrases[pIdx + 1];
-          if (nextPhrase.trajectories.length > 0) {
-            const nextTraj = nextPhrase.trajectories[0];
+        
+        if (traj.groupId === undefined) {
+          let insertSilenceLeft = false;
+          let insertSilenceRight = false;
+          let insertFixedLeft = false;
+          let insertFixedRight = false;
+          if (phrase.trajectories.length > tIdx + 1) {
+            const nextTraj = phrase.trajectories[tIdx + 1];
             if (nextTraj.id !== 12) {
               insertSilenceRight = true;
             }
             if (nextTraj.id !== 0 && traj.id !== 0) {
               insertFixedRight = true;
             }
+          } else if (this.piece.phrases.length > pIdx + 1) {
+            const nextPhrase = this.piece.phrases[pIdx + 1];
+            if (nextPhrase.trajectories.length > 0) {
+              const nextTraj = nextPhrase.trajectories[0];
+              if (nextTraj.id !== 12) {
+                insertSilenceRight = true;
+              }
+              if (nextTraj.id !== 0 && traj.id !== 0) {
+                insertFixedRight = true;
+              }
+            }
           }
-        }
-        if (tIdx > 0) {
-          const prevTraj = phrase.trajectories[tIdx - 1];
-          if (prevTraj.id !== 12) {
-            insertSilenceLeft = true;
-          }
-          if (prevTraj.id !== 0 && traj.id !== 0) {
-            insertFixedLeft = true;
-          }
-        } else if (pIdx > 0) {
-          const prevPhrase = this.piece.phrases[pIdx - 1];
-          if (prevPhrase.trajectories.length > 0) {
-            const prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
+          if (tIdx > 0) {
+            const prevTraj = phrase.trajectories[tIdx - 1];
             if (prevTraj.id !== 12) {
               insertSilenceLeft = true;
             }
             if (prevTraj.id !== 0 && traj.id !== 0) {
               insertFixedLeft = true;
             }
+          } else if (pIdx > 0) {
+            const prevPhrase = this.piece.phrases[pIdx - 1];
+            if (prevPhrase.trajectories.length > 0) {
+              const prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
+              if (prevTraj.id !== 12) {
+                insertSilenceLeft = true;
+              }
+              if (prevTraj.id !== 0 && traj.id !== 0) {
+                insertFixedLeft = true;
+              }
+            }
           }
-        }
-        this.contextMenuChoices = [];
-        if (insertSilenceLeft) {
-          this.contextMenuChoices.push({
-            text: 'Insert Silence Left',
-            action: () => {
-              this.insertSilentTrajLeft(traj);
-              this.contextMenuClosed = true;
+          this.contextMenuChoices = [];
+          if (insertSilenceLeft) {
+            this.contextMenuChoices.push({
+              text: 'Insert Silence Left',
+              action: () => {
+                this.insertSilentTrajLeft(traj);
+                this.contextMenuClosed = true;
+              }
+            })
+          }
+          if (insertSilenceRight) {
+            this.contextMenuChoices.push({
+              text: 'Insert Silence Right',
+              action: () => {
+                this.insertSilentTrajRight(traj);
+                this.contextMenuClosed = true;
+              }
+            })
+          } 
+          if (insertFixedLeft) {
+            this.contextMenuChoices.push({
+              text: 'Insert Fixed Left',
+              action: () => {
+                this.insertFixedTrajLeft(traj);
+                this.contextMenuClosed = true;
+              }
+            })
+          }
+          if (insertFixedRight) {
+            this.contextMenuChoices.push({
+              text: 'Insert Fixed Right',
+              action: () => {
+                this.insertFixedTrajRight(traj);
+                this.contextMenuClosed = true;
+              }
+            })
+          };
+          if (tIdx > 0) {
+            const pt = phrase.trajectories[tIdx - 1];
+            if (pt.groupId !== undefined && this.selectedTrajs.includes(pt)) {
+              this.contextMenuChoices.push({
+                text: 'Add to Selected Group',
+                action: () => {
+                  this.addTrajToSelectedGroup(traj);
+                  this.contextMenuClosed = true;
+                }
+              })
             }
-          })
-        }
-        if (insertSilenceRight) {
-          this.contextMenuChoices.push({
-            text: 'Insert Silence Right',
-            action: () => {
-              this.insertSilentTrajRight(traj);
-              this.contextMenuClosed = true;
+          }
+          if (phrase.trajectories.length > tIdx + 1) {
+            const nt = phrase.trajectories[tIdx + 1];
+            if (nt.groupId !== undefined && this.selectedTrajs.includes(nt)) {
+              this.contextMenuChoices.push({
+                text: 'Add to Selected Group',
+                action: () => {
+                  this.addTrajToSelectedGroup(traj);
+                  this.contextMenuClosed = true;
+                }
+              })
             }
-          })
-        } 
-        if (insertFixedLeft) {
-          this.contextMenuChoices.push({
-            text: 'Insert Fixed Left',
-            action: () => {
-              this.insertFixedTrajLeft(traj);
-              this.contextMenuClosed = true;
+          }
+        } else {
+          let groupInsertSilenceLeft = false;
+          let groupInsertSilenceRight = false;
+          let groupInsertFixedLeft = false;
+          let groupInsertFixedRight = false;
+          const group = phrase.getGroupFromId(traj.groupId)!;
+          const firstTraj = group.trajectories[0];
+          const lastTraj = group.trajectories[group.trajectories.length - 1];
+          if (phrase.trajectories.length > lastTraj.num! + 1) {
+            const nextTraj = phrase.trajectories[lastTraj.num! + 1];
+            if (nextTraj.id !== 12) {
+              groupInsertSilenceRight = true;
             }
-          })
-        }
-        if (insertFixedRight) {
-          this.contextMenuChoices.push({
-            text: 'Insert Fixed Right',
-            action: () => {
-              this.insertFixedTrajRight(traj);
-              this.contextMenuClosed = true;
+            if (nextTraj.id !== 0 && lastTraj.id !== 0) {
+              groupInsertFixedRight = true;
             }
-          })
-        }
+          } else if (this.piece.phrases.length > pIdx + 1) {
+            const nextPhrase = this.piece.phrases[pIdx + 1];
+            if (nextPhrase.trajectories.length > 0) {
+              const nextTraj = nextPhrase.trajectories[0];
+              if (nextTraj.id !== 12) {
+                groupInsertSilenceRight = true;
+              }
+              if (nextTraj.id !== 0 && lastTraj.id !== 0) {
+                groupInsertFixedRight = true;
+              }
+            }
+          }
+          if (firstTraj.num! > 0) {
+            const prevTraj = phrase.trajectories[firstTraj.num! - 1];
+            if (prevTraj.id !== 12) {
+              groupInsertSilenceLeft = true;
+            }
+            if (prevTraj.id !== 0 && firstTraj.id !== 0) {
+              groupInsertFixedLeft = true;
+            }
+          } else if (pIdx > 0) {
+            const prevPhrase = this.piece.phrases[pIdx - 1];
+            if (prevPhrase.trajectories.length > 0) {
+              const prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
+              if (prevTraj.id !== 12) {
+                groupInsertSilenceLeft = true;
+              }
+              if (prevTraj.id !== 0 && firstTraj.id !== 0) {
+                groupInsertFixedLeft = true;
+              }
+            }
+          };
+          this.contextMenuChoices = [];
+          if (groupInsertSilenceLeft) {
+            this.contextMenuChoices.push({
+              text: 'Insert Silence Left',
+              action: () => {
+                this.insertSilentTrajLeft(firstTraj);
+                this.contextMenuClosed = true;
+              }
+            })
+          }
+          if (groupInsertSilenceRight) {
+            this.contextMenuChoices.push({
+              text: 'Insert Silence Right',
+              action: () => {
+                this.insertSilentTrajRight(lastTraj);
+                this.contextMenuClosed = true;
+              }
+            })
+          }
+          if (groupInsertFixedLeft) {
+            this.contextMenuChoices.push({
+              text: 'Insert Fixed Left',
+              action: () => {
+                this.insertFixedTrajLeft(firstTraj);
+                this.contextMenuClosed = true;
+              }
+            })
+          }
+          if (groupInsertFixedRight) {
+            this.contextMenuChoices.push({
+              text: 'Insert Fixed Right',
+              action: () => {
+                this.insertFixedTrajRight(lastTraj);
+                this.contextMenuClosed = true;
+              }
+            })
+          }
+        };
         if (this.contextMenuChoices.length > 0) {
           this.contextMenuClosed = false;
         }
@@ -6165,6 +6386,7 @@ export default defineComponent({
           return traj.articulations[key].name === 'pluck'
         });
         if (relKeys.length > 0) {
+          
           const pluckData = relKeys.map(p => {
           const normedX = Number(p) * traj.durTot;
           const y = traj.compute(normedX, true);
@@ -6173,6 +6395,7 @@ export default defineComponent({
             y: y
           }
         });
+        
         const sym = d3Symbol().type(d3SymbolTriangle).size(size);
         const x = (d: DrawDataType) => this.xr()(d.x);
         const y = (d: DrawDataType) => this.yr()(d.y);
@@ -7160,6 +7383,8 @@ export default defineComponent({
               d3Select(`#pluck${id}`)
                 .attr('stroke', this.selArtColor)
                 .attr('fill', this.selArtColor)
+              d3Select(`#overlay__${id}`)
+                .attr('cursor', 'pointer')
               this.updateArtColors(traj, true)
             })
           }
@@ -7550,7 +7775,7 @@ export default defineComponent({
                 .attr('fill', this.selArtColor)
                 .attr('stroke', this.selArtColor)
               d3Select('#overlay__' + id)
-                .attr('cursor', 'default')
+                .attr('cursor', 'pointer')
               this.updateArtColors(traj, true)
             })
             d3SelectAll('.dragDots').remove();

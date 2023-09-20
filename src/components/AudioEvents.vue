@@ -105,7 +105,11 @@
   
 </template>
 <script lang='ts'>
-import { getAllAudioEventMetadata, deleteAudioEvent } from '@/js/serverCalls.ts';
+import { 
+  getAllAudioEventMetadata, 
+  deleteAudioEvent,
+  getAllTransOfAudioFile,
+} from '@/js/serverCalls.ts';
 import AddAudioEvent from '@/components/AddAudioEvent.vue';
 import AudioPlayer from '@/components/AudioPlayer.vue';
 import { defineComponent } from 'vue';
@@ -213,18 +217,18 @@ export default defineComponent({
     window.removeEventListener('keydown', this.handleKeydown);
   },
 
-  // mounted() {
-  //   this.emitter.on('nextTrack', arr => {
-  //     console.log('got a next track')
-  //     this.nextTrack(arr[0], arr[1])
-  //   })
-  // },
-
-
-
-
   
   methods: {
+
+    async testFromAF() {
+      const audioID = this.allAudioEvents![0].recordings[0].audioFileId;
+      const userID = this.$store.state.userID!;
+      try {
+        this.testRes = await getAllTransOfAudioFile(audioID, userID);
+      } catch (err) {
+        console.log(err)
+      }
+    },
 
     resetAddEvent() {
       this.showAddEvent = false;
