@@ -28,12 +28,12 @@
         :key="piece"
         @dblclick="openPieceAlt(piece)"
         :id="`fir${i}`"
-      >
+        >
         <div
           :class="`infoKey ${['', 'first'][Number(idx === 0)]}`"
           v-for="(info, idx) in allPieceInfo[i]"
           :key="info"
-        >
+          >
           {{ info }}
         </div>
       </div>
@@ -69,9 +69,16 @@
     >
       Edit Permissions
     </div>
-    <div class='dropDownRow' @click='copyLink' v-if='open_'>
-      Copy Link
+    <div 
+      :class="`dropDownRow ${['inactive', ''][Number(deleteActive)]}`"
+      @click='editOwner(piece)'
+      v-if='open_'
+      >
+      Edit Owner
     </div>
+      <div class='dropDownRow' @click='copyLink' v-if='open_'>
+        Copy Link
+      </div>
     <div
       v-if="delete_"
       :class="`dropDownRow last ${['inactive', ''][Number(deleteActive)]}`"
@@ -110,6 +117,18 @@
       <button @click='cancelPermissions'>Cancel</button>
     </div>
   </div>
+  <div v-if='editOwnerModal' class='ownerModal'>
+    <div class='modalRow'>
+      <select v-model='editingUserIdx'>
+        <option v-for='(user, i) in allUsers' :key='i' :value='i'>
+          {{allNames![i]}}
+        </option>
+      </select>
+    </div>
+    <div class='modalRow'>
+      <button @click='saveNewOwner'>Save New Owner</button>
+    </div>
+  </div>
 </template>
 <script lang='ts'>
 import {
@@ -122,11 +141,24 @@ import {
   cloneTranscription,
   updateTranscriptionTitle,
   updateTranscriptionPermissions,
+  updateTranscriptionOwner,
+  getAllUsers
 } from '@/js/serverCalls.ts';
 import NewPieceRegistrar from '@/components/NewPieceRegistrar.vue';
 import { Raga, Piece, Trajectory, Phrase } from '@/js/classes.ts';
 
 import { defineComponent } from 'vue';
+
+type UserType = {
+  email: string;
+  family_name: string;
+  given_name: string;
+  name: string;
+  picture: string;
+  sub: string;
+  waiverAgreed: boolean;
+  _id: string;
+}
 
 type FileManagerType = {
   infoKeys: string[];
@@ -148,6 +180,8 @@ type FileManagerType = {
   titleModalHeight: number;
   permissionsModalWidth: number;
   permissionsModalHeight: number;
+  ownerModalWidth: number;
+  ownerModalHeight: number;
   sorts: number[];
   selectedSort: number;
   sortKeyNames: string[];
@@ -158,6 +192,10 @@ type FileManagerType = {
   },
   editingTitle?: string,
   editingPermissions?: string,
+  editOwnerModal: boolean,
+  allUsers?: UserType[],
+  allNames?: string[],
+  editingUserIdx?: number
 }
 
 type PieceInfoType = [string?, string?, string?, string?, string?, string?];
@@ -192,6 +230,8 @@ export default defineComponent({
       titleModalHeight: 100,
       permissionsModalWidth: 300,
       permissionsModalHeight: 100,
+      ownerModalWidth: 300,
+      ownerModalHeight: 200,
       sorts: [1, 1, 1, 1, 1, 1],
       selectedSort: 0,
       sortKeyNames: [
@@ -205,8 +245,12 @@ export default defineComponent({
       passedInDataObj: undefined,
       editTitleModal: false,
       editPermissionsModal: false,
+      editOwnerModal: false,
       editingTitle: undefined,
       editingPermissions: undefined,
+      allUsers: undefined,
+      allNames: undefined,
+      editingUserIdx: undefined,
     };
   },
 
@@ -244,6 +288,20 @@ export default defineComponent({
     if (this.$route.query.aeName && this.$route.query.afName) {
       this.designNewPiece();
     }
+    try {
+      this.allUsers = await getAllUsers();
+      if (this.allUsers !== undefined) {
+        this.allNames = this.allUsers.map(user => {
+          return user.name + ' (' + user.email + ' )'
+        });
+      } else {
+        throw new Error('this.allUsers is undefined');
+      }
+        
+    } catch (err) {
+      console.log(err)
+    }
+    
 
     this.emitter.on('newPieceInfo', async (newPieceInfo) => {
       try {
@@ -323,6 +381,18 @@ export default defineComponent({
       }
       this.selectedSort = idx;
       await this.updateSort();
+    },
+
+    async saveNewOwner() {
+      const id = this.selectedPiece!._id!;
+      const ownerObj = this.allUsers![this.editingUserIdx!];
+      try {
+        await updateTranscriptionOwner(id, ownerObj);
+        await this.updateSort();
+      } catch (err) {
+        console.log(err);
+      }
+      this.editOwnerModal = false;
     },
 
     pieceInfo(p: Piece): PieceInfoType {
@@ -468,59 +538,62 @@ export default defineComponent({
 
     handleRightClick(e) {
       e.preventDefault();
-      this.dropDownLeft = e.clientX;
-      this.dropDownTop = e.clientY;
-      this.modalLeft = e.clientX;
-      this.modalTop = e.clientY;
-      const rect = this.$refs.fileContainer.getBoundingClientRect();
-      if (this.modalLeft + this.modalWidth > rect.width - 20) {
-        this.modalLeft = rect.width - 20 - this.modalWidth;
-      }
-      if (this.modalTop + this.modalHeight > rect.height - 20) {
-        this.modalTop = rect.height - 20 - this.modalHeight;
-      }
-      if (this.dropDownLeft + this.dropDownWidth > rect.width - 20) {
-        this.dropDownLeft = rect.width - 20 - this.dropDownWidth;
-      }
-      const dropDownRect = this.$refs.dropDown.getBoundingClientRect();
-      const dropDownHeight = dropDownRect.height;
-      if (this.dropDownTop + dropDownHeight > rect.height - 20) {
-        this.dropDownTop = rect.height - 20 - dropDownHeight;
-      }
-      this.designPieceModal = false;
+      this.$nextTick(() => {
+        this.dropDownLeft = e.clientX;
+        this.dropDownTop = e.clientY;
+        this.modalLeft = e.clientX;
+        this.modalTop = e.clientY;
+        const rect = this.$refs.fileContainer.getBoundingClientRect();
+        if (this.modalLeft + this.modalWidth > rect.width - 20) {
+          this.modalLeft = rect.width - 20 - this.modalWidth;
+        }
+        if (this.modalTop + this.modalHeight > rect.height - 20) {
+          this.modalTop = rect.height - 20 - this.modalHeight;
+        }
+        if (this.dropDownLeft + this.dropDownWidth > rect.width - 20) {
+          this.dropDownLeft = rect.width - 20 - this.dropDownWidth;
+        }
+        const dropDownRect = this.$refs.dropDown.getBoundingClientRect();
+        const dropDownHeight = dropDownRect.height;
+        if (this.dropDownTop + dropDownHeight > rect.height - 20) {
+          this.dropDownTop = rect.height - 20 - dropDownHeight;
+        }
+        this.designPieceModal = false;
 
-      document.querySelectorAll('.selected').forEach((el) => {
-        el.classList.remove('selected');
-      });
-      this.$refs.dropDown.classList.remove('closed');
-      const el = document.elementFromPoint(e.clientX, e.clientY);
-      if (el.classList[0] === 'fileInfoRow') {
-        const num = el.id.slice(3);
-        el.classList.add('selected');
-        this.selectedPiece = this.allPieces[num];
-        this.delete_ = true;
-        this.open_ = true;
-        if (this.allPieces[num].userID === this.$store.state.userID) {
-          this.deleteActive = true;
+        document.querySelectorAll('.selected').forEach((el) => {
+          el.classList.remove('selected');
+        });
+        this.$refs.dropDown.classList.remove('closed');
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        if (el.classList[0] === 'fileInfoRow') {
+          const num = el.id.slice(3);
+          el.classList.add('selected');
+          this.selectedPiece = this.allPieces[num];
+          this.delete_ = true;
+          this.open_ = true;
+          if (this.allPieces[num].userID === this.$store.state.userID) {
+            this.deleteActive = true;
+          } else {
+            this.deleteActive = false;
+          }
+        } else if (el.parentNode.classList[0] === 'fileInfoRow') {
+          const num = el.parentNode.id.slice(3);
+          el.parentNode.classList.add('selected');
+          this.selectedPiece = this.allPieces[num];
+          this.delete_ = true;
+          this.open_ = true;
+          if (this.allPieces[num].userID === this.$store.state.userID) {
+            this.deleteActive = true;
+          } else {
+            this.deleteActive = false;
+          }
         } else {
+          this.delete_ = false;
+          this.open_ = false;
           this.deleteActive = false;
         }
-      } else if (el.parentNode.classList[0] === 'fileInfoRow') {
-        const num = el.parentNode.id.slice(3);
-        el.parentNode.classList.add('selected');
-        this.selectedPiece = this.allPieces[num];
-        this.delete_ = true;
-        this.open_ = true;
-        if (this.allPieces[num].userID === this.$store.state.userID) {
-          this.deleteActive = true;
-        } else {
-          this.deleteActive = false;
-        }
-      } else {
-        this.delete_ = false;
-        this.open_ = false;
-        this.deleteActive = false;
-      }
+      })
+      
     },
 
     closeDropDown() {
@@ -546,46 +619,66 @@ export default defineComponent({
     },
 
     async saveTitle() {
-      const id = this.selectedPiece._id;
-      const title = this.editingTitle;
-      const result = await updateTranscriptionTitle(id, title);
+      const id = this.selectedPiece!._id!;
+      const title = this.editingTitle!;
+      await updateTranscriptionTitle(id, title);
       await this.updateSort();
       this.editTitleModal = false;
     },
 
     async savePermissions() {
-      const id = this.selectedPiece._id;
-      const permissions = this.editingPermissions;
-      const result = await updateTranscriptionPermissions(id, permissions);
+      const id = this.selectedPiece!._id!;
+      const permissions = this.editingPermissions!;
+      await updateTranscriptionPermissions(id, permissions);
       await this.updateSort();
       this.editPermissionsModal = false;
     },
 
-    editTitle(piece) {
+    async saveOwner() {
+      const id = this.selectedPiece!._id!;
+      const ownerObj = this.allUsers![this.editingUserIdx!];
+      await updateTranscriptionOwner(id, ownerObj);
+      await this.updateSort();
+      this.editOwnerModal = false;
+    },
+
+    editTitle(piece: Piece) {
       if (piece === undefined) {
-        piece = this.selectedPiece;
+        piece = this.selectedPiece!;
       }
       this.editTitleModal = true;
       this.closeDropDown();
       this.editingTitle = piece.title;
     },
 
-    editPermissions(piece) {
+    editPermissions(piece: Piece) {
       if (piece === undefined) {
-        piece = this.selectedPiece;
+        piece = this.selectedPiece!;
       }
       this.editPermissionsModal = true;
       this.closeDropDown();
       this.editingPermissions = piece.permissions;
     },
 
-    handleKeydown(e) {
+    editOwner(piece: Piece) {
+      if (piece === undefined) {
+        piece = this.selectedPiece!
+      }
+      this.editOwnerModal = true;
+      this.closeDropDown();
+      this.editingUserIdx = this.allUsers?.findIndex(user => {
+        return user._id === piece.userID
+      })      
+    },
+
+    handleKeydown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         e.preventDefault();
         this.closeDropDown();
         this.designPieceModal = false;
         this.editTitleModal = false;
         this.editPermissionsModal = false;
+        this.editOwnerModal = false;
         
       }
     },
@@ -709,6 +802,20 @@ export default defineComponent({
   justify-content: space-evenly;
 }
 
+.ownerModal {
+  width: v-bind(ownerModalWidth + 'px');
+  height: v-bind(ownerModalHeight + 'px');
+  border: 1px solid black;
+  position: fixed;
+  left: v-bind(modalLeft + 'px');
+  top: v-bind(modalTop + 'px');
+  background-color: lightgrey;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
 .modalRow {
   display: flex;
   flex-direction: row;
@@ -722,6 +829,11 @@ export default defineComponent({
   margin-right: 20px;
 }
 
+.modalRow > select {
+  width: 100%;
+  margin-left: 20px;
+  margin-right: 20px;
+}
 .dropDown {
   position: absolute;
   width: v-bind(dropDownWidth + 'px');
