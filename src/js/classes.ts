@@ -2,6 +2,47 @@ import { findLastIndex } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 import { Meter } from './meter.ts';
 
+const initSectionCategorization = () => {
+  return {
+    "Pre-Chiz Alap": {
+      "Pre-Chiz Alap": false
+    },
+    "Alap": {
+      "Alap": false,
+      "Jor": false,
+      "Alap-Jhala": false
+    },
+    "Composition Type": {
+      "Dhrupad": false,
+      "Bandish": false,
+      "Thumri": false,
+      "Ghazal": false,
+      "Qawwali": false,
+      "Dhun": false,
+      "Tappa": false,
+      "Bhajan": false,
+      "Kirtan": false,
+      "Kriti": false,
+      "Masitkhani Gat": false,
+      "Razakhani Gat": false,
+      "Ferozkhani Gat": false,
+    },
+    "Composition-section/Tempo": {
+      "Ati Vilambit": false,
+      "Vilambit": false,
+      "Madhya": false,
+      "Drut": false,
+      "Ati Drut": false,
+      "Jhala": false,
+    },
+    "Tala": {
+      "Ektal": false,
+      "Tintal": false,
+      "Rupak": false,
+    }
+  }
+}
+
 const chromaToScaleDegree = (chroma: number): [number, boolean] => {
     let scaleDegree = 0;
     let raised = true;
@@ -661,14 +702,6 @@ class Trajectory {
     } else {
       throw new SyntaxError(`invalid durTot type, must be number: ${durTot}`)
     }
-    // isArr = Array.isArray(durArray) && durArray.length > 0;
-    // const condition = isArr && durArray.every(a => typeof(a) === 'number');
-    // if (durArray === undefined || condition) {
-    //   this.durArray = durArray
-    // } else {
-    //   throw new SyntaxError(`invalid durArray type, must be array of numbers:` + 
-    //     `${durArray}`)
-    // }
     this.durArray = durArray;
 
     if (slope === undefined) {
@@ -1459,11 +1492,108 @@ class Group {
     }
   }
 
+  addTraj(traj: Trajectory) {
+    this.trajectories.push(traj);
+    this.trajectories.sort((a, b) => {
+      if (a.num === undefined || b.num === undefined) {
+        throw new Error('Trajectory must have a num')
+      }
+      return a.num - b.num
+    });
+    if (!this.testForAdjacency()) {
+      throw new Error('Trajectories are not adjacent')
+    }
+    traj.groupId = this.id;
+  }
+
   toJSON() {
     return {
       trajectories: this.trajectories,
       id: this.id
     }
+  }
+}
+
+type PhraseCategorizationType = {
+  "Phrase": {
+    "Mohra": boolean,
+    "Mukra": boolean,
+    "Asthai": boolean,
+    "Antara": boolean,
+    "Manjha": boolean,
+    "Abhog": boolean,
+    "Sanchari": boolean,
+    "Jhala": boolean
+  },
+  "Elaboration": {
+    "Vistar": boolean,
+    "Barhat": boolean,
+    "Prastar": boolean,
+    "Bol Banao": boolean,
+    "Bol Bandt": boolean,
+    "Behlava": boolean,
+    "Gat-kari": boolean,
+    "Tan (Sapat)": boolean,
+    "Tan (Gamak)": boolean,
+    "Laykari": boolean,
+    "Tihai": boolean,
+    "Chakradar": boolean,
+  },
+  "Vocal Articulation": {
+    "Bol": boolean,
+    "Non-Tom": boolean,
+    "Tarana": boolean,
+    "Aakar": boolean,
+    "Sargam": boolean
+  },
+  "Instrumental Articulation": {
+    "Bol": boolean,
+    "Non-Bol": boolean
+  },
+  "Incidental": {
+    "Talk/Conversation": boolean,
+      "Praise ('Vah')": boolean,
+      "Tuning": boolean,
+      "Pause": boolean,
+  }
+}
+
+type SectionCategorizationType = {
+  "Pre-Chiz Alap": {
+    "Pre-Chiz Alap": boolean,
+  },
+  "Alap": {
+    "Alap": boolean,
+    "Jor": boolean,
+    "Alap-Jhala": boolean,
+  },
+  "Composition Type": {
+    "Dhrupad": boolean,
+    "Bandish": boolean,
+    "Thumri": boolean,
+    "Ghazal": boolean,
+    "Qawwali": boolean,
+    "Dhun": boolean,
+    "Tappa": boolean,
+    "Bhajan": boolean,
+    "Kirtan": boolean,
+    "Kriti": boolean,
+    "Masitkhani Gat": boolean,
+    "Razakhani Gat": boolean,
+    "Ferozkhani Gat": boolean,
+  },
+  "Composition-section/Tempo": {
+    "Ati Vilambit": boolean,
+    "Vilambit": boolean,
+    "Madhya": boolean,
+    "Drut": boolean,
+    "Ati Drut": boolean,
+    "Jhala": boolean,
+  },
+  "Tala": {
+    "Ektal": boolean,
+    "Tintal": boolean,
+    "Rupak": boolean
   }
 }
 
@@ -1478,10 +1608,8 @@ class Phrase {
   durArray?: number[];
   chikaris: { [key: string]: Chikari };
   pieceIdx?: number;
-  // trajectories: Trajectory[];
+  categorizationGrid: PhraseCategorizationType[];
   
-
-
   constructor({
     trajectories = [],
     durTot = undefined,
@@ -1492,21 +1620,22 @@ class Phrase {
     trajectoryGrid = undefined,
     instrumentation = ['Sitar'],
     groupsGrid = undefined,
+    categorizationGrid = undefined,
   }: {
     trajectories?: Trajectory[],
     durTot?: number,
     durArray?: number[],
-    chikaris?: object,
+    chikaris?: { [key: string]: Chikari },
     raga?: Raga,
     startTime?: number,
     trajectoryGrid?: Trajectory[][],
     instrumentation?: string[],
     groupsGrid?: Group[][],
+    categorizationGrid?: PhraseCategorizationType[],
   } = {}) {
 
     this.startTime = startTime;
     this.raga = raga;
-    // this.trajectories = trajectories;
     if (trajectoryGrid !== undefined) {
       this.trajectoryGrid = trajectoryGrid;
     } else {
@@ -1546,6 +1675,55 @@ class Phrase {
     } else {
       this.groupsGrid = this.instrumentation.map(() => []);
     }
+    this.categorizationGrid = categorizationGrid || [];
+    if (this.categorizationGrid.length === 0) {
+      for (let i = 0; i < this.trajectoryGrid.length; i++) {
+        this.categorizationGrid.push({
+          "Phrase": {
+            "Mohra": false,
+            "Mukra": false,
+            "Asthai": false,
+            "Antara": false,
+            "Manjha": false,
+            "Abhog": false,
+            "Sanchari": false,
+            "Jhala": false
+          },
+          "Elaboration": {
+            "Vistar": false,
+            "Barhat": false,
+            "Prastar": false,
+            "Bol Banao": false,
+            "Bol Bandt": false,
+            "Behlava": false,
+            "Gat-kari": false,
+            "Tan (Sapat)": false,
+            "Tan (Gamak)": false,
+            "Laykari": false,
+            "Tihai": false,
+            "Chakradar": false,
+          },
+          "Vocal Articulation": {
+            "Bol": false,
+            "Non-Tom": false,
+            "Tarana": false,
+            "Aakar": false,
+            "Sargam": false
+          },
+          "Instrumental Articulation": {
+            "Bol": false,
+            "Non-Bol": false
+          },
+          "Incidental": {
+            "Talk/Conversation": false,
+              "Praise ('Vah')": false,
+              "Tuning": false,
+              "Pause": false,
+          }
+        })
+      }
+    }
+
   }
 
   getGroups(idx = 0) {
@@ -1800,6 +1978,7 @@ class Phrase {
       trajectoryGrid: this.trajectoryGrid,
       instrumentation: this.instrumentation,
       groupsGrid: this.groupsGrid,
+      categorizationGrid: this.categorizationGrid,
     }
   }
 
@@ -1876,6 +2055,7 @@ class Piece {
   instrumentation: string[];
   possibleTrajs: { [key: string]: number[] };
   meters: Meter[];
+  sectionCategorization: SectionCategorizationType[];
 
 
   constructor({
@@ -1900,6 +2080,7 @@ class Piece {
     sectionStarts = undefined,
     instrumentation = ['Sitar'],
     meters = [],
+    sectionCategorization = undefined,
   }: {
     phrases?: Phrase[],
     durTot?: number,
@@ -1922,6 +2103,7 @@ class Piece {
     sectionStarts?: number[],
     instrumentation?: string[],
     meters?: Meter[],
+    sectionCategorization?: SectionCategorizationType[],
   } = {}) {
     this.meters = meters;
     this.phrases = phrases;
@@ -1983,22 +2165,35 @@ class Piece {
     // this is really confusing becuase id12 is silent. The current solution 
     // is to just skip that number; so 12 listed below is really id13
     this.possibleTrajs = {
-      'Sitar': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 
-      'Vocal (M)': [0, 1, 2, 3, 4, 5, 6, 12],
-      'Vocal (F)': [0, 1, 2, 3, 4, 5, 6, 12],
-      'Bansuri': [0, 1, 2, 3, 4, 5, 6, 12],
-      'Esraj': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      'Sarangi': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      'Rabab': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      'Santoor': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      'Sarod': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      'Shehnai': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      'Surbahar': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      'Veena (Saraswati)': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      'Veena (Vichitra)': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      'Veena, Rudra (Bin)': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      'Violin': [0, 1, 2, 3, 4, 5, 6, 12],
-      'Harmonium': [0, 12],
+      'Sitar': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 
+      'Vocal (M)': [0, 1, 2, 3, 4, 5, 6, 12, 13],
+      'Vocal (F)': [0, 1, 2, 3, 4, 5, 6, 12, 13],
+      'Bansuri': [0, 1, 2, 3, 4, 5, 6, 12, 13],
+      'Esraj': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      'Sarangi': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      'Rabab': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      'Santoor': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      'Sarod': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      'Shehnai': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      'Surbahar': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      'Veena (Saraswati)': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      'Veena (Vichitra)': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      'Veena, Rudra (Bin)': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      'Violin': [0, 1, 2, 3, 4, 5, 6, 12, 13],
+      'Harmonium': [0, 12, 13],
+    }
+    if (sectionCategorization !== undefined) {
+      this.sectionCategorization = sectionCategorization;
+    } else {
+      this.sectionCategorization = this.sectionStarts.map(() => {
+        return initSectionCategorization()
+      })
+    }
+    if (this.sectionStarts.length > this.sectionCategorization.length) {
+      const diff = this.sectionStarts.length - this.sectionCategorization.length;
+      for (let i = 0; i < diff; i++) {
+        this.sectionCategorization.push(initSectionCategorization())
+      }
     }
   }
 
@@ -2022,6 +2217,11 @@ class Piece {
       })
       this.meters.push(meter);
     }
+  }
+
+  removeMeter(meter: Meter) {
+    const idx = this.meters.indexOf(meter);
+    this.meters.splice(idx, 1);
   }
 
   get durStarts() {
@@ -2070,6 +2270,15 @@ class Piece {
     this.durArray = this.phrases.map(p => {
       if (p.durTot === undefined) {
         throw new Error('p.durTot is undefined')
+      } else if (isNaN(p.durTot)) {
+        const removes = p.trajectories.filter(t => isNaN(t.durTot))
+        removes.forEach(r => {
+          const idx = p.trajectories.indexOf(r);
+          p.trajectories.splice(idx, 1)
+        })
+        p.durTot = p.trajectories.map(t => {
+          return t.durTot
+        }).reduce((a, b) => a + b, 0)
       }
       return p.durTot / this.durTot!
     });
@@ -2092,7 +2301,10 @@ class Piece {
         slice = this.phrases.slice(s, this.sectionStarts![i + 1])
         // sections.push(this.phrases.slice(s, this.sectionStarts[i + 1]))
       }
-      sections.push(new Section({ phrases: slice }))
+      sections.push(new Section({ 
+        phrases: slice, 
+        categorization: this.sectionCategorization[i] 
+      }))
     });
     return sections
   }
@@ -2233,7 +2445,8 @@ class Piece {
       given_name: this.given_name,
       sectionStarts: this.sectionStarts,
       instrumentation: this.instrumentation,
-      meters: this.meters
+      meters: this.meters,
+      sectionCategorization: this.sectionCategorization,
     }
   }
 
@@ -2266,13 +2479,21 @@ const yamanRuleSet = {
 
 class Section {
   phrases: Phrase[];
+  categorization: SectionCategorizationType;
 
   constructor({
-    phrases = []
+    phrases = [],
+    categorization = undefined
   }: {
-    phrases?: Phrase[]
+    phrases?: Phrase[],
+    categorization?: SectionCategorizationType
   } = {}) {
-    this.phrases = phrases
+    this.phrases = phrases;
+    if (categorization !== undefined) {
+      this.categorization = categorization;
+    } else {
+      this.categorization = initSectionCategorization();
+    }
   }
 
   allPitches(repetition=true) {
@@ -2608,15 +2829,18 @@ export {
   Articulation,
   Chikari,
   Raga,
+  Section,
   getStarts,
   getEnds,
   Group,
   durationsOfFixedPitches,
   pitchNumberToChroma,
-  linSpace
+  linSpace,
+  initSectionCategorization
 }
 
 export type {
   RuleSetType,
-  VibObjType
+  VibObjType,
+  PhraseCategorizationType
 }

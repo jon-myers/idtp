@@ -79,6 +79,14 @@
       <label>Duration</label>
       {{ getDuration() }}
     </div>
+    <div class='controlsRow' v-if='insertPulseMode && prevMeter'>
+    <label class='wide'>Attach to Prev Meter</label>
+    <input 
+      type='checkbox' 
+      v-model='attachToPrevMeter' 
+      @change='updateAttachToPrevMeter'/>
+    
+    </div>
     <div class='controlsRow' v-if='insertPulseMode'>
       <div v-if='numLayers === 1' class='row'>
         <label>Layer {{ 0 }}</label>
@@ -104,10 +112,16 @@
         Insert Meter at Playhead
       </button>
       <button 
-        v-if='insertPulseMode' 
+        v-if='insertPulseMode && !attachToPrevMeter' 
         @click='insertMeterFromPulses'
         :disabled='!editable'>
         Insert Meter from Pulses
+      </button>
+      <button
+        v-if='insertPulseMode && prevMeter && attachToPrevMeter'
+        @click='addTimePointsToPrevMeter'
+        :disabled='!editable'>
+        Add Time Points to Prev Meter
       </button>
     </div>
   </div>
@@ -131,14 +145,15 @@
 <script lang='ts'>
 
 import { Meter } from '@/js/meter.ts';
-import { h } from 'vue';
-
+import { Piece } from '@/js/classes.ts';
+import { findClosestStartTime } from '@/components/EditorComponent.vue'
 import { 
   selectAll as d3SelectAll,
   select as d3Select,
  } from 'd3';
 
-import { defineComponent } from 'vue';
+import { defineComponent, PropType } from 'vue';
+import EditorComponent from '@/components/EditorComponent.vue';
  
 
 type MeterControlsDataType = {
@@ -155,7 +170,9 @@ type MeterControlsDataType = {
   maxLayer: number,
   insertPulseMode: boolean,
   insertLayer: number,
-}
+  attachToPrevMeter: boolean,
+  prevMeter: boolean,
+};
 
 export default defineComponent({
   name: 'MeterControls',
@@ -179,25 +196,47 @@ export default defineComponent({
       maxLayer: 3,
       insertPulseMode: false,
       insertLayer: 0,
+      attachToPrevMeter: false,
+      prevMeter: false,
     }
   },
-  props: ['height', 'playerHeight', 'editable'],
+  props: {
+    height: {
+      type: Number,
+      required: true,
+    },
+    playerHeight: {
+      type: Number,
+      required: true,
+    },
+    editable: {
+      type: Boolean,
+      required: true,
+    },
+    currentTime: {
+      type: Number,
+      required: true,
+    },
+    insertPulses: {
+      type: Array as PropType<number[]>,
+      required: true,
+    },
+  },
+  
   methods: {
     increaseCompounds(i: number) {
       this.layerCompounds[i]++;
       // this.updateMeter();
       if (this.meter !== undefined) {
-        const editor = this.$parent!.$parent!;
         if (i === 0) {
           this.updateMeter();
         } else {
           const newHi = this.pulseDivisions[i].slice(0, this.layerCompounds[i]);
           this.meter.alterLayer(i, newHi);
-          
-          editor.resetZoom();
-          editor.selectMeter(this.meter.allPulses[0].uniqueId);
+          this.$emit('passthroughResetZoomEmit')
+          this.$emit('passthroughSelectMeterEmit', this.meter.allPulses[0].uniqueId)
+          this.$emit('passthroughUnsavedChangesEmit', true)
         }
-        editor.unsavedChanges = true;
       }
     },
 
@@ -205,29 +244,22 @@ export default defineComponent({
       this.layerCompounds[i]--;
       // this.updateMeter();
       if (this.meter !== undefined) {
-        const editor = this.$parent!.$parent!;
         if (i === 0) {
           this.updateMeter();
         } else {
           const newHi = this.pulseDivisions[i].slice(0, this.layerCompounds[i]);
           this.meter.alterLayer(i, newHi);
-          editor.resetZoom();
-          editor.selectMeter(this.meter.allPulses[0].uniqueId);
+          // editor.resetZoom();
+          this.$emit('passthroughResetZoomEmit')
+          this.$emit('passthroughSelectMeterEmit', this.meter.allPulses[0].uniqueId)
+          this.$emit('passthroughUnsavedChangesEmit', true)
         }
-        editor.unsavedChanges = true;
       }
     },
 
     removeMeter() {
-      const editor = this.$parent!.$parent!;
-      const piece = editor.piece;
-      editor.removeMeter(this.meter.uniqueId);
-      editor.unsavedChanges = true;
-      const meterIdx = piece.meters.indexOf(this.meter!);
-      if (meterIdx !== -1) {
-        piece.meters.splice(meterIdx, 1);
-        this.meterSelected = false;
-      }
+      this.$emit('passthroughRemoveMeterEmit', this.meter!);
+      this.meterSelected = false;
     },
 
     async updateMeter() {
@@ -235,11 +267,8 @@ export default defineComponent({
         const startTime = this.meter!.startTime;
         await this.removeMeter();
         this.insertMeter(undefined, startTime)
-        const editor = this.$parent!.$parent!;
-        // editor.resetZoom();
         await this.$nextTick();
-        editor.selectMeter(this.meter!.allPulses[0].uniqueId);
-        editor.unsavedChanges = true;
+        this.$emit('passthroughSelectMeterEmit', this.meter.allPulses[0].uniqueId)
       }
     },
 
@@ -248,7 +277,6 @@ export default defineComponent({
         const oldDepth = this.meter.hierarchy.length;
         const newDepth = this.numLayers;
         const diff = newDepth - oldDepth;
-        const editor = this.$parent!.$parent!;
         if (diff < 0) {
           this.meter.shrinkLayers(-diff);
         } else {
@@ -263,9 +291,9 @@ export default defineComponent({
           }
           this.meter.growLayers(newHierarchies);
         }
-        editor.resetZoom();
-        editor.selectMeter(this.meter.allPulses[0].uniqueId);
-        editor.unsavedChanges = true;
+        this.$emit('passthroughResetZoomEmit')
+        this.$emit('passthroughSelectMeterEmit', this.meter.allPulses[0].uniqueId)
+        this.$emit('passthroughUnsavedChangesEmit', true)
       }
     },
 
@@ -279,16 +307,14 @@ export default defineComponent({
         } else if (diff < 0) {
           this.meter.shrinkCycles(-diff);
         }
-        const editor = this.$parent!.$parent!;
-        editor.resetZoom();
-        editor.selectMeter(this.meter.allPulses[0].uniqueId)
-        editor.unsavedChanges = true;
+        this.$emit('passthroughResetZoomEmit')
+        this.$emit('passthroughSelectMeterEmit', this.meter.allPulses[0].uniqueId)
+        this.$emit('passthroughUnsavedChangesEmit', true)
       }
     },
 
     updatePulseDivs(i: number, kIdx: number) {
       if (this.meter !== undefined) {
-        const editor = this.$parent!.$parent!;
         const newHierarchy = [];
         for (let i = 0; i < this.numLayers; i++) {
           const lc = this.layerCompounds[i];
@@ -302,11 +328,10 @@ export default defineComponent({
           this.updateMeter()
         } else {
           this.meter.alterLayer(i, newHierarchy[i]);
-          
-          editor.resetZoom();
-          editor.selectMeter(this.meter.allPulses[0].uniqueId);
+          this.$emit('passthroughResetZoomEmit')
+          this.$emit('passthroughSelectMeterEmit', this.meter.allPulses[0].uniqueId)
         }
-        editor.unsavedChanges = true
+        this.$emit('passthroughUnsavedChangesEmit', true)
       } 
     },
 
@@ -351,10 +376,8 @@ export default defineComponent({
       this.tempo = Math.round(Math.exp(logTempo));
       if (this.meter !== undefined) {
         this.meter?.adjustTempo(this.tempo);
-        const editor = this.$parent!.$parent!;
-        editor.resetZoom();
-        editor.selectMeter(this.meter!.allPulses[0].uniqueId)
-        editor.unsavedChanges = true;
+        this.$emit('passthroughResetZoomEmit')
+        this.$emit('passthroughSelectMeterEmit', this.meter.allPulses[0].uniqueId)
       }
     },
 
@@ -373,8 +396,7 @@ export default defineComponent({
       if (this.meter !== undefined) {
         return this.displayTime(this.meter.startTime);
       } else {
-        const editor = this.$parent!.$parent!;
-        return this.displayTime(editor.currentTime)
+        return this.displayTime(this.currentTime)
       }
     },
 
@@ -391,11 +413,10 @@ export default defineComponent({
       }
     },
 
-    insertMeter(_, startTime_?: number) {
-      const editor = this.$parent!.$parent!;
+    insertMeter(_?: MouseEvent, startTime_?: number) {
       const startTime = startTime_ !== undefined ? 
                         startTime_ : 
-                        editor.currentTime;
+                        this.currentTime;
       const hierarchy: (number | number[])[] = [];
       for (let i = 0; i < this.numLayers; i++) {
         if (this.layerCompounds[i] === 1) {
@@ -411,19 +432,15 @@ export default defineComponent({
         tempo: this.tempo,
         repetitions: this.cycles,
       });
-      editor.piece.addMeter(meter);
-      editor.unsavedChanges = true;
-      editor.addMetricGrid(true);
-      editor.selectedMeter = meter;
+      this.$emit('passthroughAddMeterEmit', meter);
+      this.$emit('passthroughUnsavedChangesEmit', true)
+      this.$emit('passthroughAddMetricGridEmit', true);
       this.meterSelected = true;
-      editor.meterMode = true;
-      editor.selectMeter(meter.allPulses[0].uniqueId);
-      editor.unsavedChanges = true;
+      this.$emit('passthroughSelectMeterEmit', meter.allPulses[0].uniqueId)
     },
 
     insertMeterFromPulses() {
-      const editor = this.$parent!.$parent!;
-      const timePoints: number[] = editor.insertPulses;
+      const timePoints = this.insertPulses;
       const hierarchy: (number | number[])[] = [];
       for (let i = 0; i < this.numLayers; i++) {
         if (this.layerCompounds[i] === 1) {
@@ -433,22 +450,49 @@ export default defineComponent({
           hierarchy.push(layer)
         }
       }
-      timePoints.sort((a: number, b: number) => a - b, 0);
+      timePoints.sort((a: number, b: number) => a - b);
       const meter = Meter.fromTimePoints( {
         timePoints,
         hierarchy,
         repetitions: this.cycles,
-      })
-      editor.piece.addMeter(meter);
-      editor.unsavedChanges = true;
-      editor.addMetricGrid(true);
-      editor.selectedMeter = meter;
-      editor.insertPulseMode = false;
+      });
+      this.$emit('passthroughAddMeterEmit', meter);
+      this.$emit('passthroughAddMetricGridEmit', true);
       this.meterSelected = true;
-      editor.meterMode = true;
-      editor.selectMeter(meter.allPulses[0].uniqueId);
-      editor.unsavedChanges = true;
+      this.$emit('passthroughSelectMeterEmit', meter.allPulses[0].uniqueId)
       d3SelectAll('.insertPulse').remove();
+      this.insertPulseMode = false;
+    },
+
+    addTimePointsToPrevMeter() {
+      const timePoints = this.insertPulses;
+      timePoints.sort((a: number, b: number) => a - b);
+      this.meter!.addTimePoints(timePoints, this.insertLayer);
+      this.$emit('passthroughAddMetricGridEmit', true);
+      this.meterSelected = true;
+      this.$emit('passthroughSelectMeterEmit', this.meter!.allPulses[0].uniqueId, true)
+      this.$emit('passthroughUnsavedChangesEmit', true)
+      d3SelectAll('.insertPulse').remove();
+      this.insertPulseMode = false;
+    },
+
+    updateAttachToPrevMeter() {
+      if (this.attachToPrevMeter === true) {
+        this.$emit('passthroughAssignPrevMeterEmit');
+        this.numLayers = this.meter!.hierarchy.length;
+        if (typeof this.meter!.hierarchy[0] === 'number') {
+          this.layerCompounds[0] = 1;
+          this.pulseDivisions[0][0] = this.meter!.hierarchy[0];
+        } else {
+          this.layerCompounds[0] = this.meter!.hierarchy[0].length;
+          this.meter!.hierarchy[0].map((div, i) => {
+            this.pulseDivisions[0][i] = div;
+          })
+        }
+        (this.meter!.hierarchy.slice(1) as number[]).forEach((h, hIdx) => {
+          this.pulseDivisions[hIdx + 1][0] = h;
+        })
+      }
     }
   },
 })
@@ -482,6 +526,13 @@ export default defineComponent({
 label {
   width: 60px;
   min-width: 60px;
+  margin-right: 10px;
+  text-align: right;
+}
+
+.wide {
+  width: 150px;
+  min-width: 150px;
   margin-right: 10px;
   text-align: right;
 }

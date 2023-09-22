@@ -88,7 +88,7 @@ export default defineComponent({
       yAxis: undefined,
       visibleSargam: [],
       visiblePitches: [],
-      divsPerPxl: 1,
+      divsPerPxl: 4,
       defs: undefined,
       phonemeRepresentation: 'English',
       contextMenuX: 0,

@@ -33,6 +33,10 @@ const getSuffix = mimetype => {
     return '.m4a'
   } else if (end === 'flac' || end === 'x-flac') {
     return '.flac'
+  } else if (end === 'ogg' || end === 'x-ogg') {
+    return '.opus'
+  } else if (end === 'opus' || end === 'x-opus') {
+    return '.opus'
   }
 };
 
@@ -142,6 +146,7 @@ const runServer = async () => {
       }
     });
 
+
     app.get('/getAllTranscriptions', async (req, res) => {
       try {
         const userID = JSON.parse(req.query.userID);
@@ -194,6 +199,28 @@ const runServer = async () => {
       }
     });
 
+    app.get('/getAllTranscriptionsOfAudioFile', async (req, res) => {
+      const query = {
+        audioID: req.query.audioID,
+        $or: [
+          { userID: req.query.userID },
+          { permissions: { $in: ['Public', 'Publicly Editable'] } }
+        ]
+      };
+      const projection = {
+        title: 1,
+        name: 1,
+      };
+      try {
+        const result = await transcriptions.find(query)
+          .project(projection).toArray();
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
+
     app.get('/nameFromUserID', async (req, res) => {
       // retrieve a user's name from their associated userID in the users db
       const query = {
@@ -207,6 +234,17 @@ const runServer = async () => {
         res.status(500).send(err);
       }
     });
+
+    app.get('/allUsers', async (req, res) => {
+      try {
+        const result = await users.find().toArray();
+        res.send(await JSON.stringify(result))
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+
+    })
 
     app.get('/getAllAudioFileMetaData', async (req, res) => {
       // get all relevent data for audio files
@@ -600,6 +638,23 @@ const runServer = async () => {
       }
     })
 
+    app.post('/updateTranscriptionOwner', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.body.transcriptionID) };
+        const update = { $set: { 
+          userID: req.body.userID,
+          name: req.body.name,
+          family_name: req.body.family_name,
+          given_name: req.body.given_name
+        } };
+        const result = await transcriptions.updateOne(query, update);
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
     app.get('/getVerifiedStatus', async (req, res) => {
       try {
         const query = { _id: ObjectId(req.query.aeID) };
@@ -839,10 +894,26 @@ const runServer = async () => {
           const update = { $set: { [tempString]: newUniqueId } };
           const options = { upsert: true };
           await audioEvents.updateOne(query, update, options)
-          const fileName = newUniqueId + getSuffix(avatar.mimetype);
+          const suffix = getSuffix(avatar.mimetype);
+          let fileName = newUniqueId + suffix;
           avatar.mv('./uploads/' + fileName);
+          if (suffix === '.opus') {
+            const newFileName = newUniqueId + '.wav';
+            const spawnArgs = ['-i', './uploads/' + fileName, './uploads/' + newFileName];
+            const convertToOpus = spawn('ffmpeg', spawnArgs)
+            fileName = newFileName;
+            convertToOpus.stderr.on('data', data => {
+              console.error(`stderr: ${data}`)
+            });
+            await convertToOpus.on('close', () => {
+              console.log('opus conversion finished')
+            })
+          }
           const spawnArr = ['process_audio.py', fileName, parentId, idx];
           const processAudio = spawn('python3', spawnArr);
+          processAudio.stderr.on('data', data => {
+            console.error(`stderr: ${data}`)
+          });
           await processAudio.on('close', () => {
             console.log('python closed, finally')
             res.send({

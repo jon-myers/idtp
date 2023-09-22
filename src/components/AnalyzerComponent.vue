@@ -172,6 +172,7 @@
         @runQuery='handleRunQuery'
         :vocal='vocal'
         :raga='piece.raga'
+        :trajIdxs='piece.trajIdxs'
         />
     </div>
     <div class='segmentDisplayHolder' v-if='piece && displayTrajs && selectedATIdx === 2'>
@@ -360,7 +361,7 @@ type PCountType = {
         condensed: false,
         heatmap: false,
         fadeTime: 5,
-        controlsHeight: 180,
+        controlsHeight: 220,
         typeRowHeight: 30,
         graphHeight: 1000,
         targetPitchChoices: [0],

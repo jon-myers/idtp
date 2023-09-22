@@ -49,6 +49,14 @@
         <div class="recInfo right">
           <div class="rulerBox">
             <img
+              :src="icons.tags"
+              @click="toggleLabelControls"
+              class="tagsImg"
+              ref="tagsImg"
+            />
+          </div>
+          <div class="rulerBox">
+            <img
               :src="icons.meter"
               @click="toggleMeterControls"
               class="meterImg"
@@ -194,7 +202,6 @@
         </div>
       </fieldset>
       <button @click='handleDownload'>Download</button>
-
     </div>
     <div class='tuningControls' v-if='showTuning'>
       <div class='buttons'>
@@ -252,8 +259,29 @@
         :height='controlsHeight'
         :playerHeight='playerHeight'
         :editable='editable'
+        :currentTime='parentCurrentTime'
+        :insertPulses='insertPulses'
         ref='meterControls'
+        @passthroughResetZoomEmit='passthroughResetZoom'
+        @passthroughSelectMeterEmit='passthroughSelectMeter'
+        @passthroughAddMeterEmit='passthroughAddMeter'
+        @passthroughAddMetricGridEmit='passthroughAddMetricGrid'
+        @passthroughRemoveMeterEmit='passthroughRemoveMeter'
+        @passthroughUnsavedChangesEmit='passthroughUnsavedChanges'
+        @passthroughAssignPrevMeterEmit='passthroughAssignPrevMeter'
         />
+      <LabelEditor
+        v-if='showLabelControls'
+        :height='controlsHeight'
+        :playerHeight='playerHeight'
+        :editable='editable'
+        :piece='piece'
+        :vocal='vocal!'
+        @unsavedChanges='$emit("unsavedChangesEmit", true)'
+        @goToPhraseEmit='goToPhrase'
+        @goToSectionEmit='goToSection'
+        ref='labelControls'
+      />
   </div>
 </template>
 <script lang='ts'>
@@ -266,6 +294,7 @@ import pauseIcon from '@/assets/icons/pause.svg';
 import playIcon from '@/assets/icons/play.svg';
 import shuffleIcon from '@/assets/icons/shuffle.svg';
 import rulerIcon from '@/assets/icons/ruler.svg';
+import tagsIcon from '@/assets/icons/tags.svg';
 import { defineComponent } from 'vue';
 import type { PropType } from 'vue';
 import { 
@@ -292,7 +321,9 @@ import { BrowserInfo, detect } from 'detect-browser';
 import { drag as d3Drag, select as d3Select } from 'd3';
 import stretcherURL from '@/js/bundledStretcherWorker.js?url';
 import MeterControls from '@/components/MeterControls.vue';
+import LabelEditor from '@/components/LabelEditor.vue';
 import { RecType } from '@/components/AddAudioEvent.vue'
+import { Meter } from '@/js/meter.ts'
 
 
 type EditorAudioPlayerData = {
@@ -317,6 +348,7 @@ type EditorAudioPlayerData = {
     download: string;
     tuningFork: string;
     meter: string;
+    tags: string
   };
   circleDragging: boolean;
   formattedCurrentTime: string;
@@ -343,6 +375,7 @@ type EditorAudioPlayerData = {
   showTuning: boolean;
   showDownloads: boolean;
   showMeterControls: boolean;
+  showLabelControls: boolean;
   sargam: string[];
   centDevs: number[];
   tuningGains: number[];
@@ -537,6 +570,7 @@ export default defineComponent({
         download: downloadIcon,
         tuningFork: tuningForkIcon,
         meter: meterIcon,
+        tags: tagsIcon
       },
       circleDragging: false,
       formattedCurrentTime: '00:00',
@@ -563,6 +597,7 @@ export default defineComponent({
       showTuning: false,
       showDownloads: false,
       showMeterControls: false,
+      showLabelControls: false,
       sargam: [],
       centDevs: [],
       tuningGains: [],
@@ -672,7 +707,8 @@ export default defineComponent({
       required: true
     },
     playerHeight: {
-      type: Number
+      type: Number,
+      required: true
     },
     controlsHeight: {
       type: Number,
@@ -704,14 +740,28 @@ export default defineComponent({
     durTot: {
       type: Number,
       required: true
+    },
+    insertPulses: {
+      type: Array as PropType<number[]>,
+      required: true
+    },
+    uniformVowel: {
+      type: Boolean,
+      required: true
     }
   },
 
   components: {
-    MeterControls
+    MeterControls,
+    LabelEditor
   },
 
   async mounted() {
+    if (window.innerHeight < 800) {
+      this.showControls = false;
+      const controlsImg = this.$refs.controlsImg as HTMLImageElement;
+      controlsImg.classList.remove('showControls');
+    }
     this.ac = new AudioContext({ sampleRate: 48000 });
     this.gainNode = this.ac.createGain();
     this.gainNode.gain.setValueAtTime(Number(this.recGain), this.now());
@@ -856,6 +906,14 @@ export default defineComponent({
   },
   methods: {
 
+    goToPhrase(pIdx: number) {
+      this.$emit('goToPhraseEmit', pIdx)
+    },
+
+    goToSection(sIdx: number) {
+      this.$emit('goToSectionEmit', sIdx)
+    },
+
     reinitializeAC() {
       if (this.ac) this.ac.close();
       this.ac = new AudioContext({ sampleRate: 48000 });
@@ -976,6 +1034,35 @@ export default defineComponent({
     instantiateTuning() {
       this.piece.realignPitches();
       this.$emit('resetZoomEmit')
+    },
+
+    passthroughResetZoom() {
+      this.$emit('resetZoomEmit')
+    },
+
+    passthroughSelectMeter(pulseUniqueId: string, turnMeterModeOn: boolean = false) {
+      this.$emit('selectMeterEmit', pulseUniqueId, turnMeterModeOn)
+    },
+
+    passthroughAddMeter(meter: Meter) {
+      this.$emit('addMeterEmit', meter)
+    },
+
+    passthroughAddMetricGrid(codified: boolean = true) {
+      this.$emit('addMetricGridEmit', codified)
+    },
+
+    passthroughRemoveMeter(meter: Meter) {
+      this.$emit('removeMeterEmit', meter)
+    },
+
+    passthroughUnsavedChanges(truth: boolean) {
+      console.log('here')
+      this.$emit('unsavedChangesEmit', truth)
+    },
+
+    passthroughAssignPrevMeter() {
+      this.$emit('assignPrevMeterEmit')
     },
 
     makeTuningSines() {
@@ -1123,31 +1210,6 @@ export default defineComponent({
       }
     },
 
-    openMeterControls() {
-      // check if classlist includes showMeterControls
-      const meterImg = this.$refs.meterImg as HTMLElement;
-      const cl = meterImg.classList;
-      if (!cl.contains('showMeterControls')) {
-        cl.toggle('showMeterControls');
-        this.showMeterControls = this.showMeterControls ? false : true;
-        if (this.showControls) {
-          this.showControls = false;
-          const controlsImg = this.$refs.controlsImg as HTMLElement;
-          controlsImg.classList.remove('showControls');
-        } else if (this.showTuning) {
-          this.showTuning = false;
-          const tuningImg = this.$refs.tuningImg as HTMLElement;
-          tuningImg.classList.remove('showTuning');
-        } else if (this.showDownloads) {
-          this.showDownloads = false;
-          const downloadImg = this.$refs.downloadImg as HTMLElement;
-          downloadImg.classList.remove('showDownloads')
-        } else {
-          this.$emit('resizeHeightEmit', this.showMeterControls)
-        }
-      }
-    },
-
     stretch(tempo = 1.0) {
       if (this.stretchBuf) {
         const left = this.stretchBuf.getChannelData(0);
@@ -1285,7 +1347,7 @@ export default defineComponent({
         this.performers = keys;
         const raags = Object.keys(obj.raags);
         const pSecs = raags.map((raag) => {
-          const pSec = obj.raags[raag]['performance sections'];
+          const pSec = obj.raags[raag]['performance sections']!;
           const localPSecs = Object.keys(pSec);
           return localPSecs.join(', ');
         });
@@ -1588,7 +1650,8 @@ export default defineComponent({
       if (this.uniformVowel) {
         vIdx = 0
       }
-      const params = ['f1', 'f2', 'f3', 'b1', 'b2', 'b3'];
+      type Param = 'f1' | 'f2' | 'f3' | 'b1' | 'b2' | 'b3';
+      const params: Param[] = ['f1', 'f2', 'f3', 'b1', 'b2', 'b3'];
       params.forEach((param, pIdx) => {
         const idx = vpIdxs[vIdx];
         const s0 = this.vowelParams[idx][0][pIdx];
@@ -2168,6 +2231,10 @@ export default defineComponent({
           this.showMeterControls = false;
           const meterImg = this.$refs.meterImg as HTMLImageElement;
           meterImg.classList.remove('showMeterControls');
+        } else if (this.showLabelControls) {
+          this.showLabelControls = false;
+          const tagsImg = this.$refs.tagsImg as HTMLElement;
+          tagsImg.classList.remove('showLabelControls')
         } else {
           this.$emit('resizeHeightEmit', this.showControls);
         }
@@ -2199,6 +2266,10 @@ export default defineComponent({
           this.showMeterControls = false;
           const meterImg = this.$refs.meterImg as HTMLImageElement;
           meterImg.classList.remove('showMeterControls');
+        } else if (this.showLabelControls) {
+          this.showLabelControls = false;
+          const tagsImg = this.$refs.tagsImg as HTMLElement;
+          tagsImg.classList.remove('showLabelControls')
         } else {
           this.$emit('resizeHeightEmit', this.showTuning)
         }
@@ -2222,6 +2293,10 @@ export default defineComponent({
           this.showMeterControls = false;
           const meterImg = this.$refs.meterImg as HTMLImageElement;
           meterImg.classList.remove('showMeterControls');
+        } else if (this.showLabelControls) {
+          this.showLabelControls = false;
+          const tagsImg = this.$refs.tagsImg as HTMLElement;
+          tagsImg.classList.remove('showLabelControls')
         } else {
           this.$emit('resizeHeightEmit', this.showDownloads);
         }
@@ -2245,8 +2320,43 @@ export default defineComponent({
           this.showDownloads = false;
           const downloadImg = this.$refs.downloadImg as HTMLImageElement;
           downloadImg.classList.remove('showDownloads')
+        } else if (this.showLabelControls) {
+          this.showLabelControls = false;
+          const tagsImg = this.$refs.tagsImg as HTMLElement;
+          tagsImg.classList.remove('showLabelControls')
         } else {
           this.$emit('resizeHeightEmit', this.showMeterControls);
+        }
+      }
+    },
+
+    toggleLabelControls(e?: MouseEvent) {
+      if (!this.loading) {
+        let cl;
+        if (e === undefined) {
+          cl = (this.$refs.tagsImg as HTMLElement).classList;
+        } else {
+          cl = (e.target as HTMLElement).classList;}
+        cl.toggle('showLabelControls');
+        this.showLabelControls = !this.showLabelControls;
+        if (this.showControls) {
+          this.showControls = false;
+          const controlsImg = this.$refs.controlsImg as HTMLImageElement;
+          controlsImg.classList.remove('showControls');
+        } else if (this.showTuning) {
+          this.showTuning = false;
+          const tuningImg = this.$refs.tuningImg as HTMLImageElement;
+          tuningImg.classList.remove('showTuning');
+        } else if (this.showDownloads) {
+          this.showDownloads = false;
+          const downloadImg = this.$refs.downloadImg as HTMLImageElement;
+          downloadImg.classList.remove('showDownloads')
+        } else if (this.showMeterControls) {
+          this.showMeterControls = false;
+          const meterImg = this.$refs.meterImg as HTMLImageElement;
+          meterImg.classList.remove('showMeterControls');
+        } else {
+          this.$emit('resizeHeightEmit', this.showLabelControls);
         }
       }
     },
@@ -2466,13 +2576,14 @@ export default defineComponent({
   justify-content: bottom;
 }
 .recInfo {
-  width: 300px;
-  min-width: 300px;
+  max-width: 300px;
+  min-width: 250px;
   height: 100%;
   background-color: black;
 }
 .recInfo.left {
   height: calc(100% - 20px);
+  min-width: 150px;
   color: white;
   /* border: 1px solid grey; */
   display: flex;
@@ -2541,7 +2652,8 @@ export default defineComponent({
   justify-content: center;
 }
 .controlBox {
-  width: 400px;
+  max-width: 400px;
+  min-width: 250px;
   height: 70px;
   background-color: black;
   display: flex;
@@ -2550,7 +2662,8 @@ export default defineComponent({
   justify-content: space-evenly;
 }
 .loadingSymbol {
-  width: 400px;
+  max-width: 400px;
+  min-width: 250px;
   height: 70px;
   background-color: black;
   display: flex;
@@ -2723,10 +2836,14 @@ export default defineComponent({
   align-items: bottom;
   justify-content: bottom;
   height: 100%;
-  width: 300px;
+  max-width: 300px;
+  min-width: 150px;
+  flex-shrink: 2
 }
 .innerSpacer {
   height: 100%;
+  max-width: 300px;
+  min-width: 150px;
 }
 .rulerBox > .tuningFork {
   filter: invert(100%) sepia(100%) saturate(0%) hue-rotate(288deg)
@@ -2742,6 +2859,11 @@ export default defineComponent({
 }
 
 .rulerBox > .showMeterControls {
+  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg)
+    brightness(94%) contrast(97%);
+}
+
+.rulerBox > .showLabelControls {
   filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg)
     brightness(94%) contrast(97%);
 }
@@ -2861,5 +2983,10 @@ button {
 
 .meterImg {
   width: 40px;
+}
+
+.tagsImg {
+  width: 40px;
+
 }
 </style>

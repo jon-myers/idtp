@@ -4,6 +4,7 @@ import { AxiosProgressEvent } from 'axios';
 import fetch from 'cross-fetch';
 import { Piece } from './classes.ts';
 import { RecType } from './components/AddAudioEvent.vue';
+import { UserType } from './components/FileManager.vue';
 
 const getPiece = async (id: string): Promise<Piece> => {
   let piece;
@@ -229,6 +230,30 @@ const getAudioRecording = async (_id: string): Promise<RecType> => {
       audioRecording = await response.json()
     }
     return audioRecording
+  } catch (err) {
+    console.error(err)
+  }
+};
+
+const getAllTransOfAudioFile = async (audioID: string, userID: string) => {
+  let allTrans;
+  const suffix = '?' + new URLSearchParams({
+    audioID: audioID,
+    userID: userID
+  });
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const extUrl = url + 'getAllTranscriptionsOfAudioFile' + suffix;
+    const response = await fetch(extUrl, request);
+    if (response.ok) {
+      allTrans = await response.json()
+    }
+    return allTrans
   } catch (err) {
     console.error(err)
   }
@@ -868,15 +893,41 @@ const updateTranscriptionPermissions = async (id: string, permissions: string) =
   }
 }
 
-  const cloneTranscription = async ({
-    id = undefined,
-    title = undefined,
-    newOwner = undefined,
-    permissions = undefined,
-    name = undefined,
-    family_name = undefined,
-    given_name = undefined
-  } = {}) => {
+const updateTranscriptionOwner = async (id: string, ownerObj: UserType) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      transcriptionID: id,
+      userID: ownerObj['_id'],
+      name: ownerObj['name'],
+      family_name: ownerObj['family_name'],
+      given_name: ownerObj['given_name']
+    })
+  };
+  try {
+    const res = await fetch(url + 'updateTranscriptionOwner', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const cloneTranscription = async ({
+  id = undefined,
+  title = undefined,
+  newOwner = undefined,
+  permissions = undefined,
+  name = undefined,
+  family_name = undefined,
+  given_name = undefined
+} = {}) => {
   let out;
   const request = {
     method: 'POST',
@@ -962,6 +1013,25 @@ const getConsonants = async () => {
   }
 }
 
+const getAllUsers = async () => {
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const response = await fetch(url + 'allUsers', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
 
 export { 
   getPiece,
@@ -1004,5 +1074,8 @@ export {
   updateTranscriptionPermissions,
   getInstrumentation,
   getIpaVowels,
-  getConsonants
+  getConsonants,
+  getAllTransOfAudioFile,
+  getAllUsers,
+  updateTranscriptionOwner
 }
