@@ -52,6 +52,7 @@
     "uuid": "^9.0.0",
     "vue": "^3.2.47",
     "vue-cookies": "^1.8.3",
+    "vue-cookies-ts": "^1.5.19",
     "vue-router": "^4.1.6",
     "vue3-google-login": "^2.0.15",
     "vuex": "^4.1.0"
@@ -64,6 +65,7 @@
     "@types/javascript-color-gradient": "^2.4.0",
     "@types/lodash": "^4.14.194",
     "@types/uuid": "^9.0.1",
+    "@types/vue": "^2.0.0",
     "@typescript-eslint/eslint-plugin": "^6.3.0",
     "@typescript-eslint/parser": "^6.3.0",
     "@vitejs/plugin-vue": "^4.1.0",

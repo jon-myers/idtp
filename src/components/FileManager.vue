@@ -25,8 +25,8 @@
       <div
         class="fileInfoRow"
         v-for="(piece, i) in allPieces"
-        :key="piece"
-        @dblclick="openPieceAlt(piece)"
+        :key="i"
+        @dblclick="openPieceAlt()"
         :id="`fir${i}`"
         >
         <div
@@ -48,32 +48,32 @@
     >
       New Transcription
     </div>
-    <div v-if="open_" class="dropDownRow" @click="openPieceAlt(piece)">
+    <div v-if="open_" class="dropDownRow" @click="openPieceAlt()">
       Open In Editor
     </div>
-    <div v-if="open_" class="dropDownRow" @click="openInAnalyzer(piece)">
+    <div v-if="open_" class="dropDownRow" @click="openInAnalyzer()">
       Open In Analyzer
     </div>
-    <div class="dropDownRow" @click="clonePiece(piece)" v-if='open_'>
+    <div class="dropDownRow" @click="clonePiece()" v-if='open_'>
       Clone Transcription
     </div>
     <div 
       :class="`dropDownRow ${['inactive', ''][Number(deleteActive)]}`" 
-      @click='editTitle(piece)' 
+      @click='editTitle()' 
       v-if='open_'
     >
       Edit Title
     </div>
     <div 
       :class="`dropDownRow ${['inactive', ''][Number(deleteActive)]}`" 
-      @click='editPermissions(piece)' 
+      @click='editPermissions()' 
       v-if='open_'
     >
       Edit Permissions
     </div>
     <div 
       :class="`dropDownRow ${['inactive', ''][Number(deleteActive)]}`"
-      @click='editOwner(piece)'
+      @click='editOwner()'
       v-if='open_'
       >
       Edit Owner
@@ -95,6 +95,7 @@
       :modalWidth="modalWidth"
       :modalHeight="modalHeight"
       :dataObj='passedInDataObj'
+      @newPieceInfoEmit="acceptNewPieceInfo"
     />
   </div>
   <div v-if='editTitleModal' class='titleModal'>
@@ -150,6 +151,8 @@ import NewPieceRegistrar from '@/components/NewPieceRegistrar.vue';
 import { Raga, Piece, Trajectory, Phrase } from '@/js/classes.ts';
 
 import { defineComponent } from 'vue';
+import { RecType } from '@/components/AddAudioEvent.vue'
+
 
 type UserType = {
   email: string;
@@ -189,9 +192,7 @@ type FileManagerType = {
   sortKeyNames: string[];
   editTitleModal: boolean;
   editPermissionsModal: boolean;
-  passedInDataObj?: {
-    [key: string]: string
-  },
+  passedInDataObj?: string,
   editingTitle?: string,
   editingPermissions?: string,
   editOwnerModal: boolean,
@@ -201,6 +202,36 @@ type FileManagerType = {
 }
 
 type PieceInfoType = [string?, string?, string?, string?, string?, string?];
+
+type NewPieceInfoType = {
+  title: string;
+  transcriber?: string;
+  raga: string | Raga;
+  audioID: string;
+  permissions: string;
+  clone?: boolean;
+  origID: string;
+  instrumentation?: string[];
+  phrases?: Phrase[];
+  family_name?: string;
+  given_name?: string;
+  name?: string;
+}
+
+type RagaNewPieceInfoType = {
+  title: string;
+  transcriber?: string;
+  raga: Raga;
+  audioID: string;
+  permissions: string;
+  clone?: boolean;
+  origID: string;
+  instrumentation?: string[];
+  phrases?: Phrase[];
+  family_name?: string;
+  given_name?: string;
+  name?: string;
+}
 
 export default defineComponent({
   name: 'FileManager',
@@ -303,9 +334,16 @@ export default defineComponent({
     } catch (err) {
       console.log(err)
     }
-    
+  },
 
-    this.emitter.on('newPieceInfo', async (newPieceInfo) => {
+  beforeUnmount() {
+    window.removeEventListener('keydown', this.handleKeydown);
+  },
+
+  methods: {
+
+    async acceptNewPieceInfo(newPieceInfo: NewPieceInfoType) {
+      console.log(newPieceInfo)
       try {
         if (newPieceInfo.clone) {
           const id = newPieceInfo.origID;
@@ -330,11 +368,12 @@ export default defineComponent({
           });
         } else {
           const npi = Object.assign({}, newPieceInfo);
-          delete npi.clone
-          const rsRes = await getRaagRule(npi.raga);
+          delete npi.clone;
+          const stringRaga = npi.raga as string;
+          const rsRes = await getRaagRule(stringRaga);
           const ruleSet = rsRes.rules;
           npi.raga = new Raga({
-            name: npi.raga,
+            name: stringRaga,
             ruleSet: ruleSet,
           });
           let durTot;
@@ -344,7 +383,12 @@ export default defineComponent({
           } else {
             durTot = 60;
           }
-          const tObj = {
+          const tObj: {
+            id: number;
+            durTot: number;
+            fundID12: number;
+            instrumentation?: string;
+          } = {
             id: 12,
             durTot: durTot,
             fundID12: npi.raga.fundamental,
@@ -361,20 +405,13 @@ export default defineComponent({
           npi.family_name = this.$store.state.lastName;
           npi.given_name = this.$store.state.firstName;
 
-          this.createNewPiece(npi);
+          this.createNewPiece(npi as RagaNewPieceInfoType);
         }
       } catch (err) {
         console.log(err);
       }
-    });
-  },
+    },
 
-  beforeUnmount() {
-    this.emitter.off('newPieceInfo');
-    window.removeEventListener('keydown', this.handleKeydown);
-  },
-
-  methods: {
     async toggleSort(idx: number) {
       if (this.sorts[idx] === 1) {
         this.sorts[idx] = -1;
@@ -414,7 +451,7 @@ export default defineComponent({
       return [title, name, raga, dateCreated, dateModified, permissions];
     },
 
-    writeDate(d) {
+    writeDate(d: Date) {
       const date = new Date(d);
       const month = date.getMonth() + 1;
       const day = date.getDate();
@@ -422,10 +459,8 @@ export default defineComponent({
       return month + '/' + day + '/' + year;
     },
 
-    openPieceAlt(piece?: Piece) {
-      if (piece === undefined) {
-        piece = this.selectedPiece;
-      }
+    openPieceAlt() {
+      const piece = this.selectedPiece;
       if (piece === undefined) {
         throw new Error('piece is undefined')
       }
@@ -437,10 +472,8 @@ export default defineComponent({
       });
     },
 
-    openInAnalyzer(piece: Piece | undefined) {
-      if (piece === undefined) {
-        piece = this.selectedPiece;
-      }
+    openInAnalyzer() {
+      const piece = this.selectedPiece;
       if (piece === undefined) {
         throw new Error('piece is undefined')
       }
@@ -458,29 +491,38 @@ export default defineComponent({
       this.designPieceModal = true;
     },
 
-    createNewPiece(obj) {
+    createNewPiece(obj: RagaNewPieceInfoType) {
+      if (typeof obj.raga === 'string') {
+        throw new Error('obj.raga is a string')
+      }
       const piece = obj ? new Piece(obj) : new Piece();
       piece.userID = this.$store.state.userID;
       piece.name = this.$store.state.name;
       createNewPiece(piece).then((data) => {
+        if (data === undefined) {
+          throw new Error('data is undefined')
+        }
         this.$store.commit('update_id', data.insertedId);
         this.$cookies.set('currentPieceId', data.insertedId);
         this.$router.push({
           name: 'EditorComponent',
-          query: { id: data.insertedID },
+          query: { id: data.insertedId },
         });
       });
     },
 
     copyLink() {
       const piece = this.selectedPiece;
+      if (piece === undefined) {
+        throw new Error('piece is undefined')
+      }
       const url = window.location.origin + '/editor?id=' + piece._id;
       navigator.clipboard.writeText(url);
       this.closeDropDown();
     },
 
-    async clonePiece(piece?: Piece) {
-      if (piece === undefined) piece = this.selectedPiece;
+    async clonePiece() {
+      const piece = this.selectedPiece;
       if (piece === undefined) {
         throw new Error('piece is undefined')
       }
@@ -490,12 +532,22 @@ export default defineComponent({
       try {
         const audioRecording = await getAudioRecording(piece.audioID);
         const audioEvent = await getAudioEvent(audioRecording.parentID);
-        const dataObj = {
+        const dataObj: {
+          title: string;
+          raga: Raga;
+          audioEvent: string;
+          audioRecording: RecType;
+          origID: string;
+          family_name?: string;
+          given_name?: string;
+          name?: string;
+          instrumentation?: string[];
+        } = {
           title: piece.title + ' (clone)',
           raga: piece.raga,
           audioEvent: audioEvent.name,
           audioRecording: audioRecording,
-          origID: piece._id,
+          origID: piece._id!,
           family_name: this.$store.state.lastName,
           given_name: this.$store.state.firstName,
           name: this.$store.state.name,
@@ -511,13 +563,16 @@ export default defineComponent({
     },
 
     async deletePiece() {
+      if (this.selectedPiece === undefined) {
+        throw new Error('selectedPiece is undefined')
+      }
       const isUser = this.$store.state.userID === this.selectedPiece.userID;
       if (this.delete_ && isUser) {
         const dropDown = this.$refs.dropDown as HTMLElement;
         dropDown.classList.add('closed');
         const res = await deletePiece(this.selectedPiece);
         if (res.deletedCount === 1) {
-          const id = this.$store.state.userID;
+          const id = this.$store.state.userID!;
           const sortKey = this.sortKeyNames[this.selectedSort];
           const sortDir = this.sorts[this.selectedSort];
           this.allPieces = await getAllPieces(id, sortKey, sortDir);
@@ -529,7 +584,7 @@ export default defineComponent({
     },
 
     async updateSort() {
-      const id = this.$store.state.userID;
+      const id = this.$store.state.userID!;
       const sortKey = this.sortKeyNames[this.selectedSort];
       const sortDir = this.sorts[this.selectedSort];
       this.allPieces = await getAllPieces(id, sortKey, sortDir);
@@ -538,14 +593,15 @@ export default defineComponent({
       });
     },
 
-    handleRightClick(e) {
+    handleRightClick(e: MouseEvent) {
       e.preventDefault();
       this.$nextTick(() => {
         this.dropDownLeft = e.clientX;
         this.dropDownTop = e.clientY;
         this.modalLeft = e.clientX;
         this.modalTop = e.clientY;
-        const rect = this.$refs.fileContainer.getBoundingClientRect();
+        const fc = this.$refs.fileContainer as HTMLElement;
+        const rect = fc.getBoundingClientRect();
         if (this.modalLeft + this.modalWidth > rect.width - 20) {
           this.modalLeft = rect.width - 20 - this.modalWidth;
         }
@@ -555,7 +611,8 @@ export default defineComponent({
         if (this.dropDownLeft + this.dropDownWidth > rect.width - 20) {
           this.dropDownLeft = rect.width - 20 - this.dropDownWidth;
         }
-        const dropDownRect = this.$refs.dropDown.getBoundingClientRect();
+        const dd = this.$refs.dropDown as HTMLElement;
+        const dropDownRect = dd.getBoundingClientRect();
         const dropDownHeight = dropDownRect.height;
         if (this.dropDownTop + dropDownHeight > rect.height - 20) {
           this.dropDownTop = rect.height - 20 - dropDownHeight;
@@ -565,29 +622,30 @@ export default defineComponent({
         document.querySelectorAll('.selected').forEach((el) => {
           el.classList.remove('selected');
         });
-        this.$refs.dropDown.classList.remove('closed');
-        let el = document.elementFromPoint(e.clientX, e.clientY);
+        dd.classList.remove('closed');
+        let el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement;
+        const parentNode = el.parentNode as HTMLElement;
         if (el.classList[0] === 'overflowX') {
-          el = el.parentElement;
+          el = el.parentElement!;
         }
         if (el.classList[0] === 'fileInfoRow') {
-          const num = el.id.slice(3);
+          const num = Number(el.id.slice(3));
           el.classList.add('selected');
-          this.selectedPiece = this.allPieces[num];
+          this.selectedPiece = this.allPieces![num];
           this.delete_ = true;
           this.open_ = true;
-          if (this.allPieces[num].userID === this.$store.state.userID) {
+          if (this.allPieces![num].userID === this.$store.state.userID) {
             this.deleteActive = true;
           } else {
             this.deleteActive = false;
           }
-        } else if (el.parentNode.classList[0] === 'fileInfoRow') {
-          const num = el.parentNode.id.slice(3);
-          el.parentNode.classList.add('selected');
-          this.selectedPiece = this.allPieces[num];
+        } else if (parentNode.classList[0] === 'fileInfoRow') {
+          const num = Number(parentNode.id.slice(3));
+          parentNode.classList.add('selected');
+          this.selectedPiece = this.allPieces![num];
           this.delete_ = true;
           this.open_ = true;
-          if (this.allPieces[num].userID === this.$store.state.userID) {
+          if (this.allPieces![num].userID === this.$store.state.userID) {
             this.deleteActive = true;
           } else {
             this.deleteActive = false;
@@ -602,7 +660,8 @@ export default defineComponent({
     },
 
     closeDropDown() {
-      this.$refs.dropDown.classList.add('closed');
+      const dd = this.$refs.dropDown as HTMLElement;
+      dd.classList.add('closed');
       document.querySelectorAll('.selected').forEach((el) => {
         el.classList.remove('selected');
       });
@@ -647,27 +706,30 @@ export default defineComponent({
       this.editOwnerModal = false;
     },
 
-    editTitle(piece: Piece) {
+    editTitle() {
+      const piece = this.selectedPiece;
       if (piece === undefined) {
-        piece = this.selectedPiece!;
+        throw new Error('piece is undefined')
       }
       this.editTitleModal = true;
       this.closeDropDown();
       this.editingTitle = piece.title;
     },
 
-    editPermissions(piece: Piece) {
+    editPermissions() {
+      const piece = this.selectedPiece;
       if (piece === undefined) {
-        piece = this.selectedPiece!;
+        throw new Error('piece is undefined')
       }
       this.editPermissionsModal = true;
       this.closeDropDown();
       this.editingPermissions = piece.permissions;
     },
 
-    editOwner(piece: Piece) {
+    editOwner() {
+      const piece = this.selectedPiece;
       if (piece === undefined) {
-        piece = this.selectedPiece!
+        throw new Error('piece is undefined')
       }
       this.editOwnerModal = true;
       this.closeDropDown();

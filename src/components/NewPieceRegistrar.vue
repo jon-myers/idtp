@@ -48,7 +48,7 @@
           </option>
         </select>
       </div>
-      <div class='formRow'>
+      <div class='formRow' v-if='instrumentation'>
         <label>Instrumentation</label>
         <select v-model='instrumentation[0]'>
           <option v-for='inst in instruments' :key='inst'>
@@ -171,7 +171,9 @@ import {
   getInstrumentation
 } from '@/js/serverCalls.ts';
 import RaagEditor from '@/components/RaagEditor.vue';
-export default {
+
+import { defineComponent } from 'vue';
+export default defineComponent({
   name: 'NewPieceRegistrar',
   data() {
     return {
@@ -340,7 +342,8 @@ export default {
           origID: this.passedInData.origID,
           instrumentation: this.instrumentation
         };
-        this.emitter.emit('newPieceInfo', newPieceInfo);
+        this.$emit('newPieceInfoEmit', newPieceInfo);
+        // this.emitter.emit('newPieceInfo', newPieceInfo);
         
       } else {
         const newPieceInfo = {
@@ -356,7 +359,8 @@ export default {
           newPieceInfo.audioID = ae.recordings[this.recording].audioFileId;
           // newPieceInfo.instrumentation = this.getInstrumentation()
         }
-        this.emitter.emit('newPieceInfo', newPieceInfo);
+        this.$emit('newPieceInfoEmit', newPieceInfo)
+        // this.emitter.emit('newPieceInfo', newPieceInfo);
         this.$parent.designPieceModal = false
       }
       
@@ -388,7 +392,7 @@ export default {
       return out.join('')
     },
   }
-}
+})
 </script>
 
 <style scoped>
