@@ -192,7 +192,7 @@ type FileManagerType = {
   sortKeyNames: string[];
   editTitleModal: boolean;
   editPermissionsModal: boolean;
-  passedInDataObj?: string,
+  passedInDataObj: string,
   editingTitle?: string,
   editingPermissions?: string,
   editOwnerModal: boolean,
@@ -290,7 +290,7 @@ export default defineComponent({
         'dateModified',
         'permissions',
       ],
-      passedInDataObj: undefined,
+      passedInDataObj: '',
       editTitleModal: false,
       editPermissionsModal: false,
       editOwnerModal: false,
