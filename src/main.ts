@@ -1,5 +1,5 @@
 import { createApp } from 'vue';
-import App from './App.vue';
+import App from '@/App.vue';
 import router from './router';
 import { createStore } from 'vuex';
 import vue3GoogleLogin from 'vue3-google-login';
@@ -65,5 +65,5 @@ app
     clientId: "324767655055-crhq76mdupavvrcedtde986glivug1nm.apps.googleuserc" +
       "ontent.com"
   })
-  .use(VueCookies, { expire: '7d' })
-  .mount('#app')
+  .use(VueCookies, { expires: '7d' })
+  .mount('#app');

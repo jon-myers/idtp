@@ -4438,6 +4438,9 @@ export default defineComponent({
             }
           }
         });
+        if (phrase.trajectoryGrid === undefined) {
+          phrase.trajectoryGrid = [];
+        }
         phrase.trajectoryGrid[0] = pt.map(traj => {
           return new Trajectory(traj)
         });

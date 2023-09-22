@@ -122,7 +122,7 @@ const savePiece = async (piece: Piece) => {
 const getAllPieces = async (
     userID: string, 
     sortKey: string, 
-    sortDir: string
+    sortDir?: string | number
   ): Promise<Piece[]> => {
   if (sortKey === undefined) {
     sortKey = 'title'
@@ -503,7 +503,13 @@ const getPerformanceSections = async (): Promise<string[]> => {
   return performanceSections
 };
 
-const createNewPiece = async (obj: object) => {
+type NewPieceDataType = {
+  acknowledged: boolean,
+  insertedId: string
+}
+
+
+const createNewPiece = async (obj: object): Promise<NewPieceDataType | undefined> => {
   const data = JSON.stringify(obj);
   let out;
   let request = {
@@ -518,7 +524,7 @@ const createNewPiece = async (obj: object) => {
       if (response.ok) {
         return response.json()
       }
-    }).then(data => {
+    }).then((data: NewPieceDataType) => {
       if (data) {
         out = data
       }
@@ -927,6 +933,14 @@ const cloneTranscription = async ({
   name = undefined,
   family_name = undefined,
   given_name = undefined
+}: {
+  id?: string,
+  title?: string,
+  newOwner?: string,
+  permissions?: string,
+  name?: string,
+  family_name?: string,
+  given_name?: string
 } = {}) => {
   let out;
   const request = {

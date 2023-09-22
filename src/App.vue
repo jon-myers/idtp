@@ -46,7 +46,7 @@
   <!-- <GoogleLogin :callback='loggedIn' v-show='false' prompt auto-login/> -->
 </template>
 
-<script>
+<script lang='ts'>
 import { 
   decodeCredential, 
   googleLogout, 
