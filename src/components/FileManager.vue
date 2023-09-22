@@ -25,7 +25,7 @@
       <div
         class="fileInfoRow"
         v-for="(piece, i) in allPieces"
-        :key="i"
+        :key="piece._id"
         @dblclick="openPieceAlt(piece)"
         :id="`fir${i}`"
         >
@@ -419,7 +419,12 @@ export default defineComponent({
         this.sorts[idx] = 1;
       }
       this.selectedSort = idx;
-      await this.updateSort();
+      try {
+        await this.updateSort();
+      } catch (err) {
+        console.log(err);
+      }
+      
     },
 
     async saveNewOwner() {
@@ -589,10 +594,15 @@ export default defineComponent({
       const id = this.$store.state.userID!;
       const sortKey = this.sortKeyNames[this.selectedSort];
       const sortDir = this.sorts[this.selectedSort];
-      this.allPieces = await getAllPieces(id, sortKey, sortDir);
-      this.allPieces.forEach(async (piece, i) => {
-        this.allPieceInfo[i] = this.pieceInfo(piece);
-      });
+      try {
+        this.allPieces = await getAllPieces(id, sortKey, sortDir);
+        this.allPieces.forEach(async (piece, i) => {
+          this.allPieceInfo[i] = this.pieceInfo(piece);
+        });
+      } catch (err) {
+        console.log(err);
+      }
+      
     },
 
     handleRightClick(e: MouseEvent) {
@@ -821,7 +831,7 @@ export default defineComponent({
 .infoKey.first {
   width: 220px;
   min-width: 220px;
-  max-width: 220px;
+  max-width: 300px;
 }
 
 .addNewPiece {
