@@ -233,6 +233,21 @@ type RagaNewPieceInfoType = {
   name?: string;
 }
 
+type PassedDataType = {
+  title: string;
+  raga: Raga;
+  audioEvent: string;
+  audioRecording: RecType;
+  origID: string;
+  family_name?: string;
+  given_name?: string;
+  name?: string;
+  instrumentation?: string[];
+  transcriber?: string;
+}
+
+export type { PassedDataType }
+
 export default defineComponent({
   name: 'FileManager',
   data(): FileManagerType {
@@ -343,7 +358,6 @@ export default defineComponent({
   methods: {
 
     async acceptNewPieceInfo(newPieceInfo: NewPieceInfoType) {
-      console.log(newPieceInfo)
       try {
         if (newPieceInfo.clone) {
           const id = newPieceInfo.origID;
@@ -410,6 +424,7 @@ export default defineComponent({
       } catch (err) {
         console.log(err);
       }
+      this.designPieceModal = false
     },
 
     async toggleSort(idx: number) {
@@ -539,17 +554,7 @@ export default defineComponent({
       try {
         const audioRecording = await getAudioRecording(piece.audioID);
         const audioEvent = await getAudioEvent(audioRecording.parentID);
-        const dataObj: {
-          title: string;
-          raga: Raga;
-          audioEvent: string;
-          audioRecording: RecType;
-          origID: string;
-          family_name?: string;
-          given_name?: string;
-          name?: string;
-          instrumentation?: string[];
-        } = {
+        const dataObj: PassedDataType = {
           title: piece.title + ' (clone)',
           raga: piece.raga,
           audioEvent: audioEvent.name,

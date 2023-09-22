@@ -112,7 +112,7 @@
     <span class='close-x'></span>
   </div>
 </template>
-<script>
+<script lang='ts'>
  
 import { getRagaNames, getRaagRule, saveRaagRules } from '@/js/serverCalls.ts';
 
