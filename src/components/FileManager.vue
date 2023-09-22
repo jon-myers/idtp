@@ -26,7 +26,7 @@
         class="fileInfoRow"
         v-for="(piece, i) in allPieces"
         :key="i"
-        @dblclick="openPieceAlt()"
+        @dblclick="openPieceAlt(piece)"
         :id="`fir${i}`"
         >
         <div
@@ -459,16 +459,18 @@ export default defineComponent({
       return month + '/' + day + '/' + year;
     },
 
-    openPieceAlt() {
-      const piece = this.selectedPiece;
-      if (piece === undefined) {
+    openPieceAlt(piece?: Piece) {
+      if (piece) {
+        this.selectedPiece = piece;
+      }
+      if (this.selectedPiece === undefined) {
         throw new Error('piece is undefined')
       }
-      this.$store.commit('update_id', piece._id);
-      this.$cookies.set('currentPieceId', piece._id);
+      this.$store.commit('update_id', this.selectedPiece._id);
+      this.$cookies.set('currentPieceId', this.selectedPiece._id);
       this.$router.push({
         name: 'EditorComponent',
-        query: { id: piece._id },
+        query: { id: this.selectedPiece._id },
       });
     },
 
@@ -626,7 +628,7 @@ export default defineComponent({
         let el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement;
         const parentNode = el.parentNode as HTMLElement;
         if (el.classList[0] === 'overflowX') {
-          el = el.parentElement!;
+          el = el.parentElement!.parentElement!;
         }
         if (el.classList[0] === 'fileInfoRow') {
           const num = Number(el.id.slice(3));
