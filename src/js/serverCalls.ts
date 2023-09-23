@@ -175,7 +175,16 @@ const getAllAudioFileMetaData = async () => {
 };
 
 
-const getAllAudioEventMetadata = async () => {
+type AudioEventMetadataType = {
+  _id: string,
+  userID: string,
+  permissions: string,
+  "event type": string,
+  name: string,
+  recordings: RecType[]
+}
+
+const getAllAudioEventMetadata = async (): Promise<AudioEventMetadataType[]> => {
   let allAudioEvents;
   const request = {
     method: 'GET',
@@ -188,10 +197,11 @@ const getAllAudioEventMetadata = async () => {
     if (response.ok) {
       allAudioEvents = await response.json()
     }
-    return allAudioEvents
+    
   } catch (err) {
     console.error(err)
   }
+  return allAudioEvents
 }
 
 const getAudioEvent = async (_id: string) => {
@@ -346,7 +356,7 @@ const getGharana = async (initName: string) => {
     return gharana  
 };
 
-const getInstruments = async (melody: boolean): Promise<string[]> => {
+const getInstruments = async (melody: boolean = true): Promise<string[]> => {
   melody = melody || false;
   const searchParams = new URLSearchParams({ melody: 'true' });
   const suffix = melody ? '?' + searchParams : '';
@@ -461,7 +471,7 @@ type LocationType = {
   }
 }
 
-export type { LocationType };
+export type { LocationType, AudioEventMetadataType };
 
 const getLocationObject = async (): Promise<LocationType> => {
   // gets location object
