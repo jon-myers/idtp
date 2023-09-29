@@ -39,6 +39,9 @@ const initSectionCategorization = () => {
       "Ektal": false,
       "Tintal": false,
       "Rupak": false,
+    },
+    "Improvisation": {
+      "Improvisation": false,
     }
   }
 }
@@ -1594,6 +1597,9 @@ type SectionCategorizationType = {
     "Ektal": boolean,
     "Tintal": boolean,
     "Rupak": boolean
+  },
+  "Improvisation": {
+    "Improvisation": boolean,
   }
 }
 
@@ -2184,6 +2190,11 @@ class Piece {
     }
     if (sectionCategorization !== undefined) {
       this.sectionCategorization = sectionCategorization;
+      this.sectionCategorization.forEach(c => {
+        if (c['Improvisation'] === undefined) {
+          c['Improvisation'] = { "Improvisation": false }
+        }
+      })
     } else {
       this.sectionCategorization = this.sectionStarts.map(() => {
         return initSectionCategorization()
@@ -2423,7 +2434,6 @@ class Piece {
     return pulse
   }
 
-
   toJSON() {
     return {
       phrases: this.phrases,
@@ -2449,7 +2459,6 @@ class Piece {
       sectionCategorization: this.sectionCategorization,
     }
   }
-
 }
 
 const yamanRuleSet = {
