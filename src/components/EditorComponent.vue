@@ -3235,7 +3235,6 @@ export default defineComponent({
         d3SelectAll('.insertPulse').remove();
       }
       if (this.meterMode) {
-        console.log('getting to here')
         const allPulses: Pulse[] = []
         this.piece.meters.forEach(meter => {
           allPulses.push(...meter.allPulses)
@@ -3261,7 +3260,9 @@ export default defineComponent({
         this.selectedMeter = meter;
         meterControls.meter = meter;
         //should go to the meter controls, if not selected
-        audioPlayer.openMeterControls();
+        if (audioPlayer.showMeterControls === false) {
+          audioPlayer.toggleMeterControls()
+        }
         d3SelectAll('.metricGrid')
           .attr('stroke', this.meterColor)
         d3SelectAll(`.meterId_${pulse.meterId}`)
@@ -4235,7 +4236,9 @@ export default defineComponent({
           const meterControls = ap.$refs.meterControls;
           meterControls.insertPulseMode = true;
           meterControls.prevMeter = false;
-          ap.openMeterControls();
+          if (ap.showMeterControls === false) {
+            ap.toggleMeterControls();
+          }
           d3SelectAll('.phrase').style('cursor', 's-resize');
           d3SelectAll('.articulation').selectAll('*').style('cursor', 's-resize');
         } else {
