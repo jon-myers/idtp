@@ -146,6 +146,7 @@ const runServer = async () => {
       }
     });
 
+
     app.get('/getAllTranscriptions', async (req, res) => {
       try {
         const userID = JSON.parse(req.query.userID);
@@ -200,7 +201,7 @@ const runServer = async () => {
 
     app.get('/getAllTranscriptionsOfAudioFile', async (req, res) => {
       const query = {
-        audioID: ObjectId(req.query.audioID),
+        audioID: req.query.audioID,
         $or: [
           { userID: req.query.userID },
           { permissions: { $in: ['Public', 'Publicly Editable'] } }
@@ -233,6 +234,17 @@ const runServer = async () => {
         res.status(500).send(err);
       }
     });
+
+    app.get('/allUsers', async (req, res) => {
+      try {
+        const result = await users.find().toArray();
+        res.send(await JSON.stringify(result))
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+
+    })
 
     app.get('/getAllAudioFileMetaData', async (req, res) => {
       // get all relevent data for audio files
@@ -618,6 +630,23 @@ const runServer = async () => {
       try {
         const query = { _id: ObjectId(req.body.id) };
         const update = { $set: { permissions: req.body.permissions} };
+        const result = await transcriptions.updateOne(query, update);
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
+    app.post('/updateTranscriptionOwner', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.body.transcriptionID) };
+        const update = { $set: { 
+          userID: req.body.userID,
+          name: req.body.name,
+          family_name: req.body.family_name,
+          given_name: req.body.given_name
+        } };
         const result = await transcriptions.updateOne(query, update);
         res.json(result)
       } catch (err) {

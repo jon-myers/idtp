@@ -4,6 +4,7 @@ import { AxiosProgressEvent } from 'axios';
 import fetch from 'cross-fetch';
 import { Piece } from './classes.ts';
 import { RecType } from './components/AddAudioEvent.vue';
+import { UserType } from './components/FileManager.vue';
 
 const getPiece = async (id: string): Promise<Piece> => {
   let piece;
@@ -121,7 +122,7 @@ const savePiece = async (piece: Piece) => {
 const getAllPieces = async (
     userID: string, 
     sortKey: string, 
-    sortDir: string
+    sortDir?: string | number
   ): Promise<Piece[]> => {
   if (sortKey === undefined) {
     sortKey = 'title'
@@ -174,7 +175,16 @@ const getAllAudioFileMetaData = async () => {
 };
 
 
-const getAllAudioEventMetadata = async () => {
+type AudioEventMetadataType = {
+  _id: string,
+  userID: string,
+  permissions: string,
+  "event type": string,
+  name: string,
+  recordings: RecType[]
+}
+
+const getAllAudioEventMetadata = async (): Promise<AudioEventMetadataType[]> => {
   let allAudioEvents;
   const request = {
     method: 'GET',
@@ -187,10 +197,11 @@ const getAllAudioEventMetadata = async () => {
     if (response.ok) {
       allAudioEvents = await response.json()
     }
-    return allAudioEvents
+    
   } catch (err) {
     console.error(err)
   }
+  return allAudioEvents
 }
 
 const getAudioEvent = async (_id: string) => {
@@ -345,7 +356,7 @@ const getGharana = async (initName: string) => {
     return gharana  
 };
 
-const getInstruments = async (melody: boolean): Promise<string[]> => {
+const getInstruments = async (melody: boolean = true): Promise<string[]> => {
   melody = melody || false;
   const searchParams = new URLSearchParams({ melody: 'true' });
   const suffix = melody ? '?' + searchParams : '';
@@ -460,7 +471,7 @@ type LocationType = {
   }
 }
 
-export type { LocationType };
+export type { LocationType, AudioEventMetadataType };
 
 const getLocationObject = async (): Promise<LocationType> => {
   // gets location object
@@ -502,7 +513,13 @@ const getPerformanceSections = async (): Promise<string[]> => {
   return performanceSections
 };
 
-const createNewPiece = async (obj: object) => {
+type NewPieceDataType = {
+  acknowledged: boolean,
+  insertedId: string
+}
+
+
+const createNewPiece = async (obj: object): Promise<NewPieceDataType | undefined> => {
   const data = JSON.stringify(obj);
   let out;
   let request = {
@@ -517,7 +534,7 @@ const createNewPiece = async (obj: object) => {
       if (response.ok) {
         return response.json()
       }
-    }).then(data => {
+    }).then((data: NewPieceDataType) => {
       if (data) {
         out = data
       }
@@ -892,15 +909,49 @@ const updateTranscriptionPermissions = async (id: string, permissions: string) =
   }
 }
 
-  const cloneTranscription = async ({
-    id = undefined,
-    title = undefined,
-    newOwner = undefined,
-    permissions = undefined,
-    name = undefined,
-    family_name = undefined,
-    given_name = undefined
-  } = {}) => {
+const updateTranscriptionOwner = async (id: string, ownerObj: UserType) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      transcriptionID: id,
+      userID: ownerObj['_id'],
+      name: ownerObj['name'],
+      family_name: ownerObj['family_name'],
+      given_name: ownerObj['given_name']
+    })
+  };
+  try {
+    const res = await fetch(url + 'updateTranscriptionOwner', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const cloneTranscription = async ({
+  id = undefined,
+  title = undefined,
+  newOwner = undefined,
+  permissions = undefined,
+  name = undefined,
+  family_name = undefined,
+  given_name = undefined
+}: {
+  id?: string,
+  title?: string,
+  newOwner?: string,
+  permissions?: string,
+  name?: string,
+  family_name?: string,
+  given_name?: string
+} = {}) => {
   let out;
   const request = {
     method: 'POST',
@@ -986,6 +1037,25 @@ const getConsonants = async () => {
   }
 }
 
+const getAllUsers = async () => {
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const response = await fetch(url + 'allUsers', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
 
 export { 
   getPiece,
@@ -1029,5 +1099,7 @@ export {
   getInstrumentation,
   getIpaVowels,
   getConsonants,
-  getAllTransOfAudioFile
+  getAllTransOfAudioFile,
+  getAllUsers,
+  updateTranscriptionOwner
 }

@@ -20,14 +20,16 @@
           <select 
             class='c2' 
             v-model='recording' 
-            v-if='aeIdx >= 0' 
+            v-if='aeIdx && aeIdx >= 0' 
             ref='audioRec'
           >
             <option
               v-for='(recIdx, i) in Object.keys(allEvents[aeIdx].recordings)'
               :key='i'
               :value='recIdx'
-            >{{getShorthand(allEvents[aeIdx].recordings[recIdx])}}</option>
+            >
+              {{getShorthand(allEvents[aeIdx].recordings[Number(recIdx)])}}
+            </option>
           </select>
         </div>
       </div>
@@ -48,7 +50,7 @@
           </option>
         </select>
       </div>
-      <div class='formRow'>
+      <div class='formRow' v-if='instrumentation'>
         <label>Instrumentation</label>
         <select v-model='instrumentation[0]'>
           <option v-for='inst in instruments' :key='inst'>
@@ -168,22 +170,95 @@ import {
   getRaagRule, 
   saveRaagRules,
   getInstruments,
-  getInstrumentation
+  getInstrumentation,
 } from '@/js/serverCalls.ts';
 import RaagEditor from '@/components/RaagEditor.vue';
-export default {
+import type { AudioEventMetadataType } from '@/js/serverCalls.ts';
+import { defineComponent } from 'vue';
+import type { PassedDataType } from '@/components/FileManager.vue';
+import type { RecType } from '@/components/AddAudioEvent.vue';
+
+type RulesType = {
+  sa: boolean,
+  re: {
+    lowered: boolean,
+    raised: boolean
+  },
+  ga: {
+    lowered: boolean,
+    raised: boolean
+  },
+  ma: {
+    lowered: boolean,
+    raised: boolean
+  },
+  pa: boolean,
+  dha: {
+    lowered: boolean,
+    raised: boolean
+  },
+  ni: {
+    lowered: boolean,
+    raised: boolean
+  }
+}
+
+type NewPieceRegistrarDataType = {
+  title?: string;
+  transcriber?: string;
+  raga?: string;
+  allEvents: AudioEventMetadataType[];
+  aeIdx?: number;
+  recording?: number;
+  raags?: string[];
+  showRaagEditor: boolean;
+  rules: RulesType,
+  savedMsg: string;
+  passedInData?: PassedDataType;
+  permissions: string;
+  cloning: boolean;
+  permissionTypes: string[];
+  rulesTemplate: RulesType;
+  instrumentation: string[];
+  instruments?: string[];
+}
+
+export default defineComponent({
   name: 'NewPieceRegistrar',
-  data() {
+  data(): NewPieceRegistrarDataType {
     return {
       title: undefined,
       transcriber: undefined,
       raga: undefined,
-      allEvents: undefined,
+      allEvents: [],
       aeIdx: undefined,
       recording: undefined,
       raags: undefined,
       showRaagEditor: false,
-      rules: undefined,
+      rules: {
+        sa: false,
+        re: {
+          lowered: false,
+          raised: false
+        },
+        ga: {
+          lowered: false,
+          raised: false
+        },
+        ma: {
+          lowered: false,
+          raised: false
+        },
+        pa: false,
+        dha: {
+          lowered: false,
+          raised: false
+        },
+        ni: {
+          lowered: false,
+          raised: false
+        }
+      },
       savedMsg: 'unsaved',
       passedInData: undefined,
       permissions: 'Public',
@@ -222,29 +297,45 @@ export default {
     }
   },
   
-  props: ['modalWidth', 'modalHeight', 'dataObj'],
-  
+  props: {
+    modalWidth: {
+      type: Number,
+    },
+    modalHeight: {
+      type: Number,
+    },
+    dataObj: {
+      type: String,
+      required: true
+    },
+  },
+    
   async mounted() {
-    this.allEvents = await getAllAudioEventMetadata();
-    this.raags = await getRagaNames();
-    this.rules = this.rulesTemplate;
-    if (this.dataObj) { // this is exclusively for cloning
-      this.clonePiece(this.dataObj)
+    try {
+      this.allEvents = await getAllAudioEventMetadata();
+      this.raags = await getRagaNames();
+      this.rules = this.rulesTemplate;
+      if (this.dataObj) { // this is exclusively for cloning
+        this.clonePiece()
+      }
+      if (this.$route.query.aeName) {
+        const allNames = this.allEvents.map(obj => obj.name);
+        this.aeIdx = allNames.indexOf(JSON.parse(this.$route.query.aeName as string));
+        const recs = this.allEvents[this.aeIdx].recordings;
+        const allRecNames = await Object.keys(recs).map(key => {
+          const rec = recs[Number(key)];
+          return this.getShorthand(rec)
+        });
+        const parsed = JSON.parse(this.$route.query.afName as string);
+        this.recording = allRecNames.indexOf(parsed);
+        this.raga = Object.keys(recs[this.recording].raags)[0];
+        this.instrumentation = this.getInstrumentation();
+      }
+      this.instruments = await getInstruments();
+    } catch (err) {
+      console.log(err)
     }
-    if (this.$route.query.aeName) {
-      const allNames = this.allEvents.map(obj => obj.name);
-      this.aeIdx = allNames.indexOf(JSON.parse(this.$route.query.aeName));
-      const recs = this.allEvents[this.aeIdx].recordings;
-      const allRecNames = await Object.keys(recs).map(key => {
-        const rec = recs[key];
-        return this.getShorthand(rec)
-      });
-      const parsed = JSON.parse(this.$route.query.afName);
-      this.recording = allRecNames.indexOf(parsed);
-      this.raga = Object.keys(recs[this.recording].raags)[0];
-      this.instrumentation = this.getInstrumentation();
-    }
-    this.instruments = await getInstruments();
+    
   },
   
   watch: {
@@ -254,6 +345,9 @@ export default {
     
     async recording(newVal) {
       if (newVal) {
+        if (this.aeIdx === undefined) {
+          throw new Error('aeIdx is undefined')
+        }
         const ae = this.allEvents[this.aeIdx];
         const raags = ae.recordings[newVal].raags;
         const keys = Object.keys(raags);
@@ -286,9 +380,9 @@ export default {
     }
   },
   
-  components: [
+  components: {
     RaagEditor
-  ],
+  },
   
   methods: {
 
@@ -296,23 +390,29 @@ export default {
       this.cloning = true;
       
       try {
-        this.passedInData = JSON.parse(this.dataObj);
+        this.passedInData = JSON.parse(this.dataObj)!;
+        if (this.passedInData === undefined) {
+          throw new Error('passedInData is undefined')
+        }
         this.title = this.passedInData.title;
-        this.instrumentation = this.passedInData.instrumentation;
+        this.instrumentation = this.passedInData.instrumentation!;
         this.aeIdx = this.allEvents.findIndex(ae => {
-          return ae.name === this.passedInData.audioEvent
+          return ae.name === this.passedInData!.audioEvent
         });
         const recs = this.allEvents[this.aeIdx].recordings;
         const allRecNames = await Object.keys(recs).map(key => {
-          const rec = recs[key];
+          const rec = recs[Number(key)];
           return this.getShorthand(rec)
         });
         const rec = this.getShorthand(this.passedInData.audioRecording);
         this.recording = allRecNames.indexOf(rec);
         this.raga = this.passedInData.raga.name;
-        this.$refs.audioEvent.disabled = true;
-        this.$refs.audioRec.disabled = true;
-        this.$refs.raga.disabled = true;
+        const aeElem = this.$refs.audioEvent as HTMLSelectElement;
+        const arElem = this.$refs.audioRec as HTMLSelectElement;
+        const rElem = this.$refs.raga as HTMLSelectElement;
+        aeElem.disabled = true;
+        arElem.disabled = true;
+        rElem.disabled = true;
       } catch (err) {
         console.log(err)
       }
@@ -321,7 +421,7 @@ export default {
     
     async save() {
       const date = new Date();
-      const res = await saveRaagRules(this.raga, this.rules, date);
+      const res = await saveRaagRules(this.raga!, this.rules!, date);
       if (res) {
         this.savedMsg = 'Saved: ' + date.toLocaleString()
       }
@@ -329,21 +429,33 @@ export default {
     
     async makeNewPiece() {
       if (this.cloning) {
-        const ae = this.allEvents[this.aeIdx];
+        if (this.passedInData === undefined) {
+          throw new Error('passedInData is undefined')
+        }
+        const ae = this.allEvents[this.aeIdx!];
         const newPieceInfo = {
           title: this.title,
           transcriber: this.passedInData.transcriber,
           raga: this.passedInData.raga,
           permissions: this.permissions,
-          audioID: ae.recordings[this.recording].audioFileId,
+          audioID: ae.recordings[this.recording!].audioFileId,
           clone: true,
           origID: this.passedInData.origID,
           instrumentation: this.instrumentation
         };
-        this.emitter.emit('newPieceInfo', newPieceInfo);
+        this.$emit('newPieceInfoEmit', newPieceInfo);
+        // this.emitter.emit('newPieceInfo', newPieceInfo);
         
       } else {
-        const newPieceInfo = {
+        const newPieceInfo: {
+          title?: string,
+          transcriber?: string,
+          raga?: string,
+          permissions?: string,
+          clone: boolean,
+          audioID?: string,
+          instrumentation: string[]
+        } = {
           title: this.title,
           transcriber: this.transcriber,
           raga: this.raga,
@@ -356,16 +468,15 @@ export default {
           newPieceInfo.audioID = ae.recordings[this.recording].audioFileId;
           // newPieceInfo.instrumentation = this.getInstrumentation()
         }
-        this.emitter.emit('newPieceInfo', newPieceInfo);
-        this.$parent.designPieceModal = false
+        this.$emit('newPieceInfoEmit', newPieceInfo)
       }
       
     },
 
     getInstrumentation() {
-      const rec = this.allEvents[this.aeIdx].recordings[this.recording];
+      const rec = this.allEvents[Number(this.aeIdx)].recordings[Number(this.recording)];
       const musicians = Object.keys(rec.musicians);
-      const instrumentation = [];
+      const instrumentation: string[] = [];
       musicians.forEach(m => {
         if (rec.musicians[m].role === 'Soloist') {
           instrumentation.push(rec.musicians[m].instrument)
@@ -375,12 +486,13 @@ export default {
     },
   
     
-    getShorthand(rec) {
-      const out = [];
+    getShorthand(rec: RecType) {
+      const out: string[] = [];
       const raagNames = Object.keys(rec.raags);
       raagNames.forEach(rn => {
         out.push(rn, ' - ');
-        const pSecs = Object.keys(rec.raags[rn]['performance sections']);
+        const obj = rec.raags[rn]['performance sections']!;
+        const pSecs = Object.keys(obj);
         pSecs.forEach((pSec, i) => {
           out.push(pSec, i !== pSecs.length - 1 ? ', ' : '; ');
         })
@@ -388,7 +500,7 @@ export default {
       return out.join('')
     },
   }
-}
+})
 </script>
 
 <style scoped>

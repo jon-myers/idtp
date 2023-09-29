@@ -10,7 +10,7 @@
         v-for="(ik, idx) in infoKeys"
         :key="ik"
         :class="`infoKey ${['', 'first'][Number(idx === 0)]}`"
-      >
+        >
         {{ ik }}
         <span
           :class="`sorter ${['', 'selectedTri'][Number(selectedSort === idx)]}`"
@@ -25,16 +25,18 @@
       <div
         class="fileInfoRow"
         v-for="(piece, i) in allPieces"
-        :key="piece"
+        :key="piece._id"
         @dblclick="openPieceAlt(piece)"
         :id="`fir${i}`"
-      >
+        >
         <div
           :class="`infoKey ${['', 'first'][Number(idx === 0)]}`"
           v-for="(info, idx) in allPieceInfo[i]"
           :key="info"
-        >
-          {{ info }}
+          >
+          <div class='overflowX'>
+            {{ info }}
+          </div>
         </div>
       </div>
     </div>
@@ -46,32 +48,39 @@
     >
       New Transcription
     </div>
-    <div v-if="open_" class="dropDownRow" @click="openPieceAlt(piece)">
+    <div v-if="open_" class="dropDownRow" @click="openPieceAlt()">
       Open In Editor
     </div>
-    <div v-if="open_" class="dropDownRow" @click="openInAnalyzer(piece)">
+    <div v-if="open_" class="dropDownRow" @click="openInAnalyzer()">
       Open In Analyzer
     </div>
-    <div class="dropDownRow" @click="clonePiece(piece)" v-if='open_'>
+    <div class="dropDownRow" @click="clonePiece()" v-if='open_'>
       Clone Transcription
     </div>
     <div 
       :class="`dropDownRow ${['inactive', ''][Number(deleteActive)]}`" 
-      @click='editTitle(piece)' 
+      @click='editTitle()' 
       v-if='open_'
     >
       Edit Title
     </div>
     <div 
       :class="`dropDownRow ${['inactive', ''][Number(deleteActive)]}`" 
-      @click='editPermissions(piece)' 
+      @click='editPermissions()' 
       v-if='open_'
     >
       Edit Permissions
     </div>
-    <div class='dropDownRow' @click='copyLink' v-if='open_'>
-      Copy Link
+    <div 
+      :class="`dropDownRow ${['inactive', ''][Number(deleteActive)]}`"
+      @click='editOwner()'
+      v-if='open_'
+      >
+      Edit Owner
     </div>
+      <div class='dropDownRow' @click='copyLink' v-if='open_'>
+        Copy Link
+      </div>
     <div
       v-if="delete_"
       :class="`dropDownRow last ${['inactive', ''][Number(deleteActive)]}`"
@@ -86,6 +95,7 @@
       :modalWidth="modalWidth"
       :modalHeight="modalHeight"
       :dataObj='passedInDataObj'
+      @newPieceInfoEmit="acceptNewPieceInfo"
     />
   </div>
   <div v-if='editTitleModal' class='titleModal'>
@@ -110,6 +120,18 @@
       <button @click='cancelPermissions'>Cancel</button>
     </div>
   </div>
+  <div v-if='editOwnerModal' class='ownerModal'>
+    <div class='modalRow'>
+      <select v-model='editingUserIdx'>
+        <option v-for='(user, i) in allUsers' :key='i' :value='i'>
+          {{allNames![i]}}
+        </option>
+      </select>
+    </div>
+    <div class='modalRow'>
+      <button @click='saveNewOwner'>Save New Owner</button>
+    </div>
+  </div>
 </template>
 <script lang='ts'>
 import {
@@ -122,11 +144,26 @@ import {
   cloneTranscription,
   updateTranscriptionTitle,
   updateTranscriptionPermissions,
+  updateTranscriptionOwner,
+  getAllUsers
 } from '@/js/serverCalls.ts';
 import NewPieceRegistrar from '@/components/NewPieceRegistrar.vue';
 import { Raga, Piece, Trajectory, Phrase } from '@/js/classes.ts';
 
 import { defineComponent } from 'vue';
+import { RecType } from '@/components/AddAudioEvent.vue'
+
+
+type UserType = {
+  email: string;
+  family_name: string;
+  given_name: string;
+  name: string;
+  picture: string;
+  sub: string;
+  waiverAgreed: boolean;
+  _id: string;
+}
 
 type FileManagerType = {
   infoKeys: string[];
@@ -148,19 +185,68 @@ type FileManagerType = {
   titleModalHeight: number;
   permissionsModalWidth: number;
   permissionsModalHeight: number;
+  ownerModalWidth: number;
+  ownerModalHeight: number;
   sorts: number[];
   selectedSort: number;
   sortKeyNames: string[];
   editTitleModal: boolean;
   editPermissionsModal: boolean;
-  passedInDataObj?: {
-    [key: string]: string
-  },
+  passedInDataObj: string,
   editingTitle?: string,
   editingPermissions?: string,
+  editOwnerModal: boolean,
+  allUsers?: UserType[],
+  allNames?: string[],
+  editingUserIdx?: number
 }
 
 type PieceInfoType = [string?, string?, string?, string?, string?, string?];
+
+type NewPieceInfoType = {
+  title: string;
+  transcriber?: string;
+  raga: string | Raga;
+  audioID: string;
+  permissions: string;
+  clone?: boolean;
+  origID: string;
+  instrumentation?: string[];
+  phrases?: Phrase[];
+  family_name?: string;
+  given_name?: string;
+  name?: string;
+}
+
+type RagaNewPieceInfoType = {
+  title: string;
+  transcriber?: string;
+  raga: Raga;
+  audioID: string;
+  permissions: string;
+  clone?: boolean;
+  origID: string;
+  instrumentation?: string[];
+  phrases?: Phrase[];
+  family_name?: string;
+  given_name?: string;
+  name?: string;
+}
+
+type PassedDataType = {
+  title: string;
+  raga: Raga;
+  audioEvent: string;
+  audioRecording: RecType;
+  origID: string;
+  family_name?: string;
+  given_name?: string;
+  name?: string;
+  instrumentation?: string[];
+  transcriber?: string;
+}
+
+export type { PassedDataType }
 
 export default defineComponent({
   name: 'FileManager',
@@ -170,8 +256,8 @@ export default defineComponent({
         'Title',
         'Transcriber',
         'Raga',
-        'Date Created',
-        'Date Modified',
+        'Created',
+        'Modified',
         'Permissions',
       ],
       designPieceModal: false,
@@ -192,6 +278,8 @@ export default defineComponent({
       titleModalHeight: 100,
       permissionsModalWidth: 300,
       permissionsModalHeight: 100,
+      ownerModalWidth: 300,
+      ownerModalHeight: 200,
       sorts: [1, 1, 1, 1, 1, 1],
       selectedSort: 0,
       sortKeyNames: [
@@ -202,11 +290,15 @@ export default defineComponent({
         'dateModified',
         'permissions',
       ],
-      passedInDataObj: undefined,
+      passedInDataObj: '',
       editTitleModal: false,
       editPermissionsModal: false,
+      editOwnerModal: false,
       editingTitle: undefined,
       editingPermissions: undefined,
+      allUsers: undefined,
+      allNames: undefined,
+      editingUserIdx: undefined,
     };
   },
 
@@ -244,8 +336,28 @@ export default defineComponent({
     if (this.$route.query.aeName && this.$route.query.afName) {
       this.designNewPiece();
     }
+    try {
+      this.allUsers = await getAllUsers();
+      if (this.allUsers !== undefined) {
+        this.allNames = this.allUsers.map(user => {
+          return user.name + ' (' + user.email + ' )'
+        });
+      } else {
+        throw new Error('this.allUsers is undefined');
+      }
+        
+    } catch (err) {
+      console.log(err)
+    }
+  },
 
-    this.emitter.on('newPieceInfo', async (newPieceInfo) => {
+  beforeUnmount() {
+    window.removeEventListener('keydown', this.handleKeydown);
+  },
+
+  methods: {
+
+    async acceptNewPieceInfo(newPieceInfo: NewPieceInfoType) {
       try {
         if (newPieceInfo.clone) {
           const id = newPieceInfo.origID;
@@ -270,11 +382,12 @@ export default defineComponent({
           });
         } else {
           const npi = Object.assign({}, newPieceInfo);
-          delete npi.clone
-          const rsRes = await getRaagRule(npi.raga);
+          delete npi.clone;
+          const stringRaga = npi.raga as string;
+          const rsRes = await getRaagRule(stringRaga);
           const ruleSet = rsRes.rules;
           npi.raga = new Raga({
-            name: npi.raga,
+            name: stringRaga,
             ruleSet: ruleSet,
           });
           let durTot;
@@ -284,7 +397,12 @@ export default defineComponent({
           } else {
             durTot = 60;
           }
-          const tObj = {
+          const tObj: {
+            id: number;
+            durTot: number;
+            fundID12: number;
+            instrumentation?: string;
+          } = {
             id: 12,
             durTot: durTot,
             fundID12: npi.raga.fundamental,
@@ -301,20 +419,14 @@ export default defineComponent({
           npi.family_name = this.$store.state.lastName;
           npi.given_name = this.$store.state.firstName;
 
-          this.createNewPiece(npi);
+          this.createNewPiece(npi as RagaNewPieceInfoType);
         }
       } catch (err) {
         console.log(err);
       }
-    });
-  },
+      this.designPieceModal = false
+    },
 
-  beforeUnmount() {
-    this.emitter.off('newPieceInfo');
-    window.removeEventListener('keydown', this.handleKeydown);
-  },
-
-  methods: {
     async toggleSort(idx: number) {
       if (this.sorts[idx] === 1) {
         this.sorts[idx] = -1;
@@ -322,7 +434,24 @@ export default defineComponent({
         this.sorts[idx] = 1;
       }
       this.selectedSort = idx;
-      await this.updateSort();
+      try {
+        await this.updateSort();
+      } catch (err) {
+        console.log(err);
+      }
+      
+    },
+
+    async saveNewOwner() {
+      const id = this.selectedPiece!._id!;
+      const ownerObj = this.allUsers![this.editingUserIdx!];
+      try {
+        await updateTranscriptionOwner(id, ownerObj);
+        await this.updateSort();
+      } catch (err) {
+        console.log(err);
+      }
+      this.editOwnerModal = false;
     },
 
     pieceInfo(p: Piece): PieceInfoType {
@@ -342,7 +471,7 @@ export default defineComponent({
       return [title, name, raga, dateCreated, dateModified, permissions];
     },
 
-    writeDate(d) {
+    writeDate(d: Date) {
       const date = new Date(d);
       const month = date.getMonth() + 1;
       const day = date.getDate();
@@ -351,24 +480,22 @@ export default defineComponent({
     },
 
     openPieceAlt(piece?: Piece) {
-      if (piece === undefined) {
-        piece = this.selectedPiece;
+      if (piece) {
+        this.selectedPiece = piece;
       }
-      if (piece === undefined) {
+      if (this.selectedPiece === undefined) {
         throw new Error('piece is undefined')
       }
-      this.$store.commit('update_id', piece._id);
-      this.$cookies.set('currentPieceId', piece._id);
+      this.$store.commit('update_id', this.selectedPiece._id);
+      this.$cookies.set('currentPieceId', this.selectedPiece._id);
       this.$router.push({
         name: 'EditorComponent',
-        query: { id: piece._id },
+        query: { id: this.selectedPiece._id },
       });
     },
 
-    openInAnalyzer(piece: Piece | undefined) {
-      if (piece === undefined) {
-        piece = this.selectedPiece;
-      }
+    openInAnalyzer() {
+      const piece = this.selectedPiece;
       if (piece === undefined) {
         throw new Error('piece is undefined')
       }
@@ -386,29 +513,38 @@ export default defineComponent({
       this.designPieceModal = true;
     },
 
-    createNewPiece(obj) {
+    createNewPiece(obj: RagaNewPieceInfoType) {
+      if (typeof obj.raga === 'string') {
+        throw new Error('obj.raga is a string')
+      }
       const piece = obj ? new Piece(obj) : new Piece();
       piece.userID = this.$store.state.userID;
       piece.name = this.$store.state.name;
       createNewPiece(piece).then((data) => {
+        if (data === undefined) {
+          throw new Error('data is undefined')
+        }
         this.$store.commit('update_id', data.insertedId);
         this.$cookies.set('currentPieceId', data.insertedId);
         this.$router.push({
           name: 'EditorComponent',
-          query: { id: data.insertedID },
+          query: { id: data.insertedId },
         });
       });
     },
 
     copyLink() {
       const piece = this.selectedPiece;
+      if (piece === undefined) {
+        throw new Error('piece is undefined')
+      }
       const url = window.location.origin + '/editor?id=' + piece._id;
       navigator.clipboard.writeText(url);
       this.closeDropDown();
     },
 
-    async clonePiece(piece?: Piece) {
-      if (piece === undefined) piece = this.selectedPiece;
+    async clonePiece() {
+      const piece = this.selectedPiece;
       if (piece === undefined) {
         throw new Error('piece is undefined')
       }
@@ -418,12 +554,12 @@ export default defineComponent({
       try {
         const audioRecording = await getAudioRecording(piece.audioID);
         const audioEvent = await getAudioEvent(audioRecording.parentID);
-        const dataObj = {
+        const dataObj: PassedDataType = {
           title: piece.title + ' (clone)',
           raga: piece.raga,
           audioEvent: audioEvent.name,
           audioRecording: audioRecording,
-          origID: piece._id,
+          origID: piece._id!,
           family_name: this.$store.state.lastName,
           given_name: this.$store.state.firstName,
           name: this.$store.state.name,
@@ -439,13 +575,16 @@ export default defineComponent({
     },
 
     async deletePiece() {
+      if (this.selectedPiece === undefined) {
+        throw new Error('selectedPiece is undefined')
+      }
       const isUser = this.$store.state.userID === this.selectedPiece.userID;
       if (this.delete_ && isUser) {
         const dropDown = this.$refs.dropDown as HTMLElement;
         dropDown.classList.add('closed');
         const res = await deletePiece(this.selectedPiece);
         if (res.deletedCount === 1) {
-          const id = this.$store.state.userID;
+          const id = this.$store.state.userID!;
           const sortKey = this.sortKeyNames[this.selectedSort];
           const sortDir = this.sorts[this.selectedSort];
           this.allPieces = await getAllPieces(id, sortKey, sortDir);
@@ -457,74 +596,89 @@ export default defineComponent({
     },
 
     async updateSort() {
-      const id = this.$store.state.userID;
+      const id = this.$store.state.userID!;
       const sortKey = this.sortKeyNames[this.selectedSort];
       const sortDir = this.sorts[this.selectedSort];
-      this.allPieces = await getAllPieces(id, sortKey, sortDir);
-      this.allPieces.forEach(async (piece, i) => {
-        this.allPieceInfo[i] = this.pieceInfo(piece);
-      });
+      try {
+        this.allPieces = await getAllPieces(id, sortKey, sortDir);
+        this.allPieces.forEach(async (piece, i) => {
+          this.allPieceInfo[i] = this.pieceInfo(piece);
+        });
+      } catch (err) {
+        console.log(err);
+      }
+      
     },
 
-    handleRightClick(e) {
+    handleRightClick(e: MouseEvent) {
       e.preventDefault();
-      this.dropDownLeft = e.clientX;
-      this.dropDownTop = e.clientY;
-      this.modalLeft = e.clientX;
-      this.modalTop = e.clientY;
-      const rect = this.$refs.fileContainer.getBoundingClientRect();
-      if (this.modalLeft + this.modalWidth > rect.width - 20) {
-        this.modalLeft = rect.width - 20 - this.modalWidth;
-      }
-      if (this.modalTop + this.modalHeight > rect.height - 20) {
-        this.modalTop = rect.height - 20 - this.modalHeight;
-      }
-      if (this.dropDownLeft + this.dropDownWidth > rect.width - 20) {
-        this.dropDownLeft = rect.width - 20 - this.dropDownWidth;
-      }
-      const dropDownRect = this.$refs.dropDown.getBoundingClientRect();
-      const dropDownHeight = dropDownRect.height;
-      if (this.dropDownTop + dropDownHeight > rect.height - 20) {
-        this.dropDownTop = rect.height - 20 - dropDownHeight;
-      }
-      this.designPieceModal = false;
+      this.$nextTick(() => {
+        this.dropDownLeft = e.clientX;
+        this.dropDownTop = e.clientY;
+        this.modalLeft = e.clientX;
+        this.modalTop = e.clientY;
+        const fc = this.$refs.fileContainer as HTMLElement;
+        const rect = fc.getBoundingClientRect();
+        if (this.modalLeft + this.modalWidth > rect.width - 20) {
+          this.modalLeft = rect.width - 20 - this.modalWidth;
+        }
+        if (this.modalTop + this.modalHeight > rect.height - 20) {
+          this.modalTop = rect.height - 20 - this.modalHeight;
+        }
+        if (this.dropDownLeft + this.dropDownWidth > rect.width - 20) {
+          this.dropDownLeft = rect.width - 20 - this.dropDownWidth;
+        }
+        const dd = this.$refs.dropDown as HTMLElement;
+        const dropDownRect = dd.getBoundingClientRect();
+        const dropDownHeight = dropDownRect.height;
+        if (this.dropDownTop + dropDownHeight > rect.height - 20) {
+          this.dropDownTop = rect.height - 20 - dropDownHeight;
+        }
+        this.designPieceModal = false;
 
-      document.querySelectorAll('.selected').forEach((el) => {
-        el.classList.remove('selected');
-      });
-      this.$refs.dropDown.classList.remove('closed');
-      const el = document.elementFromPoint(e.clientX, e.clientY);
-      if (el.classList[0] === 'fileInfoRow') {
-        const num = el.id.slice(3);
-        el.classList.add('selected');
-        this.selectedPiece = this.allPieces[num];
-        this.delete_ = true;
-        this.open_ = true;
-        if (this.allPieces[num].userID === this.$store.state.userID) {
-          this.deleteActive = true;
+        document.querySelectorAll('.selected').forEach((el) => {
+          el.classList.remove('selected');
+        });
+        dd.classList.remove('closed');
+        let el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement;
+        const parentNode = el.parentNode as HTMLElement;
+        if (el.classList[0] === 'overflowX') {
+          el = el.parentElement!.parentElement!;
+        }
+        if (el.classList[0] === 'fileInfoRow') {
+          const num = Number(el.id.slice(3));
+          el.classList.add('selected');
+          this.selectedPiece = this.allPieces![num];
+          this.delete_ = true;
+          this.open_ = true;
+          if (this.allPieces![num].userID === this.$store.state.userID) {
+            this.deleteActive = true;
+          } else {
+            this.deleteActive = false;
+          }
+        } else if (parentNode.classList[0] === 'fileInfoRow') {
+          const num = Number(parentNode.id.slice(3));
+          parentNode.classList.add('selected');
+          this.selectedPiece = this.allPieces![num];
+          this.delete_ = true;
+          this.open_ = true;
+          if (this.allPieces![num].userID === this.$store.state.userID) {
+            this.deleteActive = true;
+          } else {
+            this.deleteActive = false;
+          }
         } else {
+          this.delete_ = false;
+          this.open_ = false;
           this.deleteActive = false;
         }
-      } else if (el.parentNode.classList[0] === 'fileInfoRow') {
-        const num = el.parentNode.id.slice(3);
-        el.parentNode.classList.add('selected');
-        this.selectedPiece = this.allPieces[num];
-        this.delete_ = true;
-        this.open_ = true;
-        if (this.allPieces[num].userID === this.$store.state.userID) {
-          this.deleteActive = true;
-        } else {
-          this.deleteActive = false;
-        }
-      } else {
-        this.delete_ = false;
-        this.open_ = false;
-        this.deleteActive = false;
-      }
+      })
+      
     },
 
     closeDropDown() {
-      this.$refs.dropDown.classList.add('closed');
+      const dd = this.$refs.dropDown as HTMLElement;
+      dd.classList.add('closed');
       document.querySelectorAll('.selected').forEach((el) => {
         el.classList.remove('selected');
       });
@@ -546,46 +700,69 @@ export default defineComponent({
     },
 
     async saveTitle() {
-      const id = this.selectedPiece._id;
-      const title = this.editingTitle;
-      const result = await updateTranscriptionTitle(id, title);
+      const id = this.selectedPiece!._id!;
+      const title = this.editingTitle!;
+      await updateTranscriptionTitle(id, title);
       await this.updateSort();
       this.editTitleModal = false;
     },
 
     async savePermissions() {
-      const id = this.selectedPiece._id;
-      const permissions = this.editingPermissions;
-      const result = await updateTranscriptionPermissions(id, permissions);
+      const id = this.selectedPiece!._id!;
+      const permissions = this.editingPermissions!;
+      await updateTranscriptionPermissions(id, permissions);
       await this.updateSort();
       this.editPermissionsModal = false;
     },
 
-    editTitle(piece) {
+    async saveOwner() {
+      const id = this.selectedPiece!._id!;
+      const ownerObj = this.allUsers![this.editingUserIdx!];
+      await updateTranscriptionOwner(id, ownerObj);
+      await this.updateSort();
+      this.editOwnerModal = false;
+    },
+
+    editTitle() {
+      const piece = this.selectedPiece;
       if (piece === undefined) {
-        piece = this.selectedPiece;
+        throw new Error('piece is undefined')
       }
       this.editTitleModal = true;
       this.closeDropDown();
       this.editingTitle = piece.title;
     },
 
-    editPermissions(piece) {
+    editPermissions() {
+      const piece = this.selectedPiece;
       if (piece === undefined) {
-        piece = this.selectedPiece;
+        throw new Error('piece is undefined')
       }
       this.editPermissionsModal = true;
       this.closeDropDown();
       this.editingPermissions = piece.permissions;
     },
 
-    handleKeydown(e) {
+    editOwner() {
+      const piece = this.selectedPiece;
+      if (piece === undefined) {
+        throw new Error('piece is undefined')
+      }
+      this.editOwnerModal = true;
+      this.closeDropDown();
+      this.editingUserIdx = this.allUsers?.findIndex(user => {
+        return user._id === piece.userID
+      })      
+    },
+
+    handleKeydown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         e.preventDefault();
         this.closeDropDown();
         this.designPieceModal = false;
         this.editTitleModal = false;
         this.editPermissionsModal = false;
+        this.editOwnerModal = false;
         
       }
     },
@@ -658,6 +835,8 @@ export default defineComponent({
 
 .infoKey.first {
   width: 220px;
+  min-width: 220px;
+  max-width: 300px;
 }
 
 .addNewPiece {
@@ -709,6 +888,20 @@ export default defineComponent({
   justify-content: space-evenly;
 }
 
+.ownerModal {
+  width: v-bind(ownerModalWidth + 'px');
+  height: v-bind(ownerModalHeight + 'px');
+  border: 1px solid black;
+  position: fixed;
+  left: v-bind(modalLeft + 'px');
+  top: v-bind(modalTop + 'px');
+  background-color: lightgrey;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
 .modalRow {
   display: flex;
   flex-direction: row;
@@ -722,6 +915,11 @@ export default defineComponent({
   margin-right: 20px;
 }
 
+.modalRow > select {
+  width: 100%;
+  margin-left: 20px;
+  margin-right: 20px;
+}
 .dropDown {
   position: absolute;
   width: v-bind(dropDownWidth + 'px');
@@ -786,5 +984,25 @@ button {
 
 .sorter.selectedTri {
   color: white;
+}
+
+.overflowX {
+  white-space: nowrap;
+  text-align: left;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+.overflowX::-webkit-scrollbar {
+  width: 0em;
+  height: 0em;
+}
+
+.overflowX::-webkit-scrollbar-thumb {
+  background-color: #888;
+  border-radius: 0em;
 }
 </style>
