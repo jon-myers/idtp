@@ -75,7 +75,13 @@
 
 import { defineComponent, PropType } from 'vue';
 import { Piece, initSectionCategorization, Section } from '@/js/classes.ts';
-type topLevelOptionsType = 'Pre-Chiz Alap' | 'Alap' | 'Composition' | 'None';
+type topLevelOptionsType = (
+  'Pre-Chiz Alap' | 
+  'Alap' | 
+  'Composition' | 
+  'None' |
+  'Improvisation'
+  );
 
 type Section_TempoType = keyof Section['categorization']['Composition-section/Tempo'];
 type CompositionType = keyof Section['categorization']['Composition Type'];
@@ -99,6 +105,7 @@ export default defineComponent({
         'Pre-Chiz Alap',
         'Alap',
         'Composition',
+        'Improvisation',
         'None'
       ],
       topLevel: 'None',
@@ -127,6 +134,7 @@ export default defineComponent({
     const com = cat['Composition Type'];
     const comSecTemp = cat['Composition-section/Tempo'];
     const tala = cat['Tala'];
+    const improv = cat['Improvisation'];
     const someTrue = (obj: object) => Object.values(obj).some(x => x);
     if (cat['Pre-Chiz Alap']['Pre-Chiz Alap']) {
       this.topLevel = 'Pre-Chiz Alap'
@@ -142,6 +150,8 @@ export default defineComponent({
       this.section_tempo = comSecTempKeys.find(key => comSecTemp[key]);
       const talaKeys = Object.keys(tala) as TalaType[];
       this.tala = talaKeys.find(key => tala[key]);
+    } else if (improv['Improvisation']) {
+      this.topLevel = 'Improvisation'
     } else {
       this.topLevel = 'None'
     }
@@ -162,6 +172,11 @@ export default defineComponent({
         const altCat = this.piece.sectionCategorization[this.sectionNum];
         cat['Pre-Chiz Alap']['Pre-Chiz Alap'] = true;
         altCat['Pre-Chiz Alap']['Pre-Chiz Alap'] = true;
+      } else if (this.topLevel === 'Improvisation') {
+        const cat = this.section.categorization;
+        const altCat = this.piece.sectionCategorization[this.sectionNum];
+        cat['Improvisation']['Improvisation'] = true;
+        altCat['Improvisation']['Improvisation'] = true;
       }
       this.$emit('unsavedChanges');
     },
