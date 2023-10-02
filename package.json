@@ -13,11 +13,13 @@
     "deployGeneratePeaks": "rsync -a ./python/visualization_tools/generate_peaks.py root@137.184.90.119:generate_peaks.py",
     "deployGenerateSpectrograms": "rsync -a ./python/visualization_tools/generate_log_spectrograms.py root@137.184.90.119:generate_log_spectrograms.py",
     "deployMakeAllSpectrograms": "rsync -a ./python/visualization_tools/make_all_spectrograms.py root@137.184.90.119:make_all_spectrograms.py",
+    "deployMakeAllMelographs": "rsync -a ./python/visualization_tools/make_all_melographs.py root@137.184.90.119:make_all_melographs.py",
     "deployNodemonConfig": "rsync -a ./nodemon.json root@137.184.90.119:nodemon.json",
     "deployProcessAudio": "rsync -a ./python/process_audio.py root@137.184.90.119:process_audio.py",
     "deployServer": "rsync -a ./server.js root@137.184.90.119:server.js",
     "deployMakeExcel": "rsync -a ./python/cleanJson/make_excel.py root@137.184.90.119:make_excel.py",
     "deployFixDurations": "rsync -a ./python/dataManagement/aggregations/fix_durations.py root@137.184.90.119:fix_durations.py",
+    "deployGenerateMelograph": "rsync -a ./python/visualization_tools/generate_melograph.py root@swara.studio:generate_melograph.py",
     "test": "vitest"
   },
   "main": "background.js",
