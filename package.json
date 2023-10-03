@@ -87,7 +87,9 @@
       "plugin:vue/vue3-essential",
       "eslint:recommended"
     ],
-    "rules": {}
+    "rules": {
+      "no-console": "off"
+    }
   },
   "browserslist": [
     "> 1%",

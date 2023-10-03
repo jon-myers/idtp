@@ -3,8 +3,8 @@ import axios from 'axios';
 import { AxiosProgressEvent } from 'axios';
 import fetch from 'cross-fetch';
 import { Piece } from './classes.ts';
-import { RecType } from './components/AddAudioEvent.vue';
-import { UserType } from './components/FileManager.vue';
+import { RecType } from '@/components/AddAudioEvent.vue';
+import { UserType } from '@/components/FileManager.vue';
 // import { URLSearchParams } from 'url';
 const getPiece = async (id: string): Promise<Piece> => {
   let piece;
@@ -239,10 +239,10 @@ const getAudioRecording = async (_id: string): Promise<RecType> => {
       // console.log(response);
       audioRecording = await response.json()
     }
-    return audioRecording
   } catch (err) {
     console.error(err)
   }
+  return audioRecording
 };
 
 const getAllTransOfAudioFile = async (audioID: string, userID: string) => {
@@ -420,6 +420,27 @@ const makeSpectrograms = async (recId: string, saEst: string | number) => {
   } catch (err) {
     console.error(err)
   }
+};
+
+const makeMelograph = async (recId: string, saEst: string | number) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ recId: recId, saEst: saEst })
+  };
+  try {
+    const res = await fetch(url + 'makeMelograph', request);
+    if (res.ok) {
+      out = await res.json();
+      return out
+    }
+  } catch (err) {
+    console.error(err)
+  }
+
 };
 
 const getRagaNames = async (): Promise<string[]> => {
@@ -1116,5 +1137,6 @@ export {
   getAllTransOfAudioFile,
   getAllUsers,
   updateTranscriptionOwner,
-  getMelographJSON
+  getMelographJSON,
+  makeMelograph
 }

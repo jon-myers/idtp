@@ -246,7 +246,7 @@ type PassedDataType = {
   transcriber?: string;
 }
 
-export type { PassedDataType }
+export type { PassedDataType, UserType }
 
 export default defineComponent({
   name: 'FileManager',

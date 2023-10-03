@@ -515,7 +515,29 @@ const runServer = async () => {
           res.json('made the spectrograms')
         })
       } catch (err) {
-        console.error (err)
+        console.error(err)
+      }
+    })
+
+    app.post('/makeMelograph', async (req, res) => {
+      const makingMelograph = spawn(
+        'python3', 
+        ['generate_melograph.py', req.body.recId, req.body.saEst]
+      );
+      try {
+        makingMelograph.stdout.on('data', data => {
+          console.log(`stdout: ${data}`)
+        });
+        
+        makingMelograph.stderr.on('data', data => {
+          console.error(`stderr: ${data}`)
+        });
+        await makingMelograph.on('close', (msg) => {
+          console.log(msg)
+          res.json('made the melograph')
+        })
+      } catch (err) {
+        console.error(err)
       }
     })
 
