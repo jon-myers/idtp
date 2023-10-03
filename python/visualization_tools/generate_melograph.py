@@ -25,11 +25,46 @@ break_indices = np.where(np.diff(unmasked_indices) != 1)[0] + 1
 data_chunks = np.split(masked_pitch.data[unmasked_indices], break_indices)
 time_chunks = np.split(time[unmasked_indices], break_indices)
 
+
+
+
 data_chunks_list = [chunk.tolist() for chunk in data_chunks]
 data_chunks_list = [[round(y, 1) for y in chunk.astype('float64')] for chunk in data_chunks]
 time_chunks_list = [chunk.tolist() for chunk in time_chunks]
-time_chunk_starts = [chunk[0] for chunk in time_chunks]
+
+
+new_data_chunks_list = []
+new_time_chunks_list = []
+for i, chunk in enumerate(data_chunks_list):
+  sub_data_chunk = [chunk[0]]
+  sub_time_chunk = [time_chunks_list[i][0]]
+  for j in range(len(chunk))[1:]:
+    diff = np.abs(np.log(chunk[j] / chunk[j-1]))
+    if (diff > 0.2):
+      new_data_chunks_list.append(sub_data_chunk)
+      new_time_chunks_list.append(sub_time_chunk)
+      sub_data_chunk = [chunk[j]]
+      sub_time_chunk = [time_chunks_list[i][j]]
+    else:
+      sub_data_chunk.append(chunk[j])
+      sub_time_chunk.append(time_chunks_list[i][j])
+  new_data_chunks_list.append(sub_data_chunk)
+  new_time_chunks_list.append(sub_time_chunk)
+data_chunks_list = new_data_chunks_list
+time_chunks_list = new_time_chunks_list
+    
+time_chunk_starts = [chunk[0] for chunk in time_chunks_list]
+
+# write down only every 8th one
+factor = 4
+data_chunks_list = [[item for i, item in enumerate(j) if i%factor == 0] for j in data_chunks_list]
+time_chunks_list = [[item for i, item in enumerate(j) if i%factor == 0] for j in time_chunks_list]
+
+
+
+
 time_increment = (len(audio)/44100) / (len(pitch) - 1)
+time_increment *= factor
 
 data_dict = {
     'data_chunks': data_chunks_list,

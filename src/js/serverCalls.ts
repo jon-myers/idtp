@@ -5,7 +5,7 @@ import fetch from 'cross-fetch';
 import { Piece } from './classes.ts';
 import { RecType } from './components/AddAudioEvent.vue';
 import { UserType } from './components/FileManager.vue';
-
+// import { URLSearchParams } from 'url';
 const getPiece = async (id: string): Promise<Piece> => {
   let piece;
   const request = {
@@ -1056,6 +1056,20 @@ const getAllUsers = async () => {
   }
 }
 
+const getMelographJSON = async (recID: string) => {
+  let out;
+  try {
+    const url = `https://swara.studio/melographs/${recID}/melograph.json`;
+    const response = await fetch(url);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
 
 export { 
   getPiece,
@@ -1101,5 +1115,6 @@ export {
   getConsonants,
   getAllTransOfAudioFile,
   getAllUsers,
-  updateTranscriptionOwner
+  updateTranscriptionOwner,
+  getMelographJSON
 }

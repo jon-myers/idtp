@@ -12,6 +12,7 @@ const cron = require('node-cron');
 const aggregations = require('./aggregations.js');
 const { OAuth2Client } = require('google-auth-library');
 require('dotenv').config();
+const console = require('console');
 
 async function exists (path) {  
   try {
@@ -945,6 +946,9 @@ const runServer = async () => {
     app.use('/spectrograms', express.static('spectrograms', { 
       setHeaders: setNoCache 
     }))
+    app.use('/melographs', express.static('melographs', { 
+      setHeaders: setNoCache 
+    }));
     app.use('/', express.static('dist'))
     const server = app.listen(3000);
     server.timeout = 600000;
