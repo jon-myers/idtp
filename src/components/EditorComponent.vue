@@ -34,6 +34,14 @@
             @click='preventSpaceToggle'>
         </div>
         <div class='cbRow'>
+          <label>Melograph</label>
+          <input 
+            type='checkbox' 
+            v-model='melographVisible'
+            @change='toggleMelograph'
+            @click='preventSpaceToggle'>
+        </div>
+        <div class='cbRow'>
           <label>Loop</label>
           <input type='checkbox' v-model='loop' @click='updateLoop'>
         </div>
@@ -206,7 +214,8 @@ import {
   getNumberOfSpectrograms,
   savePiece,
   makeSpectrograms,
-  pieceExists
+  pieceExists,
+  getMelographJSON
 } from '@/js/serverCalls.ts';
 import { Meter, Pulse } from '@/js/meter.ts';
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
@@ -457,7 +466,13 @@ type EditorDataType = {
   specBox: Selection<SVGGElement, undefined, null, undefined>,
   browser: BrowserInfo,
   dragIdx: string,
-  IPLims: [number, number]
+  IPLims: [number, number],
+  melographJSON?: {
+    data_chunks: number[][],
+    time_chunk_starts: number[],
+    time_increment: number,
+  },
+  melographVisible: boolean,
 }
 
 export { findClosestStartTime }
@@ -601,7 +616,9 @@ export default defineComponent({
       imgs: [],
       browser: detect() as BrowserInfo,
       dragIdx: '',
-      IPLims: [0, 0]
+      IPLims: [0, 0],
+      melographJSON: undefined,
+      melographVisible: false,
     }
   },
   components: {
@@ -684,7 +701,7 @@ export default defineComponent({
           `https://swara.studio/audio/mp3/${piece.audioID}.mp3` :
           `https://swara.studio/audio/opus/${piece.audioID}.opus`;         
         this.audioDBDoc = await getAudioRecording(piece.audioID);
-        
+        this.melographJSON = await getMelographJSON(piece.audioID);
         this.durTot = this.audioDBDoc!.duration;
         // if pieceDurTot is less than this, add silent phrase to make the two 
         // the same
@@ -853,6 +870,28 @@ export default defineComponent({
 
 
   methods: {
+
+    addMelograph(codified=true) {
+      d3SelectAll('.melograph').remove();
+      this.melographJSON?.data_chunks.forEach((chunk, i) => {
+        const start = this.melographJSON!.time_chunk_starts[i];
+        const increment = this.melographJSON!.time_increment;
+        const data = chunk.map((d, i) => {
+          return {
+            x: start + i * increment,
+            y: d
+          }
+        })
+        this.phraseG.append('path')
+          .datum(data)
+          .classed('melograph', true)
+          .attr('stroke', 'darkgreen')
+          .attr('stroke-width', '2px')
+          .attr('fill', 'none')
+          .attr('opacity', this.melographVisible ? 1 : 0)
+          .attr('d', codified ? this.codifiedPhraseLine() : this.phraseLine())
+      })
+    },
 
     addTrajToSelectedGroup(traj: Trajectory) {
       if (this.selectedTrajs.length > 1 && this.selectedTrajs[0].groupId !== undefined) {
@@ -1403,6 +1442,18 @@ export default defineComponent({
       } else {
         this.spectrogramOpacity = 0;
       }
+    },
+
+    toggleMelograph() {
+      const melographLines = d3SelectAll('.melograph');
+      this.$nextTick(() => {
+        if (this.melographVisible) {
+          melographLines.attr('opacity', 1);
+        } else {
+          melographLines.attr('opacity', 0);
+        }
+      })
+      
     },
 
     toggleInstructions() {
@@ -8267,7 +8318,9 @@ export default defineComponent({
         )
       }
 
-      if (this.piece.audioID) await this.redrawSpectrogram(instant);
+      if (this.piece.audioID) {
+        await this.redrawSpectrogram(instant);
+      }
       this.movePlayhead();
       this.moveShadowPlayhead();
       this.moveRegion();
@@ -8322,6 +8375,9 @@ export default defineComponent({
             .attr('fill', this.selArtColor)
           this.updateArtColors(t, true);
         })
+      }
+      if (this.audioDBDoc) {
+        this.addMelograph()
       }
     },
 

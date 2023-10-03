@@ -12,6 +12,7 @@ const cron = require('node-cron');
 const aggregations = require('./aggregations.js');
 const { OAuth2Client } = require('google-auth-library');
 require('dotenv').config();
+const console = require('console');
 
 async function exists (path) {  
   try {
@@ -514,7 +515,29 @@ const runServer = async () => {
           res.json('made the spectrograms')
         })
       } catch (err) {
-        console.error (err)
+        console.error(err)
+      }
+    })
+
+    app.post('/makeMelograph', async (req, res) => {
+      const makingMelograph = spawn(
+        'python3', 
+        ['generate_melograph.py', req.body.recId, req.body.saEst]
+      );
+      try {
+        makingMelograph.stdout.on('data', data => {
+          console.log(`stdout: ${data}`)
+        });
+        
+        makingMelograph.stderr.on('data', data => {
+          console.error(`stderr: ${data}`)
+        });
+        await makingMelograph.on('close', (msg) => {
+          console.log(msg)
+          res.json('made the melograph')
+        })
+      } catch (err) {
+        console.error(err)
       }
     })
 
@@ -945,6 +968,9 @@ const runServer = async () => {
     app.use('/spectrograms', express.static('spectrograms', { 
       setHeaders: setNoCache 
     }))
+    app.use('/melographs', express.static('melographs', { 
+      setHeaders: setNoCache 
+    }));
     app.use('/', express.static('dist'))
     const server = app.listen(3000);
     server.timeout = 600000;

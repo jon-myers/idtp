@@ -60,6 +60,7 @@
         <div class='inputRow button'>
           <button @click='saveSaEstimate'>Save</button>
           <button @click='generateSpectrogram'>Make Spectrogram</button>
+          <button @click='generateMelograph'>Make Melograph</button>
         </div>
       </div>
     </div>
@@ -70,8 +71,9 @@
 import { 
   updateSaEstimate, 
   getVerifiedStatus, 
-  makeSpectrograms 
-  } from '@/js/serverCalls.ts';
+  makeSpectrograms,
+  makeMelograph 
+} from '@/js/serverCalls.ts';
 
 import * as d3 from 'd3';
 const avg = values => values.reduce((sum, val) => sum + val, 0) / values.length;
@@ -156,11 +158,27 @@ export default {
   methods: {
 
     async generateSpectrogram() {
-      const id = this.$parent.$parent.audioRecId;
-      const freq = this.saEstimate * 2 ** this.octOffset;
-      const result = await makeSpectrograms(id, freq);
-      console.log(result)
+      try {
+        const id = this.$parent.$parent.audioRecId;
+        const freq = this.saEstimate * 2 ** this.octOffset;
+        const result = await makeSpectrograms(id, freq);
+        console.log(result)
+      } catch (err) {
+        console.log(err)
+      }
     },
+
+    async generateMelograph() {
+      try {
+        const id = this.$parent.$parent.audioRecId;
+        const freq = this.saEstimate * 2 ** this.octOffset;
+        const result = await makeMelograph(id, freq);
+        console.log(result)
+      } catch (err) {
+        console.log(err)
+      }
+    },
+
     
     zoom(bool) {
       const factor = 1.2;
@@ -382,7 +400,7 @@ export default {
 
 .saVerifier {
   height: 100%;
-  width: 240px;
+  width: 300px;
   background-color: grey;
   display: flex;
   flex-direction: row;
@@ -391,7 +409,7 @@ export default {
 .saVerifierCol {
   display: flex;
   flex-direction: column;
-  width: 200px;
+  width: 250px;
 }
 
 .zoomCol {
@@ -455,6 +473,7 @@ span {
 .button {
   align-items: center;
   justify-content: center;
+  
 }
 
 .saLabel {
@@ -466,7 +485,8 @@ svg {
 }
 
 button {
-  cursor: pointer
+  cursor: pointer;
+  margin-right: 5px;
 }
 
 
