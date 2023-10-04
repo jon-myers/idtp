@@ -2303,9 +2303,15 @@ export default defineComponent({
       }
     },
 
-    toggleMeterControls(e: MouseEvent) {
+    toggleMeterControls(e?: MouseEvent) {
       if (!this.loading) {
-        const cl = (e.target as HTMLImageElement).classList;
+        let target;
+        if (e === undefined) {
+          target = this.$refs.meterImg as HTMLImageElement;
+        } else {
+          target = e.target as HTMLImageElement;
+        }
+        const cl = (target as HTMLImageElement).classList;
         cl.toggle('showMeterControls');
         this.showMeterControls = this.showMeterControls ? false : true;
         if (this.showControls) {

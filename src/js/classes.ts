@@ -254,6 +254,19 @@ class Pitch {
     this.sargam = ['sa', 're', 'ga', 'ma', 'pa', 'dha', 'ni'];
     const sargamLetters = this.sargam.map(s => s.slice(0, 1));
     this.ratios = ratios;
+    this.ratios.forEach(r => {
+      if (Array.isArray(r)) {
+        r.forEach(subR => {
+          if (subR === undefined) {
+            throw new SyntaxError(`invalid ratio type, must be float: ${subR}`)
+          }
+        })
+      } else {
+        if (r === undefined) {
+          throw new SyntaxError(`invalid ratio type, must be float: ${r}`)
+        }
+      }
+    })
     if (typeof(raised) != 'boolean') {
       throw new SyntaxError(`invalid raised type, must be boolean: ${raised}`)
     } else {
@@ -1776,6 +1789,7 @@ class Phrase {
       const index = findLastIndex(starts, s => x >= s);
       const innerX = (x - starts[index]) / this.durArray[index];
       const traj = this.trajectories[index];
+      
       return traj.compute(innerX, logScale)
     }
   }
@@ -2579,11 +2593,12 @@ class Raga {
         raised: 2 ** (11 / 12)
       }
     };
-    if (ratios === undefined) {
+    if (ratios === undefined || ratios.length !== this.ruleSetNumPitches)  {
       this.ratios = this.setRatios(this.ruleSet)
     } else {
       this.ratios = ratios
     }
+    // this.ratios = this.setRatios(this.ruleSet)
     
   }
 
@@ -2600,6 +2615,23 @@ class Raga {
       }
     });
     return sl
+  }
+
+  get ruleSetNumPitches() {
+    let numPitches = 0;
+    const keys = Object.keys(this.ruleSet);
+    keys.forEach(key => {
+      if (typeof(this.ruleSet[key]) === 'boolean') {
+        if (this.ruleSet[key]) {
+          numPitches += 1;
+        }
+      } else {
+        const ruleSet = this.ruleSet[key] as BoolObj;
+        if (ruleSet.lowered) numPitches += 1;
+        if (ruleSet.raised) numPitches += 1;
+      }
+    })
+    return numPitches
   }
 
   pitchNumberToSargamLetter(pitchNumber: number) {
