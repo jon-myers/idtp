@@ -235,40 +235,40 @@ class Query {
       if (this.category === 'pitch') {
         const trialArr = phrase.allPitches(this.repetition)
           .map(pitch => pitch.numberedPitch);
-        return this.pitchDifferentiate(this.pitch!, this.designator, trialArr);
+        return this.pitchDiff(this.pitch!, this.designator, trialArr);
       } else if (this.category === 'trajectoryID') {
         const trialArr = phrase.trajectories;
-        return this.trajIDDifferentiate(this.trajectoryID!, this.designator, trialArr);
+        return this.trajIDDiff(this.trajectoryID!, this.designator, trialArr);
       } else if (this.category === 'vowel') {
         const trialArr = phrase.trajectories.map(traj => traj.vowel);
-        return this.vowelDifferentiate(this.vowel!, this.designator, trialArr);
+        return this.vowelDiff(this.vowel!, this.designator, trialArr);
       } else if (this.category === 'startingConsonant') {
         const trialArr = phrase.trajectories.map(traj => traj.startConsonant);
-        return this.consonantDifferentiate(this.consonant!, this.designator, trialArr);
+        return this.consonantDiff(this.consonant!, this.designator, trialArr);
       } else if (this.category === 'endingConsonant') {
         const trialArr = phrase.trajectories.map(traj => traj.endConsonant);
-        return this.consonantDifferentiate(this.consonant!, this.designator, trialArr);
+        return this.consonantDiff(this.consonant!, this.designator, trialArr);
       } else if (this.category === 'anyConsonant') {
         const trialArr: (string | undefined)[] = [];
         phrase.trajectories.forEach(traj => {
           trialArr.push(traj.startConsonant);
           trialArr.push(traj.endConsonant);
         })
-        return this.consonantDifferentiate(this.consonant!, this.designator, trialArr);
+        return this.consonantDiff(this.consonant!, this.designator, trialArr);
       } else if (this.category === 'pitchSequenceStrict') {
         const trialArr = phrase.allPitches(this.repetition)
           .map(pitch => pitch.numberedPitch);
-        return this.pitchSeqStrictDifferentiate(this.pitchSequence!, this.designator, trialArr);
+        return this.pitchSeqStrictDiff(this.pitchSequence!, this.designator, trialArr);
       } else if (this.category === 'pitchSequenceLoose') {
         const trialArr = phrase.allPitches(this.repetition)
           .map(pitch => pitch.numberedPitch);
-        return this.pitchSeqLooseDifferentiate(this.pitchSequence!, this.designator, trialArr);
+        return this.pitchSeqLooseDiff(this.pitchSequence!, this.designator, trialArr);
       } else if (this.category === 'trajSequenceStrict') {
         const trialArr = phrase.trajectories.map(traj => traj.id);
-        return this.trajSeqStrictDifferentiate(this.trajIdSequence!, this.designator, trialArr);
+        return this.trajSeqStrictDiff(this.trajIdSequence!, this.designator, trialArr);
       } else if (this.category === 'trajSequenceLoose') {
         const trialArr = phrase.trajectories.map(traj => traj.id);
-        return this.trajSeqLooseDifferentiate(this.trajIdSequence!, this.designator, trialArr);
+        return this.trajSeqLooseDiff(this.trajIdSequence!, this.designator, trialArr);
       }
     });
     this.trajectories = filteredPhrases.map(phrase => phrase.trajectories);
@@ -282,40 +282,40 @@ class Query {
       if (this.category === 'pitch') {
         const trialArr = group.allPitches(this.repetition)
           .map(pitch => pitch.numberedPitch);
-        bool = this.pitchDifferentiate(this.pitch!, this.designator, trialArr);
+        bool = this.pitchDiff(this.pitch!, this.designator, trialArr);
       } else if (this.category === 'trajectoryID') {
         const trialArr = group.trajectories;
-        bool = this.trajIDDifferentiate(this.trajectoryID!, this.designator, trialArr);
+        bool = this.trajIDDiff(this.trajectoryID!, this.designator, trialArr);
       } else if (this.category === 'vowel') {
         const trialArr = group.trajectories.map(traj => traj.vowel);
-        bool = this.vowelDifferentiate(this.vowel!, this.designator, trialArr);
+        bool = this.vowelDiff(this.vowel!, this.designator, trialArr);
       } else if (this.category === 'startingConsonant') {
         const trialArr = group.trajectories.map(traj => traj.startConsonant);
-        bool = this.consonantDifferentiate(this.consonant!, this.designator, trialArr);
+        bool = this.consonantDiff(this.consonant!, this.designator, trialArr);
       } else if (this.category === 'endingConsonant') {
         const trialArr = group.trajectories.map(traj => traj.endConsonant);
-        bool = this.consonantDifferentiate(this.consonant!, this.designator, trialArr);
+        bool = this.consonantDiff(this.consonant!, this.designator, trialArr);
       } else if (this.category === 'anyConsonant') {
         const trialArr: (string | undefined)[] = [];
         group.trajectories.forEach(traj => {
           trialArr.push(traj.startConsonant);
           trialArr.push(traj.endConsonant);
         })
-        bool = this.consonantDifferentiate(this.consonant!, this.designator, trialArr);
+        bool = this.consonantDiff(this.consonant!, this.designator, trialArr);
       } else if (this.category === 'pitchSequenceStrict') {
         const trialArr = group.allPitches(this.repetition)
           .map(pitch => pitch.numberedPitch);
-        bool = this.pitchSeqStrictDifferentiate(this.pitchSequence!, this.designator, trialArr);
+        bool = this.pitchSeqStrictDiff(this.pitchSequence!, this.designator, trialArr);
       } else if (this.category === 'pitchSequenceLoose') {
         const trialArr = group.allPitches(this.repetition)
           .map(pitch => pitch.numberedPitch);
-        bool = this.pitchSeqLooseDifferentiate(this.pitchSequence!, this.designator, trialArr);
+        bool = this.pitchSeqLooseDiff(this.pitchSequence!, this.designator, trialArr);
       } else if (this.category === 'trajSequenceStrict') {
         const trialArr = group.trajectories.map(traj => traj.id);
-        bool = this.trajSeqStrictDifferentiate(this.trajIdSequence!, this.designator, trialArr);
+        bool = this.trajSeqStrictDiff(this.trajIdSequence!, this.designator, trialArr);
       } else if (this.category === 'trajSequenceLoose') {
         const trialArr = group.trajectories.map(traj => traj.id);
-        bool = this.trajSeqLooseDifferentiate(this.trajIdSequence!, this.designator, trialArr);
+        bool = this.trajSeqLooseDiff(this.trajIdSequence!, this.designator, trialArr);
       }
       if (bool) {
         this.identifier.push(group.id);
@@ -393,25 +393,25 @@ class Query {
             return true;
           });
         }
-        boolean = this.pitchDifferentiate(this.pitch!, this.designator, nPitches);
+        boolean = this.pitchDiff(this.pitch!, this.designator, nPitches);
       } else if (this.category === 'trajectoryID') {
-        boolean = this.trajIDDifferentiate(this.trajectoryID!, this.designator, trajSeq);
+        boolean = this.trajIDDiff(this.trajectoryID!, this.designator, trajSeq);
       } else if (this.category === 'vowel') {
         const vowels = trajSeq.map(traj => traj.vowel);
-        boolean = this.vowelDifferentiate(this.vowel!, this.designator, vowels);
+        boolean = this.vowelDiff(this.vowel!, this.designator, vowels);
       } else if (this.category === 'startingConsonant') {
         const consonants = trajSeq.map(traj => traj.startConsonant);
-        boolean = this.consonantDifferentiate(this.consonant!, this.designator, consonants);
+        boolean = this.consonantDiff(this.consonant!, this.designator, consonants);
       } else if (this.category === 'endingConsonant') {
         const consonants = trajSeq.map(traj => traj.endConsonant);
-        boolean = this.consonantDifferentiate(this.consonant!, this.designator, consonants);
+        boolean = this.consonantDiff(this.consonant!, this.designator, consonants);
       } else if (this.category === 'anyConsonant') {
         const consonants: (string | undefined)[] = [];
         trajSeq.forEach(traj => {
           consonants.push(traj.startConsonant);
           consonants.push(traj.endConsonant);
         })
-        boolean = this.consonantDifferentiate(this.consonant!, this.designator, consonants);
+        boolean = this.consonantDiff(this.consonant!, this.designator, consonants);
       } else if (this.category === 'pitchSequenceStrict') {
         const pitches = trajSeq.map(traj => traj.pitches).flat();
         let nPitches = pitches.map(pitch => pitch.numberedPitch);
@@ -425,7 +425,7 @@ class Query {
             return true;
           });
         }
-        boolean = this.pitchSeqStrictDifferentiate(this.pitchSequence!, this.designator, nPitches);
+        boolean = this.pitchSeqStrictDiff(this.pitchSequence!, this.designator, nPitches);
       } else if (this.category === 'pitchSequenceLoose') {
         const pitches = trajSeq.map(traj => traj.pitches).flat();
         let nPitches = pitches.map(pitch => pitch.numberedPitch);
@@ -439,13 +439,13 @@ class Query {
             return true;
           });
         }
-        boolean = this.pitchSeqLooseDifferentiate(this.pitchSequence!, this.designator, nPitches);
+        boolean = this.pitchSeqLooseDiff(this.pitchSequence!, this.designator, nPitches);
       } else if (this.category === 'trajSequenceStrict') {
         const trajIDs = trajSeq.map(traj => traj.id);
-        boolean = this.trajSeqStrictDifferentiate(this.trajSequence!, this.designator, trajIDs);
+        boolean = this.trajSeqStrictDiff(this.trajIdSequence!, this.designator, trajIDs);
       } else if (this.category === 'trajSequenceLoose') {
         const trajIDs = trajSeq.map(traj => traj.id);
-        boolean = this.trajSeqLooseDifferentiate(this.trajSequence!, this.designator, trajIDs);
+        boolean = this.trajSeqLooseDiff(this.trajIdSequence!, this.designator, trajIDs);
       }
       if (boolean) {
         this.trajectories.push(trajSeq);
@@ -476,25 +476,25 @@ class Query {
             return true;
           });
         }
-        boolean = this.pitchDifferentiate(this.pitch!, this.designator, nPitches);
+        boolean = this.pitchDiff(this.pitch!, this.designator, nPitches);
       } else if (this.category === 'trajectoryID') {
-        boolean = this.trajIDDifferentiate(this.trajectoryID!, this.designator, trajSeq);
+        boolean = this.trajIDDiff(this.trajectoryID!, this.designator, trajSeq);
       } else if (this.category === 'vowel') {
         const vowels = trajSeq.map(traj => traj.vowel);
-        boolean = this.vowelDifferentiate(this.vowel!, this.designator, vowels);
+        boolean = this.vowelDiff(this.vowel!, this.designator, vowels);
       } else if (this.category === 'startingConsonant') {
         const consonants = trajSeq.map(traj => traj.startConsonant);
-        boolean = this.consonantDifferentiate(this.consonant!, this.designator, consonants);
+        boolean = this.consonantDiff(this.consonant!, this.designator, consonants);
       } else if (this.category === 'endingConsonant') {
         const consonants = trajSeq.map(traj => traj.endConsonant);
-        boolean = this.consonantDifferentiate(this.consonant!, this.designator, consonants);
+        boolean = this.consonantDiff(this.consonant!, this.designator, consonants);
       } else if (this.category === 'anyConsonant') {
         const consonants: (string | undefined)[] = [];
         trajSeq.forEach(traj => {
           consonants.push(traj.startConsonant);
           consonants.push(traj.endConsonant);
         })
-        boolean = this.consonantDifferentiate(this.consonant!, this.designator, consonants);
+        boolean = this.consonantDiff(this.consonant!, this.designator, consonants);
       } else if (this.category === 'pitchSequenceStrict') {
         let nPitches = trajSeq.map(traj => traj.pitches).flat()
           .map(pitch => pitch.numberedPitch);
@@ -508,7 +508,7 @@ class Query {
             return true;
           });
         }
-        boolean = this.pitchSeqStrictDifferentiate(this.pitchSequence!, this.designator, nPitches);
+        boolean = this.pitchSeqStrictDiff(this.pitchSequence!, this.designator, nPitches);
       } else if (this.category === 'pitchSequenceLoose') {
         let nPitches = trajSeq.map(traj => traj.pitches).flat()
           .map(pitch => pitch.numberedPitch);
@@ -522,13 +522,13 @@ class Query {
             return true;
           });
         }
-        boolean = this.pitchSeqLooseDifferentiate(this.pitchSequence!, this.designator, nPitches);
+        boolean = this.pitchSeqLooseDiff(this.pitchSequence!, this.designator, nPitches);
       } else if (this.category === 'trajSequenceStrict') {
         const trajIDs = trajSeq.map(traj => traj.id);
-        boolean = this.trajSeqStrictDifferentiate(this.trajSequence!, this.designator, trajIDs);
+        boolean = this.trajSeqStrictDiff(this.trajIdSequence!, this.designator, trajIDs);
       } else if (this.category === 'trajSequenceLoose') {
         const trajIDs = trajSeq.map(traj => traj.id);
-        boolean = this.trajSeqLooseDifferentiate(this.trajSequence!, this.designator, trajIDs);
+        boolean = this.trajSeqLooseDiff(this.trajIdSequence!, this.designator, trajIDs);
       }
       if (boolean) {
         this.trajectories.push(trajSeq);
@@ -564,7 +564,7 @@ class Query {
     }, [[]] as Trajectory[][]);
   }
 
-  private pitchDifferentiate(pitch: Pitch, designator: string, nPitches: number[]) {
+  private pitchDiff(pitch: Pitch, designator: string, nPitches: number[]) {
     let boolean: boolean = false;
     if (designator === 'includes') {
       boolean = nPitches.includes(pitch.numberedPitch);
@@ -578,7 +578,7 @@ class Query {
     return boolean;
   }
 
-  private pitchSeqStrictDifferentiate(pitchSeq: Pitch[], designator: string, nPitches: number[]) {
+  private pitchSeqStrictDiff(pitchSeq: Pitch[], designator: string, nPitches: number[]) {
     let boolean: boolean = false;
     const numPitchSeq = pitchSeq.map(pitch => pitch.numberedPitch);
     if (designator === 'includes') {
@@ -594,7 +594,7 @@ class Query {
     return boolean;
   }
 
-  private pitchSeqLooseDifferentiate(pitchSeq: Pitch[], designator: string, nPitches: number[]) {
+  private pitchSeqLooseDiff(pitchSeq: Pitch[], designator: string, nPitches: number[]) {
     let boolean: boolean = false;
     const numPitchSeq = pitchSeq.map(pitch => pitch.numberedPitch);
     if (designator === 'includes') {
@@ -613,7 +613,7 @@ class Query {
     return boolean;
   }
 
-  private trajSeqStrictDifferentiate(trajIdSeq: number[], designator: string, fullTrajList: Trajectory[]) {
+  private trajSeqStrictDiff(trajIdSeq: number[], designator: string, fullTrajList: number[]) {
     let boolean: boolean = false;
     if (designator === 'includes') {
       boolean = findSequenceIndexes(trajIdSeq, fullTrajList).length > 0;
@@ -628,7 +628,7 @@ class Query {
     return boolean;
   }
 
-  private trajSeqLooseDifferentiate(trajIdSeq: number[], designator: string, fullTrajList: Trajectory[]) {
+  private trajSeqLooseDiff(trajIdSeq: number[], designator: string, fullTrajList: number[]) {
     let boolean: boolean = false;
     if (designator === 'includes') {
       const looseObj = testLooseSequenceIndexes(trajIdSeq, fullTrajList);
@@ -647,16 +647,16 @@ class Query {
   }
 
   /**
-    * Differentiates a trajectory ID based on a given designator.
+    * Diffs a trajectory ID based on a given designator.
     * 
-    * @param {number} trajID - The trajectory ID to differentiate.
+    * @param {number} trajID - The trajectory ID to Diff.
     * @param {string} designator - The designator to use for differentiation. 
     *                              It can be 'includes', 'excludes', 'startsWith', or 'endsWith'.
     * @param {Trajectory[]} trajectories - The array of trajectories to check against.
     * 
     * @returns {boolean} - Returns true if the trajectory ID matches the condition specified by the designator, false otherwise.
     */
-  private trajIDDifferentiate(trajID: number, designator: string, trajectories: Trajectory[]) {
+  private trajIDDiff(trajID: number, designator: string, trajectories: Trajectory[]) {
     let boolean: boolean = false;
     if (designator === 'includes') {
       boolean = trajectories.some(traj => traj.id === trajID);
@@ -670,7 +670,7 @@ class Query {
     return boolean;
   }
 
-  private vowelDifferentiate(vowel: string, designator: string, vowels: (string | undefined)[]) {
+  private vowelDiff(vowel: string, designator: string, vowels: (string | undefined)[]) {
     let boolean: boolean = false;
     if (designator === 'includes') {
       boolean = vowels.includes(vowel);
@@ -684,7 +684,7 @@ class Query {
     return boolean;
   }
 
-  private consonantDifferentiate(consonant: string, designator: string, 
+  private consonantDiff(consonant: string, designator: string, 
             consonants: (string | undefined)[]) {
     let boolean: boolean = false;
     if (designator === 'includes') {

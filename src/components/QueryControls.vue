@@ -114,7 +114,6 @@
               {{ numP }}
             </option>
           </select>
-
         </div>
         <div 
           class='controlsRow'
@@ -146,10 +145,7 @@
                 {{ oct }}
               </option>
             </select>
-
           </div>
-
-
         </div>
         <div
           class='controlsRow'
@@ -190,12 +186,9 @@
                   {{ trajName.name }}
                 </option>
               </select>
-
-
             </div>
           </div>
         </div>
-
         <div 
           class='controlsRow' 
           v-if='categories[qIdx].value === "trajectoryID"'
@@ -253,13 +246,9 @@
             </option>
           </select>
         </div>
-      
       </div>
     </div>
-    
-
   </div>
-
 </template>
 
 <script lang='ts'>
@@ -477,29 +466,23 @@ export default defineComponent({
 
 
     possibleCategories(): { value: CategoryType, text: string }[] {
+      const cats: { value: CategoryType, text: string }[] = [
+        { value: 'pitch', text: 'Pitch' },
+        { value: 'pitchSequenceStrict', text: 'Strict Pitch Sequence'},
+        { value: 'pitchSequenceLoose', text: 'Loose Pitch Sequence' },
+        { value: 'trajectoryID', text: 'Trajectory' },
+        { value: 'trajSequenceStrict', text: 'Strict Trajectory Sequence' },
+        { value: 'trajSequenceLoose', text: 'Loose Traj Sequence' },
+      ];
       if (this.vocal) {
-        return [
-          { value: 'pitch', text: 'Pitch' },
-          { value: 'pitchSequenceStrict', text: 'Strict Pitch Sequence' },
-          { value: 'pitchSequenceLoose', text: 'Loose Pitch Sequence' },
-          { value: 'trajectoryID', text: 'Trajectory' },
-          { value: 'trajSequenceStrict', text: 'Strict Traj Sequence' },
-          { value: 'trajSequenceLoose', text: 'Loose Traj Sequence' },
+        cats.push(
           { value: 'vowel', text: 'Vowel' },
           { value: 'startingConsonant', text: 'Starting Consonant' },
           { value: 'endingConsonant', text: 'Ending Consonant' },
           { value: 'anyConsonant', text: 'Any Consonant' },
-        ]
-      } else {
-        return [
-          { value: 'pitch', text: 'Pitch' },
-          { value: 'pitchSequenceStrict', text: 'Strict Pitch Sequence'},
-          { value: 'pitchSequenceLoose', text: 'Loose Pitch Sequence' },
-          { value: 'trajectoryID', text: 'Trajectory' },
-          { value: 'trajSequenceStrict', text: 'Strict Trajectory Sequence' },
-          { value: 'trajSequenceLoose', text: 'Loose Traj Sequence' },
-        ]
+        )
       }
+      return cats;
     },
 
     pitches(): Pitch[] {

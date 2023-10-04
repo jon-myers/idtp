@@ -6,7 +6,11 @@
       </label>
     </div>
     <div class='middleRow'>
-      <select v-model='topLevel' @change='updateTopLevel'>
+      <select 
+        v-model='topLevel' 
+        @change='updateTopLevel' 
+        @keydown='preventSpaceSelect'
+        >
         <option v-for='option in topLevelOptions' :value='option'>
           {{option}}
         </option>
@@ -17,7 +21,11 @@
         <div class='titleRow'>
           <label>Alap Section</label>
         </div>
-        <select v-model='alapType' @change='updateAlapType'>
+        <select 
+          v-model='alapType' 
+          @change='updateAlapType'
+          @keydown='preventSpaceSelect'
+          >
           <option 
             v-for='option in Object.keys(section.categorization["Alap"])' 
             :value='option'
@@ -31,7 +39,11 @@
           <div class='titleRow'>
             <label>Composition Type</label>
           </div>
-          <select v-model='compositionType' @change='updateCompositionType'>
+          <select 
+            v-model='compositionType' 
+            @change='updateCompositionType'
+            @keydown='preventSpaceSelect'
+            >
             <option 
               v-for='option in Object.keys(section.categorization["Composition Type"])' 
               :value='option'
@@ -44,7 +56,11 @@
           <div class='titleRow'>
             <label>Section/Tempo</label>
           </div>
-          <select v-model='section_tempo' @change='updateSection_Tempo'>
+          <select 
+            v-model='section_tempo' 
+            @change='updateSection_Tempo'
+            @keydown='preventSpaceSelect'
+            >
             <option 
               v-for='option in Object.keys(section.categorization["Composition-section/Tempo"])' 
               :value='option'
@@ -57,7 +73,11 @@
           <div class='titleRow'>
             <label>Tala</label>
           </div>
-          <select v-model='tala' @change='updateTala'>
+          <select 
+            v-model='tala' 
+            @change='updateTala' 
+            @keydown='preventSpaceSelect'
+            >
             <option 
               v-for='option in Object.keys(section.categorization["Tala"])' 
               :value='option'
@@ -165,7 +185,14 @@ export default defineComponent({
 
   methods: {
 
-    
+    preventSpaceSelect(e?: KeyboardEvent) {
+      if (e) {
+        if (e.key === ' ') {
+          e.preventDefault();
+        }
+      }
+    },
+
     updateTopLevel() {
       this.compositionType = undefined,
       this.section_tempo = undefined,

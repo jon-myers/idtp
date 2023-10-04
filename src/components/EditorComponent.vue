@@ -3838,7 +3838,6 @@ export default defineComponent({
       // checking box
     },
 
-
     preventSpaceToggle(e: MouseEvent) {
       if (e && e.clientX === 0) e.preventDefault();
     },
