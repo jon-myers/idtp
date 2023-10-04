@@ -80,7 +80,8 @@ type topLevelOptionsType = (
   'Alap' | 
   'Composition' | 
   'None' |
-  'Improvisation'
+  'Improvisation' |
+  'Other'
   );
 
 type Section_TempoType = keyof Section['categorization']['Composition-section/Tempo'];
@@ -106,6 +107,7 @@ export default defineComponent({
         'Alap',
         'Composition',
         'Improvisation',
+        'Other',
         'None'
       ],
       topLevel: 'None',
@@ -135,6 +137,7 @@ export default defineComponent({
     const comSecTemp = cat['Composition-section/Tempo'];
     const tala = cat['Tala'];
     const improv = cat['Improvisation'];
+    const other = cat['Other'];
     const someTrue = (obj: object) => Object.values(obj).some(x => x);
     if (cat['Pre-Chiz Alap']['Pre-Chiz Alap']) {
       this.topLevel = 'Pre-Chiz Alap'
@@ -152,6 +155,8 @@ export default defineComponent({
       this.tala = talaKeys.find(key => tala[key]);
     } else if (improv['Improvisation']) {
       this.topLevel = 'Improvisation'
+    } else if (other['Other']) {
+      this.topLevel = 'Other'
     } else {
       this.topLevel = 'None'
     }
@@ -177,6 +182,11 @@ export default defineComponent({
         const altCat = this.piece.sectionCategorization[this.sectionNum];
         cat['Improvisation']['Improvisation'] = true;
         altCat['Improvisation']['Improvisation'] = true;
+      } else if (this.topLevel === 'Other') {
+        const cat = this.section.categorization;
+        const altCat = this.piece.sectionCategorization[this.sectionNum];
+        cat['Other']['Other'] = true;
+        altCat['Other']['Other'] = true;
       }
       this.$emit('unsavedChanges');
     },

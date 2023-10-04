@@ -42,7 +42,10 @@ const initSectionCategorization = () => {
     },
     "Improvisation": {
       "Improvisation": false,
-    }
+    },
+    "Other": {
+      "Other": false,
+    },
   }
 }
 
@@ -1613,6 +1616,9 @@ type SectionCategorizationType = {
   },
   "Improvisation": {
     "Improvisation": boolean,
+  },
+  "Other": {
+    "Other": boolean,
   }
 }
 
@@ -2207,6 +2213,9 @@ class Piece {
       this.sectionCategorization.forEach(c => {
         if (c['Improvisation'] === undefined) {
           c['Improvisation'] = { "Improvisation": false }
+        }
+        if (c['Other'] === undefined) {
+          c['Other'] = { "Other": false }
         }
       })
     } else {
