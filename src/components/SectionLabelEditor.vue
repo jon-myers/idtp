@@ -6,7 +6,11 @@
       </label>
     </div>
     <div class='middleRow'>
-      <select v-model='topLevel' @change='updateTopLevel'>
+      <select 
+        v-model='topLevel' 
+        @change='updateTopLevel' 
+        @keydown='preventSpaceSelect'
+        >
         <option v-for='option in topLevelOptions' :value='option'>
           {{option}}
         </option>
@@ -17,7 +21,11 @@
         <div class='titleRow'>
           <label>Alap Section</label>
         </div>
-        <select v-model='alapType' @change='updateAlapType'>
+        <select 
+          v-model='alapType' 
+          @change='updateAlapType'
+          @keydown='preventSpaceSelect'
+          >
           <option 
             v-for='option in Object.keys(section.categorization["Alap"])' 
             :value='option'
@@ -31,7 +39,11 @@
           <div class='titleRow'>
             <label>Composition Type</label>
           </div>
-          <select v-model='compositionType' @change='updateCompositionType'>
+          <select 
+            v-model='compositionType' 
+            @change='updateCompositionType'
+            @keydown='preventSpaceSelect'
+            >
             <option 
               v-for='option in Object.keys(section.categorization["Composition Type"])' 
               :value='option'
@@ -44,9 +56,13 @@
           <div class='titleRow'>
             <label>Section/Tempo</label>
           </div>
-          <select v-model='section_tempo' @change='updateSection_Tempo'>
+          <select 
+            v-model='section_tempo' 
+            @change='updateSection_Tempo'
+            @keydown='preventSpaceSelect'
+            >
             <option 
-              v-for='option in Object.keys(section.categorization["Composition-section/Tempo"])' 
+              v-for='option in Object.keys(section.categorization["Comp.-section/Tempo"])' 
               :value='option'
               >
               {{option}}
@@ -57,7 +73,11 @@
           <div class='titleRow'>
             <label>Tala</label>
           </div>
-          <select v-model='tala' @change='updateTala'>
+          <select 
+            v-model='tala' 
+            @change='updateTala' 
+            @keydown='preventSpaceSelect'
+            >
             <option 
               v-for='option in Object.keys(section.categorization["Tala"])' 
               :value='option'
@@ -84,7 +104,7 @@ type topLevelOptionsType = (
   'Other'
   );
 
-type Section_TempoType = keyof Section['categorization']['Composition-section/Tempo'];
+type Section_TempoType = keyof Section['categorization']['Comp.-section/Tempo'];
 type CompositionType = keyof Section['categorization']['Composition Type'];
 type TalaType = keyof Section['categorization']['Tala'];
 type AlapType = keyof Section['categorization']['Alap'];
@@ -134,7 +154,7 @@ export default defineComponent({
   mounted() {
     const cat = this.section.categorization;
     const com = cat['Composition Type'];
-    const comSecTemp = cat['Composition-section/Tempo'];
+    const comSecTemp = cat['Comp.-section/Tempo'];
     const tala = cat['Tala'];
     const improv = cat['Improvisation'];
     const other = cat['Other'];
@@ -160,12 +180,21 @@ export default defineComponent({
     } else {
       this.topLevel = 'None'
     }
+    if (cat['Top Level'] !== undefined) {
+      this.topLevel = cat['Top Level'];
+    }
   },
-
 
   methods: {
 
-    
+    preventSpaceSelect(e?: KeyboardEvent) {
+      if (e) {
+        if (e.key === ' ') {
+          e.preventDefault();
+        }
+      }
+    },
+
     updateTopLevel() {
       this.compositionType = undefined,
       this.section_tempo = undefined,
@@ -188,6 +217,8 @@ export default defineComponent({
         cat['Other']['Other'] = true;
         altCat['Other']['Other'] = true;
       }
+      this.section.categorization['Top Level'] = this.topLevel;
+      this.piece.sectionCategorization[this.sectionNum]['Top Level'] = this.topLevel;
       this.$emit('unsavedChanges');
     },
     updateCompositionType() {
@@ -205,10 +236,10 @@ export default defineComponent({
       if (this.section_tempo) {
         const cat = this.section.categorization;
         const altCat = this.piece.sectionCategorization[this.sectionNum];
-        const allKeys = Object.keys(cat['Composition-section/Tempo']) as Section_TempoType[];
-        allKeys.forEach(key => cat['Composition-section/Tempo'][key] = false);
-        cat['Composition-section/Tempo'][this.section_tempo] = true;
-        altCat['Composition-section/Tempo'][this.section_tempo] = true;
+        const allKeys = Object.keys(cat['Comp.-section/Tempo']) as Section_TempoType[];
+        allKeys.forEach(key => cat['Comp.-section/Tempo'][key] = false);
+        cat['Comp.-section/Tempo'][this.section_tempo] = true;
+        altCat['Comp.-section/Tempo'][this.section_tempo] = true;
       }
       this.$emit('unsavedChanges');
     },

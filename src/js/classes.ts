@@ -2,7 +2,7 @@ import { findLastIndex } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 import { Meter } from './meter.ts';
 
-const initSectionCategorization = () => {
+const initSectionCategorization = (): SecCatType => {
   return {
     "Pre-Chiz Alap": {
       "Pre-Chiz Alap": false
@@ -27,7 +27,7 @@ const initSectionCategorization = () => {
       "Razakhani Gat": false,
       "Ferozkhani Gat": false,
     },
-    "Composition-section/Tempo": {
+    "Comp.-section/Tempo": {
       "Ati Vilambit": false,
       "Vilambit": false,
       "Madhya": false,
@@ -46,6 +46,7 @@ const initSectionCategorization = () => {
     "Other": {
       "Other": false,
     },
+    "Top Level": "None"
   }
 }
 
@@ -1533,7 +1534,7 @@ class Group {
   }
 }
 
-type PhraseCategorizationType = {
+type PhraseCatType = {
   "Phrase": {
     "Mohra": boolean,
     "Mukra": boolean,
@@ -1577,7 +1578,7 @@ type PhraseCategorizationType = {
   }
 }
 
-type SectionCategorizationType = {
+type SecCatType = {
   "Pre-Chiz Alap": {
     "Pre-Chiz Alap": boolean,
   },
@@ -1601,7 +1602,7 @@ type SectionCategorizationType = {
     "Razakhani Gat": boolean,
     "Ferozkhani Gat": boolean,
   },
-  "Composition-section/Tempo": {
+  "Comp.-section/Tempo": {
     "Ati Vilambit": boolean,
     "Vilambit": boolean,
     "Madhya": boolean,
@@ -1619,7 +1620,15 @@ type SectionCategorizationType = {
   },
   "Other": {
     "Other": boolean,
-  }
+  },
+  "Top Level": (
+    "Pre-Chiz Alap" | 
+    "Alap" | 
+    "Composition" | 
+    "Improvisation" | 
+    "Other" |
+    "None"
+  )
 }
 
 
@@ -1633,7 +1642,7 @@ class Phrase {
   durArray?: number[];
   chikaris: { [key: string]: Chikari };
   pieceIdx?: number;
-  categorizationGrid: PhraseCategorizationType[];
+  categorizationGrid: PhraseCatType[];
   
   constructor({
     trajectories = [],
@@ -1656,7 +1665,7 @@ class Phrase {
     trajectoryGrid?: Trajectory[][],
     instrumentation?: string[],
     groupsGrid?: Group[][],
-    categorizationGrid?: PhraseCategorizationType[],
+    categorizationGrid?: PhraseCatType[],
   } = {}) {
 
     this.startTime = startTime;
@@ -2081,7 +2090,7 @@ class Piece {
   instrumentation: string[];
   possibleTrajs: { [key: string]: number[] };
   meters: Meter[];
-  sectionCategorization: SectionCategorizationType[];
+  sectionCategorization: SecCatType[];
 
 
   constructor({
@@ -2129,7 +2138,7 @@ class Piece {
     sectionStarts?: number[],
     instrumentation?: string[],
     meters?: Meter[],
-    sectionCategorization?: SectionCategorizationType[],
+    sectionCategorization?: SecCatType[],
   } = {}) {
     this.meters = meters;
     this.phrases = phrases;
@@ -2216,6 +2225,31 @@ class Piece {
         }
         if (c['Other'] === undefined) {
           c['Other'] = { "Other": false }
+        }
+        if (c['Top Level'] === undefined) {
+          const com = c['Composition Type'];
+          const comSecTemp = c['Comp.-section/Tempo'];
+          const tala = c['Tala'];
+          const improv = c['Improvisation'];
+          const other = c['Other'];
+          const someTrue = (obj: object) => Object.values(obj).some(v => v);
+          if (c['Pre-Chiz Alap']['Pre-Chiz Alap']) {
+            c['Top Level'] = 'Pre-Chiz Alap'
+          } else if (someTrue(c['Alap'])) {
+            c['Top Level'] = 'Alap'
+          } else if (someTrue(com) || someTrue(comSecTemp) || someTrue(tala)) {
+            c['Top Level'] = 'Composition'
+          } else if (improv['Improvisation']) {
+            c['Top Level'] = 'Improvisation'
+          } else if (other['Other']) {
+            c['Top Level'] = 'Other'
+          } else {
+            c['Top Level'] = 'None'
+          }
+        }
+        if (c['Comp.-section/Tempo'] === undefined) {
+          c['Comp.-section/Tempo'] = c['Composition-section/Tempo'];
+          delete c['Composition-section/Tempo']
         }
       })
     } else {
@@ -2457,6 +2491,32 @@ class Piece {
     return pulse
   }
 
+  sIdxFromPIdx(pIdx: number) {
+    // section index from phrase index
+    const ss = this.sectionStarts!;
+    const sIdx = ss.length - 1 - ss.slice().reverse().findIndex(s => pIdx >= s);
+    return sIdx
+  }
+
+  pIdxFromGroup(g: Group) {
+    const pIdx = this.phrases.findIndex(p => {
+      let bool = false;
+      p.groupsGrid.forEach(gg => {
+        if (gg.includes(g)) {
+          bool = true
+        }
+      })
+      return bool
+    });
+    return pIdx
+  }
+
+  sIdxFromGroup(g: Group) {
+    const pIdx = this.pIdxFromGroup(g);
+    const sIdx = this.sIdxFromPIdx(pIdx);
+    return sIdx
+  }
+
   toJSON() {
     return {
       phrases: this.phrases,
@@ -2511,14 +2571,14 @@ const yamanRuleSet = {
 
 class Section {
   phrases: Phrase[];
-  categorization: SectionCategorizationType;
+  categorization: SecCatType;
 
   constructor({
     phrases = [],
     categorization = undefined
   }: {
     phrases?: Phrase[],
-    categorization?: SectionCategorizationType
+    categorization?: SecCatType
   } = {}) {
     this.phrases = phrases;
     if (categorization !== undefined) {
@@ -2892,5 +2952,6 @@ export {
 export type {
   RuleSetType,
   VibObjType,
-  PhraseCategorizationType
+  PhraseCatType,
+  SecCatType
 }
