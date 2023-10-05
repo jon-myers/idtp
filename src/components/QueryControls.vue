@@ -235,90 +235,24 @@
             </option>
           </select>
         </div>
-        <div 
-          class='controlsRow' 
-          v-if='categories[qIdx].value === "sectionTopLevel"'
-          >
-          <label>Section Type: </label>
-          <select 
-            name='sectionTopLevel' 
-            v-model='sectionTopLevels[qIdx]'
+        <div v-for='selObj in selectRowData' :key='selObj.key'>
+          <div 
+            class='controlsRow' 
+            v-if='categories[qIdx].value === selObj.category'
             >
-            <option 
-              v-for='topLevel in topLevelOptions' 
-              :value='topLevel'
+            <label>{{ selObj.label }}</label>
+            <select 
+              name='category' 
+              v-model='selObj.vModelArr[qIdx]'
               >
-              {{ topLevel }}
-            </option>
-          </select>
-        </div>
-        <div 
-          class='controlsRow' 
-          v-if='categories[qIdx].value === "alapSection"'
-          >
-          <label>Alap Section: </label>
-          <select 
-            name='alapSection' 
-            v-model='alapSections[qIdx]'
-            >
-            <option 
-              v-for='alapSection in alapSectionOptions' 
-              :value='alapSection'
-              >
-              {{ alapSection }}
-            </option>
-          </select>
-        </div>
-        <div 
-          class='controlsRow' 
-          v-if='categories[qIdx].value === "compType"'
-          >
-          <label>Composition Type: </label>
-          <select 
-            name='compType' 
-            v-model='compTypes[qIdx]'
-            >
-            <option 
-              v-for='compType in compTypeOptions' 
-              :value='compType'
-              >
-              {{ compType }}
-            </option>
-          </select>
-        </div>
-        <div 
-          class='controlsRow' 
-          v-if='categories[qIdx].value === "compSecTempo"'
-          >
-          <label>Composition-section/Tempo: </label>
-          <select 
-            name='compSecTempo' 
-            v-model='compSecTempos[qIdx]'
-            >
-            <option 
-              v-for='compSecTempo in compSecTempoOptions' 
-              :value='compSecTempo'
-              >
-              {{ compSecTempo }}
-            </option>
-          </select>
-        </div>
-        <div 
-          class='controlsRow' 
-          v-if='categories[qIdx].value === "tala"'
-          >
-          <label>Tala: </label>
-          <select 
-            name='tala' 
-            v-model='talas[qIdx]'
-            >
-            <option 
-              v-for='tala in talaOptions' 
-              :value='tala'
-              >
-              {{ tala }}
-            </option>
-          </select>
+              <option 
+                v-for='option in selObj.options' 
+                :value='option'
+                >
+                {{ option }}
+              </option>
+            </select>
+          </div>
         </div>
         <div class='controlsRow'>
           <label>Designator: </label>
@@ -339,6 +273,7 @@
 <script lang='ts'>
 import phonemes from '@/assets/json/phonemes.json';
 import { defineComponent, PropType } from 'vue';
+import categoryData from '@/assets/json/categorization.json';
 import { 
   SegmentationType, 
   QueryType, 
@@ -350,7 +285,8 @@ import {
   Pitch,
   Raga,
   Trajectory,
-  SectionCategorizationType
+  SecCatType,
+  PhraseCatType
 } from '@/js/classes.ts';
 
 type QueryControlsDataType = {
@@ -376,16 +312,26 @@ type QueryControlsDataType = {
   numTrajs: number[],
   pitchSeqObjs: PitchSeqObjType[][],
   trajIdSeqs: number[][],
-  sectionTopLevels: SectionCategorizationType["Top Level"][],
-  alapSections: (keyof SectionCategorizationType["Alap"])[],
-  topLevelOptions: SectionCategorizationType["Top Level"][],
-  alapSectionOptions: (keyof SectionCategorizationType["Alap"])[],
-  compTypeOptions: (keyof SectionCategorizationType["Composition Type"])[],
-  compSecTempoOptions: (keyof SectionCategorizationType["Composition-section/Tempo"])[],
-  talaOptions: (keyof SectionCategorizationType["Tala"])[],
-  talas: (keyof SectionCategorizationType["Tala"])[],
-  compTypes: (keyof SectionCategorizationType["Composition Type"])[],
-  compSecTempos: (keyof SectionCategorizationType["Composition-section/Tempo"])[],
+  sectionTopLevels: SecCatType["Top Level"][],
+  alapSections: (keyof SecCatType["Alap"])[],
+  topLevelOptions: SecCatType["Top Level"][],
+  alapSectionOptions: (keyof SecCatType["Alap"])[],
+  compTypeOptions: (keyof SecCatType["Composition Type"])[],
+  compSecTempoOptions: (keyof SecCatType["Comp.-section/Tempo"])[],
+  talaOptions: (keyof SecCatType["Tala"])[],
+  talas: (keyof SecCatType["Tala"])[],
+  compTypes: (keyof SecCatType["Composition Type"])[],
+  compSecTempos: (keyof SecCatType["Comp.-section/Tempo"])[],
+  phraseTypeOptions: (keyof PhraseCatType["Phrase"])[],
+  elborationTypeOptions: (keyof PhraseCatType["Elaboration"])[],
+  vocalArtTypeOptions: (keyof PhraseCatType["Vocal Articulation"])[],
+  instArtTypeOptions: (keyof PhraseCatType["Instrumental Articulation"])[],
+  incidentalOptions: (keyof PhraseCatType["Incidental"])[],
+  phraseTypes: (keyof PhraseCatType["Phrase"])[],
+  elaborationTypes: (keyof PhraseCatType["Elaboration"])[],
+  vocalArtTypes: (keyof PhraseCatType["Vocal Articulation"])[],
+  instArtTypes: (keyof PhraseCatType["Instrumental Articulation"])[],
+  incidentals: (keyof PhraseCatType["Incidental"])[],
 
 }
 type PitchNameType = 'Sa' | 're' | 'Re' | 'ga' | 'Ga' | 'ma' | 'Ma' | 'Pa' | 'dha' | 
@@ -404,6 +350,9 @@ type PitchSeqObjType = {
   swara: PitchNameType,
   oct: number,
 }
+
+const sectionData = categoryData['Section'];
+const phraseData = categoryData['Phrase'];
 
 export default defineComponent({
   name: 'QueryControls',
@@ -443,52 +392,34 @@ export default defineComponent({
       numTrajs: [2],
       pitchSeqObjs: [[{ swara: 'Sa', oct: 0 }, { swara: 'Sa', oct: 0 }]],
       trajIdSeqs: [[0, 0]],
-      sectionTopLevels: ["None"],
+      sectionTopLevels: ["Alap"],
       alapSections: ["Alap"],
       compTypes: ["Dhrupad"],
       compSecTempos: ["Vilambit"],
       talas: ["Tintal"],
-      topLevelOptions: [
-        'Pre-Chiz Alap',
-        'Alap',
-        'Composition',
-        'Improvisation',
-        'Other',
-        'None'
-      ],
-      alapSectionOptions: [
-        'Alap',
-        'Jor',
-        'Alap-Jhala',
-      ],
-      compTypeOptions: [
-        'Dhrupad',
-        'Bandish',
-        'Thumri',
-        'Ghazal', 
-        'Qawwali',
-        'Dhun',
-        'Tappa',
-        'Bhajan',
-        'Kirtan',
-        'Kriti',
-        'Masitkhani Gat',
-        'Razakhani Gat',
-        'Ferozkhani Gat',
-      ],
-      compSecTempoOptions: [
-        'Ati Vilambit',
-        'Vilambit',
-        'Madhya',
-        'Drut',
-        'Ati Drut',
-        'Jhala',
-      ],
-      talaOptions: [
-        'Ektal',
-        'Tintal',
-        'Rupak'
-      ]
+      topLevelOptions: Object.keys(sectionData) as SecCatType["Top Level"][],
+      alapSectionOptions: sectionData['Alap'] as (keyof SecCatType["Alap"])[],
+      compTypeOptions: sectionData['Composition']['Composition Type'] as 
+        (keyof SecCatType["Composition Type"])[],
+      compSecTempoOptions: sectionData['Composition']['Comp.-section/Tempo'] as 
+        (keyof SecCatType["Comp.-section/Tempo"])[],
+      talaOptions: sectionData['Composition']['Tala'] as 
+        (keyof SecCatType["Tala"])[],
+      phraseTypeOptions: phraseData['Phrase Type'] as 
+        (keyof PhraseCatType["Phrase"])[],
+      elborationTypeOptions: phraseData['Elaboration Type'] as 
+        (keyof PhraseCatType["Elaboration"])[],
+      vocalArtTypeOptions: phraseData['Articulation Type']['Vocal'] as
+        (keyof PhraseCatType["Vocal Articulation"])[],
+      instArtTypeOptions: phraseData['Articulation Type']['Instrumental'] as
+        (keyof PhraseCatType["Instrumental Articulation"])[],
+      incidentalOptions: phraseData['Incidental'] as
+        (keyof PhraseCatType["Incidental"])[],
+      phraseTypes: ['Mohra'],
+      elaborationTypes: ['Tan (Sapat)'],
+      vocalArtTypes: ['Non-Tom'],
+      instArtTypes: ['Bol'],
+      incidentals: ['Tuning'],
     }
   },
 
@@ -517,19 +448,30 @@ export default defineComponent({
         { param: this.categories, init: { value: 'pitch', text: 'Pitch' } },
         { param: this.pitchNames, init: 'Sa' },
         { param: this.octs, init: 0 },
-        { param: this.designators, init: { value: 'includes', text: 'Includes' } },
+        { 
+          param: this.designators, 
+          init: { value: 'includes', text: 'Includes' } 
+        },
         { param: this.trajectoryNames, init: 'Fixed' },
         { param: this.trajectoryIDs, init: 0 },
         { param: this.numPitches, init: 2 },
-        { param: this.pitchSeqObjs, init: [{ swara: 'Sa', oct: 0 }, { swara: 'Sa', oct: 0 }] },
+        { 
+          param: this.pitchSeqObjs, 
+          init: [{ swara: 'Sa', oct: 0 }, { swara: 'Sa', oct: 0 }] 
+        },
         { param: this.trajIdSeqs, init: [0, 0] },
         { param: this.vowels, init: 'a' },
         { param: this.consonants, init: 'ra' },
-        { param: this.sectionTopLevels, init: "None" },
+        { param: this.sectionTopLevels, init: "Alap" },
         { param: this.alapSections, init: "Alap" },
         { param: this.compTypes, init: "Dhrupad" },
         { param: this.compSecTempos, init: "Vilambit" },
         { param: this.talas, init: "Tintal" },
+        { param: this.phraseTypes, init: 'Mohra' },
+        { param: this.elaborationTypes, init: 'Tan (Sapat)' },
+        { param: this.vocalArtTypes, init: 'Non-Tom' },
+        { param: this.instArtTypes, init: 'Bol' },
+        { param: this.incidentals, init: 'Tuning' },
       ]
       if (newVal > oldVal) {
         params.forEach(p => {
@@ -544,6 +486,91 @@ export default defineComponent({
   },
 
   computed: {
+
+    selectRowData() {
+      const out: {
+        label: string,
+        vModelArr: string[],
+        options: string[],
+        key: number,
+        category: CategoryType,
+      }[] = [
+        {
+          label: 'Section Type: ',
+          vModelArr: this.sectionTopLevels,
+          options: this.topLevelOptions,
+          key: 0,
+          category: 'sectionTopLevel',
+        },
+        { 
+          label: 'Alap Section: ',
+          vModelArr: this.alapSections,
+          options: this.alapSectionOptions,
+          key: 1,
+          category: 'alapSection',
+        },
+        { 
+          label: 'Composition Type: ',
+          vModelArr: this.compTypes,
+          options: this.compTypeOptions,
+          key: 2,
+          category: 'compType',
+        },
+        { 
+          label: 'Comp.-section/Tempo: ',
+          vModelArr: this.compSecTempos,
+          options: this.compSecTempoOptions,
+          key: 3,
+          category: 'compSecTempo',
+        },
+        { 
+          label: 'Tala: ',
+          vModelArr: this.talas,
+          options: this.talaOptions,
+          key: 4,
+          category: 'tala',
+        },
+        { 
+          label: 'Phrase Type: ',
+          vModelArr: this.phraseTypes,
+          options: this.phraseTypeOptions,
+          key: 5,
+          category: 'phraseType',
+        },
+        { 
+          label: 'Elaboration Type: ',
+          vModelArr: this.elaborationTypes,
+          options: this.elborationTypeOptions,
+          key: 6,
+          category: 'elaborationType',
+        },
+        { 
+          label: 'Incidental: ',
+          vModelArr: this.incidentals,
+          options: this.incidentalOptions,
+          key: 7,
+          category: 'incidental',
+        },
+      ];
+      if (this.vocal) {
+        out.push({
+          label: 'Articulation Type: ',
+          vModelArr: this.vocalArtTypes ,
+          options: this.vocalArtTypeOptions,
+          key: 8,
+          category: 'vocalArtType',
+        })
+      } else {
+        out.push({
+          label: 'Articulation Type: ',
+          vModelArr: this.instArtTypes,
+          options: this.instArtTypeOptions,
+          key: 8,
+          category: 'instArtType',
+        })
+      }
+      return out
+    },
 
     trajNames() {
       return this.trajIdxs.map(ti => {
@@ -598,6 +625,16 @@ export default defineComponent({
           query.compSecTempo = this.compSecTempos[i]
         } else if (category.value === 'tala') {
           query.tala = this.talas[i]
+        } else if (category.value === 'phraseType') {
+          query.phraseType = this.phraseTypes[i]
+        } else if (category.value === 'elaborationType') {
+          query.elaborationType = this.elaborationTypes[i]
+        } else if (category.value === 'vocalArtType') {
+          query.vocalArtType = this.vocalArtTypes[i]
+        } else if (category.value === 'instArtType') {
+          query.instArtType = this.instArtTypes[i]
+        } else if (category.value === 'incidental') {
+          query.incidental = this.incidentals[i]
         }
         return query
       })
@@ -624,14 +661,25 @@ export default defineComponent({
         { value: 'trajSequenceLoose', text: 'Loose Traj Sequence' },
         
       ];
-      if (this.segmentation !== 'sequenceOfTrajectories') {
+      if (
+        this.segmentation !== 'sequenceOfTrajectories' && 
+        this.segmentation !== 'connectedSequenceOfTrajectories'
+        ) {
         cats.push(
           { value: 'sectionTopLevel', text: 'Section Type' },
           { value: 'alapSection', text: 'Alap Section' },
           { value: 'compType', text: 'Composition Type' },
-          { value: 'compSecTempo', text: 'Composition-section/Tempo' },
-          { value: 'tala', text: 'Tala' }
+          { value: 'compSecTempo', text: 'Comp.-section/Tempo' },
+          { value: 'tala', text: 'Tala' },
+          { value: 'phraseType', text: 'Phrase Type' },
+          { value: 'elaborationType', text: 'Elaboration Type' },
+          { value: 'incidental', text: 'Incidental' }
         )
+        if (this.vocal) {
+          cats.push({ value: 'vocalArtType', text: 'Articulation Type' })
+        } else {
+          cats.push({ value: 'instArtType', text: 'Articulation Type' })
+        }
       }
       if (this.vocal) {
         cats.push(

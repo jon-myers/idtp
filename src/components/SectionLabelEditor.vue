@@ -62,7 +62,7 @@
             @keydown='preventSpaceSelect'
             >
             <option 
-              v-for='option in Object.keys(section.categorization["Composition-section/Tempo"])' 
+              v-for='option in Object.keys(section.categorization["Comp.-section/Tempo"])' 
               :value='option'
               >
               {{option}}
@@ -104,7 +104,7 @@ type topLevelOptionsType = (
   'Other'
   );
 
-type Section_TempoType = keyof Section['categorization']['Composition-section/Tempo'];
+type Section_TempoType = keyof Section['categorization']['Comp.-section/Tempo'];
 type CompositionType = keyof Section['categorization']['Composition Type'];
 type TalaType = keyof Section['categorization']['Tala'];
 type AlapType = keyof Section['categorization']['Alap'];
@@ -154,7 +154,7 @@ export default defineComponent({
   mounted() {
     const cat = this.section.categorization;
     const com = cat['Composition Type'];
-    const comSecTemp = cat['Composition-section/Tempo'];
+    const comSecTemp = cat['Comp.-section/Tempo'];
     const tala = cat['Tala'];
     const improv = cat['Improvisation'];
     const other = cat['Other'];
@@ -236,10 +236,10 @@ export default defineComponent({
       if (this.section_tempo) {
         const cat = this.section.categorization;
         const altCat = this.piece.sectionCategorization[this.sectionNum];
-        const allKeys = Object.keys(cat['Composition-section/Tempo']) as Section_TempoType[];
-        allKeys.forEach(key => cat['Composition-section/Tempo'][key] = false);
-        cat['Composition-section/Tempo'][this.section_tempo] = true;
-        altCat['Composition-section/Tempo'][this.section_tempo] = true;
+        const allKeys = Object.keys(cat['Comp.-section/Tempo']) as Section_TempoType[];
+        allKeys.forEach(key => cat['Comp.-section/Tempo'][key] = false);
+        cat['Comp.-section/Tempo'][this.section_tempo] = true;
+        altCat['Comp.-section/Tempo'][this.section_tempo] = true;
       }
       this.$emit('unsavedChanges');
     },
