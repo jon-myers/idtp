@@ -235,11 +235,96 @@
             </option>
           </select>
         </div>
+        <div 
+          class='controlsRow' 
+          v-if='categories[qIdx].value === "sectionTopLevel"'
+          >
+          <label>Section Type: </label>
+          <select 
+            name='sectionTopLevel' 
+            v-model='sectionTopLevels[qIdx]'
+            >
+            <option 
+              v-for='topLevel in topLevelOptions' 
+              :value='topLevel'
+              >
+              {{ topLevel }}
+            </option>
+          </select>
+        </div>
+        <div 
+          class='controlsRow' 
+          v-if='categories[qIdx].value === "alapSection"'
+          >
+          <label>Alap Section: </label>
+          <select 
+            name='alapSection' 
+            v-model='alapSections[qIdx]'
+            >
+            <option 
+              v-for='alapSection in alapSectionOptions' 
+              :value='alapSection'
+              >
+              {{ alapSection }}
+            </option>
+          </select>
+        </div>
+        <div 
+          class='controlsRow' 
+          v-if='categories[qIdx].value === "compType"'
+          >
+          <label>Composition Type: </label>
+          <select 
+            name='compType' 
+            v-model='compTypes[qIdx]'
+            >
+            <option 
+              v-for='compType in compTypeOptions' 
+              :value='compType'
+              >
+              {{ compType }}
+            </option>
+          </select>
+        </div>
+        <div 
+          class='controlsRow' 
+          v-if='categories[qIdx].value === "compSecTempo"'
+          >
+          <label>Composition-section/Tempo: </label>
+          <select 
+            name='compSecTempo' 
+            v-model='compSecTempos[qIdx]'
+            >
+            <option 
+              v-for='compSecTempo in compSecTempoOptions' 
+              :value='compSecTempo'
+              >
+              {{ compSecTempo }}
+            </option>
+          </select>
+        </div>
+        <div 
+          class='controlsRow' 
+          v-if='categories[qIdx].value === "tala"'
+          >
+          <label>Tala: </label>
+          <select 
+            name='tala' 
+            v-model='talas[qIdx]'
+            >
+            <option 
+              v-for='tala in talaOptions' 
+              :value='tala'
+              >
+              {{ tala }}
+            </option>
+          </select>
+        </div>
         <div class='controlsRow'>
           <label>Designator: </label>
           <select name='designator' v-model='designators[qIdx].value'>
             <option 
-              v-for='designator in possibleDesignators' 
+              v-for='designator in possibleDesignators(categories[qIdx].value)' 
               :value='designator.value'
               >
               {{ designator.text }}
@@ -264,7 +349,8 @@ import {
 import {
   Pitch,
   Raga,
-  Trajectory
+  Trajectory,
+  SectionCategorizationType
 } from '@/js/classes.ts';
 
 type QueryControlsDataType = {
@@ -277,7 +363,6 @@ type QueryControlsDataType = {
   vowels: string[],
   consonants: string[],
   possibleSegmentations: { value: SegmentationType, text: string }[],
-  possibleDesignators: { value: DesignatorType, text: string }[],
   all: boolean,
   sequenceLength: number,
   minDur: number,
@@ -291,7 +376,16 @@ type QueryControlsDataType = {
   numTrajs: number[],
   pitchSeqObjs: PitchSeqObjType[][],
   trajIdSeqs: number[][],
-
+  sectionTopLevels: SectionCategorizationType["Top Level"][],
+  alapSections: (keyof SectionCategorizationType["Alap"])[],
+  topLevelOptions: SectionCategorizationType["Top Level"][],
+  alapSectionOptions: (keyof SectionCategorizationType["Alap"])[],
+  compTypeOptions: (keyof SectionCategorizationType["Composition Type"])[],
+  compSecTempoOptions: (keyof SectionCategorizationType["Composition-section/Tempo"])[],
+  talaOptions: (keyof SectionCategorizationType["Tala"])[],
+  talas: (keyof SectionCategorizationType["Tala"])[],
+  compTypes: (keyof SectionCategorizationType["Composition Type"])[],
+  compSecTempos: (keyof SectionCategorizationType["Composition-section/Tempo"])[],
 
 }
 type PitchNameType = 'Sa' | 're' | 'Re' | 'ga' | 'Ga' | 'ma' | 'Ma' | 'Pa' | 'dha' | 
@@ -317,12 +411,10 @@ export default defineComponent({
     return {
       segmentation: 'phrase',
       numQueries: 1,
-      // queries: [],
       categories: [{ value: 'pitch', text: 'Pitch' }],
       designators: [{ value: 'includes', text: 'Includes' }],
       pitchNames: ['Sa'],
       octs: [0],
-      // pitches: [new Pitch()],
       trajectoryIDs: [0],
       vowels: ['a'],
       consonants: ['ra'],
@@ -334,12 +426,6 @@ export default defineComponent({
           value: 'connectedSequenceOfTrajectories', 
           text: 'Connected Trajectories' 
         },
-      ],
-      possibleDesignators: [
-        { value: 'includes', text: 'Includes' },
-        { value: 'excludes', text: 'Excludes' },
-        { value: 'startsWith', text: 'Starts With' },
-        { value: 'endsWith', text: 'Ends With' }
       ],
       all: true,
       sequenceLength: 20,
@@ -357,6 +443,52 @@ export default defineComponent({
       numTrajs: [2],
       pitchSeqObjs: [[{ swara: 'Sa', oct: 0 }, { swara: 'Sa', oct: 0 }]],
       trajIdSeqs: [[0, 0]],
+      sectionTopLevels: ["None"],
+      alapSections: ["Alap"],
+      compTypes: ["Dhrupad"],
+      compSecTempos: ["Vilambit"],
+      talas: ["Tintal"],
+      topLevelOptions: [
+        'Pre-Chiz Alap',
+        'Alap',
+        'Composition',
+        'Improvisation',
+        'Other',
+        'None'
+      ],
+      alapSectionOptions: [
+        'Alap',
+        'Jor',
+        'Alap-Jhala',
+      ],
+      compTypeOptions: [
+        'Dhrupad',
+        'Bandish',
+        'Thumri',
+        'Ghazal', 
+        'Qawwali',
+        'Dhun',
+        'Tappa',
+        'Bhajan',
+        'Kirtan',
+        'Kriti',
+        'Masitkhani Gat',
+        'Razakhani Gat',
+        'Ferozkhani Gat',
+      ],
+      compSecTempoOptions: [
+        'Ati Vilambit',
+        'Vilambit',
+        'Madhya',
+        'Drut',
+        'Ati Drut',
+        'Jhala',
+      ],
+      talaOptions: [
+        'Ektal',
+        'Tintal',
+        'Rupak'
+      ]
     }
   },
 
@@ -380,26 +512,33 @@ export default defineComponent({
 
   watch: {
     numQueries(newVal, oldVal) {
-      console.log('numQueries changed from', oldVal, 'to', newVal)
+      console.log('numQueries changed from', oldVal, 'to', newVal);
+      const params: { param: ParamType[], init: ParamType }[]  = [
+        { param: this.categories, init: { value: 'pitch', text: 'Pitch' } },
+        { param: this.pitchNames, init: 'Sa' },
+        { param: this.octs, init: 0 },
+        { param: this.designators, init: { value: 'includes', text: 'Includes' } },
+        { param: this.trajectoryNames, init: 'Fixed' },
+        { param: this.trajectoryIDs, init: 0 },
+        { param: this.numPitches, init: 2 },
+        { param: this.pitchSeqObjs, init: [{ swara: 'Sa', oct: 0 }, { swara: 'Sa', oct: 0 }] },
+        { param: this.trajIdSeqs, init: [0, 0] },
+        { param: this.vowels, init: 'a' },
+        { param: this.consonants, init: 'ra' },
+        { param: this.sectionTopLevels, init: "None" },
+        { param: this.alapSections, init: "Alap" },
+        { param: this.compTypes, init: "Dhrupad" },
+        { param: this.compSecTempos, init: "Vilambit" },
+        { param: this.talas, init: "Tintal" },
+      ]
       if (newVal > oldVal) {
-        this.growParam(this.categories, { value: 'pitch', text: 'Pitch' }, newVal, oldVal);
-        this.growParam(this.pitchNames, 'Sa', newVal, oldVal);
-        this.growParam(this.octs, 0, newVal, oldVal);
-        this.growParam(this.designators, { value: 'includes', text: 'Includes' }, newVal, oldVal);
-        this.growParam(this.trajectoryNames, 'Fixed', newVal, oldVal);
-        this.growParam(this.trajectoryIDs, 0, newVal, oldVal);
-        this.growParam(this.numPitches, 2, newVal, oldVal);
-        this.growParam(this.pitchSeqObjs, [{ swara: 'Sa', oct: 0 }, { swara: 'Sa', oct: 0 }], newVal, oldVal);
-        this.growParam(this.trajIdSeqs, [0, 0], newVal, oldVal);
+        params.forEach(p => {
+          this.growParam(p.param, p.init, newVal, oldVal);
+        })
       } else {
-        this.categories.splice(newVal, oldVal - newVal);
-        this.pitchNames.splice(newVal, oldVal - newVal);
-        this.octs.splice(newVal, oldVal - newVal);
-        this.designators.splice(newVal, oldVal - newVal);
-        this.trajectoryNames.splice(newVal, oldVal - newVal);
-        this.trajectoryIDs.splice(newVal, oldVal - newVal);
-        this.numPitches.splice(newVal, oldVal - newVal);
-        this.pitchSeqObjs.splice(newVal, oldVal - newVal);
+        params.forEach(p => {
+          p.param.splice(newVal, oldVal - newVal);
+        })
       }
     }
   },
@@ -449,6 +588,16 @@ export default defineComponent({
         } else if (category.value.slice(0, 12) === 'trajSequence') {
           console.log('this')
           query.trajIdSequence = this.trajIdSeqs[i]
+        } else if (category.value === 'sectionTopLevel') {
+          query.sectionTopLevel = this.sectionTopLevels[i]
+        } else if (category.value === 'alapSection') {
+          query.alapSection = this.alapSections[i]
+        } else if (category.value === 'compType') {
+          query.compType = this.compTypes[i]
+        } else if (category.value === 'compSecTempo') {
+          query.compSecTempo = this.compSecTempos[i]
+        } else if (category.value === 'tala') {
+          query.tala = this.talas[i]
         }
         return query
       })
@@ -473,7 +622,17 @@ export default defineComponent({
         { value: 'trajectoryID', text: 'Trajectory' },
         { value: 'trajSequenceStrict', text: 'Strict Trajectory Sequence' },
         { value: 'trajSequenceLoose', text: 'Loose Traj Sequence' },
+        
       ];
+      if (this.segmentation !== 'sequenceOfTrajectories') {
+        cats.push(
+          { value: 'sectionTopLevel', text: 'Section Type' },
+          { value: 'alapSection', text: 'Alap Section' },
+          { value: 'compType', text: 'Composition Type' },
+          { value: 'compSecTempo', text: 'Composition-section/Tempo' },
+          { value: 'tala', text: 'Tala' }
+        )
+      }
       if (this.vocal) {
         cats.push(
           { value: 'vowel', text: 'Vowel' },
@@ -493,6 +652,20 @@ export default defineComponent({
   },
 
   methods: {
+
+    possibleDesignators(category: CategoryType) {
+      const out: { value: DesignatorType, text: string }[] = [
+        { value: 'includes', text: 'Includes' },
+        { value: 'excludes', text: 'Excludes' },
+      ];
+      if (category !== 'sectionTopLevel') {
+        out.push(
+          { value: 'startsWith', text: 'Starts With' },
+          { value: 'endsWith', text: 'Ends With' }
+        )
+      }
+      return out;
+    },
 
     updateNumPitches(qIdx: number) {
       const n = this.numPitches[qIdx];

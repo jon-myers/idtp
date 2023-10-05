@@ -1,5 +1,10 @@
 import { instantiatePiece } from './analysis.ts';
-import { Piece, Pitch, Trajectory } from './classes.ts';
+import { 
+  Piece, 
+  Pitch, 
+  Trajectory, 
+  SectionCategorizationType 
+} from './classes.ts';
 
 
 type CategoryType = (
@@ -12,7 +17,12 @@ type CategoryType = (
   'pitchSequenceStrict' |
   'pitchSequenceLoose' |
   'trajSequenceStrict' | 
-  'trajSequenceLoose'
+  'trajSequenceLoose' |
+  'sectionTopLevel' |
+  'alapSection' |
+  'compType' | 
+  'compSecTempo' |
+  'tala'
 )
 
 type DesignatorType = 'includes' | 'excludes' | 'startsWith' | 'endsWith';
@@ -33,6 +43,11 @@ type QueryType = {
   consonant?: string,
   pitchSequence?: Pitch[],
   trajIdSequence?: number[],
+  sectionTopLevel?: SectionCategorizationType['Top Level'],
+  alapSection?:  keyof SectionCategorizationType['Alap'],
+  compType?: keyof SectionCategorizationType['Composition Type'],
+  compSecTempo?: keyof SectionCategorizationType['Composition-section/Tempo'],
+  tala?: keyof SectionCategorizationType['Tala'],
 }
 
 type MultipleReturnType = [
@@ -130,7 +145,11 @@ class Query {
   startTimes: number[];
   pitchSequence?: Pitch[];
   trajIdSequence?: number[];
-  // queryAnswers: QueryAnswerType[];
+  sectionTopLevel?: SectionCategorizationType['Top Level'];
+  alapSection?:  keyof SectionCategorizationType['Alap'];
+  compType?: keyof SectionCategorizationType['Composition Type'];
+  compSecTempo?: keyof SectionCategorizationType['Composition-section/Tempo'];
+  tala?: keyof SectionCategorizationType['Tala'];
 
 
   private constructor(piece: Piece, {
@@ -146,6 +165,11 @@ class Query {
     minDur = 0,
     pitchSequence = undefined,
     trajIdSequence = undefined,
+    sectionTopLevel = undefined,
+    alapSection = undefined,
+    compType = undefined,
+    compSecTempo = undefined,
+    tala = undefined,
   }: {
     segmentation?: SegmentationType,
     designator?: DesignatorType,
@@ -159,6 +183,11 @@ class Query {
     minDur?: number,
     pitchSequence?: Pitch[],
     trajIdSequence?: number[],
+    sectionTopLevel?: SectionCategorizationType['Top Level'],
+    alapSection?:  keyof SectionCategorizationType['Alap'],
+    compType?: keyof SectionCategorizationType['Composition Type'],
+    compSecTempo?: keyof SectionCategorizationType['Composition-section/Tempo'],
+    tala?: keyof SectionCategorizationType['Tala'],
   } = {}) {
     this.category = category;
     this.designator = designator;
@@ -177,6 +206,11 @@ class Query {
     this.minDur = minDur;
     this.pitchSequence = pitchSequence;
     this.trajIdSequence = trajIdSequence;
+    this.sectionTopLevel = sectionTopLevel;
+    this.alapSection = alapSection;
+    this.compType = compType;
+    this.compSecTempo = compSecTempo;
+    this.tala = tala;
     if (segmentation === 'sequenceOfTrajectories') {
       if (sequenceLength === undefined) {
         throw new Error('sequenceLength is required when type is ' + 
@@ -187,6 +221,7 @@ class Query {
     const c2 = category === 'endingConsonant';
     const c3 = category === 'anyConsonant';
     const consonantsCondition = c1 || c2 || c3;
+    let sectionQuery = false;
     if (category === 'pitch') {
       if (pitch === undefined) {
         throw new Error('Pitch is required when category is pitch');
@@ -218,6 +253,41 @@ class Query {
     } else if (category === 'trajSequenceStrict' || category === 'trajSequenceLoose') {
       if (this.trajIdSequence === undefined) {
         throw new Error('trajIdSequence is required');
+      }
+    } else if (category === 'sectionTopLevel') {
+      if (this.sectionTopLevel === undefined) {
+        throw new Error('sectionTopLevel is required');
+      }
+      sectionQuery = true;
+    } else if (category === 'alapSection') {
+      if (this.alapSection === undefined) {
+        throw new Error('alapSection is required');
+      }
+      sectionQuery = true;
+    } else if (category === 'compType') {
+      if (this.compType === undefined) {
+        throw new Error('compType is required');
+      }
+      sectionQuery = true;
+    } else if (category === 'compSecTempo') {
+      if (this.compSecTempo === undefined) {
+        throw new Error('compSecTempo is required');
+      }
+      sectionQuery = true;
+    } else if (category === 'tala') {
+      if (this.tala === undefined) {
+        throw new Error('tala is required');
+      }
+      sectionQuery = true;
+    }
+    if (sectionQuery) {
+      if (this.designator === 'endsWith' || this.designator === 'startsWith') {
+        const t = 'sectionTopLevel cannot be used with startsWith or endsWith';
+        throw new Error(t);
+      }
+      if (this.segmentation === 'sequenceOfTrajectories') {
+        throw new Error('sectionTopLevel cannot be used with segmentation ' +
+          'sequenceOfTrajectories');
       }
     }
     this.allTypeFilters();
@@ -269,6 +339,21 @@ class Query {
       } else if (this.category === 'trajSequenceLoose') {
         const trialArr = phrase.trajectories.map(traj => traj.id);
         return this.trajSeqLooseDiff(this.trajIdSequence!, this.designator, trialArr);
+      } else if (this.category === 'sectionTopLevel') {
+        const pIdx = phrase.pieceIdx!;
+        return this.secTopLevelDiff(pIdx, this.designator);
+      } else if (this.category === 'alapSection') {
+        const pIdx = phrase.pieceIdx!;
+        return this.alapSectionDiff(pIdx, this.designator);
+      } else if (this.category === 'compType') {
+        const pIdx = phrase.pieceIdx!;
+        return this.compTypeDiff(pIdx, this.designator);
+      } else if (this.category === 'compSecTempo') {
+        const pIdx = phrase.pieceIdx!;
+        return this.compSecTempoDiff(pIdx, this.designator);
+      } else if (this.category === 'tala') {
+        const pIdx = phrase.pieceIdx!;
+        return this.talaDiff(pIdx, this.designator);
       }
     });
     this.trajectories = filteredPhrases.map(phrase => phrase.trajectories);
@@ -316,6 +401,21 @@ class Query {
       } else if (this.category === 'trajSequenceLoose') {
         const trialArr = group.trajectories.map(traj => traj.id);
         bool = this.trajSeqLooseDiff(this.trajIdSequence!, this.designator, trialArr);
+      } else if (this.category === 'sectionTopLevel') {
+        const pIdx = this.piece.pIdxFromGroup(group);
+        bool = this.secTopLevelDiff(pIdx, this.designator);
+      } else if (this.category === 'alapSection') {
+        const pIdx = this.piece.pIdxFromGroup(group);
+        bool = this.alapSectionDiff(pIdx, this.designator);
+      } else if (this.category === 'compType') {
+        const pIdx = this.piece.pIdxFromGroup(group);
+        bool = this.compTypeDiff(pIdx, this.designator);
+      } else if (this.category === 'compSecTempo') {
+        const pIdx = this.piece.pIdxFromGroup(group);
+        bool = this.compSecTempoDiff(pIdx, this.designator);
+      } else if (this.category === 'tala') {
+        const pIdx = this.piece.pIdxFromGroup(group);
+        bool = this.talaDiff(pIdx, this.designator);
       }
       if (bool) {
         this.identifier.push(group.id);
@@ -446,6 +546,9 @@ class Query {
       } else if (this.category === 'trajSequenceLoose') {
         const trajIDs = trajSeq.map(traj => traj.id);
         boolean = this.trajSeqLooseDiff(this.trajIdSequence!, this.designator, trajIDs);
+      } else if (this.category === 'sectionTopLevel') {
+        throw new Error('sectionTopLevel cannot be used with segmentation ' +
+          'sequenceOfTrajectories');
       }
       if (boolean) {
         this.trajectories.push(trajSeq);
@@ -461,6 +564,7 @@ class Query {
   private connectedSequenceOfTrajectoriesFilter() {
     const allTrajs = this.piece.allTrajectories(this.instrumentIdx);
     const splitTrajs = this.splitTrajsBySilences(allTrajs);
+    console.log(splitTrajs)
     splitTrajs.forEach(trajSeq => {
       let boolean = false;
       if (this.category === 'pitch') {
@@ -529,6 +633,21 @@ class Query {
       } else if (this.category === 'trajSequenceLoose') {
         const trajIDs = trajSeq.map(traj => traj.id);
         boolean = this.trajSeqLooseDiff(this.trajIdSequence!, this.designator, trajIDs);
+      } else if (this.category === 'sectionTopLevel') {
+        const pIdx = trajSeq[0].phraseIdx!;
+        boolean = this.secTopLevelDiff(pIdx, this.designator);
+      } else if (this.category === 'alapSection') {
+        const pIdx = trajSeq[0].phraseIdx!;
+        boolean = this.alapSectionDiff(pIdx, this.designator);
+      } else if (this.category === 'compType') {
+        const pIdx = trajSeq[0].phraseIdx!;
+        boolean = this.compTypeDiff(pIdx, this.designator);
+      } else if (this.category === 'compSecTempo') {
+        const pIdx = trajSeq[0].phraseIdx!;
+        boolean = this.compSecTempoDiff(pIdx, this.designator);
+      } else if (this.category === 'tala') {
+        const pIdx = trajSeq[0].phraseIdx!;
+        boolean = this.talaDiff(pIdx, this.designator);
       }
       if (boolean) {
         this.trajectories.push(trajSeq);
@@ -561,7 +680,7 @@ class Query {
         acc[acc.length - 1].push(traj);
       }
       return acc;
-    }, [[]] as Trajectory[][]);
+    }, [[]] as Trajectory[][]).filter(trajSeq => trajSeq.length > 0);
   }
 
   private pitchDiff(pitch: Pitch, designator: string, nPitches: number[]) {
@@ -697,6 +816,68 @@ class Query {
     return boolean;
   }
 
+  private secTopLevelDiff(pIdx: number, designator: string) {
+    let boolean: boolean = false;
+    const sIdx = this.piece.sIdxFromPIdx(pIdx);
+    const section = this.piece.sections![sIdx];
+    if (designator === 'includes') {
+      boolean = section.categorization['Top Level'] === this.sectionTopLevel;
+    } else if (designator === 'excludes') {
+      boolean = section.categorization['Top Level'] !== this.sectionTopLevel;
+    }
+    return boolean;
+  }
+
+  private alapSectionDiff(pIdx: number, designator: string) {
+    let boolean: boolean = false;
+    const sIdx = this.piece.sIdxFromPIdx(pIdx);
+    const section = this.piece.sections![sIdx];
+    if (designator === 'includes') {
+      boolean = section.categorization['Alap'][this.alapSection!]
+    } else if (designator === 'excludes') {
+      boolean = !section.categorization['Alap'][this.alapSection!]
+    }
+    return boolean;
+  }
+
+  private compTypeDiff(pIdx: number, designator: string) {
+    let boolean: boolean = false;
+    const sIdx = this.piece.sIdxFromPIdx(pIdx);
+    const section = this.piece.sections![sIdx];
+    if (designator === 'includes') {
+      boolean = section.categorization['Composition Type'][this.compType!];
+    } else if (designator === 'excludes') {
+      boolean = !section.categorization['Composition Type'][this.compType!];
+    }
+    return boolean;
+  }
+
+  private compSecTempoDiff(pIdx: number, designator: string) {
+    let boolean: boolean = false;
+    const sIdx = this.piece.sIdxFromPIdx(pIdx);
+    const section = this.piece.sections![sIdx];
+    const compSecTempoObj = section.categorization['Composition-section/Tempo'];
+    if (designator === 'includes') {
+      boolean = compSecTempoObj[this.compSecTempo!];
+    } else if (designator === 'excludes') {
+      boolean = !compSecTempoObj[this.compSecTempo!];
+    }
+    return boolean;
+  }
+
+  private talaDiff(pIdx: number, designator: string) {
+    let boolean: boolean = false;
+    const sIdx = this.piece.sIdxFromPIdx(pIdx);
+    const section = this.piece.sections![sIdx];
+    const talaObj = section.categorization['Tala'];
+    if (designator === 'includes') {
+      boolean = talaObj[this.tala!];
+    } else if (designator === 'excludes') {
+      boolean = !talaObj[this.tala!];
+    }
+    return boolean;
+  }
+
   private filterByDuration() {
     const removeIdxs = [] as number[];
     this.trajectories.map((trajSeq, tIdx) => {
@@ -788,6 +969,11 @@ class Query {
           consonant: query.consonant,
           pitchSequence: query.pitchSequence,
           trajIdSequence: query.trajIdSequence,
+          sectionTopLevel: query.sectionTopLevel,
+          alapSection: query.alapSection,
+          compType: query.compType,
+          compSecTempo: query.compSecTempo,
+          tala: query.tala,
           minDur,
           maxDur,
         };
@@ -845,9 +1031,8 @@ type MultipleOptionType = {
 
 // const query_1 = {
 //   designator: 'includes' as DesignatorType,
-//   category: 'pitch' as CategoryType,
-//   pitch: new Pitch({ swara: 'sa', oct: 0 }),
-//   // consonant: 'ma',
+//   category: 'sectionTopLevel' as CategoryType,
+//   sectionTopLevel: 'Alap' as SectionCategorizationType['Top Level']
 // }
 
 // const query_2 = {
@@ -861,12 +1046,14 @@ type MultipleOptionType = {
 //   ],
 // }
 
-// Query.multiple([query_1, query_2], { 
+// Query.multiple([query_1], { 
 //   segmentation: 'phrase',
+//   transcriptionID: '64fd37ffca8171903f8165bc',
 // })
 //   .then(q => {
 //     console.log(q)
 //   })
+
 
   export { Query }
 

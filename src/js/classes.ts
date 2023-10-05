@@ -2,7 +2,7 @@ import { findLastIndex } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 import { Meter } from './meter.ts';
 
-const initSectionCategorization = () => {
+const initSectionCategorization = (): SectionCategorizationType => {
   return {
     "Pre-Chiz Alap": {
       "Pre-Chiz Alap": false
@@ -46,6 +46,7 @@ const initSectionCategorization = () => {
     "Other": {
       "Other": false,
     },
+    "Top Level": "None"
   }
 }
 
@@ -1619,7 +1620,15 @@ type SectionCategorizationType = {
   },
   "Other": {
     "Other": boolean,
-  }
+  },
+  "Top Level": (
+    "Pre-Chiz Alap" | 
+    "Alap" | 
+    "Composition" | 
+    "Improvisation" | 
+    "Other" |
+    "None"
+  )
 }
 
 
@@ -2217,6 +2226,27 @@ class Piece {
         if (c['Other'] === undefined) {
           c['Other'] = { "Other": false }
         }
+        if (c['Top Level'] === undefined) {
+          const com = c['Composition Type'];
+          const comSecTemp = c['Composition-section/Tempo'];
+          const tala = c['Tala'];
+          const improv = c['Improvisation'];
+          const other = c['Other'];
+          const someTrue = (obj: object) => Object.values(obj).some(v => v);
+          if (c['Pre-Chiz Alap']['Pre-Chiz Alap']) {
+            c['Top Level'] = 'Pre-Chiz Alap'
+          } else if (someTrue(c['Alap'])) {
+            c['Top Level'] = 'Alap'
+          } else if (someTrue(com) || someTrue(comSecTemp) || someTrue(tala)) {
+            c['Top Level'] = 'Composition'
+          } else if (improv['Improvisation']) {
+            c['Top Level'] = 'Improvisation'
+          } else if (other['Other']) {
+            c['Top Level'] = 'Other'
+          } else {
+            c['Top Level'] = 'None'
+          }
+        }
       })
     } else {
       this.sectionCategorization = this.sectionStarts.map(() => {
@@ -2455,6 +2485,32 @@ class Piece {
     const allPulses = this.meters.map(m => m.allPulses).flat();
     const pulse = allPulses.find(p => p.uniqueId === id);
     return pulse
+  }
+
+  sIdxFromPIdx(pIdx: number) {
+    // section index from phrase index
+    const ss = this.sectionStarts!;
+    const sIdx = ss.length - 1 - ss.slice().reverse().findIndex(s => pIdx >= s);
+    return sIdx
+  }
+
+  pIdxFromGroup(g: Group) {
+    const pIdx = this.phrases.findIndex(p => {
+      let bool = false;
+      p.groupsGrid.forEach(gg => {
+        if (gg.includes(g)) {
+          bool = true
+        }
+      })
+      return bool
+    });
+    return pIdx
+  }
+
+  sIdxFromGroup(g: Group) {
+    const pIdx = this.pIdxFromGroup(g);
+    const sIdx = this.sIdxFromPIdx(pIdx);
+    return sIdx
   }
 
   toJSON() {
@@ -2892,5 +2948,6 @@ export {
 export type {
   RuleSetType,
   VibObjType,
-  PhraseCategorizationType
+  PhraseCategorizationType,
+  SectionCategorizationType
 }

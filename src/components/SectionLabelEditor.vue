@@ -180,8 +180,10 @@ export default defineComponent({
     } else {
       this.topLevel = 'None'
     }
+    if (cat['Top Level'] !== undefined) {
+      this.topLevel = cat['Top Level'];
+    }
   },
-
 
   methods: {
 
@@ -215,6 +217,8 @@ export default defineComponent({
         cat['Other']['Other'] = true;
         altCat['Other']['Other'] = true;
       }
+      this.section.categorization['Top Level'] = this.topLevel;
+      this.piece.sectionCategorization[this.sectionNum]['Top Level'] = this.topLevel;
       this.$emit('unsavedChanges');
     },
     updateCompositionType() {
