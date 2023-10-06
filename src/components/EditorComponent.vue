@@ -953,7 +953,11 @@ export default defineComponent({
       if (Math.min(...meterStarts) > ip) {
         const afterIdx = findClosestStartTimeAfter(meterStarts, ip);
         const after = this.piece.meters[afterIdx];
-        this.IPLims = [0, after.startTime];
+        if (after === undefined) {
+          this.IPLims = [0, this.durTot];
+        } else {
+          this.IPLims = [0, after.startTime];
+        }
       } else if (Math.max(...meterStarts) < ip) {
         const beforeIdx = findClosestStartTime(meterStarts, ip);
         const before = this.piece.meters[beforeIdx];
