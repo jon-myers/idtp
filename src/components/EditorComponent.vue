@@ -552,7 +552,7 @@ export default defineComponent({
       selectedMeterColor: '#3dcc63',
       meterMode: false,
       selectedMeter: undefined,
-      meterColor: '#1f6331',
+      meterColor: '#0D3D0E',
       pulseDragEnabled: false,
       pulseDragInitX: undefined,
       insertPulseMode: false,
@@ -3211,6 +3211,7 @@ export default defineComponent({
           const newTime = this.codifiedXR!.invert(newX);
           const time = newTime - oldTime;
           this.selectedMeter!.offsetPulse(pulse, time, true);
+          this.selectedMeter!.resetTempo();
           this.resetZoom();
           this.pulseDragEnabled = false;
           this.pulseDragInitX = undefined
@@ -3238,7 +3239,6 @@ export default defineComponent({
           })!;
           pulse = meter.allPulses[0];
         }     
-        console.log(pulse.meterId === meter.uniqueId)
         if (this.selectedMeter !== meter) {
           this.svg.style('cursor', 'pointer')
           d3SelectAll(`.meterId_${pulse.meterId}`)
