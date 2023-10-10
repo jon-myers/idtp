@@ -2228,11 +2228,16 @@ class Piece {
         }
         if (c['Top Level'] === undefined) {
           const com = c['Composition Type'];
-          const comSecTemp = c['Comp.-section/Tempo'];
+          let comSecTemp = c['Comp.-section/Tempo'];
+          if (comSecTemp === undefined) {
+            comSecTemp = c['Composition-section/Tempo']
+          }
           const tala = c['Tala'];
           const improv = c['Improvisation'];
           const other = c['Other'];
-          const someTrue = (obj: object) => Object.values(obj).some(v => v);
+          const someTrue = (obj: object) => {
+            return Object.values(obj).some(v => v)
+          };
           if (c['Pre-Chiz Alap']['Pre-Chiz Alap']) {
             c['Top Level'] = 'Pre-Chiz Alap'
           } else if (someTrue(c['Alap'])) {
