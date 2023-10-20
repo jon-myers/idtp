@@ -492,7 +492,7 @@ type LocationType = {
   }
 }
 
-export type { LocationType, AudioEventMetadataType };
+export type { LocationType, AudioEventMetadataType, UserDataType };
 
 const getLocationObject = async (): Promise<LocationType> => {
   // gets location object

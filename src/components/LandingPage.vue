@@ -5,17 +5,57 @@
       <span class='subtitle'>{{ subtitleText }}</span>
       <div class='buttonRow'>
         <div class='enterButton' @click='goToLogin'>Enter IDTP</div>
-        <div class='demosButton'>Demos</div>
+        <div class='demosButton'>
+          <a href='https://www.youtube.com/channel/UCSsnBpY5Hh8mvZu-63lpmaQ'>
+            Demos
+          </a>
+        </div>
       </div>
     </div>
-    <div class='infoRowOuter'>
       <div class='infoRowInner'>
         <div v-for='(item, index) in info' :key='index' class='infoItem'>
           <span class='infoItemHeading'>{{ item.heading }}</span>
           <span class='infoItemText'>{{ item.text }}</span>
         </div>
       </div>
-    </div>
+      <div class='sponsorsRowOuter'>
+        <div class='sponsorsRow'>
+          <div><img :src='logos.neh'></div>
+          <div><img :src='logos.or'></div>
+          <div><img :src='logos.ari'></div>
+          <div><img :src='logos.e'></div>
+        </div>
+      </div>
+      <div class='bottomRow'>
+        <div class='bottomRowInner'>
+          <div class='chasmsBox'><img :src='logos.chasms'></div>
+          <div class='support'>
+            <div class='supportTitle'>Support</div>
+            <div class='supportRow'>
+              <a href='https://github.com/jon-myers/idtp'>Github</a>
+            </div>
+            <div class='supportRow'>
+              <a href='https://github.com/jon-myers/idtp/issues'>
+                Github Issues
+              </a>
+            </div>
+            <div class='supportRow'>FAQ</div>
+          </div>
+          <div class='projectTeam'>
+            <div class='projectTeamTitle'>Principal Investigators</div>
+            <div class='projectTeamRow'>
+              <a href='https://music.ucsc.edu/people/dard-neuman'>
+                Dard Neuman
+              </a>
+            </div>
+            <div class='projectTeamRow'>
+              <a href='https://music.ucsc.edu/people/jonathan-myers'>
+                Jon Myers
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
   </div>
 </template>
 
@@ -49,13 +89,20 @@
 
 import nehURL from '@/assets/logos/NEH_logo.jpg';
 import ariURL from '@/assets/logos/ARI_logo.png';
+import orURL from '@/assets/logos/OR_logo.png';
+import eURL from '@/assets/logos/Endowment_logo.png';
+import chasmsURL from '@/assets/logos/chasms_logo.png';
+
 export default {
   name: 'LandingPage',
   data() {
     return {
       logos: {
         neh: nehURL,
-        ari: ariURL
+        ari: ariURL,
+        or: orURL,
+        e: eURL,
+        chasms: chasmsURL
       },
       layerColors: [
         '#50945c'
@@ -67,36 +114,37 @@ export default {
       info: [
         {
           heading: 'Musical Transcription',
-          text: 'Intuitive and flexible transcription tools and notation system \
-            designed to acurately represent the finely calibrated glissandi \
-            (continuous melodic contours across and between pitches) that \
-            appear in so many musical traditions outside of the European and \
-            U.S. keyboard and staff oriented paradigms of music'
+          text: 'Intuitive and flexible transcription tools and notation \
+            system designed to better represent the finely calibrated \
+            glissandi (continuous melodic contours across and between pitches) \
+            that appear in many musical traditions outside of the European and \
+            U.S. keyboard and staff oriented paradigms of music.'
         },
         {
           heading: 'Theoretical Identity',
           text: 'The IDTP is organized around a succession of “trajectories”: \
-            formally specified, flexible basic units of musical continuity that \
-            follow archetypal paths or curves from one pitch to \
-            another, or among a series of pitches. Trajectories can be adorned \
-            with a variety of instrument-specific articulations, allowing \
-            transcriptions to capture the performance practices \
-            of specific traditions / idioms.'
+            formally specified, flexible basic units of musical continuity \
+            that follow archetypal paths or curves from one pitch to another, \
+            or among a series of pitches. Trajectories can be marked and \
+            expressed with a variety of instrument-specific articulations, \
+            allowing transcriptions to capture the performance practices of \
+            specific traditions / idioms.'
         },
         {
           heading: 'Synthesis',
-          text: 'The IDTP Editor includes custom synthesis engines \
-            associated with each supported instrument, allowing the user to \
-            verify the acuracy of their transcription a s measured up against \
+          text: 'The IDTP Editor includes custom synthesis engines associated \
+            with each supported instrument, allowing the user to aurally \
+            verify the accuracy of their transcription as measured up against \
             the original recording.'
         },
         {
           heading: 'Analysis',
           text: 'The IDTP includes a suite of analysis tools that allow users \
-            to analyze their transcriptions quantitatively and computationally, \
-            at a large scale across a range of performances (diachronically or \
-            synchronically), or at a small scale through specific measurements \
-            within a single performance, or even a single phrase.'
+            to analyze their transcriptions quantitatively and \
+            computationally, at a large scale across a range of performances \
+            (diachronically or synchronically), or at a small scale through \
+            specific measurements within a single performance, or even a \
+            single phrase.'
         }
       ]
     }
@@ -126,6 +174,7 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: top;
+  background-color: #10abb6;
 
 }
 
@@ -150,26 +199,23 @@ export default {
   justify-content: center;
 }
 
-.logoImgBox > img {
-  height: 90%;
-}
-
 .titleRow {
   background-color: #50945c;
-  min-height: 250px;
-  max-height: 600px;
+  /* min-height: 250px; */
+  /* max-height: 600px; */
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: top;
   color: white;
+  width: calc(100%-160px);
+  max-width: calc(100%-160px);
 }
 
 .title {
   /* min-width: 200px; */
-  width: 950px;
-  max-width: 950px;
   height: 70px;
+  width: calc(100% - 160px);
   display: flex;
   align-items: center;
   justify-content: left;
@@ -179,8 +225,9 @@ export default {
 }
 
 .subtitle {
-  min-width: 200px;
-  max-width: 950px;
+  /* min-width: 200px; */
+  /* max-width: 950px; */
+  width: calc(100% - 160px);
   min-height: 100px;
   display: flex;
   align-items: center;
@@ -189,8 +236,7 @@ export default {
   font-size: 20px;
 }
 .buttonRow {
-  min-width: 200px;
-  max-width: 950px;
+  width: calc(100% - 160px);
   height: 70px;
   display: flex;
   flex-direction: row;
@@ -213,7 +259,6 @@ export default {
   cursor: pointer;
   transition: background-color 0.3s ease;
   transition: color 0.3s ease;
-  margin-left: 10px;
   margin-right: 10px;
 }
 
@@ -222,7 +267,7 @@ export default {
   color: black;
 }
 
-.infoRowOuter {
+/* .infoRowOuter {
   width: 100%;
   min-height: 320px;
   display: flex;
@@ -231,26 +276,47 @@ export default {
   justify-content: center;
   background-color: #F9E0A9;
   color: black;
-}
+} */
 
 .infoRowInner {
-  width: 950px;
+  /* width: 950px; */
+  width: calc(100% - 160px);
   display: flex;
-  flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: left;
+  justify-content: space-between;
   color: #242660;
-  overflow-x: auto;
+  background-color: #F9E0A9;
+  padding-left: 80px;
+  padding-right: 80px;
 }
 
 .infoItem {
-  width: 230px;
-  min-width: 230px;
-  height: 300px;
+  /* width: 230px; */
+  /* min-width: 230px; */
+  height: 260px;
+  flex: 1 0 20%;
+  margin: 10px;
   display: flex;
   flex-direction: column;
-  align-items: left;
+  align-items: center;
   justify-content: top;
+}
+
+@media (max-width: 800px) {
+  .infoItem {
+    flex: 1 0 40%
+  }
+  
+  .sponsorsRow > img {
+    flex: 1 0 40%;
+  }
+}
+
+@media (max-width: 400px) {
+  .infoItem {
+    flex: 1 0 80%;
+  }
 }
 
 .infoItemHeading {
@@ -261,32 +327,122 @@ export default {
 
 .infoItemText {
   font-size: 13px;
-  text-align: left;
-  width: 210px;
-  max-height: 300px;
+  width: 250px;
+  max-height: 250px;
   text-align: justify;
 }
 
 .outer {
-  font: 15px/1.5 "Helvetica Neue", Helvetica, Arial, sans-serif
+  font: 15px/1.5 "Helvetica Neue", Helvetica, Arial, sans-serif;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: top;
+  overflow: auto;
 }
 
-@media (max-width: 1187px) {
-  .subtitle {
-    width: 80vw;
-  }
-
-  .title {
-    width: 80vw;
-  }
-
-  .buttonRow {
-    width: 80vw;
-  }
-
-  .infoRowInner {
-    width: 80vw;
-  }
+.sponsorsRow {
+  background-color: white;
+  width: calc(100% - 160px);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-evenly;
+  flex-wrap: wrap;
 }
 
+.sponsorsRowOuter {
+  background-color: white;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.sponsorsRow > div > img {
+  width: 230px;
+}
+
+.sponsorsRow > div {
+  height: 150px;
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.bottomRowInner {
+  background-color: #10abb6;
+  min-height: 260px;
+  width: calc(100% - 160px);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: left;
+}
+
+.bottomRow {
+  background-color: #10abb6;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.chasmsBox > img {
+  width: 170px;
+  height: 170px;
+  margin-right: 40px;
+}
+
+.chasmsBox {
+  width: 250px;
+  height: 170px;
+
+}
+
+.support {
+  width: 180px;
+  height: 170px;
+  display: flex;
+  flex-direction: column;
+  align-items: left;
+  justify-content: top;
+  color: white;
+}
+
+.supportTitle {
+  font-size: 22px;
+  text-align: left;
+}
+
+.supportRow {
+  width: 100%;
+  text-align: left;
+}
+
+.projectTeam {
+  color: white;
+  width: 250px;
+  height: 170px;
+  display: flex;
+  flex-direction: column;
+  align-items: left;
+  justify-content: top;
+}
+
+.projectTeamTitle {
+  font-size: 22px;
+  text-align: left;
+}
+
+.projectTeamRow {
+  width: 100%;
+  text-align: left;
+}
 </style>

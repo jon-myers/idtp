@@ -48,7 +48,11 @@ import {
   googleAuthCodeLogin 
 } from 'vue3-google-login';
 // import { detect } from 'detect-browser';
-import { userLoginGoogle, handleGoogleAuthCode } from '@/js/serverCalls.ts';
+import { 
+  userLoginGoogle, 
+  handleGoogleAuthCode, 
+  UserDataType 
+} from '@/js/serverCalls.ts';
 import { defineComponent } from 'vue';
 import defaultUsrImgUrl from '@/assets/icons/user_head.svg';
 import { LocationQueryRaw } from 'vue-router';
@@ -112,14 +116,17 @@ export default defineComponent({
         //just for now
     } else {
       try {
+        console.log('trying this first')
         const response = await googleOneTap({ autoLogin: false });
           const userData = decodeCredential(response.credential);
           await this.loggedIn(userData);     
       } catch (err) {
         console.error(err);
         try {
+          console.log('trying this second')
           const response = await googleAuthCodeLogin();
           const redirURL = window.location.href;
+          console.log(redirURL)
           const userData = await handleGoogleAuthCode(response.code, redirURL);
           await this.loggedIn(userData);
         } catch (error) {
@@ -130,7 +137,7 @@ export default defineComponent({
   },
 
   methods: {
-    async loggedIn(userData) {
+    async loggedIn(userData: UserDataType) {
       this.usrImgUrl = userData.picture;
       const result = await userLoginGoogle(userData);
       this.userID = result.value._id;    
@@ -184,7 +191,7 @@ export default defineComponent({
       this.$cookies.set('firstName', undefined);
       this.$cookies.set('lastName', undefined);
       this.$cookies.set('name', undefined);
-      this.$router.push('/')    
+      this.$router.push('/logIn')    
     },
     
     async logIn() {
