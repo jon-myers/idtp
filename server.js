@@ -781,7 +781,12 @@ const runServer = async () => {
       
       try {
         let url = req.body.redirectURL;
-        url = url.slice(0, url.length-1);
+        if (url[url.length-1] === '/') {
+          url = url.slice(0, url.length-1);
+        }
+        if (url.slice(url.length-5, url.length) === 'logIn')[
+          url = url.slice(0, url.length-6)
+        ]
         console.log(url)
         const OAuthClient = new OAuth2Client({
           clientId: "324767655055-crhq76mdupavvrcedtde986glivug1nm.apps.googl" +
