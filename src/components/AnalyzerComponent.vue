@@ -344,6 +344,8 @@ type PCountType = {
 
 
   }
+  
+  import { useTitle } from '@vueuse/core';
 
   export default defineComponent({
     data(): AnalyzerComponentDataType {
@@ -1378,6 +1380,7 @@ type PCountType = {
           query: { 'id': id },
         })
         this.piece = await instantiatePiece(id);
+        useTitle(this.piece.title)
         this.createGraph();
         const low = this.piece.lowestPitchNumber;
         const high = this.piece.highestPitchNumber;

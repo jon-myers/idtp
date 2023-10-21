@@ -264,6 +264,8 @@ import {
   Selection,
 } from 'd3';
 
+import { useTitle } from '@vueuse/core';
+
 const  findClosestStartTime = (startTimes: number[], timepoint: number) => {
   let closestIndex = -1;
   let closestDiff = Infinity;
@@ -716,6 +718,7 @@ export default defineComponent({
       this.freqMin = 2 ** (Math.log2(fund / 2) - this.rangeOffset);
       this.freqMax = 2 ** (Math.log2(fund * 4) + this.rangeOffset);
       await this.getPieceFromJson(piece, fund);
+      useTitle(this.piece.title);
       const c1 = this.$store.state.userID === this.piece.userID;
       const c2 = this.piece.permissions === 'Publicly Editable';
       const c3 = this.piece.permissions === 'Private';
