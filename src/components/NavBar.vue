@@ -1,15 +1,23 @@
 <template>
   <div id='nav' @click='handleNavClick'>
-    <router-link class='routerLink' to='/files/'>
+    <router-link class='routerLink' to='/files/' @click='clickLink("files")'>
       <div class='link'>Files</div>
     </router-link>
     <router-link class='routerLink' to='/editor'>
       <div class='link'>Editor</div>
     </router-link>
-    <router-link class='routerLink' to='/audioEvents'>
+    <router-link 
+      class='routerLink' 
+      to='/audioEvents' 
+      @click='clickLink("audioEvents")'
+      >
       <div class='link'>Audio Events</div>
     </router-link>
-    <router-link class='routerLink' to='/raagEditor'>
+    <router-link 
+      class='routerLink' 
+      to='/raagEditor'
+      @click='clickLink("raagEditor")'
+      >
       <div class='link'>Raag Editor</div>
     </router-link>
     <router-link class='routerLink' to='/analyzer'>
@@ -56,6 +64,7 @@ import {
 import { defineComponent } from 'vue';
 import defaultUsrImgUrl from '@/assets/icons/user_head.svg';
 import { LocationQueryRaw } from 'vue-router';
+import { useTitle } from '@vueuse/core';
 
 type NavBarDataType = {
   usrImgUrl?: string,
@@ -168,6 +177,16 @@ export default defineComponent({
             query: this.$store.state.query
           })
         }
+      }
+    },
+
+    clickLink(category: string) {
+      if (category === 'files') {
+        useTitle('File Manager')
+      } else if (category === 'audioEvents') {
+        useTitle('Audio Events')
+      } else if (category === 'raagEditor') {
+        useTitle('Raag Editor')
       }
     },
 
