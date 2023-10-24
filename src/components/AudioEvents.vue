@@ -82,28 +82,6 @@
       ref='audioPlayer'
       @emitNextTrack='nextTrack'/>
   </div>
-  <!-- <div class='dropDown closed' ref='dropDown'>
-    <div 
-      :class='`dropDownRow`'
-      @click='toggleAddEvent'>
-      Add Audio Event
-    </div>
-    <div 
-      :class='`dropDownRow ${toggle[Number(!clickedAE)]}`' 
-      @click='handleEditAEClick'>
-      Edit Audio Event
-    </div>
-    <div
-      :class='`dropDownRow ${toggle[Number(userID !== selectedUserID)]}`'
-      @click='deleteAE'>
-      Delete Audio Event
-    </div>
-    <div
-      :class='`dropDownRow last ${toggle[Number(!clickedAF)]}`'
-      @click='handleNewTranscriptionClick'>
-      New Transcription
-    </div>
-  </div> -->
   <ContextMenu
     :x='dropDownLeft'
     :y='dropDownTop'
@@ -211,9 +189,15 @@ export default defineComponent({
   async created() {
     window.addEventListener('keydown', this.handleKeydown);
     if (this.$store.state.userID === undefined) {
-      this.$router.push('/')
+      if (this.$cookies.get('userID') === undefined) {
+        this.$router.push('/')
+      } else {
+        this.userID = this.$cookies.get('userID');
+      }
+    } else {
+      this.userID = this.$store.state.userID;
     }
-    this.userID = this.$store.state.userID;
+    
     try {
       this.allAudioEvents = await getAllAudioEventMetadata();
       this.allAudioEvents?.sort((a, b) => a.name.localeCompare(b.name));

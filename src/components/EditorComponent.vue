@@ -635,14 +635,15 @@ export default defineComponent({
     if (window.innerHeight < 800) {
       offset = this.navHeight + this.playerHeight + 1;
       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-      // ap.showControls = false;
     }
     this.editorHeight = window.innerHeight - offset  ;
     if (this.$store.state.userID === undefined) {
-      if (this.$route.query) {
-        this.$store.commit('update_query', this.$route.query)
+      if (this.$cookies.get('userID') === undefined) {
+        if (this.$route.query) {
+          this.$store.commit('update_query', this.$route.query)
+        }
+        this.$router.push('/')
       }
-      this.$router.push('/')
     }
   },
 

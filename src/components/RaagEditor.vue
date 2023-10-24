@@ -178,7 +178,9 @@ export default {
   
   created() {
     if (this.$store.state.userID === undefined) {
-      this.$router.push('/')
+      if (this.$cookies.get('userID') === undefined) {
+        this.$router.push('/')
+      }     
     }
   },
   
