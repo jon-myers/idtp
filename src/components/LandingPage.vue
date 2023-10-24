@@ -208,8 +208,8 @@ export default {
   align-items: center;
   justify-content: top;
   color: white;
-  width: calc(100%-160px);
-  max-width: calc(100%-160px);
+  width: calc(100% - 160px);
+  max-width: calc(100% - 160px);
 }
 
 .title {
