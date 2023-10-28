@@ -62,8 +62,8 @@
     "vue3-google-login": "^2.0.15",
     "vuex": "^4.1.0"
   },
-  "resolutions": {
-    "browserify-sign": "4.2.2"
+  "overrides": {
+    "browserify-sign": "^4.2.2"
   },
   "devDependencies": {
     "@types/d3": "^7.4.0",
