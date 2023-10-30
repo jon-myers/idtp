@@ -16,12 +16,13 @@
       ref='sectionLabelHolder'>
       <SectionLabelEditor 
       v-for='(section, i) in piece.sections'
-      :sectionNum='i'
-      :piece='piece'
-      @unsavedChanges='$emit("unsavedChanges")'
-      :section='section'
-      @dblclick='goToSection($event, i)'
-      ref='sectionLabelEditors'
+        :sectionNum='i'
+        :piece='piece'
+        @unsavedChanges='$emit("unsavedChanges")'
+        :section='section'
+        @dblclick='goToSection($event, i)'
+        ref='sectionLabelEditors'
+        :key='i'
       />
     </div>
     <div 
