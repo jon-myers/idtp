@@ -303,6 +303,12 @@ type AddAudioFileDataType = {
   newAddedCity?: string;
 }
 
+const capitalizeWords = (str: string) => {
+  return str.replace(/\b\w/g, function(char) {
+    return char.toUpperCase();
+  });
+}
+
 export default {
   name: 'AddAudioFile',
 
@@ -643,9 +649,10 @@ export default {
       const recObj = {} as RecObjType;
       recObj.musicians = {}
       for (let i = 0; i < this.numPerformers; i++) {
-        const key = this.selectedMusicians[i] === 'Other (specify)' ?
+        let key = this.selectedMusicians[i] === 'Other (specify)' ?
                     this.newAddedMusicians[i] :
                     this.selectedMusicians[i] ;
+        key = capitalizeWords(key!);
         const inst = this.selectedInstruments[i] === 'Other (specify)' ?
                      this.newAddedInstruments[i] :
                      this.selectedInstruments[i] ;

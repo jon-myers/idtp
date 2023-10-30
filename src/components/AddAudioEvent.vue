@@ -62,7 +62,7 @@ import {
 } from '@/js/serverCalls.ts';
 
 import { defineComponent } from 'vue';
-
+ 
 const capFirst = (string: string) => {
   return string.charAt(0).toUpperCase() + string.slice(1);
 };
@@ -158,6 +158,11 @@ type AudioEventType = {
 
 export type { AudioEventType, RecType, RaagType, PSecType }
 
+const capitalizeWords = (str: string) => {
+  return str.replace(/\b\w/g, function(char) {
+    return char.toUpperCase();
+  });
+}
 
 export default defineComponent({
   name: 'AddAudioEvent',
@@ -297,14 +302,78 @@ export default defineComponent({
       updates['name'] = this.eventName;
       updates['event type'] = this.selectedEventType
       return updates
-    }, 
+    },
+
+    makeAddedMusicians() {
+      const addedMusicans: {
+        "Initial Name": string,
+        "Full Name": string,
+        Instrument?: string,
+        Gender?: 'M' | 'F',
+        "Last Name": string,
+        "First Name": string,
+        "Middle Name": string,
+      }[] = [];
+      const audioFileRefs = Object.keys(this.$refs);
+      audioFileRefs.forEach(afr => {
+        const afComp = (this.$refs[afr] as typeof AddAudioFile[])[0];
+        console.log(afr, afComp, afComp.newAddedMusicians);
+        afComp.newAddedMusicians.forEach((mus: string, mIdx: number) => {
+          if (mus !== undefined) {
+            const capMus = capitalizeWords(mus);
+            const splitName = capMus.split(' ');
+            const obj: {
+              "Initial Name": string,
+              "Full Name": string,
+              "Last Name": string,
+              Instrument?: string,
+              Gender?: 'M' | 'F',
+              "First Name": string,
+              "Middle Name": string,
+            } = {
+              'Initial Name': capMus,
+              'Full Name': capMus,
+              'Last Name': splitName.slice(-1)[0],
+              'First Name': '',
+              'Middle Name': '',
+            };
+            if (splitName.length >= 2) {
+              obj['First Name'] = splitName[0];
+            }
+            if (splitName.length >= 3) {
+              obj['Middle Name'] = splitName[1];
+            }
+            const inst = afComp.selectedInstruments[mIdx];
+            if (inst !== undefined) {
+              if (inst !== 'Other (specify)') {
+                if (inst === 'Vocal (M)') {
+                  obj.Instrument = 'Vocal';
+                  obj.Gender = 'M';
+                } else if (inst === 'Vocal (F)') {
+                  obj.Instrument = 'Vocal';
+                  obj.Gender = 'F';
+                } else {
+                  obj.Instrument = inst;
+                }
+              } else {
+                obj.Instrument = afComp.newAddedInstruments[mIdx];
+              }
+            }
+            addedMusicans.push(obj);
+          }
+        })
+      });
+      return addedMusicans
+    },
     
     async saveMetadata() {
       console.log('saving')
       if (!this.uniqueId) {
         throw new Error('uniqueId is undefined')
       }
-      const saveMsg = await saveAudioMetadata(this.uniqueId, this.makeUpdates())
+      const ups = this.makeUpdates();
+      const muss = this.makeAddedMusicians();
+      const saveMsg = await saveAudioMetadata(this.uniqueId, ups, muss)
       console.log(saveMsg)
     },
     

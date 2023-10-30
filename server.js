@@ -599,17 +599,22 @@ const runServer = async () => {
     app.post('/saveAudioMetadata', async (req, res) => {
       const parentId = ObjectId(req.body._id);
       const myUpdates = req.body.updates;
+      const addMusicians = req.body.addMusicians;
       const query = { _id: parentId };
       const update = { $set: myUpdates };
       const options = { upsert: true };
       try {
-        const result = await audioEvents.updateOne(query, update, options);
-        res.json(result);
+        const [result1, result2] = await Promise.all([
+          audioEvents.updateOne(query, update, options),
+          musicians.insertMany(addMusicians)
+        ])
+        res.json({ result1, result2 });
         aggregations.generateAudioRecordingsDB();
+        
       } catch (err) {
         console.error(err);
         res.status(500).send(err);
-      }    
+      }
     })
 
     app.post('/updateSaEstimate', async (req, res) => {

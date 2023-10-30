@@ -652,7 +652,9 @@ const cleanEmptyDoc = async (_id: string) => {
   }
 }
 
-const saveAudioMetadata = async (_id: string, updates: object) => {
+const saveAudioMetadata = async (
+    _id: string, updates: object, addMusicians: object[]
+  ) => {
   const request = {
     method: 'POST',
     headers: {
@@ -660,9 +662,11 @@ const saveAudioMetadata = async (_id: string, updates: object) => {
     },
     body: JSON.stringify({
       '_id': _id,
-      'updates': updates
+      'updates': updates,
+      'addMusicians': addMusicians
     })
   };
+  console.log(updates)
   let out;
   try {
     const response = await fetch(url + 'saveAudioMetadata', request);
