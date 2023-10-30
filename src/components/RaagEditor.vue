@@ -100,26 +100,43 @@
         </div>
       </div>
     </div>
-    <div class='infoRow'>
+    <div class='infoRow' v-if='selectedRaag !== undefined'>
       <button @click='save'>save</button>
     </div>
-    <div class='infoRow'>
+    <div class='infoRow' v-if='selectedRaag !== undefined'>
       <span>{{savedMsg}}</span>
     </div>
-  </div>
-  
-  <div class='closeWindow' @click='closeWindow'>
-    <span class='close-x'></span>
   </div>
 </template>
 <script lang='ts'>
  
 import { getRagaNames, getRaagRule, saveRaagRules } from '@/js/serverCalls.ts';
+type RaisedLoweredType = {
+  lowered: boolean,
+  raised: boolean
+}
+type RuleProfileType = {
+  sa: boolean,
+  re: RaisedLoweredType,
+  ga: RaisedLoweredType,
+  ma: RaisedLoweredType,
+  pa: boolean,
+  dha: RaisedLoweredType,
+  ni: RaisedLoweredType
+}
 
+type RaagEditorDataType = {
+  raagNames: string[],
+  selectedRaag: string | undefined,
+  otherRaagName: string | undefined,
+  rules: RuleProfileType,
+  rulesTemplate: RuleProfileType,
+  savedMsg: string
+}
 export default {
   name: 'RaagEditor',
   
-  data() {
+  data(): RaagEditorDataType {
     return {
       raagNames: [],
       selectedRaag: undefined,
@@ -211,7 +228,9 @@ export default {
     
     async save() {
       const date = new Date();
-      const res = await saveRaagRules(this.selectedRaag, this.rules, date);
+      const res = await saveRaagRules(
+        this.selectedRaag, this.rules, date, this.otherRaagName
+        );
       if (res) {
         this.savedMsg = 'Saved: ' + date.toLocaleString()
       }
@@ -300,6 +319,7 @@ label.small {
 select {
   width: 250px;
   background-color: #1e241e;
+  color: white;
 }
 
 input {

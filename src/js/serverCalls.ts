@@ -708,17 +708,18 @@ const getVerifiedStatus = async (aeID: string, recIdx: string) => {
   }
 }
 
-const saveRaagRules = async (name: string, rules: object, date: Date) => {
+const saveRaagRules = async (
+  name: string, 
+  rules: object, 
+  date: Date,
+  newName?: string
+  ) => {
   const request = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      name: name,
-      rules: rules,
-      date: date
-    })
+    body: JSON.stringify({ name, rules, date, newName })
   };
   let out;
   try {
