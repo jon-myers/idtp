@@ -15,16 +15,26 @@
     </div>
   </div>
 </template>
-<script>
+<script lang='ts'>
 
 
 // import { decodeCredential } from 'vue3-google-login';
 import { agreeToWaiver } from '@/js/serverCalls.ts';
 
+
+type LoginDataType = {
+  firstTime: boolean,
+  returning: boolean,
+  waiver: string,
+  agreeBool: boolean,
+  firstName: string | undefined,
+  userID: string | undefined,
+  firstWelcome: boolean | undefined
+}
 export default {
   name: 'LogIn',
   
-  data() {
+  data(): LoginDataType {
     return {
       firstTime: false,
       returning: false,
@@ -86,6 +96,9 @@ export default {
     
     agreeToWaiver() {
       if (this.agreeBool) {
+        if (this.userID === undefined) {
+          throw new Error('userID is undefined')
+        }
         agreeToWaiver(this.userID);
         this.firstTime = false;
         this.$store.commit('update_firstTime', this.firstTime);
