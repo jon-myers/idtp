@@ -230,8 +230,11 @@ export default {
     
     async save() {
       const date = new Date();
+      const name = this.selectedRaag === 'Other (specify)' ? 
+        this.otherRaagName : 
+        this.selectedRaag;
       const res = await saveRaagRules(
-        this.selectedRaag, this.rules, date, this.otherRaagName
+        name, this.rules, date
         );
       if (res) {
         this.savedMsg = 'Saved: ' + date.toLocaleString()

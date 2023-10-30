@@ -734,7 +734,7 @@ const getVerifiedStatus = async (aeID: string, recIdx: string) => {
 }
 
 const saveRaagRules = async (
-  name: string, 
+  name: string | undefined, 
   rules: object, 
   date: Date,
   newName?: string
