@@ -1025,7 +1025,17 @@ const getInstrumentation = async (audioID: string) => {
   }
 }
 
-const getIpaVowels = async () => {
+type IpaVowelType = {
+  eng_trans: string,
+  english: string,
+  hindi: { initial: string, final: string | null },
+  ipa: string,
+  iso_15919: string,
+  type: string
+  urdu: { initial: string, final: string, medial?: string }
+}
+
+const getIpaVowels = async (): Promise<IpaVowelType[]> => {
   let out;
   const request = {
     method: 'GET',
@@ -1044,7 +1054,16 @@ const getIpaVowels = async () => {
   }
 }
 
-const getConsonants = async () => {
+type IPAConsonantType = {
+  eng_trans: string,
+  example: string,
+  hindi: string,
+  ipa: string,
+  iso_15919: string,
+  type: string,
+}
+
+const getConsonants = async (): Promise<IPAConsonantType[]> => {
   let out;
   const request = {
     method: 'GET',

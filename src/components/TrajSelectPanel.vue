@@ -4,7 +4,7 @@
     :class='`selectionPanel \
     ${["", "vocal"][Number(vocal)]} \
     ${["", "vib"][Number(showVibObj)]}`'>
-    <div class='octShift' v-if='$parent.selectedTrajs.length > 0'>
+    <div class='octShift' v-if='selectedTrajs.length > 0'>
       <button 
         class='octUp' 
         @click='shiftOct(1)' 
@@ -20,7 +20,7 @@
         &#8595
       </button>
     </div>
-    <div class='selectionRow checks' v-if='$parent.groupable'>
+    <div class='selectionRow checks' v-if='groupable'>
       <label>Grouped</label>
       <input
         v-if='editable'
@@ -33,7 +33,7 @@
         type='checkbox'
         v-model='grouped'
         @change='toggleGroup'
-        disabled='disabled'
+        :disabled='true'
       />
     </div>
     <div class='selectionRow checks' v-if='!vocal && showTrajChecks'>
@@ -49,7 +49,7 @@
         type='checkbox' 
         v-model='pluckBool' 
         @change='updateBool'
-        disabled='disabled'
+        :disabled='true'
       />
     </div>
     <div class='selectionRow checks' v-if='!vocal && showTrajChecks'>
@@ -65,7 +65,7 @@
         type='checkbox' 
         v-model='dampen' 
         @change='updateDampen'
-        disabled='disabled'
+       :disabled='true'
       />
     </div>
     <div class='selectionRow checks' v-if='vocal && showTrajChecks'>
@@ -85,7 +85,7 @@
         <select 
         v-if='!editable' 
         v-model='startConsonant' 
-        disabled='disabled'
+        :disabled='true'
         >
         <option 
           v-for='(consonant, idx) in cIso_15919' 
@@ -114,7 +114,7 @@
         v-model='vowel' 
         @change='updateVowel' 
         class='vowelSelect'
-        disabled='disabled'>
+        :disabled='true'>
         <option 
           v-for='(vowel, idx) in iso_15919' 
           :key='vowel' 
@@ -122,10 +122,6 @@
           v-html='vowelList[idx]'
           >
         </option>
-          <!-- {{ hindiVowels[idx] + '  -  ' + iso_15919[idx] + '  ('}}
-            <span v-html='englishWords[idx]'></span>
-          {{ ')' }}  -->
-        <!-- </option> -->
       </select>
     </div>
     <div class='selectionRow checks' v-if='vocal && showTrajChecks'>
@@ -145,7 +141,7 @@
         <select 
         v-if='!editable' 
         v-model='endConsonant' 
-        disabled='disabled'
+        :disabled='true'
         >
         <option 
           v-for='(consonant, idx) in cIso_15919' 
@@ -188,7 +184,7 @@
         type='checkbox'
         v-model='initUp'
         @change='updateVibObj'
-        disabled='disabled'
+        :disabled='true'
       />
     </div>
     <div class='selectionRow' v-if='showSlope'>
@@ -212,7 +208,7 @@
           max='3.0'
           step='0.01'
           @input='updateSlope'
-          disabled='disabled'
+          :disabled='true'
           />
     </div>
     <div class='selectionRow' v-if='showVibObj'>
@@ -236,7 +232,7 @@
         max='20'
         step='0.5'
         @input='updateVibObj'
-        disabled='disabled'
+        :disabled='true'
       />
     </div>
     <div class='selectionRow' v-if='showVibObj'>
@@ -260,7 +256,7 @@
         max='0.5'
         step='0.01'
         @input='updateVibObj'
-        disabled='disabled'
+        :disabled='true'
       />
     </div>
     <div class='selectionRow' v-if='showVibObj'>
@@ -284,7 +280,7 @@
         max='1.0'
         step='0.01'
         @input='updateVibObj'
-        disabled='disabled'
+        :disabled='true'
       />
     </div>
   </div>
@@ -327,8 +323,8 @@ import t13 from '@/assets/thumbnails/13.png';
 import { select as d3Select } from 'd3';
 import { getIpaVowels, getConsonants } from '@/js/serverCalls.ts';
 import { defineComponent } from 'vue';
-import { initSectionCategorization } from '@/js/classes.ts';
-
+import { initSectionCategorization, Piece, Trajectory } from '@/js/classes.ts';
+import type { PropType } from 'vue';
 
 type TrajSelectPanelDataType = {
   urls: string[],
@@ -355,11 +351,12 @@ type TrajSelectPanelDataType = {
   vowel: string,
   ipaVowels: string[],
   englishWords: string[],
+  englishTrans: string[],
   hindiVowels: string[],
   iso_15919: string[],
   cIpa: string[],
   cExample: string[],
-  cIso_15919: string[],
+  cIso_15919: (string | undefined)[],
   hindiConsonants: string[],
   consonantList: string[],
   startConsonant?: string,
@@ -369,7 +366,9 @@ type TrajSelectPanelDataType = {
   vib: boolean,
   octShiftTop: number,
   canShiftUp: boolean,
-  canShiftDown: boolean
+  canShiftDown: boolean,
+  vowelList: string[],
+  cEngTrans: string[],
 }
 
 export default defineComponent({
@@ -415,14 +414,58 @@ export default defineComponent({
       vib: false,
       octShiftTop: 4,
       canShiftUp: true,
-      canShiftDown: true
+      canShiftDown: true,
+      englishTrans: [],
+      vowelList: [],
+      cEngTrans: [],
     }
   },
   
-  props: [
-    'editable',
-    'ctrlBoxWidth',
-  ],
+  props: {
+    groupable: {
+      type: Boolean,
+      required: true
+    },
+    editable: {
+      type: Boolean,
+      required: true
+    },
+    ctrlBoxWidth: {
+      type: Number,
+      required: true
+    },
+    selectedPhraseDivIdx: {
+      type: Number,
+      required: false
+    },
+    piece: {
+      type: Object as PropType<Piece>,
+    },
+    selectedTrajs: {
+      type: Array as PropType<Trajectory[]>,
+      required: true
+    },
+    selectedTraj: {
+      type: Object as PropType<Trajectory>,
+      required: false
+    },
+    freqMin: {
+      type: Number,
+      required: true
+    },
+    freqMax: {
+      type: Number,
+      required: true
+    },
+    setNewTraj: {
+      type: Boolean,
+      required: true
+    },
+    trajTimePts: {
+      type: Array as PropType<{time: number, logFreq: number}[]>,
+      required: false
+    }
+  },
 
   async mounted() {
     const result = await getIpaVowels();
@@ -466,7 +509,7 @@ export default defineComponent({
       if (newVal !== undefined) {
         const el = document.querySelector(`#id${newVal}`)!
         el.classList.add('selected')
-        const slopeIdxs = [2, 3, 4, 5]
+        const slopeIdxs = [2, 3, 4, 5] 
         this.showSlope = slopeIdxs.includes(this.trajIdxs[newVal]);
         this.showVibObj = this.trajIdxs[newVal] === 12;
         if (this.vocal && this.vowel === undefined) {
@@ -493,10 +536,13 @@ export default defineComponent({
 
     phraseDivType(newVal, oldVal) {
       if (oldVal !== undefined && newVal !== undefined) {
-        const realPhraseStart = this.$parent.selectedPhraseDivIdx + 1;
+        const realPhraseStart = this.selectedPhraseDivIdx! + 1;
         if (newVal === 'phrase' && oldVal == 'section') {
-          const piece = this.$parent.piece;
+          const piece = this.piece!;
           const starts = piece.sectionStarts;
+          if (starts === undefined) {
+            throw new Error('starts is undefined')
+          }
           piece.sectionStarts = starts.filter((s, sIdx) => {
             const bool = s !== realPhraseStart;
             if (!bool) {
@@ -507,8 +553,11 @@ export default defineComponent({
           d3Select(`#phraseLine${realPhraseStart-1}`)
             .attr('stroke-width', '2px')
         } else if (newVal === 'section' && oldVal == 'phrase') {
-          const piece = this.$parent.piece;
+          const piece = this.piece!;
           const starts = piece.sectionStarts;
+          if (starts === undefined) {
+            throw new Error('starts is undefined')
+          }
           piece.sectionStarts = [...starts, realPhraseStart];
           piece.sectionStarts.sort((a, b) => a - b);
           const newIdx = piece.sectionStarts.indexOf(realPhraseStart);
@@ -521,24 +570,24 @@ export default defineComponent({
     },
 
     trajIdxs(newVal) {
-      this.urlsFiltered = newVal.map(idx => this.urls[idx]);
-      this.kNumsFiltered = newVal.map(idx => this.kNums[idx]);
+      this.urlsFiltered = newVal.map((idx: number) => this.urls[idx]);
+      this.kNumsFiltered = newVal.map((idx: number) => this.kNums[idx]);
     }
   },
 
   methods: {
 
     shiftOct(offset = 1) {
-      const sts = this.$parent.selectedTrajs;
-      sts.forEach(traj => this.$parent.shiftTrajByOctave(traj, offset))
+      const sts = this.selectedTrajs;
+      sts.forEach(traj => this.$emit('shiftOct', traj, offset))
       const minFreq = Math.min(...sts.map(traj => traj.minFreq));
       const maxFreq = Math.max(...sts.map(traj => traj.maxFreq));
-      if ((minFreq / 2) < this.$parent.freqMin) {
+      if ((minFreq / 2) < this.freqMin) {
         this.canShiftDown = false;
       } else {
         this.canShiftDown = true;
       }
-      if ((maxFreq * 2) > this.$parent.freqMax) {
+      if ((maxFreq * 2) > this.freqMax) {
         this.canShiftUp = false;
       } else {
         this.canShiftUp = true;
@@ -547,17 +596,17 @@ export default defineComponent({
 
     toggleGroup() {
       if (this.grouped) {
-        console.log('getting toggled')
-        this.$parent.groupSelectedTrajs()
+        this.$emit('groupSelectedTrajs')
       } else {
-        this.$parent.ungroupSelectedTrajs()
+        this.$emit('ungroupSelectedTrajs')
       }
     },
 
-    selectIcon(e) {
+    selectIcon(e: MouseEvent | number) {
       let idx;
       if (e instanceof PointerEvent) {
-        idx = Number(e.target.id.slice(2));
+        const target = e.target as HTMLElement;
+        idx = Number(target!.id.slice(2));
       } else {
         idx = Number(e)
       }
@@ -566,7 +615,7 @@ export default defineComponent({
       if (realIdx >= 12) {
         realIdx += 1;
       }
-      let realSelectedIdx = this.trajIdxs[this.selectedIdx];
+      let realSelectedIdx = this.trajIdxs[this.selectedIdx!];
       if (realSelectedIdx >= 12) {
         realSelectedIdx += 1;
       }
@@ -574,7 +623,7 @@ export default defineComponent({
         const fixed = [0, 13];
         const twos = [1, 2, 3];
         const threes = [4, 5, 6];
-        const trId = this.trajIdxs[this.selectedIdx];
+        const trId = this.trajIdxs[this.selectedIdx!];
         if (twos.includes(trId)) {
           if (realIdx !== trId && twos.includes(realIdx)) {
             this.selectedIdx = idx;
@@ -584,12 +633,12 @@ export default defineComponent({
             document.querySelectorAll('.thumb').forEach(t => {
               t.classList.remove('selected')
             })
-            document.querySelector(selectId).classList.add('selected')
+            document.querySelector(selectId)!.classList.add('selected')
           }
         } else if (threes.includes(trId)) {
           if (realIdx !== trId && threes.includes(realIdx)) {
             if (trId === 6) {
-              if (this.$parent.selectedTraj.durArray.length === 2) {
+              if (this.selectedTraj!.durArray!.length === 2) {
                 this.selectedIdx = idx;
                 let outIdx = this.trajIdxs[this.selectedIdx];
                 if (outIdx >= 12) outIdx += 1;
@@ -597,7 +646,7 @@ export default defineComponent({
                 document.querySelectorAll('.thumb').forEach(t => {
                   t.classList.remove('selected')
                 })
-                document.querySelector(selectId).classList.add('selected')
+                document.querySelector(selectId)!.classList.add('selected')
               }
             } else {
               this.selectedIdx = idx;
@@ -607,7 +656,7 @@ export default defineComponent({
               document.querySelectorAll('.thumb').forEach(t => {
                 t.classList.remove('selected')
               })
-              document.querySelector(selectId).classList.add('selected')
+              document.querySelector(selectId)!.classList.add('selected')
             }
           }
         } else if (fixed.includes(realSelectedIdx)) {
@@ -619,18 +668,18 @@ export default defineComponent({
             document.querySelectorAll('.thumb').forEach(t => {
               t.classList.remove('selected')
             })
-            document.querySelector(selectId).classList.add('selected')
+            document.querySelector(selectId)!.classList.add('selected')
           }
         }
-      } else if (this.$parent.setNewTraj) {
-        const timePts = this.$parent.trajTimePts;
+      } else if (this.setNewTraj) {
+        const timePts = this.trajTimePts!;
         if (timePts.length === 2) {
           const options = [1, 2, 3];
           if (timePts[0].logFreq === timePts[1].logFreq) options.push(0, 13)
           if (options.includes(realIdx)) {
             this.selectedIdx = idx;
 
-            document.querySelector(selectId).classList.add('selected')
+            document.querySelector(selectId)!.classList.add('selected')
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
             this.$emit('newTraj', outIdx)
@@ -645,7 +694,7 @@ export default defineComponent({
           if (lfDiffs[1] === 0) options.push(11)
           if (options.includes(realIdx)) {
             this.selectedIdx = idx;
-            document.querySelector(selectId).classList.add('selected')
+            document.querySelector(selectId)!.classList.add('selected')
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
             this.$emit('newTraj', outIdx)
@@ -659,7 +708,7 @@ export default defineComponent({
           if (c) options.push(8)
           if (options.includes(realIdx)) {
             this.selectedIdx = idx;
-            document.querySelector(selectId).classList.add('selected')
+            document.querySelector(selectId)!.classList.add('selected')
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
             this.$emit('newTraj', outIdx)
@@ -673,7 +722,7 @@ export default defineComponent({
           if (c) options.push(9);
           if (options.includes(realIdx)) {
             this.selectedIdx = idx;
-            document.querySelector(selectId).classList.add('selected')
+            document.querySelector(selectId)!.classList.add('selected')
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
             this.$emit('newTraj', outIdx)
@@ -682,7 +731,7 @@ export default defineComponent({
           const options = [6];
           if (options.includes(realIdx)) {
             this.selectedIdx = idx;
-            document.querySelector(selectId).classList.add('selected')
+            document.querySelector(selectId)!.classList.add('selected')
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
             this.$emit('newTraj', outIdx)
@@ -705,7 +754,7 @@ export default defineComponent({
           }
           if (options.includes(realIdx)) {
             this.selectedIdx = idx;
-            document.querySelector(selectId).classList.add('selected')
+            document.querySelector(selectId)!.classList.add('selected')
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
             this.$emit('newTraj', outIdx)
@@ -715,7 +764,8 @@ export default defineComponent({
     },
     
     updateSlope() {
-      this.$parent.alterSlope((2 ** this.slope))
+      // this.$parent.alterSlope((2 ** this.slope))
+      this.$emit('alterSlope', 2 ** this.slope)
     },
     
     updateBool() {
