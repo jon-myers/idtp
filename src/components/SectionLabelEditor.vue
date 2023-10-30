@@ -151,41 +151,52 @@ export default defineComponent({
       required: true
     }
   },
+
   mounted() {
-    const cat = this.section.categorization;
-    const com = cat['Composition Type'];
-    const comSecTemp = cat['Comp.-section/Tempo'];
-    const tala = cat['Tala'];
-    const improv = cat['Improvisation'];
-    const other = cat['Other'];
-    const someTrue = (obj: object) => Object.values(obj).some(x => x);
-    if (cat['Pre-Chiz Alap']['Pre-Chiz Alap']) {
-      this.topLevel = 'Pre-Chiz Alap'
-    } else if (someTrue(cat['Alap'])) {
-      this.topLevel = 'Alap';
-      const keys = Object.keys(cat['Alap']) as AlapType[];
-      this.alapType = keys.find(key => cat['Alap'][key]);
-    } else if (someTrue(com) || someTrue(comSecTemp) || someTrue(tala)) {
-      this.topLevel = 'Composition';
-      const comKeys = Object.keys(com) as CompositionType[];
-      this.compositionType = comKeys.find(key => com[key]);
-      const comSecTempKeys = Object.keys(comSecTemp) as Section_TempoType[];
-      this.section_tempo = comSecTempKeys.find(key => comSecTemp[key]);
-      const talaKeys = Object.keys(tala) as TalaType[];
-      this.tala = talaKeys.find(key => tala[key]);
-    } else if (improv['Improvisation']) {
-      this.topLevel = 'Improvisation'
-    } else if (other['Other']) {
-      this.topLevel = 'Other'
-    } else {
-      this.topLevel = 'None'
-    }
-    if (cat['Top Level'] !== undefined) {
-      this.topLevel = cat['Top Level'];
+    this.updateFromSectionProp();
+  },
+
+  watch: {
+    section() {
+      this.updateFromSectionProp();
     }
   },
 
   methods: {
+
+    updateFromSectionProp() {
+      const cat = this.section.categorization;
+      const com = cat['Composition Type'];
+      const comSecTemp = cat['Comp.-section/Tempo'];
+      const tala = cat['Tala'];
+      const improv = cat['Improvisation'];
+      const other = cat['Other'];
+      const someTrue = (obj: object) => Object.values(obj).some(x => x);
+      if (cat['Pre-Chiz Alap']['Pre-Chiz Alap']) {
+        this.topLevel = 'Pre-Chiz Alap'
+      } else if (someTrue(cat['Alap'])) {
+        this.topLevel = 'Alap';
+        const keys = Object.keys(cat['Alap']) as AlapType[];
+        this.alapType = keys.find(key => cat['Alap'][key]);
+      } else if (someTrue(com) || someTrue(comSecTemp) || someTrue(tala)) {
+        this.topLevel = 'Composition';
+        const comKeys = Object.keys(com) as CompositionType[];
+        this.compositionType = comKeys.find(key => com[key]);
+        const comSecTempKeys = Object.keys(comSecTemp) as Section_TempoType[];
+        this.section_tempo = comSecTempKeys.find(key => comSecTemp[key]);
+        const talaKeys = Object.keys(tala) as TalaType[];
+        this.tala = talaKeys.find(key => tala[key]);
+      } else if (improv['Improvisation']) {
+        this.topLevel = 'Improvisation'
+      } else if (other['Other']) {
+        this.topLevel = 'Other'
+      } else {
+        this.topLevel = 'None'
+      }
+      if (cat['Top Level'] !== undefined) {
+        this.topLevel = cat['Top Level'];
+      }
+    },
 
     preventSpaceSelect(e?: KeyboardEvent) {
       if (e) {
