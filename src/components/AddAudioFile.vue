@@ -303,7 +303,9 @@ type AddAudioFileDataType = {
   newAddedCity?: string;
 }
 
-const capitalizeWords = (str: string) => {
+const capitalizeWords = (str?: string) => {
+  if (str === undefined) return undefined;
+  if (str === null) return null;
   return str.replace(/\b\w/g, function(char) {
     return char.toUpperCase();
   });
