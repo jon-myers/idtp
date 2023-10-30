@@ -455,6 +455,7 @@ export default defineComponent({
         timePoints,
         hierarchy,
         repetitions: this.cycles,
+        layer: Number(this.insertLayer),
       });
       this.$emit('passthroughAddMeterEmit', meter);
       this.$emit('passthroughAddMetricGridEmit', true);

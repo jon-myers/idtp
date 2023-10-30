@@ -114,7 +114,6 @@
               {{ numP }}
             </option>
           </select>
-
         </div>
         <div 
           class='controlsRow'
@@ -146,10 +145,7 @@
                 {{ oct }}
               </option>
             </select>
-
           </div>
-
-
         </div>
         <div
           class='controlsRow'
@@ -190,12 +186,9 @@
                   {{ trajName.name }}
                 </option>
               </select>
-
-
             </div>
           </div>
         </div>
-
         <div 
           class='controlsRow' 
           v-if='categories[qIdx].value === "trajectoryID"'
@@ -242,29 +235,45 @@
             </option>
           </select>
         </div>
+        <div v-for='selObj in selectRowData' :key='selObj.key'>
+          <div 
+            class='controlsRow' 
+            v-if='categories[qIdx].value === selObj.category'
+            >
+            <label>{{ selObj.label }}</label>
+            <select 
+              name='category' 
+              v-model='selObj.vModelArr[qIdx]'
+              >
+              <option 
+                v-for='option in selObj.options' 
+                :value='option'
+                >
+                {{ option }}
+              </option>
+            </select>
+          </div>
+        </div>
         <div class='controlsRow'>
           <label>Designator: </label>
           <select name='designator' v-model='designators[qIdx].value'>
             <option 
-              v-for='designator in possibleDesignators' 
+              v-for='designator in possibleDesignators(categories[qIdx].value)' 
               :value='designator.value'
               >
               {{ designator.text }}
             </option>
           </select>
         </div>
-      
       </div>
     </div>
-    
-
   </div>
-
 </template>
 
 <script lang='ts'>
 import phonemes from '@/assets/json/phonemes.json';
 import { defineComponent, PropType } from 'vue';
+import categoryData from '@/assets/json/categorization.json';
 import { 
   SegmentationType, 
   QueryType, 
@@ -275,7 +284,9 @@ import {
 import {
   Pitch,
   Raga,
-  Trajectory
+  Trajectory,
+  SecCatType,
+  PhraseCatType
 } from '@/js/classes.ts';
 
 type QueryControlsDataType = {
@@ -288,7 +299,6 @@ type QueryControlsDataType = {
   vowels: string[],
   consonants: string[],
   possibleSegmentations: { value: SegmentationType, text: string }[],
-  possibleDesignators: { value: DesignatorType, text: string }[],
   all: boolean,
   sequenceLength: number,
   minDur: number,
@@ -302,7 +312,26 @@ type QueryControlsDataType = {
   numTrajs: number[],
   pitchSeqObjs: PitchSeqObjType[][],
   trajIdSeqs: number[][],
-
+  sectionTopLevels: SecCatType["Top Level"][],
+  alapSections: (keyof SecCatType["Alap"])[],
+  topLevelOptions: SecCatType["Top Level"][],
+  alapSectionOptions: (keyof SecCatType["Alap"])[],
+  compTypeOptions: (keyof SecCatType["Composition Type"])[],
+  compSecTempoOptions: (keyof SecCatType["Comp.-section/Tempo"])[],
+  talaOptions: (keyof SecCatType["Tala"])[],
+  talas: (keyof SecCatType["Tala"])[],
+  compTypes: (keyof SecCatType["Composition Type"])[],
+  compSecTempos: (keyof SecCatType["Comp.-section/Tempo"])[],
+  phraseTypeOptions: (keyof PhraseCatType["Phrase"])[],
+  elborationTypeOptions: (keyof PhraseCatType["Elaboration"])[],
+  vocalArtTypeOptions: (keyof PhraseCatType["Vocal Articulation"])[],
+  instArtTypeOptions: (keyof PhraseCatType["Instrumental Articulation"])[],
+  incidentalOptions: (keyof PhraseCatType["Incidental"])[],
+  phraseTypes: (keyof PhraseCatType["Phrase"])[],
+  elaborationTypes: (keyof PhraseCatType["Elaboration"])[],
+  vocalArtTypes: (keyof PhraseCatType["Vocal Articulation"])[],
+  instArtTypes: (keyof PhraseCatType["Instrumental Articulation"])[],
+  incidentals: (keyof PhraseCatType["Incidental"])[],
 
 }
 type PitchNameType = 'Sa' | 're' | 'Re' | 'ga' | 'Ga' | 'ma' | 'Ma' | 'Pa' | 'dha' | 
@@ -322,18 +351,19 @@ type PitchSeqObjType = {
   oct: number,
 }
 
+const sectionData = categoryData['Section'];
+const phraseData = categoryData['Phrase'];
+
 export default defineComponent({
   name: 'QueryControls',
   data(): QueryControlsDataType {
     return {
       segmentation: 'phrase',
       numQueries: 1,
-      // queries: [],
       categories: [{ value: 'pitch', text: 'Pitch' }],
       designators: [{ value: 'includes', text: 'Includes' }],
       pitchNames: ['Sa'],
       octs: [0],
-      // pitches: [new Pitch()],
       trajectoryIDs: [0],
       vowels: ['a'],
       consonants: ['ra'],
@@ -345,12 +375,6 @@ export default defineComponent({
           value: 'connectedSequenceOfTrajectories', 
           text: 'Connected Trajectories' 
         },
-      ],
-      possibleDesignators: [
-        { value: 'includes', text: 'Includes' },
-        { value: 'excludes', text: 'Excludes' },
-        { value: 'startsWith', text: 'Starts With' },
-        { value: 'endsWith', text: 'Ends With' }
       ],
       all: true,
       sequenceLength: 20,
@@ -368,6 +392,34 @@ export default defineComponent({
       numTrajs: [2],
       pitchSeqObjs: [[{ swara: 'Sa', oct: 0 }, { swara: 'Sa', oct: 0 }]],
       trajIdSeqs: [[0, 0]],
+      sectionTopLevels: ["Alap"],
+      alapSections: ["Alap"],
+      compTypes: ["Dhrupad"],
+      compSecTempos: ["Vilambit"],
+      talas: ["Tintal"],
+      topLevelOptions: Object.keys(sectionData) as SecCatType["Top Level"][],
+      alapSectionOptions: sectionData['Alap'] as (keyof SecCatType["Alap"])[],
+      compTypeOptions: sectionData['Composition']['Composition Type'] as 
+        (keyof SecCatType["Composition Type"])[],
+      compSecTempoOptions: sectionData['Composition']['Comp.-section/Tempo'] as 
+        (keyof SecCatType["Comp.-section/Tempo"])[],
+      talaOptions: sectionData['Composition']['Tala'] as 
+        (keyof SecCatType["Tala"])[],
+      phraseTypeOptions: phraseData['Phrase Type'] as 
+        (keyof PhraseCatType["Phrase"])[],
+      elborationTypeOptions: phraseData['Elaboration Type'] as 
+        (keyof PhraseCatType["Elaboration"])[],
+      vocalArtTypeOptions: phraseData['Articulation Type']['Vocal'] as
+        (keyof PhraseCatType["Vocal Articulation"])[],
+      instArtTypeOptions: phraseData['Articulation Type']['Instrumental'] as
+        (keyof PhraseCatType["Instrumental Articulation"])[],
+      incidentalOptions: phraseData['Incidental'] as
+        (keyof PhraseCatType["Incidental"])[],
+      phraseTypes: ['Mohra'],
+      elaborationTypes: ['Tan (Sapat)'],
+      vocalArtTypes: ['Non-Tom'],
+      instArtTypes: ['Bol'],
+      incidentals: ['Tuning'],
     }
   },
 
@@ -391,31 +443,134 @@ export default defineComponent({
 
   watch: {
     numQueries(newVal, oldVal) {
-      console.log('numQueries changed from', oldVal, 'to', newVal)
+      console.log('numQueries changed from', oldVal, 'to', newVal);
+      const params: { param: ParamType[], init: ParamType }[]  = [
+        { param: this.categories, init: { value: 'pitch', text: 'Pitch' } },
+        { param: this.pitchNames, init: 'Sa' },
+        { param: this.octs, init: 0 },
+        { 
+          param: this.designators, 
+          init: { value: 'includes', text: 'Includes' } 
+        },
+        { param: this.trajectoryNames, init: 'Fixed' },
+        { param: this.trajectoryIDs, init: 0 },
+        { param: this.numPitches, init: 2 },
+        { 
+          param: this.pitchSeqObjs, 
+          init: [{ swara: 'Sa', oct: 0 }, { swara: 'Sa', oct: 0 }] 
+        },
+        { param: this.trajIdSeqs, init: [0, 0] },
+        { param: this.vowels, init: 'a' },
+        { param: this.consonants, init: 'ra' },
+        { param: this.sectionTopLevels, init: "Alap" },
+        { param: this.alapSections, init: "Alap" },
+        { param: this.compTypes, init: "Dhrupad" },
+        { param: this.compSecTempos, init: "Vilambit" },
+        { param: this.talas, init: "Tintal" },
+        { param: this.phraseTypes, init: 'Mohra' },
+        { param: this.elaborationTypes, init: 'Tan (Sapat)' },
+        { param: this.vocalArtTypes, init: 'Non-Tom' },
+        { param: this.instArtTypes, init: 'Bol' },
+        { param: this.incidentals, init: 'Tuning' },
+      ]
       if (newVal > oldVal) {
-        this.growParam(this.categories, { value: 'pitch', text: 'Pitch' }, newVal, oldVal);
-        this.growParam(this.pitchNames, 'Sa', newVal, oldVal);
-        this.growParam(this.octs, 0, newVal, oldVal);
-        this.growParam(this.designators, { value: 'includes', text: 'Includes' }, newVal, oldVal);
-        this.growParam(this.trajectoryNames, 'Fixed', newVal, oldVal);
-        this.growParam(this.trajectoryIDs, 0, newVal, oldVal);
-        this.growParam(this.numPitches, 2, newVal, oldVal);
-        this.growParam(this.pitchSeqObjs, [{ swara: 'Sa', oct: 0 }, { swara: 'Sa', oct: 0 }], newVal, oldVal);
-        this.growParam(this.trajIdSeqs, [0, 0], newVal, oldVal);
+        params.forEach(p => {
+          this.growParam(p.param, p.init, newVal, oldVal);
+        })
       } else {
-        this.categories.splice(newVal, oldVal - newVal);
-        this.pitchNames.splice(newVal, oldVal - newVal);
-        this.octs.splice(newVal, oldVal - newVal);
-        this.designators.splice(newVal, oldVal - newVal);
-        this.trajectoryNames.splice(newVal, oldVal - newVal);
-        this.trajectoryIDs.splice(newVal, oldVal - newVal);
-        this.numPitches.splice(newVal, oldVal - newVal);
-        this.pitchSeqObjs.splice(newVal, oldVal - newVal);
+        params.forEach(p => {
+          p.param.splice(newVal, oldVal - newVal);
+        })
       }
     }
   },
 
   computed: {
+
+    selectRowData() {
+      const out: {
+        label: string,
+        vModelArr: string[],
+        options: string[],
+        key: number,
+        category: CategoryType,
+      }[] = [
+        {
+          label: 'Section Type: ',
+          vModelArr: this.sectionTopLevels,
+          options: this.topLevelOptions,
+          key: 0,
+          category: 'sectionTopLevel',
+        },
+        { 
+          label: 'Alap Section: ',
+          vModelArr: this.alapSections,
+          options: this.alapSectionOptions,
+          key: 1,
+          category: 'alapSection',
+        },
+        { 
+          label: 'Composition Type: ',
+          vModelArr: this.compTypes,
+          options: this.compTypeOptions,
+          key: 2,
+          category: 'compType',
+        },
+        { 
+          label: 'Comp.-section/Tempo: ',
+          vModelArr: this.compSecTempos,
+          options: this.compSecTempoOptions,
+          key: 3,
+          category: 'compSecTempo',
+        },
+        { 
+          label: 'Tala: ',
+          vModelArr: this.talas,
+          options: this.talaOptions,
+          key: 4,
+          category: 'tala',
+        },
+        { 
+          label: 'Phrase Type: ',
+          vModelArr: this.phraseTypes,
+          options: this.phraseTypeOptions,
+          key: 5,
+          category: 'phraseType',
+        },
+        { 
+          label: 'Elaboration Type: ',
+          vModelArr: this.elaborationTypes,
+          options: this.elborationTypeOptions,
+          key: 6,
+          category: 'elaborationType',
+        },
+        { 
+          label: 'Incidental: ',
+          vModelArr: this.incidentals,
+          options: this.incidentalOptions,
+          key: 7,
+          category: 'incidental',
+        },
+      ];
+      if (this.vocal) {
+        out.push({
+          label: 'Articulation Type: ',
+          vModelArr: this.vocalArtTypes ,
+          options: this.vocalArtTypeOptions,
+          key: 8,
+          category: 'vocalArtType',
+        })
+      } else {
+        out.push({
+          label: 'Articulation Type: ',
+          vModelArr: this.instArtTypes,
+          options: this.instArtTypeOptions,
+          key: 8,
+          category: 'instArtType',
+        })
+      }
+      return out
+    },
 
     trajNames() {
       return this.trajIdxs.map(ti => {
@@ -460,6 +615,26 @@ export default defineComponent({
         } else if (category.value.slice(0, 12) === 'trajSequence') {
           console.log('this')
           query.trajIdSequence = this.trajIdSeqs[i]
+        } else if (category.value === 'sectionTopLevel') {
+          query.sectionTopLevel = this.sectionTopLevels[i]
+        } else if (category.value === 'alapSection') {
+          query.alapSection = this.alapSections[i]
+        } else if (category.value === 'compType') {
+          query.compType = this.compTypes[i]
+        } else if (category.value === 'compSecTempo') {
+          query.compSecTempo = this.compSecTempos[i]
+        } else if (category.value === 'tala') {
+          query.tala = this.talas[i]
+        } else if (category.value === 'phraseType') {
+          query.phraseType = this.phraseTypes[i]
+        } else if (category.value === 'elaborationType') {
+          query.elaborationType = this.elaborationTypes[i]
+        } else if (category.value === 'vocalArtType') {
+          query.vocalArtType = this.vocalArtTypes[i]
+        } else if (category.value === 'instArtType') {
+          query.instArtType = this.instArtTypes[i]
+        } else if (category.value === 'incidental') {
+          query.incidental = this.incidentals[i]
         }
         return query
       })
@@ -477,29 +652,44 @@ export default defineComponent({
 
 
     possibleCategories(): { value: CategoryType, text: string }[] {
+      const cats: { value: CategoryType, text: string }[] = [
+        { value: 'pitch', text: 'Pitch' },
+        { value: 'pitchSequenceStrict', text: 'Strict Pitch Sequence'},
+        { value: 'pitchSequenceLoose', text: 'Loose Pitch Sequence' },
+        { value: 'trajectoryID', text: 'Trajectory' },
+        { value: 'trajSequenceStrict', text: 'Strict Trajectory Sequence' },
+        { value: 'trajSequenceLoose', text: 'Loose Traj Sequence' },
+        
+      ];
+      if (
+        this.segmentation !== 'sequenceOfTrajectories' && 
+        this.segmentation !== 'connectedSequenceOfTrajectories'
+        ) {
+        cats.push(
+          { value: 'sectionTopLevel', text: 'Section Type' },
+          { value: 'alapSection', text: 'Alap Section' },
+          { value: 'compType', text: 'Composition Type' },
+          { value: 'compSecTempo', text: 'Comp.-section/Tempo' },
+          { value: 'tala', text: 'Tala' },
+          { value: 'phraseType', text: 'Phrase Type' },
+          { value: 'elaborationType', text: 'Elaboration Type' },
+          { value: 'incidental', text: 'Incidental' }
+        )
+        if (this.vocal) {
+          cats.push({ value: 'vocalArtType', text: 'Articulation Type' })
+        } else {
+          cats.push({ value: 'instArtType', text: 'Articulation Type' })
+        }
+      }
       if (this.vocal) {
-        return [
-          { value: 'pitch', text: 'Pitch' },
-          { value: 'pitchSequenceStrict', text: 'Strict Pitch Sequence' },
-          { value: 'pitchSequenceLoose', text: 'Loose Pitch Sequence' },
-          { value: 'trajectoryID', text: 'Trajectory' },
-          { value: 'trajSequenceStrict', text: 'Strict Traj Sequence' },
-          { value: 'trajSequenceLoose', text: 'Loose Traj Sequence' },
+        cats.push(
           { value: 'vowel', text: 'Vowel' },
           { value: 'startingConsonant', text: 'Starting Consonant' },
           { value: 'endingConsonant', text: 'Ending Consonant' },
           { value: 'anyConsonant', text: 'Any Consonant' },
-        ]
-      } else {
-        return [
-          { value: 'pitch', text: 'Pitch' },
-          { value: 'pitchSequenceStrict', text: 'Strict Pitch Sequence'},
-          { value: 'pitchSequenceLoose', text: 'Loose Pitch Sequence' },
-          { value: 'trajectoryID', text: 'Trajectory' },
-          { value: 'trajSequenceStrict', text: 'Strict Trajectory Sequence' },
-          { value: 'trajSequenceLoose', text: 'Loose Traj Sequence' },
-        ]
+        )
       }
+      return cats;
     },
 
     pitches(): Pitch[] {
@@ -510,6 +700,20 @@ export default defineComponent({
   },
 
   methods: {
+
+    possibleDesignators(category: CategoryType) {
+      const out: { value: DesignatorType, text: string }[] = [
+        { value: 'includes', text: 'Includes' },
+        { value: 'excludes', text: 'Excludes' },
+      ];
+      if (category !== 'sectionTopLevel') {
+        out.push(
+          { value: 'startsWith', text: 'Starts With' },
+          { value: 'endsWith', text: 'Ends With' }
+        )
+      }
+      return out;
+    },
 
     updateNumPitches(qIdx: number) {
       const n = this.numPitches[qIdx];

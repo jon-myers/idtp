@@ -55,6 +55,8 @@ const store = createStore({
 
 // for event bus
 import mitt from 'mitt';
+import { createHead } from '@vueuse/head';
+const head = createHead();
 const emitter = mitt();
 const app = createApp(App);
 app.config.globalProperties.emitter = emitter;
@@ -66,4 +68,5 @@ app
       "ontent.com"
   })
   .use(VueCookies, { expires: '7d' })
+  .use(head)
   .mount('#app');

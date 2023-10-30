@@ -316,7 +316,9 @@ worksheet.write(0, 0, 'Title', titleFormat)
 worksheet.write(0, 1, data['title'], entryFormat)
 
 worksheet.write(1, 0, 'Date Created', titleFormat)
-worksheet.write(1, 1, get_mod_date_string(data['dateCreated']), entryFormat)
+# worksheet.write(1, 1, get_mod_date_string(data['dateCreated']), entryFormat)
+worksheet.write(1, 1, get_date_string(data['dateCreated']), entryFormat)
+
 
 worksheet.write(2, 0, 'Date Modified', titleFormat)
 worksheet.write(2, 1, get_date_string(data['dateModified']), entryFormat)

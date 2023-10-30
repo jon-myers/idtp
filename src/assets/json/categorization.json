@@ -24,7 +24,7 @@
         "Razakhani Gat",
         "Ferozkhani Gat"
       ],
-      "Composition-section/Tempo": [
+      "Comp.-section/Tempo": [
         "Ati Vilambit",
         "Vilambit",
         "Madhya",
@@ -37,7 +37,24 @@
         "Tintal",
         "Rupak"
       ]
-    }
+    },
+    "Comp.-section/Tempo": [
+      "Ati Vilambit",
+      "Vilambit",
+      "Madhya",
+      "Drut",
+      "Ati Drut",
+      "Jhala"
+    ],
+    "Improvisation": [
+      "Improvisation"
+    ],
+    "Other": [
+      "Other"
+    ],
+    "None": [
+      "None"
+    ]
   },
   "Phrase": {
     "Phrase Type": [

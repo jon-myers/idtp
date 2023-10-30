@@ -9,7 +9,11 @@ module.exports = {
     'eslint:recommended',
   ],
   rules: {
-    'no-console': 'warn',
+    'no-console': 'off',
     'no-debugger': 'warn'
+  },
+  env: {
+    browser: true,
+    node: true,
   }
 };

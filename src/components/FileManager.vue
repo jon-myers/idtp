@@ -246,7 +246,7 @@ type PassedDataType = {
   transcriber?: string;
 }
 
-export type { PassedDataType }
+export type { PassedDataType, UserType }
 
 export default defineComponent({
   name: 'FileManager',
@@ -308,10 +308,17 @@ export default defineComponent({
 
   async created() {
     window.addEventListener('keydown', this.handleKeydown);
+    let id: string;
     if (this.$store.state.userID === undefined) {
-      this.$router.push('/');
+      if (this.$cookies.get('userID') === undefined) {
+        this.$router.push('/');
+      } else {
+        id = this.$cookies.get('userID') as string;
+      }
+    } else {
+      id = this.$store.state.userID as string;
     }
-    const id = this.$store.state.userID as string;
+    
     const sortKey = this.sortKeyNames[this.selectedSort];
     const sortDir = this.sorts[this.selectedSort];
     this.allPieces = await getAllPieces(id, sortKey, String(sortDir));

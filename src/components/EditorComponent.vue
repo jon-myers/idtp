@@ -34,6 +34,14 @@
             @click='preventSpaceToggle'>
         </div>
         <div class='cbRow'>
+          <label>Melograph</label>
+          <input 
+            type='checkbox' 
+            v-model='melographVisible'
+            @change='toggleMelograph'
+            @click='preventSpaceToggle'>
+        </div>
+        <div class='cbRow'>
           <label>Loop</label>
           <input type='checkbox' v-model='loop' @click='updateLoop'>
         </div>
@@ -206,7 +214,8 @@ import {
   getNumberOfSpectrograms,
   savePiece,
   makeSpectrograms,
-  pieceExists
+  pieceExists,
+  getMelographJSON
 } from '@/js/serverCalls.ts';
 import { Meter, Pulse } from '@/js/meter.ts';
 import EditorAudioPlayer from '@/components/EditorAudioPlayer.vue';
@@ -254,6 +263,8 @@ import {
   D3DragEvent,
   Selection,
 } from 'd3';
+
+import { useTitle } from '@vueuse/core';
 
 const  findClosestStartTime = (startTimes: number[], timepoint: number) => {
   let closestIndex = -1;
@@ -457,7 +468,13 @@ type EditorDataType = {
   specBox: Selection<SVGGElement, undefined, null, undefined>,
   browser: BrowserInfo,
   dragIdx: string,
-  IPLims: [number, number]
+  IPLims: [number, number],
+  melographJSON?: {
+    data_chunks: number[][],
+    time_chunk_starts: number[],
+    time_increment: number,
+  },
+  melographVisible: boolean,
 }
 
 export { findClosestStartTime }
@@ -537,7 +554,7 @@ export default defineComponent({
       selectedMeterColor: '#3dcc63',
       meterMode: false,
       selectedMeter: undefined,
-      meterColor: '#1f6331',
+      meterColor: '#0D3D0E',
       pulseDragEnabled: false,
       pulseDragInitX: undefined,
       insertPulseMode: false,
@@ -601,7 +618,9 @@ export default defineComponent({
       imgs: [],
       browser: detect() as BrowserInfo,
       dragIdx: '',
-      IPLims: [0, 0]
+      IPLims: [0, 0],
+      melographJSON: undefined,
+      melographVisible: false,
     }
   },
   components: {
@@ -616,14 +635,15 @@ export default defineComponent({
     if (window.innerHeight < 800) {
       offset = this.navHeight + this.playerHeight + 1;
       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-      // ap.showControls = false;
     }
     this.editorHeight = window.innerHeight - offset  ;
     if (this.$store.state.userID === undefined) {
-      if (this.$route.query) {
-        this.$store.commit('update_query', this.$route.query)
+      if (this.$cookies.get('userID') === undefined) {
+        if (this.$route.query) {
+          this.$store.commit('update_query', this.$route.query)
+        }
+        this.$router.push('/')
       }
-      this.$router.push('/')
     }
   },
 
@@ -684,7 +704,7 @@ export default defineComponent({
           `https://swara.studio/audio/mp3/${piece.audioID}.mp3` :
           `https://swara.studio/audio/opus/${piece.audioID}.opus`;         
         this.audioDBDoc = await getAudioRecording(piece.audioID);
-        
+        this.melographJSON = await getMelographJSON(piece.audioID);
         this.durTot = this.audioDBDoc!.duration;
         // if pieceDurTot is less than this, add silent phrase to make the two 
         // the same
@@ -699,6 +719,7 @@ export default defineComponent({
       this.freqMin = 2 ** (Math.log2(fund / 2) - this.rangeOffset);
       this.freqMax = 2 ** (Math.log2(fund * 4) + this.rangeOffset);
       await this.getPieceFromJson(piece, fund);
+      useTitle(this.piece.title);
       const c1 = this.$store.state.userID === this.piece.userID;
       const c2 = this.piece.permissions === 'Publicly Editable';
       const c3 = this.piece.permissions === 'Private';
@@ -854,6 +875,28 @@ export default defineComponent({
 
   methods: {
 
+    addMelograph(codified=true) {
+      d3SelectAll('.melograph').remove();
+      this.melographJSON?.data_chunks.forEach((chunk, i) => {
+        const start = this.melographJSON!.time_chunk_starts[i];
+        const increment = this.melographJSON!.time_increment;
+        const data = chunk.map((d, i) => {
+          return {
+            x: start + i * increment,
+            y: d
+          }
+        })
+        this.phraseG.append('path')
+          .datum(data)
+          .classed('melograph', true)
+          .attr('stroke', 'darkgreen')
+          .attr('stroke-width', '2px')
+          .attr('fill', 'none')
+          .attr('opacity', this.melographVisible ? 1 : 0)
+          .attr('d', codified ? this.codifiedPhraseLine() : this.phraseLine())
+      })
+    },
+
     addTrajToSelectedGroup(traj: Trajectory) {
       if (this.selectedTrajs.length > 1 && this.selectedTrajs[0].groupId !== undefined) {
         const pIdx = this.selectedTrajs[0].phraseIdx!;
@@ -914,7 +957,11 @@ export default defineComponent({
       if (Math.min(...meterStarts) > ip) {
         const afterIdx = findClosestStartTimeAfter(meterStarts, ip);
         const after = this.piece.meters[afterIdx];
-        this.IPLims = [0, after.startTime];
+        if (after === undefined) {
+          this.IPLims = [0, this.durTot];
+        } else {
+          this.IPLims = [0, after.startTime];
+        }
       } else if (Math.max(...meterStarts) < ip) {
         const beforeIdx = findClosestStartTime(meterStarts, ip);
         const before = this.piece.meters[beforeIdx];
@@ -1403,6 +1450,18 @@ export default defineComponent({
       } else {
         this.spectrogramOpacity = 0;
       }
+    },
+
+    toggleMelograph() {
+      const melographLines = d3SelectAll('.melograph');
+      this.$nextTick(() => {
+        if (this.melographVisible) {
+          melographLines.attr('opacity', 1);
+        } else {
+          melographLines.attr('opacity', 0);
+        }
+      })
+      
     },
 
     toggleInstructions() {
@@ -3156,6 +3215,7 @@ export default defineComponent({
           const newTime = this.codifiedXR!.invert(newX);
           const time = newTime - oldTime;
           this.selectedMeter!.offsetPulse(pulse, time, true);
+          this.selectedMeter!.resetTempo();
           this.resetZoom();
           this.pulseDragEnabled = false;
           this.pulseDragInitX = undefined
@@ -3183,7 +3243,6 @@ export default defineComponent({
           })!;
           pulse = meter.allPulses[0];
         }     
-        console.log(pulse.meterId === meter.uniqueId)
         if (this.selectedMeter !== meter) {
           this.svg.style('cursor', 'pointer')
           d3SelectAll(`.meterId_${pulse.meterId}`)
@@ -3235,7 +3294,6 @@ export default defineComponent({
         d3SelectAll('.insertPulse').remove();
       }
       if (this.meterMode) {
-        console.log('getting to here')
         const allPulses: Pulse[] = []
         this.piece.meters.forEach(meter => {
           allPulses.push(...meter.allPulses)
@@ -3261,7 +3319,9 @@ export default defineComponent({
         this.selectedMeter = meter;
         meterControls.meter = meter;
         //should go to the meter controls, if not selected
-        audioPlayer.openMeterControls();
+        if (audioPlayer.showMeterControls === false) {
+          audioPlayer.toggleMeterControls()
+        }
         d3SelectAll('.metricGrid')
           .attr('stroke', this.meterColor)
         d3SelectAll(`.meterId_${pulse.meterId}`)
@@ -3786,7 +3846,6 @@ export default defineComponent({
       // checking box
     },
 
-
     preventSpaceToggle(e: MouseEvent) {
       if (e && e.clientX === 0) e.preventDefault();
     },
@@ -4235,7 +4294,9 @@ export default defineComponent({
           const meterControls = ap.$refs.meterControls;
           meterControls.insertPulseMode = true;
           meterControls.prevMeter = false;
-          ap.openMeterControls();
+          if (ap.showMeterControls === false) {
+            ap.toggleMeterControls();
+          }
           d3SelectAll('.phrase').style('cursor', 's-resize');
           d3SelectAll('.articulation').selectAll('*').style('cursor', 's-resize');
         } else {
@@ -8264,7 +8325,9 @@ export default defineComponent({
         )
       }
 
-      if (this.piece.audioID) await this.redrawSpectrogram(instant);
+      if (this.piece.audioID) {
+        await this.redrawSpectrogram(instant);
+      }
       this.movePlayhead();
       this.moveShadowPlayhead();
       this.moveRegion();
@@ -8319,6 +8382,9 @@ export default defineComponent({
             .attr('fill', this.selArtColor)
           this.updateArtColors(t, true);
         })
+      }
+      if (this.audioDBDoc) {
+        this.addMelograph()
       }
     },
 

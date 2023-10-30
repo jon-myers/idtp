@@ -87,6 +87,7 @@ class Pulse {
         throw new Error('Pulse already affiliated with this pulse structure')
       }
     } else {
+      console.log(this.realTime, pulseStructure.pulses[idx].realTime)
       throw new Error('Pulse real time does not match affiliation real time')
     }
   }
@@ -480,6 +481,7 @@ class Meter {
                 let duration = parentPS.pulseDur;
                 // const tempo = 60 * h / duration;
                 // let startTime = p.realTime + parentPS.pulseDur * j;
+                // console.log(p, parentPS, duration, h)
                 const ps = PulseStructure.fromPulse(p, duration, h, { 
                   layer: i 
                 })
@@ -888,6 +890,17 @@ class Meter {
     if (hierarchy.length < 1) {
       throw new Error('Must provide at least one hierarchy')
     }
+    if (layer === 1) {
+      const layer0Size = hierarchy[0] instanceof Array ?
+        sum(hierarchy[0] as number[]) :
+        hierarchy[0] as number;
+      const avgDiff = (timePoints[timePoints.length - 1] - timePoints[0]) / 
+        (timePoints.length - 1);
+      while (timePoints.length < layer0Size + 1) {
+        timePoints.push(timePoints[timePoints.length - 1] + avgDiff)
+      }
+    }
+    
     let diffs = timePoints.slice(0, timePoints.length - 1).map((tp, i) => {
       return timePoints![i+1] - tp;
     })
@@ -939,7 +952,6 @@ class Meter {
       return timePoints![i+1] - tp;
     });
     pulseDur = sum(diffs) / diffs.length;
-
     
     const tempo = 60 / pulseDur;
     const startTime = timePoints[0];
@@ -967,10 +979,11 @@ class Meter {
         psMetricTimes.forEach((mt, i) => {
           if (i > 0) {
             const tp = initTimepoints[otpCt + i];
-            const pulse = psMetricPulses[i];
-            const diff = tp - mt;
-            meter.offsetPulse(pulse, diff);
-
+            if (tp !== undefined) {
+              const pulse = psMetricPulses[i];
+              const diff = tp - mt;
+              meter.offsetPulse(pulse, diff);
+            }
           }
         })
         otpCt += psMetricTimes.length;

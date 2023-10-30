@@ -12,6 +12,7 @@ const cron = require('node-cron');
 const aggregations = require('./aggregations.js');
 const { OAuth2Client } = require('google-auth-library');
 require('dotenv').config();
+const console = require('console');
 
 async function exists (path) {  
   try {
@@ -514,7 +515,29 @@ const runServer = async () => {
           res.json('made the spectrograms')
         })
       } catch (err) {
-        console.error (err)
+        console.error(err)
+      }
+    })
+
+    app.post('/makeMelograph', async (req, res) => {
+      const makingMelograph = spawn(
+        'python3', 
+        ['generate_melograph.py', req.body.recId, req.body.saEst]
+      );
+      try {
+        makingMelograph.stdout.on('data', data => {
+          console.log(`stdout: ${data}`)
+        });
+        
+        makingMelograph.stderr.on('data', data => {
+          console.error(`stderr: ${data}`)
+        });
+        await makingMelograph.on('close', (msg) => {
+          console.log(msg)
+          res.json('made the melograph')
+        })
+      } catch (err) {
+        console.error(err)
       }
     })
 
@@ -576,17 +599,22 @@ const runServer = async () => {
     app.post('/saveAudioMetadata', async (req, res) => {
       const parentId = ObjectId(req.body._id);
       const myUpdates = req.body.updates;
+      const addMusicians = req.body.addMusicians;
       const query = { _id: parentId };
       const update = { $set: myUpdates };
       const options = { upsert: true };
       try {
-        const result = await audioEvents.updateOne(query, update, options);
-        res.json(result);
+        const [result1, result2] = await Promise.all([
+          audioEvents.updateOne(query, update, options),
+          musicians.insertMany(addMusicians)
+        ])
+        res.json({ result1, result2 });
         aggregations.generateAudioRecordingsDB();
+        
       } catch (err) {
         console.error(err);
         res.status(500).send(err);
-      }    
+      }
     })
 
     app.post('/updateSaEstimate', async (req, res) => {
@@ -758,7 +786,12 @@ const runServer = async () => {
       
       try {
         let url = req.body.redirectURL;
-        url = url.slice(0, url.length-1);
+        if (url[url.length-1] === '/') {
+          url = url.slice(0, url.length-1);
+        }
+        if (url.slice(url.length-5, url.length) === 'logIn')[
+          url = url.slice(0, url.length-6)
+        ]
         console.log(url)
         const OAuthClient = new OAuth2Client({
           clientId: "324767655055-crhq76mdupavvrcedtde986glivug1nm.apps.googl" +
@@ -945,6 +978,9 @@ const runServer = async () => {
     app.use('/spectrograms', express.static('spectrograms', { 
       setHeaders: setNoCache 
     }))
+    app.use('/melographs', express.static('melographs', { 
+      setHeaders: setNoCache 
+    }));
     app.use('/', express.static('dist'))
     const server = app.listen(3000);
     server.timeout = 600000;

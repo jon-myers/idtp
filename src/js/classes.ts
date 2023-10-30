@@ -2,7 +2,7 @@ import { findLastIndex } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 import { Meter } from './meter.ts';
 
-const initSectionCategorization = () => {
+const initSectionCategorization = (): SecCatType => {
   return {
     "Pre-Chiz Alap": {
       "Pre-Chiz Alap": false
@@ -27,7 +27,7 @@ const initSectionCategorization = () => {
       "Razakhani Gat": false,
       "Ferozkhani Gat": false,
     },
-    "Composition-section/Tempo": {
+    "Comp.-section/Tempo": {
       "Ati Vilambit": false,
       "Vilambit": false,
       "Madhya": false,
@@ -39,7 +39,14 @@ const initSectionCategorization = () => {
       "Ektal": false,
       "Tintal": false,
       "Rupak": false,
-    }
+    },
+    "Improvisation": {
+      "Improvisation": false,
+    },
+    "Other": {
+      "Other": false,
+    },
+    "Top Level": "None"
   }
 }
 
@@ -251,6 +258,19 @@ class Pitch {
     this.sargam = ['sa', 're', 'ga', 'ma', 'pa', 'dha', 'ni'];
     const sargamLetters = this.sargam.map(s => s.slice(0, 1));
     this.ratios = ratios;
+    this.ratios.forEach(r => {
+      if (Array.isArray(r)) {
+        r.forEach(subR => {
+          if (subR === undefined) {
+            throw new SyntaxError(`invalid ratio type, must be float: ${subR}`)
+          }
+        })
+      } else {
+        if (r === undefined) {
+          throw new SyntaxError(`invalid ratio type, must be float: ${r}`)
+        }
+      }
+    })
     if (typeof(raised) != 'boolean') {
       throw new SyntaxError(`invalid raised type, must be boolean: ${raised}`)
     } else {
@@ -1514,7 +1534,7 @@ class Group {
   }
 }
 
-type PhraseCategorizationType = {
+type PhraseCatType = {
   "Phrase": {
     "Mohra": boolean,
     "Mukra": boolean,
@@ -1558,7 +1578,7 @@ type PhraseCategorizationType = {
   }
 }
 
-type SectionCategorizationType = {
+type SecCatType = {
   "Pre-Chiz Alap": {
     "Pre-Chiz Alap": boolean,
   },
@@ -1582,7 +1602,7 @@ type SectionCategorizationType = {
     "Razakhani Gat": boolean,
     "Ferozkhani Gat": boolean,
   },
-  "Composition-section/Tempo": {
+  "Comp.-section/Tempo": {
     "Ati Vilambit": boolean,
     "Vilambit": boolean,
     "Madhya": boolean,
@@ -1594,7 +1614,21 @@ type SectionCategorizationType = {
     "Ektal": boolean,
     "Tintal": boolean,
     "Rupak": boolean
-  }
+  },
+  "Improvisation": {
+    "Improvisation": boolean,
+  },
+  "Other": {
+    "Other": boolean,
+  },
+  "Top Level": (
+    "Pre-Chiz Alap" | 
+    "Alap" | 
+    "Composition" | 
+    "Improvisation" | 
+    "Other" |
+    "None"
+  )
 }
 
 
@@ -1608,7 +1642,7 @@ class Phrase {
   durArray?: number[];
   chikaris: { [key: string]: Chikari };
   pieceIdx?: number;
-  categorizationGrid: PhraseCategorizationType[];
+  categorizationGrid: PhraseCatType[];
   
   constructor({
     trajectories = [],
@@ -1631,7 +1665,7 @@ class Phrase {
     trajectoryGrid?: Trajectory[][],
     instrumentation?: string[],
     groupsGrid?: Group[][],
-    categorizationGrid?: PhraseCategorizationType[],
+    categorizationGrid?: PhraseCatType[],
   } = {}) {
 
     this.startTime = startTime;
@@ -1770,6 +1804,7 @@ class Phrase {
       const index = findLastIndex(starts, s => x >= s);
       const innerX = (x - starts[index]) / this.durArray[index];
       const traj = this.trajectories[index];
+      
       return traj.compute(innerX, logScale)
     }
   }
@@ -2055,7 +2090,7 @@ class Piece {
   instrumentation: string[];
   possibleTrajs: { [key: string]: number[] };
   meters: Meter[];
-  sectionCategorization: SectionCategorizationType[];
+  sectionCategorization: SecCatType[];
 
 
   constructor({
@@ -2103,7 +2138,7 @@ class Piece {
     sectionStarts?: number[],
     instrumentation?: string[],
     meters?: Meter[],
-    sectionCategorization?: SectionCategorizationType[],
+    sectionCategorization?: SecCatType[],
   } = {}) {
     this.meters = meters;
     this.phrases = phrases;
@@ -2184,6 +2219,44 @@ class Piece {
     }
     if (sectionCategorization !== undefined) {
       this.sectionCategorization = sectionCategorization;
+      this.sectionCategorization.forEach(c => {
+        if (c['Improvisation'] === undefined) {
+          c['Improvisation'] = { "Improvisation": false }
+        }
+        if (c['Other'] === undefined) {
+          c['Other'] = { "Other": false }
+        }
+        if (c['Top Level'] === undefined) {
+          const com = c['Composition Type'];
+          let comSecTemp = c['Comp.-section/Tempo'];
+          if (comSecTemp === undefined) {
+            comSecTemp = c['Composition-section/Tempo']
+          }
+          const tala = c['Tala'];
+          const improv = c['Improvisation'];
+          const other = c['Other'];
+          const someTrue = (obj: object) => {
+            return Object.values(obj).some(v => v)
+          };
+          if (c['Pre-Chiz Alap']['Pre-Chiz Alap']) {
+            c['Top Level'] = 'Pre-Chiz Alap'
+          } else if (someTrue(c['Alap'])) {
+            c['Top Level'] = 'Alap'
+          } else if (someTrue(com) || someTrue(comSecTemp) || someTrue(tala)) {
+            c['Top Level'] = 'Composition'
+          } else if (improv['Improvisation']) {
+            c['Top Level'] = 'Improvisation'
+          } else if (other['Other']) {
+            c['Top Level'] = 'Other'
+          } else {
+            c['Top Level'] = 'None'
+          }
+        }
+        if (c['Comp.-section/Tempo'] === undefined) {
+          c['Comp.-section/Tempo'] = c['Composition-section/Tempo'];
+          delete c['Composition-section/Tempo']
+        }
+      })
     } else {
       this.sectionCategorization = this.sectionStarts.map(() => {
         return initSectionCategorization()
@@ -2423,6 +2496,31 @@ class Piece {
     return pulse
   }
 
+  sIdxFromPIdx(pIdx: number) {
+    // section index from phrase index
+    const ss = this.sectionStarts!;
+    const sIdx = ss.length - 1 - ss.slice().reverse().findIndex(s => pIdx >= s);
+    return sIdx
+  }
+
+  pIdxFromGroup(g: Group) {
+    const pIdx = this.phrases.findIndex(p => {
+      let bool = false;
+      p.groupsGrid.forEach(gg => {
+        if (gg.includes(g)) {
+          bool = true
+        }
+      })
+      return bool
+    });
+    return pIdx
+  }
+
+  sIdxFromGroup(g: Group) {
+    const pIdx = this.pIdxFromGroup(g);
+    const sIdx = this.sIdxFromPIdx(pIdx);
+    return sIdx
+  }
 
   toJSON() {
     return {
@@ -2449,7 +2547,6 @@ class Piece {
       sectionCategorization: this.sectionCategorization,
     }
   }
-
 }
 
 const yamanRuleSet = {
@@ -2479,14 +2576,14 @@ const yamanRuleSet = {
 
 class Section {
   phrases: Phrase[];
-  categorization: SectionCategorizationType;
+  categorization: SecCatType;
 
   constructor({
     phrases = [],
     categorization = undefined
   }: {
     phrases?: Phrase[],
-    categorization?: SectionCategorizationType
+    categorization?: SecCatType
   } = {}) {
     this.phrases = phrases;
     if (categorization !== undefined) {
@@ -2570,11 +2667,12 @@ class Raga {
         raised: 2 ** (11 / 12)
       }
     };
-    if (ratios === undefined) {
+    if (ratios === undefined || ratios.length !== this.ruleSetNumPitches)  {
       this.ratios = this.setRatios(this.ruleSet)
     } else {
       this.ratios = ratios
     }
+    // this.ratios = this.setRatios(this.ruleSet)
     
   }
 
@@ -2591,6 +2689,23 @@ class Raga {
       }
     });
     return sl
+  }
+
+  get ruleSetNumPitches() {
+    let numPitches = 0;
+    const keys = Object.keys(this.ruleSet);
+    keys.forEach(key => {
+      if (typeof(this.ruleSet[key]) === 'boolean') {
+        if (this.ruleSet[key]) {
+          numPitches += 1;
+        }
+      } else {
+        const ruleSet = this.ruleSet[key] as BoolObj;
+        if (ruleSet.lowered) numPitches += 1;
+        if (ruleSet.raised) numPitches += 1;
+      }
+    })
+    return numPitches
   }
 
   pitchNumberToSargamLetter(pitchNumber: number) {
@@ -2842,5 +2957,6 @@ export {
 export type {
   RuleSetType,
   VibObjType,
-  PhraseCategorizationType
+  PhraseCatType,
+  SecCatType
 }

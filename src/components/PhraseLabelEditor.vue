@@ -103,7 +103,7 @@
 <script lang='ts'>
 
 import { defineComponent, PropType } from 'vue';
-import { Piece, Phrase, PhraseCategorizationType } from '@/js/classes.ts';
+import { Piece, Phrase, PhraseCatType } from '@/js/classes.ts';
 
 import categoryData from '@/assets/json/categorization.json';
 const phraseData = categoryData['Phrase'];
@@ -118,11 +118,11 @@ type PhraseLabelEditorDataType = {
   phrase: Phrase
 }
 
-type PPhraseType = keyof PhraseCategorizationType['Phrase'];
-type PElaborationType = keyof PhraseCategorizationType['Elaboration'];
-type PVArtType = keyof PhraseCategorizationType['Vocal Articulation'];
-type PIArtType = keyof PhraseCategorizationType['Instrumental Articulation'];
-type PIncidentalType = keyof PhraseCategorizationType['Incidental'];
+type PPhraseType = keyof PhraseCatType['Phrase'];
+type PElaborationType = keyof PhraseCatType['Elaboration'];
+type PVArtType = keyof PhraseCatType['Vocal Articulation'];
+type PIArtType = keyof PhraseCatType['Instrumental Articulation'];
+type PIncidentalType = keyof PhraseCatType['Incidental'];
 
 
 
