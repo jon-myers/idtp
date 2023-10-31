@@ -296,7 +296,7 @@ const  findClosestStartTime = (startTimes: number[], timepoint: number) => {
   return closestIndex;
 }
 
-function findClosestStartTimeAfter(startTimes, timepoint) {
+function findClosestStartTimeAfter(startTimes: number[], timepoint: number) {
   let closestIndex = -1;
   let closestDiff = Infinity;
 
