@@ -102,7 +102,18 @@
       <TrajSelectPanel 
         ref='trajSelectPanel' 
         :editable='editable' 
-        :ctrlBoxWidth='controlBoxWidth' 
+        :ctrlBoxWidth='controlBoxWidth'
+        :selectedPhraseDivIdx='selectedPhraseDivIdx'
+        :piece='piece'
+        :selectedTrajs='selectedTrajs'
+        :selectedTraj='selectedTraj'
+        :freqMax='freqMax'
+        :freqMin='freqMin'
+        :setNewTraj='setNewTraj'
+        :trajTimePts='trajTimePts'
+        :groupable='groupable'
+        @groupSelectedTrajs='groupSelectedTrajs'
+        @ungroupSelectedTrajs='ungroupSelectedTrajs'
         @mutateTraj='mutateTrajEmit'
         @pluckBool='pluckBoolEmit'
         @newTraj='newTrajEmit'
@@ -111,6 +122,8 @@
         @vowel='vowelEmit'
         @startConsonant='startConsonantEmit'
         @endConsonant='endConsonantEmit'
+        @shiftOct='shiftTrajByOctave'
+        @alterSlope='alterSlope'
         />
     </div>
   </div>
@@ -283,7 +296,7 @@ const  findClosestStartTime = (startTimes: number[], timepoint: number) => {
   return closestIndex;
 }
 
-function findClosestStartTimeAfter(startTimes, timepoint) {
+function findClosestStartTimeAfter(startTimes: number[], timepoint: number) {
   let closestIndex = -1;
   let closestDiff = Infinity;
 
