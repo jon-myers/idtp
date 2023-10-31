@@ -10,6 +10,7 @@
         v-model='topLevel' 
         @change='updateTopLevel' 
         @keydown='preventSpaceSelect'
+        :disabled='!editable'
         >
         <option v-for='option in topLevelOptions' :value='option'>
           {{option}}
@@ -25,6 +26,7 @@
           v-model='alapType' 
           @change='updateAlapType'
           @keydown='preventSpaceSelect'
+          :disabled='!editable'
           >
           <option 
             v-for='option in Object.keys(section.categorization["Alap"])' 
@@ -43,6 +45,7 @@
             v-model='compositionType' 
             @change='updateCompositionType'
             @keydown='preventSpaceSelect'
+            :disabled='!editable'
             >
             <option 
               v-for='option in Object.keys(section.categorization["Composition Type"])' 
@@ -60,6 +63,7 @@
             v-model='section_tempo' 
             @change='updateSection_Tempo'
             @keydown='preventSpaceSelect'
+            :disabled='!editable'
             >
             <option 
               v-for='option in Object.keys(section.categorization["Comp.-section/Tempo"])' 
@@ -77,6 +81,7 @@
             v-model='tala' 
             @change='updateTala' 
             @keydown='preventSpaceSelect'
+            :disabled='!editable'
             >
             <option 
               v-for='option in Object.keys(section.categorization["Tala"])' 
@@ -148,6 +153,10 @@ export default defineComponent({
     },
     section: {
       type: Object as PropType<Section>,
+      required: true
+    },
+    editable: {
+      type: Boolean,
       required: true
     }
   },
@@ -383,5 +392,9 @@ select {
   flex-direction: row;
   align-items: center;
   justify-content: center;
+}
+
+select:disabled {
+  color: black;
 }
 </style>
