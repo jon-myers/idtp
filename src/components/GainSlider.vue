@@ -11,10 +11,6 @@
 <script lang='ts'>
 import { defineComponent, ref, PropType } from 'vue';
 
-type GainSliderDataType = {
-  gain: number
-}
-
 export default defineComponent({
   name: 'GainSlider',
   props: {
@@ -41,10 +37,12 @@ export default defineComponent({
 
     const updateGain = () => {
       const curGain = props.gainNode.gain.value;
-      // rest of your logic here
       const gainParam = props.gainNode.gain;
+      const min = 2 ** -7;
+      const max = 1;
+      const scaled = min * (max / min) ** gain.value;
       gainParam.setValueAtTime(curGain, now());
-      gainParam.linearRampToValueAtTime(gain.value, now() + props.lag);
+      gainParam.linearRampToValueAtTime(scaled, now() + props.lag);
     };
 
     return {
@@ -53,26 +51,5 @@ export default defineComponent({
       updateGain
     };
   }
-
-  // data(): GainSliderDataType {
-  //   return {
-  //     gain: 0
-  //   }
-  // },
-
-  // methods: {
-
-  //   now() {
-  //     return this.ac.currentTime;
-  //   },
-
-  //   updateGain() {
-  //     const curGain = this.gainNode.gain.value;
-  //     const gainParam = this.gainNode.gain;
-  //     gainParam.setValueAtTime(curGain, this.now());
-  //     gainParam.linearRampToValueAtTime(this.gain, this.now() + this.lag);
-
-  //   }
-  // }
 })
 </script>

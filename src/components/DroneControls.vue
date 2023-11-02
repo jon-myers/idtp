@@ -142,13 +142,33 @@
         </div>
       </div>
     </div>
+    <div class='controlBox medium'>
+      <label>Filter</label>
+      <LowPassFilterControl 
+        v-if='droneInitialized'
+        :filterNode='filter!'
+        :ac='ac!'
+        :lag='lag'
+        />
+
+    </div>
+    <div class='controlBox amp'>
+      <label>Amplitude</label>
+      <AmplitudeMeter 
+        v-if='droneInitialized'
+        :analyserNode='analyserNode!'
+        :height='height - 70'
+      />
+    </div>
   </div>
 </template>
 <script lang='ts'>
 
 import { defineComponent, PropType } from 'vue';
 import { Piece } from '@/js/classes.ts'
-import GainSlider from '@/components/GainSlider.vue'
+import GainSlider from '@/components/GainSlider.vue';
+import AmplitudeMeter from '@/components/AmplitudeMeter.vue';
+import LowPassFilterControl from '@/components/LowPassFilterControl.vue';
 
 type DroneControlsDataType = {
   saOscBank: OscillatorNode[],
@@ -164,6 +184,7 @@ type DroneControlsDataType = {
   droneInitialized: boolean,
   droneStarted: boolean,
   refStrings: string[],
+  filter: BiquadFilterNode | undefined,
 }
 
 export default defineComponent({
@@ -176,6 +197,7 @@ export default defineComponent({
       mainGain: undefined,
       saGain: undefined,
       paGain: undefined,
+      filter: undefined,
       droneOn: false,
       lag: 0.1,
       droneInitialized: false,
@@ -223,7 +245,9 @@ export default defineComponent({
   },
 
   components: {
-    GainSlider
+    GainSlider,
+    AmplitudeMeter,
+    LowPassFilterControl
   },
 
   mounted() {
@@ -269,7 +293,7 @@ export default defineComponent({
         this.paOscBank.forEach(osc => osc.start());
       }
       
-      const mg = this.mainGain.gain;
+      const mg = this.mainGain!.gain;
       const gains = this.refStrings.map(refString => {
           const slider = this.$refs[refString] as typeof GainSlider;
           return slider.gainNode.gain.value;
@@ -277,7 +301,7 @@ export default defineComponent({
       if (gains[0] === 0) {
         gains[0] = 0.0001;
       }
-      mg.exponentialRampToValueAtTime(gains[0], this.ac.currentTime + this.lag);
+      mg.exponentialRampToValueAtTime(gains[0], this.ac!.currentTime + this.lag);
     },
 
     initializeDrone() {
@@ -403,9 +427,14 @@ export default defineComponent({
   box-sizing: border-box;
 }
 
+.controlBox.medium {
+  width: 200px;
+}
+
 .controlBox.thin {
   width: 50px;
 }
+
 
 .gainSlider {
   width: 20px;
@@ -425,6 +454,11 @@ export default defineComponent({
 }
 
 label {
-  height: 40px;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 14px;
 }
 </style>
