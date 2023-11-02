@@ -13,7 +13,6 @@
             {{ formattedCurrentTime }}
           </div>
           <div class="progressCircle">
-            <!-- <div class="invisibleProgressCircle"></div> -->
           </div>
         </div>
         <div class="timeLeft">{{ '-' + formattedTimeLeft }}</div>
@@ -22,7 +21,6 @@
         <div class="spacer">
           <div class="innerSpacer"></div>
           <div class="recInfo left">
-            <!-- <span>{{pieceTitle}}</span> -->
             <div class="span">
               {{ performers.join(', ') }}
             </div>
@@ -78,6 +76,14 @@
               class="tuningFork"
               ref="tuningImg"
             />
+          </div>
+          <div class='rulerBox'>
+            <img 
+              :src="icons.drone" 
+              @click="toggleDrone" 
+              class='droneImg'
+              ref='droneImg'
+              />
           </div>
           <div class="rulerBox">
             <img 
@@ -270,18 +276,29 @@
         @passthroughUnsavedChangesEmit='passthroughUnsavedChanges'
         @passthroughAssignPrevMeterEmit='passthroughAssignPrevMeter'
         />
-      <LabelEditor
-        v-if='showLabelControls'
-        :height='controlsHeight'
-        :playerHeight='playerHeight'
-        :editable='editable'
-        :piece='piece'
-        :vocal='vocal!'
-        @unsavedChanges='$emit("unsavedChangesEmit", true)'
-        @goToPhraseEmit='goToPhrase'
-        @goToSectionEmit='goToSection'
-        ref='labelControls'
-      />
+    <LabelEditor
+      v-if='showLabelControls'
+      :height='controlsHeight'
+      :playerHeight='playerHeight'
+      :editable='editable'
+      :piece='piece'
+      :vocal='vocal!'
+      @unsavedChanges='$emit("unsavedChangesEmit", true)'
+      @goToPhraseEmit='goToPhrase'
+      @goToSectionEmit='goToSection'
+      ref='labelControls'
+    />
+    <DroneControls 
+      v-if='ac && raga'
+      v-show='showDrone'
+      :height='controlsHeight'
+      :playerHeight='playerHeight'
+      :editable='editable'
+      :piece='piece'
+      :ac='ac'
+      :saFreq='raga.fundamental'
+      ref='droneControls'
+    />
   </div>
 </template>
 <script lang='ts'>
@@ -295,6 +312,7 @@ import playIcon from '@/assets/icons/play.svg';
 import shuffleIcon from '@/assets/icons/shuffle.svg';
 import rulerIcon from '@/assets/icons/ruler.svg';
 import tagsIcon from '@/assets/icons/tags.svg';
+import droneIcon from '@/assets/icons/drone.png';
 import { defineComponent } from 'vue';
 import type { PropType } from 'vue';
 import { 
@@ -322,6 +340,7 @@ import { drag as d3Drag, select as d3Select } from 'd3';
 import stretcherURL from '@/js/bundledStretcherWorker.js?url';
 import MeterControls from '@/components/MeterControls.vue';
 import LabelEditor from '@/components/LabelEditor.vue';
+import DroneControls from '@/components/DroneControls.vue';
 import { RecType } from '@/components/AddAudioEvent.vue'
 import { Meter } from '@/js/meter.ts'
 
@@ -348,7 +367,8 @@ type EditorAudioPlayerData = {
     download: string;
     tuningFork: string;
     meter: string;
-    tags: string
+    tags: string;
+    drone: string;
   };
   circleDragging: boolean;
   formattedCurrentTime: string;
@@ -365,6 +385,7 @@ type EditorAudioPlayerData = {
   chikariGain: number;
   lagTime: number;
   showControls: boolean;
+  showDrone: boolean;
   recGain: number;
   synthGain: number;
   synthDamp: number;
@@ -442,7 +463,7 @@ type EditorAudioPlayerData = {
   ETRatios: number[];
   initFreqs: number[];
   currentFreqs: number[];
-  tuningMasterGainNode?: GainNode;
+  tuningmainGainNode?: GainNode;
   tuningGainNodes: GainNode[];
   tuningSines: OscillatorNode[];
 }
@@ -570,7 +591,8 @@ export default defineComponent({
         download: downloadIcon,
         tuningFork: tuningForkIcon,
         meter: meterIcon,
-        tags: tagsIcon
+        tags: tagsIcon,
+        drone: droneIcon,
       },
       circleDragging: false,
       formattedCurrentTime: '00:00',
@@ -587,6 +609,7 @@ export default defineComponent({
       chikariGain: 0,
       lagTime: 0.025,
       showControls: true,
+      showDrone: false,
       recGain: 1,
       synthGain: 0,
       synthDamp: 0.5,
@@ -680,13 +703,9 @@ export default defineComponent({
       ETRatios: [],
       initFreqs: [],
       currentFreqs: [],
-      tuningMasterGainNode: undefined,
+      tuningmainGainNode: undefined,
       tuningGainNodes: [],
       tuningSines: [],
-
-
-
-
     };
   },
   props: {
@@ -753,7 +772,8 @@ export default defineComponent({
 
   components: {
     MeterControls,
-    LabelEditor
+    LabelEditor,
+    DroneControls
   },
 
   async mounted() {
@@ -1072,11 +1092,11 @@ export default defineComponent({
       this.tuningSines = [...Array(this.sargam.length)].map(() => {
           return this.ac!.createOscillator()
       });
-      this.tuningMasterGainNode = this.ac!.createGain();
-      this.tuningMasterGainNode.connect(this.ac!.destination);
-      this.tuningMasterGainNode.gain.setValueAtTime(0.25, this.now());
+      this.tuningmainGainNode = this.ac!.createGain();
+      this.tuningmainGainNode.connect(this.ac!.destination);
+      this.tuningmainGainNode.gain.setValueAtTime(0.25, this.now());
       this.tuningGainNodes.forEach((gainNode, i) => {
-        gainNode.connect(this.tuningMasterGainNode!);
+        gainNode.connect(this.tuningmainGainNode!);
         gainNode.gain.setValueAtTime(0, this.now());
         const osc = this.tuningSines[i];
         osc.frequency.setValueAtTime(this.currentFreqs[i], this.now());
@@ -2235,6 +2255,10 @@ export default defineComponent({
           this.showLabelControls = false;
           const tagsImg = this.$refs.tagsImg as HTMLElement;
           tagsImg.classList.remove('showLabelControls')
+        } else if (this.showDrone) {
+          this.showDrone = false;
+          const droneImg = this.$refs.droneImg as HTMLImageElement;
+          droneImg.classList.remove('showDrone');      
         } else {
           this.$emit('resizeHeightEmit', this.showControls);
         }
@@ -2270,12 +2294,52 @@ export default defineComponent({
           this.showLabelControls = false;
           const tagsImg = this.$refs.tagsImg as HTMLElement;
           tagsImg.classList.remove('showLabelControls')
+        } else if (this.showDrone) {
+          this.showDrone = false;
+          const droneImg = this.$refs.droneImg as HTMLImageElement;
+          droneImg.classList.remove('showDrone');      
         } else {
           this.$emit('resizeHeightEmit', this.showTuning)
         }
       }
-      
     },
+
+    toggleDrone(e: MouseEvent) {
+      if (!this.loading) {
+        const target = e.target as HTMLImageElement;
+        const cl = target.classList;
+        cl.toggle('showDrone');
+        if (this.showDrone) {
+          this.showDrone = false;
+        } else {
+          this.showDrone = true
+        }
+        if (this.showControls) {
+          this.showControls = false;
+          const controlsImg = this.$refs.controlsImg as HTMLImageElement;
+          controlsImg.classList.remove('showControls');
+        } else if (this.showDownloads) {
+          this.showDownloads = false;
+          const downloadImg = this.$refs.downloadImg as HTMLImageElement;
+          downloadImg.classList.remove('showDownloads')
+        } else if (this.showMeterControls) {
+          this.showMeterControls = false;
+          const meterImg = this.$refs.meterImg as HTMLImageElement;
+          meterImg.classList.remove('showMeterControls');
+        } else if (this.showLabelControls) {
+          this.showLabelControls = false;
+          const tagsImg = this.$refs.tagsImg as HTMLElement;
+          tagsImg.classList.remove('showLabelControls')
+        } else if (this.showTuning) {
+          this.showTuning = false;
+          const tuningImg = this.$refs.tuningImg as HTMLImageElement;
+          tuningImg.classList.remove('showTuning');
+        } else {
+          this.$emit('resizeHeightEmit', this.showDrone)
+        }
+      }
+    },
+
     toggleDownloads(e: MouseEvent) {
       if (!this.loading) {
         const cl = (e.target as HTMLImageElement).classList;
@@ -2297,6 +2361,10 @@ export default defineComponent({
           this.showLabelControls = false;
           const tagsImg = this.$refs.tagsImg as HTMLElement;
           tagsImg.classList.remove('showLabelControls')
+        } else if (this.showDrone) {
+          this.showDrone = false;
+          const droneImg = this.$refs.droneImg as HTMLImageElement;
+          droneImg.classList.remove('showDrone');      
         } else {
           this.$emit('resizeHeightEmit', this.showDownloads);
         }
@@ -2330,6 +2398,10 @@ export default defineComponent({
           this.showLabelControls = false;
           const tagsImg = this.$refs.tagsImg as HTMLElement;
           tagsImg.classList.remove('showLabelControls')
+        } else if (this.showDrone) {
+          this.showDrone = false;
+          const droneImg = this.$refs.droneImg as HTMLImageElement;
+          droneImg.classList.remove('showDrone');      
         } else {
           this.$emit('resizeHeightEmit', this.showMeterControls);
         }
@@ -2361,6 +2433,10 @@ export default defineComponent({
           this.showMeterControls = false;
           const meterImg = this.$refs.meterImg as HTMLImageElement;
           meterImg.classList.remove('showMeterControls');
+        } else if (this.showDrone) {
+          this.showDrone = false;
+          const droneImg = this.$refs.droneImg as HTMLImageElement;
+          droneImg.classList.remove('showDrone');      
         } else {
           this.$emit('resizeHeightEmit', this.showLabelControls);
         }
@@ -2855,9 +2931,20 @@ export default defineComponent({
   filter: invert(100%) sepia(100%) saturate(0%) hue-rotate(288deg)
     brightness(102%) contrast(102%);
 }
+
+.rulerBox > .droneImg {
+  filter: invert(100%) sepia(100%) saturate(0%) hue-rotate(288deg)
+    brightness(102%) contrast(102%);
+}
 .rulerBox > .showTuning {
   filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg)
     brightness(94%) contrast(97%);
+}
+
+.rulerBox > .showDrone {
+  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg)
+    brightness(94%) contrast(97%);
+
 }
 .rulerBox > .showDownloads {
   filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg)
