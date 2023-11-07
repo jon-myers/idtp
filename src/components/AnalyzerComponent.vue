@@ -227,7 +227,8 @@ import {
   Pitch, 
   pitchNumberToChroma,
   Trajectory,
-  Piece
+  Piece,
+  PhraseCatType
 } from '@/js/classes.ts';
 import { pieceExists } from '@/js/serverCalls.ts';
 import Gradient from 'javascript-color-gradient';
@@ -352,7 +353,7 @@ type PCountType = {
       return {
         piece: undefined,
         analysisTypes: ['Pitch Prevalence', 'Pitch Patterns', 'Query Display'],
-        selectedATIdx: 2,
+        selectedATIdx: 0,
         pitchPrevalenceTypes: ['Section', 'Phrase', 'Duration'],
         patternCountTypes: ['Transcription', 'Section', 'Duration'],
         pitchRepresentationTypes: ['Fixed Pitch', 'Pitch Onsets'],
@@ -695,12 +696,16 @@ type PCountType = {
         const ppOct = condensed ? pnLen : 12; 
         const lkOct = Math.floor(lowestKey! / ppOct);
         const hOct = Math.floor(highestKey! / ppOct);
-        const mTop = segmentation === 'Duration' ? 90 : 110;
+        let mTop = segmentation === 'Duration' ? 90 : 110;
+        if (segmentation === 'Section') mTop = 180;
+        if (segmentation === 'Phrase') mTop = 240;
         const margin = { top: mTop, right: 30, bottom: 20, left: 80 };
         let width = totalWidth - margin.left - margin.right;
         const height = totalHeight - margin.top - margin.bottom;
         let widthPerSeg = width / durs.length;
-        const minWidthPerSeg = 35;
+        let minWidthPerSeg = 40;
+        if (segmentation === 'Section') minWidthPerSeg = 80;
+        if (segmentation === 'Phrase') minWidthPerSeg = 80;
         if (widthPerSeg < minWidthPerSeg) {
           widthPerSeg = minWidthPerSeg;
           width = widthPerSeg * durs.length;
@@ -914,86 +919,188 @@ type PCountType = {
               }
             })
           } else if (segmentation === 'Section') {
-            this.addLine({ x1: -30, y1: -20, x2: width, y2: -20 })
-            this.addLine({ x1: -60, y1: -40, x2: width, y2: -40 })
             this.addLine({ x1: -60, y1: -60, x2: width, y2: -60 })
-            this.addLine({ x1: -60, y1: 0, x2: -60, y2: -90 })
-            this.addLine({ x1: -30, y1: 0, x2: -30, y2: -40 })
-            this.addLine({ x1: 0, y1: 0, x2: 0, y2: -60 })
-            this.addLine({ x1: width, y1: 0, x2: width, y2: -90 })
-            this.addLine({ x1: -60, y1: -90, x2: width, y2: -90 })
+            this.addLine({ x1: -60, y1: -40, x2: width, y2: -40 })
+            this.addLine({ x1: -60, y1: -20, x2: width, y2: -20 })
+            this.addLine({ x1: -60, y1: -80, x2: width, y2: -80 })
+            // this.addLine({ x1: -60, y1: -100, x2: width, y2: -100 })
+            this.addLine({ x1: -60, y1: -140, x2: width, y2: -140 })
+            this.addLine({ x1: -60, y1: 0, x2: -60, y2: -140 })
+            this.addLine({ x1: 0, y1: 0, x2: 0, y2: -80 })
+            this.addLine({ x1: width, y1: 0, x2: width, y2: -140 })
+            this.addLine({ x1: -60, y1: -110, x2: width, y2: -110 })
             
             this.addText({ 
               x: width / 2, 
-              y: -75, 
+              y: -95, 
               text: 'Pitch Range and Percentage of Duration on each Fixed ' + 
                 'Pitch, Segmented by Section', 
               fSize: '14px', 
               fWeight: 'bold' 
             });
-            this.addText({ x: -15, y: -10, text: 'End' })
-            this.addText({ x: -15, y: -30, text: 'Start' })
-            this.addText({ x: -30, y: -50, text: 'Section' })
-            this.addText({ x: -45, y: -20, text: 'Oct.' })
+            this.addText({
+              x: width / 2,
+              y: -125,
+              text: this.piece.title,
+              fSize: '14px',
+              fWeight: 'bold'
+            })
+            this.addText({ x: -30, y: -50, text: 'Start' })
+            this.addText({ x: -30, y: -70, text: 'Section #' })
+            this.addText({ x: -30, y: -30, text: 'Duration'  })
+            this.addText({ x: -30, y: -10, text: 'Sec. Type'  })
+
             durs.forEach((dur, dIdx) => {
+              const sCats = this.piece!.sectionCategorization[dIdx];
               const secPhrases = this.piece!.sections[dIdx].phrases;
               const st = secPhrases[0].startTime!;
               const lastPhrase = secPhrases[secPhrases.length - 1];
               const et = lastPhrase.startTime! + lastPhrase.durTot!;
               const x_ = widthPerSeg * (dIdx + 0.5);
-              this.addText({ x: x_, y: -30, text: displayTime(st) });
-              this.addText({ x: x_, y: -10, text: displayTime(et) });
-              this.addText({ x: x_, y: -50, text: dIdx + 1 })
+              this.addText({ x: x_, y: -50, text: displayTime(st) });
+              this.addText({ x: x_, y: -70, text: dIdx + 1 })
+              this.addText({ x: x_, y: -30, text: displayTime(et - st) });
+              this.addText({ x: x_, y: -10, text: sCats['Top Level'] })
               if (dIdx !== durs.length - 1) {
                 const x_ = widthPerSeg * (dIdx + 1)
                 this.addLine({ 
                   x1: x_, 
                   y1: 0, 
                   x2: x_, 
-                  y2: -60, 
+                  y2: -80, 
                   stroke: '#D3D3D3' 
                 })
               }           
             })
           } else if (segmentation === 'Phrase') {
-            this.addLine({ x1: -30, y1: -20, x2: width, y2: -20 })
-            this.addLine({ x1: -60, y1: -40, x2: width, y2: -40 })
-            this.addLine({ x1: -60, y1: -60, x2: width, y2: -60 })
-            this.addLine({ x1: -60, y1: 0, x2: -60, y2: -90 })
-            this.addLine({ x1: -30, y1: 0, x2: -30, y2: -40 })
-            this.addLine({ x1: 0, y1: 0, x2: 0, y2: -60 })
-            this.addLine({ x1: width, y1: 0, x2: width, y2: -90 })
-            this.addLine({ x1: -60, y1: -90, x2: width, y2: -90 })
+            this.addLine({ x1: -60, y1: 0, x2: -60, y2: -220 })
+            this.addLine({ x1: 0, y1: 0, x2: 0, y2: -160 })
+            this.addLine({ x1: width, y1: 0, x2: width, y2: -220 })
+            const horizontals = [0, -1, -2, -3, -4, -5, -6, -7, -8, -9.5, -11];
+            horizontals.forEach(h => {
+              const y_ = h * 20;
+              this.addLine({ x1: -60, y1: y_, x2: width, y2: y_ })
+            })
             // text labels
             this.addText({ 
               x: width / 2, 
-              y: -75, 
+              y: -175, 
               text: 'Pitch Range and Percentage of Duration on each Fixed ' + 
                 'Pitch, Segmented by Phrase', 
               fSize: '14px', 
               fWeight: 'bold' 
             });
-            this.addText({ x: -15, y: -10, text: 'End' })
-            this.addText({ x: -15, y: -30, text: 'Start' })
-            this.addText({ x: -30, y: -50, text: 'Phrase' })
-            this.addText({ x: -45, y: -20, text: 'Oct.' })
-            durs.forEach((dur, dIdx) => {
+            this.addText({
+              x: width / 2,
+              y: -205,
+              text: this.piece.title,
+              fSize: '14px',
+              fWeight: 'bold'
+            })
+            this.addText({ x: -30, y: -110, text: 'Start' })
+            this.addText({ x: -30, y: -130, text: 'Phrase #' })
+            this.addText({ x: -30, y: -150, text: 'Section #' })
+            this.addText({ x: -30, y: -90, text: 'Duration'  })
+            this.addText({ x: -30, y: -70, text: 'Section'  })
+            this.addText({ x: -30, y: -50, text: 'Phrase'  })
+            this.addText({ x: -30, y: -30, text: 'Elaboration' })
+            this.addText({ x: -30, y: -10, text: 'Articulation' })
+            const secStarts = this.piece.sectionStarts!;
+            let secCt = 0;
+            const secCats = this.piece.sectionCategorization;
+             durs.forEach((dur, dIdx) => {
+              const cat = this.piece!.phrases[dIdx].categorizationGrid[0];
+              if (secStarts.includes(dIdx)) {
+                const x = widthPerSeg * dIdx;
+                this.addLine({ x1: x, y1: height, x2: x, y2: -160 });
+                if (secCt >= 1) {
+                  const prevSecType = secCats[secCt-1]['Top Level'];
+                  const size = this.piece!.sections[secCt-1].phrases.length;
+                  const midpoint = x - (widthPerSeg * size ) / 2;
+                  this.addText({ x: midpoint, y: -70, text: prevSecType });
+                  this.addText({ x: midpoint, y: -150, text: secCt });
+                }
+                secCt += 1;
+                if (secCt === secCats.length) {
+                  const prevSecType = secCats[secCt-1]['Top Level'];
+                  const size = this.piece!.sections[secCt-1].phrases.length;
+                  const midpoint = width - (widthPerSeg * size ) / 2;
+                  this.addText({ x: midpoint, y: -70, text: prevSecType });
+                  this.addText({ x: midpoint, y: -150, text: secCt });
+                }
+              }
+              const ptKeys = Object.keys(cat['Phrase']) as 
+                (keyof PhraseCatType['Phrase'])[];
+              const phraseTypes = ptKeys.filter(k => {
+                return cat['Phrase'][k] === true
+              });
+              const phraseType = phraseTypes[0];
+
+              const etKeys = Object.keys(cat['Elaboration']) as 
+                (keyof PhraseCatType['Elaboration'])[];
+              const elaborationTypes = etKeys.filter(k => {
+                return cat['Elaboration'][k] === true
+              });
+              const elaborationType = elaborationTypes[0];
+              const art = this.vocal ? 
+                'Vocal Articulation' : 
+                'Instrumental Articulation';
+              type VAType = keyof PhraseCatType['Vocal Articulation'];
+              type IAType = keyof PhraseCatType['Instrumental Articulation'];
+              let atKeys: 
+                (VAType)[] | 
+                (IAType)[];
+              let articulationTypes: string[] = [];
+              if (art === 'Vocal Articulation') {
+                atKeys = Object.keys(cat[art]) as 
+                  (VAType)[];
+                articulationTypes = atKeys.filter((k) => {
+                  const ca = cat[art]
+                  return ca[k] === true
+                });
+              } else {
+                atKeys = Object.keys(cat[art]) as 
+                  (IAType)[];
+                articulationTypes = atKeys.filter((k) => {
+                  const ca = cat[art]
+                  return ca[k] === true
+                });
+              } 
+              const articulationType = articulationTypes[0];
               const phrase = this.piece!.phrases[dIdx];
               const st = phrase.startTime!;
               const et = st + phrase.durTot!;
               const x_ = widthPerSeg * (dIdx + 0.5);
-              this.addText({ x: x_, y: -30, text: displayTime(st) });
-              this.addText({ x: x_, y: -10, text: displayTime(et) });
-              this.addText({ x: x_, y: -50, text: dIdx + 1 })
+              this.addText({ x: x_, y: -110, text: displayTime(st) });
+              this.addText({ x: x_, y: -130, text: dIdx + 1 });
+              this.addText({ x: x_, y: -90, text: displayTime(et - st) });
+              if (phraseType) {
+                this.addText({ x: x_, y: -50, text: phraseType });
+              }
+              if (elaborationType) {
+                this.addText({ x: x_, y: -30, text: elaborationType });
+              }
+              if (articulationType) {
+                this.addText({ x: x_, y: -10, text: articulationType });
+              }
               if (dIdx !== durs.length - 1) {
                 const lX_ = widthPerSeg * (dIdx + 1);
+                this.addLine({ 
+                  x1: lX_, 
+                  y1: -80, 
+                  x2: lX_, 
+                  y2: -140, 
+                  stroke: '#D3D3D3' 
+                });
                 this.addLine({ 
                   x1: lX_, 
                   y1: 0, 
                   x2: lX_, 
                   y2: -60, 
                   stroke: '#D3D3D3' 
-                })
+                });
+                
+
               }
             })
 
