@@ -196,7 +196,8 @@
           />
     </div>
     <div class='graphContainer' v-if='selectedATIdx <= 1'>
-      <div class='graph' ref='graph'></div>
+      <div class='graph' ref='graph'>
+      </div>
     </div>
   </div>
 </template>
@@ -353,7 +354,7 @@ type PCountType = {
       return {
         piece: undefined,
         analysisTypes: ['Pitch Prevalence', 'Pitch Patterns', 'Query Display'],
-        selectedATIdx: 0,
+        selectedATIdx: 2,
         pitchPrevalenceTypes: ['Section', 'Phrase', 'Duration'],
         patternCountTypes: ['Transcription', 'Section', 'Duration'],
         pitchRepresentationTypes: ['Fixed Pitch', 'Pitch Onsets'],
@@ -601,7 +602,8 @@ type PCountType = {
         fSize = '12px',
         fWeight = 'normal',
         fill = 'black',
-        anchor = 'middle'
+        anchor = 'middle',
+        element = undefined,
       }: {
         x?: number,
         y?: number,
@@ -610,11 +612,15 @@ type PCountType = {
         fWeight?: string,
         fill?: string,
         anchor?: string,
+        element?: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>,
       } = {}) {
         if (x === undefined || y === undefined || text === undefined) {
           throw new Error('x, y, or text is undefined');
         }
-        return this.svg!.append('text')
+        if (element === undefined) {
+          element = this.svg;
+        }
+        return element!.append('text')
           .attr('x', x)
           .attr('y', y)
           .attr('font-size', fSize)
@@ -923,13 +929,11 @@ type PCountType = {
             this.addLine({ x1: -60, y1: -40, x2: width, y2: -40 })
             this.addLine({ x1: -60, y1: -20, x2: width, y2: -20 })
             this.addLine({ x1: -60, y1: -80, x2: width, y2: -80 })
-            // this.addLine({ x1: -60, y1: -100, x2: width, y2: -100 })
             this.addLine({ x1: -60, y1: -140, x2: width, y2: -140 })
             this.addLine({ x1: -60, y1: 0, x2: -60, y2: -140 })
             this.addLine({ x1: 0, y1: 0, x2: 0, y2: -80 })
             this.addLine({ x1: width, y1: 0, x2: width, y2: -140 })
             this.addLine({ x1: -60, y1: -110, x2: width, y2: -110 })
-            
             this.addText({ 
               x: width / 2, 
               y: -95, 
@@ -997,11 +1001,11 @@ type PCountType = {
               fSize: '14px',
               fWeight: 'bold'
             })
-            this.addText({ x: -30, y: -110, text: 'Start' })
-            this.addText({ x: -30, y: -130, text: 'Phrase #' })
+            this.addText({ x: -30, y: -90, text: 'Start' })
+            this.addText({ x: -30, y: -110, text: 'Phrase #' })
             this.addText({ x: -30, y: -150, text: 'Section #' })
-            this.addText({ x: -30, y: -90, text: 'Duration'  })
-            this.addText({ x: -30, y: -70, text: 'Section'  })
+            this.addText({ x: -30, y: -70, text: 'Duration'  })
+            this.addText({ x: -30, y: -130, text: 'Section'  })
             this.addText({ x: -30, y: -50, text: 'Phrase'  })
             this.addText({ x: -30, y: -30, text: 'Elaboration' })
             this.addText({ x: -30, y: -10, text: 'Articulation' })
@@ -1017,7 +1021,7 @@ type PCountType = {
                   const prevSecType = secCats[secCt-1]['Top Level'];
                   const size = this.piece!.sections[secCt-1].phrases.length;
                   const midpoint = x - (widthPerSeg * size ) / 2;
-                  this.addText({ x: midpoint, y: -70, text: prevSecType });
+                  this.addText({ x: midpoint, y: -130, text: prevSecType });
                   this.addText({ x: midpoint, y: -150, text: secCt });
                 }
                 secCt += 1;
@@ -1025,7 +1029,7 @@ type PCountType = {
                   const prevSecType = secCats[secCt-1]['Top Level'];
                   const size = this.piece!.sections[secCt-1].phrases.length;
                   const midpoint = width - (widthPerSeg * size ) / 2;
-                  this.addText({ x: midpoint, y: -70, text: prevSecType });
+                  this.addText({ x: midpoint, y: -130, text: prevSecType });
                   this.addText({ x: midpoint, y: -150, text: secCt });
                 }
               }
@@ -1035,7 +1039,6 @@ type PCountType = {
                 return cat['Phrase'][k] === true
               });
               const phraseType = phraseTypes[0];
-
               const etKeys = Object.keys(cat['Elaboration']) as 
                 (keyof PhraseCatType['Elaboration'])[];
               const elaborationTypes = etKeys.filter(k => {
@@ -1071,9 +1074,9 @@ type PCountType = {
               const st = phrase.startTime!;
               const et = st + phrase.durTot!;
               const x_ = widthPerSeg * (dIdx + 0.5);
-              this.addText({ x: x_, y: -110, text: displayTime(st) });
-              this.addText({ x: x_, y: -130, text: dIdx + 1 });
-              this.addText({ x: x_, y: -90, text: displayTime(et - st) });
+              this.addText({ x: x_, y: -90, text: displayTime(st) });
+              this.addText({ x: x_, y: -110, text: dIdx + 1 });
+              this.addText({ x: x_, y: -70, text: displayTime(et - st) });
               if (phraseType) {
                 this.addText({ x: x_, y: -50, text: phraseType });
               }
@@ -1087,23 +1090,13 @@ type PCountType = {
                 const lX_ = widthPerSeg * (dIdx + 1);
                 this.addLine({ 
                   x1: lX_, 
-                  y1: -80, 
-                  x2: lX_, 
-                  y2: -140, 
-                  stroke: '#D3D3D3' 
-                });
-                this.addLine({ 
-                  x1: lX_, 
                   y1: 0, 
                   x2: lX_, 
-                  y2: -60, 
+                  y2: -120, 
                   stroke: '#D3D3D3' 
                 });
-                
-
               }
             })
-
           }
         }
       },
@@ -1499,24 +1492,6 @@ type PCountType = {
           this.targetPitchChoices = raga.getPitchNumbers(low, high).reverse()
           this.targetPitchIdx = this.targetPitchChoices.indexOf(0)
         }
-        // const options: MultipleOptionType = { 
-        //   segmentation: 'phrase',
-        //   piece: this.piece,
-        // };
-        // const query1: QueryType = {
-        //   designator: 'includes',
-        //   category: 'endingConsonant',
-        //   consonant: 'ra'
-        // };
-        // // const query2: QueryType = {
-        // //   designator: 'includes',
-        // //   category: 'pitch',
-        // //   pitch: new Pitch({ swara: 'ga', oct: 0 })
-        // // }
-        // const queries = [query1];
-        // const res = await Query.multiple(queries, options)  ;
-        // this.displayTrajs = res[0] as Trajectory[][];
-        // this.setProportions();
         
       } catch (err) {
         console.log(err);
@@ -1537,16 +1512,12 @@ type PCountType = {
     overflow-x: scroll;
     overflow-y: scroll;
     width: 90vw;
-    /* height: 100%; */
     height: v-bind(graphRowHeight + 'px');
-    /* max-height: v-bind(graphRowHeight + 'px'); */
-    /* overflow-y: scroll; */
+    display: relative;
   }
 
   .graphContainer {
     width: 100%;
-    /* height: v-bind(graphRowHeight + 'px'); */
-    /* max-height: v-bind(graphRowHeight + 'px'); */
     height: calc(100% - v-bind(controlsHeight + typeRowHeight + 100 + 'px'));
     display: flex;
     flex-direction: column;
@@ -1752,4 +1723,5 @@ type PCountType = {
     /* justify-content: center; */
     /* align-items: center; */
   }
+
 </style>
