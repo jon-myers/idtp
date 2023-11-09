@@ -1,5 +1,5 @@
 <template>
-  <div class='main'>
+  <div class='main_'>
     <div class='analysisControls'>
       <div class='analysisTypeRow'>
         <div 
@@ -199,6 +199,18 @@
       <div class='graph' ref='graph'>
       </div>
     </div>
+    <PitchPrevalence 
+      :segmentation='segmentationType'
+      :duration='duration'
+      :pitchChroma='pitchChroma'
+      :condensed='condensed'
+      :heatmap='heatmap'
+      :pitchRepresentation='pitchRepresentation'
+      :piece='piece'
+      :fadeTime='fadeTime'
+      :height='400'
+      v-if='selectedATIdx === 0 && piece'
+    />
   </div>
 </template>
 
@@ -238,6 +250,7 @@ import { defineComponent } from 'vue';
 
 import SegmentDisplay from '@/components/SegmentDisplay.vue';
 import QueryControls from '@/components/QueryControls.vue';
+import PitchPrevalence from '@/components/analysis/PitchPrevalence.vue';
 
 import { 
   Query, 
@@ -354,7 +367,7 @@ type PCountType = {
       return {
         piece: undefined,
         analysisTypes: ['Pitch Prevalence', 'Pitch Patterns', 'Query Display'],
-        selectedATIdx: 2,
+        selectedATIdx: 0,
         pitchPrevalenceTypes: ['Section', 'Phrase', 'Duration'],
         patternCountTypes: ['Transcription', 'Section', 'Duration'],
         pitchRepresentationTypes: ['Fixed Pitch', 'Pitch Onsets'],
@@ -416,6 +429,7 @@ type PCountType = {
     components: {
       SegmentDisplay,
       QueryControls,
+      PitchPrevalence,
     },
 
     watch: {
@@ -644,7 +658,7 @@ type PCountType = {
       createPitchFrequencyGraph({
         segmentation = 'Duration', // or 'Phrase' or 'Section'
         duration = 30, // in seconds, only if segmentation is 'Duration'
-        displayType = 'simple', // or 'gradient'
+        // displayType = 'simple', // or 'gradient'
         pitchChroma = false,
         condensed = false,
         heatmap = false,
@@ -1501,11 +1515,16 @@ type PCountType = {
 </script>
 
 <style lang="css" scoped>
-  .main {
+  .main_ {
     background-image: linear-gradient(black, #1e241e);
-    height: 100%;
+    height: 2000px;
     color: white;
     user-select: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: top;
+    align-items: center;
+    overflow-y: scroll;
   }
 
   .graph {
@@ -1518,7 +1537,10 @@ type PCountType = {
 
   .graphContainer {
     width: 100%;
-    height: calc(100% - v-bind(controlsHeight + typeRowHeight + 100 + 'px'));
+    /* height: calc(100% - v-bind(controlsHeight + typeRowHeight + 100 + 'px')); */
+    height: 200px;
+    /* min-height: calc(100% - v-bind(controlsHeight + typeRowHeight + 100 + 'px')); */
+
     display: flex;
     flex-direction: column;
     align-items: center;
