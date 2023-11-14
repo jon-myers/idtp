@@ -147,6 +147,8 @@ export default defineComponent({
         this.generateSectionGraph();
       } else if (this.segmentation === 'Phrase') {
         this.generatePhraseGraph();
+      } else if (this.segmentation === 'Duration') {
+        this.generateDurationGraph();
       }
     },
 
@@ -214,9 +216,7 @@ export default defineComponent({
       this.xAxisHeight = 70;
       this.yAxisWidth = 70.5;
 
-      this.graphHeight = this.height - this.xAxisHeight - 80 - this.margin * 2;
-      console.log(this.height, this.xAxisHeight, 80, this.margin * 2)
-      console.log(this.graphHeight)
+      this.graphHeight = this.height - this.xAxisHeight - this.topOfGraph - this.margin * 2;
       const axisHolder = this.$refs.axisHolder as HTMLElement;
       
       const axisSVG = d3.select(axisHolder)
@@ -248,14 +248,14 @@ export default defineComponent({
           .tickPadding(15))
         .style('color', 'black')
         .style('font-weight', 'normal')
-        .attr('transform', `translate(${this.yAxisWidth}, ${this.xAxisHeight + 80})`);
+        .attr('transform', `translate(${this.yAxisWidth}, ${this.xAxisHeight + this.topOfGraph})`);
       
         // horizontal line above sargam
-        this.addLine({
+      this.addLine({
         x1: this.yAxisWidth - 35,
         x2: this.yAxisWidth,
-        y1: this.xAxisHeight + 80,
-        y2: this.xAxisHeight + 80,
+        y1: this.xAxisHeight + this.topOfGraph,
+        y2: this.xAxisHeight + this.topOfGraph,
         stroke: 'black',
         element: axisSVG
       })
@@ -271,14 +271,14 @@ export default defineComponent({
         this.addLine({
           x1: this.yAxisWidth - 70,
           x2: this.yAxisWidth + add,
-          y1: this.xAxisHeight + 80 - d.num,
-          y2: this.xAxisHeight + 80 - d.num,
+          y1: this.xAxisHeight + this.topOfGraph - d.num,
+          y2: this.xAxisHeight + this.topOfGraph - d.num,
           stroke: 'black',
           element: axisSVG
         })
         this.addText({
           x: this.yAxisWidth - 35,
-          y: this.xAxisHeight + 80 - d.num + 10,
+          y: this.xAxisHeight + this.topOfGraph - d.num + 10,
           text: d.text,
           element: axisSVG
         
@@ -289,8 +289,8 @@ export default defineComponent({
       this.addLine({
         x1: this.yAxisWidth - 70,
         x2: this.yAxisWidth - 70,
-        y1: this.xAxisHeight + 80 - 140,
-        y2: this.xAxisHeight + 80,
+        y1: this.xAxisHeight + this.topOfGraph - 140,
+        y2: this.xAxisHeight + this.topOfGraph,
         stroke: 'black',
         element: axisSVG
       })
@@ -298,7 +298,7 @@ export default defineComponent({
         x1: this.yAxisWidth,
         x2: this.yAxisWidth,
         y1: this.xAxisHeight,
-        y2: this.xAxisHeight + 80,
+        y2: this.xAxisHeight + this.topOfGraph,
         stroke: 'black',
         element: axisSVG
       })
@@ -311,15 +311,15 @@ export default defineComponent({
         this.addLine({
           x1: this.yAxisWidth - 70,
           x2: this.yAxisWidth - 70 + totalWidth,
-          y1: this.xAxisHeight + 80 - wl.num,
-          y2: this.xAxisHeight + 80 - wl.num,
+          y1: this.xAxisHeight + this.topOfGraph - wl.num,
+          y2: this.xAxisHeight + this.topOfGraph - wl.num,
           stroke: 'black',
           element: axisSVG,
           class_: 'wideLine'
         });
         this.addText({
           x: this.yAxisWidth - 70 + totalWidth / 2,
-          y: this.xAxisHeight + 80 - wl.num + 15,
+          y: this.xAxisHeight + this.topOfGraph - wl.num + 15,
           text: wl.text,
           element: axisSVG,
           fSize: '14px',
@@ -349,7 +349,7 @@ export default defineComponent({
         }
         this.addText({ 
           x: this.yAxisWidth - 50, 
-          y: this.xAxisHeight + 80 + y((lowY + highY) / 2 - 0.5), 
+          y: this.xAxisHeight + this.topOfGraph + y((lowY + highY) / 2 - 0.5), 
           text: i, 
           element: axisSVG 
         })
@@ -358,7 +358,7 @@ export default defineComponent({
         const add = i === lkOct ? - 0.5 : 0;
         this.addRect({
           x: this.yAxisWidth - 70,
-          y: this.xAxisHeight + 80 + y_,
+          y: this.xAxisHeight + this.topOfGraph + y_,
           w: 35,
           h: h_ + add,
           stroke: 'black',
@@ -367,9 +367,9 @@ export default defineComponent({
         const lY_ = y(lowY - 0.5);
         this.addLine({ 
           x1: this.yAxisWidth - 35,
-          y1: lY_ + this.xAxisHeight + add + 80,
+          y1: lY_ + this.xAxisHeight + add + this.topOfGraph,
           x2: this.yAxisWidth - add * 2,
-          y2: lY_ + this.xAxisHeight + add + 80,
+          y2: lY_ + this.xAxisHeight + add + this.topOfGraph,
           stroke: 'black',
           element: axisSVG
         })
@@ -443,7 +443,7 @@ export default defineComponent({
             maxVal = maxVal + 0.5;
             minVal = minVal - 0.5;  
             const x_ = dIdx * width / durs.length;
-            const y_ = y(maxVal) + 80;
+            const y_ = y(maxVal) + this.topOfGraph;
             const w_ = width / durs.length;
             const h_ = y(minVal) - y(maxVal);
             if ((!this.pitchChroma) && (!this.heatmap)) {
@@ -461,7 +461,7 @@ export default defineComponent({
             keys.forEach((key, kIdx) => {
 
               let fillColor = 'black';
-              const mY_ = y(Number(key)+0.5) + 80;
+              const mY_ = y(Number(key)+0.5) + this.topOfGraph;
               const mH_ = y(Number(key)-0.5) - y(Number(key)+0.5);
               if (this.heatmap) {
                 fillColor = this.getHeatmapColor(dur[key]);
@@ -475,7 +475,7 @@ export default defineComponent({
                 });
                 this.addText({ 
                   x: x_ + width / (2 * durs.length), 
-                  y: y(Number(key)) + 80, 
+                  y: y(Number(key)) + this.topOfGraph, 
                   text: (100*dur[key]).toFixed(0)+'%',
                   fill: dur[key] > 0.5 ? 'white' : 'black',
                   element: gSVG
@@ -503,7 +503,7 @@ export default defineComponent({
                 }
                 this.addText({ 
                   x: x_ + width / (2 * durs.length), 
-                  y: y(Number(key)) + 80, 
+                  y: y(Number(key)) + this.topOfGraph, 
                   text: (100*dur[key]).toFixed(0)+'%', 
                   fill: fillColor,
                   element: gSVG
@@ -535,20 +535,20 @@ export default defineComponent({
           if (i === hOct) {
             highY = highestKey + 1.5;
           }
-          const yPos = y((lowY + highY) / 2 - 0.5) + 80;
+          const yPos = y((lowY + highY) / 2 - 0.5) + this.topOfGraph;
           this.addText({ x: -45, y: yPos, text: i, element: gSVG })
           const h_ = y(lowY) - y(highY);
-          const y_ = y(highY - 0.5) + 80;
+          const y_ = y(highY - 0.5) + this.topOfGraph;
           this.addRect({ x: -60, y: y_, w: 30, h: h_, stroke: 'black', element: gSVG })
-          const lY_ = y(lowY - 0.5) + 80;
+          const lY_ = y(lowY - 0.5) + this.topOfGraph;
           this.addLine({ x1: -30, y1: lY_, x2: width, y2: lY_, element: gSVG })
           if (i === hOct) {
             this.addLine({ x1: -30, y1: y_, x2: width, y2: y_, element: gSVG })
           }
           this.addLine({ x1: width, y1: lY_, x2: width, y2: y_, element: gSVG })
-          this.addLine({ x1: -60, y1: -60 + 80, x2: width, y2: -60 + 80, element: gSVG })
-          this.addLine({ x1: -60, y1: -40 + 80, x2: width, y2: -40 + 80, element: gSVG })
-          this.addLine({ x1: -60, y1: -20 + 80, x2: width, y2: -20 + 80, element: gSVG })
+          this.addLine({ x1: -60, y1: -60 + this.topOfGraph, x2: width, y2: -60 + this.topOfGraph, element: gSVG })
+          this.addLine({ x1: -60, y1: -40 + this.topOfGraph, x2: width, y2: -40 + this.topOfGraph, element: gSVG })
+          this.addLine({ x1: -60, y1: -20 + this.topOfGraph, x2: width, y2: -20 + this.topOfGraph, element: gSVG })
           this.addLine({ x1: -60, y1: -80, x2: width, y2: -80, element: gSVG })
           this.addLine({ x1: -60, y1: -140, x2: width, y2: -140, element: gSVG })
           this.addLine({ x1: -60, y1: 0, x2: -60, y2: -140, element: gSVG })
@@ -564,15 +564,15 @@ export default defineComponent({
               const lastPhrase = secPhrases[secPhrases.length - 1];
               const et = lastPhrase.startTime! + lastPhrase.durTot!;
               const x_ = widthPerSeg * (dIdx + 0.5);
-              this.addText({ x: x_, y: -50 + 80, text: displayTime(st), element: gSVG });
-              this.addText({ x: x_, y: -70 + 80, text: sIdx + 1, element: gSVG })
-              this.addText({ x: x_, y: -30 + 80, text: displayTime(et - st), element: gSVG });
-              this.addText({ x: x_, y: -10 + 80, text: sCats['Top Level'], element: gSVG })
+              this.addText({ x: x_, y: -50 + this.topOfGraph, text: displayTime(st), element: gSVG });
+              this.addText({ x: x_, y: -70 + this.topOfGraph, text: sIdx + 1, element: gSVG })
+              this.addText({ x: x_, y: -30 + this.topOfGraph, text: displayTime(et - st), element: gSVG });
+              this.addText({ x: x_, y: -10 + this.topOfGraph, text: sCats['Top Level'], element: gSVG })
               if (dIdx !== durs.length - 1) {
                 const x_ = widthPerSeg * (dIdx + 1)
                 this.addLine({ 
                   x1: x_, 
-                  y1: 80, 
+                  y1: this.topOfGraph, 
                   x2: x_, 
                   y2: 0, 
                   stroke: '#D3D3D3',
@@ -676,7 +676,6 @@ export default defineComponent({
         if (theseElabs.length === 0) {
           elabBool = true;
         } else if (this.diffs['elaborationDiff'] === 'include') {
-          console.log(selectedElabs, theseElabs)
           selectedElabs.forEach(elab => {
             if (theseElabs.includes(elab.name)) {
               elabBool = true;
@@ -817,8 +816,6 @@ export default defineComponent({
       const sumHeights = phraseTypeHeight + elabHeight + artHeight + incHeight;
       this.topOfGraph = 100 + 20 * sumHeights;
       this.graphHeight = this.height - this.xAxisHeight - this.topOfGraph - this.margin * 2;
-      console.log(this.height, this.xAxisHeight, this.topOfGraph, this.margin * 2)
-      console.log(this.graphHeight)
       const axisHolder = this.$refs.axisHolder as HTMLElement;
 
       const axisSVG = d3.select(axisHolder)
@@ -1248,7 +1245,6 @@ export default defineComponent({
               
               return pCat.Incidental[inc] === true;
             });
-          // console.log(pIncs)
           const x_ = widthPerSeg * (dIdx + 0.5);
           pIncs.forEach((pInc, pIncIdx) => {
             const y_ = -20 * (incHeight - pIncIdx) + this.topOfGraph + 10;
@@ -1424,6 +1420,375 @@ export default defineComponent({
         // })
       }
       
+    },
+
+    generateDurationGraph() {
+      this.topOfGraph = 20;
+      d3.select('.axisSVG').remove();
+      d3.select('.gSVG').remove();
+      let segments = segmentByDuration(this.piece, { duration: this.duration });
+      const func = this.pitchRepresentation === 'Fixed Pitch' ?
+        durationsOfFixedPitches :
+        durationsOfPitchOnsets ;
+      const durs = segments.map(seg => func(seg, {
+        countType: 'proportional',
+        outputType: this.pitchChroma ? 'chroma' : 'pitchNumber',
+        maxSilence: this.fadeTime,
+      }));
+      let lowestKey: number = 10000, highestKey: number = -10000;
+      durs.forEach(dur => {
+        if (dur === undefined) {
+          throw new Error('dur is undefined');
+        }
+        const keys = Object.keys(dur);
+        keys.forEach(key => {
+          if (Number(key) < lowestKey) {
+            lowestKey = Number(key);
+          }
+          if (Number(key) > highestKey) {
+            highestKey = Number(key);
+          }
+        })
+      });
+      if (this.condensed) {
+        lowestKey = this.piece.raga.pitchNumberToScaleNumber(lowestKey);
+        highestKey = this.piece.raga.pitchNumberToScaleNumber(highestKey);
+      }
+      let totalWidth = 0.9 * window.innerWidth;
+      const pnLen = this.piece.raga.getPitchNumbers(0, 11).length;
+      const ppOct = this.condensed ? pnLen: 12;
+      const lkOct = Math.floor(lowestKey / ppOct);
+      const hOct = Math.floor(highestKey / ppOct);
+      this.xAxisHeight = 70;
+      this.yAxisWidth = 70.5;
+
+      this.graphHeight = this.height - this.xAxisHeight - this.topOfGraph - this.margin * 2;
+      const axisHolder = this.$refs.axisHolder as HTMLElement;
+      
+      const axisSVG = d3.select(axisHolder)
+        .append('svg')
+        .classed('axisSVG', true)
+        .attr('width', 0.9 * window.innerWidth - this.margin * 2 + 1)
+        .attr('height', this.height - this.margin * 2)
+        .style('background-color', 'white');
+
+      let y = d3.scaleLinear()
+        .domain([lowestKey - 1, highestKey + 1])
+        .range([this.graphHeight, 0]);
+      const yAxisNode = axisSVG.append('g');
+      const pitchNumbers = this.condensed ? 
+        [...Array(1 + highestKey - lowestKey)].map((_, i) => i + lowestKey) :
+        this.piece.raga.getPitchNumbers(lowestKey, highestKey);
+      const tickLabels = this.condensed ? 
+        pitchNumbers.map(sn => {
+          return this.piece.raga.scaleNumberToSargamLetter(sn);
+        }) :
+        pitchNumbers.map(pn => {
+          return this.piece.raga.pitchNumberToSargamLetter(pn);
+        });
+      yAxisNode.call(d3.axisLeft(y)
+          .tickValues(pitchNumbers)
+          .tickFormat((d, i) => tickLabels[i])
+          .tickSize(0)
+          .tickPadding(15))
+        .style('color', 'black')
+        .style('font-weight', 'normal')
+        .attr('transform', `translate(${this.yAxisWidth}, ${this.xAxisHeight + this.topOfGraph})`);
+      
+      // horizontal line above sargam
+      this.addLine({
+        x1: this.yAxisWidth - 35,
+        x2: this.yAxisWidth,
+        y1: this.xAxisHeight + this.topOfGraph,
+        y2: this.xAxisHeight + this.topOfGraph,
+        stroke: 'black',
+        element: axisSVG
+      });
+
+      const aboveAxLines = [
+        { num: 20, text: 'start' }
+      ];
+      aboveAxLines.forEach((d, idx) => {
+        const add = idx === 3 ? 1 : 0;
+        this.addLine({
+          x1: this.yAxisWidth - 70,
+          x2: this.yAxisWidth + 1,
+          y1: this.xAxisHeight + this.topOfGraph - d.num,
+          y2: this.xAxisHeight + this.topOfGraph - d.num,
+          stroke: 'black',
+          element: axisSVG,
+          class_: 'wideLine'
+        });
+        this.addText({
+          x: this.yAxisWidth - 35,
+          y: this.xAxisHeight + this.topOfGraph - d.num + 10,
+          text: d.text,
+          element: axisSVG,
+          class_: 'titleText'
+        })   
+      });
+      // vertical line top left
+      this.addLine({
+        x1: this.yAxisWidth - 70,
+        x2: this.yAxisWidth - 70,
+        y1: this.xAxisHeight + this.topOfGraph - (aboveAxLines[0].num + 60),
+        y2: this.xAxisHeight + this.topOfGraph,
+        stroke: 'black',
+        element: axisSVG
+      });
+      this.addLine({
+        x1: this.yAxisWidth,
+        x2: this.yAxisWidth,
+        y1: this.xAxisHeight,
+        y2: this.xAxisHeight + this.topOfGraph,
+        stroke: 'black',
+        element: axisSVG
+      });
+      const wideLines = [
+        { num: aboveAxLines[0].num + 30, text: this.piece.title },
+        { 
+          num: aboveAxLines[0].num + 60, 
+          text: `Pitch Range and Percentage of Duration on each ` + 
+              `Fixed Pitch, Segmented into ${this.duration}s Windows` }
+      ];
+      wideLines.forEach(wl => {
+        this.addLine({
+          x1: this.yAxisWidth - 70,
+          x2: this.yAxisWidth - 70 + totalWidth,
+          y1: this.xAxisHeight + this.topOfGraph - wl.num,
+          y2: this.xAxisHeight + this.topOfGraph - wl.num,
+          stroke: 'black',
+          element: axisSVG,
+          class_: 'wideLine'
+        });
+        this.addText({
+          x: this.yAxisWidth - 70 + totalWidth / 2,
+          y: this.xAxisHeight + this.topOfGraph - wl.num + 15,
+          text: wl.text,
+          element: axisSVG,
+          fSize: '14px',
+          fWeight: 'bold',
+          class_: 'titleText'
+        })
+      });
+      // top right vertical line
+      this.addLine({
+        x1: totalWidth - this.margin * 2 + 0.5,
+        x2: totalWidth - this.margin * 2 + 0.5,
+        y1: this.margin,
+        y2: this.xAxisHeight,
+        stroke: 'black',
+        element: axisSVG,
+        class_: 'topRightVertical'
+      });
+      for (let i = lkOct; i <= hOct; i++) {
+        let lowY = i * ppOct;
+        let highY = (i + 1) * ppOct;
+        if (i === lkOct) {
+          lowY = lowestKey - 0.5;
+        }
+        if (i === hOct) {
+          highY = highestKey + 1.5;
+        }
+        this.addText({ 
+          x: this.yAxisWidth - 50, 
+          y: this.xAxisHeight + this.topOfGraph + y((lowY + highY) / 2 - 0.5), 
+          text: i, 
+          element: axisSVG 
+        })
+        const h_ = y(lowY) - y(highY);
+        const y_ = y(highY - 0.5);
+        const add = i === lkOct ? - 0.5 : 0;
+        this.addRect({
+          x: this.yAxisWidth - 70,
+          y: this.xAxisHeight + this.topOfGraph + y_,
+          w: 35,
+          h: h_ + add,
+          stroke: 'black',
+          element: axisSVG
+        });
+        const lY_ = y(lowY - 0.5);
+        this.addLine({ 
+          x1: this.yAxisWidth - 35,
+          y1: lY_ + this.xAxisHeight + add + this.topOfGraph,
+          x2: this.yAxisWidth - add * 2,
+          y2: lY_ + this.xAxisHeight + add + this.topOfGraph,
+          stroke: 'black',
+          element: axisSVG
+        })
+      };
+      const widthPerSeg = 80;
+      const width = widthPerSeg * durs.length;
+      const gSVG = d3.select('.scrollingGraphHolder')
+        .append('svg')
+        .attr('width', width)
+        .attr('height', this.graphHeight + this.topOfGraph - 1.5)
+        .style('background-color', 'white')
+        .attr('transform', `translate(-0.5, 0)`)
+        .classed('gSVG', true);
+      
+      const rects = [...Array(durs.length)];
+      if (this.condensed) {
+        durs.forEach(dur => {
+          if (dur === undefined) {
+            throw new Error('dur is undefined');
+          }
+          const keys = Object.keys(dur);
+          keys.forEach(key => {
+            const sn = this.piece.raga.pitchNumberToScaleNumber(Number(key));
+            dur[sn] = dur[key];
+            if (Number(key) !== Number(sn)) delete dur[key];
+          })
+        })
+      };
+      durs.forEach((dur, dIdx) => {
+        let minVal: (number | undefined) = undefined; 
+        let maxVal: (number | undefined) = undefined;
+        let modeIdx: number | undefined = undefined; 
+        let modeVal = 0;
+        if (dur === undefined) {
+          throw new Error('dur is undefined');
+        }
+        const keys = Object.keys(dur);
+        if (keys.length > 0) {
+          keys.forEach(key => {
+            if (key !== 'sIdx') {
+              if (minVal === undefined) {
+                minVal = Number(key);
+              }
+              if (maxVal === undefined) {
+                maxVal = Number(key);
+              }
+              if (Number(key) < minVal) {
+                minVal = Number(key);
+              }
+              if (Number(key) > maxVal) {
+                maxVal = Number(key);
+              }
+              if (Number(dur[key]) > modeVal) {
+                modeVal = Number(dur[key]);
+                modeIdx = Number(key);
+              }
+            }
+          })
+          if (maxVal === undefined) {
+            throw new Error('maxVal is undefined');
+          }
+          if (minVal === undefined) {
+            throw new Error('minVal is undefined');
+          }
+          maxVal = maxVal + 0.5;
+          minVal = minVal - 0.5;  
+          const x_ = dIdx * width / durs.length;
+          const y_ = y(maxVal) + this.topOfGraph;
+          const w_ = width / durs.length;
+          const h_ = y(minVal) - y(maxVal);
+          if ((!this.pitchChroma) && (!this.heatmap)) {
+            rects[dIdx] = this.addRect({
+              x: x_,
+              y: y_,
+              w: w_,
+              h: h_,
+              fill: this.heatmap ? 'none' : '#D3D3D3',
+              element: gSVG
+            })
+          }
+
+          keys.forEach(key => {
+            let fillColor = 'black';
+            const mY_ = y(Number(key)+0.5) + this.topOfGraph;
+            const mH_ = y(Number(key)-0.5) - y(Number(key)+0.5);
+            if (this.heatmap) {
+              fillColor = this.getHeatmapColor(dur[key]);
+              this.addRect({ 
+                x: x_, 
+                y: mY_, 
+                w: w_, 
+                h: mH_, 
+                fill: fillColor,
+                element: gSVG
+              });
+              this.addText({ 
+                x: x_ + width / (2 * durs.length), 
+                y: y(Number(key)) + this.topOfGraph, 
+                text: (100*dur[key]).toFixed(0)+'%',
+                fill: dur[key] > 0.5 ? 'white' : 'black',
+                element: gSVG
+              })
+            } else {
+              if (Number(key) === modeIdx) {
+                fillColor = 'white'
+                this.addRect({ 
+                  x: x_, 
+                  y: mY_, 
+                  w: w_, 
+                  h: mH_, 
+                  fill: 'grey',
+                  element: gSVG 
+                })
+              } else if (this.pitchChroma) {
+                this.addRect({ 
+                  x: x_, 
+                  y: mY_, 
+                  w: w_, 
+                  h: mH_, 
+                  fill: '#D3D3D3',
+                  element: gSVG
+                })
+              }
+              this.addText({ 
+                x: x_ + width / (2 * durs.length), 
+                y: y(Number(key)) + this.topOfGraph, 
+                text: (100*dur[key]).toFixed(0)+'%', 
+                fill: fillColor,
+                element: gSVG
+              })
+            }
+          })
+          if ((!this.pitchChroma) && (this.heatmap)) {
+            rects[dIdx] = this.addRect({
+              x: x_,
+              y: y_,
+              w: w_,
+              h: h_,
+              fill: this.heatmap ? 'none' : '#D3D3D3',
+              element: gSVG
+            })
+          }
+        }
+      })
+      rects.forEach(rect => {
+        rect?.attr('stroke', 'black')
+      });
+      for (let i = lkOct; i<= hOct; i++) {
+        let lowY = i * ppOct;
+        let highY = (i+1) * ppOct;
+        if (i === lkOct) {
+          lowY = lowestKey - 0.5;
+        }
+        if (i === hOct) {
+          highY = highestKey + 1.5;
+        }
+        const yPos = y((lowY + highY) / 2 - 0.5) + this.topOfGraph;
+        this.addText({ x: -45, y: yPos, text: i, element: gSVG })
+        const h_ = y(lowY) - y(highY);
+        const y_ = y(highY - 0.5) + this.topOfGraph;
+        this.addRect({ x: -60, y: y_, w: 30, h: h_, stroke: 'black', element: gSVG })
+        const lY_ = y(lowY - 0.5) + this.topOfGraph;
+        this.addLine({ x1: -30, y1: lY_, x2: width, y2: lY_, element: gSVG })
+        if (i === hOct) {
+          this.addLine({ x1: -30, y1: y_, x2: width, y2: y_, element: gSVG })
+        }
+        this.addLine({ x1: width, y1: lY_, x2: width, y2: y_, element: gSVG })
+        durs.forEach((dur, dIdx) => {
+          const startTime = dIdx * this.duration;
+          this.addText({ x: (dIdx + 0.5) * widthPerSeg , y: -10 + this.topOfGraph, text: displayTime(startTime), element: gSVG })
+          if (dIdx !== durs.length - 1) {
+            const x_ = (dIdx + 1) * widthPerSeg;
+            this.addLine({ x1: x_, y1: this.topOfGraph, x2: x_, y2: 0, stroke: '#D3D3D3', element: gSVG })
+          }
+        })
+      }
     },
 
     getHeatmapColor(val: number) {

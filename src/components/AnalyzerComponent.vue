@@ -59,7 +59,7 @@
               <label>Heatmap</label>
             </div>
           </div>
-          <div class='controlBox'>
+          <div class='controlBox' v-if='segmentationType !== "Duration"'>
             <div class='title'>Section Type</div>
             <div class='scrolling'>
               <div v-for='tl in secTopLevels'>
