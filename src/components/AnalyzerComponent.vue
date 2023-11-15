@@ -1407,7 +1407,6 @@ type PCountType = {
           pCount['maxSize'] = maxSize;
           return pCount;
         })
-        console.log(pCounts)
         let verticalTot = 20 * pCounts
           .map(pCount => (plot ? pCount.maxSize * 4 : pCount.maxSize) + 3)
           .reduce((acc, v) => acc + v, 0);
@@ -1701,7 +1700,8 @@ type PCountType = {
 <style lang="css" scoped>
   .main_ {
     background-image: linear-gradient(black, #1e241e);
-    height: 2000px;
+    height: 100vh;
+    /* height: 2000px; */
     color: white;
     user-select: none;
     display: flex;
@@ -1721,8 +1721,8 @@ type PCountType = {
 
   .graphContainer {
     width: 100%;
-    /* height: calc(100% - v-bind(controlsHeight + typeRowHeight + 100 + 'px')); */
-    height: 200px;
+    height: calc(100% - v-bind(controlsHeight + typeRowHeight + 100 + 'px'));
+    /* height: 200px; */
     /* min-height: calc(100% - v-bind(controlsHeight + typeRowHeight + 100 + 'px')); */
 
     display: flex;
