@@ -8,34 +8,38 @@
         <div class='titleRow'>
           <label>Phrase Type</label>
         </div>
-        <div class='checkRow' v-for='phraseType in phraseTypes'>
+        <div class='checkRow' v-for='(phraseType, ptIdx) in phraseTypes'>
           <input 
             type='checkbox' 
-            :id='phraseType' 
+            :id='phraseType + "p" + phraseNum + "idx" + ptIdx' 
             :name='phraseType' 
             :value='phraseType'
             v-model='phrase.categorizationGrid[0].Phrase[phraseType]'
             @change='$emit("unsavedChanges")'
             :disabled='!editable'
             >
-          <label :for='phraseType'>{{phraseType}}</label>
+          <label :for='phraseType + "p" + phraseNum + "idx" + ptIdx'>
+            {{phraseType}}
+          </label>
         </div>
       </div>
       <div class='checkColumn'>
         <div class='titleRow'>
           <label>Elaboration Type</label>
         </div>
-        <div class='checkRow' v-for='elaborationType in elaborationTypes'>
+        <div class='checkRow' v-for='(elaborationType, etIdx) in elaborationTypes'>
           <input 
             type='checkbox' 
-            :id='elaborationType' 
+            :id='elaborationType + "p" + phraseNum + "idx" + etIdx' 
             :name='elaborationType' 
             :value='elaborationType'
             v-model='phrase.categorizationGrid[0].Elaboration[elaborationType]'
             @change='$emit("unsavedChanges")'
             :disabled='!editable'
             >
-          <label :for='elaborationType'>{{elaborationType}}</label>
+          <label :for='elaborationType + "p" + phraseNum + "idx" + etIdx'>
+            {{elaborationType}}
+          </label>
         </div>
       </div>
       <div class='checkColumn' v-if='vocal'>
@@ -44,18 +48,20 @@
         </div>
         <div 
           class='checkRow'
-          v-for='vArtType in vocalArtTypes'
+          v-for='(vArtType, vaIdx) in vocalArtTypes'
           >
           <input 
             type='checkbox' 
-            :id='vArtType' 
+            :id='vArtType + "p" + phraseNum + "idx" + vaIdx' 
             :name='vArtType' 
             :value='vArtType'
             v-model='phrase.categorizationGrid[0]["Vocal Articulation"][vArtType]'
             @change='$emit("unsavedChanges")'
             :disabled='!editable'
             >
-          <label :for='vArtType'>{{vArtType}}</label>
+          <label :for='vArtType + "p" + phraseNum + "idx" + vaIdx' >
+            {{vArtType}}
+          </label>
         </div>
       </div>
       <div class='checkColumn' v-else>
@@ -64,11 +70,11 @@
         </div>
         <div 
           class='checkRow'
-          v-for='iArtType in instrumentalArtTypes'
+          v-for='(iArtType, iaIdx) in instrumentalArtTypes'
           >
           <input 
             type='checkbox' 
-            :id='iArtType' 
+            :id='iArtType + "p" + phraseNum + "idx" + iaIdx' 
             :name='iArtType' 
             :value='iArtType'
             v-model='phrase.categorizationGrid[0]["Instrumental Articulation"][iArtType]'
@@ -76,24 +82,28 @@
             :disabled='!editable'
             
             >
-          <label :for='iArtType'>{{iArtType}}</label>
+          <label :for='iArtType + "p" + phraseNum + "idx" + iaIdx'>
+            {{iArtType}}
+          </label>
         </div>
       </div>
       <div class='checkColumn'>
         <div class='titleRow'>
           <label>Incidental</label>
         </div>
-        <div class='checkRow' v-for='incidentalType in incidentalTypes'>
+        <div class='checkRow' v-for='(incidentalType, itIdx) in incidentalTypes'>
           <input 
             type='checkbox' 
-            :id='incidentalType' 
+            :id='incidentalType + "p" + phraseNum + "idx" + itIdx' 
             :name='incidentalType' 
             :value='incidentalType'
             v-model='phrase.categorizationGrid[0].Incidental[incidentalType]'
             @change='$emit("unsavedChanges")'
             :disabled='!editable'
             >
-          <label :for='incidentalType'>{{incidentalType}}</label>
+          <label :for='incidentalType + "p" + phraseNum + "idx" + itIdx'>
+            {{incidentalType}}
+          </label>
         </div>
       </div>
     </div>
