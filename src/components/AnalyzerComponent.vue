@@ -1,5 +1,5 @@
 <template>
-  <div class='main'>
+  <div class='main_'>
     <div class='analysisControls'>
       <div class='analysisTypeRow'>
         <div 
@@ -12,48 +12,173 @@
         </div>
       </div>
       <div class='controls' v-if='selectedATIdx === 0'>
-        <div class='controlBox'>
-          <div v-for='prType in pitchRepresentationTypes' :key='prType'>
-            <input 
-              type='radio' 
-              :id='prType' 
-              :value='prType' 
-              v-model='pitchRepresentation'
-              >
-              <label :for='prType'>{{ prType }}</label>
+        <div class='scrollingCBHolder' :style="{
+          '--cbWidth': controlBoxWidth + 'px',
+        }">
+          <div class='controlBox'>
+            <div v-for='prType in pitchRepresentationTypes' :key='prType'>
+              <input 
+                type='radio' 
+                :id='prType' 
+                :value='prType' 
+                v-model='pitchRepresentation'
+                >
+                <label :for='prType'>{{ prType }}</label>
+            </div>
+            <div v-if='pitchRepresentation === "Pitch Onsets"'>
+              <label for='fadeTime'>Fade Time (s)</label>
+              <input type='number' id='fadeTime' v-model.number='fadeTime'>
+            </div>
           </div>
-          <div v-if='pitchRepresentation === "Pitch Onsets"'>
-            <label for='fadeTime'>Fade Time (s)</label>
-            <input type='number' id='fadeTime' v-model.number='fadeTime'>
+          <div class='controlBox'>
+            <div v-for='ppType in pitchPrevalenceTypes' :key='ppType'>
+              <input 
+                type='radio' 
+                :id='ppType' 
+                :value='ppType' 
+                v-model='segmentationType'
+                >
+              <label :for='ppType'>{{ ppType }}</label>
+            </div>
+            <div v-if='segmentationType === "Duration"'>
+              <input type='number' id='duration' v-model.number='duration'>
+              <label for='duration'>(s)</label>
+            </div>
           </div>
-        </div>
-        <div class='controlBox'>
-          <div v-for='ppType in pitchPrevalenceTypes' :key='ppType'>
-            <input 
-              type='radio' 
-              :id='ppType' 
-              :value='ppType' 
-              v-model='segmentationType'
-              >
-            <label :for='ppType'>{{ ppType }}</label>
+          <div class='controlBox'>
+            <div>
+              <input type='checkbox' v-model='pitchChroma'/>
+              <label>Pitch Chroma</label>
+            </div>
+            <div>
+              <input type='checkbox' v-model='condensed'/>
+              <label>Condensed</label>
+            </div>
+            <div>
+              <input type='checkbox' v-model='heatmap'/>
+              <label>Heatmap</label>
+            </div>
           </div>
-          <div v-if='segmentationType === "Duration"'>
-            <input type='number' id='duration' v-model.number='duration'>
-            <label for='duration'>(s)</label>
+          <div class='controlBox' v-if='segmentationType !== "Duration"'>
+            <div class='title'>Section Type</div>
+            <div class='scrolling'>
+              <div v-for='tl in secTopLevels'>
+                <input type='checkbox' v-model='tl.bool' :id='tl.name'>
+                <label :for='tl.name'>{{ tl.name }}</label>
+              </div>
+            </div>
           </div>
-        </div>
-        <div class='controlBox'>
-          <div>
-            <input type='checkbox' v-model='pitchChroma'/>
-            <label>Pitch Chroma</label>
+          <div class='controlBox' v-if='segmentationType === "Phrase"'>
+            <div class='title'>Phrase Type</div>
+            <div class='scrolling'>
+              <div>
+                <input 
+                  type='radio' 
+                  v-model='diffs.phraseTypeDiff' 
+                  value='include' 
+                  id='phraseTypeDiffInclude'
+                  >
+                <label for='phraseTypeDiffInclude'>Include</label>
+              </div>
+              <div class='spaceBelow'>
+                <input 
+                  type='radio' 
+                  v-model='diffs.phraseTypeDiff' 
+                  value='exclude' 
+                  id='phraseTypeDiffExclude'
+                  >
+                <label for='phraseTypeDiffExclude'>Exclude</label>
+              </div>
+              <div v-for='pt in phraseInfo.phraseTypes'>
+                <input type='checkbox' v-model='pt.bool' :id='pt.name'>
+                <label :for='pt.name'>{{ pt.name }}</label>
+              </div>
+            </div>
           </div>
-          <div>
-            <input type='checkbox' v-model='condensed'/>
-            <label>Condensed</label>
+          <div class='controlBox' v-if='segmentationType === "Phrase"'>
+            <div class='title'>Elaboration</div>
+            <div class='scrolling'>
+              <div>
+                <input 
+                  type='radio' 
+                  v-model='diffs.elaborationDiff' 
+                  value='include' 
+                  id='elaborationDiffInclude'
+                  >
+                <label for='elaborationDiffInclude'>Include</label>
+              </div>
+              <div class='spaceBelow'>
+                <input 
+                  type='radio' 
+                  v-model='diffs.elaborationDiff' 
+                  value='exclude' 
+                  id='elaborationDiffExclude'
+                  >
+                <label for='elaborationDiffExclude'>Exclude</label>
+              </div>
+              <div v-for='e in phraseInfo.elaborations'>
+                <input type='checkbox' v-model='e.bool' :id='e.name'>
+                <label :for='e.name'>{{ e.name }}</label>
+              </div>
+            </div>
           </div>
-          <div>
-            <input type='checkbox' v-model='heatmap'/>
-            <label>Heatmap</label>
+          <div class='controlBox' v-if='segmentationType === "Phrase"'>
+            <div class='title'>Articulation</div>
+            <div class='scrolling'>
+              <div>
+                <input 
+                  type='radio' 
+                  v-model='diffs.articulationDiff' 
+                  value='include' 
+                  id='articulationDiffInclude'
+                  >
+                <label for='articulationDiffInclude'>Include</label>
+              </div>
+              <div class='spaceBelow'>
+                <input 
+                  type='radio' 
+                  v-model='diffs.articulationDiff' 
+                  value='exclude' 
+                  id='articulationDiffExclude'
+                  >
+                <label for='articulationDiffExclude'>Exclude</label>
+              </div>
+              <div v-for='va in phraseInfo.vocalArticulations' v-if='vocal'>
+                <input type='checkbox' v-model='va.bool' :id='va.name'>
+                <label :for='va.name'>{{ va.name }}</label>
+              </div>
+              <div v-for='ia in phraseInfo.instArticulations' v-else>
+                <input type='checkbox' v-model='ia.bool' :id='ia.name'>
+                <label :for='ia.name'>{{ ia.name }}</label>
+              </div>
+            </div>
+          </div>
+          <div class='controlBox' v-if='segmentationType === "Phrase"'>
+            <div class='title'>Incidental</div>
+            <div class='scrolling'>
+              <div>
+                <input 
+                  type='radio' 
+                  v-model='diffs.incidentalDiff' 
+                  value='include' 
+                  id='incidentalDiffInclude'
+                  >
+                <label for='incidentalDiffInclude'>Include</label>
+              </div>
+              <div class='spaceBelow'>
+                <input 
+                  type='radio' 
+                  v-model='diffs.incidentalDiff' 
+                  value='exclude' 
+                  id='incidentalDiffExclude'
+                  >
+                <label for='incidentalDiffExclude'>Exclude</label>
+              </div>
+              <div v-for='i in phraseInfo.incidentals'>
+                <input type='checkbox' v-model='i.bool' :id='i.name'>
+                <label :for='i.name'>{{ i.name }}</label>
+              </div>
+            </div>
           </div>
         </div>
         <div class='controlBox button'>
@@ -195,9 +320,27 @@
           :queryAnswer='queryAnswers[idx]'
           />
     </div>
-    <div class='graphContainer' v-if='selectedATIdx <= 1'>
-      <div class='graph' ref='graph'></div>
+    <div class='graphContainer' v-if='selectedATIdx === 1'>
+      <div class='graph' ref='graph'>
+      </div>
     </div>
+    <PitchPrevalence
+      ref='pitchPrevalence' 
+      :segmentation='segmentationType'
+      :duration='duration'
+      :pitchChroma='pitchChroma'
+      :condensed='condensed'
+      :heatmap='heatmap'
+      :pitchRepresentation='pitchRepresentation'
+      :piece='piece'
+      :fadeTime='fadeTime'
+      :height='600'
+      :secTopLevels='secTopLevels'
+      :diffs='diffs'
+      :phraseInfo='phraseInfo!'
+      v-if='selectedATIdx === 0 && piece'
+      :vocal='vocal'
+    />
   </div>
 </template>
 
@@ -227,7 +370,9 @@ import {
   Pitch, 
   pitchNumberToChroma,
   Trajectory,
-  Piece
+  Piece,
+  PhraseCatType,
+  SecCatType
 } from '@/js/classes.ts';
 import { pieceExists } from '@/js/serverCalls.ts';
 import Gradient from 'javascript-color-gradient';
@@ -236,6 +381,20 @@ import { defineComponent } from 'vue';
 
 import SegmentDisplay from '@/components/SegmentDisplay.vue';
 import QueryControls from '@/components/QueryControls.vue';
+import PitchPrevalence from '@/components/analysis/PitchPrevalence.vue';
+import categorization from '@/assets/json/categorization.json';
+
+const phraseTop = categorization['Phrase'];
+const phraseTypes = phraseTop['Phrase Type'] as 
+  (keyof PhraseCatType['Phrase'])[];
+const elaborations = phraseTop['Elaboration Type'] as 
+  (keyof PhraseCatType['Elaboration'])[];
+const vocalArticulations = phraseTop['Articulation Type']['Vocal'] as
+  (keyof PhraseCatType['Vocal Articulation'])[];
+const instArticulations = phraseTop['Articulation Type']['Instrumental'] as
+  (keyof PhraseCatType['Instrumental Articulation'])[];
+const incidentals = phraseTop['Incidental'] as
+  (keyof PhraseCatType['Incidental'])[];
 
 import { 
   Query, 
@@ -341,6 +500,20 @@ type PCountType = {
     proportions: number[],
     logFreqOverride?: { low: number, high: number },
     queryAnswers: QueryAnswerType[],
+    secTopLevels: { name: SecCatType['Top Level'], bool: boolean }[],
+    diffs: {
+      phraseTypeDiff: 'include' | 'exclude',
+      elaborationDiff: 'include' | 'exclude',
+      articulationDiff: 'include' | 'exclude',
+      incidentalDiff: 'include' | 'exclude',
+    },
+    phraseInfo: {
+      phraseTypes: { name: keyof PhraseCatType['Phrase'], bool: boolean }[],
+      elaborations: { name: keyof PhraseCatType['Elaboration'], bool: boolean }[],
+      vocalArticulations: { name: keyof PhraseCatType['Vocal Articulation'], bool: boolean }[],
+      instArticulations: { name: keyof PhraseCatType['Instrumental Articulation'], bool: boolean }[],
+      incidentals: { name: keyof PhraseCatType['Incidental'], bool: boolean }[],
+    }
 
 
   }
@@ -352,7 +525,7 @@ type PCountType = {
       return {
         piece: undefined,
         analysisTypes: ['Pitch Prevalence', 'Pitch Patterns', 'Query Display'],
-        selectedATIdx: 2,
+        selectedATIdx: 0,
         pitchPrevalenceTypes: ['Section', 'Phrase', 'Duration'],
         patternCountTypes: ['Transcription', 'Section', 'Duration'],
         pitchRepresentationTypes: ['Fixed Pitch', 'Pitch Onsets'],
@@ -363,7 +536,7 @@ type PCountType = {
         condensed: false,
         heatmap: false,
         fadeTime: 5,
-        controlsHeight: 220,
+        controlsHeight: 200,
         typeRowHeight: 30,
         graphHeight: 1000,
         targetPitchChoices: [0],
@@ -401,12 +574,37 @@ type PCountType = {
         proportions: [],
         logFreqOverride: undefined,
         queryAnswers: [],
+        secTopLevels: [
+          { name: 'Pre-Chiz Alap', bool: true },
+          { name: 'Alap', bool: true },
+          { name: 'Composition', bool: true },
+          { name: 'Improvisation', bool: true },
+          { name: 'Other', bool: true },
+          { name: 'None', bool: true },
+        ],
+        diffs: {
+          phraseTypeDiff: 'include',
+          elaborationDiff: 'include',
+          articulationDiff: 'include',
+          incidentalDiff: 'include',
+        },
+        phraseInfo: {
+          phraseTypes: phraseTypes.map(pt => ({ name: pt, bool: true })),
+          elaborations: elaborations.map(e => ({ name: e, bool: true })),
+          vocalArticulations: vocalArticulations.map(va => {
+            return { name: va, bool: true }
+          }),
+          instArticulations: instArticulations.map(ia => { 
+            return { name: ia, bool: true } 
+          }),
+          incidentals: incidentals.map(i => ({ name: i, bool: true })),
+        }
       }
     },
 
     props: {
       navHeight: {
-        type: Number,
+        type: Number, 
         required: true
       }
     },
@@ -414,6 +612,7 @@ type PCountType = {
     components: {
       SegmentDisplay,
       QueryControls,
+      PitchPrevalence,
     },
 
     watch: {
@@ -532,7 +731,7 @@ type PCountType = {
           this.topSvg = undefined;
           this.svg = undefined;
         }
-        if (this.selectedATIdx !== 2) {
+        if (this.selectedATIdx === 1) {
           this.createGraph()
         }
       },
@@ -600,7 +799,8 @@ type PCountType = {
         fSize = '12px',
         fWeight = 'normal',
         fill = 'black',
-        anchor = 'middle'
+        anchor = 'middle',
+        element = undefined,
       }: {
         x?: number,
         y?: number,
@@ -609,11 +809,15 @@ type PCountType = {
         fWeight?: string,
         fill?: string,
         anchor?: string,
+        element?: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>,
       } = {}) {
         if (x === undefined || y === undefined || text === undefined) {
           throw new Error('x, y, or text is undefined');
         }
-        return this.svg!.append('text')
+        if (element === undefined) {
+          element = this.svg;
+        }
+        return element!.append('text')
           .attr('x', x)
           .attr('y', y)
           .attr('font-size', fSize)
@@ -637,7 +841,7 @@ type PCountType = {
       createPitchFrequencyGraph({
         segmentation = 'Duration', // or 'Phrase' or 'Section'
         duration = 30, // in seconds, only if segmentation is 'Duration'
-        displayType = 'simple', // or 'gradient'
+        // displayType = 'simple', // or 'gradient'
         pitchChroma = false,
         condensed = false,
         heatmap = false,
@@ -695,12 +899,16 @@ type PCountType = {
         const ppOct = condensed ? pnLen : 12; 
         const lkOct = Math.floor(lowestKey! / ppOct);
         const hOct = Math.floor(highestKey! / ppOct);
-        const mTop = segmentation === 'Duration' ? 90 : 110;
+        let mTop = segmentation === 'Duration' ? 90 : 110;
+        if (segmentation === 'Section') mTop = 180;
+        if (segmentation === 'Phrase') mTop = 240;
         const margin = { top: mTop, right: 30, bottom: 20, left: 80 };
         let width = totalWidth - margin.left - margin.right;
         const height = totalHeight - margin.top - margin.bottom;
         let widthPerSeg = width / durs.length;
-        const minWidthPerSeg = 35;
+        let minWidthPerSeg = 40;
+        if (segmentation === 'Section') minWidthPerSeg = 80;
+        if (segmentation === 'Phrase') minWidthPerSeg = 80;
         if (widthPerSeg < minWidthPerSeg) {
           widthPerSeg = minWidthPerSeg;
           width = widthPerSeg * durs.length;
@@ -850,13 +1058,6 @@ type PCountType = {
           rect?.attr('stroke', 'black')
         })
         
-        const texts = [
-          'Very Low Octave', 
-          'Low Octave (Manjha)', 
-          'Middle Octave (Sthai)', 
-          'High Octave (Antara)', 
-          'Very High Octave'
-        ];
         for (let i = lkOct; i <= hOct; i++) {
           let lowY = i * ppOct;
           let highY = (i+1) * ppOct;
@@ -914,140 +1115,237 @@ type PCountType = {
               }
             })
           } else if (segmentation === 'Section') {
-            this.addLine({ x1: -30, y1: -20, x2: width, y2: -20 })
-            this.addLine({ x1: -60, y1: -40, x2: width, y2: -40 })
             this.addLine({ x1: -60, y1: -60, x2: width, y2: -60 })
-            this.addLine({ x1: -60, y1: 0, x2: -60, y2: -90 })
-            this.addLine({ x1: -30, y1: 0, x2: -30, y2: -40 })
-            this.addLine({ x1: 0, y1: 0, x2: 0, y2: -60 })
-            this.addLine({ x1: width, y1: 0, x2: width, y2: -90 })
-            this.addLine({ x1: -60, y1: -90, x2: width, y2: -90 })
-            
+            this.addLine({ x1: -60, y1: -40, x2: width, y2: -40 })
+            this.addLine({ x1: -60, y1: -20, x2: width, y2: -20 })
+            this.addLine({ x1: -60, y1: -80, x2: width, y2: -80 })
+            this.addLine({ x1: -60, y1: -140, x2: width, y2: -140 })
+            this.addLine({ x1: -60, y1: 0, x2: -60, y2: -140 })
+            this.addLine({ x1: 0, y1: 0, x2: 0, y2: -80 })
+            this.addLine({ x1: width, y1: 0, x2: width, y2: -140 })
+            this.addLine({ x1: -60, y1: -110, x2: width, y2: -110 })
             this.addText({ 
               x: width / 2, 
-              y: -75, 
+              y: -95, 
               text: 'Pitch Range and Percentage of Duration on each Fixed ' + 
                 'Pitch, Segmented by Section', 
               fSize: '14px', 
               fWeight: 'bold' 
             });
-            this.addText({ x: -15, y: -10, text: 'End' })
-            this.addText({ x: -15, y: -30, text: 'Start' })
-            this.addText({ x: -30, y: -50, text: 'Section' })
-            this.addText({ x: -45, y: -20, text: 'Oct.' })
+            this.addText({
+              x: width / 2,
+              y: -125,
+              text: this.piece.title,
+              fSize: '14px',
+              fWeight: 'bold'
+            })
+            this.addText({ x: -30, y: -50, text: 'Start' })
+            this.addText({ x: -30, y: -70, text: 'Section #' })
+            this.addText({ x: -30, y: -30, text: 'Duration'  })
+            this.addText({ x: -30, y: -10, text: 'Sec. Type'  })
+
             durs.forEach((dur, dIdx) => {
+              const sCats = this.piece!.sectionCategorization[dIdx];
               const secPhrases = this.piece!.sections[dIdx].phrases;
               const st = secPhrases[0].startTime!;
               const lastPhrase = secPhrases[secPhrases.length - 1];
               const et = lastPhrase.startTime! + lastPhrase.durTot!;
               const x_ = widthPerSeg * (dIdx + 0.5);
-              this.addText({ x: x_, y: -30, text: displayTime(st) });
-              this.addText({ x: x_, y: -10, text: displayTime(et) });
-              this.addText({ x: x_, y: -50, text: dIdx + 1 })
+              this.addText({ x: x_, y: -50, text: displayTime(st) });
+              this.addText({ x: x_, y: -70, text: dIdx + 1 })
+              this.addText({ x: x_, y: -30, text: displayTime(et - st) });
+              this.addText({ x: x_, y: -10, text: sCats['Top Level'] })
               if (dIdx !== durs.length - 1) {
                 const x_ = widthPerSeg * (dIdx + 1)
                 this.addLine({ 
                   x1: x_, 
                   y1: 0, 
                   x2: x_, 
-                  y2: -60, 
+                  y2: -80, 
                   stroke: '#D3D3D3' 
                 })
               }           
             })
           } else if (segmentation === 'Phrase') {
-            this.addLine({ x1: -30, y1: -20, x2: width, y2: -20 })
-            this.addLine({ x1: -60, y1: -40, x2: width, y2: -40 })
-            this.addLine({ x1: -60, y1: -60, x2: width, y2: -60 })
-            this.addLine({ x1: -60, y1: 0, x2: -60, y2: -90 })
-            this.addLine({ x1: -30, y1: 0, x2: -30, y2: -40 })
-            this.addLine({ x1: 0, y1: 0, x2: 0, y2: -60 })
-            this.addLine({ x1: width, y1: 0, x2: width, y2: -90 })
-            this.addLine({ x1: -60, y1: -90, x2: width, y2: -90 })
+            this.addLine({ x1: -60, y1: 0, x2: -60, y2: -220 })
+            this.addLine({ x1: 0, y1: 0, x2: 0, y2: -160 })
+            this.addLine({ x1: width, y1: 0, x2: width, y2: -220 })
+            const horizontals = [0, -1, -2, -3, -4, -5, -6, -7, -8, -9.5, -11];
+            horizontals.forEach(h => {
+              const y_ = h * 20;
+              this.addLine({ x1: -60, y1: y_, x2: width, y2: y_ })
+            })
             // text labels
             this.addText({ 
               x: width / 2, 
-              y: -75, 
+              y: -175, 
               text: 'Pitch Range and Percentage of Duration on each Fixed ' + 
                 'Pitch, Segmented by Phrase', 
               fSize: '14px', 
               fWeight: 'bold' 
             });
-            this.addText({ x: -15, y: -10, text: 'End' })
-            this.addText({ x: -15, y: -30, text: 'Start' })
-            this.addText({ x: -30, y: -50, text: 'Phrase' })
-            this.addText({ x: -45, y: -20, text: 'Oct.' })
-            durs.forEach((dur, dIdx) => {
+            this.addText({
+              x: width / 2,
+              y: -205,
+              text: this.piece.title,
+              fSize: '14px',
+              fWeight: 'bold'
+            })
+            this.addText({ x: -30, y: -90, text: 'Start' })
+            this.addText({ x: -30, y: -110, text: 'Phrase #' })
+            this.addText({ x: -30, y: -150, text: 'Section #' })
+            this.addText({ x: -30, y: -70, text: 'Duration'  })
+            this.addText({ x: -30, y: -130, text: 'Section'  })
+            this.addText({ x: -30, y: -50, text: 'Phrase'  })
+            this.addText({ x: -30, y: -30, text: 'Elaboration' })
+            this.addText({ x: -30, y: -10, text: 'Articulation' })
+            const secStarts = this.piece.sectionStarts!;
+            let secCt = 0;
+            const secCats = this.piece.sectionCategorization;
+             durs.forEach((dur, dIdx) => {
+              const cat = this.piece!.phrases[dIdx].categorizationGrid[0];
+              if (secStarts.includes(dIdx)) {
+                const x = widthPerSeg * dIdx;
+                this.addLine({ x1: x, y1: height, x2: x, y2: -160 });
+                if (secCt >= 1) {
+                  const prevSecType = secCats[secCt-1]['Top Level'];
+                  const size = this.piece!.sections[secCt-1].phrases.length;
+                  const midpoint = x - (widthPerSeg * size ) / 2;
+                  this.addText({ x: midpoint, y: -130, text: prevSecType });
+                  this.addText({ x: midpoint, y: -150, text: secCt });
+                }
+                secCt += 1;
+                if (secCt === secCats.length) {
+                  const prevSecType = secCats[secCt-1]['Top Level'];
+                  const size = this.piece!.sections[secCt-1].phrases.length;
+                  const midpoint = width - (widthPerSeg * size ) / 2;
+                  this.addText({ x: midpoint, y: -130, text: prevSecType });
+                  this.addText({ x: midpoint, y: -150, text: secCt });
+                }
+              }
+              const ptKeys = Object.keys(cat['Phrase']) as 
+                (keyof PhraseCatType['Phrase'])[];
+              const phraseTypes = ptKeys.filter(k => {
+                return cat['Phrase'][k] === true
+              });
+              const phraseType = phraseTypes[0];
+              const etKeys = Object.keys(cat['Elaboration']) as 
+                (keyof PhraseCatType['Elaboration'])[];
+              const elaborationTypes = etKeys.filter(k => {
+                return cat['Elaboration'][k] === true
+              });
+              const elaborationType = elaborationTypes[0];
+              const art = this.vocal ? 
+                'Vocal Articulation' : 
+                'Instrumental Articulation';
+              type VAType = keyof PhraseCatType['Vocal Articulation'];
+              type IAType = keyof PhraseCatType['Instrumental Articulation'];
+              let atKeys: 
+                (VAType)[] | 
+                (IAType)[];
+              let articulationTypes: string[] = [];
+              if (art === 'Vocal Articulation') {
+                atKeys = Object.keys(cat[art]) as 
+                  (VAType)[];
+                articulationTypes = atKeys.filter((k) => {
+                  const ca = cat[art]
+                  return ca[k] === true
+                });
+              } else {
+                atKeys = Object.keys(cat[art]) as 
+                  (IAType)[];
+                articulationTypes = atKeys.filter((k) => {
+                  const ca = cat[art]
+                  return ca[k] === true
+                });
+              } 
+              const articulationType = articulationTypes[0];
               const phrase = this.piece!.phrases[dIdx];
               const st = phrase.startTime!;
               const et = st + phrase.durTot!;
               const x_ = widthPerSeg * (dIdx + 0.5);
-              this.addText({ x: x_, y: -30, text: displayTime(st) });
-              this.addText({ x: x_, y: -10, text: displayTime(et) });
-              this.addText({ x: x_, y: -50, text: dIdx + 1 })
+              this.addText({ x: x_, y: -90, text: displayTime(st) });
+              this.addText({ x: x_, y: -110, text: dIdx + 1 });
+              this.addText({ x: x_, y: -70, text: displayTime(et - st) });
+              if (phraseType) {
+                this.addText({ x: x_, y: -50, text: phraseType });
+              }
+              if (elaborationType) {
+                this.addText({ x: x_, y: -30, text: elaborationType });
+              }
+              if (articulationType) {
+                this.addText({ x: x_, y: -10, text: articulationType });
+              }
               if (dIdx !== durs.length - 1) {
                 const lX_ = widthPerSeg * (dIdx + 1);
                 this.addLine({ 
                   x1: lX_, 
                   y1: 0, 
                   x2: lX_, 
-                  y2: -60, 
+                  y2: -120, 
                   stroke: '#D3D3D3' 
-                })
+                });
               }
             })
-
           }
         }
       },
 
       createGraph() {
-        if (this.piece === undefined) {
-          throw new Error('Piece is undefined');
-        }
-
-        if (this.svg) {
-          if (this.topSvg !== undefined) {
-            this.topSvg.selectAll('*').remove();
-            this.topSvg.remove();
-            this.topSvg = undefined;
-          }
-          this.svg = undefined;
-        }
         if (this.selectedATIdx === 0) {
-          this.createPitchFrequencyGraph({ 
-            segmentation: this.segmentationType,
-            duration: this.duration,
-            pitchChroma: this.pitchChroma,
-            condensed: this.condensed,
-            heatmap: this.heatmap,
-            pitchRepresentation: this.pitchRepresentation,
-          })
-        } else if (this.selectedATIdx === 1) {
-          const sargam = this.pitchType === 'Sargam';
-          let tpChoices;
-          if (sargam) {
-            const low = this.piece.lowestPitchNumber;
-            const high = this.piece.highestPitchNumber;
-            tpChoices = this.pitchChroma ?
-              this.piece.raga.getPitchNumbers(0, 11).reverse() :
-              this.piece.raga.getPitchNumbers(low, high).reverse();
-          } else {
-            tpChoices = this.targetPitchChoices;
+          const pp = this.$refs['pitchPrevalence'] as typeof PitchPrevalence;
+          if (pp !== undefined) pp.generateGraph();
+        } else {
+          if (this.piece === undefined) {
+            throw new Error('Piece is undefined');
           }
-          const tp = tpChoices[this.targetPitchIdx];
-          const targetPitch = this.targetPitchBool ? tp : undefined;
-          const minPatSize = this.minPatternSize ? this.minPatternSizeValue : 1;
-          this.createPatternCounterGraph({
-            segmentation: this.segmentationType,
-            duration: this.duration,
-            pitchChroma: this.pitchChroma,
-            targetPitch: targetPitch,
-            minSize: minPatSize,
-            pitchType: this.pitchType,
-            plot: this.plot,
-          })
+
+          if (this.svg) {
+            if (this.topSvg !== undefined) {
+              this.topSvg.selectAll('*').remove();
+              this.topSvg.remove();
+              this.topSvg = undefined;
+            }
+            this.svg = undefined;
+          }
+          if (this.selectedATIdx === 0) {
+            this.createPitchFrequencyGraph({ 
+              segmentation: this.segmentationType,
+              duration: this.duration,
+              pitchChroma: this.pitchChroma,
+              condensed: this.condensed,
+              heatmap: this.heatmap,
+              pitchRepresentation: this.pitchRepresentation,
+            })
+          } else if (this.selectedATIdx === 1) {
+            const sargam = this.pitchType === 'Sargam';
+            let tpChoices;
+            if (sargam) {
+              const low = this.piece.lowestPitchNumber;
+              const high = this.piece.highestPitchNumber;
+              tpChoices = this.pitchChroma ?
+                this.piece.raga.getPitchNumbers(0, 11).reverse() :
+                this.piece.raga.getPitchNumbers(low, high).reverse();
+            } else {
+              tpChoices = this.targetPitchChoices;
+            }
+            const tp = tpChoices[this.targetPitchIdx];
+            const targetPitch = this.targetPitchBool ? tp : undefined;
+            const minPatSize = this.minPatternSize ? this.minPatternSizeValue : 1;
+            this.createPatternCounterGraph({
+              segmentation: this.segmentationType,
+              duration: this.duration,
+              pitchChroma: this.pitchChroma,
+              targetPitch: targetPitch,
+              minSize: minPatSize,
+              pitchType: this.pitchType,
+              plot: this.plot,
+            })
+          }
         }
+        
+
+       
       },
 
       createPatternCounterGraph({
@@ -1392,24 +1690,6 @@ type PCountType = {
           this.targetPitchChoices = raga.getPitchNumbers(low, high).reverse()
           this.targetPitchIdx = this.targetPitchChoices.indexOf(0)
         }
-        // const options: MultipleOptionType = { 
-        //   segmentation: 'phrase',
-        //   piece: this.piece,
-        // };
-        // const query1: QueryType = {
-        //   designator: 'includes',
-        //   category: 'endingConsonant',
-        //   consonant: 'ra'
-        // };
-        // // const query2: QueryType = {
-        // //   designator: 'includes',
-        // //   category: 'pitch',
-        // //   pitch: new Pitch({ swara: 'ga', oct: 0 })
-        // // }
-        // const queries = [query1];
-        // const res = await Query.multiple(queries, options)  ;
-        // this.displayTrajs = res[0] as Trajectory[][];
-        // this.setProportions();
         
       } catch (err) {
         console.log(err);
@@ -1419,28 +1699,32 @@ type PCountType = {
 </script>
 
 <style lang="css" scoped>
-  .main {
+  .main_ {
     background-image: linear-gradient(black, #1e241e);
-    height: 100%;
+    height: 2000px;
     color: white;
     user-select: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: top;
+    align-items: center;
+    overflow-y: scroll;
   }
 
   .graph {
     overflow-x: scroll;
     overflow-y: scroll;
     width: 90vw;
-    /* height: 100%; */
     height: v-bind(graphRowHeight + 'px');
-    /* max-height: v-bind(graphRowHeight + 'px'); */
-    /* overflow-y: scroll; */
+    display: relative;
   }
 
   .graphContainer {
     width: 100%;
-    /* height: v-bind(graphRowHeight + 'px'); */
-    /* max-height: v-bind(graphRowHeight + 'px'); */
-    height: calc(100% - v-bind(controlsHeight + typeRowHeight + 100 + 'px'));
+    /* height: calc(100% - v-bind(controlsHeight + typeRowHeight + 100 + 'px')); */
+    height: 200px;
+    /* min-height: calc(100% - v-bind(controlsHeight + typeRowHeight + 100 + 'px')); */
+
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1506,17 +1790,42 @@ type PCountType = {
     align-items: left;
     width: v-bind(controlBoxWidth + 'px');
     height: v-bind(controlsHeight - 20 + 'px');
-    padding: 10px;
+    padding: 5px;
+    box-sizing: border-box;
     /* border: 1px solid black; */
   }
   
-  .controlBox > div {
+  .controlBox > div:not(.scrolling) {
     width: 100%;
     height: 25px;
     display: flex;
     flex-direction: row;
     justify-content: left;
     align-items: center;
+  }
+
+  .scrollingCBHolder {
+    display: flex;
+    flex-direction: row;
+    justify-content: left;
+    align-items: center;
+    width: calc(100vw - var(--controlBoxWidth) - 20px);
+    height: v-bind(controlsHeight - 20 + 'px');
+    padding: 10px;
+    overflow-x: scroll;
+  }
+
+  .scrolling > div {
+    width: 100%;
+    height: 25px;
+    display: flex;
+    flex-direction: row;
+    justify-content: left;
+    align-items: center;
+  }
+
+  .scrolling > div > input {
+    margin: 5px;
   }
 
   .controlBox > div > input {
@@ -1645,4 +1954,29 @@ type PCountType = {
     /* justify-content: center; */
     /* align-items: center; */
   }
+
+  .title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    width: 100%;
+    
+  }
+
+  .scrolling {
+    overflow-y: scroll;
+    overflow-x: hidden;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: top;
+    align-items: center;
+
+  }
+
+  .spaceBelow {
+    margin-bottom: 5px;
+  }
+
 </style>

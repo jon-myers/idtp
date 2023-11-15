@@ -18,6 +18,7 @@
       v-for='(section, i) in piece.sections'
         :sectionNum='i'
         :piece='piece'
+        :editable='editable'
         @unsavedChanges='$emit("unsavedChanges")'
         :section='section'
         @dblclick='goToSection($event, i)'
