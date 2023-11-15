@@ -50,6 +50,53 @@ const initSectionCategorization = (): SecCatType => {
   }
 }
 
+const initPhraseCategorization = (): PhraseCatType => {
+  return {
+    "Phrase": {
+      "Mohra": false,
+      "Mukra": false,
+      "Asthai": false,
+      "Antara": false,
+      "Manjha": false,
+      "Abhog": false,
+      "Sanchari": false,
+      "Jhala": false
+    },
+    "Elaboration": {
+      "Vistar": false,
+      "Barhat": false,
+      "Prastar": false,
+      "Bol Banao": false,
+      "Bol Alap": false,
+      "Bol Bandt": false,
+      "Behlava": false,
+      "Gat-kari": false,
+      "Tan (Sapat)": false,
+      "Tan (Gamak)": false,
+      "Laykari": false,
+      "Tihai": false,
+      "Chakradar": false,
+    },
+    "Vocal Articulation": {
+      "Bol": false,
+      "Non-Tom": false,
+      "Tarana": false,
+      "Aakar": false,
+      "Sargam": false
+    },
+    "Instrumental Articulation": {
+      "Bol": false,
+      "Non-Bol": false
+    },
+    "Incidental": {
+      "Talk/Conversation": false,
+        "Praise ('Vah')": false,
+        "Tuning": false,
+        "Pause": false,
+    }
+  }
+}
+
 const chromaToScaleDegree = (chroma: number): [number, boolean] => {
     let scaleDegree = 0;
     let raised = true;
@@ -1550,6 +1597,7 @@ type PhraseCatType = {
     "Barhat": boolean,
     "Prastar": boolean,
     "Bol Banao": boolean,
+    "Bol Alap": boolean,
     "Bol Bandt": boolean,
     "Behlava": boolean,
     "Gat-kari": boolean,
@@ -1712,52 +1760,14 @@ class Phrase {
     this.categorizationGrid = categorizationGrid || [];
     if (this.categorizationGrid.length === 0) {
       for (let i = 0; i < this.trajectoryGrid.length; i++) {
-        this.categorizationGrid.push({
-          "Phrase": {
-            "Mohra": false,
-            "Mukra": false,
-            "Asthai": false,
-            "Antara": false,
-            "Manjha": false,
-            "Abhog": false,
-            "Sanchari": false,
-            "Jhala": false
-          },
-          "Elaboration": {
-            "Vistar": false,
-            "Barhat": false,
-            "Prastar": false,
-            "Bol Banao": false,
-            "Bol Bandt": false,
-            "Behlava": false,
-            "Gat-kari": false,
-            "Tan (Sapat)": false,
-            "Tan (Gamak)": false,
-            "Laykari": false,
-            "Tihai": false,
-            "Chakradar": false,
-          },
-          "Vocal Articulation": {
-            "Bol": false,
-            "Non-Tom": false,
-            "Tarana": false,
-            "Aakar": false,
-            "Sargam": false
-          },
-          "Instrumental Articulation": {
-            "Bol": false,
-            "Non-Bol": false
-          },
-          "Incidental": {
-            "Talk/Conversation": false,
-              "Praise ('Vah')": false,
-              "Tuning": false,
-              "Pause": false,
-          }
-        })
+        this.categorizationGrid.push(initPhraseCategorization())
       }
     }
-
+    if (this.categorizationGrid[0].Elaboration['Bol Alap'] === undefined) {
+      this.categorizationGrid.forEach(cat => {
+        cat.Elaboration['Bol Alap'] = false;
+      })
+    }
   }
 
   getGroups(idx = 0) {
