@@ -180,144 +180,146 @@ const instantiatePiece = async (queryId = testQueryId)=> {
   return piece
 }
 
-class PitchCounter {
-  constructor(pitches) {
-    this.pitches = pitches;
-  }
+// class PitchCounter {
+//   pitches: Pitch[];
 
-  sargamCount(proportion=false) {
-    const pitchDict = {};
-    this.pitches.forEach(pitch => {
-      const sargam = pitch.sargam[pitch.swara];
-      if (pitchDict[sargam]) {
-        pitchDict[sargam] += 1;
-      } else {
-        pitchDict[sargam] = 1;
-      }
-    })
-    if (proportion) {
-      const total = this.pitches.length;
-      const keys = Object.keys(pitchDict);
-      keys.forEach(key => {
-        pitchDict[key] = pitchDict[key]/total;
-      })
-    }
-    return pitchDict
-  }
+//   constructor(pitches: Pitch[]) {
+//     this.pitches = pitches;
+//   }
 
-  scaleDegreeCount(proportion=false) {
-    const pitchDict = {};
-    this.pitches.forEach(pitch => {
-      if (pitchDict[pitch.swara]) {
-        pitchDict[pitch.swara] += 1;
-      } else {
-        pitchDict[pitch.swara] = 1;
-      }
-    })
-    if (proportion) {
-      const total = this.pitches.length;
-      const keys = Object.keys(pitchDict);
-      keys.forEach(key => {
-        pitchDict[key] = pitchDict[key]/total;
-      })
-    }
-    return pitchDict
-  }
+//   sargamCount(proportion=false) {
+//     const pitchDict = {};
+//     this.pitches.forEach(pitch => {
+//       const sargam = pitch.sargam[pitch.swara];
+//       if (pitchDict[sargam]) {
+//         pitchDict[sargam] += 1;
+//       } else {
+//         pitchDict[sargam] = 1;
+//       }
+//     })
+//     if (proportion) {
+//       const total = this.pitches.length;
+//       const keys = Object.keys(pitchDict);
+//       keys.forEach(key => {
+//         pitchDict[key] = pitchDict[key]/total;
+//       })
+//     }
+//     return pitchDict
+//   }
 
-  pitchNumberCount(proportion=false) {
-    const pitchDict = {};
-    this.pitches.forEach(pitch => {
-      const pitchNum = pitch.numberedPitch;
-      if (pitchDict[pitchNum]) {
-        pitchDict[pitchNum] += 1;
-      } else {
-        pitchDict[pitchNum] = 1;
-      }
-    })
-    if (proportion) {
-      const total = this.pitches.length;
-      const keys = Object.keys(pitchDict);
-      keys.forEach(key => {
-        pitchDict[key] = pitchDict[key]/total;
-      })
-    }
-    return pitchDict
-  }
+//   scaleDegreeCount(proportion=false) {
+//     const pitchDict = {};
+//     this.pitches.forEach(pitch => {
+//       if (pitchDict[pitch.swara]) {
+//         pitchDict[pitch.swara] += 1;
+//       } else {
+//         pitchDict[pitch.swara] = 1;
+//       }
+//     })
+//     if (proportion) {
+//       const total = this.pitches.length;
+//       const keys = Object.keys(pitchDict);
+//       keys.forEach(key => {
+//         pitchDict[key] = pitchDict[key]/total;
+//       })
+//     }
+//     return pitchDict
+//   }
 
- octavedScaleDegreeCount(proportion=false) {
-    const pitchDict = {};
-    this.pitches.forEach(pitch => {
-      if (!pitchDict[pitch.oct]) {
-        pitchDict[pitch.oct] = {};
-      }
-      if (pitchDict[pitch.oct][pitch.swara]) {
-        pitchDict[pitch.oct][pitch.swara] += 1;
-      } else {
-        pitchDict[pitch.oct][pitch.swara] = 1;
-      }
-    })
-    if (proportion) {
-      const total = this.pitches.length;
-      const keys = Object.keys(pitchDict);
-      keys.forEach(key => {
-        const subKeys = Object.keys(pitchDict[key]);
-        subKeys.forEach(subKey => {
-          pitchDict[key][subKey] = pitchDict[key][subKey]/total;
-        })
-      })
-    }
-    return pitchDict
-  }
+//   pitchNumberCount(proportion=false) {
+//     const pitchDict = {};
+//     this.pitches.forEach(pitch => {
+//       const pitchNum = pitch.numberedPitch;
+//       if (pitchDict[pitchNum]) {
+//         pitchDict[pitchNum] += 1;
+//       } else {
+//         pitchDict[pitchNum] = 1;
+//       }
+//     })
+//     if (proportion) {
+//       const total = this.pitches.length;
+//       const keys = Object.keys(pitchDict);
+//       keys.forEach(key => {
+//         pitchDict[key] = pitchDict[key]/total;
+//       })
+//     }
+//     return pitchDict
+//   }
 
-  pitchChromaCount(proportion=false) {
-    const pitchDict = {};
-    this.pitches.forEach(pitch => {
-      const chroma = pitch.chroma;
-      if (pitchDict[chroma]) {
-        pitchDict[chroma] += 1;
-      } else {
-        pitchDict[chroma] = 1;
-      }
-    })
-    if (proportion) {
-      const total = this.pitches.length;
-      const keys = Object.keys(pitchDict);
-      keys.forEach(key => {
-        pitchDict[key] = pitchDict[key]/total;
-      })
-    }
-    return pitchDict
-  }
+//  octavedScaleDegreeCount(proportion=false) {
+//     const pitchDict = {};
+//     this.pitches.forEach(pitch => {
+//       if (!pitchDict[pitch.oct]) {
+//         pitchDict[pitch.oct] = {};
+//       }
+//       if (pitchDict[pitch.oct][pitch.swara]) {
+//         pitchDict[pitch.oct][pitch.swara] += 1;
+//       } else {
+//         pitchDict[pitch.oct][pitch.swara] = 1;
+//       }
+//     })
+//     if (proportion) {
+//       const total = this.pitches.length;
+//       const keys = Object.keys(pitchDict);
+//       keys.forEach(key => {
+//         const subKeys = Object.keys(pitchDict[key]);
+//         subKeys.forEach(subKey => {
+//           pitchDict[key][subKey] = pitchDict[key][subKey]/total;
+//         })
+//       })
+//     }
+//     return pitchDict
+//   }
 
-  octavedPitchChromaCount(proportion=false) {
-    const pitchDict = {};
-    this.pitches.forEach(pitch => {
-      if (!pitchDict[pitch.oct]) {
-        pitchDict[pitch.oct] = {};
-      }
-      if (pitchDict[pitch.oct][pitch.chroma]) {
-        pitchDict[pitch.oct][pitch.chroma] += 1;
-      } else {
-        pitchDict[pitch.oct][pitch.chroma] = 1;
-      }
-    })
-    if (proportion) {
-      const total = this.pitches.length;
-      const keys = Object.keys(pitchDict);
-      keys.forEach(key => {
-        const subKeys = Object.keys(pitchDict[key]);
-        subKeys.forEach(subKey => {
-          pitchDict[key][subKey] = pitchDict[key][subKey]/total;
-        })
-      })
-    }
-    return pitchDict
-  }
-}
+//   pitchChromaCount(proportion=false) {
+//     const pitchDict = {};
+//     this.pitches.forEach(pitch => {
+//       const chroma = pitch.chroma;
+//       if (pitchDict[chroma]) {
+//         pitchDict[chroma] += 1;
+//       } else {
+//         pitchDict[chroma] = 1;
+//       }
+//     })
+//     if (proportion) {
+//       const total = this.pitches.length;
+//       const keys = Object.keys(pitchDict);
+//       keys.forEach(key => {
+//         pitchDict[key] = pitchDict[key]/total;
+//       })
+//     }
+//     return pitchDict
+//   }
 
-const phraseRange = (piece: Piece) => {
-  return piece.phrases.map(phrase => phrase.getRange())
-}
+//   octavedPitchChromaCount(proportion=false) {
+//     const pitchDict = {};
+//     this.pitches.forEach(pitch => {
+//       if (!pitchDict[pitch.oct]) {
+//         pitchDict[pitch.oct] = {};
+//       }
+//       if (pitchDict[pitch.oct][pitch.chroma]) {
+//         pitchDict[pitch.oct][pitch.chroma] += 1;
+//       } else {
+//         pitchDict[pitch.oct][pitch.chroma] = 1;
+//       }
+//     })
+//     if (proportion) {
+//       const total = this.pitches.length;
+//       const keys = Object.keys(pitchDict);
+//       keys.forEach(key => {
+//         const subKeys = Object.keys(pitchDict[key]);
+//         subKeys.forEach(subKey => {
+//           pitchDict[key][subKey] = pitchDict[key][subKey]/total;
+//         })
+//       })
+//     }
+//     return pitchDict
+//   }
+// }
+
+// const phraseRange = (piece: Piece) => {
+//   return piece.phrases.map(phrase => phrase.getRange())
+// }
 
 const PitchTimes = (trajs: Trajectory[], { outputType = 'pitchNumber' } = {}) => { // outputs pitches as pitchNumbers
   // returns a list of all pitches in trajs, and the cumulative times at which 
@@ -330,7 +332,7 @@ const PitchTimes = (trajs: Trajectory[], { outputType = 'pitchNumber' } = {}) =>
     articulation: boolean 
   }[] = [];
   let startTime = 0;
-  trajs.forEach((traj, tIdx) => {
+  trajs.forEach(traj => {
     const art = traj.articulations[0] || traj.articulations['0.00'];
     if (traj.id === 12) {
       const obj = { time: startTime, pitch: 'silence', articulation: false };
@@ -500,7 +502,7 @@ const segmentByDuration = (piece: Piece, {
     }
   })
   if (removeEmpty) {
-    segments = segments.filter((segment, sIdx) => {
+    segments = segments.filter(segment => {
       const out = segment.length > 0;
       return out
     });
@@ -597,14 +599,15 @@ const patternCounter = (trajs: Trajectory[], {
   })
   // now, create a list of objects from patterns, where each object has a 
   // 'pattern' key, an array of the nested keys, and a 'count' key, the nested value
-  let out = [];
-  const recurse = (obj, pattern = []) => {
+  let out: { pattern: number[], count: number }[] = [];
+  const recurse = (obj: { [key: number | string]: number | {} }, pattern = []) => {
     const keys = Object.keys(obj);
     keys.forEach(key => {
       if (typeof obj[key] === 'number') {
-        out.push({ pattern: pattern.concat([Number(key)]), count: obj[key] });
+        const ok = obj[key] as number;
+        out.push({ pattern: pattern.concat([Number(key)]), count: ok });
       } else {
-        recurse(obj[key], pattern.concat([Number(key)]));
+        recurse(obj[key] as {}, pattern.concat([Number(key)]));
       }
     })
   }
@@ -658,14 +661,14 @@ const chromaSeqToCondensedPitchNums = (chromaSeq: number[]) => {
   return unsorted
 }
 
-const analyze = async () => {
-  const piece = await instantiatePiece();
-  const trajs = piece.allTrajectories();
-  let out = patternCounter(trajs, { size: 3, maxLagTime: 0.5, sort: true, outputType: 'pitchNum' })
-  // const seq = [0, 2, 11, 7, 0, 9, 11];
-  // const out = chromaSeqToCondensedPitchNums(seq);
-  console.log(out)
-}
+// const analyze = async () => {
+//   const piece = await instantiatePiece();
+//   const trajs = piece.allTrajectories();
+//   let out = patternCounter(trajs, { size: 3, maxLagTime: 0.5, sort: true, outputType: 'pitchNum' })
+//   // const seq = [0, 2, 11, 7, 0, 9, 11];
+//   // const out = chromaSeqToCondensedPitchNums(seq);
+//   console.log(out)
+// }
 
 
 // analyze();
