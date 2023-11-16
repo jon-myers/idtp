@@ -52,7 +52,7 @@
 </template>
 <script lang='ts'>
 
-import AddAudioFile from '@/components/AddAudioFile.vue';
+import AddAudioFile from '@/components/audioEvents/AudioEvents/AddAudioFile.vue';
 import { 
   getEventTypes, 
   initializeAudioEvent, 
@@ -104,7 +104,7 @@ type MusicianType = {
   gharana: string
 }
 
-import type { RecObjType } from '@/components/AddAudioFile.vue';
+import type { RecObjType } from '@/components/audioEvents/AudioEvents/AddAudioFile.vue';
 
 type PSecType = {
   end: number,

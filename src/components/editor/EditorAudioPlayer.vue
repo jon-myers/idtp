@@ -320,9 +320,9 @@ import { createRubberBandNode as createRBNode } from 'rubberband-web';
 import { BrowserInfo, detect } from 'detect-browser';
 import { drag as d3Drag, select as d3Select } from 'd3';
 import stretcherURL from '@/js/bundledStretcherWorker.js?url';
-import MeterControls from '@/components/MeterControls.vue';
-import LabelEditor from '@/components/LabelEditor.vue';
-import { RecType } from '@/components/AddAudioEvent.vue'
+import MeterControls from '@/components/editor/MeterControls.vue';
+import LabelEditor from '@/components/editor/LabelEditor.vue';
+import { RecType } from '@/components/audioEvents/AudioEvents/AddAudioEvent.vue'
 import { Meter } from '@/js/meter.ts'
 
 

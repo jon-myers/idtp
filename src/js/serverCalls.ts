@@ -3,8 +3,8 @@ import axios from 'axios';
 import { AxiosProgressEvent } from 'axios';
 import fetch from 'cross-fetch';
 import { Piece } from './classes.ts';
-import { RecType } from '@/components/AddAudioEvent.vue';
-import { UserType } from '@/components/FileManager.vue';
+import { RecType } from '@/components/audioEvents/AudioEvents/AddAudioEvent.vue';
+import { UserType } from '@/components/files/FileManager.vue';
 // import { URLSearchParams } from 'url';
 const getPiece = async (id: string): Promise<Piece> => {
   let piece;

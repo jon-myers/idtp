@@ -65,7 +65,7 @@ import pauseIcon from '@/assets/icons/pause.svg';
 import playIcon from '@/assets/icons/play.svg';
 import shuffleIcon from '@/assets/icons/shuffle.svg';
 import rulerIcon from '@/assets/icons/ruler.svg';
-import WaveformAnalyzer from '@/components/WaveformAnalyzer.vue';
+import WaveformAnalyzer from '@/components/audioEvents/WaveformAnalyzer.vue';
 
 const structuredTime = (dur: number) => {
   const hours = String(Math.floor(dur / 3600));

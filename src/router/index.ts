@@ -4,12 +4,12 @@ const routes = [
   {
     path: '/files',
     name: 'Files',
-    component: () => import('@/components/FileManager.vue')
+    component: () => import('@/components/files/FileManager.vue')
   },
   {
     path: '/audioEvents',
     name: 'AudioEvents',
-    component: () => import('@/components/AudioEvents.vue')
+    component: () => import('@/components/audioEvents/AudioEvents.vue')
   },
   {
     path: '/raagEditor',
@@ -19,12 +19,12 @@ const routes = [
   {
     path: '/editor',
     name: 'EditorComponent',
-    component: () => import('@/components/EditorComponent.vue')
+    component: () => import('@/components/editor/EditorComponent.vue')
   },
   {
     path: '/analyzer',
     name: 'AnalyzerComponent',
-    component: () => import('@/components/AnalyzerComponent.vue')
+    component: () => import('@/components/analysis/AnalyzerComponent.vue')
 
   },
   {
