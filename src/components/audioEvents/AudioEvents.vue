@@ -96,7 +96,7 @@ import {
   deleteAudioEvent,
   getAllTransOfAudioFile,
 } from '@/js/serverCalls.ts';
-import AddAudioEvent from '@/components/audioEvents/AudioEvents/AddAudioEvent.vue';
+import AddAudioEvent from '@/components/audioEvents/AddAudioEvent.vue';
 import AudioPlayer from '@/components/audioEvents/AudioPlayer.vue';
 import { defineComponent } from 'vue';
 import ContextMenu from '@/components/ContextMenu.vue';
@@ -114,7 +114,7 @@ const displayTime = (dur: number) => {
   }
 }
 
-import type { AudioEventType, RecType, RaagType } from '@/components/audioEvents/AudioEvents/AddAudioEvent.vue'
+import type { AudioEventType, RecType, RaagType } from '@/components/audioEvents/AddAudioEvent.vue'
 
 type AudioEventsDataType = {
   infoKeys: string[],

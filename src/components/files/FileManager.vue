@@ -151,7 +151,7 @@ import NewPieceRegistrar from '@/components/files/NewPieceRegistrar.vue';
 import { Raga, Piece, Trajectory, Phrase } from '@/js/classes.ts';
 
 import { defineComponent } from 'vue';
-import { RecType } from '@/components/audioEvents/AudioEvents/AddAudioEvent.vue'
+import { RecType } from '@/components/audioEvents/AddAudioEvent.vue'
 
 
 type UserType = {

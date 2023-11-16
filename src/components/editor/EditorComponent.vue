@@ -241,7 +241,7 @@ import { detect, BrowserInfo } from 'detect-browser';
 
 import { defineComponent } from 'vue';
 
-import { RecType } from '@/components/audioEvents/AudioEvents/AddAudioEvent.vue'
+import { RecType } from '@/components/audioEvents/AddAudioEvent.vue'
 
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
 

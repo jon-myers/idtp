@@ -176,7 +176,7 @@ import RaagEditor from '@/components/RaagEditor.vue';
 import type { AudioEventMetadataType } from '@/js/serverCalls.ts';
 import { defineComponent } from 'vue';
 import type { PassedDataType } from '@/components/files/FileManager.vue';
-import type { RecType } from '@/components/audioEvents/AudioEvents/AddAudioEvent.vue';
+import type { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
 
 type RulesType = {
   sa: boolean,
