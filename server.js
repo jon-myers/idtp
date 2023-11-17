@@ -247,19 +247,22 @@ const runServer = async () => {
 
     })
 
-    app.get('/getAllAudioFileMetaData', async (req, res) => {
+    app.get('/getAllAudioRecordingMetadata', async (req, res) => {
       // get all relevent data for audio files
       const projection = {
-        raag: 1,
-        performers: 1,
+        raags: 1,
+        musicians: 1,
+        parentID: 1,
         _id: 1,
         duration: 1,
-        fundamental: 1,
-        fileNumber: 1,
-        year: 1,
+        saEstimate: 1,
+        saVerified: 1,
+        date: 1,
+        location: 1,
+        octOffset: 1,
       }
       try {
-        const result = await audioFiles.find().project(projection).toArray();
+        const result = await audioRecordings.find().project(projection).toArray();
         res.json(result)
       } catch (err) {
         console.error(err);

@@ -154,7 +154,7 @@ export default defineComponent({
         'Name', 
       ],
       playingIdx: undefined,
-      // getAllAudioFileMetaData: getAllAudioFileMetaData,
+      // getAllAudioRecordingMetadata: getAllAudioRecordingMetadata,
       allAudioEvents: undefined,
       performers: undefined,
       colHeight: 30,

@@ -12,6 +12,11 @@ const routes = [
     component: () => import('@/components/audioEvents/AudioEvents.vue')
   },
   {
+    path: '/audioRecordings',
+    name: 'AudioRecordings',
+    component: () => import('@/components/AudioRecordings.vue')
+  },
+  {
     path: '/raagEditor',
     name: 'RaagEditor',
     component: () => import('@/components/RaagEditor.vue')
