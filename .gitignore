@@ -37,3 +37,5 @@ credentials
 
 .envrc
 docs
+.direnv
+idtp_env
