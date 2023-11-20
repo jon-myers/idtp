@@ -40,19 +40,19 @@
           </div>
         </div>
         <div class='recInfo right'>
-          <div class='rulerBox'>
+          <!-- <div class='rulerBox'>
             <img :src='icons.ruler' @click='toggleWaveform' />
-          </div>
+          </div> -->
         </div>
       </div>
     </div>
-    <WaveformAnalyzer
+    <!-- <WaveformAnalyzer
       class='waveformAnalyzer'
       v-show='showWaveform' 
       :initSaEstimate='saEstimate' 
       :initSaVerified='saVerified'
       ref='waveformAnalyzer'
-      :key='waKey'/>
+      :key='waKey'/> -->
     
   
   </div>
@@ -65,8 +65,8 @@ import loopIcon from '@/assets/icons/loop.svg';
 import pauseIcon from '@/assets/icons/pause.svg';
 import playIcon from '@/assets/icons/play.svg';
 import shuffleIcon from '@/assets/icons/shuffle.svg';
-import rulerIcon from '@/assets/icons/ruler.svg';
-import WaveformAnalyzer from '@/components/audioEvents/WaveformAnalyzer.vue';
+// import rulerIcon from '@/assets/icons/ruler.svg';
+// import WaveformAnalyzer from '@/components/audioEvents/WaveformAnalyzer.vue';
 
 const structuredTime = (dur: number) => {
   const hours = String(Math.floor(dur / 3600));
@@ -98,7 +98,7 @@ type AudioPlayerData = {
     pause: string,
     play: string,
     shuffle: string,
-    ruler: string
+    // ruler: string
   },
   circleDragging: boolean,
   formattedCurrentTime: string,
@@ -126,7 +126,7 @@ export default {
         pause: pauseIcon,
         play: playIcon,
         shuffle: shuffleIcon,
-        ruler: rulerIcon
+        // ruler: rulerIcon
       },
       circleDragging: false,
       formattedCurrentTime: '00:00',
@@ -137,7 +137,7 @@ export default {
   },
   
   components: {
-    WaveformAnalyzer
+    // WaveformAnalyzer
   },
   
   props: [
@@ -434,7 +434,7 @@ export default {
   align-items: center;
   justify-content: right;
 }
-
+/* 
 .rulerBox {
   width: 100px;
   height: 100%;
@@ -458,7 +458,7 @@ export default {
 .rulerBox > .showWaveform {
   filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) 
     brightness(97%) contrast(97%);
-}
+} */
 
 .controlFlexer {
   width: 100%;
@@ -597,7 +597,7 @@ export default {
   pointer-events: auto;
 }
 
-.waveformAnalyzer {
+/* .waveformAnalyzer {
   z-index: -2
-}
+} */
 </style>

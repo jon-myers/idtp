@@ -83,7 +83,7 @@
 
 <script lang='ts'>
 import { defineComponent } from 'vue';
-import AudioPlayer from '@/components/audioEvents/AudioPlayer.vue';
+import AudioPlayer from '@/components/audioRecordings/ARAudioPlayer.vue';
 import { 
   getAllAudioRecordingMetadata, 
   getSortedMusicians 
@@ -507,7 +507,6 @@ export default defineComponent({
         target = target.parentElement!;
         if (target.classList.contains('metadataLabels')) {
           target = target.parentElement!;
-          console.log(target)
         }
       };
       const playingElem = document.querySelector('.playing');
