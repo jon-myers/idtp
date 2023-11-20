@@ -392,9 +392,15 @@ const runServer = async () => {
       //Get all names of all musicians from db, sorted
       const sorts = { 'Last Name': 1, 'First Name': 1, 'Middle Name': 1};
       const proj = { 'Initial Name': 1, _id: 0 };
+      if (req.query.verbose === 'true') {
+        proj['First Name'] = 1;
+        proj['Last Name'] = 1;
+        proj['Middle Name'] = 1;
+      }
       try {
         let result = await musicians.find().sort(sorts).project(proj).toArray();
-        res.json(result.map(r => r['Initial Name']))
+        const output = req.query.verbose === 'true' ? result : result.map(r => r['Initial Name']);
+        res.json(output)
       } catch (err) {
         console.error(err);
         res.status(500).send(err);

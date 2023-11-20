@@ -153,8 +153,8 @@ const getAllPieces = async (
   return allPieces
 };
 
-const getAllAudioRecordingMetadata = async () => {
-  let allAudio;
+const getAllAudioRecordingMetadata = async (): Promise<RecType[]> => {
+  let allAudio: RecType[] = [];
   let request = {
     method: 'GET',
     headers: {
@@ -268,31 +268,12 @@ const getAllTransOfAudioFile = async (audioID: string, userID: string) => {
   }
 };
 
-// const getSortedMusicians = async () => {
-//   // query 'musicians' mongoDB collection to get all musicians in alphabetical 
-//   // order
-//   let allMusicians;
-//   let request = {
-//     method: 'GET',
-//     headers: {
-//       'Content-Type': 'application/json'
-//     },
-//   };
-//   await fetch(url + 'getSortedMusicians', request)
-//     .then(res => {
-//       if (res.ok) {
-//         return res.json();
-//       }
-//     }).then(data => {
-//       if (data) {
-//         allMusicians = data
-//       }
-//     }).catch(err => console.error(err))
-//   return allMusicians
-// };
-
-
-const getSortedMusicians = async (): Promise<string[]> => {
+const getSortedMusicians = async (verbose=false): Promise<(string | {
+  'First Name'?: string,
+  'Last Name'?: string,
+  'Initial Name': string,
+  'Middle Name'?: string,
+})[]> => {
   let allMusicians: string[] = [];
   let request = {
     method: 'GET',
@@ -300,8 +281,12 @@ const getSortedMusicians = async (): Promise<string[]> => {
       'Content-Type': 'application/json'
     },
   };
+  // const query = '?' + new URLSearchParams({ verbose: verbose.toString() });
+  const query = verbose ? '?' + new URLSearchParams({ verbose: verbose.toString() }): '';
+  const fullQuery = url + 'getSortedMusicians' + query;
   try {
-    const res = await fetch(url + 'getSortedMusicians', request);
+    
+    const res = await fetch(fullQuery, request);
     if (res.ok) {
       allMusicians = await res.json()
     }
