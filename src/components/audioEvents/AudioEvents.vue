@@ -14,7 +14,6 @@
             :id='`ae${aeIdx}`'
             @dblclick='toggleDisplay($event, ae, true)'
             >
-            
             <span @click='toggleDisplay($event, ae, false)'>&#9654;</span>
             <label>{{ae.name}}</label>
           </div>

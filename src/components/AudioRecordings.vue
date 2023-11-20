@@ -1,6 +1,8 @@
 <template>
   <div class='main' @click='handleClick'>
-    <div class='labelRow'>
+    <div 
+      class='labelRow'
+      >
       <div 
         class='metadataLabels' 
         v-for='(field, fIdx) in metadataFields'
@@ -41,7 +43,9 @@
       >
       <div 
         class='recordingRow'
-        v-for='recording in allRecordings'
+        v-for='(recording, rIdx) in allRecordings'
+        @dblclick='sendAudioSource($event, recording)'
+        :id='`recRow${rIdx}`'
         >
         <div 
           class='metadataLabels' 
@@ -88,8 +92,8 @@ import { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
 import { displayTime } from '@/js/utils.ts';
 type AudioRecordingsDataType = {
   audioSource: string | undefined,
-  saEstimate: string | undefined,
-  saVerified: string | undefined,
+  saEstimate: number | undefined,
+  saVerified: boolean | undefined,
   audioRecId: string | undefined,
   allRecordings: RecType[],
   metadataFields: { 
@@ -107,7 +111,8 @@ type AudioRecordingsDataType = {
     'Initial Name': string,
     'Middle Name'?: string,
   }[],
-  selectedSortIdx: number
+  selectedSortIdx: number,
+  activeRecording: RecType | undefined
 }
 
 export default defineComponent({
@@ -121,6 +126,7 @@ export default defineComponent({
       audioRecId: undefined,
       allMusicians: undefined,
       allRecordings: [],
+      activeRecording: undefined,
       metadataFields: [
         { 
           'name': 'Soloist', 
@@ -232,6 +238,66 @@ export default defineComponent({
   },
   
   methods: {
+
+    nextTrack(shuffling: boolean, initial: boolean) {
+
+      if (this.activeRecording) {
+        const playingElem = document.querySelector('.playing');
+        if (playingElem) playingElem.classList.remove('playing');
+        if (!shuffling) {
+          const curIdx = this.allRecordings.findIndex(rec => {
+            return rec._id === this.activeRecording!._id;
+          });
+          const nextIdx = (curIdx + 1) % this.allRecordings.length;
+          this.activeRecording = this.allRecordings[nextIdx];
+          const nextElem = document.getElementById(`recRow${nextIdx}`);
+          if (nextElem) nextElem.classList.add('playing');
+          const id = this.activeRecording._id;
+          this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
+        } else {
+          if (initial) {
+            const idx = Math.floor(Math.random() * this.allRecordings.length);
+            this.activeRecording = this.allRecordings[idx];
+            const elem = document.getElementById(`recRow${idx}`);
+            if (elem) elem.classList.add('playing');
+            const id = this.activeRecording._id;
+            this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
+          } else {
+            const curIdx = this.allRecordings.findIndex(rec => {
+              return rec._id === this.activeRecording!._id;
+            });
+            let nextIdx = Math.floor(Math.random() * this.allRecordings.length);
+            while (nextIdx === curIdx) {
+              nextIdx = Math.floor(Math.random() * this.allRecordings.length);
+            }
+            this.activeRecording = this.allRecordings[nextIdx];
+            const nextElem = document.getElementById(`recRow${nextIdx}`);
+            if (nextElem) nextElem.classList.add('playing');
+            const id = this.activeRecording._id;
+            this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
+          }
+        
+        }
+      } else {
+        if (!shuffling) {
+          this.activeRecording = this.allRecordings[0];
+          const elem = document.getElementById('recRow0');
+          if (elem) elem.classList.add('playing');
+          const id = this.activeRecording._id;
+          this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
+        } else {
+          const idx = Math.floor(Math.random() * this.allRecordings.length);
+          this.activeRecording = this.allRecordings[idx];
+          const elem = document.getElementById(`recRow${idx}`);
+          if (elem) elem.classList.add('playing');
+          const id = this.activeRecording._id;
+          this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
+        
+        }
+      }
+      
+
+    },
 
     handleDragStart(fIdx: number, event: DragEvent) {
       console.log('drag start')
@@ -436,6 +502,29 @@ export default defineComponent({
       }
     },
 
+    sendAudioSource(event: MouseEvent, recording: RecType) {
+      const audioFileId = recording._id; 
+      let target = event.target as HTMLElement;
+      if (target.tagName === 'SPAN') {
+        target = target.parentElement!;
+        if (target.classList.contains('metadataLabels')) {
+          target = target.parentElement!;
+          console.log(target)
+        }
+      };
+      const playingElem = document.querySelector('.playing');
+      if (playingElem) {
+        playingElem.classList.remove('playing');
+      }
+      target.classList.add('playing');
+      this.audioSource = `Https://swara.studio/audio/mp3/${audioFileId}.mp3`;
+      this.saEstimate = recording.saEstimate;
+      this.saVerified = recording.saVerified;
+      this.activeRecording = recording;
+
+
+    },
+
     soloistSorter(a: RecType, b: RecType) {
       // get last name by looking up soloist in allMusicians array,
       // then sort by last name, then first name, then middle name. If there 
@@ -536,6 +625,10 @@ export default defineComponent({
       fromTop?: boolean
     } = {
     }) {
+      const playingElem = document.querySelector('.playing');
+      if (playingElem) {
+        playingElem.classList.remove('playing');
+      }
       if (sort === 'soloist') {
         this.allRecordings.sort(this.soloistSorter);
         if (!fromTop) {
@@ -562,6 +655,16 @@ export default defineComponent({
           this.allRecordings.reverse();
         }
       }
+      if (this.activeRecording !== undefined) {
+        const idx = this.allRecordings.findIndex(rec => {
+          return rec._id === this.activeRecording!._id;
+        });
+        const elem = document.getElementById(`recRow${idx}`);
+        if (elem) {
+          elem.classList.add('playing');
+        }
+      }
+
     }
   }
 })
@@ -594,6 +697,14 @@ export default defineComponent({
   width: 100%;
   border-bottom: 1px solid grey;
   /* overflow-x: hidden; */
+}
+
+.recordingRow:hover {
+  background-color: #2b332c;
+}
+
+.playing {
+  background-color: #3e4a40;
 }
 
 .labelRow { 

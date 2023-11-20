@@ -184,8 +184,8 @@ export default {
         }
         this.audio.currentTime = 0;
         this.audio.play();
+        this.playing = true;
       } else {
-        console.log('huh')
         this.$emit('emitNextTrack', this.shuffling, false)
       }
     },
