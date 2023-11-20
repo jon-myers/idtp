@@ -194,25 +194,42 @@ export default defineComponent({
 
     },
     handleDrag(fIdx: number, event: DragEvent) {
+      const nextCol = fIdx < this.columnWidths.length - 1;
       // Calculate the new width based on the mouse movement
         if (event.clientX !== 0) {
           const deltaX = event.clientX - this.initialMouseX!;
-        requestAnimationFrame(() => {
-          this.columnWidths[fIdx] = this.initialWidths[fIdx]! + deltaX;
-          if (fIdx < this.columnWidths.length - 1) {
-            this.columnWidths[fIdx + 1] = this.initialWidths[fIdx + 1] - deltaX;
+        // requestAnimationFrame(() => {
+          if (this.initialWidths[fIdx]! + deltaX < 50) {
+            return;
+          } else if (nextCol && (this.initialWidths[fIdx + 1]! - deltaX < 50)) {
+            return
+          } else {
+            this.columnWidths[fIdx] = this.initialWidths[fIdx]! + deltaX;
+            if (nextCol) {
+              this.columnWidths[fIdx + 1] = this.initialWidths[fIdx + 1] - deltaX;
+            }
           }
-        });
+          
+        // });
       }
     },
     handleDragEnd(fIdx: number, event: DragEvent) {
       // Update the column width in your data
+      const nextCol = fIdx < this.columnWidths.length - 1;
       const deltaX = event.clientX - this.initialMouseX!;
-      this.columnWidths[fIdx] = this.initialWidths[fIdx] + deltaX;
-      if (fIdx < this.columnWidths.length - 1) {
-        this.columnWidths[fIdx + 1] = this.initialWidths[fIdx + 1] - deltaX;
+      if (this.initialWidths[fIdx] + deltaX < 50) {
+        return;
+      } else if (nextCol && this.initialWidths[fIdx + 1] - deltaX < 50) {
+        return
+      } else {
+        this.columnWidths[fIdx] = this.initialWidths[fIdx] + deltaX;
+        if (nextCol) {
+          this.columnWidths[fIdx + 1] = this.initialWidths[fIdx + 1] - deltaX;
+        }
+        
       }
       document.body.style.cursor = '';
+      
     },
   }
 })
@@ -282,6 +299,7 @@ span {
   height: 30px;
   margin-left: 5px;
   margin-right: 5px;
+  user-select: none;
 }
 
 .draggableBorder {
