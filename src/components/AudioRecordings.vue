@@ -295,8 +295,6 @@ export default defineComponent({
         
         }
       }
-      
-
     },
 
     handleDragStart(fIdx: number, event: DragEvent) {
@@ -383,9 +381,9 @@ export default defineComponent({
     },
 
     durSorter(a: RecType, b: RecType) {
-      if (a.duration < b.duration) {
+      if (a.duration > b.duration) {
         return -1;
-      } else if (a.duration > b.duration) {
+      } else if (a.duration < b.duration) {
         return 1;
       } else {
         return 0;
