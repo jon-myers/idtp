@@ -260,6 +260,7 @@ const runServer = async () => {
         date: 1,
         location: 1,
         octOffset: 1,
+        parentTitle: 1,
       }
       try {
         const result = await audioRecordings.find().project(projection).toArray();
