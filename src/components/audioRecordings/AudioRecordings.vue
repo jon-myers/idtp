@@ -79,11 +79,18 @@
       @emitNextTrack='nextTrack'
     />
   </div>
+  <ContextMenu
+    :x='dropDownLeft'
+    :y='dropDownTop'
+    :closed='contextMenuClosed'
+    :choices='contextMenuChoices'
+    />
 </template>
 
 <script lang='ts'>
 import { defineComponent } from 'vue';
 import AudioPlayer from '@/components/audioRecordings/ARAudioPlayer.vue';
+import ContextMenu from '@/components/ContextMenu.vue';
 import { 
   getAllAudioRecordingMetadata, 
   getSortedMusicians 
@@ -112,7 +119,12 @@ type AudioRecordingsDataType = {
     'Middle Name'?: string,
   }[],
   selectedSortIdx: number,
-  activeRecording: RecType | undefined
+  activeRecording: RecType | undefined,
+  contextMenuClosed: boolean,
+  contextMenuChoices: { text: string, action: () => void }[],
+  userID: string | undefined,
+  dropDownLeft: number,
+  dropDownTop: number
 }
 
 export default defineComponent({
@@ -185,13 +197,16 @@ export default defineComponent({
       ],
       columnWidths: [200, 180, 180, 80, 400],
       initialWidths: [200, 180, 180, 80, 400],
-      selectedSortIdx: 0
+      selectedSortIdx: 0,
+      contextMenuClosed: true,
+      contextMenuChoices: [],
+      userID: undefined,
+      dropDownLeft: 200,
+      dropDownTop: 300
     }
   },
 
-  components: {
-    AudioPlayer
-  },
+  components: { AudioPlayer, ContextMenu },
 
   async created() {
     window.addEventListener('keydown', this.handleKeydown);
@@ -293,6 +308,34 @@ export default defineComponent({
           const id = this.activeRecording._id;
           this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
         
+        }
+      }
+    },
+
+    handleKeydown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        this.contextMenuClosed = true;
+      }
+    },
+
+    handleClick() {
+      this.contextMenuClosed = true;
+    },
+
+    async handleRightClick(e: MouseEvent) {
+      e.preventDefault();
+      this.dropDownLeft = e.clientX;
+      this.dropDownTop = e.clientY;
+      this.contextMenuClosed = !this.contextMenuClosed;
+      let el = document.elementFromPoint(e.clientX, e.clientY);
+      if (el) {
+        if (el.classList.contains('metadataLabels')) {
+          el = el.parentElement!;
+        } else if (el.classList.contains('field')) {
+          el = el.parentElement!.parentElement!;
+        } else if (el.classList.contains('draggableBorder')) {
+          el = el.parentElement!;
         }
       }
     },

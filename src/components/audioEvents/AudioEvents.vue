@@ -184,7 +184,6 @@ export default defineComponent({
     AddAudioEvent, AudioPlayer, ContextMenu
   },
 
-  
   async created() {
     window.addEventListener('keydown', this.handleKeydown);
     if (this.$store.state.userID === undefined) {
@@ -203,7 +202,6 @@ export default defineComponent({
     } catch (err) {
       console.log(err)
     }
-    
   },
   
   beforeUnmount() {
@@ -215,7 +213,6 @@ export default defineComponent({
     window.removeEventListener('keydown', this.handleKeydown);
   },
 
-  
   methods: {
 
     resetAddEvent() {
@@ -275,7 +272,6 @@ export default defineComponent({
       if (e.key === 'Escape') {
         e.preventDefault();
         this.contextMenuClosed = true;
-
       }
     },
 
