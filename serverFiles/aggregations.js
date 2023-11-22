@@ -9,7 +9,8 @@ const generateAudioRecordingsDB = async () => {
         }, 
         '_id': 0, 
         'parentID': '$_id',
-        'name': '$name'
+        'name': '$name',
+        'userID': '$userID'
       }
     }, {
       '$unwind': {
@@ -28,6 +29,7 @@ const generateAudioRecordingsDB = async () => {
         'parentID': '$parentID',
         'octOffset': '$recordings.v.octOffset',
         'parentTitle': '$name',
+        'userID': '$userID'
 
       }
     }, {
@@ -56,5 +58,5 @@ const generateAudioRecordingsDB = async () => {
   
 }
 
-generateAudioRecordingsDB();
+// generateAudioRecordingsDB();
 exports.generateAudioRecordingsDB = generateAudioRecordingsDB
