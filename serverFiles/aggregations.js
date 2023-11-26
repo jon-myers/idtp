@@ -33,7 +33,12 @@ const generateAudioRecordingsDB = async () => {
 
       }
     }, {
-      '$out': 'audioRecordings'
+      '$merge': {
+        'into': 'audioRecordings',
+        'on': '_id',
+        'whenMatched': 'merge',
+        'whenNotMatched': 'insert'
+      }
     }
   ];
   const webAddress = 'swara.f5cuf.mongodb.net/swara';
