@@ -40,6 +40,7 @@
     <div 
       class='fileContainer'
       @contextmenu='handleRightClick'
+      ref='fileContainer'
       >
       <div 
         class='recordingRow'
@@ -93,7 +94,8 @@ import AudioPlayer from '@/components/audioRecordings/ARAudioPlayer.vue';
 import ContextMenu from '@/components/ContextMenu.vue';
 import { 
   getAllAudioRecordingMetadata, 
-  getSortedMusicians 
+  getSortedMusicians,
+  getAllTransOfAudioFile 
 } from '@/js/serverCalls.ts';
 import { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
 import { displayTime } from '@/js/utils.ts';
@@ -124,7 +126,8 @@ type AudioRecordingsDataType = {
   contextMenuChoices: { text: string, action: () => void }[],
   userID: string | undefined,
   dropDownLeft: number,
-  dropDownTop: number
+  dropDownTop: number,
+  dropDownWidth: number
 }
 
 export default defineComponent({
@@ -202,7 +205,8 @@ export default defineComponent({
       contextMenuChoices: [],
       userID: undefined,
       dropDownLeft: 200,
-      dropDownTop: 300
+      dropDownTop: 300,
+      dropDownWidth: 180
     }
   },
 
@@ -337,21 +341,82 @@ export default defineComponent({
         } else if (el.classList.contains('draggableBorder')) {
           el = el.parentElement!;
         }
+        const recording = this.allRecordings[parseInt(el.id.slice(6))];
+        this.contextMenuChoices = [];
+        this.contextMenuChoices.push({
+          text: 'New Transcription',
+          action: () => {
+            this.$router.push({
+              name: 'Files',
+              query: {
+                aeName: JSON.stringify(recording.parentTitle),
+                afName: JSON.stringify(this.getShorthand(recording)),
+              }
+            })
+            this.contextMenuClosed = true;
+          }
+        });
+        try {
+          const tChoices = await getAllTransOfAudioFile(
+            recording._id!, 
+            this.userID!
+          );
+          tChoices.forEach(tc => {
+            this.contextMenuChoices.push({
+              text: `Open file: "${tc.title}" by ${tc.name}`,
+              action: () => {
+                this.$store.commit('update_id', tc._id);
+                this.$cookies.set('currentPieceID', tc._id);
+                this.$router.push({
+                  name: 'EditorComponent',
+                    query: { id: tc._id }
+                })
+              }
+            })
+          })
+        } catch (err) {
+          console.log(err);
+        }
+      }
+      const fileContainer = this.$refs.fileContainer as HTMLElement;
+      const rect = fileContainer.getBoundingClientRect();
+      if (this.dropDownLeft + this.dropDownWidth > rect.width - 20) {
+        this.dropDownLeft = rect.width - 20 - this.dropDownWidth;
       }
     },
 
+    getShorthand(rec: RecType) {
+      const out: string[] = [];
+      const raagNames = Object.keys(rec.raags);
+      raagNames.forEach(rn => {
+        const raag = rec.raags[rn];
+        const pSecsObj = raag['performance sections'];
+        if (pSecsObj === undefined) {
+          throw new Error('no pSecsObj')
+        }
+        out.push(rn, ' - ');
+        const pSecs = Object.keys(pSecsObj);
+        pSecs.forEach((pSec, i) => {
+          out.push(pSec, i !== pSecs.length - 1 ? ', ' : '; ');
+        })
+      })
+      return out.join('')
+    },
+
     handleDragStart(fIdx: number, event: DragEvent) {
-      console.log('drag start')
       // Store the initial mouse position and column widths
+      // event.preventDefault();
       this.initialMouseX = event.clientX;
       this.initialWidths = this.columnWidths.slice()
       // make cursor resize until drag end
       document.body.style.cursor = 'col-resize';
+      
 
     },
     handleDrag(fIdx: number, event: DragEvent) {
       const nextCol = fIdx < this.columnWidths.length - 1;
       // Calculate the new width based on the mouse movement
+      document.body.style.cursor = 'col-resize';
         if (event.clientX !== 0) {
           const deltaX = event.clientX - this.initialMouseX!;
           if (this.initialWidths[fIdx]! + deltaX < 50) {
@@ -367,7 +432,7 @@ export default defineComponent({
       }
     },
     handleDragEnd(fIdx: number, event: DragEvent) {
-      document.body.style.cursor = '';
+      document.body.style.cursor = 'auto';
       const nextCol = fIdx < this.columnWidths.length - 1;
       const deltaX = event.clientX - this.initialMouseX!;
       if (this.initialWidths[fIdx] + deltaX < 50) {
@@ -787,9 +852,14 @@ span.field {
   background-color: none;
   z-index: 1;
   opacity: 0;
-  cursor: ew-resize;
+  cursor: col-resize;
+  
   user-select: none;
-  /* background-color: pink */
+  background-color: pink
+}
+
+.draggableBorder:hover {
+  cursor: col-resize
 }
 
 .sortTriangle.down {
