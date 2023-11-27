@@ -296,6 +296,8 @@ const getSortedMusicians = async (verbose=false): Promise<(string | {
   return allMusicians
 }
 
+
+
 const getEventTypes = async () => {
   // query 'audioEventTypes' mongoDB collection to get all event types
   let allEventTypes: string[] = []; 
@@ -591,6 +593,29 @@ const deleteAudioEvent = async (aeID: string) => {
     console.error(err)
   }
 }
+
+const deleteRecording = async (recID: string) => {
+  // delete a particular recording
+  let out;
+  let request = {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      '_id': recID
+    })
+  };
+  try {
+    const response = await fetch(url + 'deleteRecording', request);
+    if (response.ok) {
+      out = await response.json();
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+};
 
 const initializeAudioEvent = async (userID: string) => {
   const request = {
@@ -1146,5 +1171,6 @@ export {
   getAllUsers,
   updateTranscriptionOwner,
   getMelographJSON,
-  makeMelograph
+  makeMelograph,
+  deleteRecording
 }

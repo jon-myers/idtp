@@ -261,6 +261,7 @@ const runServer = async () => {
         location: 1,
         octOffset: 1,
         parentTitle: 1,
+        parentTrackNumber: 1,
       }
       try {
         const result = await audioRecordings.find().project(projection).toArray();
@@ -329,6 +330,73 @@ const runServer = async () => {
       }    
     });
 
+    app.delete('/deleteRecording', async (req, res) => {
+      // delete a particular recording
+      try {
+        const query1 = { "_id": ObjectId(req.body._id) };
+        const found1 = await audioRecordings.findOne(query1);
+        const parentID = found1.parentID;
+        const result1 = await audioRecordings.deleteOne(query1);
+        // also delete recording from audioevent, if rec has associated audio
+        // event
+        const query2 = { "_id": ObjectId(parentID) };
+        const projection = { 'recordings': 1, '_id': 0 };
+        const result2 = await audioEvents.findOne(query2, projection);
+        const recordings = result2.recordings;
+        const newRecordings = {};
+        let count = 0;
+        for (let idx in recordings) {
+          if (recordings[idx].audioFileId.toString() !== req.body._id) {
+            newRecordings[count] = recordings[idx];
+            count++;
+          }
+        }
+        result2.recordings = newRecordings;
+        const result3 = await audioEvents.updateOne(query2, { 
+          $set: {recordings: newRecordings}
+        });
+        // if no recs left, delete audio event
+        let result4 = undefined;
+        if (Object.keys(newRecordings).length === 0) {
+          result4 = await audioEvents.deleteOne(query2);
+        }
+        if (result4 !== undefined) {
+          res.json({ result1, result2, result3, result4 });
+        } else {
+          res.json({ result1, result2, result3 });
+        }
+
+        const peaksPath = 'peaks/' + req.body._id + '.json';
+        const spectrogramsPath = 'spectrograms/' + req.body._id;
+        const mp3Path = 'audio/mp3/' + req.body._id + '.mp3';
+        const wavPath = 'audio/wav/' + req.body._id + '.wav';
+        const opusPath = 'audio/opus/' + req.body._id + '.opus';
+        const peaksPathExists = await exists(peaksPath);
+        const spectrogramsPathExists = await exists(spectrogramsPath);
+        const mp3PathExists = await exists(mp3Path);
+        const wavPathExists = await exists(wavPath);
+        const opusPathExists = await exists(opusPath);
+        if (peaksPathExists) {
+          fs.unlink(peaksPath)
+        }
+        if (spectrogramsPathExists) {
+          fs.rm(spectrogramsPath, { recursive: true, force: true })
+        }
+        if (mp3PathExists) {
+          fs.unlink(mp3Path)
+        }
+        if (wavPathExists) {
+          fs.unlink(wavPath)
+        }
+        if (opusPathExists) {
+          fs.unlink(opusPath)
+        }
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }    
+    });
+
     app.delete('/deleteAudioEvent', async (req, res) => {
       // delete a particular audio event
       try {
@@ -339,6 +407,10 @@ const runServer = async () => {
         const idxs = Object.keys(recordings);
         idxs.forEach(async idx => {
           const recID = recordings[idx].audioFileId?.toString();
+          //  remove from audioRecordings collection
+          const query = { '_id': ObjectId(recID) };
+          const result = await audioRecordings.deleteOne(query);
+          console.log(result)
           // remove from peaks folder
           const peaksPath = 'peaks/' + recID + '.json';
           const spectrogramsPath = 'spectrograms' + recID;
@@ -613,12 +685,19 @@ const runServer = async () => {
       const query = { _id: parentId };
       const update = { $set: myUpdates };
       const options = { upsert: true };
+      console.log(addMusicians)
       try {
-        const [result1, result2] = await Promise.all([
-          audioEvents.updateOne(query, update, options),
-          musicians.insertMany(addMusicians)
-        ])
-        res.json({ result1, result2 });
+        if (addMusicians.length > 0) {
+          const [result1, result2] = await Promise.all([
+            audioEvents.updateOne(query, update, options),
+            musicians.insertMany(addMusicians)
+          ])
+          res.json({ result1, result2 });
+        } else {
+          const result = await audioEvents.updateOne(query, update, options);
+          res.json(result);
+        }
+        
         aggregations.generateAudioRecordingsDB();
         
       } catch (err) {

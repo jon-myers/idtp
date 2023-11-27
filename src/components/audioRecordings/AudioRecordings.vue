@@ -8,9 +8,9 @@
         v-for='(field, fIdx) in metadataFields'
         :style='{
           "width": columnWidths[fIdx] + "px",
-          "max-width": fIdx === metadataFields.length - 1 ? "" : columnWidths[fIdx] + "px",
+          "max-width": fIdx === metadataFields.length - 2 ? "" : columnWidths[fIdx] + "px",
           "min-width": columnWidths[fIdx] + "px",
-          "flex-grow": fIdx === metadataFields.length - 1 ? 1 : 0,
+          "flex-grow": fIdx === metadataFields.length - 2 ? 1 : 0,
           "position": "relative" 
           }'
         >
@@ -53,9 +53,9 @@
           v-for='(field, fIdx) in metadataFields'
           :style='{ 
             "width": columnWidths[fIdx] + "px", 
-            "max-width": fIdx === metadataFields.length - 1 ? "" : columnWidths[fIdx] + "px",
+            "max-width": fIdx === metadataFields.length - 2 ? "" : columnWidths[fIdx] + "px",
             "min-width": columnWidths[fIdx] + "px",
-            "flex-grow": fIdx === metadataFields.length - 1 ? 1 : 0 
+            "flex-grow": fIdx === metadataFields.length - 2 ? 1 : 0 
             }'
           >
           <span class='field'>{{ field.func(recording) }}</span>
@@ -95,7 +95,8 @@ import ContextMenu from '@/components/ContextMenu.vue';
 import { 
   getAllAudioRecordingMetadata, 
   getSortedMusicians,
-  getAllTransOfAudioFile 
+  getAllTransOfAudioFile,
+  deleteRecording 
 } from '@/js/serverCalls.ts';
 import { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
 import { displayTime } from '@/js/utils.ts';
@@ -109,7 +110,7 @@ type AudioRecordingsDataType = {
     'name': string,
     'func': (rec: RecType) => string | string[],
     'sortState': 'down' | 'up',
-    'sortType': string
+    'sortType'?: string
   }[],
   columnWidths: number[],
   initialMouseX?: number,
@@ -127,7 +128,12 @@ type AudioRecordingsDataType = {
   userID: string | undefined,
   dropDownLeft: number,
   dropDownTop: number,
-  dropDownWidth: number
+  dropDownWidth: number,
+  labelRowHeight: number,
+  dropDownHeight: number,
+  uploadRecModalClosed: boolean,
+  
+
 }
 
 export default defineComponent({
@@ -196,17 +202,30 @@ export default defineComponent({
           },
           'sortState': 'down',
           'sortType': 'audioEvent'
+        },
+        {
+          'name': 'Track #',
+          'func': (rec: RecType) => {
+            return rec.parentTrackNumber ? rec.parentTrackNumber : 'None';
+          },
+          'sortState': 'down',
+          'sortType': undefined
         }      
       ],
-      columnWidths: [200, 180, 180, 80, 400],
-      initialWidths: [200, 180, 180, 80, 400],
+      columnWidths: [200, 180, 180, 80, 400, 80],
+      initialWidths: [200, 180, 180, 80, 400, 80],
       selectedSortIdx: 0,
       contextMenuClosed: true,
       contextMenuChoices: [],
       userID: undefined,
       dropDownLeft: 200,
       dropDownTop: 300,
-      dropDownWidth: 180
+      dropDownWidth: 180,
+      labelRowHeight: 40,
+      dropDownHeight: 30,
+      uploadRecModalClosed: true,
+
+
     }
   },
 
@@ -251,6 +270,10 @@ export default defineComponent({
       this.columnWidths = this.columnWidths.map(width => width * ratio);
       this.initialWidths = this.columnWidths.slice();
     }
+    this.ensureDurationWidth();
+
+    // add observers to resize columns when window is resized
+    
   },
   
   computed: {
@@ -332,7 +355,14 @@ export default defineComponent({
       this.dropDownLeft = e.clientX;
       this.dropDownTop = e.clientY;
       this.contextMenuClosed = !this.contextMenuClosed;
+      const fileContainer = this.$refs.fileContainer as HTMLElement;
+      const rect = fileContainer.getBoundingClientRect();
+      if (this.dropDownLeft + this.dropDownWidth > rect.width - 20) {
+        this.dropDownLeft = rect.width - 30 - this.dropDownWidth;
+      }
+
       let el = document.elementFromPoint(e.clientX, e.clientY);
+      
       if (el) {
         if (el.classList.contains('metadataLabels')) {
           el = el.parentElement!;
@@ -356,6 +386,36 @@ export default defineComponent({
             this.contextMenuClosed = true;
           }
         });
+
+        // options to edit recording, delete recording, and upload new recording
+        this.contextMenuChoices.push({
+          text: 'Edit Recording',
+          action: () => this.openRecordingModal({ editing: true })
+        });
+        this.contextMenuChoices.push({
+          text: 'Delete Recording',
+          action: async () => {
+            
+            this.contextMenuClosed = true;
+            try { 
+              await deleteRecording(recording._id!);
+              this.allRecordings = await getAllAudioRecordingMetadata();
+              this.toggleSort(this.selectedSortIdx, true);
+            } catch (err) {
+              console.log(err);
+              
+            }
+
+          }
+        });
+        this.contextMenuChoices.push({
+          text: 'Upload New Recording',
+          action: () => {
+            this.openUploadModal();
+            this.contextMenuClosed = true;
+          }
+        });
+
         try {
           const tChoices = await getAllTransOfAudioFile(
             recording._id!, 
@@ -374,15 +434,18 @@ export default defineComponent({
               }
             })
           })
+
+          this.dropDownHeight = this.contextMenuChoices.length * 30;
+          const topPartHeight = rect.height + rect.top;
+          if (this.dropDownTop + this.dropDownHeight > topPartHeight - 10) {
+            this.dropDownTop = topPartHeight - 10 - this.dropDownHeight;
+          }
         } catch (err) {
           console.log(err);
         }
       }
-      const fileContainer = this.$refs.fileContainer as HTMLElement;
-      const rect = fileContainer.getBoundingClientRect();
-      if (this.dropDownLeft + this.dropDownWidth > rect.width - 20) {
-        this.dropDownLeft = rect.width - 20 - this.dropDownWidth;
-      }
+      
+      
     },
 
     getShorthand(rec: RecType) {
@@ -428,6 +491,7 @@ export default defineComponent({
             if (nextCol) {
               this.columnWidths[fIdx + 1] = this.initialWidths[fIdx + 1] - deltaX;
             }
+
           }
       }
     },
@@ -447,10 +511,29 @@ export default defineComponent({
       } 
     },
 
-    toggleSort(fIdx: number) {
+    ensureDurationWidth() {
+      // ensure duration column is wide enough to display duration label
+      const minWidth = 100;
+      const idx = this.metadataFields.findIndex(field => {
+        return field.name === 'Duration';
+      });
+      const audioEventIdx = this.metadataFields.findIndex(field => {
+        return field.name === 'Audio Event';
+      });
+      if (this.columnWidths[idx] < minWidth) {
+        const extra = minWidth - this.columnWidths[idx];
+        this.columnWidths[idx] = minWidth;
+        this.columnWidths[audioEventIdx] -= extra;
+      }
+    },
+
+    toggleSort(fIdx: number, ensureCurrentState: boolean = false) {
       const field = this.metadataFields[fIdx];
       if (this.selectedSortIdx === fIdx) {
-        if (field.sortState === 'down') {
+        if (
+          (field.sortState === 'down' && !ensureCurrentState) || 
+          (field.sortState === 'up' && ensureCurrentState)
+          ) {
           field.sortState = 'up';
           this.sortRecordings({ sort: field.sortType, fromTop: false });
         } else {
@@ -770,7 +853,16 @@ export default defineComponent({
         }
       }
 
+    },
+
+    openRecordingModal({ editing = true }: { editing?: boolean } = {}) {
+      console.log(`open recording modal, ${editing}`);
+    },
+
+    openUploadModal() {
+      console.log('open upload modal');
     }
+
   }
 })
 </script>
@@ -817,7 +909,7 @@ export default defineComponent({
   flex-direction: row;
   justify-content: left;
   align-items: center;
-  min-height: 40px;
+  min-height: v-bind(labelRowHeight + 'px');
   background-color: #1e241e;
   border-top: 1px solid grey;
 }
