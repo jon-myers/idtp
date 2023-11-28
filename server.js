@@ -1000,6 +1000,67 @@ const runServer = async () => {
         res.status(500).send(err);
       }
     })
+
+    app.post('/newUploadFile', async (req, res) => {
+      try {
+        if (!req.files) {
+          res.send({ status: false, message: 'No file uploaded' });
+        } else {
+          if (req.body.audioEventType === 'add') {
+            const audioEventID = req.body.audioEventID;
+            const recIdx = req.body.recIdx;
+            const audioFile = req.files.audioFile;
+            const tempString = `recordings.${recIdx}.audioFileId`;
+            const newUniqueId = await ObjectId();
+            const query = { _id: ObjectId(audioEventID) };
+            const update = { $set: { [tempString]: newUniqueId } };
+            const options = { upsert: true };
+            await audioEvents.updateOne(query, update, options);
+            // here we should also update the audioRecordings collection
+            // with the new audio file, so as not to rely on the aggregation
+            // which generates from audioEvents forever.
+            const suffix = getSuffix(audioFile.mimetype);
+            let fileName = newUniqueId + suffix;
+            audioFile.mv('./uploads/' + fileName);
+            if (suffix === '.opus') {
+              const newFileName = newUniqueId + '.wav';
+              const spawnArgs = ['-i', './uploads/' + fileName, './uploads/' + newFileName];
+              const convertToOpus = spawn('ffmpeg', spawnArgs)
+              fileName = newFileName;
+              convertToOpus.stderr.on('data', data => {
+                console.error(`stderr: ${data}`)
+              });
+              convertToOpus.on('close', () => {
+                console.log('opus conversion finished')
+              })
+            }
+            const spawnArr = ['process_audio.py', fileName, audioEventID, recIdx];
+            const processAudio = spawn('python3', spawnArr);
+            processAudio.stderr.on('data', data => {
+              console.error(`stderr: ${data}`)
+            });
+            processAudio.on('close', () => {
+              console.log('audio processing finished')
+              res.send({
+                status: true,
+                message: 'File is uploaded',
+                data: {
+                  name: audioFile.name,
+                  mimetype: audioFile.mimetype,
+                  size: audioFile.size,
+                  audioFileId: newUniqueId
+                }
+              });
+            });
+          } else {
+            throw new Error('audioEventType not yet implemented')
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
     
     app.post('/upload-avatar', async (req, res) => {
     // upload files, and send back progress, via axios (doesn't work with fetch)

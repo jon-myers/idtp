@@ -87,12 +87,16 @@
     :closed='contextMenuClosed'
     :choices='contextMenuChoices'
     />
+  <UploadRecording 
+    v-if='!uploadRecModalClosed'
+  />
 </template>
 
 <script lang='ts'>
 import { defineComponent } from 'vue';
 import AudioPlayer from '@/components/audioRecordings/ARAudioPlayer.vue';
 import ContextMenu from '@/components/ContextMenu.vue';
+import UploadRecording from '@/components/audioRecordings/UploadRecording.vue';
 import { 
   getAllAudioRecordingMetadata, 
   getSortedMusicians,
@@ -230,7 +234,7 @@ export default defineComponent({
     }
   },
 
-  components: { AudioPlayer, ContextMenu },
+  components: { AudioPlayer, ContextMenu, UploadRecording },
 
   async created() {
     window.addEventListener('keydown', this.handleKeydown);
@@ -422,6 +426,7 @@ export default defineComponent({
             recording._id!, 
             this.userID!
           );
+          console.log(tChoices)
           tChoices.forEach(tc => {
             this.contextMenuChoices.push({
               text: `Open file: "${tc.title}" by ${tc.name}`,
@@ -883,6 +888,7 @@ export default defineComponent({
 
     openUploadModal() {
       console.log('open upload modal');
+      this.uploadRecModalClosed = false;
     }
 
   }

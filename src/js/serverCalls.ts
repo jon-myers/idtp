@@ -244,7 +244,11 @@ const getAudioRecording = async (_id: string): Promise<RecType> => {
   return audioRecording
 };
 
-const getAllTransOfAudioFile = async (audioID: string, userID: string) => {
+const getAllTransOfAudioFile = async (audioID: string, userID: string): Promise<{
+  name: string,
+  title: string,
+  _id: string
+}[]> => {
   let allTrans;
   const suffix = '?' + new URLSearchParams({
     audioID: audioID,
@@ -262,10 +266,11 @@ const getAllTransOfAudioFile = async (audioID: string, userID: string) => {
     if (response.ok) {
       allTrans = await response.json()
     }
-    return allTrans
+    
   } catch (err) {
     console.error(err)
   }
+  return allTrans
 };
 
 const getSortedMusicians = async (verbose=false): Promise<(string | {
@@ -799,6 +804,52 @@ const uploadFile = async (
   }
 }
 
+const newUploadFile = async (file: File, onProgress: OnProgressType, {
+  audioEventType = 'add',
+  audioEventID = undefined,
+  recIdx = undefined
+}: {
+  audioEventType?: 'add' | 'create' | 'none',
+  audioEventID?: string,
+  recIdx?: number
+} = {}) => {
+  console.log('getting to newUploadFile server call')
+  if (audioEventType === 'add') {
+    if (audioEventID === undefined) {
+      throw new Error('audioEventID must be defined')
+    }
+    if (recIdx === undefined) {
+      throw new Error('recIdx must be defined')
+    }
+    const formData = new FormData();
+    formData.append('audioFile', file);
+    formData.append('audioEventID', audioEventID);
+    formData.append('recIdx', String(recIdx));
+    formData.append('audioEventType', audioEventType);
+    const config = {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress: (progressEvent: AxiosProgressEvent) => {
+        const progressPercent = 100 * progressEvent.loaded / progressEvent.total!;
+        if (onProgress) onProgress(progressPercent);
+        return progressPercent
+      }
+    };
+    try {
+      const response = await axios.post(url+'newUploadFile', formData, config)
+      if (response.statusText !== 'OK') {
+        throw new Error(`Error! status: ${response.status}`)
+      }
+      return response.data;
+    } catch (err) {
+      console.log(err)
+    }
+  } else {
+    throw new Error('Not implemented yet')
+  }
+}
+
 type UserDataType = {
   sub: string,
   picture: string,
@@ -1135,6 +1186,7 @@ export {
   getAudioDBEntry,
   getAllAudioRecordingMetadata,
   uploadFile,
+  newUploadFile,
   getSortedMusicians,
   getEventTypes,
   getGharana,
