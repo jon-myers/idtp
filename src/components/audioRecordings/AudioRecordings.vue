@@ -17,6 +17,7 @@
         <span class='field'>
           {{ field.name }}
           <span 
+            v-if='field.sortType !== undefined'
             :class='`sortTriangle ${field.sortState}`'
             @click='toggleSort(fIdx)'
             :style='{
@@ -713,6 +714,24 @@ export default defineComponent({
 
     },
 
+    trackNumSorter(a: RecType, b: RecType) {
+      if (a.parentTrackNumber === undefined && b.parentTrackNumber === undefined) {
+        return 0;
+      } else if (a.parentTrackNumber === undefined && b.parentTrackNumber !== undefined) {
+        return 1;
+      } else if (a.parentTrackNumber !== undefined && b.parentTrackNumber === undefined) {
+        return -1;
+      } else {
+        if (a.parentTrackNumber! < b.parentTrackNumber!) {
+          return -1;
+        } else if (a.parentTrackNumber! > b.parentTrackNumber!) {
+          return 1;
+        } else {
+          return 0;
+        }
+      }
+    },
+
     soloistSorter(a: RecType, b: RecType) {
       // get last name by looking up soloist in allMusicians array,
       // then sort by last name, then first name, then middle name. If there 
@@ -838,10 +857,13 @@ export default defineComponent({
           this.allRecordings.reverse();
         }
       } else if (sort === 'audioEvent') {
+        this.allRecordings.sort(this.trackNumSorter)
         this.allRecordings.sort(this.eventSorter)
         if (!fromTop) {
           this.allRecordings.reverse();
         }
+      } else if (sort === 'trackNum') {
+        this.allRecordings.sort(this.trackNumSorter)
       }
       if (this.activeRecording !== undefined) {
         const idx = this.allRecordings.findIndex(rec => {
