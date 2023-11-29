@@ -89,11 +89,10 @@ export default defineComponent({
         { name: 'Files', path: '/files' },
         { name: 'Editor', path: '/editor' },
         { name: 'Audio Events', path: '/audioEvents' },
-        { name: 'Recordings', path: '/audioRecordings'},
+        // { name: 'Recordings', path: '/audioRecordings'},
         { name: 'Raag Editor', path: '/raagEditor' },
         { name: 'Analyzer', path: '/analyzer' }
       ]
-
     }
   },
 
