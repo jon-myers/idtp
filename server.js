@@ -140,6 +140,7 @@ const runServer = async () => {
     const audioRecordings = db.collection('audioRecordings');
     const users = db.collection('users');
     const phonemes = db.collection('phonemes');
+    const collections = db.collection('collections');
       
     app.post('/insertNewTranscription', async (req, res) => {
       // creates new transcription entry in transcriptions collection
@@ -316,6 +317,17 @@ const runServer = async () => {
       }
       try {
         const result = await audioRecordings.find().project(projection).toArray();
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
+
+    app.post('/createCollection', async (req, res) => {
+      // create a new collection
+      try {
+        const result = await collections.insertOne(req.body);
         res.json(result)
       } catch (err) {
         console.error(err);

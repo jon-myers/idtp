@@ -4,7 +4,8 @@ import { AxiosProgressEvent } from 'axios';
 import fetch from 'cross-fetch';
 import { Piece } from './classes.ts';
 import { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
-import { UserType } from '@/components/files/FileManager.vue';
+import { UserType } from '@/ts/types.ts';
+import { CollectionType } from '@/ts/types.ts';
 // import { URLSearchParams } from 'url';
 const getPiece = async (id: string): Promise<Piece> => {
   let piece;
@@ -153,26 +154,28 @@ const getAllPieces = async (
   return allPieces
 };
 
-// const getAllAudioFileMetaData = async () => {
-//   let allAudio;
-//   let request = {
-//     method: 'GET',
-//     headers: {
-//       'Content-Type': 'application/json'
-//     },
-//   };
-//   await fetch(url + 'getAllAudioFileMetaData', request)
-//     .then(response => {
-//       if (response.ok) {
-//         return response.json();
-//       }
-//     }).then(data => {
-//       if (data) {
-//         allAudio = data
-//       }
-//     }).catch(err => console.error(err));
-//   return allAudio
-// };
+const createCollection = async (collection: CollectionType) => {
+  let result: undefined | { acknowledged: boolean, insertedId: string };
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(collection)
+  };
+  try {
+    const res = await fetch(url + 'createCollection', request);
+    if (res.ok) {
+      result = await res.json()
+    } else {
+      console.error(res)
+    }
+    
+  } catch (err) {
+    console.error(err)
+  }
+  return result
+}
 
 const getAllAudioRecordingMetadata = async () => {
   let allAudio;
@@ -1246,5 +1249,6 @@ export {
   updateTranscriptionOwner,
   getMelographJSON,
   makeMelograph,
-  deleteRecording
+  deleteRecording,
+  createCollection
 }
