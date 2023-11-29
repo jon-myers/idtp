@@ -14,7 +14,6 @@
             :id='`ae${aeIdx}`'
             @dblclick='toggleDisplay($event, ae, true)'
             >
-            
             <span @click='toggleDisplay($event, ae, false)'>&#9654;</span>
             <label>{{ae.name}}</label>
           </div>
@@ -96,8 +95,8 @@ import {
   deleteAudioEvent,
   getAllTransOfAudioFile,
 } from '@/js/serverCalls.ts';
-import AddAudioEvent from '@/components/AddAudioEvent.vue';
-import AudioPlayer from '@/components/AudioPlayer.vue';
+import AddAudioEvent from '@/components/audioEvents/AddAudioEvent.vue';
+import AudioPlayer from '@/components/audioEvents/AudioPlayer.vue';
 import { defineComponent } from 'vue';
 import ContextMenu from '@/components/ContextMenu.vue';
 
@@ -114,7 +113,7 @@ const displayTime = (dur: number) => {
   }
 }
 
-import type { AudioEventType, RecType, RaagType } from '@/components/AddAudioEvent.vue'
+import type { AudioEventType, RecType, RaagType } from '@/components/audioEvents/AddAudioEvent.vue'
 
 type AudioEventsDataType = {
   infoKeys: string[],
@@ -154,7 +153,7 @@ export default defineComponent({
         'Name', 
       ],
       playingIdx: undefined,
-      // getAllAudioFileMetaData: getAllAudioFileMetaData,
+      // getAllAudioRecordingMetadata: getAllAudioRecordingMetadata,
       allAudioEvents: undefined,
       performers: undefined,
       colHeight: 30,
@@ -185,7 +184,6 @@ export default defineComponent({
     AddAudioEvent, AudioPlayer, ContextMenu
   },
 
-  
   async created() {
     window.addEventListener('keydown', this.handleKeydown);
     if (this.$store.state.userID === undefined) {
@@ -204,7 +202,6 @@ export default defineComponent({
     } catch (err) {
       console.log(err)
     }
-    
   },
   
   beforeUnmount() {
@@ -216,7 +213,6 @@ export default defineComponent({
     window.removeEventListener('keydown', this.handleKeydown);
   },
 
-  
   methods: {
 
     resetAddEvent() {
@@ -276,7 +272,6 @@ export default defineComponent({
       if (e.key === 'Escape') {
         e.preventDefault();
         this.contextMenuClosed = true;
-
       }
     },
 

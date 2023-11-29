@@ -52,7 +52,7 @@
 </template>
 <script lang='ts'>
 
-import AddAudioFile from '@/components/AddAudioFile.vue';
+import AddAudioFile from '@/components/audioEvents/AddAudioFile.vue';
 import { 
   getEventTypes, 
   initializeAudioEvent, 
@@ -104,7 +104,7 @@ type MusicianType = {
   gharana: string
 }
 
-import type { RecObjType } from '@/components/AddAudioFile.vue';
+import type { RecObjType } from '@/components/audioEvents/AddAudioFile.vue';
 
 type PSecType = {
   end: number,
@@ -142,6 +142,9 @@ type RecType = {
   saEstimate: number,
   saVerified: boolean,
   _id?: string,
+  parentID?: string,
+  parentTitle?: string,
+  parentTrackNumber?: string
 }
 
 type AudioEventType = {

@@ -3,8 +3,8 @@ import axios from 'axios';
 import { AxiosProgressEvent } from 'axios';
 import fetch from 'cross-fetch';
 import { Piece } from './classes.ts';
-import { RecType } from '@/components/AddAudioEvent.vue';
-import { UserType } from '@/components/FileManager.vue';
+import { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
+import { UserType } from '@/components/files/FileManager.vue';
 // import { URLSearchParams } from 'url';
 const getPiece = async (id: string): Promise<Piece> => {
   let piece;
@@ -153,26 +153,26 @@ const getAllPieces = async (
   return allPieces
 };
 
-const getAllAudioFileMetaData = async () => {
-  let allAudio;
-  let request = {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-  };
-  await fetch(url + 'getAllAudioFileMetaData', request)
-    .then(response => {
-      if (response.ok) {
-        return response.json();
-      }
-    }).then(data => {
-      if (data) {
-        allAudio = data
-      }
-    }).catch(err => console.error(err));
-  return allAudio
-};
+// const getAllAudioFileMetaData = async () => {
+//   let allAudio;
+//   let request = {
+//     method: 'GET',
+//     headers: {
+//       'Content-Type': 'application/json'
+//     },
+//   };
+//   await fetch(url + 'getAllAudioFileMetaData', request)
+//     .then(response => {
+//       if (response.ok) {
+//         return response.json();
+//       }
+//     }).then(data => {
+//       if (data) {
+//         allAudio = data
+//       }
+//     }).catch(err => console.error(err));
+//   return allAudio
+// };
 
 
 type AudioEventMetadataType = {
@@ -245,7 +245,11 @@ const getAudioRecording = async (_id: string): Promise<RecType> => {
   return audioRecording
 };
 
-const getAllTransOfAudioFile = async (audioID: string, userID: string) => {
+const getAllTransOfAudioFile = async (audioID: string, userID: string): Promise<{
+  name: string,
+  title: string,
+  _id: string
+}[]> => {
   let allTrans;
   const suffix = '?' + new URLSearchParams({
     audioID: audioID,
@@ -263,37 +267,19 @@ const getAllTransOfAudioFile = async (audioID: string, userID: string) => {
     if (response.ok) {
       allTrans = await response.json()
     }
-    return allTrans
+    
   } catch (err) {
     console.error(err)
   }
+  return allTrans
 };
 
-// const getSortedMusicians = async () => {
-//   // query 'musicians' mongoDB collection to get all musicians in alphabetical 
-//   // order
-//   let allMusicians;
-//   let request = {
-//     method: 'GET',
-//     headers: {
-//       'Content-Type': 'application/json'
-//     },
-//   };
-//   await fetch(url + 'getSortedMusicians', request)
-//     .then(res => {
-//       if (res.ok) {
-//         return res.json();
-//       }
-//     }).then(data => {
-//       if (data) {
-//         allMusicians = data
-//       }
-//     }).catch(err => console.error(err))
-//   return allMusicians
-// };
-
-
-const getSortedMusicians = async (): Promise<string[]> => {
+const getSortedMusicians = async (verbose=false): Promise<(string | {
+  'First Name'?: string,
+  'Last Name'?: string,
+  'Initial Name': string,
+  'Middle Name'?: string,
+})[]> => {
   let allMusicians: string[] = [];
   let request = {
     method: 'GET',
@@ -301,8 +287,12 @@ const getSortedMusicians = async (): Promise<string[]> => {
       'Content-Type': 'application/json'
     },
   };
+  // const query = '?' + new URLSearchParams({ verbose: verbose.toString() });
+  const query = verbose ? '?' + new URLSearchParams({ verbose: verbose.toString() }): '';
+  const fullQuery = url + 'getSortedMusicians' + query;
   try {
-    const res = await fetch(url + 'getSortedMusicians', request);
+    
+    const res = await fetch(fullQuery, request);
     if (res.ok) {
       allMusicians = await res.json()
     }
@@ -311,6 +301,8 @@ const getSortedMusicians = async (): Promise<string[]> => {
   }
   return allMusicians
 }
+
+
 
 const getEventTypes = async () => {
   // query 'audioEventTypes' mongoDB collection to get all event types
@@ -608,6 +600,29 @@ const deleteAudioEvent = async (aeID: string) => {
   }
 }
 
+const deleteRecording = async (recID: string) => {
+  // delete a particular recording
+  let out;
+  let request = {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      '_id': recID
+    })
+  };
+  try {
+    const response = await fetch(url + 'deleteRecording', request);
+    if (response.ok) {
+      out = await response.json();
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+};
+
 const initializeAudioEvent = async (userID: string) => {
   const request = {
     method: 'POST',
@@ -787,6 +802,52 @@ const uploadFile = async (
     return response.data;
   } catch (err) {
     console.log(err)
+  }
+}
+
+const newUploadFile = async (file: File, onProgress: OnProgressType, {
+  audioEventType = 'add',
+  audioEventID = undefined,
+  recIdx = undefined
+}: {
+  audioEventType?: 'add' | 'create' | 'none',
+  audioEventID?: string,
+  recIdx?: number
+} = {}) => {
+  console.log('getting to newUploadFile server call')
+  if (audioEventType === 'add') {
+    if (audioEventID === undefined) {
+      throw new Error('audioEventID must be defined')
+    }
+    if (recIdx === undefined) {
+      throw new Error('recIdx must be defined')
+    }
+    const formData = new FormData();
+    formData.append('audioFile', file);
+    formData.append('audioEventID', audioEventID);
+    formData.append('recIdx', String(recIdx));
+    formData.append('audioEventType', audioEventType);
+    const config = {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress: (progressEvent: AxiosProgressEvent) => {
+        const progressPercent = 100 * progressEvent.loaded / progressEvent.total!;
+        if (onProgress) onProgress(progressPercent);
+        return progressPercent
+      }
+    };
+    try {
+      const response = await axios.post(url+'newUploadFile', formData, config)
+      if (response.statusText !== 'OK') {
+        throw new Error(`Error! status: ${response.status}`)
+      }
+      return response.data;
+    } catch (err) {
+      console.log(err)
+    }
+  } else {
+    throw new Error('Not implemented yet')
   }
 }
 
@@ -1124,8 +1185,9 @@ export {
   deletePiece,
   deleteAudioEvent,
   getAudioDBEntry,
-  getAllAudioFileMetaData,
+  // getAllAudioFileMetaData,
   uploadFile,
+  newUploadFile,
   getSortedMusicians,
   getEventTypes,
   getGharana,
@@ -1162,5 +1224,6 @@ export {
   getAllUsers,
   updateTranscriptionOwner,
   getMelographJSON,
-  makeMelograph
+  makeMelograph,
+  deleteRecording
 }

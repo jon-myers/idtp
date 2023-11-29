@@ -212,11 +212,11 @@ import {
   uploadFile
 } from '@/js/serverCalls.ts';
 
-import AddRaag from '@/components/AddRaag.vue';
+import AddRaag from '@/components/audioEvents/AddRaag.vue';
 
 import type { LocationType } from '@/js/serverCalls.ts';
-import { AddAudioEventDataType, RaagType } from '@/components/AddAudioEvent.vue';
-import type { AddRaagDataType } from '@/components/AddRaag.vue';
+import { AddAudioEventDataType, RaagType } from '@/components/audioEvents/AddAudioEvent.vue';
+import type { AddRaagDataType } from '@/components/audioEvents/AddRaag.vue';
 
 type RaagTimingType = {
   start: {
