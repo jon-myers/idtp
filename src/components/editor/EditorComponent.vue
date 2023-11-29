@@ -634,6 +634,7 @@ export default defineComponent({
       IPLims: [0, 0],
       melographJSON: undefined,
       melographVisible: false,
+      selectedPhraseDivIdx: undefined,
     }
   },
   components: {
@@ -2877,6 +2878,7 @@ export default defineComponent({
     },
     
     addNewPhraseDiv(idx: number) {
+      console.log(idx)
       const phrase = this.piece.phrases[idx];
       const time = phrase.startTime! + phrase.durTot!;
       const drag = () => {
@@ -3446,6 +3448,7 @@ export default defineComponent({
         console.log('phrase div drag end')
         e.sourceEvent.preventDefault();
         e.sourceEvent.stopPropagation();
+        console.log(this.selectedPhraseDivIdx)
         if (this.selectedPhraseDivIdx !== undefined) {
           this.justEnded = true;
           d3Select(`#transparentPhraseLine${i}`).remove();

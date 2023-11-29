@@ -23,6 +23,34 @@ async function exists (path) {
   }
 }
 
+const deleteFiles = async (audioID) => {
+  const peaksPath = 'peaks/' + audioID + '.json';
+  const spectrogramsPath = 'spectrograms/' + audioID;
+  const mp3Path = 'audio/mp3/' + audioID + '.mp3';
+  const wavPath = 'audio/wav/' + audioID + '.wav';
+  const opusPath = 'audio/opus/' + audioID + '.opus';
+  const peaksPathExists = await exists(peaksPath);
+  const spectrogramsPathExists = await exists(spectrogramsPath);
+  const mp3PathExists = await exists(mp3Path);
+  const wavPathExists = await exists(wavPath);
+  const opusPathExists = await exists(opusPath);
+  if (peaksPathExists) {
+    fs.unlink(peaksPath)
+  }
+  if (spectrogramsPathExists) {
+    fs.rm(spectrogramsPath, { recursive: true, force: true })
+  }
+  if (mp3PathExists) {
+    fs.unlink(mp3Path)
+  }
+  if (wavPathExists) {
+    fs.unlink(wavPath)
+  }
+  if (opusPathExists) {
+    fs.unlink(opusPath)
+  }
+}
+
 const getSuffix = mimetype => {
   // TODO add other audio file types
   const end = mimetype.split('/')[1];
@@ -247,30 +275,25 @@ const runServer = async () => {
 
     })
 
-    app.get('/getAllAudioRecordingMetadata', async (req, res) => {
-      // get all relevent data for audio files
-      const projection = {
-        raags: 1,
-        musicians: 1,
-        parentID: 1,
-        _id: 1,
-        duration: 1,
-        saEstimate: 1,
-        saVerified: 1,
-        date: 1,
-        location: 1,
-        octOffset: 1,
-        parentTitle: 1,
-        parentTrackNumber: 1,
-      }
-      try {
-        const result = await audioRecordings.find().project(projection).toArray();
-        res.json(result)
-      } catch (err) {
-        console.error(err);
-        res.status(500).send(err);
-      }
-    });
+    // app.get('/getAllAudioFileMetaData', async (req, res) => {
+    //   // get all relevent data for audio files
+    //   const projection = {
+    //     raag: 1,
+    //     performers: 1,
+    //     _id: 1,
+    //     duration: 1,
+    //     fundamental: 1,
+    //     fileNumber: 1,
+    //     year: 1,
+    //   }
+    //   try {
+    //     const result = await audioFiles.find().project(projection).toArray();
+    //     res.json(result)
+    //   } catch (err) {
+    //     console.error(err);
+    //     res.status(500).send(err);
+    //   }
+    // });
 
     app.get('/getAllAudioEventMetadata', async (req, res) => {
       // retreive metadata for all audio events
@@ -697,7 +720,6 @@ const runServer = async () => {
           const result = await audioEvents.updateOne(query, update, options);
           res.json(result);
         }
-        
         aggregations.generateAudioRecordingsDB();
         
       } catch (err) {
@@ -1076,6 +1098,23 @@ const runServer = async () => {
           const query = { _id: ObjectId(parentId) };
           const update = { $set: { [tempString]: newUniqueId } };
           const options = { upsert: true };
+          // first, find the existing audio event.
+          // if there is another audio file already, use that id to search
+          // the transcriptions db via the audioID field. For each transcription
+          // found, update the audioID field to the new id. Then, delete any audio, 
+          // spectrograms, melographs, and peaks files associated with the old id.
+          // Then, delete the old id from the audioRecordings db.
+          const ae = await audioEvents.findOne(query);
+          if (ae.recordings && ae.recordings[idx]) {
+            const oldId = ae.recordings[idx].audioFileId.toString();
+            const tQuery = { audioID: oldId };
+            const tUpdate = { $set: { audioID: newUniqueId } };
+            const tOptions = { upsert: true };
+            await transcriptions.updateMany(tQuery, tUpdate, tOptions);
+            await deleteFiles(oldId);
+            const arQuery = { _id: oldId };
+            audioRecordings.deleteOne(arQuery);
+          }
           await audioEvents.updateOne(query, update, options)
           const suffix = getSuffix(avatar.mimetype);
           let fileName = newUniqueId + suffix;
