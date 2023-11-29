@@ -154,17 +154,6 @@ import { defineComponent } from 'vue';
 import { RecType } from '@/components/audioEvents/AddAudioEvent.vue'
 
 
-type UserType = {
-  email: string;
-  family_name: string;
-  given_name: string;
-  name: string;
-  picture: string;
-  sub: string;
-  waiverAgreed: boolean;
-  _id: string;
-}
-
 type FileManagerType = {
   infoKeys: string[];
   designPieceModal: boolean;
