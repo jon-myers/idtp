@@ -153,26 +153,26 @@ const getAllPieces = async (
   return allPieces
 };
 
-const getAllAudioFileMetaData = async () => {
-  let allAudio;
-  let request = {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-  };
-  await fetch(url + 'getAllAudioFileMetaData', request)
-    .then(response => {
-      if (response.ok) {
-        return response.json();
-      }
-    }).then(data => {
-      if (data) {
-        allAudio = data
-      }
-    }).catch(err => console.error(err));
-  return allAudio
-};
+// const getAllAudioFileMetaData = async () => {
+//   let allAudio;
+//   let request = {
+//     method: 'GET',
+//     headers: {
+//       'Content-Type': 'application/json'
+//     },
+//   };
+//   await fetch(url + 'getAllAudioFileMetaData', request)
+//     .then(response => {
+//       if (response.ok) {
+//         return response.json();
+//       }
+//     }).then(data => {
+//       if (data) {
+//         allAudio = data
+//       }
+//     }).catch(err => console.error(err));
+//   return allAudio
+// };
 
 
 type AudioEventMetadataType = {
@@ -1124,7 +1124,7 @@ export {
   deletePiece,
   deleteAudioEvent,
   getAudioDBEntry,
-  getAllAudioFileMetaData,
+  // getAllAudioFileMetaData,
   uploadFile,
   getSortedMusicians,
   getEventTypes,
