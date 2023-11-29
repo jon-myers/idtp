@@ -1,27 +1,18 @@
 <template>
   <div id='nav' @click='handleNavClick'>
-    <router-link class='routerLink' to='/files/' @click='clickLink("files")'>
-      <div class='link'>Files</div>
-    </router-link>
-    <router-link class='routerLink' to='/editor'>
-      <div class='link'>Editor</div>
-    </router-link>
     <router-link 
       class='routerLink' 
-      to='/audioEvents' 
-      @click='clickLink("audioEvents")'
+      v-for='choice in navChoices' 
+      :key='choice.name'
+      :to='choice.path'
+      @click='clickLink(choice.path)'
       >
-      <div class='link'>Audio Events</div>
-    </router-link>
-    <router-link 
-      class='routerLink' 
-      to='/raagEditor'
-      @click='clickLink("raagEditor")'
-      >
-      <div class='link'>Raag Editor</div>
-    </router-link>
-    <router-link class='routerLink' to='/analyzer'>
-      <div class='link'>Analyzer</div>
+      <div 
+        class='link'
+        :class='{active: $route.path === choice.path}'
+        >
+        {{ choice.name }}
+      </div>
     </router-link>
     <div class='gap'></div>
     <div class='imgBox' @click='handleUsrImgClick'>
@@ -77,6 +68,7 @@ type NavBarDataType = {
   defaultUsrImgUrl: string,
   lastName?: string,
   name?: string,
+  navChoices: { name: string, path: string }[]
 }
 
 export default defineComponent({
@@ -93,6 +85,14 @@ export default defineComponent({
       defaultUsrImgUrl: defaultUsrImgUrl,
       lastName: undefined,
       name: undefined,
+      navChoices: [
+        { name: 'Files', path: '/files' },
+        { name: 'Editor', path: '/editor' },
+        { name: 'Audio Events', path: '/audioEvents' },
+        { name: 'Recordings', path: '/audioRecordings'},
+        { name: 'Raag Editor', path: '/raagEditor' },
+        { name: 'Analyzer', path: '/analyzer' }
+      ]
 
     }
   },
@@ -181,11 +181,13 @@ export default defineComponent({
     },
 
     clickLink(category: string) {
-      if (category === 'files') {
+      if (category === '/files') {
         useTitle('File Manager')
-      } else if (category === 'audioEvents') {
+      } else if (category === '/audioEvents') {
         useTitle('Audio Events')
-      } else if (category === 'raagEditor') {
+      } else if (category === '/audioRecordings') {
+        useTitle('Audio Recordings')
+      } else if (category === '/raagEditor') {
         useTitle('Raag Editor')
       }
     },

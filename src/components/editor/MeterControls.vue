@@ -146,14 +146,14 @@
 
 import { Meter } from '@/js/meter.ts';
 import { Piece } from '@/js/classes.ts';
-import { findClosestStartTime } from '@/components/EditorComponent.vue'
+import { findClosestStartTime } from '@/components/editor/EditorComponent.vue'
 import { 
   selectAll as d3SelectAll,
   select as d3Select,
  } from 'd3';
 
 import { defineComponent, PropType } from 'vue';
-import EditorComponent from '@/components/EditorComponent.vue';
+import EditorComponent from '@/components/editor/EditorComponent.vue';
  
 
 type MeterControlsDataType = {

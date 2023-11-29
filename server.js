@@ -353,6 +353,73 @@ const runServer = async () => {
       }    
     });
 
+    app.delete('/deleteRecording', async (req, res) => {
+      // delete a particular recording
+      try {
+        const query1 = { "_id": ObjectId(req.body._id) };
+        const found1 = await audioRecordings.findOne(query1);
+        const parentID = found1.parentID;
+        const result1 = await audioRecordings.deleteOne(query1);
+        // also delete recording from audioevent, if rec has associated audio
+        // event
+        const query2 = { "_id": ObjectId(parentID) };
+        const projection = { 'recordings': 1, '_id': 0 };
+        const result2 = await audioEvents.findOne(query2, projection);
+        const recordings = result2.recordings;
+        const newRecordings = {};
+        let count = 0;
+        for (let idx in recordings) {
+          if (recordings[idx].audioFileId.toString() !== req.body._id) {
+            newRecordings[count] = recordings[idx];
+            count++;
+          }
+        }
+        result2.recordings = newRecordings;
+        const result3 = await audioEvents.updateOne(query2, { 
+          $set: {recordings: newRecordings}
+        });
+        // if no recs left, delete audio event
+        let result4 = undefined;
+        if (Object.keys(newRecordings).length === 0) {
+          result4 = await audioEvents.deleteOne(query2);
+        }
+        if (result4 !== undefined) {
+          res.json({ result1, result2, result3, result4 });
+        } else {
+          res.json({ result1, result2, result3 });
+        }
+
+        const peaksPath = 'peaks/' + req.body._id + '.json';
+        const spectrogramsPath = 'spectrograms/' + req.body._id;
+        const mp3Path = 'audio/mp3/' + req.body._id + '.mp3';
+        const wavPath = 'audio/wav/' + req.body._id + '.wav';
+        const opusPath = 'audio/opus/' + req.body._id + '.opus';
+        const peaksPathExists = await exists(peaksPath);
+        const spectrogramsPathExists = await exists(spectrogramsPath);
+        const mp3PathExists = await exists(mp3Path);
+        const wavPathExists = await exists(wavPath);
+        const opusPathExists = await exists(opusPath);
+        if (peaksPathExists) {
+          fs.unlink(peaksPath)
+        }
+        if (spectrogramsPathExists) {
+          fs.rm(spectrogramsPath, { recursive: true, force: true })
+        }
+        if (mp3PathExists) {
+          fs.unlink(mp3Path)
+        }
+        if (wavPathExists) {
+          fs.unlink(wavPath)
+        }
+        if (opusPathExists) {
+          fs.unlink(opusPath)
+        }
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }    
+    });
+
     app.delete('/deleteAudioEvent', async (req, res) => {
       // delete a particular audio event
       try {
@@ -363,6 +430,10 @@ const runServer = async () => {
         const idxs = Object.keys(recordings);
         idxs.forEach(async idx => {
           const recID = recordings[idx].audioFileId?.toString();
+          //  remove from audioRecordings collection
+          const query = { '_id': ObjectId(recID) };
+          const result = await audioRecordings.deleteOne(query);
+          console.log(result)
           // remove from peaks folder
           const peaksPath = 'peaks/' + recID + '.json';
           const spectrogramsPath = 'spectrograms' + recID;
@@ -416,9 +487,15 @@ const runServer = async () => {
       //Get all names of all musicians from db, sorted
       const sorts = { 'Last Name': 1, 'First Name': 1, 'Middle Name': 1};
       const proj = { 'Initial Name': 1, _id: 0 };
+      if (req.query.verbose === 'true') {
+        proj['First Name'] = 1;
+        proj['Last Name'] = 1;
+        proj['Middle Name'] = 1;
+      }
       try {
         let result = await musicians.find().sort(sorts).project(proj).toArray();
-        res.json(result.map(r => r['Initial Name']))
+        const output = req.query.verbose === 'true' ? result : result.map(r => r['Initial Name']);
+        res.json(output)
       } catch (err) {
         console.error(err);
         res.status(500).send(err);
@@ -631,6 +708,7 @@ const runServer = async () => {
       const query = { _id: parentId };
       const update = { $set: myUpdates };
       const options = { upsert: true };
+      console.log(addMusicians)
       try {
         if (addMusicians.length > 0) {
           const [result1, result2] = await Promise.all([
@@ -939,6 +1017,67 @@ const runServer = async () => {
         musiciansArr.sort((a, b) => ordering[a.role] - ordering[b.role]);
         const instrumentation = musiciansArr.map(m => m.instrument);
         res.json(instrumentation);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
+    app.post('/newUploadFile', async (req, res) => {
+      try {
+        if (!req.files) {
+          res.send({ status: false, message: 'No file uploaded' });
+        } else {
+          if (req.body.audioEventType === 'add') {
+            const audioEventID = req.body.audioEventID;
+            const recIdx = req.body.recIdx;
+            const audioFile = req.files.audioFile;
+            const tempString = `recordings.${recIdx}.audioFileId`;
+            const newUniqueId = await ObjectId();
+            const query = { _id: ObjectId(audioEventID) };
+            const update = { $set: { [tempString]: newUniqueId } };
+            const options = { upsert: true };
+            await audioEvents.updateOne(query, update, options);
+            // here we should also update the audioRecordings collection
+            // with the new audio file, so as not to rely on the aggregation
+            // which generates from audioEvents forever.
+            const suffix = getSuffix(audioFile.mimetype);
+            let fileName = newUniqueId + suffix;
+            audioFile.mv('./uploads/' + fileName);
+            if (suffix === '.opus') {
+              const newFileName = newUniqueId + '.wav';
+              const spawnArgs = ['-i', './uploads/' + fileName, './uploads/' + newFileName];
+              const convertToOpus = spawn('ffmpeg', spawnArgs)
+              fileName = newFileName;
+              convertToOpus.stderr.on('data', data => {
+                console.error(`stderr: ${data}`)
+              });
+              convertToOpus.on('close', () => {
+                console.log('opus conversion finished')
+              })
+            }
+            const spawnArr = ['process_audio.py', fileName, audioEventID, recIdx];
+            const processAudio = spawn('python3', spawnArr);
+            processAudio.stderr.on('data', data => {
+              console.error(`stderr: ${data}`)
+            });
+            processAudio.on('close', () => {
+              console.log('audio processing finished')
+              res.send({
+                status: true,
+                message: 'File is uploaded',
+                data: {
+                  name: audioFile.name,
+                  mimetype: audioFile.mimetype,
+                  size: audioFile.size,
+                  audioFileId: newUniqueId
+                }
+              });
+            });
+          } else {
+            throw new Error('audioEventType not yet implemented')
+          }
+        }
       } catch (err) {
         console.error(err);
         res.status(500).send(err);
