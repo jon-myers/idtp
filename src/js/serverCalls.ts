@@ -174,6 +174,26 @@ const getAllPieces = async (
 //   return allAudio
 // };
 
+const getAllAudioRecordingMetadata = async () => {
+  let allAudio;
+  let request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  };
+  await fetch(url + 'getAllAudioRecordingMetadata', request)
+    .then(response => {
+      if (response.ok) {
+        return response.json();
+      }
+    }).then(data => {
+      if (data) {
+        allAudio = data
+      }
+    }).catch(err => console.error(err));
+  return allAudio
+}
 
 type AudioEventMetadataType = {
   _id: string,
@@ -1186,6 +1206,7 @@ export {
   deleteAudioEvent,
   getAudioDBEntry,
   // getAllAudioFileMetaData,
+  getAllAudioRecordingMetadata,
   uploadFile,
   newUploadFile,
   getSortedMusicians,

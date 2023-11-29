@@ -295,6 +295,34 @@ const runServer = async () => {
     //   }
     // });
 
+    app.get('/getAllAudioRecordingMetadata', async (req, res) => {
+      // get all relevent data for audio files
+      const projection = {
+        performers: 1,
+        musicians: 1,
+        raags: 1,
+        _id: 1,
+        duration: 1,
+        fundamental: 1,
+        fileNumber: 1,
+        year: 1,
+        saEstimate: 1,
+        saVerified: 1,
+        octOffset: 1,
+        parentID: 1,
+        parentTitle: 1,
+        parentTrackNumber: 1,
+        userID: 1
+      }
+      try {
+        const result = await audioRecordings.find().project(projection).toArray();
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
+
     app.get('/getAllAudioEventMetadata', async (req, res) => {
       // retreive metadata for all audio events
       try {
