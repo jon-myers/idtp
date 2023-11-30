@@ -796,6 +796,26 @@ const saveRaagRules = async (
   }
 }
 
+const getAllCollections = async (): Promise<CollectionType[]> => {
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const response = await fetch(url + 'getAllCollections', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+
+}
+
 type OnProgressType = (percent: number) => void;
 
 const uploadFile = async (
@@ -1250,5 +1270,6 @@ export {
   getMelographJSON,
   makeMelograph,
   deleteRecording,
-  createCollection
+  createCollection,
+  getAllCollections
 }

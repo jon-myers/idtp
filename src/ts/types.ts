@@ -7,11 +7,14 @@ type CollectionType = {
     edit: string[]; // list of userIDs
     publicView: boolean; // potentially overrides the need for view list
   };
-  purpose: 'Pedagogical' | 'Research' | 'Aesthetic' | 'Creative' | 'Other';
+  purpose: 'Pedagogical' | 'Research' | 'Appreciative' | 'Creative' | 'Other';
   description?: string;
   audioRecordings: string[]; // list of audioRecordingIDs
   audioEvents: string[]; // list of audioEventIDs
   transcriptions: string[]; // list of transcriptionIDs
+  userName?: string;
+  dateCreated?: Date;
+  dateModified?: Date;
 }
 
 

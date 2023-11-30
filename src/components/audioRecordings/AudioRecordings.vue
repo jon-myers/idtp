@@ -89,6 +89,8 @@
     />
   <UploadRecording 
     v-if='!uploadRecModalClosed'
+    :navHeight='navHeight'
+    @closeModal='uploadRecModalClosed = true'
   />
 </template>
 
@@ -235,6 +237,13 @@ export default defineComponent({
   },
 
   components: { AudioPlayer, ContextMenu, UploadRecording },
+
+  props: {
+    navHeight: {
+      type: Number,
+      required: true
+    }
+  },
 
   async created() {
     window.addEventListener('keydown', this.handleKeydown);

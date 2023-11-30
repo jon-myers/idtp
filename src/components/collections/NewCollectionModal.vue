@@ -67,7 +67,7 @@
                 <button @click='selectedEditors.splice(i, 1)'>-</button>
               </div>
             </div>
-            <div>
+            <div class='addButton'>
               <button @click='addEditor'>+</button>
             </div>
           </div>
@@ -97,6 +97,10 @@
           </div>
         </div>
       </div>
+      <div class='modalRow'>
+        <button @click='create'>Create</button>
+        <button @click='close'>Close</button>
+      </div>
     </div>
   </div>
 </template>
@@ -104,18 +108,17 @@
 <script lang='ts'>
 import { defineComponent } from 'vue';
 import { CollectionType, UserType } from '@/ts/types.ts';
-import { getAllUsers } from '@/js/serverCalls.ts';
+import { getAllUsers, createCollection } from '@/js/serverCalls.ts';
 type NewCollectionModalDataType = {
   purposeChoices: CollectionType['purpose'][],
   title: string,
   description: string,
   publicView: boolean,
   purpose: CollectionType['purpose'],
-  // viewers: { name: string, id: string }[],
-  // editors: { name: string, id: string }[],
   allUsers: UserType[],
   selectedViewers: (UserType | undefined)[],
   selectedEditors: (UserType | undefined)[],
+  userSelectHeight: number
 }
 
 export default defineComponent({
@@ -124,7 +127,7 @@ export default defineComponent({
       purposeChoices: [
         'Pedagogical', 
         'Research', 
-        'Aesthetic', 
+        'Appreciative', 
         'Creative', 
         'Other'
       ],
@@ -132,17 +135,19 @@ export default defineComponent({
       description: '',
       publicView: false,
       purpose: 'Research',
-      // viewers: [],
-      // editors: [],
       allUsers: [],
       selectedViewers: [],
       selectedEditors: [],
+      userSelectHeight: 100
     };
   },
 
   async created() {
     try {
       this.allUsers = await getAllUsers();
+      this.allUsers = this.allUsers.filter(user => {
+        return user._id !== this.$store.state.userID
+      });
       this.allUsers.sort((a, b) => {
         if (a.family_name < b.family_name) return -1;
         else if (a.family_name > b.family_name) return 1;
@@ -155,6 +160,33 @@ export default defineComponent({
     }
   },
 
+  mounted() {
+    // escape key closes modal
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') this.close();
+    });
+    // or if you click outside the modal-content, it closes the modal
+    window.addEventListener('click', (e) => {
+      if (e.target === this.$el) this.close();
+    });
+  },
+
+  unmounted() {
+    window.removeEventListener('keydown', (e) => {
+      if (e.key === 'Escape') this.close();
+    });
+    window.removeEventListener('click', (e) => {
+      if (e.target === this.$el) this.close();
+    });
+  },
+
+  props: {
+    navHeight: {
+      type: Number,
+      required: true
+    }
+  },
+
   methods: {
 
     addViewer() {
@@ -163,6 +195,38 @@ export default defineComponent({
 
     addEditor() {
       this.selectedEditors.push(undefined);
+    },
+
+    async create() {
+      const viewers = this.selectedViewers.filter(user => {
+        return user !== undefined
+      }) as UserType[];
+      const editors = this.selectedEditors.filter(user => {
+        return user !== undefined
+      }) as UserType[];
+      const viewerIds = viewers.map(user => user._id);
+      const editorIds = editors.map(user => user._id);
+      const collection: CollectionType = {
+        title: this.title,
+        userID: this.$store.state.userID!,
+        description: this.description,
+        permissions: {
+          view: viewerIds,
+          edit: editorIds,
+          publicView: this.publicView
+        },
+        purpose: this.purpose,
+        audioRecordings: [],
+        audioEvents: [],
+        transcriptions: [],
+      };
+      const response = await createCollection(collection);
+      this.$emit('closeModal');
+
+    },
+
+    close() {
+      this.$emit('closeModal');
     }
     
   }
@@ -182,6 +246,7 @@ export default defineComponent({
   justify-content: center;
   align-items: center;
   z-index: 3;
+  margin-top: v-bind(navHeight + 'px');
 }
 
 .modal-content {
@@ -215,6 +280,8 @@ export default defineComponent({
 
 .wide {
   width: 250px;
+  height: v-bind(userSelectHeight + 30 + 'px');
+
 }
 
 .labelBox > label {
@@ -255,8 +322,9 @@ select {
   flex-direction: column;
   justify-content: left;
   align-items: left;
-  height: 100px;
-  width: 200px;
+  height: v-bind(userSelectHeight + 'px');
+
+  width: 100%;;
 }
 
 .usersBox {
@@ -264,7 +332,7 @@ select {
   flex-direction: column;
   justify-content: left;
   align-items: left;
-  max-height: 100px;
+  max-height: v-bind(userSelectHeight - 30 + 'px');
   width: 200px;
   margin-bottom: 5px;
   overflow-y: scroll;
@@ -275,11 +343,24 @@ select {
   flex-direction: row;
   justify-content: center;
   align-items: center;
-  height: 50px;
+  height: 30px;
+  min-height: 30px;
   /* width: 200px; */
 }
 
 .modalRow.users {
   margin-top: 10px;
+  align-items: top;
+  height: v-bind(userSelectHeight + 30 + 'px');
+  border: 1px solid black;
+}
+
+.addButton {
+  height: 30px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
 }
 </style>

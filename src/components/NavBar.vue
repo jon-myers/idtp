@@ -351,7 +351,7 @@ a {
   display: flex;
   flex-direction: column;
   user-select: none;
-  z-index: 1
+  z-index: 5
 }
 
 .userMenuRow {

@@ -111,10 +111,35 @@ export default defineComponent({
   },
 
   async mounted() {
+    // esc closes modal
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        this.$emit('closeModal');
+      }
+    });
+    //  if you click outside modal-content, it closes the modal
+    window.addEventListener('click', (e) => {
+      const modal = this.$el as HTMLElement;
+      if (e.target === modal) {
+        this.$emit('closeModal');
+      }
+    })
     try {
       this.allAudioEvents = await getAllAudioEventMetadata();
     } catch (err) {
       console.log(err);
+    }
+  },
+
+  unmounted() {
+    document.removeEventListener('keydown', () => {});
+    document.removeEventListener('click', () => {});
+  },
+
+  props: {
+    navHeight: {
+      type: Number,
+      required: true
     }
   },
 
@@ -185,6 +210,7 @@ export default defineComponent({
   justify-content: center;
   align-items: center;
   z-index: 3;
+  margin-top: v-bind(navHeight + 'px');
 }
 
 .modal-content {

@@ -176,6 +176,16 @@ const runServer = async () => {
       }
     });
 
+    app.get('/getAllCollections', async (req, res) => {
+      try {
+        const result = await collections.find().toArray();
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
+
 
     app.get('/getAllTranscriptions', async (req, res) => {
       try {
@@ -327,8 +337,18 @@ const runServer = async () => {
     app.post('/createCollection', async (req, res) => {
       // create a new collection
       try {
-        const result = await collections.insertOne(req.body);
-        res.json(result)
+        // get the user's name from their userID
+        const query = { _id: ObjectId(req.body.userID) };
+        const projection = { projection: { _id: 0, name: 1 } };
+        const result = await users.findOne(query, projection);
+        const name = result.name;
+        // create the collection
+        const collection = req.body;
+        collection['dateCreated'] = new Date();
+        collection['dateModified'] = new Date();
+        collection['userName'] = name;
+        const result2 = await collections.insertOne(collection);
+        res.json(result2)
       } catch (err) {
         console.error(err);
         res.status(500).send(err);
