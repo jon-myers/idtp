@@ -200,6 +200,29 @@ const deleteCollection = async (collectionID: string) => {
   return result
 }
 
+const updateCollection = async (collection: CollectionType) => {
+  let result: undefined | { acknowledged: boolean, modifiedCount: number };
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(collection)
+  };
+  try {
+    const res = await fetch(url + 'updateCollection', request);
+    if (res.ok) {
+      result = await res.json()
+    } else {
+      console.error(res)
+    }
+    
+  } catch (err) {
+    console.error(err)
+  }
+  return result
+}
+
 const getAllAudioRecordingMetadata = async () => {
   let allAudio;
   let request = {
@@ -1295,5 +1318,6 @@ export {
   deleteRecording,
   createCollection,
   deleteCollection,
+  updateCollection,
   getAllCollections
 }

@@ -367,6 +367,22 @@ const runServer = async () => {
       }
     });
 
+    app.post('/updateCollection', async (req, res) => {
+      // update a collection
+      try {
+        const query = { _id: ObjectId(req.body._id) };
+        // copy to updates, and remove _id
+        const updates = req.body;
+        delete updates._id;
+        const update = { $set: updates };
+        const result = await collections.updateOne(query, update);
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
+
     app.get('/getAllAudioEventMetadata', async (req, res) => {
       // retreive metadata for all audio events
       try {

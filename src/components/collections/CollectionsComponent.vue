@@ -2,7 +2,7 @@
   <div class='collectionsMain' @click='handleClick'>
     <div class='sidePanel'>
       <div class='buttonHolder'>
-        <button @click='newCollectionModalOpen = true'>New Collection</button>
+        <button @click='handleNewCollectionClick'>New Collection</button>
       </div>
     </div>
     <div class='colRowHolder' :style='{"--navHeight": navHeight + "px"}'>
@@ -18,6 +18,7 @@
             v-for='(collection, cIdx) in collector.collections' 
             :key='cIdx' 
             class='collection'
+            :id='collection._id'
             :style='{ 
               "background-color": collection.color,
               "color": getContrastingTextColor(collection.color!)
@@ -36,12 +37,14 @@
     v-if='newCollectionModalOpen'
     @closeModal='closeModal'
     :navHeight='navHeight'
+    :editing='editingCollectionStatus'
+    :collection='selectedCollection'
     />
     <ContextMenu
-      v-if='contextMenuOpen'
       :x='contextMenuX'
       :y='contextMenuY'
       :choices='contextMenuOptions'
+      :closed='!contextMenuOpen'
       @close='contextMenuOpen = false'
       />
 </template>
@@ -75,6 +78,8 @@ type CollectionsComponentDataType = {
   contextMenuX: number,
   contextMenuY: number,
   contextMenuOptions: ContextMenuOptionType[],
+  editingCollectionStatus: boolean,
+  selectedCollection: CollectionType | undefined
 }
 
 export default defineComponent({
@@ -92,6 +97,8 @@ export default defineComponent({
       contextMenuX: 0,
       contextMenuY: 0,
       contextMenuOptions: [],
+      editingCollectionStatus: false,
+      selectedCollection: undefined
       
     };
   },
@@ -163,6 +170,11 @@ export default defineComponent({
 
   methods: {
 
+    handleNewCollectionClick() {
+      this.editingCollectionStatus = false;
+      this.newCollectionModalOpen = true;
+    },
+
     handleClick() {
       if (this.contextMenuOpen === true) {
         this.contextMenuOpen = false;
@@ -220,12 +232,14 @@ export default defineComponent({
       const enabled = collection.userID === this.$store.state.userID;
       this.contextMenuX = event.clientX;
       this.contextMenuY = event.clientY;
-      console.log(collection)
+
       this.contextMenuOptions = [
         {
           text: 'Edit',
-          action: () => {
-            console.log('edit');
+          action: () => {   
+            this.selectedCollection = collection;
+            this.editingCollectionStatus = true;
+            this.newCollectionModalOpen = true;
             this.contextMenuOpen = false;
           },
           enabled

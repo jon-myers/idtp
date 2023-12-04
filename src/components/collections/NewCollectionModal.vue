@@ -100,7 +100,8 @@
         </div>
       </div>
       <div class='modalRow'>
-        <button @click='create'>Create</button>
+        <button @click='create' v-if='!editing'>Create</button>
+        <button @click='edit' v-if='editing'>Update</button>
         <button @click='close'>Close</button>
       </div>
     </div>
@@ -110,7 +111,8 @@
 <script lang='ts'>
 import { defineComponent } from 'vue';
 import { CollectionType, UserType } from '@/ts/types.ts';
-import { getAllUsers, createCollection } from '@/js/serverCalls.ts';
+import { getAllUsers, createCollection, updateCollection } from '@/js/serverCalls.ts';
+import type { PropType } from 'vue';
 type NewCollectionModalDataType = {
   purposeChoices: CollectionType['purpose'][],
   title: string,
@@ -173,6 +175,20 @@ export default defineComponent({
     window.addEventListener('click', (e) => {
       if (e.target === this.$el) this.close();
     });
+
+    if (this.editing && this.collection !== undefined) {
+      this.title = this.collection.title;
+      this.description = this.collection.description!;
+      this.publicView = this.collection.permissions.publicView;
+      this.purpose = this.collection.purpose;
+      this.color = this.collection.color!;
+      this.selectedEditors = this.collection.permissions.edit.map(id => {
+        return this.allUsers.find(user => user._id === id);
+      });
+      this.selectedViewers = this.collection.permissions.view.map(id => {
+        return this.allUsers.find(user => user._id === id);
+      });
+    }
   },
 
   unmounted() {
@@ -188,6 +204,14 @@ export default defineComponent({
     navHeight: {
       type: Number,
       required: true
+    },
+    editing: {
+      type: Boolean,
+      required: true
+    },
+    collection: {
+      type: Object as PropType<CollectionType>,
+      required: false
     }
   },
 
@@ -228,6 +252,40 @@ export default defineComponent({
       const response = await createCollection(collection);
       this.$emit('closeModal');
 
+    },
+
+    async edit() {
+      const viewers = this.selectedViewers.filter(user => {
+        return user !== undefined
+      }) as UserType[];
+      const editors = this.selectedEditors.filter(user => {
+        return user !== undefined
+      }) as UserType[];
+      const viewerIds = viewers.map(user => user._id);
+      const editorIds = editors.map(user => user._id);
+      const collection: CollectionType = {
+        _id: this.collection!._id,
+        title: this.title,
+        userID: this.$store.state.userID!,
+        description: this.description,
+        permissions: {
+          view: viewerIds,
+          edit: editorIds,
+          publicView: this.publicView
+        },
+        purpose: this.purpose,
+        audioRecordings: this.collection!.audioRecordings,
+        audioEvents: this.collection!.audioEvents,
+        transcriptions: this.collection!.transcriptions,
+        color: this.color,
+      };
+      try {
+        const response = await updateCollection(collection);
+        console.log(response)
+      } catch (error) {
+        console.log(error);
+      }
+      this.$emit('closeModal');
     },
 
     close() {
