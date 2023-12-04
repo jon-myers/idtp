@@ -1,37 +1,62 @@
 <template>
-  <div class='collectionsMain'>
-    <div 
-      class='collectionRow'
-      v-for='(collector, index) in collectors' 
-      :key='index'
-      >
-      <div class='userName'>{{ collector.userName }}</div>
-      <div class='collections'>
-        <div 
-          v-for='(collection, cIdx) in collector.collections' 
-          :key='cIdx' 
-          class='collection'
-          >
-          <div class='title'>{{ collection.title }}</div>
-          <div class='description'>{{ collection.description }}</div>
+  <div class='collectionsMain' @click='handleClick'>
+    <div class='sidePanel'>
+      <div class='buttonHolder'>
+        <button @click='newCollectionModalOpen = true'>New Collection</button>
+      </div>
+    </div>
+    <div class='colRowHolder' :style='{"--navHeight": navHeight + "px"}'>
+      <div 
+        class='collectionRow'
+        v-for='(collector, index) in collectors' 
+        :key='index'
+        :style='{"--sidePanelWidth": sidePanelWidth + "px" }'
+        >
+        <div class='userName'>{{ collector.userName }}</div>
+        <div class='collections'>
+          <div 
+            v-for='(collection, cIdx) in collector.collections' 
+            :key='cIdx' 
+            class='collection'
+            :style='{ 
+              "background-color": collection.color,
+              "color": getContrastingTextColor(collection.color!)
+              }'
+              @contextmenu='handleContextClick(collection, $event)'
+            >
+            <div class='title'>{{ collection.title }}</div>
+            <div class='description'>{{ collection.description }}</div>
+            <div class='purpose'>{{ collection.purpose }}</div>
+          </div>
         </div>
       </div>
     </div>
   </div>
   <NewCollectionModal 
     v-if='newCollectionModalOpen'
-    @closeModal='newCollectionModalOpen = false'
+    @closeModal='closeModal'
     :navHeight='navHeight'
     />
+    <ContextMenu
+      v-if='contextMenuOpen'
+      :x='contextMenuX'
+      :y='contextMenuY'
+      :choices='contextMenuOptions'
+      @close='contextMenuOpen = false'
+      />
 </template>
 
 <script lang='ts'>
 
-import { CollectionType } from '@/ts/types.ts';
-import { createCollection, getAllCollections } from '@/js/serverCalls.ts';
+import { CollectionType, ContextMenuOptionType } from '@/ts/types.ts';
+import { 
+  deleteCollection, 
+  getAllCollections 
+} from '@/js/serverCalls.ts';
 import NewCollectionModal from '@/components/collections/NewCollectionModal.vue';
-
+import { getContrastingTextColor } from '@/ts/utils';
 import { defineComponent } from 'vue';
+import ContextMenu from '@/components/ContextMenu.vue';
 
 type CollectionsComponentDataType = {
   newCollectionModalOpen: boolean,
@@ -43,7 +68,13 @@ type CollectionsComponentDataType = {
   }[],
   collectionBoxSize: number,
   collectionsRowHeight: number,
-  userNameHeight: number
+  userNameHeight: number,
+  sidePanelWidth: number,
+  collectorsLength: number,
+  contextMenuOpen: boolean,
+  contextMenuX: number,
+  contextMenuY: number,
+  contextMenuOptions: ContextMenuOptionType[],
 }
 
 export default defineComponent({
@@ -54,13 +85,20 @@ export default defineComponent({
       collectors: [],
       collectionBoxSize: 250,
       collectionsRowHeight: 330,
-      userNameHeight: 50
+      userNameHeight: 50,
+      sidePanelWidth: 200,
+      collectorsLength: 1,
+      contextMenuOpen: false,
+      contextMenuX: 0,
+      contextMenuY: 0,
+      contextMenuOptions: [],
       
     };
   },
 
   components: {
-    NewCollectionModal
+    NewCollectionModal,
+    ContextMenu
   },
 
   props: {
@@ -71,6 +109,15 @@ export default defineComponent({
   },
 
   async mounted() {
+
+
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        if (this.contextMenuOpen === true) {
+          this.contextMenuOpen = false;
+        }
+      }
+    });
     // gather all collections, filter to only show collections that the user 
     // has permission to view, split them up according to their creator, and 
     // display basically a list of creator names, below each of which is a 
@@ -103,35 +150,103 @@ export default defineComponent({
           collections
         };
       });
+      this.collectorsLength = this.collectors.length;
     } catch (error) {
       console.log(error);
     }
 
   },
 
+  unmounted() {
+    window.removeEventListener('keydown', () => {});
+  },
+
   methods: {
 
-    async addTestCollection() {
-      const collection: CollectionType = {
-        title: 'Test Collection',
-        userID: this.$store.state.userID!, 
-        description: 'This is a test collection',
-        permissions: {
-          view: [],
-          edit: [],
-          publicView: false
-        },
-        purpose: 'Research',
-        audioRecordings: [],
-        audioEvents: [],
-        transcriptions: [],
-      };
-      const response = await createCollection(collection);
-      console.log(response);
+    handleClick() {
+      if (this.contextMenuOpen === true) {
+        this.contextMenuOpen = false;
+      }
+    },
 
+    async closeModal() {
+      this.newCollectionModalOpen = false;
+      try { 
+        await this.updateCollections();
+
+      } catch (error) {
+        console.log(error);
+      }
       
+    },
+
+    getContrastingTextColor,
+
+    async updateCollections() {
+      try {
+        this.allCollections = await getAllCollections();
+        this.allCollections = this.allCollections.filter(coll => {
+          const c0 = coll.permissions.publicView;
+          const c1 = coll.userID === this.$store.state.userID;
+          const c2 = coll.permissions.view.includes(this.$store.state.userID!);
+          const c3 = coll.permissions.edit.includes(this.$store.state.userID!);
+          return c0 || c1 || c2 || c3;
+        });
+        const collectorIDs = this.allCollections
+          .map(coll => coll.userID)
+          .filter((userID, index, self) => {
+            return self.indexOf(userID) === index;
+          });
+        this.collectors = collectorIDs.map(collectorID => {
+          const collectorName = this.allCollections.find(coll => {
+            return coll.userID === collectorID;
+          })!.userName!;
+          const collections = this.allCollections.filter(coll => {
+            return coll.userID === collectorID;
+          });
+          return {
+            userID: collectorID,
+            userName: collectorName,
+            collections
+          };
+        });
+      } catch (error) {
+        console.log(error);
+      }
+    },
+  
+    handleContextClick(collection: CollectionType, event: MouseEvent) {
+      event.preventDefault();
+      const enabled = collection.userID === this.$store.state.userID;
+      this.contextMenuX = event.clientX;
+      this.contextMenuY = event.clientY;
+      console.log(collection)
+      this.contextMenuOptions = [
+        {
+          text: 'Edit',
+          action: () => {
+            console.log('edit');
+            this.contextMenuOpen = false;
+          },
+          enabled
+        },
+        {
+          text: 'Delete',
+          action: async () => {
+            try {
+              const res = await deleteCollection(collection._id!);
+              console.log(res);
+              await this.updateCollections();
+            } catch (error) {
+              console.log(error);
+            }
+            this.contextMenuOpen = false;
+          },
+          enabled
+        }
+      ];
+      this.contextMenuOpen = true;
     }
-    
   }
 });
 </script>
@@ -142,25 +257,29 @@ export default defineComponent({
   background-image: linear-gradient(black, #1e241e);
   height: 100%;
   width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: top;
+  justify-content: left;
 }
 
 .collectionRow {
   height: v-bind(collectionsRowHeight + 'px');
+  width: calc(100vw - var(--sidePanelWidth));
   display: flex;
   flex-direction: column;
   border-bottom: 1px solid #ccc;
+  box-sizing: border-box;
 }
 
 .userName {
   color: white;
   font-size: 1.5em;
   margin-left: 20px;
-  /* margin-top: 10px; */
   display: flex;
   align-items: center;
   justify-content: left;
   height: v-bind(userNameHeight + 'px');
-
 }
 
 .collections {
@@ -178,7 +297,7 @@ export default defineComponent({
   height: v-bind(collectionBoxSize + 'px');
   min-width: v-bind(collectionBoxSize + 'px');
   min-height: v-bind(collectionBoxSize + 'px');
-  background-color: tan;
+  background-color: #D2B48C;
   box-sizing: border-box;
   border: 1px solid #ccc;
   margin-left: 20px;
@@ -187,17 +306,18 @@ export default defineComponent({
   flex-direction: column;
   align-items: left;
   justify-content: left;
+  position: relative;
 }
 
 .collection:hover {
-  background-color: #ccc;
+  background-color: #ccc!important;
   cursor: pointer;
+  color: black!important;
 }
 
 .title {
   font-size: 1.5em;
-  color: black;
-  /* margin-left: 10px; */
+  /* color: black; */
   margin-top: 10px;
   width: 100%;
   text-align: left;
@@ -205,10 +325,52 @@ export default defineComponent({
 
 .description {
   font-size: 1em;
-  color: black;
-  /* margin-left: 10px; */
+  /* color: black; */
   margin-top: 10px;
   width: 100%;
   text-align: left;
+}
+
+.sidePanel {
+  min-width: v-bind(sidePanelWidth + 'px');
+  max-width: v-bind(sidePanelWidth + 'px');
+  height: 100%;
+  background-color: #202621;
+  border-right: 1px solid #ccc;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: top;
+  border-top: 1px solid #ccc;
+}
+
+.colRowHolder {
+  height: calc(100% - var(--navHeight));
+  width: calc(100% - sidePanelWidth);
+  display: flex;
+  flex-direction: column;
+  align-items: left;
+  justify-content: top;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-top: 1px solid #ccc;
+  box-sizing: border-box;
+
+}
+
+.buttonHolder {
+  width: 100%;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.purpose {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  text-align: right;
 }
 </style>

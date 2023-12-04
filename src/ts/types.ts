@@ -15,6 +15,7 @@ type CollectionType = {
   userName?: string;
   dateCreated?: Date;
   dateModified?: Date;
+  color?: string;
 }
 
 
@@ -29,4 +30,10 @@ type UserType = {
   _id: string;
 }
 
-export type { CollectionType, UserType };
+type ContextMenuOptionType = {
+  text: string,
+  action: () => void,
+  enabled?: boolean,
+}
+
+export type { CollectionType, UserType, ContextMenuOptionType };

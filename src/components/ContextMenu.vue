@@ -4,9 +4,10 @@
     :style='{ top: y + "px", left: x + "px" }'
     >
     <div 
-      :class='`dropDownRow ${choices && cIdx === choices.length - 1 ? "last" : "" }`' 
+      :class='getClass(choices, choice, cIdx)'
       v-for='(choice, cIdx) in choices' 
       @click='choice.action'
+
       >
       <div class='overflowX'>
         {{ choice.text }}
@@ -21,6 +22,8 @@
 import { defineComponent } from 'vue';
 import type { PropType } from 'vue';
 
+import { ContextMenuOptionType } from '@/ts/types.ts';
+
 type ContextMenuDataType = {
   dropDownWidth: number
 }
@@ -29,16 +32,52 @@ type ContextMenuDataType = {
 export default defineComponent({
   name: 'ContextMenu',
   props: {
-    x: Number,
-    y: Number,
-    choices: Array as PropType<{ text: string, action: () => void }[]>,
-    closed: Boolean
+    x: {
+      type: Number,
+      required: true
+    },
+    y: {
+      type: Number,
+      required: true
+    },
+    choices: {
+      type: Array as PropType<ContextMenuOptionType[]>,
+      required: true
+    },
+    closed: {
+      type: Boolean,
+      required: true,
+    }
   },
 
   data(): ContextMenuDataType {
     return {
       dropDownWidth: 200
     }
+  },
+
+  methods: {
+
+    testmethod() {
+      console.log('testmethod');
+    },
+    
+    getClass(
+      choices: ContextMenuOptionType[], 
+      choice: ContextMenuOptionType, 
+      cIdx: number
+      ) {
+      let classString = 'dropDownRow';
+      if (choices && cIdx === choices!.length - 1) {
+        classString += ' last';
+      }
+      if (choices && choice.enabled !== undefined && choice.enabled === false) {
+        classString += ' inactive';
+      }
+      return classString;
+    }
+
+    
   }
 });
 

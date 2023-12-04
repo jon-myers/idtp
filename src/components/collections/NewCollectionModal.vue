@@ -23,6 +23,8 @@
             {{purpose}}
           </option>
         </select>
+        <label for='color'>Color: </label>
+        <input type='color' id='color' v-model='color'>
       </div>
       <div class='modalRow'>
         <label for='publicView'>Visibility: </label>
@@ -118,7 +120,8 @@ type NewCollectionModalDataType = {
   allUsers: UserType[],
   selectedViewers: (UserType | undefined)[],
   selectedEditors: (UserType | undefined)[],
-  userSelectHeight: number
+  userSelectHeight: number,
+  color: string,
 }
 
 export default defineComponent({
@@ -138,7 +141,8 @@ export default defineComponent({
       allUsers: [],
       selectedViewers: [],
       selectedEditors: [],
-      userSelectHeight: 100
+      userSelectHeight: 100,
+      color: '#D2B48C',
     };
   },
 
@@ -219,6 +223,7 @@ export default defineComponent({
         audioRecordings: [],
         audioEvents: [],
         transcriptions: [],
+        color: this.color,
       };
       const response = await createCollection(collection);
       this.$emit('closeModal');

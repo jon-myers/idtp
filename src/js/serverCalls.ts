@@ -177,6 +177,29 @@ const createCollection = async (collection: CollectionType) => {
   return result
 }
 
+const deleteCollection = async (collectionID: string) => {
+  let result: undefined | { acknowledged: boolean, deletedCount: number };
+  const request = {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ _id: collectionID })
+  };
+  try {
+    const res = await fetch(url + 'deleteCollection', request);
+    if (res.ok) {
+      result = await res.json()
+    } else {
+      console.error(res)
+    }
+    
+  } catch (err) {
+    console.error(err)
+  }
+  return result
+}
+
 const getAllAudioRecordingMetadata = async () => {
   let allAudio;
   let request = {
@@ -1271,5 +1294,6 @@ export {
   makeMelograph,
   deleteRecording,
   createCollection,
+  deleteCollection,
   getAllCollections
 }

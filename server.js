@@ -355,6 +355,18 @@ const runServer = async () => {
       }
     });
 
+    app.delete('/deleteCollection', async (req, res) => {
+      // delete a collection
+      try {
+        const query = { _id: ObjectId(req.body._id) };
+        const result = await collections.deleteOne(query);
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
+
     app.get('/getAllAudioEventMetadata', async (req, res) => {
       // retreive metadata for all audio events
       try {
