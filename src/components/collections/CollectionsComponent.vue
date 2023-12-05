@@ -1,11 +1,19 @@
 <template>
-  <div class='collectionsMain' @click='handleClick'>
+  <div 
+    class='collectionsMain' 
+    @click='handleClick'
+    v-if='!collectionSelected'
+    >
     <div class='sidePanel'>
       <div class='buttonHolder'>
         <button @click='handleNewCollectionClick'>New Collection</button>
       </div>
     </div>
-    <div class='colRowHolder' :style='{"--navHeight": navHeight + "px"}'>
+    <div 
+      class='colRowHolder' 
+      :style='{"--navHeight": navHeight + "px"}'
+      
+      >
       <div 
         class='collectionRow'
         v-for='(collector, index) in collectors' 
@@ -17,13 +25,14 @@
           <div 
             v-for='(collection, cIdx) in collector.collections' 
             :key='cIdx' 
-            class='collection'
+            :class='`collection ${ cIdx === collector.collections.length - 1 ? "last" : "" }`'
             :id='collection._id'
             :style='{ 
               "background-color": collection.color,
               "color": getContrastingTextColor(collection.color!)
               }'
               @contextmenu='handleContextClick(collection, $event)'
+              @dblclick='openCollection(collection)'
             >
             <div class='title'>{{ collection.title }}</div>
             <div class='description'>{{ collection.description }}</div>
@@ -33,6 +42,14 @@
       </div>
     </div>
   </div>
+  <CollectionViewer 
+      v-if='collectionSelected && selectedCollection !== undefined'
+      :collection='selectedCollection'
+      :navHeight='navHeight'
+      :owner='selectedCollection.userID === $store.state.userID'
+      @closeCollection='collectionSelected = false'
+      @editCollection='editCollection'
+      />
   <NewCollectionModal 
     v-if='newCollectionModalOpen'
     @closeModal='closeModal'
@@ -60,6 +77,7 @@ import NewCollectionModal from '@/components/collections/NewCollectionModal.vue'
 import { getContrastingTextColor } from '@/ts/utils';
 import { defineComponent } from 'vue';
 import ContextMenu from '@/components/ContextMenu.vue';
+import CollectionViewer from '@/components/collections/CollectionViewer.vue';
 
 type CollectionsComponentDataType = {
   newCollectionModalOpen: boolean,
@@ -79,7 +97,8 @@ type CollectionsComponentDataType = {
   contextMenuY: number,
   contextMenuOptions: ContextMenuOptionType[],
   editingCollectionStatus: boolean,
-  selectedCollection: CollectionType | undefined
+  selectedCollection: CollectionType | undefined,
+  collectionSelected: boolean
 }
 
 export default defineComponent({
@@ -98,14 +117,16 @@ export default defineComponent({
       contextMenuY: 0,
       contextMenuOptions: [],
       editingCollectionStatus: false,
-      selectedCollection: undefined
+      selectedCollection: undefined,
+      collectionSelected: false
       
     };
   },
 
   components: {
     NewCollectionModal,
-    ContextMenu
+    ContextMenu,
+    CollectionViewer
   },
 
   props: {
@@ -170,9 +191,16 @@ export default defineComponent({
 
   methods: {
 
+    editCollection() {
+      this.editingCollectionStatus = true; 
+      this.newCollectionModalOpen = true;
+      this.collectionSelected = false;
+    },
+
     handleNewCollectionClick() {
       this.editingCollectionStatus = false;
       this.newCollectionModalOpen = true;
+      this.collectionSelected = false;
     },
 
     handleClick() {
@@ -226,6 +254,12 @@ export default defineComponent({
         console.log(error);
       }
     },
+
+    openCollection(collection: CollectionType) {
+      this.selectedCollection = collection;
+      this.collectionSelected = true;
+
+    },
   
     handleContextClick(collection: CollectionType, event: MouseEvent) {
       event.preventDefault();
@@ -234,6 +268,14 @@ export default defineComponent({
       this.contextMenuY = event.clientY;
 
       this.contextMenuOptions = [
+        { 
+          text: 'Open',
+          action: () => {
+            this.openCollection(collection);
+            this.contextMenuOpen = false;
+          },
+          enabled: true
+        },
         {
           text: 'Edit',
           action: () => {   
@@ -321,6 +363,10 @@ export default defineComponent({
   align-items: left;
   justify-content: left;
   position: relative;
+}
+
+.collection.last {
+  margin-right: 20px;
 }
 
 .collection:hover {

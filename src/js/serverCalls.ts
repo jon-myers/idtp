@@ -1198,10 +1198,10 @@ const getIpaVowels = async (): Promise<IpaVowelType[]> => {
     if (response.ok) {
       out = await response.json()
     }
-    return out
   } catch (err) {
     console.error(err)
   }
+  return out
 }
 
 type IPAConsonantType = {
@@ -1226,10 +1226,11 @@ const getConsonants = async (): Promise<IPAConsonantType[]> => {
     if (response.ok) {
       out = await response.json()
     }
-    return out
+    
   } catch (err) {
     console.error(err)
   }
+  return out
 }
 
 const getAllUsers = async () => {
@@ -1263,6 +1264,27 @@ const getMelographJSON = async (recID: string) => {
   } catch (err) {
     console.error(err)
   }
+}
+
+const getEditableCollections = async (userID: string): Promise<CollectionType[]> => {
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const params = new URLSearchParams({ userID: JSON.stringify(userID) });
+    const response = await fetch(url + 'getEditableCollections?' + params, request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    
+  } catch (err) {
+    console.error(err)
+  }
+  return out
 }
 
 
@@ -1319,5 +1341,6 @@ export {
   createCollection,
   deleteCollection,
   updateCollection,
-  getAllCollections
+  getAllCollections,
+  getEditableCollections
 }

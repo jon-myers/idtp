@@ -1171,6 +1171,19 @@ const runServer = async () => {
         res.status(500).send(err);
       }
     })
+
+    app.get('/getEditableCollections', async (req, res) => {
+      try {
+        const query1 = { userID: JSON.parse(req.query.userID) };
+        const query2 = { 'permissions.edit': JSON.parse(req.query.userID) };
+        const query = { $or: [query1, query2] };
+        const result = await collections.find(query).toArray();
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
     
     app.post('/upload-avatar', async (req, res) => {
     // upload files, and send back progress, via axios (doesn't work with fetch)
