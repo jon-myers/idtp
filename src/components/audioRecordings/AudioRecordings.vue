@@ -92,6 +92,14 @@
     :navHeight='navHeight'
     @closeModal='uploadRecModalClosed = true'
   />
+  <AddToCollection 
+  v-if='!addToCollectionModalClosed && selectedRecording'
+  :possibleCollections='possibleCols'
+  :navHeight='navHeight'
+  :recID='selectedRecording._id!'
+  @close='addToCollectionModalClosed = true'
+  
+  />
 </template>
 
 <script lang='ts'>
@@ -99,14 +107,18 @@ import { defineComponent } from 'vue';
 import AudioPlayer from '@/components/audioRecordings/ARAudioPlayer.vue';
 import ContextMenu from '@/components/ContextMenu.vue';
 import UploadRecording from '@/components/audioRecordings/UploadRecording.vue';
+import AddToCollection from '@/components/AddToCollection.vue';
 import { 
   getAllAudioRecordingMetadata, 
   getSortedMusicians,
   getAllTransOfAudioFile,
-  deleteRecording 
+  deleteRecording,
+  getEditableCollections
 } from '@/js/serverCalls.ts';
 import { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
 import { displayTime } from '@/js/utils.ts';
+import { CollectionType } from '@/ts/types.ts';
+
 type AudioRecordingsDataType = {
   audioSource: string | undefined,
   saEstimate: number | undefined,
@@ -139,6 +151,9 @@ type AudioRecordingsDataType = {
   labelRowHeight: number,
   dropDownHeight: number,
   uploadRecModalClosed: boolean,
+  possibleCols: CollectionType[],
+  addToCollectionModalClosed: boolean,
+  selectedRecording: RecType | undefined
   
 
 }
@@ -231,12 +246,13 @@ export default defineComponent({
       labelRowHeight: 40,
       dropDownHeight: 30,
       uploadRecModalClosed: true,
-
-
+      addToCollectionModalClosed: true,
+      possibleCols: [],
+      selectedRecording: undefined
     }
   },
 
-  components: { AudioPlayer, ContextMenu, UploadRecording },
+  components: { AudioPlayer, ContextMenu, UploadRecording, AddToCollection },
 
   props: {
     navHeight: {
@@ -431,11 +447,25 @@ export default defineComponent({
         });
 
         try {
+          // show option to add to collection, if there are any avaliable to
+          // the user
+          this.possibleCols = await getEditableCollections(this.$store.state.userID!);
+          if (this.possibleCols.length > 0) {
+            this.contextMenuChoices.push({
+              text: 'Add to Collection',
+              action: () => {
+
+                this.selectedRecording = recording;
+                this.contextMenuClosed = true;
+                this.addToCollectionModalClosed = false;
+              }
+            })
+          }
+
           const tChoices = await getAllTransOfAudioFile(
             recording._id!, 
             this.userID!
           );
-          console.log(tChoices)
           tChoices.forEach(tc => {
             this.contextMenuChoices.push({
               text: `Open file: "${tc.title}" by ${tc.name}`,
@@ -454,10 +484,12 @@ export default defineComponent({
           const topPartHeight = rect.height + rect.top;
           if (this.dropDownTop + this.dropDownHeight > topPartHeight - 10) {
             this.dropDownTop = topPartHeight - 10 - this.dropDownHeight;
-          }
+          };
+
         } catch (err) {
           console.log(err);
         }
+        
       }
       
       

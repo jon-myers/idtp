@@ -31,7 +31,8 @@ const generateAudioRecordingsDB = async () => {
         'octOffset': '$recordings.v.octOffset',
         'parentTitle': '$name',
         'userID': '$userID',
-        'parentTrackNumber': '$recordings.k'
+        'parentTrackNumber': '$recordings.k',
+        'collections': []
 
       }
     }, {

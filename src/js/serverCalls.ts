@@ -223,8 +223,8 @@ const updateCollection = async (collection: CollectionType) => {
   return result
 }
 
-const getAllAudioRecordingMetadata = async () => {
-  let allAudio;
+const getAllAudioRecordingMetadata = async (): Promise<RecType[]> => {
+  let allAudio: RecType[] = [];
   let request = {
     method: 'GET',
     headers: {
@@ -940,6 +940,27 @@ const newUploadFile = async (file: File, onProgress: OnProgressType, {
   }
 }
 
+const addRecordingToCollection = async (recordingID: string, collectionID: string) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ recordingID, collectionID })
+  };
+  try {
+    const response = await fetch(url + 'addRecordingToCollection', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+
+}
+
 type UserDataType = {
   sub: string,
   picture: string,
@@ -1342,5 +1363,6 @@ export {
   deleteCollection,
   updateCollection,
   getAllCollections,
-  getEditableCollections
+  getEditableCollections,
+  addRecordingToCollection
 }

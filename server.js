@@ -926,6 +926,24 @@ const runServer = async () => {
         res.status(500).send(err)
       }
     })
+    
+    app.post('/addRecordingToCollection', async (req, res) => {
+      try {
+        // add recordingID to collections collection
+        const query = { _id: ObjectId(req.body.collectionID) };
+
+        const update = { $push: { audioRecordings: req.body.recordingID } };
+        const result = await collections.updateOne(query, update);
+        // add collectionId to audioRecordings collection
+        const query2 = { _id: ObjectId(req.body.recordingID) };
+        const update2 = { $push: { collections: req.body.collectionID } };
+        const result2 = await audioRecordings.updateOne(query2, update2);
+        res.json({ result, result2 })
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err)
+      }
+    })
 
     app.get('/getConsonants', async (req, res) => {
       try {
@@ -1017,7 +1035,7 @@ const runServer = async () => {
         console.log(query)
         const copy = await transcriptions.findOne(query);
         console.log(copy)
-        copy._id = new ObjectId();
+        copy._id = new ObjectId();add
         copy.title = req.body.title;
         copy.userID = req.body.newOwner;
         copy.permissions = req.body.permissions;
