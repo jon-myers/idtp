@@ -41,7 +41,8 @@
       </div>
     </div>
   </div>
-  <div class="dropDown closed" ref="dropDown">
+
+  <!-- <div class="dropDown_ closed" ref="dropDown">
     <div
       :class="`dropDownRow ${['last', ''][Number(delete_)]}`"
       @click="designNewPiece()"
@@ -88,7 +89,15 @@
     >
       Delete Transcription
     </div>
-  </div>
+  </div> -->
+  <ContextMenu
+  :x='dropDownLeft'
+  :y='dropDownTop'
+  :closed='contextMenuClosed'
+  :choices='contextMenuChoices'
+  ref='contextMenu'
+
+  />
   <div v-if="designPieceModal" class="designPieceModal">
     <NewPieceRegistrar
       ref="newPieceRegistrar"
@@ -152,7 +161,8 @@ import { Raga, Piece, Trajectory, Phrase } from '@/js/classes.ts';
 
 import { defineComponent } from 'vue';
 import { RecType } from '@/components/audioEvents/AddAudioEvent.vue'
-
+import ContextMenu from '@/components/ContextMenu.vue';
+import { ContextMenuOptionType, UserType } from '@/ts/types.ts';
 
 type FileManagerType = {
   infoKeys: string[];
@@ -187,7 +197,9 @@ type FileManagerType = {
   editOwnerModal: boolean,
   allUsers?: UserType[],
   allNames?: string[],
-  editingUserIdx?: number
+  editingUserIdx?: number,
+  contextMenuClosed: boolean,
+  contextMenuChoices: ContextMenuOptionType[]
 }
 
 type PieceInfoType = [string?, string?, string?, string?, string?, string?];
@@ -226,7 +238,7 @@ type PassedDataType = {
   title: string;
   raga: Raga;
   audioEvent: string;
-  audioRecording: RecType;
+  audioRecording?: RecType;
   origID: string;
   family_name?: string;
   given_name?: string;
@@ -235,7 +247,7 @@ type PassedDataType = {
   transcriber?: string;
 }
 
-export type { PassedDataType, UserType }
+export type { PassedDataType }
 
 export default defineComponent({
   name: 'FileManager',
@@ -288,11 +300,14 @@ export default defineComponent({
       allUsers: undefined,
       allNames: undefined,
       editingUserIdx: undefined,
+      contextMenuClosed: true,
+      contextMenuChoices: [],
     };
   },
 
   components: {
     NewPieceRegistrar,
+    ContextMenu
   },
 
   async created() {
@@ -504,8 +519,8 @@ export default defineComponent({
     },
 
     designNewPiece() {
-      const dropDown = this.$refs.dropDown as HTMLElement;
-      dropDown.classList.add('closed');
+      // const dropDown = this.$refs.dropDown as HTMLElement;
+      // dropDown.classList.add('closed');
       this.designPieceModal = true;
     },
 
@@ -544,17 +559,20 @@ export default defineComponent({
       if (piece === undefined) {
         throw new Error('piece is undefined')
       }
-      if (piece.audioID === undefined) {
-        throw new Error('piece.audioId is undefined')
-      }
+      // if (piece.audioID === undefined) {
+      //   throw new Error('piece.audioId is undefined')
+      // }
       try {
-        const audioRecording = await getAudioRecording(piece.audioID);
-        const audioEvent = await getAudioEvent(audioRecording.parentID);
+        let audioEvent, audioRecording;
+        if (piece.audioID !== undefined) {
+          audioRecording = await getAudioRecording(piece.audioID);
+          audioEvent = await getAudioEvent(audioRecording!.parentID!);
+        }
         const dataObj: PassedDataType = {
           title: piece.title + ' (clone)',
           raga: piece.raga,
-          audioEvent: audioEvent.name,
-          audioRecording: audioRecording,
+          audioEvent: audioEvent ? audioEvent.name : undefined,
+          audioRecording: audioRecording ? audioRecording : undefined,
           origID: piece._id!,
           family_name: this.$store.state.lastName,
           given_name: this.$store.state.firstName,
@@ -576,8 +594,9 @@ export default defineComponent({
       }
       const isUser = this.$store.state.userID === this.selectedPiece.userID;
       if (this.delete_ && isUser) {
-        const dropDown = this.$refs.dropDown as HTMLElement;
-        dropDown.classList.add('closed');
+        // const dropDown = this.$refs.dropDown as HTMLElement;
+        // dropDown.classList.add('closed');
+        this.closeDropDown()
         const res = await deletePiece(this.selectedPiece);
         if (res.deletedCount === 1) {
           const id = this.$store.state.userID!;
@@ -609,6 +628,7 @@ export default defineComponent({
     handleRightClick(e: MouseEvent) {
       e.preventDefault();
       this.$nextTick(() => {
+        let addOptions = false;
         this.dropDownLeft = e.clientX;
         this.dropDownTop = e.clientY;
         this.modalLeft = e.clientX;
@@ -624,24 +644,33 @@ export default defineComponent({
         if (this.dropDownLeft + this.dropDownWidth > rect.width - 20) {
           this.dropDownLeft = rect.width - 20 - this.dropDownWidth;
         }
-        const dd = this.$refs.dropDown as HTMLElement;
-        const dropDownRect = dd.getBoundingClientRect();
-        const dropDownHeight = dropDownRect.height;
-        if (this.dropDownTop + dropDownHeight > rect.height - 20) {
-          this.dropDownTop = rect.height - 20 - dropDownHeight;
+        const cm = this.$refs.contextMenu as typeof ContextMenu;
+        const cmElem = cm.$el as HTMLElement;
+        const cmRect = cmElem.getBoundingClientRect();
+        if (this.dropDownTop + cmRect.height > rect.height - 20) {
+          this.dropDownTop = rect.height - 20 - cmRect.height;
         }
+        // const dd = this.$refs.dropDown as HTMLElement;
+        // const dropDownRect = dd.getBoundingClientRect();
+        // const dropDownHeight = dropDownRect.height;
+        // if (this.dropDownTop + dropDownHeight > rect.height - 20) {
+        //   this.dropDownTop = rect.height - 20 - dropDownHeight;
+        // }
         this.designPieceModal = false;
 
         document.querySelectorAll('.selected').forEach((el) => {
           el.classList.remove('selected');
         });
-        dd.classList.remove('closed');
+        // dd.classList.remove('closed');
         let el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement;
         const parentNode = el.parentNode as HTMLElement;
         if (el.classList[0] === 'overflowX') {
           el = el.parentElement!.parentElement!;
         }
         if (el.classList[0] === 'fileInfoRow') {
+
+          addOptions = true;
+
           const num = Number(el.id.slice(3));
           el.classList.add('selected');
           this.selectedPiece = this.allPieces![num];
@@ -653,6 +682,9 @@ export default defineComponent({
             this.deleteActive = false;
           }
         } else if (parentNode.classList[0] === 'fileInfoRow') {
+          
+          addOptions = true;
+
           const num = Number(parentNode.id.slice(3));
           parentNode.classList.add('selected');
           this.selectedPiece = this.allPieces![num];
@@ -668,13 +700,92 @@ export default defineComponent({
           this.open_ = false;
           this.deleteActive = false;
         }
+
+        if (addOptions) {
+
+          this.contextMenuClosed = false;
+          this.contextMenuChoices = [];
+          this.contextMenuChoices.push({
+            text: 'New Transcription',
+            enabled: true,
+            action: () => {
+              this.designNewPiece();
+              this.contextMenuClosed = true;
+            }
+          });
+          if (this.open_) {
+            this.contextMenuChoices.push({
+              text: 'Open In Editor',
+              enabled: true,
+              action: () => {
+                this.openPieceAlt();
+                this.contextMenuClosed = true;
+              }
+            });
+            this.contextMenuChoices.push({
+              text: 'Open In Analyzer',
+              enabled: true,
+              action: () => {
+                this.openInAnalyzer();
+                this.contextMenuClosed = true;
+              }
+            });
+            this.contextMenuChoices.push({
+              text: 'Clone Transcription',
+              enabled: true,
+              action: () => {
+                this.clonePiece();
+                this.contextMenuClosed = true;
+              }
+            });
+            this.contextMenuChoices.push({
+              text: 'Edit Title',
+              enabled: this.deleteActive,
+              action: () => {
+                this.editTitle();
+                this.contextMenuClosed = true;
+              }
+            });
+            this.contextMenuChoices.push({
+              text: 'Edit Permissions',
+              enabled: this.deleteActive,
+              action: () => {
+                this.editPermissions();
+                this.contextMenuClosed = true;
+              }
+            });
+            this.contextMenuChoices.push({
+              text: 'Edit Owner',
+              enabled: this.deleteActive,
+              action: () => {
+                this.editOwner();
+                this.contextMenuClosed = true;
+              }
+            });
+            this.contextMenuChoices.push({
+              text: 'Copy Link',
+              enabled: true,
+              action: () => {
+                this.copyLink();
+                this.contextMenuClosed = true;
+              }
+            });
+            this.contextMenuChoices.push({
+              text: 'Delete Transcription',
+              enabled: this.deleteActive,
+              action: () => {
+                this.deletePiece();
+                this.contextMenuClosed = true;
+              }
+            })
+          }
+        }
       })
       
     },
 
     closeDropDown() {
-      const dd = this.$refs.dropDown as HTMLElement;
-      dd.classList.add('closed');
+      this.contextMenuClosed = true;
       document.querySelectorAll('.selected').forEach((el) => {
         el.classList.remove('selected');
       });
@@ -916,7 +1027,7 @@ export default defineComponent({
   margin-left: 20px;
   margin-right: 20px;
 }
-.dropDown {
+.dropDown_ {
   position: absolute;
   width: v-bind(dropDownWidth + 'px');
   background-color: black;
@@ -929,7 +1040,7 @@ export default defineComponent({
   user-select: none;
 }
 
-.dropDown.closed {
+.dropDown_.closed {
   visibility: hidden;
   opacity: 0;
   transition: visibility 0s 0.15s, opacity 0.15s linear;

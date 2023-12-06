@@ -960,6 +960,46 @@ const addRecordingToCollection = async (recordingID: string, collectionID: strin
   return out
 }
 
+const addAudioEventToCollection = async (audioEventID: string, collectionID: string) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ audioEventID, collectionID })
+  };
+  try {
+    const response = await fetch(url + 'addAudioEventToCollection', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const addTranscriptionToCollection = async (transcriptionID: string, collectionID: string) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ transcriptionID, collectionID })
+  };
+  try {
+    const response = await fetch(url + 'addTranscriptionToCollection', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
 const removeRecordingFromCollection = async (recordingID: string, collectionID: string) => {
   let out;
   const request = {
@@ -971,6 +1011,46 @@ const removeRecordingFromCollection = async (recordingID: string, collectionID: 
   };
   try {
     const response = await fetch(url + 'removeRecordingFromCollection', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const removeAudioEventFromCollection = async (audioEventID: string, collectionID: string) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ audioEventID, collectionID })
+  };
+  try {
+    const response = await fetch(url + 'removeAudioEventFromCollection', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const removeTranscriptionFromCollection = async (transcriptionID: string, collectionID: string) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ transcriptionID, collectionID })
+  };
+  try {
+    const response = await fetch(url + 'removeTranscriptionFromCollection', request);
     if (response.ok) {
       out = await response.json()
     }
@@ -1384,5 +1464,9 @@ export {
   getAllCollections,
   getEditableCollections,
   addRecordingToCollection,
-  removeRecordingFromCollection
+  addAudioEventToCollection,
+  addTranscriptionToCollection,
+  removeRecordingFromCollection,
+  removeAudioEventFromCollection,
+  removeTranscriptionFromCollection
 }

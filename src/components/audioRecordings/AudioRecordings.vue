@@ -97,6 +97,7 @@
     :possibleCollections='possibleCols'
     :navHeight='navHeight'
     :recID='selectedRecording._id!'
+    addType='recording'
     @close='addToCollectionModalClosed = true'
   />
   <RemoveFromCollection
@@ -104,6 +105,7 @@
     :possibleCollections='removableCols'
     :navHeight='navHeight'
     :recID='selectedRecording._id!'
+    removeType='recording'
     @close='removeFromCollectionModalClosed = true'
   />
 

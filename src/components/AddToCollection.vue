@@ -27,7 +27,11 @@
 <script lang="ts">
 import { defineComponent, PropType } from 'vue';
 import type { CollectionType } from '@/ts/types.ts';
-import { addRecordingToCollection } from '@/js/serverCalls';
+import { 
+  addRecordingToCollection,
+  addAudioEventToCollection,
+  addTranscriptionToCollection
+} from '@/js/serverCalls';
 
 type AddToCollectionDataType = {
   selectedCollection: CollectionType | undefined  
@@ -51,6 +55,18 @@ export default defineComponent({
     },
     recID: {
       type: String,
+      required: false
+    },
+    aeID: {
+      type: String,
+      required: false
+    },
+    tID: {
+      type: String,
+      required: false
+    },
+    addType: {
+      type: String as PropType<'recording' | 'audioEvent' | 'transcription'>,
       required: true
     }
   },
@@ -91,8 +107,21 @@ export default defineComponent({
   methods: {
     async addToCollection() {
       try {
-        const res = await addRecordingToCollection(this.recID, this.selectedCollection!._id!);
-        console.log(res)
+        if (this.addType === 'recording') {
+          if (this.recID === undefined) throw new Error('recID is undefined');
+          const res = await addRecordingToCollection(this.recID, this.selectedCollection!._id!);
+          console.log(res)
+        } else if (this.addType === 'audioEvent') {
+          if (this.aeID === undefined) throw new Error('aeID is undefined');
+          const res = await addAudioEventToCollection(this.aeID, this.selectedCollection!._id!);
+          console.log(res)
+        } else if (this.addType === 'transcription') {
+          if (this.tID === undefined) throw new Error('tID is undefined');
+          const res = await addTranscriptionToCollection(this.tID, this.selectedCollection!._id!);
+          console.log(res)
+        } else {
+          throw new Error('Invalid addType');
+        }
         this.$emit('close');
       } catch (err) {
         console.log(err);

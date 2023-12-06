@@ -945,6 +945,40 @@ const runServer = async () => {
       }
     })
 
+    app.post('/addTranscriptionToCollection', async (req, res) => {
+      try {
+        // add recordingID to collections collection
+        const query = { _id: ObjectId(req.body.collectionID) };
+        const update = { $push: { transcriptions: req.body.transcriptionID } };
+        const result = await collections.updateOne(query, update);
+        // add collectionId to audioRecordings collection
+        const query2 = { _id: ObjectId(req.body.transcriptionID) };
+        const update2 = { $push: { collections: req.body.collectionID } };
+        const result2 = await transcriptions.updateOne(query2, update2);
+        res.json({ result, result2 })
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err)
+      }
+    })
+
+    app.post('/addAudioEventToCollection', async (req, res) => {
+      try {
+        // add recordingID to collections collection
+        const query = { _id: ObjectId(req.body.collectionID) };
+        const update = { $push: { audioEvents: req.body.audioEventID } };
+        const result = await collections.updateOne(query, update);
+        // add collectionId to audioRecordings collection
+        const query2 = { _id: ObjectId(req.body.audioEventID) };
+        const update2 = { $push: { collections: req.body.collectionID } };
+        const result2 = await audioEvents.updateOne(query2, update2);
+        res.json({ result, result2 })
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err)
+      }
+    })
+
     app.post('/removeRecordingFromCollection', async (req, res) => {
       try {
         // remove recordingID from collections collection
@@ -961,6 +995,40 @@ const runServer = async () => {
         res.status(500).send(err)
       }
     })
+
+    app.post('/removeTranscriptionFromCollection', async (req, res) => {
+      try { 
+        const query = { _id: ObjectId(req.body.collectionID) };
+        const update = { $pull: { transcriptions: req.body.transcriptionID } };
+        const result = await collections.updateOne(query, update);
+
+        const query2 = { _id: ObjectId(req.body.transcriptionID) };
+        const update2 = { $pull: { collections: req.body.collectionID } };
+        const result2 = await transcriptions.updateOne(query2, update2);
+        res.json({ result, result2 })
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err)
+      }
+    })
+
+    app.post('/removeAudioEventFromCollection', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.body.collectionID) };
+        const update = { $pull: { audioEvents: req.body.audioEventID } };
+        const result = await collections.updateOne(query, update);
+
+        const query2 = { _id: ObjectId(req.body.audioEventID) };
+        const update2 = { $pull: { collections: req.body.collectionID } };
+        const result2 = await audioEvents.updateOne(query2, update2);
+        res.json({ result, result2 })
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err)
+      }
+    })
+
+    
 
     app.get('/getConsonants', async (req, res) => {
       try {

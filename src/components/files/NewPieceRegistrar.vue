@@ -396,22 +396,27 @@ export default defineComponent({
         }
         this.title = this.passedInData.title;
         this.instrumentation = this.passedInData.instrumentation!;
-        this.aeIdx = this.allEvents.findIndex(ae => {
-          return ae.name === this.passedInData!.audioEvent
-        });
-        const recs = this.allEvents[this.aeIdx].recordings;
-        const allRecNames = await Object.keys(recs).map(key => {
-          const rec = recs[Number(key)];
-          return this.getShorthand(rec)
-        });
-        const rec = this.getShorthand(this.passedInData.audioRecording);
-        this.recording = allRecNames.indexOf(rec);
+        if (this.passedInData.audioEvent && this.passedInData.audioRecording) {
+
+          this.aeIdx = this.allEvents.findIndex(ae => {
+            return ae.name === this.passedInData!.audioEvent
+          });
+          const recs = this.allEvents[this.aeIdx].recordings;
+          console.log(recs)
+          const allRecNames = await Object.keys(recs).map(key => {
+            const rec = recs[Number(key)];
+            return this.getShorthand(rec)
+          });
+          let rec;
+          rec = this.getShorthand(this.passedInData.audioRecording);
+          this.recording = allRecNames.indexOf(rec);
+        }
         this.raga = this.passedInData.raga.name;
         const aeElem = this.$refs.audioEvent as HTMLSelectElement;
         const arElem = this.$refs.audioRec as HTMLSelectElement;
         const rElem = this.$refs.raga as HTMLSelectElement;
         aeElem.disabled = true;
-        arElem.disabled = true;
+        if (arElem) arElem.disabled = true;
         rElem.disabled = true;
       } catch (err) {
         console.log(err)

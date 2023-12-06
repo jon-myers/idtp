@@ -26,7 +26,11 @@
 <script lang="ts">
 import { defineComponent, PropType } from 'vue';
 import type { CollectionType } from '@/ts/types.ts';
-import { removeRecordingFromCollection } from '@/js/serverCalls';
+import { 
+  removeRecordingFromCollection,
+  removeAudioEventFromCollection,
+  removeTranscriptionFromCollection
+} from '@/js/serverCalls';
 
 type RemoveFromCollectionDataType = {
   selectedCollection: CollectionType | undefined  
@@ -50,6 +54,18 @@ export default defineComponent({
     },
     recID: {
       type: String,
+      required: false
+    },
+    aeID: {
+      type: String,
+      required: false
+    },
+    tID: {
+      type: String,
+      required: false
+    },
+    removeType: {
+      type: String as PropType<'recording' | 'audioEvent' | 'transcription'>,
       required: true
     }
   },
@@ -90,8 +106,29 @@ export default defineComponent({
   methods: {
     async removeFromCollection() {
       try {
-        const res = await removeRecordingFromCollection(this.recID, this.selectedCollection!._id!);
-        console.log(res)
+        if (this.removeType === 'recording') {
+          if (this.recID === undefined) {
+            throw new Error('recID is undefined');
+          }
+          const remove = removeRecordingFromCollection;
+          const res = await remove(this.recID, this.selectedCollection!._id!);
+          console.log(res)
+        } else if (this.removeType === 'audioEvent') {
+          if (this.aeID === undefined) {
+            throw new Error('aeID is undefined');
+          }
+          const remove = removeAudioEventFromCollection;
+          const res = await remove(this.aeID, this.selectedCollection!._id!);
+          console.log(res)
+
+        } else if (this.removeType === 'transcription') {
+          if (this.tID === undefined) {
+            throw new Error('tID is undefined');
+          }
+          const remove = removeTranscriptionFromCollection;
+          const res = await remove(this.tID, this.selectedCollection!._id!);
+          console.log(res)
+        }
         this.$emit('close');
       } catch (err) {
         console.log(err);
