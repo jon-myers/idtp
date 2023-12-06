@@ -1,14 +1,13 @@
 <template>
   <div class='modal'>
     <div class='modal-content'>
-      <h2>Add to Collection</h2>
+      <h2>Remove From Collection</h2>
       <div class='modalRow'>
         <select v-model='selectedCollection'>
           <option 
             v-for='(collection, i) in possibleCollections' 
             :key='i'
             :value='collection'
-            :disabled='optionDisabled(collection)'
             >
             {{collection.userName + ' - ' + collection.title}}
           </option>
@@ -16,9 +15,9 @@
       </div>
       <div class='modalRow'>
         <button 
-          @click='addToCollection'
+          @click='removeFromCollection'
           :disabled='selectedCollection === undefined'
-          >Add</button>
+          >Remove</button>
         <button @click='$emit("close")'>Close</button>
       </div>
     </div>
@@ -27,15 +26,15 @@
 <script lang="ts">
 import { defineComponent, PropType } from 'vue';
 import type { CollectionType } from '@/ts/types.ts';
-import { addRecordingToCollection } from '@/js/serverCalls';
+import { removeRecordingFromCollection } from '@/js/serverCalls';
 
-type AddToCollectionDataType = {
+type RemoveFromCollectionDataType = {
   selectedCollection: CollectionType | undefined  
 }
 
 export default defineComponent({
-  name: 'AddToCollection',
-  data(): AddToCollectionDataType {
+  name: 'RemoveFromCollection',
+  data(): RemoveFromCollectionDataType {
     return {
       selectedCollection: undefined
     }
@@ -89,9 +88,9 @@ export default defineComponent({
   },
 
   methods: {
-    async addToCollection() {
+    async removeFromCollection() {
       try {
-        const res = await addRecordingToCollection(this.recID, this.selectedCollection!._id!);
+        const res = await removeRecordingFromCollection(this.recID, this.selectedCollection!._id!);
         console.log(res)
         this.$emit('close');
       } catch (err) {
@@ -99,10 +98,7 @@ export default defineComponent({
       }
     },
 
-    optionDisabled(collection: CollectionType) {
-      let out = collection.audioRecordings.some((rec) => rec === this.recID);
-      return out;
-    }
+    
   }
 })
 

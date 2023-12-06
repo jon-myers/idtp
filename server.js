@@ -945,6 +945,23 @@ const runServer = async () => {
       }
     })
 
+    app.post('/removeRecordingFromCollection', async (req, res) => {
+      try {
+        // remove recordingID from collections collection
+        const query = { _id: ObjectId(req.body.collectionID) };
+        const update = { $pull: { audioRecordings: req.body.recordingID } };
+        const result = await collections.updateOne(query, update);
+        // remove collectionId from audioRecordings collection
+        const query2 = { _id: ObjectId(req.body.recordingID) };
+        const update2 = { $pull: { collections: req.body.collectionID } };
+        const result2 = await audioRecordings.updateOne(query2, update2);
+        res.json({ result, result2 })
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err)
+      }
+    })
+
     app.get('/getConsonants', async (req, res) => {
       try {
         const query = { type: 'consonant' };

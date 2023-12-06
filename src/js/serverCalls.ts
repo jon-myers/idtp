@@ -958,7 +958,26 @@ const addRecordingToCollection = async (recordingID: string, collectionID: strin
     console.error(err)
   }
   return out
+}
 
+const removeRecordingFromCollection = async (recordingID: string, collectionID: string) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ recordingID, collectionID })
+  };
+  try {
+    const response = await fetch(url + 'removeRecordingFromCollection', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
 }
 
 type UserDataType = {
@@ -1364,5 +1383,6 @@ export {
   updateCollection,
   getAllCollections,
   getEditableCollections,
-  addRecordingToCollection
+  addRecordingToCollection,
+  removeRecordingFromCollection
 }

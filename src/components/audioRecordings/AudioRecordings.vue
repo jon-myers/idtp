@@ -93,13 +93,20 @@
     @closeModal='uploadRecModalClosed = true'
   />
   <AddToCollection 
-  v-if='!addToCollectionModalClosed && selectedRecording'
-  :possibleCollections='possibleCols'
-  :navHeight='navHeight'
-  :recID='selectedRecording._id!'
-  @close='addToCollectionModalClosed = true'
-  
+    v-if='!addToCollectionModalClosed && selectedRecording'
+    :possibleCollections='possibleCols'
+    :navHeight='navHeight'
+    :recID='selectedRecording._id!'
+    @close='addToCollectionModalClosed = true'
   />
+  <RemoveFromCollection
+    v-if='!removeFromCollectionModalClosed && selectedRecording'
+    :possibleCollections='removableCols'
+    :navHeight='navHeight'
+    :recID='selectedRecording._id!'
+    @close='removeFromCollectionModalClosed = true'
+  />
+
 </template>
 
 <script lang='ts'>
@@ -108,6 +115,7 @@ import AudioPlayer from '@/components/audioRecordings/ARAudioPlayer.vue';
 import ContextMenu from '@/components/ContextMenu.vue';
 import UploadRecording from '@/components/audioRecordings/UploadRecording.vue';
 import AddToCollection from '@/components/AddToCollection.vue';
+import RemoveFromCollection from '@/components/RemoveFromCollection.vue';
 import { 
   getAllAudioRecordingMetadata, 
   getSortedMusicians,
@@ -152,7 +160,9 @@ type AudioRecordingsDataType = {
   dropDownHeight: number,
   uploadRecModalClosed: boolean,
   possibleCols: CollectionType[],
+  removableCols: CollectionType[],
   addToCollectionModalClosed: boolean,
+  removeFromCollectionModalClosed: boolean,
   selectedRecording: RecType | undefined
   
 
@@ -247,12 +257,20 @@ export default defineComponent({
       dropDownHeight: 30,
       uploadRecModalClosed: true,
       addToCollectionModalClosed: true,
+      removeFromCollectionModalClosed: true,
       possibleCols: [],
+      removableCols: [],
       selectedRecording: undefined
     }
   },
 
-  components: { AudioPlayer, ContextMenu, UploadRecording, AddToCollection },
+  components: { 
+    AudioPlayer, 
+    ContextMenu, 
+    UploadRecording, 
+    AddToCollection,
+    RemoveFromCollection,
+  },
 
   props: {
     navHeight: {
@@ -459,7 +477,24 @@ export default defineComponent({
                 this.contextMenuClosed = true;
                 this.addToCollectionModalClosed = false;
               }
+            });
+
+            this.removableCols = this.possibleCols.filter(col => {
+              return col.audioRecordings.some(rec => {
+                return rec === recording._id;
+              })
             })
+            if (this.removableCols.length > 0) {
+              this.contextMenuChoices.push({
+                text: 'Remove from Collection',
+                action: () => {
+                  this.selectedRecording = recording;
+                  this.contextMenuClosed = true;
+                  this.removeFromCollectionModalClosed = false;
+                  
+                }
+              })
+            }
           }
 
           const tChoices = await getAllTransOfAudioFile(
