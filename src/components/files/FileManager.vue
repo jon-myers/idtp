@@ -144,7 +144,7 @@
   <AddToCollection
       v-if='addToCollectionModalOpen'
       :possibleCollections='editableCols'
-      :navHeight='0'
+      :navHeight='navHeight'
       :tID='selectedPiece?._id'
       @close='closeCollectionsModal'
       addType='transcription'
@@ -171,8 +171,6 @@ import {
   updateTranscriptionPermissions,
   updateTranscriptionOwner,
   getAllUsers,
-  addTranscriptionToCollection,
-  removeTranscriptionFromCollection,
   getEditableCollections,
 } from '@/js/serverCalls.ts';
 import NewPieceRegistrar from '@/components/files/NewPieceRegistrar.vue';
@@ -341,6 +339,13 @@ export default defineComponent({
     RemoveFromCollection
   },
 
+  props: {
+    navHeight: {
+      type: Number,
+      required: true,
+    },
+  },
+
   async created() {
     window.addEventListener('keydown', this.handleKeydown);
     let id = '';
@@ -401,12 +406,17 @@ export default defineComponent({
 
   methods: {
 
-    closeCollectionsModal() {
+    async closeCollectionsModal() {
       this.addToCollectionModalOpen = false;
       this.removeFromCollectionModalOpen = false;
       document.querySelectorAll('.selected').forEach((el) => {
         el.classList.remove('selected');
       });
+      try {
+        this.editableCols = await getEditableCollections(this.$store.state.userID!);
+      } catch (err) {
+        console.log(err)
+      }
     },
 
     async acceptNewPieceInfo(newPieceInfo: NewPieceInfoType) {

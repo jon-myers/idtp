@@ -87,6 +87,24 @@
     :closed='contextMenuClosed'
     :choices='contextMenuChoices'
     />
+  <AddToCollection
+    v-if='addToCollectionModalOpen'
+    :possibleCollections='editableCols'
+    :navHeight='navHeight'
+    :recID='audioRecId'
+    :aeID='selectedAE!._id'
+    @close='closeCollectionsModal'
+    :addType='addType'
+    />
+  <RemoveFromCollection
+    v-if='removeFromCollectionModalOpen'
+    :possibleCollections='aeRemovableCols'
+    :navHeight='navHeight'
+    :recID='audioRecId'
+    :aeID='selectedAE!._id'
+    @close='closeCollectionsModal'
+    :removeType='addType'
+    />
   
 </template>
 <script lang='ts'>
@@ -94,11 +112,14 @@ import {
   getAllAudioEventMetadata, 
   deleteAudioEvent,
   getAllTransOfAudioFile,
+  getEditableCollections,
 } from '@/js/serverCalls.ts';
 import AddAudioEvent from '@/components/audioEvents/AddAudioEvent.vue';
 import AudioPlayer from '@/components/audioEvents/AudioPlayer.vue';
 import { defineComponent } from 'vue';
 import ContextMenu from '@/components/ContextMenu.vue';
+import AddToCollection from '@/components/AddToCollection.vue';
+import RemoveFromCollection from '@/components/RemoveFromCollection.vue';
 
 const displayTime = (dur: number) => {
   const hours = Math.floor(dur / 3600);
@@ -114,6 +135,7 @@ const displayTime = (dur: number) => {
 }
 
 import type { AudioEventType, RecType, RaagType } from '@/components/audioEvents/AddAudioEvent.vue'
+import { ContextMenuOptionType, CollectionType } from '@/ts/types.ts';
 
 type AudioEventsDataType = {
   infoKeys: string[],
@@ -141,7 +163,13 @@ type AudioEventsDataType = {
   audioEventId?: string,
   recIdx?: number,
   contextMenuClosed: boolean,
-  contextMenuChoices: { text: string, action: () => void }[],
+  contextMenuChoices: ContextMenuOptionType[],
+  editableCols: CollectionType[],
+  aeRemovableCols: CollectionType[],
+  recRemovableCols: CollectionType[],
+  addToCollectionModalOpen: boolean,
+  removeFromCollectionModalOpen: boolean,
+  addType: "audioEvent" | "recording" | "transcription",
 }
 
 export default defineComponent({
@@ -178,10 +206,27 @@ export default defineComponent({
       audioEventId: undefined,
       contextMenuClosed: true,
       contextMenuChoices: [],
+      editableCols: [],
+      aeRemovableCols: [],
+      recRemovableCols: [],
+      addToCollectionModalOpen: false,
+      removeFromCollectionModalOpen: false,
+      addType: 'audioEvent'
     }
   },
   components: {
-    AddAudioEvent, AudioPlayer, ContextMenu
+    AddAudioEvent, 
+    AudioPlayer, 
+    ContextMenu, 
+    AddToCollection, 
+    RemoveFromCollection
+  },
+
+  props: {
+    navHeight: {
+      type: Number,
+      required: true
+    },
   },
 
   async created() {
@@ -203,6 +248,14 @@ export default defineComponent({
       console.log(err)
     }
   },
+
+  async mounted() {
+    try {
+      this.editableCols = await getEditableCollections(this.$store.state.userID!)
+    } catch (err) {
+      console.log(err)
+    }
+  },
   
   beforeUnmount() {
     const audioPlayer = this.$refs.audioPlayer as typeof AudioPlayer;
@@ -214,6 +267,19 @@ export default defineComponent({
   },
 
   methods: {
+
+    async closeCollectionsModal() {
+      this.addToCollectionModalOpen = false;
+      this.removeFromCollectionModalOpen = false;
+      try {
+        this.allAudioEvents = await getAllAudioEventMetadata();
+        this.allAudioEvents?.sort((a, b) => a.name.localeCompare(b.name));
+        this.editableCols = await getEditableCollections(this.$store.state.userID!)
+
+      } catch (err) {
+        console.log(err)
+      }
+    },
 
     resetAddEvent() {
       this.showAddEvent = false;
@@ -323,6 +389,31 @@ export default defineComponent({
           this.contextMenuClosed = true;
         }
       })
+      if (this.editableCols.length > 0) {
+        this.contextMenuChoices.push({
+          text: 'Add Event to Collection',
+          action: () => {
+            this.addToCollectionModalOpen = true;
+            
+            this.contextMenuClosed = true;
+          }
+        });
+        this.aeRemovableCols = this.editableCols.filter(c => {
+          if (this.selectedAE === undefined) {
+            throw new Error('selectedAE is undefined')
+          }
+          return c.audioEvents.includes(this.selectedAE._id!)
+        });
+      }
+      if (this.aeRemovableCols.length > 0) {
+        this.contextMenuChoices.push({
+          text: 'Remove Event from Collection',
+          action: () => {
+            this.removeFromCollectionModalOpen = true;
+            this.contextMenuClosed = true;
+          }
+        })
+      }
       if (this.selectedAF !== undefined) {
         this.contextMenuChoices.push({
           text: 'New Transcription',
