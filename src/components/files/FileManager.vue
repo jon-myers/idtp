@@ -141,6 +141,22 @@
       <button @click='saveNewOwner'>Save New Owner</button>
     </div>
   </div>
+  <AddToCollection
+      v-if='addToCollectionModalOpen'
+      :possibleCollections='editableCols'
+      :navHeight='0'
+      :tID='selectedPiece?._id'
+      @close='addToCollectionModalOpen = false'
+      addType='transcription'
+    />
+    <RemoveFromCollection
+      v-if='removeFromCollectionModalOpen'
+      :possibleCollections='removableCols'
+      :navHeight='0'
+      :tID='selectedPiece?._id'
+      @close='removeFromCollectionModalOpen = false'
+      removeType='transcription'
+    />
 </template>
 <script lang='ts'>
 import {
@@ -154,15 +170,20 @@ import {
   updateTranscriptionTitle,
   updateTranscriptionPermissions,
   updateTranscriptionOwner,
-  getAllUsers
+  getAllUsers,
+  addTranscriptionToCollection,
+  removeTranscriptionFromCollection,
+  getEditableCollections,
 } from '@/js/serverCalls.ts';
 import NewPieceRegistrar from '@/components/files/NewPieceRegistrar.vue';
+import AddToCollection from '@/components/AddToCollection.vue';
+import RemoveFromCollection from '@/components/RemoveFromCollection.vue';
 import { Raga, Piece, Trajectory, Phrase } from '@/js/classes.ts';
 
 import { defineComponent } from 'vue';
 import { RecType } from '@/components/audioEvents/AddAudioEvent.vue'
 import ContextMenu from '@/components/ContextMenu.vue';
-import { ContextMenuOptionType, UserType } from '@/ts/types.ts';
+import { ContextMenuOptionType, UserType, CollectionType } from '@/ts/types.ts';
 
 type FileManagerType = {
   infoKeys: string[];
@@ -199,7 +220,11 @@ type FileManagerType = {
   allNames?: string[],
   editingUserIdx?: number,
   contextMenuClosed: boolean,
-  contextMenuChoices: ContextMenuOptionType[]
+  contextMenuChoices: ContextMenuOptionType[],
+  editableCols: CollectionType[],
+  removableCols: CollectionType[],
+  addToCollectionModalOpen: boolean,
+  removeFromCollectionModalOpen: boolean,
 }
 
 type PieceInfoType = [string?, string?, string?, string?, string?, string?];
@@ -302,17 +327,23 @@ export default defineComponent({
       editingUserIdx: undefined,
       contextMenuClosed: true,
       contextMenuChoices: [],
+      editableCols: [],
+      addToCollectionModalOpen: false,
+      removeFromCollectionModalOpen: false,
+      removableCols: [],
     };
   },
 
   components: {
     NewPieceRegistrar,
-    ContextMenu
+    ContextMenu,
+    AddToCollection,
+    RemoveFromCollection
   },
 
   async created() {
     window.addEventListener('keydown', this.handleKeydown);
-    let id: string;
+    let id = '';
     if (this.$store.state.userID === undefined) {
       if (this.$cookies.get('userID') === undefined) {
         this.$router.push('/');
@@ -356,6 +387,8 @@ export default defineComponent({
       } else {
         throw new Error('this.allUsers is undefined');
       }
+
+      this.editableCols = await getEditableCollections(this.$store.state.userID!);
         
     } catch (err) {
       console.log(err)
@@ -625,8 +658,13 @@ export default defineComponent({
       
     },
 
-    handleRightClick(e: MouseEvent) {
+    async handleRightClick(e: MouseEvent) {
       e.preventDefault();
+      try {
+        this.editableCols = await getEditableCollections(this.$store.state.userID!);
+      } catch (err) {
+        console.log(err)
+      }
       this.$nextTick(() => {
         let addOptions = false;
         this.dropDownLeft = e.clientX;
@@ -777,7 +815,32 @@ export default defineComponent({
                 this.deletePiece();
                 this.contextMenuClosed = true;
               }
-            })
+            });
+            if (this.editableCols.length > 0) {
+              this.contextMenuChoices.push({
+                text: 'Add To Collection',
+                enabled: true,
+                action: () => {
+                  this.contextMenuClosed = true;
+                  this.addToCollectionModalOpen = true;
+                }
+              });
+              this.removableCols = this.editableCols.filter(col => {
+                return col.transcriptions.includes(this.selectedPiece!._id!)
+              });
+              if (this.removableCols.length > 0) {
+                this.contextMenuChoices.push({
+                  text: 'Remove From Collection',
+                  enabled: true,
+                  action: () => {
+                    this.contextMenuClosed = true;
+                    this.removeFromCollectionModalOpen = true;
+                  }
+                });
+              }
+            };
+            
+
           }
         }
       })

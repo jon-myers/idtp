@@ -112,14 +112,12 @@ export default defineComponent({
           }
           const remove = removeRecordingFromCollection;
           const res = await remove(this.recID, this.selectedCollection!._id!);
-          console.log(res)
         } else if (this.removeType === 'audioEvent') {
           if (this.aeID === undefined) {
             throw new Error('aeID is undefined');
           }
           const remove = removeAudioEventFromCollection;
           const res = await remove(this.aeID, this.selectedCollection!._id!);
-          console.log(res)
 
         } else if (this.removeType === 'transcription') {
           if (this.tID === undefined) {
@@ -127,7 +125,6 @@ export default defineComponent({
           }
           const remove = removeTranscriptionFromCollection;
           const res = await remove(this.tID, this.selectedCollection!._id!);
-          console.log(res)
         }
         this.$emit('close');
       } catch (err) {

@@ -482,9 +482,7 @@ export default defineComponent({
             });
 
             this.removableCols = this.possibleCols.filter(col => {
-              return col.audioRecordings.some(rec => {
-                return rec === recording._id;
-              })
+              return col.audioRecordings.includes(recording._id!);
             })
             if (this.removableCols.length > 0) {
               this.contextMenuChoices.push({

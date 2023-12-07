@@ -110,15 +110,12 @@ export default defineComponent({
         if (this.addType === 'recording') {
           if (this.recID === undefined) throw new Error('recID is undefined');
           const res = await addRecordingToCollection(this.recID, this.selectedCollection!._id!);
-          console.log(res)
         } else if (this.addType === 'audioEvent') {
           if (this.aeID === undefined) throw new Error('aeID is undefined');
           const res = await addAudioEventToCollection(this.aeID, this.selectedCollection!._id!);
-          console.log(res)
         } else if (this.addType === 'transcription') {
           if (this.tID === undefined) throw new Error('tID is undefined');
           const res = await addTranscriptionToCollection(this.tID, this.selectedCollection!._id!);
-          console.log(res)
         } else {
           throw new Error('Invalid addType');
         }
@@ -129,8 +126,18 @@ export default defineComponent({
     },
 
     optionDisabled(collection: CollectionType) {
-      let out = collection.audioRecordings.some((rec) => rec === this.recID);
-      return out;
+      if (this.addType === 'recording') {
+        if (this.recID === undefined) throw new Error('recID is undefined');
+        return collection.audioRecordings.some((rec) => rec === this.recID);
+      } else if (this.addType === 'audioEvent') {
+        if (this.aeID === undefined) throw new Error('aeID is undefined');
+        return collection.audioEvents.some((ae) => ae === this.aeID);
+      } else if (this.addType === 'transcription') {
+        if (this.tID === undefined) throw new Error('tID is undefined');
+        return collection.transcriptions.some((t) => t === this.tID);
+      } else {
+        throw new Error('Invalid addType');
+      }
     }
   }
 })
