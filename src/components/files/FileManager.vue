@@ -146,7 +146,7 @@
       :possibleCollections='editableCols'
       :navHeight='0'
       :tID='selectedPiece?._id'
-      @close='addToCollectionModalOpen = false'
+      @close='closeCollectionsModal'
       addType='transcription'
     />
     <RemoveFromCollection
@@ -154,7 +154,7 @@
       :possibleCollections='removableCols'
       :navHeight='0'
       :tID='selectedPiece?._id'
-      @close='removeFromCollectionModalOpen = false'
+      @close='closeCollectionsModal'
       removeType='transcription'
     />
 </template>
@@ -400,6 +400,14 @@ export default defineComponent({
   },
 
   methods: {
+
+    closeCollectionsModal() {
+      this.addToCollectionModalOpen = false;
+      this.removeFromCollectionModalOpen = false;
+      document.querySelectorAll('.selected').forEach((el) => {
+        el.classList.remove('selected');
+      });
+    },
 
     async acceptNewPieceInfo(newPieceInfo: NewPieceInfoType) {
       try {
@@ -749,6 +757,10 @@ export default defineComponent({
             action: () => {
               this.designNewPiece();
               this.contextMenuClosed = true;
+              // find any with class selected and remove it
+              document.querySelectorAll('.selected').forEach((el) => {
+                el.classList.remove('selected');
+              });
             }
           });
           if (this.open_) {
