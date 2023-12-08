@@ -91,16 +91,16 @@
     v-if='addToCollectionModalOpen'
     :possibleCollections='editableCols'
     :navHeight='navHeight'
-    :recID='audioRecId'
-    :aeID='selectedAE!._id'
+    :recID='selectedAF?.audioFileId'
+    :aeID='selectedAE?._id'
     @close='closeCollectionsModal'
     :addType='addType'
     />
   <RemoveFromCollection
     v-if='removeFromCollectionModalOpen'
-    :possibleCollections='aeRemovableCols'
+    :possibleCollections='addType === "audioEvent" ? aeRemovableCols : recRemovableCols'
     :navHeight='navHeight'
-    :recID='audioRecId'
+    :recID='selectedAF?.audioFileId'
     :aeID='selectedAE!._id'
     @close='closeCollectionsModal'
     :removeType='addType'
@@ -404,16 +404,17 @@ export default defineComponent({
           }
           return c.audioEvents.includes(this.selectedAE._id!)
         });
+        if (this.aeRemovableCols.length > 0) {
+          this.contextMenuChoices.push({
+            text: 'Remove Event from Collection',
+            action: () => {
+              this.removeFromCollectionModalOpen = true;
+              this.contextMenuClosed = true;
+            }
+          })
+        }
       }
-      if (this.aeRemovableCols.length > 0) {
-        this.contextMenuChoices.push({
-          text: 'Remove Event from Collection',
-          action: () => {
-            this.removeFromCollectionModalOpen = true;
-            this.contextMenuClosed = true;
-          }
-        })
-      }
+      
       if (this.selectedAF !== undefined) {
         this.contextMenuChoices.push({
           text: 'New Transcription',
@@ -430,6 +431,32 @@ export default defineComponent({
             this.contextMenuClosed = true;
           }
         });
+        if (this.editableCols.length > 0) {
+          this.contextMenuChoices.push({
+            text: 'Add Recording to Collection',
+            action: () => {
+              this.addType = 'recording';
+              this.addToCollectionModalOpen = true;
+              this.contextMenuClosed = true;
+            }
+          });
+          this.recRemovableCols = this.editableCols.filter(c => {
+            if (this.selectedAF === undefined) {
+              throw new Error('selectedAF is undefined')
+            }
+            return c.audioRecordings.includes(this.selectedAF.audioFileId)
+          });
+          if (this.recRemovableCols.length > 0) {
+            this.contextMenuChoices.push({
+              text: 'Remove Recording from Collection',
+              action: () => {
+                this.addType = 'recording';
+                this.removeFromCollectionModalOpen = true;
+                this.contextMenuClosed = true;
+              }
+            })
+          }
+        }
         try {
           const tChoices = await getAllTransOfAudioFile(
             this.selectedAF.audioFileId, this.$store.state.userID!
