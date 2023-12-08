@@ -78,6 +78,7 @@ import { getContrastingTextColor } from '@/ts/utils';
 import { defineComponent } from 'vue';
 import ContextMenu from '@/components/ContextMenu.vue';
 import CollectionViewer from '@/components/collections/CollectionViewer.vue';
+import MiniAudioRecordings from '@/components/collections/MiniAudioRecordings.vue';
 
 type CollectionsComponentDataType = {
   newCollectionModalOpen: boolean,

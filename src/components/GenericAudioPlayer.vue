@@ -233,7 +233,11 @@ export default {
       if (this.audio === undefined) {
         throw new Error('audio is undefined')
       }
-      this.audio.currentTime = 0
+      if (this.audio.currentTime > 2) {
+        this.audio.currentTime = 0
+      } else {
+        this.$emit('emitPrevTrack', this.shuffling, this.looping)
+      }
     },
     
     handleProgressClick(e: MouseEvent) {

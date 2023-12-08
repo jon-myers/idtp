@@ -1028,7 +1028,18 @@ const runServer = async () => {
       }
     })
 
-    
+    app.post('/getRecsFromIds', async (req, res) => {
+      console.log(req.body.recIDs)
+      try {
+        const query = { _id: { $in: req.body.recIDs.map(id => ObjectId(id)) } };
+        const result = await audioRecordings.find(query).toArray();
+        console.log(result)
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err)
+      }
+    })
 
     app.get('/getConsonants', async (req, res) => {
       try {

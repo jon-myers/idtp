@@ -1386,6 +1386,37 @@ const getMelographJSON = async (recID: string) => {
   }
 }
 
+const getRecsFromIds = async (recIDs: string[]) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      recIDs
+    })
+  };
+  // const request = {
+  //   method: 'POST',
+  //   headers: {
+  //     'Content-Type': 'application/json'
+  //   },
+  //   body: {
+  //     recIDs:JSON.stringify(recIDs)
+  //   }
+  // };
+  try {
+    const response = await fetch(url + 'getRecsFromIds', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
 const getEditableCollections = async (userID: string): Promise<CollectionType[]> => {
   let out;
   const request = {
@@ -1468,5 +1499,6 @@ export {
   addTranscriptionToCollection,
   removeRecordingFromCollection,
   removeAudioEventFromCollection,
-  removeTranscriptionFromCollection
+  removeTranscriptionFromCollection,
+  getRecsFromIds
 }

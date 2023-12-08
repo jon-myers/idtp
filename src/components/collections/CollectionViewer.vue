@@ -12,8 +12,19 @@
     <div class='descriptionRow'>
      <div class='descriptionContainer'>{{ collection.description }}</div>
     </div>
+    <div class='arHolder' v-if='collection.audioRecordings.length > 0'>
+      <div class='miniBoxTitle'>Audio Recordings</div>
+      <MiniAudioRecordings
+        :recIds='collection.audioRecordings'
+        class='miniAR'
+        @sendAudioSource='sendAudioSource'
+        ref = 'miniAR'
+        />
+    </div>
     <GenericAudioPlayer 
       :audioSource='audioSource'
+      @emitNextTrack='emitNextTrack'
+      @emitPrevTrack='emitPrevTrack'
       />
   </div>
 </template>
@@ -24,18 +35,27 @@ import type { CollectionType } from '@/ts/types.ts';
 import { getContrastingTextColor } from '@/ts/utils';
 import GenericAudioPlayer from '@/components/GenericAudioPlayer.vue';
 import { getEditableCollections } from '@/js/serverCalls';
+import MiniAudioRecordings from '@/components/collections/MiniAudioRecordings.vue';
+
 type CollectionViewerDataType = {
-  audioSource: string | undefined
+  audioSource: string | undefined,
+  miniBoxHeight: number,
+  miniBoxLabelHeight: number,
+  playingFromType?: 'recording' | 'audioEvent'
 }
 export default defineComponent({
   name: 'CollectionViewer',
-  data() {
+  data(): CollectionViewerDataType {
     return {
-      audioSource: undefined
+      audioSource: undefined,
+      miniBoxHeight: 300,
+      miniBoxLabelHeight: 50,
+      playingFromType: undefined
     }
   },
   components: {
-    GenericAudioPlayer
+    GenericAudioPlayer,
+    MiniAudioRecordings
   },
   props: {
     collection: {
@@ -67,6 +87,25 @@ export default defineComponent({
 
     editCollection($event: MouseEvent) {
       this.$emit('editCollection');
+    },
+
+    sendAudioSource(id: string, fromType: 'recording' | 'audioEvent') {
+      this.playingFromType = fromType;
+      this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
+    },
+
+    emitNextTrack(shuffling: boolean, repeat: boolean) {
+      if (this.playingFromType === 'recording') {
+        const miniAR = this.$refs.miniAR as typeof MiniAudioRecordings;
+        miniAR.sendNextTrack(shuffling, repeat);
+      }
+    },
+
+    emitPrevTrack(shuffling: boolean, repeat: boolean) {
+      if (this.playingFromType === 'recording') {
+        const miniAR = this.$refs.miniAR as typeof MiniAudioRecordings;
+        miniAR.sendPrevTrack(shuffling, repeat);
+      }
     }
   }
 })
@@ -137,5 +176,32 @@ h2 {
   align-items: center;
   margin-left: 20px;
   text-align: left;
+}
+
+.miniAR {
+  width: 90vw;
+  height: v-bind(miniBoxHeight + 'px');
+
+}
+
+.arHolder {
+  width: 100%;
+  height: v-bind(miniBoxHeight + miniBoxLabelHeight + 'px');
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.miniBoxTitle {
+  width: 100%;
+  height: v-bind(miniBoxLabelHeight + 'px');
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2em;
+  font-weight: bold;
+  text-align: center;
 }
 </style>

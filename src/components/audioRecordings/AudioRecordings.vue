@@ -773,27 +773,7 @@ export default defineComponent({
       }
     },
 
-    sendAudioSource(event: MouseEvent, recording: RecType) {
-      const audioFileId = recording._id; 
-      let target = event.target as HTMLElement;
-      if (target.tagName === 'SPAN') {
-        target = target.parentElement!;
-        if (target.classList.contains('metadataLabels')) {
-          target = target.parentElement!;
-        }
-      };
-      const playingElem = document.querySelector('.playing');
-      if (playingElem) {
-        playingElem.classList.remove('playing');
-      }
-      target.classList.add('playing');
-      this.audioSource = `Https://swara.studio/audio/mp3/${audioFileId}.mp3`;
-      this.saEstimate = recording.saEstimate;
-      this.saVerified = recording.saVerified;
-      this.activeRecording = recording;
 
-
-    },
 
     trackNumSorter(a: RecType, b: RecType) {
       if (a.parentTrackNumber === undefined && b.parentTrackNumber === undefined) {
@@ -955,6 +935,28 @@ export default defineComponent({
           elem.classList.add('playing');
         }
       }
+
+    },
+
+    sendAudioSource(event: MouseEvent, recording: RecType) {
+      const audioFileId = recording._id; 
+      let target = event.target as HTMLElement;
+      if (target.tagName === 'SPAN') {
+        target = target.parentElement!;
+        if (target.classList.contains('metadataLabels')) {
+          target = target.parentElement!;
+        }
+      };
+      const playingElem = document.querySelector('.playing');
+      if (playingElem) {
+        playingElem.classList.remove('playing');
+      }
+      target.classList.add('playing');
+      this.audioSource = `Https://swara.studio/audio/mp3/${audioFileId}.mp3`;
+      this.saEstimate = recording.saEstimate;
+      this.saVerified = recording.saVerified;
+      this.activeRecording = recording;
+
 
     },
 
