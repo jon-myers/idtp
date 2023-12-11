@@ -12,15 +12,26 @@
     <div class='descriptionRow'>
      <div class='descriptionContainer'>{{ collection.description }}</div>
     </div>
-    <div class='arHolder' v-if='collection.audioRecordings.length > 0'>
-      <div class='miniBoxTitle'>Audio Recordings</div>
-      <MiniAudioRecordings
-        :recIds='collection.audioRecordings'
-        class='miniAR'
-        @sendAudioSource='sendAudioSource'
-        ref = 'miniAR'
-        />
+    <div class='contentContainer'>
+      <div class='arHolder' v-if='collection.audioRecordings.length > 0'>
+        <div class='miniBoxTitle'>Audio Recordings</div>
+        <MiniAudioRecordings
+          :recIds='collection.audioRecordings'
+          class='miniAR'
+          @sendAudioSource='sendAudioSource'
+          ref = 'miniAR'
+          />
+      </div>
+      <div class='aeHolder' v-if='collection.audioEvents.length > 0'>
+        <div class='miniBoxTitle'>Audio Events</div>
+        <MiniAudioEvents
+          :aeIds='collection.audioEvents'
+          class='miniAE'
+          ref = 'miniAE'
+          />
+      </div>
     </div>
+    
     <GenericAudioPlayer 
       :audioSource='audioSource'
       @emitNextTrack='emitNextTrack'
@@ -36,12 +47,15 @@ import { getContrastingTextColor } from '@/ts/utils';
 import GenericAudioPlayer from '@/components/GenericAudioPlayer.vue';
 import { getEditableCollections } from '@/js/serverCalls';
 import MiniAudioRecordings from '@/components/collections/MiniAudioRecordings.vue';
-
+import MiniAudioEvents from '@/components/collections/MiniAudioEvents.vue';
 type CollectionViewerDataType = {
   audioSource: string | undefined,
   miniBoxHeight: number,
   miniBoxLabelHeight: number,
-  playingFromType?: 'recording' | 'audioEvent'
+  playingFromType?: 'recording' | 'audioEvent',
+  titleRowHeight: number,
+  descriptionRowHeight: number,
+  containerHeight: number
 }
 export default defineComponent({
   name: 'CollectionViewer',
@@ -50,12 +64,16 @@ export default defineComponent({
       audioSource: undefined,
       miniBoxHeight: 300,
       miniBoxLabelHeight: 50,
-      playingFromType: undefined
+      playingFromType: undefined,
+      titleRowHeight: 80,
+      descriptionRowHeight: 80,
+      containerHeight: 500,
     }
   },
   components: {
     GenericAudioPlayer,
-    MiniAudioRecordings
+    MiniAudioRecordings,
+    MiniAudioEvents
   },
   props: {
     collection: {
@@ -64,6 +82,10 @@ export default defineComponent({
     },
     owner: {
       type: Boolean,
+      required: true
+    },
+    navHeight: {
+      type: Number,
       required: true
     }
   },
@@ -77,7 +99,20 @@ export default defineComponent({
     }
   },
 
+  mounted() {
+    this.setContainerHeight();
+    window.addEventListener('resize', this.setContainerHeight);
+  },
+
+  beforeUnmount() {
+    window.removeEventListener('resize', this.setContainerHeight);
+  },
+
   methods: {
+
+    setContainerHeight() {
+      this.containerHeight = window.innerHeight - this.navHeight - 101 - this.titleRowHeight - this.descriptionRowHeight;
+    },
 
     getEditableCollections,
     
@@ -127,7 +162,7 @@ export default defineComponent({
 
 .titleRow {
   width: 100%;
-  height: 80px;
+  height: v-bind(titleRowHeight + 'px');
   display: flex;
   flex-direction: row;
   justify-content: left;
@@ -160,7 +195,7 @@ h2 {
 
 .descriptionRow {
   width: 100%;
-  height: 80px;
+  height: v-bind(descriptionRowHeight + 'px');
   display: flex;
   flex-direction: row;
   justify-content: left;
@@ -184,6 +219,21 @@ h2 {
 
 }
 
+.miniAE {
+  width: 90vw;
+  height: v-bind(miniBoxHeight + 'px');
+}
+
+.aeHolder {
+  width: 100%;
+  height: v-bind(miniBoxHeight + miniBoxLabelHeight + 'px');
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+}
+
 .arHolder {
   width: 100%;
   height: v-bind(miniBoxHeight + miniBoxLabelHeight + 'px');
@@ -203,5 +253,19 @@ h2 {
   font-size: 1.2em;
   font-weight: bold;
   text-align: center;
+}
+
+.contentContainer {
+  width: 100%;
+  height: v-bind(containerHeight + 'px');
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  padding: 10px;
+
 }
 </style>

@@ -1397,15 +1397,6 @@ const getRecsFromIds = async (recIDs: string[]) => {
       recIDs
     })
   };
-  // const request = {
-  //   method: 'POST',
-  //   headers: {
-  //     'Content-Type': 'application/json'
-  //   },
-  //   body: {
-  //     recIDs:JSON.stringify(recIDs)
-  //   }
-  // };
   try {
     const response = await fetch(url + 'getRecsFromIds', request);
     if (response.ok) {
@@ -1416,6 +1407,28 @@ const getRecsFromIds = async (recIDs: string[]) => {
     console.error(err)
   }
 }
+
+const getAEsFromIds = async (aeIDs: string[]) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      aeIDs
+    })
+  };
+  try {
+    const response = await fetch(url + 'getAEsFromIds', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+};
 
 const getEditableCollections = async (userID: string): Promise<CollectionType[]> => {
   let out;
@@ -1500,5 +1513,6 @@ export {
   removeRecordingFromCollection,
   removeAudioEventFromCollection,
   removeTranscriptionFromCollection,
-  getRecsFromIds
+  getRecsFromIds,
+  getAEsFromIds
 }

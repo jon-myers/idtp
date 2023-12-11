@@ -126,7 +126,7 @@ import {
   getEditableCollections
 } from '@/js/serverCalls.ts';
 import { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
-import { displayTime } from '@/js/utils.ts';
+import { displayTime } from '@/ts/utils.ts';
 import { CollectionType } from '@/ts/types.ts';
 
 type AudioRecordingsDataType = {

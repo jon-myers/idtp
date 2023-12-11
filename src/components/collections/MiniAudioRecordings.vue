@@ -98,7 +98,7 @@ type MiniAudioRecordingsDataType = {
   initialWidths: number[],
   minColumnWidths: number[]
 }
-import { displayTime } from '@/js/utils.ts';
+import { displayTime } from '@/ts/utils.ts';
 
 
 export default defineComponent({
@@ -775,7 +775,6 @@ span.field {
   min-height: 40px;
   width: 100%;
   border-bottom: 1px solid grey;
-  /* overflow-x: hidden; */
 }
 
 .playing {
