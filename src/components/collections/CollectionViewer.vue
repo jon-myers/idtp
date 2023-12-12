@@ -28,6 +28,7 @@
           :aeIds='collection.audioEvents'
           class='miniAE'
           ref = 'miniAE'
+          @sendAudioSource='sendAudioSource'
           />
       </div>
     </div>
@@ -133,6 +134,9 @@ export default defineComponent({
       if (this.playingFromType === 'recording') {
         const miniAR = this.$refs.miniAR as typeof MiniAudioRecordings;
         miniAR.sendNextTrack(shuffling, repeat);
+      } else if (this.playingFromType === 'audioEvent') {
+        const miniAE = this.$refs.miniAE as typeof MiniAudioEvents;
+        miniAE.sendNextTrack(shuffling, repeat);
       }
     },
 
@@ -140,6 +144,9 @@ export default defineComponent({
       if (this.playingFromType === 'recording') {
         const miniAR = this.$refs.miniAR as typeof MiniAudioRecordings;
         miniAR.sendPrevTrack(shuffling, repeat);
+      } else if (this.playingFromType === 'audioEvent') {
+        const miniAE = this.$refs.miniAE as typeof MiniAudioEvents;
+        miniAE.sendPrevTrack(shuffling, repeat);
       }
     }
   }
