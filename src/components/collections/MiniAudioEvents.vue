@@ -87,9 +87,9 @@
               v-for='(field, fIdx) in recMetadataFields'
               :style='{
                 "width": recColumnWidths[fIdx] + "px",
-                "max-width": fIdx === 0 ? "" : recColumnWidths[fIdx] + "px",
+                "max-width": fIdx === 1 ? "" : recColumnWidths[fIdx] + "px",
                 "min-width": recMinColumnWidths[fIdx] + "px",
-                "flex-grow": fIdx === 0 ? 1 : 0,
+                "flex-grow": fIdx === 1 ? 1 : 0,
                 "position": "relative",
               }'
               >
@@ -115,9 +115,9 @@
               v-for='(field, fIdx) in recMetadataFields'
               :style='{
                 "width": recColumnWidths[fIdx] + "px",
-                "max-width": fIdx === 0 ? "" : recColumnWidths[fIdx] + "px",
+                "max-width": fIdx === 1 ? "" : recColumnWidths[fIdx] + "px",
                 "min-width": recMinColumnWidths[fIdx] + "px",
-                "flex-grow": fIdx === 0 ? 1 : 0,
+                "flex-grow": fIdx === 1 ? 1 : 0,
               }'
               >
               <span class='field'>
@@ -763,14 +763,8 @@ span.field {
   align-items: center;
   min-height: 40px;
   width: 100%;
-  /* border-top: 1px solid grey; */
   border-bottom: 1px solid grey;
-  /* overflow-x: hidden; */
 }
-
-/* .aeRow.visible {
-  background-color: #343A35;
-} */
 
 .aeRow.first {
   border-top: 1px solid grey;
