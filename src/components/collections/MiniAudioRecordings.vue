@@ -36,7 +36,6 @@
     </div>
     <div 
       class='fileContainer'
-      @contextmenu='handleRightClick'
       ref='fileContainer'
       >
       <div 

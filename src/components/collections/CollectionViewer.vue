@@ -31,6 +31,13 @@
           @sendAudioSource='sendAudioSource'
           />
       </div>
+      <div class='tHolder' v-if='collection.transcriptions.length > 0'>
+        <div class='miniBoxTitle'>Transcriptions</div>
+        <MiniTranscriptions
+          :tIds='collection.transcriptions'
+          class='miniT'
+          />
+      </div>
     </div>
     
     <GenericAudioPlayer 
@@ -49,6 +56,7 @@ import GenericAudioPlayer from '@/components/GenericAudioPlayer.vue';
 import { getEditableCollections } from '@/js/serverCalls';
 import MiniAudioRecordings from '@/components/collections/MiniAudioRecordings.vue';
 import MiniAudioEvents from '@/components/collections/MiniAudioEvents.vue';
+import MiniTranscriptions from '@/components/collections/MiniTranscriptions.vue';
 type CollectionViewerDataType = {
   audioSource: string | undefined,
   miniBoxHeight: number,
@@ -74,7 +82,8 @@ export default defineComponent({
   components: {
     GenericAudioPlayer,
     MiniAudioRecordings,
-    MiniAudioEvents
+    MiniAudioEvents,
+    MiniTranscriptions
   },
   props: {
     collection: {
@@ -231,6 +240,11 @@ h2 {
   height: v-bind(miniBoxHeight + 'px');
 }
 
+.miniT {
+  width: 90vw;
+  height: v-bind(miniBoxHeight + 'px');
+}
+
 .aeHolder {
   width: 100%;
   height: v-bind(miniBoxHeight + miniBoxLabelHeight + 'px');
@@ -238,6 +252,7 @@ h2 {
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  margin-top: 10px;
 
 }
 
@@ -248,6 +263,18 @@ h2 {
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  margin-top: 10px;
+}
+
+.tHolder {
+  width: 100%;
+  height: v-bind(miniBoxHeight + miniBoxLabelHeight + 'px');
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px;
+
 }
 
 .miniBoxTitle {

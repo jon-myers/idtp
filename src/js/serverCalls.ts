@@ -1430,6 +1430,29 @@ const getAEsFromIds = async (aeIDs: string[]) => {
   }
 };
 
+const getTranscriptionsFromIds = async (transIDs: string[]) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      transIDs
+    })
+  };
+  try {
+    const response = await fetch(url + 'getTranscriptionsFromIds', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+
 const getEditableCollections = async (userID: string): Promise<CollectionType[]> => {
   let out;
   const request = {
@@ -1514,5 +1537,6 @@ export {
   removeAudioEventFromCollection,
   removeTranscriptionFromCollection,
   getRecsFromIds,
-  getAEsFromIds
+  getAEsFromIds,
+  getTranscriptionsFromIds
 }

@@ -1052,6 +1052,37 @@ const runServer = async () => {
       }
     })
 
+    app.post('/getTranscriptionsFromIds', async (req, res) => {
+      try {
+        const query = { 
+          _id: { $in: req.body.transIDs.map(id => ObjectId(id)) } 
+        };
+        const proj = {
+          title: 1,
+          dateCreated: 1,
+          dateModified: 1,
+          location: 1,
+          transcriber: 1,
+          _id: 1,
+          performers: 1,
+          durTot: 1,
+          raga: 1,
+          userID: 1,
+          permissions: 1,
+          name: 1,
+          family_name: 1,
+          given_name: 1,
+          audioID: 1,
+          instrumentation: 1
+        }
+        const result = await transcriptions.find(query).project(proj).toArray();
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err)
+      }
+    })
+
     app.get('/getConsonants', async (req, res) => {
       try {
         const query = { type: 'consonant' };
