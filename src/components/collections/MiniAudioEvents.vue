@@ -5,9 +5,9 @@
         v-for='(field, fIdx) in metadataFields'
         :style='{
           "width": columnWidths[fIdx] + "px",
-          "max-width": fIdx === metadataFields.length - 3 ? "" : columnWidths[fIdx] + "px",
+          "max-width": fIdx === 0 ? "" : columnWidths[fIdx] + "px",
           "min-width": minColumnWidths[fIdx] + "px",
-          "flex-grow": fIdx === metadataFields.length - 3 ? 1 : 0,
+          "flex-grow": fIdx === 0 ? 1 : 0,
           "position": "relative",
         }'
       >
@@ -39,31 +39,102 @@
       ref='fileContainer'
       >
       <div 
-        class='aeRow'
+        class='aeRowHolder' 
         v-for='(ae, aeIdx) in audioEvents'
-        :id='`aeRow${aeIdx}`'
+        :style='{ "min-height": getAERowHeight(ae) + "px" }'
         >
         <div 
-          class='metadataLabels'
-          v-for='(field, fIdx) in metadataFields'
-          :style='{
-            "width": columnWidths[fIdx] + "px",
-            "max-width": fIdx === metadataFields.length - 3 ? "" : columnWidths[fIdx] + "px",
-            "min-width": minColumnWidths[fIdx] + "px",
-            "flex-grow": fIdx === metadataFields.length - 3 ? 1 : 0,
-          }'
+          :class='aeRowClass(aeIdx, audioEvents)'
+          :id='`aeRow${aeIdx}`'
+          @dblclick='toggleDisplay($event, ae, true)'
           >
-          <span class='field'>
-            {{ field.func(ae) }}
-          </span>
           <div 
-            class='draggableBorder'
-            draggable='true'
-            @dragstart='handleDragStart(fIdx, $event)'
-            @drag='handleDrag(fIdx, $event)'
-            @dragend='handleDragEnd(fIdx, $event)'
+            class='metadataLabels'
+            v-for='(field, fIdx) in metadataFields'
+            :style='{
+              "width": columnWidths[fIdx] + "px",
+              "max-width": fIdx === 0 ? "" : columnWidths[fIdx] + "px",
+              "min-width": minColumnWidths[fIdx] + "px",
+              "flex-grow": fIdx === 0 ? 1 : 0,
+            }'
             >
+            
+            <span class='field'>
+              <span 
+                class='tri' 
+                v-if='fIdx === 0' 
+                @click='toggleDisplay($event, ae, false)'
+                >&#9654;</span>
+              {{ field.func(ae) }}
+            </span>
+            <div 
+              class='draggableBorder'
+              draggable='true'
+              @dragstart='handleDragStart(fIdx, $event)'
+              @drag='handleDrag(fIdx, $event)'
+              @dragend='handleDragEnd(fIdx, $event)'
+              >
+            </div>
           </div>
+        </div>
+        <div 
+          class='recsHolder'
+          :style='{ "min-height": getAERowHeight(ae) - rowHeight + "px" }'
+          v-if='ae.visible'
+          >
+          <div class='recsLabelRow'>
+            <div class='recsMetadataLabels' 
+              v-for='(field, fIdx) in recMetadataFields'
+              :style='{
+                "width": recColumnWidths[fIdx] + "px",
+                "max-width": fIdx === 0 ? "" : recColumnWidths[fIdx] + "px",
+                "min-width": recMinColumnWidths[fIdx] + "px",
+                "flex-grow": fIdx === 0 ? 1 : 0,
+                "position": "relative",
+              }'
+              >
+              <span class='field'>
+                {{ field.name }}
+              </span>
+              <div 
+                class='draggableBorder'
+                draggable='true'
+                @dragstart='recHandleDragStart(fIdx, $event)'
+                @drag='recHandleDrag(fIdx, $event)'
+                @dragend='recHandleDragEnd(fIdx, $event)'
+                >
+              </div>
+            </div>
+          </div>
+          <div 
+            class='recRow'
+            v-for='(recKey, recIdx) in Object.keys(ae.recordings)'
+            >
+            <div 
+              :class='recClass(recIdx, aeIdx, audioEvents)'
+              v-for='(field, fIdx) in recMetadataFields'
+              :style='{
+                "width": recColumnWidths[fIdx] + "px",
+                "max-width": fIdx === 0 ? "" : recColumnWidths[fIdx] + "px",
+                "min-width": recMinColumnWidths[fIdx] + "px",
+                "flex-grow": fIdx === 0 ? 1 : 0,
+              }'
+              >
+              <span class='field'>
+                {{ field.func(ae.recordings[Number(recKey)]) }}
+              </span>
+              <div 
+                class='draggableBorder'
+                draggable='true'
+                @dragstart='recHandleDragStart(fIdx, $event)'
+                @drag='recHandleDrag(fIdx, $event)'
+                @dragend='recHandleDragEnd(fIdx, $event)'
+                >
+              </div>
+            </div>
+          </div>
+
+
         </div>
       </div>
     </div>
@@ -88,12 +159,21 @@ type MiniAudioEventsDataType = {
     sortState: 'up' | 'down',
     sortType?: string
   }[],
+  recMetadataFields: {
+    name: string,
+    func: (rec: RecType) => string,
+  }[],
   columnWidths: number[],
   minColumnWidths: number[],
   initialWidths: number[],
+  recColumnWidths: number[],
+  recMinColumnWidths: number[],
+  recInitialWidths: number[],
   selectedSortIdx: number,
   labelRowHeight: number,
   initialMouseX?: number,
+  indentWidth: number,
+  rowHeight: number
   
 }
 
@@ -144,12 +224,64 @@ export default defineComponent({
           sortType: 'totalDuration'
         }
       ],
+
       columnWidths: [200, 150, 150, 125, 140],
       initialWidths: [200, 150, 150, 125, 140],
       minColumnWidths: [80, 150, 120, 125, 140],
+      recColumnWidths: [140, 160, 150, 150, 125],
+      recInitialWidths: [140, 160, 150, 150, 125],
+      recMinColumnWidths: [70, 80, 70, 80, 80],
       selectedSortIdx: 0,
       labelRowHeight: 40,
       initialMouseX: undefined,
+      recMetadataFields: [
+        {
+          name: 'Track #',
+          func: (rec: RecType) => {
+            return rec.parentTrackNumber ? rec.parentTrackNumber : 'None';
+          }, 
+        },
+        {
+          name: 'Soloist',
+          func: (rec: RecType) => {
+            const keys = Object.keys(rec.musicians).filter(key => {
+              return rec.musicians[key].role === 'Soloist';
+            });
+            if (keys.length > 0) {
+              return keys[0];
+            } else {
+              return 'Unknown';
+            }         
+          },
+        },
+        {
+          name: 'Raag',
+          func: (rec: RecType) => {
+            return Object.keys(rec.raags).join(', ');
+          },
+        },
+        {
+          name: 'Section',
+          func: (rec: RecType) => {
+            const raags = Object.keys(rec.raags);
+            return raags.map(raag => {
+              if (rec.raags[raag]['performance sections']) {
+                return Object.keys(rec.raags[raag]['performance sections']!);
+              } else {
+                return []; 
+              }
+            }).flat().join(', ');
+          }
+        },
+        {
+          name: 'Duration',
+          func: (rec: RecType) => {
+            return displayTime(rec.duration);
+          },
+        },
+      ],
+      indentWidth: 40,
+      rowHeight: 40,
     }
   },
   props: {
@@ -164,12 +296,52 @@ export default defineComponent({
     const ratio = this.$el.offsetWidth / summedWidths;
     this.columnWidths = this.columnWidths.map(w => w * ratio);
     this.initialWidths = this.columnWidths.slice();
+
+    const summedRecWidths = this.recColumnWidths.reduce((a, b) => a + b, 0);
+    const recRatio = (this.$el.offsetWidth - this.indentWidth) / summedRecWidths;
+    this.recColumnWidths = this.recColumnWidths.map(w => w * recRatio);
+    this.recInitialWidths = this.recColumnWidths.slice();
+
+    // handle resizing
+    window.addEventListener('resize', () => {
+      const summedWidths = this.columnWidths.reduce((a, b) => a + b, 0);
+      const ratio = this.$el.offsetWidth / summedWidths;
+      this.columnWidths = this.columnWidths.map(w => w * ratio);
+      this.initialWidths = this.columnWidths.slice();
+
+      const summedRecWidths = this.recColumnWidths.reduce((a, b) => a + b, 0);
+      const recRatio = (this.$el.offsetWidth - this.indentWidth) / summedRecWidths;
+      this.recColumnWidths = this.recColumnWidths.map(w => w * recRatio);
+      this.recInitialWidths = this.recColumnWidths.slice();
+    });
     try {
       this.audioEvents = await getAEsFromIds(this.aeIds);
+      // add parentTrackNumber to each recording
+      this.audioEvents.forEach(ae => {
+        const recKeys = Object.keys(ae.recordings);
+        recKeys.forEach(recKey => {
+          const rec = ae.recordings[Number(recKey)];
+          rec.parentTrackNumber = recKey;
+        });
+      });
 
     } catch (err) {
       console.log(err);
     }
+  },
+
+  beforeUnmount() {
+    window.removeEventListener('resize', () => {
+      const summedWidths = this.columnWidths.reduce((a, b) => a + b, 0);
+      const ratio = this.$el.offsetWidth / summedWidths;
+      this.columnWidths = this.columnWidths.map(w => w * ratio);
+      this.initialWidths = this.columnWidths.slice();
+
+      const summedRecWidths = this.recColumnWidths.reduce((a, b) => a + b, 0);
+      const recRatio = (this.$el.offsetWidth - this.indentWidth) / summedRecWidths;
+      this.recColumnWidths = this.recColumnWidths.map(w => w * recRatio);
+      this.recInitialWidths = this.recColumnWidths.slice();
+    });
   },
   components: {
   },
@@ -177,6 +349,52 @@ export default defineComponent({
   },
 
   methods: {
+
+    getAERowHeight(ae: AudioEventType) {
+      if (ae.visible === undefined || ae.visible === false ) {
+        return this.rowHeight;
+      } else {
+        const recKeys = Object.keys(ae.recordings);
+        let totalHeight = this.rowHeight;
+        recKeys.forEach(recKey => {
+          const rec = ae.recordings[Number(recKey)];
+          totalHeight += this.rowHeight;
+        });
+        totalHeight += this.rowHeight; // for the rec label row
+        return totalHeight;
+      }
+    },
+
+    toggleDisplay(t: MouseEvent, audioEvent: AudioEventType, parent: boolean) {
+      if (!parent) {
+        const target = t.target as HTMLElement;
+        if (target.classList.contains('rotated')) {
+          audioEvent.visible = undefined
+        } else {
+          audioEvent.visible = true;
+        }
+        target.classList.toggle('rotated');
+        const row = target.parentElement!.parentElement!.parentElement!;
+        row.classList.toggle('visible');
+      } else {
+        let target = t.target as HTMLElement;
+        target = target.parentElement!;
+        if (target.classList.contains('metadataLabels')) {
+          target = target.parentElement!;
+        }
+        if (target.classList.contains('aeRow')) {
+          target = target.querySelector('.tri') as HTMLElement;
+          if (target.classList.contains('rotated')) {
+            audioEvent.visible = undefined
+          } else {
+            audioEvent.visible = true;
+          }
+          target.classList.toggle('rotated')
+          const row = target.parentElement!.parentElement!.parentElement!;
+          row.classList.toggle('visible');
+        } 
+      }
+    },
 
     getSoloist(ae: AudioEventType) {
       const recKeys = Object.keys(ae.recordings);
@@ -212,8 +430,6 @@ export default defineComponent({
       this.initialWidths = this.columnWidths.slice()
       // make cursor resize until drag end
       document.body.style.cursor = 'col-resize';
-      
-
     },
     handleDrag(fIdx: number, event: DragEvent) {
       const nextCol = fIdx < this.columnWidths.length - 1;
@@ -255,6 +471,60 @@ export default defineComponent({
         this.columnWidths[fIdx] = this.initialWidths[fIdx] + deltaX;
         if (nextCol) {
           this.columnWidths[fIdx + 1] = this.initialWidths[fIdx + 1] - deltaX;
+        }  
+      } 
+    },
+
+    recHandleDragStart(fIdx: number, event: DragEvent) {
+      // Store the initial mouse position and column widths
+      // event.preventDefault();
+      this.initialMouseX = event.clientX;
+      this.recInitialWidths = this.recColumnWidths.slice()
+      // make cursor resize until drag end
+      document.body.style.cursor = 'col-resize';
+    },
+
+    recHandleDrag(fIdx: number, event: DragEvent) {
+      const nextCol = fIdx < this.recColumnWidths.length - 1;
+      // Calculate the new width based on the mouse movement
+      document.body.style.cursor = 'col-resize';
+        if (event.clientX !== 0) {
+          
+          const deltaX = event.clientX - this.initialMouseX!;
+          if (this.recInitialWidths[fIdx]! + deltaX < 50) {
+            return;
+          } else if (nextCol && (this.recInitialWidths[fIdx + 1]! - deltaX < 50)) {
+            return
+          } else if (this.recInitialWidths[fIdx] + deltaX < this.recMinColumnWidths[fIdx]) {
+            return
+          } else if (nextCol && this.recInitialWidths[fIdx + 1] -deltaX < this.recMinColumnWidths[fIdx + 1]) {
+            return
+          } else {
+            this.recColumnWidths[fIdx] = this.recInitialWidths[fIdx]! + deltaX;
+            if (nextCol) {
+              this.recColumnWidths[fIdx + 1] = this.recInitialWidths[fIdx + 1] - deltaX;
+            }
+
+          }
+      }
+    },
+
+    recHandleDragEnd(fIdx: number, event: DragEvent) {
+      document.body.style.cursor = 'auto';
+      const nextCol = fIdx < this.recColumnWidths.length - 1;
+      const deltaX = event.clientX - this.initialMouseX!;
+      if (this.recInitialWidths[fIdx] + deltaX < 50) {
+        return;
+      } else if (nextCol && this.recInitialWidths[fIdx + 1] - deltaX < 50) {
+        return
+      } else if (this.recInitialWidths[fIdx] + deltaX < this.recMinColumnWidths[fIdx]) {
+        return
+      } else if (nextCol && this.recInitialWidths[fIdx + 1] -deltaX < this.recMinColumnWidths[fIdx + 1]) {
+        return
+      } else {
+        this.recColumnWidths[fIdx] = this.recInitialWidths[fIdx] + deltaX;
+        if (nextCol) {
+          this.recColumnWidths[fIdx + 1] = this.recInitialWidths[fIdx + 1] - deltaX;
         }  
       } 
     },
@@ -376,6 +646,27 @@ export default defineComponent({
       if (!fromTop) {
         this.audioEvents.reverse();
       }
+    },
+
+    aeRowClass(aeIdx: number, AEs: AudioEventType[]) {
+      if (aeIdx === 0) {
+        return 'aeRow first';
+      } else if (AEs[aeIdx-1].visible) {
+        return 'aeRow borderAbove';
+      } else {
+        return 'aeRow';
+      }
+    },
+
+    recClass(recIdx: number, aeIdx: number, AEs: AudioEventType[]) {
+      const ae = AEs[aeIdx];
+      const c1 = recIdx === (Object.keys(ae.recordings).length - 1);
+      const c2 = aeIdx === (AEs.length - 1);
+      if (c1 && c2) {
+        return 'recsMetadataLabels lastRec';
+      } else {
+        return 'recsMetadataLabels';
+      }
     }
   }
 })
@@ -462,7 +753,7 @@ span.field {
   user-select: none;
   overflow-y: scroll;
   overflow-x: hidden;
-  border-top: 1px solid grey;
+  /* border-bottom: 1px solid grey; */
 }
 
 .aeRow {
@@ -472,7 +763,97 @@ span.field {
   align-items: center;
   min-height: 40px;
   width: 100%;
+  /* border-top: 1px solid grey; */
   border-bottom: 1px solid grey;
   /* overflow-x: hidden; */
+}
+
+/* .aeRow.visible {
+  background-color: #343A35;
+} */
+
+.aeRow.first {
+  border-top: 1px solid grey;
+}
+
+.aeRow.borderAbove {
+  border-top: 1px solid grey;
+
+}
+
+.aeRow:hover {
+  background-color: #2b332c;
+}
+
+.tri {
+  color: white;
+}
+
+.tri.rotated {
+  transform: rotate(90deg);
+}
+
+.aeRowHolder {
+  display: flex;
+  flex-direction: column;
+  justify-content: left;
+  align-items: center;
+  width: 100%;
+}
+
+.recsHolder {
+  display: flex;
+  flex-direction: column;
+  justify-content: left;
+  align-items: center;
+  width: calc(100% - 40px);
+  margin-left: v-bind(indentWidth + 'px');
+  box-sizing: border-box;
+  border-left: 1px solid grey;
+}
+
+.recsLabelRow {
+  display: flex;
+  flex-direction: row;
+  justify-content: left;
+  align-items: center;
+  min-height: v-bind(rowHeight + 'px');
+  width: 100%;
+  /* border-bottom: 1px solid grey; */
+  box-sizing: border-box;
+  background-color: #343A35;
+}
+
+.recsMetadataLabels {
+  text-align: center;
+  border-right: 1px solid grey;
+  height: 40px;
+  position: relative;
+  white-space: nowrap;
+  /* margin-left: 5px;
+  margin-right: 5px; */
+  user-select: none;
+  box-sizing: border-box;
+  border-bottom: 1px solid grey;
+}
+
+.recsMetadataLabels.lastRec {
+  border-bottom: 1px solid grey;
+}
+
+.recRow {
+  display: flex;
+  flex-direction: row;
+  justify-content: left;
+  align-items: center;
+  min-height: v-bind(rowHeight + 'px');
+  width: 100%;
+  /* border-bottom: 1px solid grey; */
+  box-sizing: border-box;
+  background-color: #202621;
+}
+
+.recRow:hover {
+  background-color: #2b332c;
 }
 </style>
