@@ -708,6 +708,7 @@ export default defineComponent({
         });
       }
       this.selectedSortIdx = fIdx;
+
     },
 
     titleSorter(a: AudioEventType, b: AudioEventType) {
@@ -787,6 +788,9 @@ export default defineComponent({
       if (playingElem) {
         playingElem.classList.remove('playing');
       }
+      const oldAEIdx = Number(this.playingId!.split('ae')[1].split('rec')[0]);
+      const oldAE = this.audioEvents[oldAEIdx];
+      const oldRecIdx = Number(this.playingId!.split('ae')[1].split('rec')[1]);
       let sortFunc: (a: AudioEventType, b: AudioEventType) => number;
       if (sort === 'title') {
         sortFunc = this.titleSorter;
@@ -805,6 +809,14 @@ export default defineComponent({
       if (!fromTop) {
         this.audioEvents.reverse();
       }
+      const newAEIdx = this.audioEvents.indexOf(oldAE);
+      this.playingId = `ae${newAEIdx}rec${oldRecIdx}`;
+      this.$nextTick(() => {
+        const newElem = document.getElementById(this.playingId!);
+        if (newElem) {
+          newElem.classList.add('playing');
+        }
+      });
     },
 
     aeRowClass(aeIdx: number, AEs: AudioEventType[]) {
