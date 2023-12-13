@@ -42,13 +42,15 @@
       </div>
     </div>
   </div>
-  <CollectionViewer 
+  <CollectionViewer
+      ref='collectionViewer'
       v-if='collectionSelected && selectedCollection !== undefined'
       :collection='selectedCollection'
       :navHeight='navHeight'
       :owner='selectedCollection.userID === $store.state.userID'
       @closeCollection='collectionSelected = false'
       @editCollection='editCollection'
+      @updateCollections='updateCollections'
       />
   <NewCollectionModal 
     v-if='newCollectionModalOpen'
@@ -79,6 +81,7 @@ import { defineComponent } from 'vue';
 import ContextMenu from '@/components/ContextMenu.vue';
 import CollectionViewer from '@/components/collections/CollectionViewer.vue';
 import MiniAudioRecordings from '@/components/collections/MiniAudioRecordings.vue';
+import MiniTranscriptions from '@/components/collections/MiniTranscriptions.vue';
 
 type CollectionsComponentDataType = {
   newCollectionModalOpen: boolean,
@@ -153,36 +156,11 @@ export default defineComponent({
     // scrolling horizontal set of boxes representing each collection, with its
     // title and description and purpose. 
     try {
-      this.allCollections = await getAllCollections();
-      this.allCollections = this.allCollections.filter(coll => {
-        const c0 = coll.permissions.publicView;
-        const c1 = coll.userID === this.$store.state.userID;
-        const c2 = coll.permissions.view.includes(this.$store.state.userID!);
-        const c3 = coll.permissions.edit.includes(this.$store.state.userID!);
-        return c0 || c1 || c2 || c3;
-      });
-      const collectorIDs = this.allCollections
-        .map(coll => coll.userID)
-        .filter((userID, index, self) => {
-          return self.indexOf(userID) === index;
-        });
-      this.collectors = collectorIDs.map(collectorID => {
-        const collectorName = this.allCollections.find(coll => {
-          return coll.userID === collectorID;
-        })!.userName!;
-        const collections = this.allCollections.filter(coll => {
-          return coll.userID === collectorID;
-        });
-        return {
-          userID: collectorID,
-          userName: collectorName,
-          collections
-        };
-      });
-      this.collectorsLength = this.collectors.length;
+      await this.resetCollections();
     } catch (error) {
       console.log(error);
     }
+    
 
   },
 
@@ -191,6 +169,40 @@ export default defineComponent({
   },
 
   methods: {
+
+    async resetCollections() {
+      try {
+        this.allCollections = await getAllCollections();
+        this.allCollections = this.allCollections.filter(coll => {
+          const c0 = coll.permissions.publicView;
+          const c1 = coll.userID === this.$store.state.userID;
+          const c2 = coll.permissions.view.includes(this.$store.state.userID!);
+          const c3 = coll.permissions.edit.includes(this.$store.state.userID!);
+          return c0 || c1 || c2 || c3;
+        });
+        const collectorIDs = this.allCollections
+          .map(coll => coll.userID)
+          .filter((userID, index, self) => {
+            return self.indexOf(userID) === index;
+          });
+        this.collectors = collectorIDs.map(collectorID => {
+          const collectorName = this.allCollections.find(coll => {
+            return coll.userID === collectorID;
+          })!.userName!;
+          const collections = this.allCollections.filter(coll => {
+            return coll.userID === collectorID;
+          });
+          return {
+            userID: collectorID,
+            userName: collectorName,
+            collections
+          };
+        });
+        this.collectorsLength = this.collectors.length;
+      } catch (error) {
+        console.log(error);
+      }
+    },
 
     editCollection() {
       this.editingCollectionStatus = true; 
@@ -224,6 +236,7 @@ export default defineComponent({
     getContrastingTextColor,
 
     async updateCollections() {
+      console.log('updating collections')
       try {
         this.allCollections = await getAllCollections();
         this.allCollections = this.allCollections.filter(coll => {
@@ -251,6 +264,13 @@ export default defineComponent({
             collections
           };
         });
+
+        if (this.selectedCollection !== undefined) {
+          const scId = this.selectedCollection._id;
+          this.selectedCollection = this.allCollections.find(coll => {
+            return coll._id === scId;
+          });
+        }
       } catch (error) {
         console.log(error);
       }

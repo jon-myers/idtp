@@ -25,7 +25,8 @@ import type { PropType } from 'vue';
 import { ContextMenuOptionType } from '@/ts/types.ts';
 
 type ContextMenuDataType = {
-  dropDownWidth: number
+  dropDownWidth: number,
+  rowHeight: number,
 }
 
 
@@ -52,7 +53,8 @@ export default defineComponent({
 
   data(): ContextMenuDataType {
     return {
-      dropDownWidth: 200
+      dropDownWidth: 200,
+      rowHeight: 20,
     }
   },
 
@@ -106,7 +108,7 @@ export default defineComponent({
 .dropDownRow {
   color: white;
   border-radius: 5px;
-  height: 20px;
+  height: v-bind(rowHeight + 'px');
   display: flex;
   flex-direction: row;
   align-items: center;

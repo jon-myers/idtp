@@ -59,6 +59,7 @@
     :y='contextMenuY'
     :choices='contextMenuOptions'
     :closed='!contextMenuOpen'
+    ref='contextMenu'
   
   />
 </template>
@@ -68,7 +69,12 @@ import { defineComponent, PropType } from 'vue';
 import type { CollectionType, ContextMenuOptionType } from '@/ts/types.ts';
 import { getContrastingTextColor } from '@/ts/utils';
 import GenericAudioPlayer from '@/components/GenericAudioPlayer.vue';
-import { getEditableCollections } from '@/js/serverCalls';
+import { 
+  getEditableCollections,
+  removeAudioEventFromCollection,
+  removeAudioRecordingFromCollection,
+  removeTranscriptionFromCollection 
+} from '@/js/serverCalls';
 import MiniAudioRecordings from '@/components/collections/MiniAudioRecordings.vue';
 import MiniAudioEvents from '@/components/collections/MiniAudioEvents.vue';
 import MiniTranscriptions from '@/components/collections/MiniTranscriptions.vue';
@@ -86,7 +92,8 @@ type CollectionViewerDataType = {
   contextMenuX: number,
   contextMenuY: number,
   contextMenuOptions: ContextMenuOptionType[],
-  chirpSource?: 'recording' | 'audioEvent' | 'transcription'
+  chirpSource?: 'recording' | 'audioEvent' | 'transcription',
+  editor: boolean
 }
 export default defineComponent({
   name: 'CollectionViewer',
@@ -103,7 +110,8 @@ export default defineComponent({
       contextMenuX: 0,
       contextMenuY: 0,
       contextMenuOptions: [],
-      chirpSource: undefined
+      chirpSource: undefined,
+      editor: false
     }
   },
   components: {
@@ -150,6 +158,8 @@ export default defineComponent({
         }
       }
     });
+    const editors = this.collection.permissions.edit;
+    this.editor = this.owner || editors.includes(this.$store.state.userID!);
   },
 
   beforeUnmount() {
@@ -166,7 +176,10 @@ export default defineComponent({
       this.contextMenuOptions = [];
 
       e.preventDefault();
-      const target = e.target as HTMLElement;
+      if (this.contextMenuOpen) {
+        this.contextMenuOpen = false;
+        return;
+      }
       this.contextMenuX = e.clientX;
       this.contextMenuY = e.clientY;
       if (this.chirpSource === 'transcription') {
@@ -178,36 +191,72 @@ export default defineComponent({
           target = target.parentElement!
         }
         const idx = target.id.slice(4);
-        const tComp = this.$refs.miniT as typeof MiniTranscriptions;
-        const t = tComp.trans[idx];
-        this.contextMenuOptions = [
-          {
-            text: 'Open in Editor',
-            action: () => {
-              this.$store.commit('update_id', t._id);
-              this.$cookies.set('currentPieceId', t._id);
-              this.$router.push({
-                name: 'EditorComponent',
-                query: { id: t._id }
-              })
+        if (idx !== '') {
+          const tComp = this.$refs.miniT as typeof MiniTranscriptions;
+          const t = tComp.trans[idx];
+          this.contextMenuOptions = [
+            {
+              text: 'Open in Editor',
+              action: () => {
+                this.$store.commit('update_id', t._id);
+                this.$cookies.set('currentPieceId', t._id);
+                this.$router.push({
+                  name: 'EditorComponent',
+                  query: { id: t._id }
+                })
+              },
+              enabled: true
             },
-            enabled: true
-          },
-          {
-            text: 'Open in Analyzer',
-            action: () => {
-              this.$store.commit('update_id', t._id);
-              this.$cookies.set('currentPieceId', t._id);
-              this.$router.push({
-                name: 'AnalyzerComponent',
-                query: { id: t._id }
-              })
+            {
+              text: 'Open in Analyzer',
+              action: () => {
+                this.$store.commit('update_id', t._id);
+                this.$cookies.set('currentPieceId', t._id);
+                this.$router.push({
+                  name: 'AnalyzerComponent',
+                  query: { id: t._id }
+                })
+              },
+              enabled: true
             },
-            enabled: true
+          ];
+          // if you are the owner, or have editing permissions for the collection
+          // const editors = this.collection.permissions.edit;
+          if (this.editor) {
+            this.contextMenuOptions.push({
+              text: 'Remove from Collection',
+              action: async () => {
+                try {
+                  await removeTranscriptionFromCollection(t._id, this.collection._id!);
+                  await this.$nextTick();
+                  await tComp.updateTrans();
+                } catch (err) {
+                  console.log(err);
+                }
+                this.$emit('updateCollections');
+                this.contextMenuOpen = false;
+
+              },
+              enabled: true
+            });
           }
-        ]
+          this.contextMenuOpen = true;
+          this.updateContextMenuPosition();
+        }   
+      } else if (this.chirpSource === 'audioEvent') {
+
       }
-      this.contextMenuOpen = true;
+    },
+
+    updateContextMenuPosition() {
+      const CM = this.$refs.contextMenu as typeof ContextMenu;
+      const height = this.contextMenuOptions.length * CM.rowHeight;
+      if (this.contextMenuY + height > window.innerHeight - this.navHeight - 100) {
+        this.contextMenuY = window.innerHeight - 100 - this.navHeight - height;
+      }
+      if (this.contextMenuX + CM.dropDownWidth > window.innerWidth - 20) {
+        this.contextMenuX = window.innerWidth - CM.dropDownWidth - 20;
+      }
     },
 
     setContainerHeight() {

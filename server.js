@@ -998,6 +998,7 @@ const runServer = async () => {
 
     app.post('/removeTranscriptionFromCollection', async (req, res) => {
       try { 
+        console.log(req.body)
         const query = { _id: ObjectId(req.body.collectionID) };
         const update = { $pull: { transcriptions: req.body.transcriptionID } };
         const result = await collections.updateOne(query, update);
@@ -1005,6 +1006,7 @@ const runServer = async () => {
         const query2 = { _id: ObjectId(req.body.transcriptionID) };
         const update2 = { $pull: { collections: req.body.collectionID } };
         const result2 = await transcriptions.updateOne(query2, update2);
+        console.log(result, result2)
         res.json({ result, result2 })
       } catch (err) {
         console.error(err);
@@ -1170,10 +1172,8 @@ const runServer = async () => {
       try {
 
         const query = { _id: ObjectId(req.body.id) };
-        console.log(query)
         const copy = await transcriptions.findOne(query);
-        console.log(copy)
-        copy._id = new ObjectId();add
+        copy._id = new ObjectId();
         copy.title = req.body.title;
         copy.userID = req.body.newOwner;
         copy.permissions = req.body.permissions;

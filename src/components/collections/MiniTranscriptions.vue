@@ -167,9 +167,9 @@ export default defineComponent({
           sortState: 'down'
         },
       ],
-      columnWidths: [100, 100, 100, 100, 100, 100],
-      minColumnWidths: [80, 80, 80, 80, 80, 80],
-      initialWidths: [100, 100, 100, 100, 100, 100],
+      columnWidths: [80, 115, 75, 100, 100, 125],
+      minColumnWidths: [80, 115, 75, 100, 100, 125],
+      initialWidths: [80, 115, 75, 100, 100, 125],
       initialMouseX: undefined,
       selectedSortIdx: 0,
       labelRowHeight: 40,
@@ -188,7 +188,26 @@ export default defineComponent({
       console.error(err);
     }
   },
+
+  watch: {
+    async tIds() {
+      try {
+        this.updateTrans();
+      } catch (err) {
+        console.error(err);
+      }
+    },
+  },
+
   methods: {
+
+    async updateTrans() {
+      try {
+        this.trans = await getTranscriptionsFromIds(this.tIds);
+      } catch (err) {
+        console.error(err);
+      }
+    },
 
     handleChirp() {
       this.$emit('chirp');
@@ -283,6 +302,66 @@ export default defineComponent({
       }
     },
 
+    transcriberSorter(a: TranscriptionMetadataType, b: TranscriptionMetadataType) {
+      const aName = a.name.toLowerCase();
+      const bName = b.name.toLowerCase();
+      if (aName < bName) {
+        return -1;
+      } else if (aName > bName) {
+        return 1;
+      } else {
+        return 0;
+      }
+    },
+
+    ragaSorter(a: TranscriptionMetadataType, b: TranscriptionMetadataType) {
+      const aRaga = a.raga.name.toLowerCase();
+      const bRaga = b.raga.name.toLowerCase();
+      if (aRaga < bRaga) {
+        return -1;
+      } else if (aRaga > bRaga) {
+        return 1;
+      } else {
+        return 0;
+      }
+    },
+
+    createdSorter(a: TranscriptionMetadataType, b: TranscriptionMetadataType) {
+      const aDate = new Date(a.dateCreated);
+      const bDate = new Date(b.dateCreated);
+      if (aDate < bDate) {
+        return -1;
+      } else if (aDate > bDate) {
+        return 1;
+      } else {
+        return 0;
+      }
+    },
+
+    modifiedSorter(a: TranscriptionMetadataType, b: TranscriptionMetadataType) {
+      const aDate = new Date(a.dateModified);
+      const bDate = new Date(b.dateModified);
+      if (aDate < bDate) {
+        return -1;
+      } else if (aDate > bDate) {
+        return 1;
+      } else {
+        return 0;
+      }
+    },
+
+    permissionsSorter(a: TranscriptionMetadataType, b: TranscriptionMetadataType) {
+      const aPerm = a.permissions.toLowerCase();
+      const bPerm = b.permissions.toLowerCase();
+      if (aPerm < bPerm) {
+        return -1;
+      } else if (aPerm > bPerm) {
+        return 1;
+      } else {
+        return 0;
+      }
+    },
+
     sortTranscriptions({
       sort='title',
       fromTop=true
@@ -293,8 +372,21 @@ export default defineComponent({
       let sorter;
       if (sort === 'title') {
         sorter = this.titleSorter;
-      }
+      } else if (sort === 'transcriber') {
+        sorter = this.transcriberSorter;
+      } else if (sort === 'raga') {
+        sorter = this.ragaSorter;
+      } else if (sort === 'created') {
+        sorter = this.createdSorter;
+      } else if (sort === 'modified') {
+        sorter = this.modifiedSorter;
+      } else if (sort === 'permissions') {
+        sorter = this.permissionsSorter;
+      } 
       this.trans.sort(sorter);
+      if (!fromTop) {
+        this.trans.reverse();
+      }
 
     }
   },
