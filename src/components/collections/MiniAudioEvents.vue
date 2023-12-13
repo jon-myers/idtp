@@ -1,5 +1,5 @@
 <template>
-  <div class='miniAEMain'>
+  <div class='miniAEMain' @contextmenu='handleContextMenu($event)'>
     <div class='labelRow'>
       <div class='metadataLabels'
         v-for='(field, fIdx) in metadataFields'
@@ -353,6 +353,11 @@ export default defineComponent({
   },
 
   methods: {
+
+    handleContextMenu(e: MouseEvent) {
+      e.preventDefault();
+      this.$emit('chirp')
+    },
 
     handleDblClick(e: MouseEvent, ae: AudioEventType, recKey: string) {
       const rec = ae.recordings[Number(recKey)];

@@ -1,5 +1,5 @@
 <template>
-  <div class='miniARMain'>
+  <div class='miniARMain' @contextmenu='handleChirp'>
     <div class='labelRow'>
       <div class='metadataLabels'
         v-for='(field, fIdx) in metadataFields'
@@ -210,6 +210,10 @@ export default defineComponent({
   },
 
   methods: {
+
+    handleChirp() {
+      this.$emit('chirp');
+    },
 
     ensureDurationWidth() {
       // ensure duration column is wide enough to display duration label

@@ -41,62 +41,12 @@
       </div>
     </div>
   </div>
-
-  <!-- <div class="dropDown_ closed" ref="dropDown">
-    <div
-      :class="`dropDownRow ${['last', ''][Number(delete_)]}`"
-      @click="designNewPiece()"
-    >
-      New Transcription
-    </div>
-    <div v-if="open_" class="dropDownRow" @click="openPieceAlt()">
-      Open In Editor
-    </div>
-    <div v-if="open_" class="dropDownRow" @click="openInAnalyzer()">
-      Open In Analyzer
-    </div>
-    <div class="dropDownRow" @click="clonePiece()" v-if='open_'>
-      Clone Transcription
-    </div>
-    <div 
-      :class="`dropDownRow ${['inactive', ''][Number(deleteActive)]}`" 
-      @click='editTitle()' 
-      v-if='open_'
-    >
-      Edit Title
-    </div>
-    <div 
-      :class="`dropDownRow ${['inactive', ''][Number(deleteActive)]}`" 
-      @click='editPermissions()' 
-      v-if='open_'
-    >
-      Edit Permissions
-    </div>
-    <div 
-      :class="`dropDownRow ${['inactive', ''][Number(deleteActive)]}`"
-      @click='editOwner()'
-      v-if='open_'
-      >
-      Edit Owner
-    </div>
-      <div class='dropDownRow' @click='copyLink' v-if='open_'>
-        Copy Link
-      </div>
-    <div
-      v-if="delete_"
-      :class="`dropDownRow last ${['inactive', ''][Number(deleteActive)]}`"
-      @click="deletePiece"
-    >
-      Delete Transcription
-    </div>
-  </div> -->
   <ContextMenu
   :x='dropDownLeft'
   :y='dropDownTop'
   :closed='contextMenuClosed'
   :choices='contextMenuChoices'
   ref='contextMenu'
-
   />
   <div v-if="designPieceModal" class="designPieceModal">
     <NewPieceRegistrar

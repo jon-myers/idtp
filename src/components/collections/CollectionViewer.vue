@@ -1,5 +1,9 @@
 <template>
-  <div class='mainCollection'>
+  <div 
+  class='mainCollection' 
+  @contextmenu='handleContextClick($event)'
+  @click='contextMenuOpen = false'
+  >
     <div class='titleRow'>
       <div class='titleContainer'>
         <h2>{{ collection.title }}</h2>
@@ -19,6 +23,7 @@
           :recIds='collection.audioRecordings'
           class='miniAR'
           @sendAudioSource='sendAudioSource'
+          @chirp='handleChirp("recording")'
           ref = 'miniAR'
           />
       </div>
@@ -29,13 +34,16 @@
           class='miniAE'
           ref = 'miniAE'
           @sendAudioSource='sendAudioSource'
+          @chirp='handleChirp("audioEvent")'
           />
       </div>
       <div class='tHolder' v-if='collection.transcriptions.length > 0'>
         <div class='miniBoxTitle'>Transcriptions</div>
         <MiniTranscriptions
           :tIds='collection.transcriptions'
+          @chirp='handleChirp("transcription")'
           class='miniT'
+          ref='miniT'
           />
       </div>
     </div>
@@ -46,17 +54,26 @@
       @emitPrevTrack='emitPrevTrack'
       />
   </div>
+  <ContextMenu
+    :x='contextMenuX'
+    :y='contextMenuY'
+    :choices='contextMenuOptions'
+    :closed='!contextMenuOpen'
+  
+  />
 </template>
 
 <script lang='ts'>
 import { defineComponent, PropType } from 'vue';
-import type { CollectionType } from '@/ts/types.ts';
+import type { CollectionType, ContextMenuOptionType } from '@/ts/types.ts';
 import { getContrastingTextColor } from '@/ts/utils';
 import GenericAudioPlayer from '@/components/GenericAudioPlayer.vue';
 import { getEditableCollections } from '@/js/serverCalls';
 import MiniAudioRecordings from '@/components/collections/MiniAudioRecordings.vue';
 import MiniAudioEvents from '@/components/collections/MiniAudioEvents.vue';
 import MiniTranscriptions from '@/components/collections/MiniTranscriptions.vue';
+import ContextMenu from '@/components/ContextMenu.vue';
+
 type CollectionViewerDataType = {
   audioSource: string | undefined,
   miniBoxHeight: number,
@@ -64,7 +81,12 @@ type CollectionViewerDataType = {
   playingFromType?: 'recording' | 'audioEvent',
   titleRowHeight: number,
   descriptionRowHeight: number,
-  containerHeight: number
+  containerHeight: number,
+  contextMenuOpen: boolean,
+  contextMenuX: number,
+  contextMenuY: number,
+  contextMenuOptions: ContextMenuOptionType[],
+  chirpSource?: 'recording' | 'audioEvent' | 'transcription'
 }
 export default defineComponent({
   name: 'CollectionViewer',
@@ -77,13 +99,19 @@ export default defineComponent({
       titleRowHeight: 80,
       descriptionRowHeight: 80,
       containerHeight: 500,
+      contextMenuOpen: false,
+      contextMenuX: 0,
+      contextMenuY: 0,
+      contextMenuOptions: [],
+      chirpSource: undefined
     }
   },
   components: {
     GenericAudioPlayer,
     MiniAudioRecordings,
     MiniAudioEvents,
-    MiniTranscriptions
+    MiniTranscriptions,
+    ContextMenu
   },
   props: {
     collection: {
@@ -112,6 +140,16 @@ export default defineComponent({
   mounted() {
     this.setContainerHeight();
     window.addEventListener('resize', this.setContainerHeight);
+    // listen for escape key
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (this.contextMenuOpen) {
+          this.contextMenuOpen = false;
+        } else {
+          this.closeCollection();
+        }
+      }
+    });
   },
 
   beforeUnmount() {
@@ -120,13 +158,65 @@ export default defineComponent({
 
   methods: {
 
+    handleChirp(fromType: 'recording' | 'audioEvent' | 'transcription') {
+      this.chirpSource = fromType;
+    },
+
+    handleContextClick(e: MouseEvent) {
+      this.contextMenuOptions = [];
+
+      e.preventDefault();
+      const target = e.target as HTMLElement;
+      this.contextMenuX = e.clientX;
+      this.contextMenuY = e.clientY;
+      if (this.chirpSource === 'transcription') {
+        let target = e.target as HTMLElement;
+        if (target.classList.contains('field')) {
+          target = target.parentElement!.parentElement!;
+        } 
+        if (target.classList.contains('metadataLabels')) {
+          target = target.parentElement!
+        }
+        const idx = target.id.slice(4);
+        const tComp = this.$refs.miniT as typeof MiniTranscriptions;
+        const t = tComp.trans[idx];
+        this.contextMenuOptions = [
+          {
+            text: 'Open in Editor',
+            action: () => {
+              this.$store.commit('update_id', t._id);
+              this.$cookies.set('currentPieceId', t._id);
+              this.$router.push({
+                name: 'EditorComponent',
+                query: { id: t._id }
+              })
+            },
+            enabled: true
+          },
+          {
+            text: 'Open in Analyzer',
+            action: () => {
+              this.$store.commit('update_id', t._id);
+              this.$cookies.set('currentPieceId', t._id);
+              this.$router.push({
+                name: 'AnalyzerComponent',
+                query: { id: t._id }
+              })
+            },
+            enabled: true
+          }
+        ]
+      }
+      this.contextMenuOpen = true;
+    },
+
     setContainerHeight() {
       this.containerHeight = window.innerHeight - this.navHeight - 101 - this.titleRowHeight - this.descriptionRowHeight;
     },
 
     getEditableCollections,
     
-    closeCollection($event: MouseEvent) {
+    closeCollection($event?: MouseEvent) {
       this.$emit('closeCollection');
     },
 

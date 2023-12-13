@@ -1,5 +1,5 @@
 <template>
-  <div class='miniTMain'>
+  <div class='miniTMain' @contextmenu='handleChirp'>
     <div class='labelRow'>
       <div class='metadataLabels'
         v-for='(field, fIdx) in metadataFields'
@@ -41,7 +41,7 @@
       <div 
         class='transcriptionRow'
         v-for='(transcription, rIdx) in trans'
-        :id='`recRow${rIdx}`'
+        :id='`tRow${rIdx}`'
         >
         <div 
           class='metadataLabels' 
@@ -189,6 +189,10 @@ export default defineComponent({
     }
   },
   methods: {
+
+    handleChirp() {
+      this.$emit('chirp');
+    },
 
     handleDragStart(fIdx: number, event: DragEvent) {
       // Store the initial mouse position and column widths
