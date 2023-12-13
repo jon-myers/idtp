@@ -236,7 +236,6 @@ export default defineComponent({
     getContrastingTextColor,
 
     async updateCollections() {
-      console.log('updating collections')
       try {
         this.allCollections = await getAllCollections();
         this.allCollections = this.allCollections.filter(coll => {

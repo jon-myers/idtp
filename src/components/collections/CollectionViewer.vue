@@ -72,7 +72,7 @@ import GenericAudioPlayer from '@/components/GenericAudioPlayer.vue';
 import { 
   getEditableCollections,
   removeAudioEventFromCollection,
-  removeAudioRecordingFromCollection,
+  removeRecordingFromCollection,
   removeTranscriptionFromCollection 
 } from '@/js/serverCalls';
 import MiniAudioRecordings from '@/components/collections/MiniAudioRecordings.vue';
@@ -244,7 +244,110 @@ export default defineComponent({
           this.updateContextMenuPosition();
         }   
       } else if (this.chirpSource === 'audioEvent') {
+        let target = e.target as HTMLElement;
+        if (target.classList.contains('draggableBorder')) {
+          target = target.parentElement!
+        }
+        if (target.classList.contains('field')) {
+          target = target.parentElement!
+        }
+        if (target.classList.contains('metadataLabels')) {
+          target = target.parentElement!
+        }
+        if (target.classList.contains('aeRow')) {
+          target = target.parentElement!
+        }
+        if (target.classList.contains('recsMetadataLabels')) {
+          target = target.parentElement!
+        }
+        if (target.classList.contains('recsLabelRow')) {
+          target = target.parentElement!
+        }
+        if (target.classList.contains('recRow')) {
+          target = target.parentElement!
+        }
+        if (target.classList.contains('recsHolder')) {
+          target = target.parentElement!
+        }
+        if (target.classList.contains('aeRowHolder')) {
+          const idx = Number(target.id.slice(11));
+          if (this.editor) {
+            this.contextMenuOptions.push({
+              text: 'Remove from Collection',
+              action: async () => {
+                try {
+                  const miniAE = this.$refs.miniAE as typeof MiniAudioEvents;
+                  const aeId = miniAE.audioEvents[idx]._id!;
+                  await removeAudioEventFromCollection(aeId, this.collection._id!);
+                  await this.$nextTick();
+                  await miniAE.updateAEs();
+                } catch (err) {
+                  console.log(err);
+                }
+                this.$emit('updateCollections');
+                this.contextMenuOpen = false;
+              },
+              enabled: true,
+            });
+            this.contextMenuOpen = true;
+          }
+        }
+      } else if (this.chirpSource === 'recording') {
+        let target = e.target as HTMLElement;
+        if (target.classList.contains('draggableBorder')) {
+          target = target.parentElement!
+        }
+        if (target.classList.contains('field')) {
+          target = target.parentElement!
+        }
+        if (target.classList.contains('metadataLabels')) {
+          target = target.parentElement!
+        }
+        if (target.classList.contains('recordingRow')) {
+          const idx = Number(target.id.slice(6));
+          if (this.editor) {
+            this.contextMenuOptions.push({
+              text: 'Remove from Collection',
+              action: async () => {
+                try {
+                  const miniAR = this.$refs.miniAR as typeof MiniAudioRecordings;
+                  const recId = miniAR.recs[idx]._id!;
+                  await removeRecordingFromCollection(recId, this.collection._id!);
+                  // await this.$nextTick();
+                  // await miniAR.updateRecs();
+                } catch (err) {
+                  console.log(err);
+                }
+                this.$emit('updateCollections');
+                this.contextMenuOpen = false;
+              },
+              enabled: true,
+            });
+            this.contextMenuOpen = true;
+          }
 
+          // if (this.editor) {
+          //   this.contextMenuOptions.push({
+          //     text: 'Remove from Collection',
+          //     action: async () => {
+          //       try {
+          //         const miniAR = this.$refs.miniAR as typeof MiniAudioRecordings;
+          //         const recId = miniAR.audioRecordings[idx]._id!;
+          //         await removeAudioRecordingFromCollection(recId, this.collection._id!);
+          //         await this.$nextTick();
+          //         await miniAR.updateRecs();
+          //       } catch (err) {
+          //         console.log(err);
+          //       }
+          //       this.$emit('updateCollections');
+          //       this.contextMenuOpen = false;
+          //     },
+          //     enabled: true,
+          //   });
+          //   this.contextMenuOpen = true;
+          // }
+          
+        }
       }
     },
 

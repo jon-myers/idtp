@@ -186,6 +186,24 @@ export default defineComponent({
     }
   },
 
+  watch: {
+    // recIds: {
+    //   handler: async function() {
+    //     this.recs = await getRecsFromIds(this.recIds);
+    //   },
+    //   deep: true
+    // },
+
+    async recIds() {
+      try {
+        this.recs = await getRecsFromIds(this.recIds);
+      } catch (err) {
+        console.error(err);
+      }
+      
+    }
+  },
+
   async mounted() {
     const summedWidths = this.columnWidths.reduce((a, b) => a + b, 0);
     // if (summedWidths > this.$el.offsetWidth) {

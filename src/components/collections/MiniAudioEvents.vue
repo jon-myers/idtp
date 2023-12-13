@@ -42,6 +42,7 @@
         class='aeRowHolder' 
         v-for='(ae, aeIdx) in audioEvents'
         :style='{ "min-height": getAERowHeight(ae) + "px" }'
+        :id='`aeRowHolder${aeIdx}`'
         >
         <div 
           :class='aeRowClass(aeIdx, audioEvents)'
@@ -283,7 +284,7 @@ export default defineComponent({
           },
         },
       ],
-      indentWidth: 40,
+      indentWidth: 20,
       rowHeight: 40,
       playingId: undefined
     }
@@ -293,6 +294,18 @@ export default defineComponent({
       type: Array as PropType<string[]>,
       required: true
     },
+  },
+
+  watch: {
+
+    async aeIds() {
+      try {
+        await this.updateAudioEvents();
+      } catch (err) {
+        console.log(err);
+      }
+    }
+    
   },
 
   async mounted() {
@@ -353,6 +366,23 @@ export default defineComponent({
   },
 
   methods: {
+
+    async updateAudioEvents() {
+      try {
+        this.audioEvents = await getAEsFromIds(this.aeIds);
+        // add parentTrackNumber to each recording
+        this.audioEvents.forEach(ae => {
+          const recKeys = Object.keys(ae.recordings);
+          recKeys.forEach(recKey => {
+            const rec = ae.recordings[Number(recKey)];
+            rec.parentTrackNumber = recKey;
+          });
+        });
+
+      } catch (err) {
+        console.log(err);
+      }
+    },
 
     handleContextMenu(e: MouseEvent) {
       e.preventDefault();
@@ -713,6 +743,21 @@ export default defineComponent({
         });
       }
       this.selectedSortIdx = fIdx;
+      document.querySelectorAll('.rotated') 
+        .forEach(elem => elem.classList.remove('rotated'));
+      this.audioEvents.forEach((ae, aeIdx) => {
+        if (ae.visible) {
+          console.log('doign this')
+          const row = document.getElementById(`aeRow${aeIdx}`);
+          if (row) {
+            // select '.tri' and add rotated to class list
+            const tri = row.querySelector('.tri');
+            if (tri) {
+              tri.classList.add('rotated');
+            }
+           }
+        }
+      })
 
     },
 
@@ -793,9 +838,17 @@ export default defineComponent({
       if (playingElem) {
         playingElem.classList.remove('playing');
       }
-      const oldAEIdx = Number(this.playingId!.split('ae')[1].split('rec')[0]);
-      const oldAE = this.audioEvents[oldAEIdx];
-      const oldRecIdx = Number(this.playingId!.split('ae')[1].split('rec')[1]);
+      const playingBool = this.playingId !== undefined;
+      let oldAEIdx: number;
+      let oldAE: AudioEventType;
+      let oldRecIdx: number;
+
+      if (playingBool) {
+        oldAEIdx = Number(this.playingId!.split('ae')[1].split('rec')[0]);
+        oldAE = this.audioEvents[oldAEIdx];
+        oldRecIdx = Number(this.playingId!.split('ae')[1].split('rec')[1]);
+      }
+    
       let sortFunc: (a: AudioEventType, b: AudioEventType) => number;
       if (sort === 'title') {
         sortFunc = this.titleSorter;
@@ -814,14 +867,17 @@ export default defineComponent({
       if (!fromTop) {
         this.audioEvents.reverse();
       }
-      const newAEIdx = this.audioEvents.indexOf(oldAE);
-      this.playingId = `ae${newAEIdx}rec${oldRecIdx}`;
-      this.$nextTick(() => {
-        const newElem = document.getElementById(this.playingId!);
-        if (newElem) {
-          newElem.classList.add('playing');
-        }
-      });
+      if (playingBool) {
+        const newAEIdx = this.audioEvents.indexOf(oldAE!);
+        this.playingId = `ae${newAEIdx}rec${oldRecIdx!}`;
+        this.$nextTick(() => {
+          const newElem = document.getElementById(this.playingId!);
+          if (newElem) {
+            newElem.classList.add('playing');
+          }
+        });
+      }
+      
     },
 
     aeRowClass(aeIdx: number, AEs: AudioEventType[]) {
@@ -983,7 +1039,7 @@ span.field {
   flex-direction: column;
   justify-content: left;
   align-items: center;
-  width: calc(100% - 40px);
+  width: calc(100% - 20px);
   margin-left: v-bind(indentWidth + 'px');
   box-sizing: border-box;
   border-left: 1px solid grey;
