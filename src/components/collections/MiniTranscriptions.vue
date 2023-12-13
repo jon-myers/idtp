@@ -393,4 +393,8 @@ span.field {
   width: 100%;
   border-bottom: 1px solid grey;
 }
+
+.transcriptionRow:hover {
+  background-color: #2b332c;
+}
 </style>
