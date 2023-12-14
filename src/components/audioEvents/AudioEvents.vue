@@ -621,13 +621,15 @@ export default defineComponent({
       if (!audioEvent.recordings) return 0;
       Object.values(audioEvent.recordings).forEach(rec => {
         Object.keys(rec.raags).forEach(() => ct ++)
+        if (Object.keys(rec.raags).length === 0) ct ++;
       });
       return ct
     },
     
     raagHt(audioEvent: AudioEventType, recKey: number) {
       const rec = audioEvent.recordings[recKey];
-      return Object.keys(rec.raags).length
+      let len = Object.keys(rec.raags).length;
+      return len === 0 ? 1 : len
     },
     
     openEditWindow(_id: string) {
@@ -872,6 +874,7 @@ button {
   justify-content: left;
   width: 160px;
   padding-left: 10px;
+  border-right: 1px dotted grey;
 }
 
 .playCol {

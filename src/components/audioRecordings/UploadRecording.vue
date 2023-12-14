@@ -56,9 +56,12 @@
         </div>
       </div>
       <div class='modalRow'>
-        <button @click="uploadRecording">Upload</button>
+        <button @click="uploadRecording" :disabled='uploadButtonDisabled'>Upload</button>
         <div class='progressContainer' v-if='!uploadDone'>
           <div class='progress'></div>
+        </div>
+        <div v-if='uploadDone && !processingDone'>
+          Processing...
         </div>
         <audio 
           controls 
@@ -92,6 +95,7 @@ type UploadRecordingDataType = {
   uploadDone: boolean;
   audioFileId: string;
   processingDone: boolean;
+  numFiles: number;
 }
 
 export default defineComponent({
@@ -107,7 +111,14 @@ export default defineComponent({
       uploadDone: false,
       audioFileId: '',
       processingDone: false,
+      numFiles: 0,
     };
+  },
+
+  computed: {
+    uploadButtonDisabled() {
+      return this.numFiles < 1;
+    }
   },
 
   async mounted() {
@@ -145,10 +156,16 @@ export default defineComponent({
 
   methods: {
 
+    // uploadButtonDisabled() {
+    //   const file = this.$refs.file as HTMLInputElement;
+    //   return file.files.length < 1;
+    // },
+
     handleFileChange(event: Event) {
       const target = event.target as HTMLInputElement;
       if (target.files && target.files.length > 0) {
         this.file = target.files[0];
+        this.numFiles = target.files.length;
       }
     },
 
@@ -173,6 +190,7 @@ export default defineComponent({
               audioEventType,
               audioEventID: this.selectedAE?._id,
               recIdx: Object.keys(this.selectedAE!.recordings).length,
+              userID: this.$store.state.userID,
             });
             this.audioFileId = res.data.audioFileId;
             this.processingDone = true;

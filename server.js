@@ -1276,15 +1276,48 @@ const runServer = async () => {
             const audioEventID = req.body.audioEventID;
             const recIdx = req.body.recIdx;
             const audioFile = req.files.audioFile;
-            const tempString = `recordings.${recIdx}.audioFileId`;
+            const recPath = `recordings.${recIdx}`;
+            const afIdPath = `${recPath}.audioFileId`;
+            const datePath = `${recPath}.date`;
+            const locationPath = `${recPath}.location`;
+            const musiciansPath = `${recPath}.musicians`;
+            const raagsPath = `${recPath}.raags`;
+            const octOffsetPath = `${recPath}.octOffset`;
             const newUniqueId = await ObjectId();
             const query = { _id: ObjectId(audioEventID) };
-            const update = { $set: { [tempString]: newUniqueId } };
-            const options = { upsert: true };
-            await audioEvents.updateOne(query, update, options);
+            const update = { $set: { 
+              [afIdPath]: newUniqueId,
+              [datePath]: {},
+              [locationPath]: {},
+              [musiciansPath]: {},
+              [raagsPath]: {},
+              [octOffsetPath]: 0
+            } };
+            const options = { upsert: true, returnOriginal: false };
+            const result = await audioEvents.findOneAndUpdate(query, update, options);
+            console.log(result.value)
             // here we should also update the audioRecordings collection
             // with the new audio file, so as not to rely on the aggregation
             // which generates from audioEvents forever.
+            await audioRecordings.insertOne({
+              _id: newUniqueId,
+              duration: 0,
+              saEstimate: 0,
+              saVerified: false,
+              octOffset: 0,
+              collections: [],
+              musicians: {},
+              title: '',
+              date: {},
+              location: {},
+              raags: {},
+              parentID: audioEventID,
+              parentTitle: result.value.title,
+              aeUserID: result.value.userID,
+              userID: req.body.userID,
+              parentTrackNumber: recIdx,
+            })
+
             const suffix = getSuffix(audioFile.mimetype);
             let fileName = newUniqueId + suffix;
             audioFile.mv('./uploads/' + fileName);

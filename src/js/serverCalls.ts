@@ -897,11 +897,13 @@ const uploadFile = async (
 const newUploadFile = async (file: File, onProgress: OnProgressType, {
   audioEventType = 'add',
   audioEventID = undefined,
-  recIdx = undefined
+  recIdx = undefined,
+  userID = undefined
 }: {
   audioEventType?: 'add' | 'create' | 'none',
   audioEventID?: string,
-  recIdx?: number
+  recIdx?: number,
+  userID?: string
 } = {}) => {
   console.log('getting to newUploadFile server call')
   if (audioEventType === 'add') {
@@ -916,6 +918,7 @@ const newUploadFile = async (file: File, onProgress: OnProgressType, {
     formData.append('audioEventID', audioEventID);
     formData.append('recIdx', String(recIdx));
     formData.append('audioEventType', audioEventType);
+    formData.append('userID', userID || '');
     const config = {
       headers: {
         'Content-Type': 'multipart/form-data'
