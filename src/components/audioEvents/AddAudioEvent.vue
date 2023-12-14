@@ -144,7 +144,11 @@ type RecType = {
   _id?: string,
   parentID?: string,
   parentTitle?: string,
-  parentTrackNumber?: string
+  parentTrackNumber?: string,
+  explicitPermissions?: {
+    edit: string[],
+    view: string[]
+  }
 }
 
 type AudioEventType = {
@@ -157,6 +161,10 @@ type AudioEventType = {
     [key: number]: RecType
   },
   visible?: boolean,
+  explicitPermissions?: {
+    edit: string[],
+    view: string[]
+  }
 }
 
 export type { AudioEventType, RecType, RaagType, PSecType }

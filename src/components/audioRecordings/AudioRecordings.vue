@@ -28,7 +28,8 @@
           </span>
         </span>
         
-        <div 
+        <div
+          v-if='fIdx !== metadataFields.length - 1'
           class='draggableBorder'
           draggable='true'
           @dragstart='handleDragStart(fIdx, $event)'
@@ -144,6 +145,7 @@ type AudioRecordingsDataType = {
   columnWidths: number[],
   initialMouseX?: number,
   initialWidths: number[],
+  minColumnWidths: number[],
   allMusicians?: { 
     'First Name'?: string,
     'Last Name'?: string,
@@ -248,6 +250,7 @@ export default defineComponent({
       ],
       columnWidths: [200, 180, 180, 80, 400, 80],
       initialWidths: [200, 180, 180, 80, 400, 80],
+      minColumnWidths: [90, 80, 190, 100, 130, 80],
       selectedSortIdx: 0,
       contextMenuClosed: true,
       contextMenuChoices: [],
@@ -314,22 +317,29 @@ export default defineComponent({
   },
   
   mounted() {
-    const summedWidths = this.columnWidths.reduce((a, b) => a + b, 0);
-    if (summedWidths > window.innerWidth) {
-      const ratio = window.innerWidth / summedWidths;
-      this.columnWidths = this.columnWidths.map(width => width * ratio);
-      this.initialWidths = this.columnWidths.slice();
-    }
-    this.ensureDurationWidth();
-
-    // add observers to resize columns when window is resized
+    this.resetWidths();
+    // add event listener to resize columns when window is resized
+    window.addEventListener('resize', this.resetWidths);
     
+  },
+
+  unmounted() {
+    window.removeEventListener('resize', this.resetWidths);
   },
   
   computed: {
   },
   
   methods: {
+
+
+    resetWidths() {
+      const summedWidths = this.columnWidths.reduce((a, b) => a + b, 0);
+      const ratio = window.innerWidth / summedWidths;
+      this.columnWidths = this.columnWidths.map(width => width * ratio);
+      this.initialWidths = this.columnWidths.slice();
+      this.ensureMinWidths();
+    },
 
     nextTrack(shuffling: boolean, initial: boolean) {
 
@@ -564,9 +574,9 @@ export default defineComponent({
       document.body.style.cursor = 'col-resize';
         if (event.clientX !== 0) {
           const deltaX = event.clientX - this.initialMouseX!;
-          if (this.initialWidths[fIdx]! + deltaX < 50) {
+          if (this.initialWidths[fIdx]! + deltaX < this.minColumnWidths[fIdx]!) {
             return;
-          } else if (nextCol && (this.initialWidths[fIdx + 1]! - deltaX < 50)) {
+          } else if (nextCol && (this.initialWidths[fIdx + 1]! - deltaX < this.minColumnWidths[fIdx + 1]!)) {
             return
           } else {
             this.columnWidths[fIdx] = this.initialWidths[fIdx]! + deltaX;
@@ -581,9 +591,9 @@ export default defineComponent({
       document.body.style.cursor = 'auto';
       const nextCol = fIdx < this.columnWidths.length - 1;
       const deltaX = event.clientX - this.initialMouseX!;
-      if (this.initialWidths[fIdx] + deltaX < 50) {
+      if (this.initialWidths[fIdx] + deltaX < this.minColumnWidths[fIdx]) {
         return;
-      } else if (nextCol && this.initialWidths[fIdx + 1] - deltaX < 50) {
+      } else if (nextCol && this.initialWidths[fIdx + 1] - deltaX < this.minColumnWidths[fIdx + 1]) {
         return
       } else {
         this.columnWidths[fIdx] = this.initialWidths[fIdx] + deltaX;
@@ -607,6 +617,20 @@ export default defineComponent({
         this.columnWidths[idx] = minWidth;
         this.columnWidths[audioEventIdx] -= extra;
       }
+    },
+
+    ensureMinWidths() {
+      this.columnWidths.forEach((width, idx) => {
+        if (width < this.minColumnWidths[idx]) {
+          const diff = this.minColumnWidths[idx] - width;
+          this.columnWidths[idx] += diff;
+          if (idx < this.columnWidths.length - 1) {
+            this.columnWidths[idx + 1] -= diff;
+          } else {
+            this.columnWidths[0] -= diff;
+          }
+        }
+      })
     },
 
     toggleSort(fIdx: number, ensureCurrentState: boolean = false) {

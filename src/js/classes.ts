@@ -2101,6 +2101,10 @@ class Piece {
   possibleTrajs: { [key: string]: number[] };
   meters: Meter[];
   sectionCategorization: SecCatType[];
+  explicitPermissions: {
+    edit: string[],
+    view: string[]
+  }
 
 
   constructor({
@@ -2126,6 +2130,7 @@ class Piece {
     instrumentation = ['Sitar'],
     meters = [],
     sectionCategorization = undefined,
+    explicitPermissions = undefined,
   }: {
     phrases?: Phrase[],
     durTot?: number,
@@ -2149,6 +2154,10 @@ class Piece {
     instrumentation?: string[],
     meters?: Meter[],
     sectionCategorization?: SecCatType[],
+    explicitPermissions?: {
+      edit: string[],
+      view: string[]
+    }
   } = {}) {
     this.meters = meters;
     this.phrases = phrases;
@@ -2277,6 +2286,14 @@ class Piece {
       for (let i = 0; i < diff; i++) {
         this.sectionCategorization.push(initSectionCategorization())
       }
+    }
+    if (explicitPermissions === undefined) {
+      this.explicitPermissions = {
+        edit: [],
+        view: []
+      }
+    } else {
+      this.explicitPermissions = explicitPermissions
     }
   }
 
@@ -2494,7 +2511,6 @@ class Piece {
       lastTraj.durTot += extraDur;
       lastPhrase.durTotFromTrajectories();
       lastPhrase.durArrayFromTrajectories();
-      // this.durTot = durTot;
       this.durArrayFromPhrases();
       this.updateStartTimes();
     }
@@ -2555,6 +2571,7 @@ class Piece {
       instrumentation: this.instrumentation,
       meters: this.meters,
       sectionCategorization: this.sectionCategorization,
+      explicitPermissions: this.explicitPermissions
     }
   }
 }
