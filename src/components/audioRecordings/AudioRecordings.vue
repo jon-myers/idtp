@@ -91,7 +91,11 @@
   <UploadRecording 
     v-if='!uploadRecModalClosed'
     :navHeight='navHeight'
-    @closeModal='uploadRecModalClosed = true'
+    :frameView='recModalFrame'
+    :recId='editingRecId'  
+    @closeModal='handleCloseRecModal'
+    @updateFrameView='newVal => recModalFrame = newVal'
+    @updateEditingRecId='newVal => editingRecId = newVal'
   />
   <AddToCollection 
     v-if='!addToCollectionModalClosed && selectedRecording'
@@ -167,7 +171,9 @@ type AudioRecordingsDataType = {
   removableCols: CollectionType[],
   addToCollectionModalClosed: boolean,
   removeFromCollectionModalClosed: boolean,
-  selectedRecording: RecType | undefined
+  selectedRecording: RecType | undefined,
+  recModalFrame: 'uploadRec' | 'editRecMetadata',
+  editingRecId?: string,
   
 
 }
@@ -265,7 +271,8 @@ export default defineComponent({
       removeFromCollectionModalClosed: true,
       possibleCols: [],
       removableCols: [],
-      selectedRecording: undefined
+      selectedRecording: undefined,
+      recModalFrame: 'uploadRec',
     }
   },
 
@@ -331,6 +338,17 @@ export default defineComponent({
   },
   
   methods: {
+
+    async handleCloseRecModal() {
+      this.uploadRecModalClosed = true;
+      try {
+        this.allRecordings = await getAllAudioRecordingMetadata();
+        this.toggleSort(this.selectedSortIdx, true);
+      } catch (err) {
+        console.log(err);
+      }
+
+    },
 
 
     resetWidths() {
@@ -450,7 +468,10 @@ export default defineComponent({
         // options to edit recording, delete recording, and upload new recording
         this.contextMenuChoices.push({
           text: 'Edit Recording',
-          action: () => this.openRecordingModal({ editing: true })
+          action: () => {
+            this.openRecordingModal({ editing: true, recId: recording._id })
+            this.contextMenuClosed = true;
+          }
         });
         this.contextMenuChoices.push({
           text: 'Delete Recording',
@@ -664,8 +685,8 @@ export default defineComponent({
       } else if (a.parentTitle !== undefined && b.parentTitle === undefined) {
         return -1;
       } else {
-        const aTitleLower = a.parentTitle!.toLowerCase();
-        const bTitleLower = b.parentTitle!.toLowerCase();
+        const aTitleLower = a.parentTitle ? a.parentTitle.toLowerCase() : '';
+        const bTitleLower = b.parentTitle? b.parentTitle.toLowerCase() : '';
 
         if (aTitleLower < bTitleLower) {
           return -1;
@@ -984,8 +1005,19 @@ export default defineComponent({
 
     },
 
-    openRecordingModal({ editing = true }: { editing?: boolean } = {}) {
-      console.log(`open recording modal, ${editing}`);
+    openRecordingModal({ 
+      editing = true, 
+      recId = undefined 
+    }: { 
+      editing?: boolean,
+      recId?: string 
+    } = {}) {
+      // console.log(`open recording modal, ${editing}`);
+      this.uploadRecModalClosed = false;
+      this.recModalFrame = editing ? 'editRecMetadata' : 'uploadRec';
+      if (editing) {
+        this.editingRecId = recId;
+      }
     },
 
     openUploadModal() {

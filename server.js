@@ -141,6 +141,7 @@ const runServer = async () => {
     const users = db.collection('users');
     const phonemes = db.collection('phonemes');
     const collections = db.collection('collections');
+    const gharanas = db.collection('gharanas');
       
     app.post('/insertNewTranscription', async (req, res) => {
       // creates new transcription entry in transcriptions collection
@@ -186,6 +187,25 @@ const runServer = async () => {
       }
     });
 
+    app.get('/getAllMusicians', async (req, res) => {
+      try {
+        const result = await musicians.find().toArray();
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
+    app.get('/getAllGharanas', async (req, res) => {
+      try {
+        const result = await gharanas.find().toArray();
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
 
     app.get('/getAllTranscriptions', async (req, res) => {
       try {
@@ -1312,7 +1332,7 @@ const runServer = async () => {
               location: {},
               raags: {},
               parentID: audioEventID,
-              parentTitle: result.value.title,
+              parentTitle: result.value.name,
               aeUserID: result.value.userID,
               userID: req.body.userID,
               parentTrackNumber: recIdx,
@@ -1333,7 +1353,7 @@ const runServer = async () => {
                 console.log('opus conversion finished')
               })
             }
-            const spawnArr = ['process_audio.py', fileName, audioEventID, recIdx];
+            const spawnArr = ['process_audio.py', fileName, audioEventID, recIdx, newUniqueId];
             const processAudio = spawn('python3', spawnArr);
             processAudio.stderr.on('data', data => {
               console.error(`stderr: ${data}`)

@@ -1,89 +1,147 @@
 <template>
   <div class="modal">
     <div class="modal-content">
-      <h2>Upload Recording</h2>
-      <div class='modalRow'>
-        <input 
-          type="file" 
-          @change="handleFileChange" 
-          accept="audio/*"
-          ref='file'
-          />
+      <div class='modalFrame' v-if='frameView === "uploadRec"'>
+        <h2>Upload Recording</h2>
+        <div class='modalRow'>
+          <input 
+            type="file" 
+            @change="handleFileChange" 
+            accept="audio/*"
+            ref='file'
+            />
+        </div>
+        <div class='modalRow taller'>
+          <div class='subColumn'>
+            <div class='subRow'>
+              <input 
+                type='radio' 
+                id='addToAudioEvent' 
+                value='addToAudioEvent' 
+                name='uploadType'
+                v-model='aeChoice'>
+              <label for='addToAudioEvent'>Add to Audio Event</label>
+            </div>
+            <div class='subRow'>
+              <input 
+                type='radio' 
+                id='createNewAudioEvent' 
+                value='createNewAudioEvent' 
+                name='uploadType'
+                v-model='aeChoice'>
+              <label for='createNewAudioEvent'>Create New Audio Event</label>
+            </div>
+            <div class='subRow'>
+              <input 
+                type='radio' 
+                id='noAudioEvent' 
+                value='noAudioEvent' 
+                name='uploadType'
+                v-model='aeChoice'>
+              <label for='noAudioEvent'>No Audio Event</label>
+            </div>
+          </div>
+          <div class='subColumn' v-if='aeChoice === "addToAudioEvent"'>
+            <select v-model='selectedAE'>
+              <option 
+                v-for='(ae, i) in allAudioEvents' 
+                :key='i'
+                :value='ae'
+                >
+                {{ae.name}}
+              </option>
+            </select>
+          </div>
+          <div class='subColumn' v-if='aeChoice === "createNewAudioEvent"'>
+            <input type='text' class='textInput' v-model='newAEName'>
+          </div>
+        </div>
+        <div class='modalRow'>
+          <button 
+            @click="uploadRecording" 
+            :disabled='uploadButtonDisabled'
+            v-if='!uploadDone && !processingDone'
+            >
+            Upload
+          </button>
+          <div class='progressContainer' v-if='!uploadDone'>
+            <div class='progress'></div>
+          </div>
+          <div v-if='uploadDone && !processingDone'>
+            Processing...
+          </div>
+          <audio 
+            controls 
+            v-if='processingDone'
+            ref='audio'
+            >
+            <source :src='`https://swara.studio/audio/mp3/${audioFileId}.mp3`'>
+        </audio>
+        </div>
       </div>
-      <div class='modalRow taller'>
-        <div class='subColumn'>
-          <div class='subRow'>
-            <input 
-              type='radio' 
-              id='addToAudioEvent' 
-              value='addToAudioEvent' 
-              name='uploadType'
-              v-model='aeChoice'>
-            <label for='addToAudioEvent'>Add to Audio Event</label>
+      <div class='modalFrame' v-if='frameView === "editRecMetadata"'>
+        <h2>Edit Recording Metadata</h2>
+        <div class='modalRow'>
+          <audio 
+            controls 
+            ref='audio'
+            >
+            <source :src='`https://swara.studio/audio/mp3/${audioFileId}.mp3`'>
+          </audio>
+        </div>
+        <div class='modalRow numMusicians'>
+          <label>Number of Musicians</label>
+          <input type='number' v-model='numMusicians'>
+        </div>
+        <div class='modalRow tall muscians'>
+          <div class='modalCol' v-for='(mus, i) in editingMusicians' :key='i'>
+            <div class='modalColRow'>
+              <label>Name</label>
+              <input type='text' v-model='mus.name'>
+            </div>
+            <div class='modalColRow'>
+              <label>Role</label>
+              <select v-model='mus.role'>
+                <option value='Soloist'>Soloist</option>
+                <option value='Accompanist'>Accompanist</option>
+                <option value='Percussionist'>Percussionist</option>
+                <option value='Drone'>Drone</option>
+              </select>
+            </div>
+            <div class='modalColRow'>
+              <label>Gharana</label>
+              <select v-model='mus.gharana'>
+                <option 
+                  v-for='(gharana, i) in allGharanas' 
+                  :key='i'
+                  :value='gharana.name'
+                  >
+                  {{gharana.name}}
+                </option>
+              </select>
+              <!-- <input type='text' v-model='mus.gharana'> -->
+            </div>
           </div>
-          <div class='subRow'>
-            <input 
-              type='radio' 
-              id='createNewAudioEvent' 
-              value='createNewAudioEvent' 
-              name='uploadType'
-              v-model='aeChoice'>
-            <label for='createNewAudioEvent'>Create New Audio Event</label>
-          </div>
-          <div class='subRow'>
-            <input 
-              type='radio' 
-              id='noAudioEvent' 
-              value='noAudioEvent' 
-              name='uploadType'
-              v-model='aeChoice'>
-            <label for='noAudioEvent'>No Audio Event</label>
-          </div>
+
         </div>
-        <div class='subColumn' v-if='aeChoice === "addToAudioEvent"'>
-          <select v-model='selectedAE'>
-            <option 
-              v-for='(ae, i) in allAudioEvents' 
-              :key='i'
-              :value='ae'
-              >
-              {{ae.name}}
-            </option>
-          </select>
-        </div>
-        <div class='subColumn' v-if='aeChoice === "createNewAudioEvent"'>
-          <input type='text' class='textInput' v-model='newAEName'>
-        </div>
-      </div>
-      <div class='modalRow'>
-        <button @click="uploadRecording" :disabled='uploadButtonDisabled'>Upload</button>
-        <div class='progressContainer' v-if='!uploadDone'>
-          <div class='progress'></div>
-        </div>
-        <div v-if='uploadDone && !processingDone'>
-          Processing...
-        </div>
-        <audio 
-          controls 
-          v-if='processingDone'
-          ref='audio'
-          @canplaythrough='loaded'
-          >
-          <source :src='`https://swara.studio/audio/mp3/${audioFileId}.mp3`'>
-      </audio>
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent, PropType } from 'vue';
 import { 
   getAllAudioEventMetadata, 
   AudioEventMetadataType,
-  newUploadFile 
-} from '@/js/serverCalls';
+  newUploadFile,
+  getAudioRecording,
+  getAllMusicians,
+  getAllGharanas
+} from '@/js/serverCalls.ts';
 
+import { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
+import { MusicianDBType, GharanaType } from '@/ts/types.ts';
 type UploadRecordingDataType = {
   progressWidth: number;
   file: File | null;
@@ -96,6 +154,16 @@ type UploadRecordingDataType = {
   audioFileId: string;
   processingDone: boolean;
   numFiles: number;
+  editingRec?: RecType;
+  numMusicians: number;
+  allMusicians: MusicianDBType[];
+  allGharanas: GharanaType[];
+  editingMusicians: {
+    name?: string;
+    id?: string;
+    role?: 'Soloist' | 'Accompanist' | 'Percussionist' | 'Drone';
+    gharana?: string
+  }[]
 }
 
 export default defineComponent({
@@ -112,6 +180,12 @@ export default defineComponent({
       audioFileId: '',
       processingDone: false,
       numFiles: 0,
+      editingRec: undefined,
+      numMusicians: 1,
+      allMusicians: [],
+      editingMusicians: [],
+      allGharanas: [],
+      
     };
   },
 
@@ -134,9 +208,14 @@ export default defineComponent({
       if (e.target === modal) {
         this.$emit('closeModal');
       }
-    })
+    });
     try {
-      this.allAudioEvents = await getAllAudioEventMetadata();
+      if (this.recId && this.frameView === 'editRecMetadata') {
+        this.audioFileId = this.recId;
+        await this.prepareForEditing();
+      } else if (this.frameView === 'uploadRec') {
+        this.allAudioEvents = await getAllAudioEventMetadata();
+      }
     } catch (err) {
       console.log(err);
     }
@@ -151,15 +230,71 @@ export default defineComponent({
     navHeight: {
       type: Number,
       required: true
+    },
+
+    frameView: {
+      type: String as PropType<'uploadRec' | 'editRecMetadata'>,
+      required: true
+    },
+
+    recId: {
+      type: String,
+      required: false
     }
+  },
+
+  watch: {
+
+    recId(newVal) {
+      console.log('changed')
+      if (newVal) {
+        this.audioFileId = newVal;
+      }
+    }
+
   },
 
   methods: {
 
-    // uploadButtonDisabled() {
-    //   const file = this.$refs.file as HTMLInputElement;
-    //   return file.files.length < 1;
-    // },
+    growEditingMusicians() {
+      this.editingMusicians.push({
+        name: undefined,
+        id: undefined,
+        role: undefined,
+        gharana: undefined
+      })
+    },
+
+    async prepareForEditing() {
+      try {
+        this.editingRec = await getAudioRecording(this.audioFileId);
+        this.numMusicians = Object.keys(this.editingRec!.musicians).length;
+        if (this.numMusicians === 0) {
+          this.numMusicians = 1;
+          this.editingMusicians = [];
+          this.growEditingMusicians();
+        } else {
+          this.allMusicians = await getAllMusicians();
+          this.allGharanas = await getAllGharanas();
+          this.editingMusicians = Object.keys(this.editingRec!.musicians).map((musKey) => {
+            const mus = this.editingRec!.musicians[musKey];
+            console.log(mus)
+            const musObj = this.allMusicians.find((m) => m['Full Name'] === musKey);
+            return {
+              name: musKey,
+              id: musObj ? musObj._id: undefined,
+              role: mus.role,
+              gharana: mus.gharana ? 
+                mus.gharana : 
+                (musObj ? musObj.Gharana : undefined)
+            }
+          })
+        }
+        
+      } catch (err) {
+        console.log(err);
+      }
+    },
 
     handleFileChange(event: Event) {
       const target = event.target as HTMLInputElement;
@@ -194,7 +329,10 @@ export default defineComponent({
             });
             this.audioFileId = res.data.audioFileId;
             this.processingDone = true;
-            console.log(res.message, res.audioFileId)
+            this.$emit('updateFrameView', 'editRecMetadata');
+            this.$emit('updateEditingRecId', this.audioFileId);
+            this.editingRec = await getAudioRecording(this.audioFileId);
+
           } else {
             throw new Error('File must be an audio file');
           }
@@ -235,11 +373,37 @@ export default defineComponent({
   background-color: lightgrey;
   padding: 20px;
   border-radius: 4px;
-  height: 300px;
+  height: 400px;
   width: 600px;
   display: flex;
   flex-direction: column;
   justify-content: top;
+}
+.modalCol > * > select {
+  width: 100px;
+  box-sizing: border-box;
+}
+
+.modalCol > * > input[type='text'] {
+  width: 100px;
+  padding: 0px;
+  margin: 0px;
+  box-sizing: border-box;
+}
+
+.modalColRow {
+  display: flex;
+  flex-direction: row;
+  justify-content: left;
+  align-items: center;
+  height: 30px;
+  width: 200px;
+}
+
+.modalColRow > label {
+  min-width: 100px;
+  text-align: right;
+  margin-right: 10px;
 }
 
 .modalRow {
@@ -248,6 +412,19 @@ export default defineComponent({
   justify-content: left;
   align-items: center;
   height: 60px;
+}
+
+.modalRow.tall {
+  height: 100px;
+}
+
+.modalCol {
+  display: flex;
+  flex-direction: column;
+  justify-content: left;
+  align-items: center;
+  height: 100%;
+  width: 200px;
 }
 
 .taller {
@@ -288,6 +465,11 @@ input[type='text'] {
   width: 250px;
 }
 
+.numMusicians > input[type='number'] {
+  width: 30px;
+  margin-left: 10px;
+}
+
 .subRow {
   display: flex;
   flex-direction: row;
@@ -295,5 +477,18 @@ input[type='text'] {
   align-items: center;
   height: 100%;
   /* width: 150px; */
+}
+
+.modalFrame {
+  display: flex;
+  flex-direction: column;
+  justify-content: top;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+}
+
+audio {
+  width: 100%;
 }
 </style>

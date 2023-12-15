@@ -6,6 +6,9 @@ import { Piece } from './classes.ts';
 import { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
 import { UserType } from '@/ts/types.ts';
 import { CollectionType } from '@/ts/types.ts';
+
+import { MusicianDBType, GharanaType } from '@/ts/types.ts';
+
 // import { URLSearchParams } from 'url';
 const getPiece = async (id: string): Promise<Piece> => {
   let piece;
@@ -342,6 +345,25 @@ const getAllTransOfAudioFile = async (audioID: string, userID: string): Promise<
   }
   return allTrans
 };
+
+const getAllMusicians = async (): Promise<MusicianDBType[]> => {
+  let allMusicians: MusicianDBType[] = [];
+  let request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  };
+  try {
+    const res = await fetch(url + 'getAllMusicians', request);
+    if (res.ok) {
+      allMusicians = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return allMusicians
+}
 
 const getSortedMusicians = async (verbose=false): Promise<(string | {
   'First Name'?: string,
@@ -852,6 +874,26 @@ const getAllCollections = async (): Promise<CollectionType[]> => {
   };
   try {
     const response = await fetch(url + 'getAllCollections', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+
+}
+
+const getAllGharanas = async (): Promise<GharanaType[]> => {
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const response = await fetch(url + 'getAllGharanas', request);
     if (response.ok) {
       out = await response.json()
     }
@@ -1486,7 +1528,6 @@ export {
   deletePiece,
   deleteAudioEvent,
   getAudioDBEntry,
-  // getAllAudioFileMetaData,
   getAllAudioRecordingMetadata,
   uploadFile,
   newUploadFile,
@@ -1541,5 +1582,8 @@ export {
   removeTranscriptionFromCollection,
   getRecsFromIds,
   getAEsFromIds,
-  getTranscriptionsFromIds
+  getTranscriptionsFromIds,
+  getAllMusicians,
+  getAllGharanas
+  
 }

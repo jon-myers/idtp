@@ -100,7 +100,7 @@ export type { AddAudioEventDataType }
 
 type MusicianType = {
   instrument: string,
-  role: string,
+  role: 'Soloist' | 'Accompanist' | 'Percussionist' | 'Drone',
   gharana: string
 }
 

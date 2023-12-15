@@ -36,5 +36,34 @@ type ContextMenuOptionType = {
   enabled?: boolean,
 }
 
+type MusicianDBType = {
+  _id: string;
+  'Initial Name': string;
+  'Full Name'?: string;
+  'First Name'?: string;
+  'Middle Name'?: string;
+  'Second Middle Name'?: string;
+  'Last Name'?: string;
+  'Alternative Name'?: string;
+  Born?: number;
+  Died?: number;
+  Gharana?: string;
+  Gender?: 'M' | 'F' | 'O';
+  Instrument: string;
+  'All Instruments'?: string[];
+}
 
-export type { CollectionType, UserType, ContextMenuOptionType };
+type GharanaType = {
+  _id: string;
+  name: string;
+  members: string[];
+}
+
+
+export type { 
+  CollectionType, 
+  UserType, 
+  ContextMenuOptionType,
+  MusicianDBType,
+  GharanaType,
+};

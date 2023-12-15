@@ -30,11 +30,14 @@ query = "mongodb+srv://" + username + ":" + password + "@swara.f5cuf.mongodb.net
 client = pymongo.MongoClient(query, server_api=ServerApi('1'))
 db = client.swara
 audio_events = db.audioEvents
+audio_recordings = db.audioRecordings
 
 
 path = sys.argv[1]
 objectId = sys.argv[2]
 recording_idx = sys.argv[3]
+recording_id = sys.argv[4]
+
 file_path = 'uploads/'
 
 split_f = path.split('.')
@@ -55,6 +58,14 @@ sa_path = 'recordings.' + str(recording_idx) + '.saEstimate'
 verified_path = 'recordings.' + str(recording_idx) + '.saVerified'
 update = { '$set': { dur_path: dur, sa_path: tonic_guess, verified_path: False } }
 audio_events.update_one(query, update, upsert=True)
+
+if recording_id:
+    query = { '_id': ObjectId(recording_id) }
+    dur_path = 'duration'
+    sa_path = 'saEstimate'
+    verified_path = 'saVerified'
+    update = { '$set': { dur_path: dur, sa_path: tonic_guess, verified_path: False } }
+    audio_recordings.update_one(query, update, upsert=True)
 
 wav_path = 'audio/wav/' + file_name + '.wav'
 mp3_path = 'audio/mp3/' + file_name + '.mp3'
