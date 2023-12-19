@@ -8,7 +8,7 @@ import { UserType } from '@/ts/types.ts';
 import { CollectionType } from '@/ts/types.ts';
 
 import { MusicianDBType, GharanaType } from '@/ts/types.ts';
-
+import { RecUpdateType } from '@/components/audioRecordings/UploadRecording.vue';
 // import { URLSearchParams } from 'url';
 const getPiece = async (id: string): Promise<Piece> => {
   let piece;
@@ -438,6 +438,161 @@ const getGharana = async (initName: string) => {
     }).catch(err => console.error(err))
     return gharana  
 };
+
+const addMusicianToDB = async (data: {
+  fullName: string,
+  initName: string,
+  gharana: string,
+  instrument: string
+}): Promise<{ acknowledged: boolean, insertedId: string}> => {
+  // add musician to DB
+  let out;
+  let request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ 
+      fullName: data.fullName, 
+      initName: data.initName, 
+      gharana: data.gharana, 
+      instrument: data.instrument 
+    })
+  };
+  try {
+    const res = await fetch(url + 'addMusicianToDB', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+    
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+
+};
+
+const addGharanaToDB = async (data: { name: string, members: string[] }) => {
+  // add gharana to DB
+  let out;
+  let request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ name: data.name, members: data.members })
+  };
+  try {
+    const res = await fetch(url + 'addGharanaToDB', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+};
+
+const addCountryToDB = async (continent: string, country: string) => {
+  // add country to DB
+  let out;
+  let request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ country: country, continent: continent })
+  };
+  try {
+    const res = await fetch(url + 'addCountryToDB', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+};
+
+const addCityToDB = async (continent: string, country: string, city: string) => {
+  // add city to DB
+  let out;
+  let request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ continent: continent, country: country, city: city })
+  };
+  try {
+    const res = await fetch(url + 'addCityToDB', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+};
+
+const addRaagToDB = async (raag: string) => {
+  // add raag to DB
+  let out;
+  let request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ raag: raag })
+  };
+  console.log(request)
+  try {
+    const res = await fetch(url + 'addRaagToDB', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+};
+
+const updateAudioRecording = async (
+  recID: string, 
+  updates: RecUpdateType, 
+  aeId?: string,
+  parentTrackNum?: number | string
+  ) => {
+  // update audio recording
+  let out;
+  if (aeId !== undefined && parentTrackNum === undefined) {
+    throw new Error('parentTrackNum must be defined if ae_id is defined')
+  }
+  let request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ 
+      _id: recID, 
+      updates: updates, 
+      ae_id: aeId, 
+      parentTrackNum: parentTrackNum 
+    })
+  };
+  try {
+    const res = await fetch(url + 'updateAudioRecording', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+    
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+};
+
+
 
 const getInstruments = async (melody: boolean = true): Promise<string[]> => {
   melody = melody || false;
@@ -1584,6 +1739,11 @@ export {
   getAEsFromIds,
   getTranscriptionsFromIds,
   getAllMusicians,
-  getAllGharanas
-  
+  getAllGharanas,
+  addMusicianToDB,
+  addGharanaToDB,
+  addCountryToDB,
+  addCityToDB,
+  addRaagToDB,
+  updateAudioRecording
 }

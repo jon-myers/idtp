@@ -89,42 +89,217 @@
             <source :src='`https://swara.studio/audio/mp3/${audioFileId}.mp3`'>
           </audio>
         </div>
-        <div class='modalRow numMusicians'>
-          <label>Number of Musicians</label>
-          <input type='number' v-model='numMusicians'>
+
+        <div class='editingSubFrame' v-if='editRecIdx === 0'>
+        <!-- editing num of musicians, and their attributes -->
+          <div class='modalRow numMusicians'>
+            <label>Number of Musicians</label>
+            <input 
+              type='number' 
+              v-model='numMusicians' 
+              min='0' 
+              max='6'
+              step='1'
+              @input='updateNumMusicians'>
+          </div>
+          <div class='modalRow tall musicians'>
+            <div class='modalCol' v-for='(mus, i) in editingMusicians' :key='i'>
+              <div class='modalColRow'>
+                <label>Name</label>
+                <div class='selHolder'>
+                  <select v-model='mus.name'>
+                    <option 
+                      v-for='(aMus, amIdx) in allMusicians' 
+                      :key='i'
+                      :value='aMus["Full Name"]'
+                      >
+                      {{aMus["Full Name"]}}
+                    </option>
+                  </select>
+                  <input type='text' v-model='newMusNames[i]' v-if='mus.name === "Other"'>
+                </div>
+              </div>
+              <div class='modalColRow'>
+                <label>Role</label>
+                <select v-model='mus.role'>
+                  <option value='Soloist'>Soloist</option>
+                  <option value='Accompanist'>Accompanist</option>
+                  <option value='Percussionist'>Percussionist</option>
+                  <option value='Drone'>Drone</option>
+                </select>
+              </div>
+              <div class='modalColRow'>
+                <label>Instrument</label>
+                <select v-model='mus.instrument'>
+                  <option 
+                    v-for='(inst, i) in allInstruments' 
+                    :key='i'
+                    :value='inst'
+                    >
+                    {{inst}}
+                  </option>
+                </select>
+                </div>
+              <div class='modalColRow'>
+                <label>Gharana</label>
+                <div class='selHolder'>
+                  <select v-model='mus.gharana'>
+                    <option 
+                      v-for='(gharana, i) in allGharanas' 
+                      :key='i'
+                      :value='gharana.name'
+                      >
+                      {{gharana.name}}
+                    </option>
+                  </select>
+                  <input type='text' v-model='newGharanas[i]' v-if='mus.gharana === "Other"'>
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
-        <div class='modalRow tall muscians'>
-          <div class='modalCol' v-for='(mus, i) in editingMusicians' :key='i'>
-            <div class='modalColRow'>
-              <label>Name</label>
-              <input type='text' v-model='mus.name'>
-            </div>
-            <div class='modalColRow'>
-              <label>Role</label>
-              <select v-model='mus.role'>
-                <option value='Soloist'>Soloist</option>
-                <option value='Accompanist'>Accompanist</option>
-                <option value='Percussionist'>Percussionist</option>
-                <option value='Drone'>Drone</option>
-              </select>
-            </div>
-            <div class='modalColRow'>
-              <label>Gharana</label>
-              <select v-model='mus.gharana'>
+
+        <div class='editingSubFrame' v-if='editRecIdx === 1'>
+          <!-- location -->
+          <div class='modalRow'>
+            <label>Location</label>
+            <select v-model='selectedContinent'>
+              <option 
+                v-for='(cont, i) in getContinents' 
+                :key='i'
+                :value='cont'
+                >
+                {{cont}}
+              </option>
+            </select>
+            <div class='selHolder'>
+              <select 
+                v-model='selectedCountry' 
+                v-if='selectedContinent !== undefined'>
                 <option 
-                  v-for='(gharana, i) in allGharanas' 
+                  v-for='(coun, i) in getCountries' 
                   :key='i'
-                  :value='gharana.name'
+                  :value='coun'
                   >
-                  {{gharana.name}}
+                  {{coun}}
                 </option>
               </select>
-              <!-- <input type='text' v-model='mus.gharana'> -->
+              <input type='text' v-model='newSelectedCountry' v-if='selectedCountry === "Other (specify)"'>
+            </div>
+            <div class='selHolder'>
+              <select 
+                v-model='selectedCity' 
+                v-if='selectedCountry !== undefined && selectedCountry !== "Unknown"'
+                >
+                <option 
+                  v-for='(city, i) in getCities' 
+                  :key='i'
+                  :value='city'
+                  >
+                  {{city}}
+                </option>
+              </select>
+              <input type='text' v-model='newSelectedCity' v-if='selectedCity === "Other (specify)"'>
             </div>
           </div>
+          <!-- date -->
+          <div class='modalRow'>
+            <label>Date</label>
+            <select v-model='selectedYear'>
+              <option 
+                v-for='(year, i) in getYears' 
+                :key='i'
+                :value='year'
+                >
+                {{year}}
+              </option>
+            </select>
+            <select v-model='selectedMonth' v-if='selectedYear !== undefined'>
+              <option 
+                v-for='(month, i) in months' 
+                :key='i'
+                :value='month'
+                >
+                {{month}}
+              </option>
+            </select>
+            <select v-model='selectedDay' v-if='selectedMonth !== undefined'>
+              <option 
+                v-for='(day, i) in possibleDays' 
+                :key='i'
+                :value='day'
+                >
+                {{day}}
+              </option>
+            </select>
+          </div>
+          <!-- raag -->
+          <div class='modalRow'>
+            <label>Raag</label>
+            <div class='selHolder'>
+              <select v-model='selectedRaag'>
+                <option 
+                  v-for='(raag, i) in allRaags' 
+                  :key='i'
+                  :value='raag'
+                  >
+                  {{raag}}
+                </option>
+              </select>
+              <input 
+                type='text' 
+                v-model='newRaag' 
+                v-if='selectedRaag === "Other (specify)"'
+                >
+            </div>
+          </div>
+        </div>
 
+        <div class='editingSubFrame' v-if='editRecIdx === 2'>
+          <div class='modalRow'>
+            <label>Number of Sections</label>
+            <input 
+              type='number' 
+              min='1' 
+              max='10' 
+              step='1' 
+              v-model='numSecs'
+              @input='updateNumSecs'
+              >
+              
+          </div>
+          <div class='modalRow'>
+            <div class='modalCol' v-for='(sec, i) in editingSecs' :key='i'>
+              <div class='modalColRow'>
+                <label>Section</label>
+                <select v-model='sec.name'>
+                  <option 
+                    v-for='(pSec, i) in performanceSections' 
+                    :key='i'
+                    :value='pSec'
+                    >
+                    {{pSec}}
+                  </option>
+                </select>
+                <!-- <input type='text' v-model='sec.name'> -->
+              </div>
+              
+            </div>
+          </div>
+        </div>
+
+        <div class='modalRow centered short'>
+          <button @click='editRecIdx--' :disabled='editRecIdx===0'>{{ "<" }}</button>
+          <button @click='saveUpdates'>Save Updates</button>
+          <button @click='editRecIdx++' :disabled='editRecIdx>1'>{{ ">" }}</button>
+        </div>
+        <div class='modalRow centered short'>
+          <span>{{ dateModified }}</span>
         </div>
       </div>
+
+      
     </div>
   </div>
 </template>
@@ -137,10 +312,20 @@ import {
   newUploadFile,
   getAudioRecording,
   getAllMusicians,
-  getAllGharanas
+  getAllGharanas,
+  getInstruments,
+  getLocationObject,
+  getRagaNames,
+  getPerformanceSections,
+  addMusicianToDB,
+  addGharanaToDB,
+  addCountryToDB,
+  addCityToDB,
+  addRaagToDB,
+  updateAudioRecording
 } from '@/js/serverCalls.ts';
 
-import { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
+import { RecType, PSecType, MusicianType } from '@/components/audioEvents/AddAudioEvent.vue';
 import { MusicianDBType, GharanaType } from '@/ts/types.ts';
 type UploadRecordingDataType = {
   progressWidth: number;
@@ -162,10 +347,65 @@ type UploadRecordingDataType = {
     name?: string;
     id?: string;
     role?: 'Soloist' | 'Accompanist' | 'Percussionist' | 'Drone';
-    gharana?: string
-  }[]
+    gharana?: string,
+    instrument?: string,
+  }[],
+  allInstruments: string[],
+  newMusNames: (string | undefined)[],
+  newGharanas: (string | undefined)[],
+  editRecIdx: number, // which page of metadata editing you're on
+  locObj: {[continent: string]: {[country: string]: string[]}},
+  selectedContinent?: string,
+  selectedCountry?: string,
+  selectedCity?: string,
+  months: string[],
+  selectedYear?: number,
+  selectedMonth?: string,
+  selectedDay?: number,
+  newSelectedCountry?: string,
+  newSelectedCity?: string,
+  allRaags: string[],
+  selectedRaag?: string,
+  newRaag?: string,
+  numSecs: number,
+  editingSecs: EditingSecType[],
+  performanceSections: string[],
 }
 
+type RecUpdateType = {
+    musicians: { [name: string]: MusicianType },
+    location: {
+      continent?: string,
+      country?: string,
+      city?: string,
+    },
+    date: {
+      year?: string,
+      month?: string,
+      day?: string,
+    },
+    raags: {
+      [name: string]: {
+        'performance sections': {
+          [name: string]: PSecType
+        }
+      }
+    }
+  };
+
+export type { RecUpdateType };
+
+type EditingSecType = {
+  name?: string,
+  start: number, 
+  end: number, 
+  startSecs: string, 
+  startMins: string, 
+  startHours: string,
+  endSecs: string,
+  endMins: string,
+  endHours: string,
+}
 export default defineComponent({
   data(): UploadRecordingDataType {
     return {
@@ -185,14 +425,112 @@ export default defineComponent({
       allMusicians: [],
       editingMusicians: [],
       allGharanas: [],
+      newMusNames: new Array(6).fill(undefined),
+      newGharanas: new Array(6).fill(undefined),
+      allInstruments: [],
+      editRecIdx: 0,
+      locObj: {},
+      selectedContinent: undefined,
+      selectedCountry: undefined,
+      selectedCity: undefined,
+      months: [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December'
+      ], 
+      newSelectedCountry: undefined,
+      newSelectedCity: undefined,
+      selectedYear: undefined,
+      selectedMonth: undefined,
+      selectedDay: undefined,
+      allRaags: [],
+      selectedRaag: undefined,
+      newRaag: undefined,
+      numSecs: 1,
+      editingSecs: [],
+      performanceSections: [],
       
     };
   },
 
   computed: {
+
+    dateModified() {
+      if (this.editingRec) {
+        const date = new Date(this.editingRec.dateModified);
+        const optionsDate: Intl.DateTimeFormatOptions = { 
+          month: '2-digit', 
+          day: '2-digit', 
+          year: 'numeric' 
+        };
+        const optionsTime: Intl.DateTimeFormatOptions = { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        };
+        const strDate = date.toLocaleDateString(undefined, optionsDate);
+        const strTime = date.toLocaleTimeString(undefined, optionsTime);
+        return `Last Modified: ${strDate} ${strTime}`;
+      } else {
+        return '';
+      }
+    },
+    
     uploadButtonDisabled() {
       return this.numFiles < 1;
-    }
+    },
+
+    getCountries() {
+      if (this.selectedContinent && this.locObj) {
+        const countries = Object.keys(this.locObj[this.selectedContinent]);
+        return countries.concat(['Unknown', 'Other (specify)'])
+      } else {
+        return ['Unknown', 'Other (specify)']
+      }
+    },
+    
+    getContinents() {
+      return this.locObj ? Object.keys(this.locObj) : [];
+    },
+  
+    getCities() {
+      const sCont = this.selectedContinent;
+      const loc = this.locObj;
+      const sCoun = this.selectedCountry;
+      if (sCont && loc && sCoun && loc[sCont][sCoun]) {
+        const cities = loc[sCont][sCoun];
+        return cities.concat(['Unknown', 'Other (specify)'])
+      } else {
+        return ['Unknown', 'Other (specify)']
+      }
+    },
+  
+    getYears() {
+      const stop = (new Date()).getFullYear();
+      const start = 1903;
+      const len = { length: stop - start + 1 };
+      const out: (string | number)[] = Array.from(len, (_, i) => start + i);
+      out.push('Unknown')
+      return out
+    },
+  
+    possibleDays() {
+      if (this.selectedMonth) {
+        const monthNum = this.months.indexOf(this.selectedMonth) + 1
+        return (new Date(Number(this.selectedYear), monthNum, 0)).getDate()
+      } else {
+        return 31
+      }
+      
+    },
   },
 
   async mounted() {
@@ -251,10 +589,173 @@ export default defineComponent({
         this.audioFileId = newVal;
       }
     }
-
   },
 
   methods: {
+
+    async saveUpdates() {
+      const recUpdates: RecUpdateType = {
+        musicians: {},
+        location: {},
+        date: {},
+        raags: {},
+      };
+      this.editingMusicians.forEach(async (mus, musIdx) => {
+        try {
+          const gharana = mus.gharana === 'Other' ? 
+            this.newGharanas[musIdx] : 
+            mus.gharana;
+          let musId: string = '';
+          if (mus.name === 'Other')  {
+            recUpdates.musicians[this.newMusNames[musIdx]!] = {
+              role: mus.role,
+              gharana: gharana,
+              instrument: mus.instrument,
+            }
+            const res = await addMusicianToDB({ // needs to be tested
+              fullName: this.newMusNames[musIdx]!,
+              initName: this.newMusNames[musIdx]!,
+              instrument: mus.instrument!,
+              gharana: gharana!,
+            })
+            musId = res.insertedId;
+          } else {
+            recUpdates.musicians[mus.name!] = {
+              role: mus.role,
+              gharana: gharana,
+              instrument: mus.instrument,
+            };
+            const mObj = this.allMusicians.find(m => m['Full Name'] === mus.name);
+            musId = mObj!._id;
+          }
+          if (mus.gharana === 'Other') {
+            if (musId === '') {
+              throw new Error('musId is undefined');
+            }
+            const res = await addGharanaToDB({
+              name: this.newGharanas[musIdx]!,
+              members: [musId],
+            })
+          }
+        } catch (err) {
+          console.log(err);
+        }
+        
+      })
+
+      if (this.selectedContinent) {
+        recUpdates.location.continent = this.selectedContinent;
+        if (this.selectedCountry) {
+          if (this.selectedCountry === 'Other (specify)') {
+            recUpdates.location.country = this.newSelectedCountry!;
+            const continent = this.selectedContinent;
+            const country = this.newSelectedCountry!;
+            const res = await addCountryToDB(continent, country);
+          } else {
+            recUpdates.location.country = this.selectedCountry;
+          }
+          if (this.selectedCity) {
+            if (this.selectedCity === 'Other (specify)') {
+              recUpdates.location.city = this.newSelectedCity!;
+              const continent = this.selectedContinent;
+              const country = this.selectedCountry;
+              const city = this.newSelectedCity!;
+              const res = await addCityToDB(continent, country, city);
+            } else {
+              recUpdates.location.city = this.selectedCity;
+            }
+          }
+        }
+      };
+
+      recUpdates.date.year = this.selectedYear !== undefined ? 
+        String(this.selectedYear) : 
+        undefined;
+      recUpdates.date.month = this.selectedMonth;
+      recUpdates.date.day = this.selectedDay !== undefined ? 
+        String(this.selectedDay) : 
+        undefined;
+      
+      if (this.selectedRaag) {
+        const pSecNames = this.editingSecs.map((pSec) => pSec.name);
+        if (this.selectedRaag === 'Other (specify)') {
+          const res = await addRaagToDB(this.newRaag!);
+          recUpdates.raags[this.newRaag!] = {
+            'performance sections': {},
+          };
+          pSecNames.forEach(psName => {
+            if (psName !== undefined) {
+              recUpdates.raags[this.newRaag!]['performance sections'][psName] = {
+                start: 0,
+                end: 0,
+              }
+            }
+          })
+        } else {
+          recUpdates.raags[this.selectedRaag] = {
+            'performance sections': {},
+          };
+          pSecNames.forEach(psName => {
+            if (psName !== undefined) {
+              recUpdates.raags[this.selectedRaag!]['performance sections'][psName] = {
+                start: 0,
+                end: 0,
+              }
+            }
+          })
+        }
+      }
+      const res = await updateAudioRecording(
+        this.audioFileId, 
+        recUpdates, 
+        this.editingRec!.parentID,
+        this.editingRec!.parentTrackNumber,
+        );
+      console.log(res);
+      // const addRes = 
+      
+      
+      
+
+
+      
+    },
+
+    updateNumMusicians() {
+      while (this.editingMusicians.length < this.numMusicians) {
+        this.growEditingMusicians();
+      }
+      while (this.editingMusicians.length > this.numMusicians) {
+        this.shrinkEditingMusicians();
+      }
+    },
+
+    updateNumSecs () {
+      while (this.editingSecs.length < this.numSecs) {
+        this.growEditingSecs();
+      }
+      while (this.editingSecs.length > this.numSecs) {
+        this.shrinkEditingSecs();
+      }
+    },
+
+    growEditingSecs() {
+      this.editingSecs.push({
+        name: undefined,
+        start: 0,
+        end: 0,
+        startHours: '00',
+        startMins: '00',
+        startSecs: '00',
+        endHours: '00',
+        endMins: '00',
+        endSecs: '00',
+      })
+    },
+
+    shrinkEditingSecs() {
+      this.editingSecs.pop();
+    },
 
     growEditingMusicians() {
       this.editingMusicians.push({
@@ -265,20 +766,99 @@ export default defineComponent({
       })
     },
 
+    shrinkEditingMusicians() {
+      this.editingMusicians.pop();
+    },
+
     async prepareForEditing() {
+      
+
       try {
         this.editingRec = await getAudioRecording(this.audioFileId);
         this.numMusicians = Object.keys(this.editingRec!.musicians).length;
+        this.allMusicians = await getAllMusicians();
+        this.allMusicians.push({
+          'Full Name': 'Other',
+          'Initial Name': 'Other',
+          _id: '',
+        })
+
+        this.allGharanas = await getAllGharanas();
+        this.allGharanas.push({
+          name: 'Other',
+          _id: '',
+          members: []
+        })
+
+        this.allInstruments = await getInstruments(false);
+
+        this.locObj = await getLocationObject();
+        this.allRaags = await getRagaNames();
+        this.allRaags.push('Other (specify)');
+        this.performanceSections = await getPerformanceSections();
+
+        this.selectedContinent = this.editingRec!.location.continent;
+        this.selectedCountry = this.editingRec!.location.country;
+        this.selectedCity = this.editingRec!.location.city;
+        this.selectedYear = this.editingRec!.date.year ? 
+          Number(this.editingRec!.date.year): 
+          undefined;
+        this.selectedMonth = this.editingRec!.date.month;
+        this.selectedDay = this.editingRec!.date.day ? 
+          Number(this.editingRec!.date.day): 
+          undefined;
+        const raags = Object.keys(this.editingRec!.raags);
+        let numSecs = 0;
+        if (raags.length > 0) {
+          this.selectedRaag = raags[0];
+          raags.forEach(raagKey => {
+            const raag = this.editingRec!.raags[raagKey];
+            const pSecs = raag['performance sections']!;
+            const pSecKeys = Object.keys(pSecs);
+            numSecs += pSecKeys.length;
+            pSecKeys.forEach(pSecKey => {
+              const pSec = pSecs[pSecKey] as EditingSecType;
+              pSec.name = pSecKey;
+
+              const sHrs = Math.floor(pSec.start / 3600);
+              const sMins = Math.floor((pSec.start - Number(sHrs) * 3600) / 60);
+              const sSecs = pSec.start - Number(sHrs) * 3600 - Number(sMins) * 60;
+              const eHrs = Math.floor(pSec.end / 3600);
+              const eMins = Math.floor((pSec.end - Number(eHrs) * 3600) / 60);
+              const eSecs = pSec.end - Number(eHrs) * 3600 - Number(eMins) * 60;
+
+              pSec.startHours = String(sHrs);
+              pSec.startMins = String(sMins);
+              if (pSec.startMins.length === 1) {
+                pSec.startMins = '0' + pSec.startMins;
+              }
+              pSec.startSecs = String(sSecs);
+              if (pSec.startSecs.length === 1) {
+                pSec.startSecs = '0' + pSec.startSecs;
+              }
+              pSec.endHours = String(eHrs);
+              pSec.endMins = String(eMins);
+              if (pSec.endMins.length === 1) {
+                pSec.endMins = '0' + pSec.endMins;
+              }
+              pSec.endSecs = String(eSecs);
+              if (pSec.endSecs.length === 1) {
+                pSec.endSecs = '0' + pSec.endSecs;
+              }
+              this.editingSecs.push(pSec);
+            })
+          })
+          
+
+        }
+
         if (this.numMusicians === 0) {
           this.numMusicians = 1;
           this.editingMusicians = [];
           this.growEditingMusicians();
         } else {
-          this.allMusicians = await getAllMusicians();
-          this.allGharanas = await getAllGharanas();
           this.editingMusicians = Object.keys(this.editingRec!.musicians).map((musKey) => {
             const mus = this.editingRec!.musicians[musKey];
-            console.log(mus)
             const musObj = this.allMusicians.find((m) => m['Full Name'] === musKey);
             return {
               name: musKey,
@@ -286,14 +866,25 @@ export default defineComponent({
               role: mus.role,
               gharana: mus.gharana ? 
                 mus.gharana : 
-                (musObj ? musObj.Gharana : undefined)
+                (musObj ? musObj.Gharana : undefined),
+              instrument: mus.instrument ? 
+                mus.instrument : 
+                (musObj ? musObj.Instrument : undefined),
             }
           })
+        };
+
+        if (this.editingSecs.length === 0) {
+          this.numSecs = 1;
+          this.editingSecs = [];
+          this.growEditingSecs();
         }
         
       } catch (err) {
         console.log(err);
       }
+
+      
     },
 
     handleFileChange(event: Event) {
@@ -321,17 +912,22 @@ export default defineComponent({
             } else if (this.aeChoice === 'noAudioEvent') {
               audioEventType = 'none';
             }
+            let recIdx = 0;
+            if (this.selectedAE!.recordings) {
+              recIdx = Object.keys(this.selectedAE!.recordings).length;
+            }
             const res = await newUploadFile(file, this.onProgress, {
               audioEventType,
               audioEventID: this.selectedAE?._id,
-              recIdx: Object.keys(this.selectedAE!.recordings).length,
+              recIdx,
               userID: this.$store.state.userID,
             });
             this.audioFileId = res.data.audioFileId;
             this.processingDone = true;
             this.$emit('updateFrameView', 'editRecMetadata');
             this.$emit('updateEditingRecId', this.audioFileId);
-            this.editingRec = await getAudioRecording(this.audioFileId);
+            await this.prepareForEditing();
+            // this.editingRec = await getAudioRecording(this.audioFileId);
 
           } else {
             throw new Error('File must be an audio file');
@@ -373,13 +969,17 @@ export default defineComponent({
   background-color: lightgrey;
   padding: 20px;
   border-radius: 4px;
-  height: 400px;
-  width: 600px;
+  height: 460px;
+  width: 700px;
   display: flex;
   flex-direction: column;
   justify-content: top;
 }
 .modalCol > * > select {
+  width: 100px;
+  box-sizing: border-box;
+}
+.modalCol > * > * > select {
   width: 100px;
   box-sizing: border-box;
 }
@@ -391,20 +991,55 @@ export default defineComponent({
   box-sizing: border-box;
 }
 
+.modalRow > select {
+  width: 100px;
+  box-sizing: border-box;
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+.modalRow > .selHolder > select {
+  width: 100px;
+  box-sizing: border-box;
+  /* margin-left: 5px;
+  margin-right: 5px; */
+
+}
+
+.modalRow > .selHolder {
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+/* .modalRow > .selHolder > input[type='text'] {
+  width: 100px;
+  padding: 0px;
+  margin-left: 5px;
+  margin-right: 5px;
+  box-sizing: border-box;
+} */
 .modalColRow {
   display: flex;
   flex-direction: row;
   justify-content: left;
   align-items: center;
-  height: 30px;
+  min-height: 30px;
+  max-height: 45px;
   width: 200px;
 }
 
 .modalColRow > label {
-  min-width: 100px;
+  min-width: 80px;
   text-align: right;
   margin-right: 10px;
 }
+
+.modalRow > label {
+  min-width: 80px;
+  text-align: right;
+  margin-right: 5px;
+
+} 
 
 .modalRow {
   display: flex;
@@ -414,8 +1049,21 @@ export default defineComponent({
   height: 60px;
 }
 
+.modalRow.centered {
+  justify-content: center;
+
+}
+
+.modalRow.centered > button {
+  margin: 5px 5px;
+}
+
 .modalRow.tall {
-  height: 100px;
+  height: 160px;
+}
+
+.modalRow.tall.musicians {
+  overflow-x: scroll;
 }
 
 .modalCol {
@@ -424,7 +1072,8 @@ export default defineComponent({
   justify-content: left;
   align-items: center;
   height: 100%;
-  width: 200px;
+  min-width: 220px;
+  max-width: 220px;
 }
 
 .taller {
@@ -491,4 +1140,40 @@ input[type='text'] {
 audio {
   width: 100%;
 }
+
+.selHolder {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  align-items: left;
+  box-sizing: border-box;
+  width: 100px;
+  min-height: 30px;
+  max-height: 45px;
+}
+
+
+
+.selHolder > input[type='text'] {
+  width: 100px;
+  margin-top: 5px;
+  box-sizing: border-box;
+  /* margin-left: 5px; */
+  /* margin-right: 5px; */
+}
+
+.editingSubFrame {
+  display: flex;
+  flex-direction: column;
+  justify-content: top;
+  align-items: center;
+  min-height: 220px;
+  max-height: 220px;
+  width: 100%;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 </style>

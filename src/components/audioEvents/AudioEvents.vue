@@ -628,7 +628,7 @@ export default defineComponent({
     
     raagHt(audioEvent: AudioEventType, recKey: number) {
       const rec = audioEvent.recordings[recKey];
-      let len = Object.keys(rec.raags).length;
+      let len = rec.raags ? Object.keys(rec.raags).length: 1;
       return len === 0 ? 1 : len
     },
     

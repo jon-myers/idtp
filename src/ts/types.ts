@@ -49,7 +49,7 @@ type MusicianDBType = {
   Died?: number;
   Gharana?: string;
   Gender?: 'M' | 'F' | 'O';
-  Instrument: string;
+  Instrument?: string;
   'All Instruments'?: string[];
 }
 

@@ -836,6 +836,76 @@ const runServer = async () => {
       }
     })
 
+    app.post('/addMusicianToDB', async (req, res) => {
+      //adding new entry to musicians db
+      const entry = { 
+        'Initial Name': req.body.initName,
+        'Gharana': req.body.gharana,
+        'Full Name': req.body.fullName,
+        'Instrument': req.body.instrument
+      };
+      try {
+        const result = await musicians.insertOne(entry);
+        res.json(result);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
+    app.post('/addGharanaToDB', async (req, res) => {
+      //adding new entry to gharanas db
+      const entry = { 'name': req.body.name, 'members': req.body.members };
+      try {
+        const result = await gharanas.insertOne(entry);
+        res.json(result);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
+    app.post('/addCountryToDB', async (req, res) => {
+      const country = req.body.country;
+      const continent = req.body.continent;
+      const update = { $set: { [`${continent}.${country}`]: [] } };
+      const query = {};
+      try {
+        const result = await location.updateOne(query, update);
+        res.json(result);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      } 
+    })
+
+    app.post('/addCityToDB', async (req, res) => {
+      const continent = req.body.continent;
+      const country = req.body.country;
+      const city = req.body.city;
+      const update = { $push: { [`${continent}.${country}`]: city } };
+      const query = {};
+      try {
+        const result = await location.updateOne(query, update);
+        res.json(result);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
+    app.post('/addRaagToDB', async (req, res) => {
+      const d = new Date();
+      const entry = { 'name': req.body.raag, 'updatedDate': d.toISOString() };
+      try {
+        const result = await ragas.insertOne(entry);
+        res.json(result);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
     app.post('/updateSaEstimate', async (req, res) => {
       try {
         const verString = `recordings.${req.body.recIdx}.saVerified`;
@@ -855,6 +925,34 @@ const runServer = async () => {
         const otherUpdate = { $set: setting };
         const oRes = await audioRecordings.updateOne(otherQuery, otherUpdate);
         res.json(oRes)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err)
+      }
+    })
+
+    app.post('/updateAudioRecording', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.body._id) };
+        const update = { $set: req.body.updates };
+        const result = await audioRecordings.updateOne(query, update);
+        if (req.body.ae_id !== undefined) {
+          const aeUpdate = {};
+          console.log(req.body.updates)
+          Object.keys(req.body.updates).forEach(key => {
+            console.log(key)
+            aeUpdate[key] = JSON.parse(JSON.stringify(req.body.updates[key]));
+          })
+          aeUpdate['audioFileId'] = ObjectId(req.body._id);
+          delete aeUpdate['_id'];
+
+          const aeQuery = { _id: ObjectId(req.body.ae_id) };
+          const aeUpdateFull = { $set: { 
+            [`recordings.${req.body.parentTrackNum}`]: aeUpdate 
+          } };
+          await audioEvents.updateOne(aeQuery, aeUpdateFull);
+        }
+        res.json(result)
       } catch (err) {
         console.error(err);
         res.status(500).send(err)
