@@ -147,7 +147,8 @@ type RecType = {
   parentTrackNumber?: string,
   explicitPermissions?: {
     edit: string[],
-    view: string[]
+    view: string[],
+    publicView: boolean
   },
   dateModified: string | Date,
 }
@@ -164,7 +165,8 @@ type AudioEventType = {
   visible?: boolean,
   explicitPermissions?: {
     edit: string[],
-    view: string[]
+    view: string[],
+    publicView: boolean
   }
 }
 

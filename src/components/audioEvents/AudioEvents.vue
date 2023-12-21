@@ -105,6 +105,16 @@
     @close='closeCollectionsModal'
     :removeType='addType'
     />
+    <PermissionsModal
+      v-if='selectedAE !== undefined && 
+        selectedAE.explicitPermissions !== undefined && 
+        permissionsModalOpen'
+      :navHeight='navHeight'
+      :visibility='selectedAE.explicitPermissions.publicView'
+      :artifactType='"audioEvent"'
+      :artifactID='selectedAE._id'
+      @close='handleClosePermissionsModal'
+      />
   
 </template>
 <script lang='ts'>
@@ -120,19 +130,7 @@ import { defineComponent } from 'vue';
 import ContextMenu from '@/components/ContextMenu.vue';
 import AddToCollection from '@/components/AddToCollection.vue';
 import RemoveFromCollection from '@/components/RemoveFromCollection.vue';
-
-const displayTime = (dur: number) => {
-  const hours = Math.floor(dur / 3600);
-  let minutes: string | number = Math.floor((dur - hours * 3600) / 60);
-  let seconds: string | number = dur % 60;
-  if (seconds.toString().length === 1) seconds = '0' + seconds;
-  if (hours !== 0) {
-    if (minutes.toString().length === 1) minutes = '0' + minutes;
-    return ([hours, minutes, seconds]).join(':')
-  } else {
-    return minutes + ':' + seconds 
-  }
-}
+import PermissionsModal from '@/components/PermissionsModal.vue'; 
 
 import type { AudioEventType, RecType, RaagType } from '@/components/audioEvents/AddAudioEvent.vue'
 import { ContextMenuOptionType, CollectionType } from '@/ts/types.ts';
@@ -169,6 +167,7 @@ type AudioEventsDataType = {
   recRemovableCols: CollectionType[],
   addToCollectionModalOpen: boolean,
   removeFromCollectionModalOpen: boolean,
+  permissionsModalOpen: boolean,
   addType: "audioEvent" | "recording" | "transcription",
 }
 
@@ -211,6 +210,7 @@ export default defineComponent({
       recRemovableCols: [],
       addToCollectionModalOpen: false,
       removeFromCollectionModalOpen: false,
+      permissionsModalOpen: false,
       addType: 'audioEvent'
     }
   },
@@ -219,7 +219,8 @@ export default defineComponent({
     AudioPlayer, 
     ContextMenu, 
     AddToCollection, 
-    RemoveFromCollection
+    RemoveFromCollection,
+    PermissionsModal
   },
 
   props: {
@@ -267,6 +268,18 @@ export default defineComponent({
   },
 
   methods: {
+
+    async handleClosePermissionsModal() {
+      this.permissionsModalOpen = false;
+      try {
+        this.allAudioEvents = await getAllAudioEventMetadata();
+        this.allAudioEvents?.sort((a, b) => a.name.localeCompare(b.name));
+        this.editableCols = await getEditableCollections(this.$store.state.userID!)
+
+      } catch (err) {
+        console.log(err)
+      }
+    },
 
     async closeCollectionsModal() {
       this.addToCollectionModalOpen = false;
@@ -388,7 +401,14 @@ export default defineComponent({
           this.deleteAE();
           this.contextMenuClosed = true;
         }
-      })
+      });
+      this.contextMenuChoices.push({
+        text: 'Edit Permissions',
+        action: () => {
+          this.permissionsModalOpen = true;
+          this.contextMenuClosed = true;
+        }
+      });
       if (this.editableCols.length > 0) {
         this.contextMenuChoices.push({
           text: 'Add Event to Collection',

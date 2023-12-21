@@ -1,3 +1,5 @@
+import { Raga } from '@/js/classes.ts';
+
 type CollectionType = {
   _id?: string;
   title: string;
@@ -36,6 +38,24 @@ type ContextMenuOptionType = {
   enabled?: boolean,
 }
 
+type TranscriptionMetadataType = {
+  title: string;
+  dateCreated: string;
+  dateModified: string;
+  location: string;
+  _id: string;
+  durTot: number;
+  raga: Raga;
+  userID: string;
+  permissions: string;
+  name: string;
+  family_name: string;
+  given_name: string;
+  audioID?: string;
+  instrumentation: string[]
+}
+
+
 type MusicianDBType = {
   _id: string;
   'Initial Name': string;
@@ -66,4 +86,5 @@ export type {
   ContextMenuOptionType,
   MusicianDBType,
   GharanaType,
+  TranscriptionMetadataType,
 };

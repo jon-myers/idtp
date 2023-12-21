@@ -219,9 +219,7 @@ const runServer = async () => {
           dateCreated: 1,
           dateModified: 1,
           location: 1,
-          transcriber: 1,
           _id: 1,
-          performers: 1,
           durTot: 1,
           raga: 1,
           userID: 1,
@@ -343,7 +341,8 @@ const runServer = async () => {
         parentID: 1,
         parentTitle: 1,
         parentTrackNumber: 1,
-        userID: 1
+        userID: 1,
+        explicitPermissions: 1
       }
       try {
         const result = await audioRecordings.find().project(projection).toArray();
@@ -648,6 +647,39 @@ const runServer = async () => {
       }
     });
 
+    app.get('/verifySpectrogram', async (req, res) => {
+      // verify that spectrogram exists for a particular recording
+      const dir = 'spectrograms/' + req.query.id + '/0';
+      try {
+        const files = await fs.readdir(dir);
+        res.json(files.length > 0)
+      } catch (err) {
+        if (err.code === 'ENOENT') {
+          res.json(false)
+        } else {
+          console.error(err);
+          res.status(500).send(err);
+        }
+        
+      }
+    });
+
+    app.get('/verifyMelograph', async (req, res) => {
+      // verify that melograph exists for a particular recording
+      const dir = 'melographs/' + req.query.id;
+      try {
+        const files = await fs.readdir(dir);
+        res.json(files.length > 0)
+      } catch (err) {
+        if (err.code === 'ENOENT') {
+          res.json(false)
+        } else {
+          console.error(err);
+          res.status(500).send(err);
+        }
+      }
+    });
+
     app.get('/getRagaNames', async (req, res) => {
       // gets names of all ragas
       const proj = { 'name': 1, _id: 0 };
@@ -707,6 +739,58 @@ const runServer = async () => {
         console.error(err);
         res.status(500).send(err);
       }
+    });
+
+    app.post('/updateVisibility', async (req, res) => {
+      // update the visibility of either a transcription, recording, or 
+      // audioEvent
+      if (req.body.artifactType === 'transcription') {
+        try {
+          const query = { _id: ObjectId(req.body._id) };
+          const update = { $set: { 
+            "explicitPermissions.publicView": req.body.visibility 
+          } };
+          const result = await transcriptions.updateOne(query, update);
+          res.json(result)
+        } catch (err) {
+          console.error(err);
+          res.status(500).send(err);
+        }
+      } else if (req.body.artifactType === 'audioRecording') {
+        try {
+          const query = { _id: ObjectId(req.body._id) };
+          const update = { $set: { 
+            "explicitPermissions.publicView": req.body.visibility 
+          } };
+          const options = { returnOriginal: false };
+          const result = await audioRecordings.findOneAndUpdate(query, update, options);
+          console.log(result)
+          const parentID = result.value.parentID;
+          const key = result.value.parentTrackNumber;
+          const query2 = { _id: ObjectId(parentID) };
+          const path = `recordings.${key}.explicitPermissions.publicView`;
+          const update2 = { $set: { [path]: req.body.visibility } };
+          const result2 = await audioEvents.updateOne(query2, update2);
+          res.json({ result, result2 })
+        } catch (err) {
+          console.error(err);
+          res.status(500).send(err);
+        }
+      } else if (req.body.artifactType === 'audioEvent') {
+        console.log(req.body)
+        try {
+          const query = { _id: ObjectId(req.body._id) };
+          const update = { $set: { 
+            "explicitPermissions.publicView": req.body.visibility 
+          } };
+          const result = await audioEvents.updateOne(query, update);
+          res.json(result)
+        } catch (err) {
+          console.error(err);
+          res.status(500).send(err);
+        }
+      }
+
     });
     
     app.post('/makeSpectrograms', async (req, res) => {
@@ -934,7 +1018,11 @@ const runServer = async () => {
     app.post('/updateAudioRecording', async (req, res) => {
       try {
         const query = { _id: ObjectId(req.body._id) };
-        const update = { $set: req.body.updates };
+        const isoDateString = new Date().toISOString();
+        const update = { $set: {
+          ...req.body.updates,
+          dateModified: isoDateString
+         } };
         const result = await audioRecordings.updateOne(query, update);
         if (req.body.ae_id !== undefined) {
           const aeUpdate = {};
@@ -948,7 +1036,8 @@ const runServer = async () => {
 
           const aeQuery = { _id: ObjectId(req.body.ae_id) };
           const aeUpdateFull = { $set: { 
-            [`recordings.${req.body.parentTrackNum}`]: aeUpdate 
+            [`recordings.${req.body.parentTrackNum}`]: aeUpdate,
+            dateModified: isoDateString 
           } };
           await audioEvents.updateOne(aeQuery, aeUpdateFull);
         }
@@ -1401,15 +1490,19 @@ const runServer = async () => {
             const musiciansPath = `${recPath}.musicians`;
             const raagsPath = `${recPath}.raags`;
             const octOffsetPath = `${recPath}.octOffset`;
+            const dateModifiedPath = `${recPath}.dateModified`
             const newUniqueId = await ObjectId();
             const query = { _id: ObjectId(audioEventID) };
+            const dateModified = new Date().toISOString();
             const update = { $set: { 
               [afIdPath]: newUniqueId,
               [datePath]: {},
               [locationPath]: {},
               [musiciansPath]: {},
               [raagsPath]: {},
-              [octOffsetPath]: 0
+              [octOffsetPath]: 0,
+              [dateModifiedPath]: dateModified
+              
             } };
             const options = { upsert: true, returnOriginal: false };
             const result = await audioEvents.findOneAndUpdate(query, update, options);
@@ -1434,6 +1527,7 @@ const runServer = async () => {
               aeUserID: result.value.userID,
               userID: req.body.userID,
               parentTrackNumber: recIdx,
+              dateModified: dateModified,
             })
 
             const suffix = getSuffix(audioFile.mimetype);

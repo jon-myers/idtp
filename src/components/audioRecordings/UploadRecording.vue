@@ -289,10 +289,21 @@
           </div>
         </div>
 
+        <div class='editingSubFrame' v-if='editRecIdx === 3'>
+          <SaTuner v-if='editingRec'
+            :rec='editingRec'
+            v-model:sa-estimate='saEstimate'
+            v-model:sa-verified='saVerified'
+            v-model:oct-offset='octOffset'
+            :spectrogramExists='spectrogramExists'
+            :melographExists='melographExists'
+          />
+        </div>
+
         <div class='modalRow centered short'>
           <button @click='editRecIdx--' :disabled='editRecIdx===0'>{{ "<" }}</button>
           <button @click='saveUpdates'>Save Updates</button>
-          <button @click='editRecIdx++' :disabled='editRecIdx>1'>{{ ">" }}</button>
+          <button @click='editRecIdx++' :disabled='editRecIdx>2'>{{ ">" }}</button>
         </div>
         <div class='modalRow centered short'>
           <span>{{ dateModified }}</span>
@@ -322,10 +333,16 @@ import {
   addCountryToDB,
   addCityToDB,
   addRaagToDB,
-  updateAudioRecording
+  updateAudioRecording,
+  verifySpectrogram,
+  verifyMelograph,
 } from '@/js/serverCalls.ts';
-
-import { RecType, PSecType, MusicianType } from '@/components/audioEvents/AddAudioEvent.vue';
+import SaTuner from '@/components/audioRecordings/SaTuner.vue';
+import { 
+  RecType, 
+  PSecType, 
+  MusicianType 
+} from '@/components/audioEvents/AddAudioEvent.vue';
 import { MusicianDBType, GharanaType } from '@/ts/types.ts';
 type UploadRecordingDataType = {
   progressWidth: number;
@@ -370,6 +387,11 @@ type UploadRecordingDataType = {
   numSecs: number,
   editingSecs: EditingSecType[],
   performanceSections: string[],
+  saEstimate: number,
+  saVerified: boolean,
+  octOffset: -1 | 0,
+  spectrogramExists: boolean,
+  melographExists: boolean
 }
 
 type RecUpdateType = {
@@ -390,7 +412,10 @@ type RecUpdateType = {
           [name: string]: PSecType
         }
       }
-    }
+    },
+    saEstimate: number,
+    saVerified: boolean,
+    octOffset: -1 | 0
   };
 
 export type { RecUpdateType };
@@ -458,8 +483,17 @@ export default defineComponent({
       numSecs: 1,
       editingSecs: [],
       performanceSections: [],
+      saEstimate: 0,
+      saVerified: false,
+      octOffset: 0,
+      spectrogramExists: false,
+      melographExists: false,
       
     };
+  },
+
+  components: {
+    SaTuner
   },
 
   computed: {
@@ -593,13 +627,7 @@ export default defineComponent({
 
   methods: {
 
-    async saveUpdates() {
-      const recUpdates: RecUpdateType = {
-        musicians: {},
-        location: {},
-        date: {},
-        raags: {},
-      };
+    async saveMusicians(recUpdates: RecUpdateType) {
       this.editingMusicians.forEach(async (mus, musIdx) => {
         try {
           const gharana = mus.gharana === 'Other' ? 
@@ -626,12 +654,9 @@ export default defineComponent({
               instrument: mus.instrument,
             };
             const mObj = this.allMusicians.find(m => m['Full Name'] === mus.name);
-            musId = mObj!._id;
+            musId = mObj? mObj!._id: '';
           }
           if (mus.gharana === 'Other') {
-            if (musId === '') {
-              throw new Error('musId is undefined');
-            }
             const res = await addGharanaToDB({
               name: this.newGharanas[musIdx]!,
               members: [musId],
@@ -640,34 +665,41 @@ export default defineComponent({
         } catch (err) {
           console.log(err);
         }
-        
       })
+    },
 
-      if (this.selectedContinent) {
-        recUpdates.location.continent = this.selectedContinent;
-        if (this.selectedCountry) {
-          if (this.selectedCountry === 'Other (specify)') {
-            recUpdates.location.country = this.newSelectedCountry!;
-            const continent = this.selectedContinent;
-            const country = this.newSelectedCountry!;
-            const res = await addCountryToDB(continent, country);
-          } else {
-            recUpdates.location.country = this.selectedCountry;
-          }
-          if (this.selectedCity) {
-            if (this.selectedCity === 'Other (specify)') {
-              recUpdates.location.city = this.newSelectedCity!;
+    async saveLocation(recUpdates: RecUpdateType) {
+      try {
+        if (this.selectedContinent) {
+          recUpdates.location.continent = this.selectedContinent;
+          if (this.selectedCountry) {
+            if (this.selectedCountry === 'Other (specify)') {
+              recUpdates.location.country = this.newSelectedCountry!;
               const continent = this.selectedContinent;
-              const country = this.selectedCountry;
-              const city = this.newSelectedCity!;
-              const res = await addCityToDB(continent, country, city);
+              const country = this.newSelectedCountry!;
+              const res = await addCountryToDB(continent, country);
             } else {
-              recUpdates.location.city = this.selectedCity;
+              recUpdates.location.country = this.selectedCountry;
+            }
+            if (this.selectedCity) {
+              if (this.selectedCity === 'Other (specify)') {
+                recUpdates.location.city = this.newSelectedCity!;
+                const continent = this.selectedContinent;
+                const country = this.selectedCountry;
+                const city = this.newSelectedCity!;
+                const res = await addCityToDB(continent, country, city);
+              } else {
+                recUpdates.location.city = this.selectedCity;
+              }
             }
           }
-        }
-      };
+        };
+      } catch (err) {
+        console.log(err);
+      }
+    },
 
+    saveDate(recUpdates: RecUpdateType) {
       recUpdates.date.year = this.selectedYear !== undefined ? 
         String(this.selectedYear) : 
         undefined;
@@ -675,49 +707,72 @@ export default defineComponent({
       recUpdates.date.day = this.selectedDay !== undefined ? 
         String(this.selectedDay) : 
         undefined;
-      
-      if (this.selectedRaag) {
-        const pSecNames = this.editingSecs.map((pSec) => pSec.name);
-        if (this.selectedRaag === 'Other (specify)') {
-          const res = await addRaagToDB(this.newRaag!);
-          recUpdates.raags[this.newRaag!] = {
-            'performance sections': {},
-          };
-          pSecNames.forEach(psName => {
-            if (psName !== undefined) {
-              recUpdates.raags[this.newRaag!]['performance sections'][psName] = {
-                start: 0,
-                end: 0,
+    },
+
+    async saveRaag(recUpdates: RecUpdateType) {
+      try {
+        if (this.selectedRaag) {
+          const pSecNames = this.editingSecs.map((pSec) => pSec.name);
+          if (this.selectedRaag === 'Other (specify)') {
+            const res = await addRaagToDB(this.newRaag!);
+            recUpdates.raags[this.newRaag!] = {
+              'performance sections': {},
+            };
+            pSecNames.forEach(psName => {
+              if (psName !== undefined) {
+                recUpdates.raags[this.newRaag!]['performance sections'][psName] = {
+                  start: 0,
+                  end: 0,
+                }
               }
-            }
-          })
-        } else {
-          recUpdates.raags[this.selectedRaag] = {
-            'performance sections': {},
-          };
-          pSecNames.forEach(psName => {
-            if (psName !== undefined) {
-              recUpdates.raags[this.selectedRaag!]['performance sections'][psName] = {
-                start: 0,
-                end: 0,
+            })
+          } else {
+            recUpdates.raags[this.selectedRaag] = {
+              'performance sections': {},
+            };
+            pSecNames.forEach(psName => {
+              if (psName !== undefined) {
+                recUpdates.raags[this.selectedRaag!]['performance sections'][psName] = {
+                  start: 0,
+                  end: 0,
+                }
               }
-            }
-          })
+            })
+          }
         }
+      } catch (err) {
+        console.log(err);
       }
-      const res = await updateAudioRecording(
-        this.audioFileId, 
-        recUpdates, 
-        this.editingRec!.parentID,
-        this.editingRec!.parentTrackNumber,
-        );
-      console.log(res);
-      // const addRes = 
-      
-      
-      
+    },
 
+    async saveUpdates() {
+      const recUpdates: RecUpdateType = {
+        musicians: {},
+        location: {},
+        date: {},
+        raags: {},
+        saEstimate: this.saEstimate,
+        saVerified: this.saVerified,
+        octOffset: this.octOffset,
 
+      };
+      try {
+        await this.saveMusicians(recUpdates);
+        await this.saveLocation(recUpdates);
+        this.saveDate(recUpdates);
+        await this.saveRaag(recUpdates);
+        const res = await updateAudioRecording(
+          this.audioFileId, 
+          recUpdates, 
+          this.editingRec!.parentID,
+          this.editingRec!.parentTrackNumber,
+          );
+        // reload the editing rec
+        await this.prepareForEditing();
+
+      } catch (err) {
+        console.log(err);
+      }
       
     },
 
@@ -879,7 +934,13 @@ export default defineComponent({
           this.editingSecs = [];
           this.growEditingSecs();
         }
-        
+
+        this.saEstimate = this.editingRec!.saEstimate;
+        this.octOffset = this.editingRec!.octOffset as -1 | 0;
+        this.saVerified = this.editingRec!.saVerified;
+        this.spectrogramExists = await verifySpectrogram(this.audioFileId);
+        this.melographExists = await verifyMelograph(this.audioFileId)
+        console.log(this.melographExists)
       } catch (err) {
         console.log(err);
       }

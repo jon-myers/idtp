@@ -2083,11 +2083,9 @@ class Piece {
   durArray?: number[];
   raga: Raga;
   title: string;
-  performers: string[];
   dateCreated: Date;
   dateModified: Date;
   location: string;
-  transcriber: string;
   _id?: string;
   audioID?: string;
   audio_DB_ID?: string;
@@ -2113,11 +2111,9 @@ class Piece {
     durArray = undefined,
     raga = new Raga(),
     title = 'untitled',
-    performers = [],
     dateCreated = new Date(),
     dateModified = new Date(),
     location = 'Santa Cruz',
-    transcriber = 'Anonymous User',
     _id = undefined,
     audioID = undefined,
     audio_DB_ID = undefined,
@@ -2137,11 +2133,9 @@ class Piece {
     durArray?: number[],
     raga?: Raga,
     title?: string,
-    performers?: string[],
     dateCreated?: Date,
     dateModified?: Date,
     location?: string,
-    transcriber?: string,
     _id?: string,
     audioID?: string,
     audio_DB_ID?: string,
@@ -2197,11 +2191,9 @@ class Piece {
     }
     this.putRagaInPhrase();
     this.title = title;
-    this.performers = performers;
     this.dateCreated = dateCreated;
     this.dateModified = dateModified;
     this.location = location;
-    this.transcriber = transcriber;
     this._id = _id;
     this.audioID = audioID;
     this.audio_DB_ID = audio_DB_ID;
@@ -2555,11 +2547,9 @@ class Piece {
       durTot: this.durTot,
       durArray: this.durArray,
       title: this.title,
-      performers: this.performers,
       dateCreated: this.dateCreated,
       dateModified: this.dateModified,
       location: this.location,
-      transcriber: this.transcriber,
       _id: this._id,
       audioID: this.audioID,
       userID: this.userID,

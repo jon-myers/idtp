@@ -7,7 +7,11 @@ import { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
 import { UserType } from '@/ts/types.ts';
 import { CollectionType } from '@/ts/types.ts';
 
-import { MusicianDBType, GharanaType } from '@/ts/types.ts';
+import { 
+  MusicianDBType, 
+  GharanaType,
+  TranscriptionMetadataType
+} from '@/ts/types.ts';
 import { RecUpdateType } from '@/components/audioRecordings/UploadRecording.vue';
 // import { URLSearchParams } from 'url';
 const getPiece = async (id: string): Promise<Piece> => {
@@ -127,7 +131,7 @@ const getAllPieces = async (
     userID: string, 
     sortKey: string, 
     sortDir?: string | number
-  ): Promise<Piece[]> => {
+  ): Promise<TranscriptionMetadataType[]> => {
   if (sortKey === undefined) {
     sortKey = 'title'
   }
@@ -156,6 +160,34 @@ const getAllPieces = async (
   }
   return allPieces
 };
+
+const updateVisibility = async (
+  artifactType: 'audioEvent' | 'audioRecording' | 'transcription', 
+  _id: string, 
+  visibility: boolean,
+  ) => {
+    let result;
+    let request = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        artifactType: artifactType,
+        _id: _id,
+        visibility: visibility
+      })
+    };
+    try {
+      const res = await fetch(url + 'updateVisibility', request);
+      if (res.ok) {
+        result = await res.json()
+      }
+      return result
+    } catch (err) {
+      console.error(err)
+    }  
+  }
 
 const createCollection = async (collection: CollectionType) => {
   let result: undefined | { acknowledged: boolean, insertedId: string };
@@ -253,7 +285,12 @@ type AudioEventMetadataType = {
   permissions: string,
   "event type": string,
   name: string,
-  recordings: RecType[]
+  recordings: RecType[],
+  explicitPermissions?: {
+    edit: string[],
+    view: string[]
+    publicView: boolean
+  }
 }
 
 const getAllAudioEventMetadata = async (): Promise<AudioEventMetadataType[]> => {
@@ -630,6 +667,50 @@ const getNumberOfSpectrograms = async (id: string) => {
   };
   try {
     const res = await fetch(url + 'getNumberOfSpectrograms' + suffix, request);
+    if (res.ok) {
+      out = await res.json();
+      return out
+    }
+  } catch (err) {
+    console.error(err)
+  }  
+};
+
+const verifySpectrogram = async (id: string) => {
+  const suffix = '?' + new URLSearchParams({
+    id: id
+  });
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  };
+  try {
+    const res = await fetch(url + 'verifySpectrogram' + suffix, request);
+    if (res.ok) {
+      out = await res.json();
+      return out
+    }
+  } catch (err) {
+    console.error(err)
+  }  
+};
+
+const verifyMelograph = async (id: string) => {
+  const suffix = '?' + new URLSearchParams({
+    id: id
+  });
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  };
+  try {
+    const res = await fetch(url + 'verifyMelograph' + suffix, request);
     if (res.ok) {
       out = await res.json();
       return out
@@ -1652,7 +1733,6 @@ const getTranscriptionsFromIds = async (transIDs: string[]) => {
   }
 }
 
-
 const getEditableCollections = async (userID: string): Promise<CollectionType[]> => {
   let out;
   const request = {
@@ -1745,5 +1825,8 @@ export {
   addCountryToDB,
   addCityToDB,
   addRaagToDB,
-  updateAudioRecording
+  updateAudioRecording,
+  verifySpectrogram,
+  verifyMelograph,
+  updateVisibility
 }

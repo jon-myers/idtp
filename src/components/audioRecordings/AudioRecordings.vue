@@ -113,6 +113,15 @@
     removeType='recording'
     @close='removeFromCollectionModalClosed = true'
   />
+  <PermissionsModal
+    v-if='!permissionsModalClosed && artifactID && selectedRecording &&
+      selectedRecording.explicitPermissions'
+    :navHeight='navHeight'
+    :artifactID='artifactID'
+    :visibility='selectedRecording.explicitPermissions.publicView'
+    artifactType='audioRecording'
+    @close='handleClosePermissionsModal'
+    />
 
 </template>
 
@@ -133,6 +142,7 @@ import {
 import { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
 import { displayTime } from '@/ts/utils.ts';
 import { CollectionType } from '@/ts/types.ts';
+import PermissionsModal from '@/components/PermissionsModal.vue';
 
 type AudioRecordingsDataType = {
   audioSource: string | undefined,
@@ -174,6 +184,8 @@ type AudioRecordingsDataType = {
   selectedRecording: RecType | undefined,
   recModalFrame: 'uploadRec' | 'editRecMetadata',
   editingRecId?: string,
+  permissionsModalClosed: boolean,
+  artifactID: string | undefined,
   
 
 }
@@ -273,6 +285,8 @@ export default defineComponent({
       removableCols: [],
       selectedRecording: undefined,
       recModalFrame: 'uploadRec',
+      permissionsModalClosed: true,
+      artifactID: undefined,
     }
   },
 
@@ -282,6 +296,7 @@ export default defineComponent({
     UploadRecording, 
     AddToCollection,
     RemoveFromCollection,
+    PermissionsModal
   },
 
   props: {
@@ -338,6 +353,16 @@ export default defineComponent({
   },
   
   methods: {
+
+    async handleClosePermissionsModal() {
+      this.permissionsModalClosed = true;
+      try {
+        this.allRecordings = await getAllAudioRecordingMetadata();
+        this.toggleSort(this.selectedSortIdx, true);
+      } catch (err) {
+        console.log(err);
+      }
+    },
 
     async handleCloseRecModal() {
       this.uploadRecModalClosed = true;
@@ -473,6 +498,15 @@ export default defineComponent({
             this.contextMenuClosed = true;
           }
         });
+        this.contextMenuChoices.push({
+          text: 'Edit Permissions',
+          action: () => {
+            this.artifactID = recording._id!;
+            this.permissionsModalClosed = false;
+            this.contextMenuClosed = true;
+            this.selectedRecording = recording
+          }
+        })
         this.contextMenuChoices.push({
           text: 'Delete Recording',
           action: async () => {
