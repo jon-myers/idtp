@@ -587,6 +587,9 @@ export default defineComponent({
         await this.prepareForEditing();
       } else if (this.frameView === 'uploadRec') {
         this.allAudioEvents = await getAllAudioEventMetadata();
+        this.allAudioEvents = this.allAudioEvents.filter(ae => {
+          return this.permissionToEditAE(ae)
+        });
       }
     } catch (err) {
       console.log(err);
@@ -626,6 +629,39 @@ export default defineComponent({
   },
 
   methods: {
+
+    permissionToViewAE(audioEvent: AudioEventMetadataType) {
+      const ep = audioEvent.explicitPermissions!;
+      const id = this.$store.state.userID!;
+      const out = ep.publicView || 
+        ep.view.includes(id) || 
+        ep.edit.includes(id) ||
+        audioEvent.userID === id;
+      return out;
+    },
+
+    permissionToEditAE(audioEvent: AudioEventMetadataType) {
+      const ep = audioEvent.explicitPermissions!;
+      const id = this.$store.state.userID!;
+      const out = ep.edit.includes(id) || audioEvent.userID === id;
+      console.log(out)
+      return out;
+    },
+
+    permissionToViewRec(rec: RecType) {
+      const ep = rec.explicitPermissions!;
+      const id = this.$store.state.userID!;
+      return ep.publicView || 
+        ep.view.includes(id) || 
+        ep.edit.includes(id) ||
+        rec.userID === id;
+    },
+
+    permissionToEditRec(rec: RecType) {
+      const ep = rec.explicitPermissions!;
+      const id = this.$store.state.userID!;
+      return ep.edit.includes(id) || rec.userID === id;
+    },
 
     async saveMusicians(recUpdates: RecUpdateType) {
       this.editingMusicians.forEach(async (mus, musIdx) => {

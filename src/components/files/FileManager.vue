@@ -92,21 +92,31 @@
     </div>
   </div>
   <AddToCollection
-      v-if='addToCollectionModalOpen'
-      :possibleCollections='editableCols'
-      :navHeight='navHeight'
-      :tID='selectedPiece?._id'
-      @close='closeCollectionsModal'
-      addType='transcription'
-    />
-    <RemoveFromCollection
-      v-if='removeFromCollectionModalOpen'
-      :possibleCollections='removableCols'
-      :navHeight='0'
-      :tID='selectedPiece?._id'
-      @close='closeCollectionsModal'
-      removeType='transcription'
-    />
+    v-if='addToCollectionModalOpen'
+    :possibleCollections='editableCols'
+    :navHeight='navHeight'
+    :tID='selectedPiece?._id'
+    @close='closeCollectionsModal'
+    addType='transcription'
+  />
+  <RemoveFromCollection
+    v-if='removeFromCollectionModalOpen'
+    :possibleCollections='removableCols'
+    :navHeight='0'
+    :tID='selectedPiece?._id'
+    @close='closeCollectionsModal'
+    removeType='transcription'
+  />
+  <PermissionsModal
+    v-if='permissionsModalOpen && selectedPiece !== undefined'
+    :navHeight='navHeight'
+    :explicitPermissions='selectedPiece.explicitPermissions'
+    @close='permissionsModalOpen = false'
+    artifactType='transcription'
+    :artifactID='selectedPiece._id!'
+
+
+  />
 </template>
 <script lang='ts'>
 import {
@@ -127,12 +137,12 @@ import NewPieceRegistrar from '@/components/files/NewPieceRegistrar.vue';
 import AddToCollection from '@/components/AddToCollection.vue';
 import RemoveFromCollection from '@/components/RemoveFromCollection.vue';
 import { Raga, Piece, Trajectory, Phrase } from '@/js/classes.ts';
-
+import PermissionsModal from '@/components/PermissionsModal.vue';
 import { defineComponent } from 'vue';
 import { RecType } from '@/components/audioEvents/AddAudioEvent.vue'
 import ContextMenu from '@/components/ContextMenu.vue';
 import { ContextMenuOptionType, UserType, CollectionType } from '@/ts/types.ts';
-
+import { TranscriptionMetadataType } from '@/components/collections/MiniTranscriptions.vue';
 type FileManagerType = {
   infoKeys: string[];
   designPieceModal: boolean;
@@ -173,6 +183,7 @@ type FileManagerType = {
   removableCols: CollectionType[],
   addToCollectionModalOpen: boolean,
   removeFromCollectionModalOpen: boolean,
+  permissionsModalOpen: boolean,
 }
 
 type PieceInfoType = [string?, string?, string?, string?, string?, string?];
@@ -232,7 +243,7 @@ export default defineComponent({
         'Raga',
         'Created',
         'Modified',
-        'Permissions',
+        'Editable',
       ],
       designPieceModal: false,
       allPieces: undefined,
@@ -279,6 +290,7 @@ export default defineComponent({
       addToCollectionModalOpen: false,
       removeFromCollectionModalOpen: false,
       removableCols: [],
+      permissionsModalOpen: false,
     };
   },
 
@@ -286,7 +298,8 @@ export default defineComponent({
     NewPieceRegistrar,
     ContextMenu,
     AddToCollection,
-    RemoveFromCollection
+    RemoveFromCollection,
+    PermissionsModal
   },
 
   props: {
@@ -311,7 +324,7 @@ export default defineComponent({
     
     const sortKey = this.sortKeyNames[this.selectedSort];
     const sortDir = this.sorts[this.selectedSort];
-    this.allPieces = await getAllPieces(id, sortKey, String(sortDir));
+    this.allPieces = await getAllPieces(id, sortKey, String(sortDir), true);
     if (this.allPieces === undefined) {
       throw new Error('this.allPieces is undefined');
     }
@@ -466,7 +479,7 @@ export default defineComponent({
       this.editOwnerModal = false;
     },
 
-    pieceInfo(p: Piece): PieceInfoType {
+    pieceInfo(p: TranscriptionMetadataType): PieceInfoType {
       const title = p.title;
       const raga = p.raga.name;
       let name = undefined;
@@ -477,10 +490,10 @@ export default defineComponent({
           name = p.name;
         }
       }
-      const dateCreated = this.writeDate(p.dateCreated);
-      const dateModified = this.writeDate(p.dateModified);
-      const permissions = p.permissions;
-      return [title, name, raga, dateCreated, dateModified, permissions];
+      const dateCreated = this.writeDate(new Date(p.dateCreated));
+      const dateModified = this.writeDate(new Date(p.dateModified));
+      const editable = this.permissionToEdit(p) ? 'Yes' : 'No';
+      return [title, name, raga, dateCreated, dateModified, editable];
     },
 
     writeDate(d: Date) {
@@ -603,7 +616,7 @@ export default defineComponent({
           const id = this.$store.state.userID!;
           const sortKey = this.sortKeyNames[this.selectedSort];
           const sortDir = this.sorts[this.selectedSort];
-          this.allPieces = await getAllPieces(id, sortKey, sortDir);
+          this.allPieces = await getAllPieces(id, sortKey, sortDir, true);
           this.allPieces.forEach( (piece, i) => {
             this.allPieceInfo[i] = this.pieceInfo(piece);
           });
@@ -616,7 +629,7 @@ export default defineComponent({
       const sortKey = this.sortKeyNames[this.selectedSort];
       const sortDir = this.sorts[this.selectedSort];
       try {
-        this.allPieces = await getAllPieces(id, sortKey, sortDir);
+        this.allPieces = await getAllPieces(id, sortKey, sortDir, true);
         this.allPieces.forEach(async (piece, i) => {
           this.allPieceInfo[i] = this.pieceInfo(piece);
         });
@@ -760,10 +773,10 @@ export default defineComponent({
               text: 'Edit Permissions',
               enabled: this.deleteActive,
               action: () => {
-                this.editPermissions();
+                this.permissionsModalOpen = true;
                 this.contextMenuClosed = true;
               }
-            });
+            })
             this.contextMenuChoices.push({
               text: 'Edit Owner',
               enabled: this.deleteActive,
@@ -907,6 +920,21 @@ export default defineComponent({
         this.editOwnerModal = false;
         
       }
+    },
+
+    permissionToView(transcription: TranscriptionMetadataType) {
+      const ep = transcription.explicitPermissions;
+      const id = this.$store.state.userID!;
+      return ep.publicView || 
+        transcription.userID === id ||
+        ep.edit.includes(id) ||
+        ep.view.includes(id);
+    },
+
+    permissionToEdit(transcription: TranscriptionMetadataType) {
+      const ep = transcription.explicitPermissions;
+      const id = this.$store.state.userID!;
+      return transcription.userID === id || ep.edit.includes(id);
     },
   },
 });

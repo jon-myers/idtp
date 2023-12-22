@@ -39,7 +39,7 @@
       ref='fileContainer'
       >
       <div 
-        class='aeRowHolder' 
+        :class='`aeRowHolder ${permissionToViewAE(ae) ? "" : "disabled"}`' 
         v-for='(ae, aeIdx) in audioEvents'
         :style='{ "min-height": getAERowHeight(ae) + "px" }'
         :id='`aeRowHolder${aeIdx}`'
@@ -59,7 +59,6 @@
               "flex-grow": fIdx === 0 ? 1 : 0,
             }'
             >
-            
             <span class='field'>
               <span 
                 class='tri' 
@@ -108,7 +107,8 @@
             </div>
           </div>
           <div 
-            class='recRow'
+            :class='`recRow \
+      ${permissionToViewRec(ae.recordings[Number(recKey)]) ? "" : "disabled"}`'
             v-for='(recKey, recIdx) in Object.keys(ae.recordings)'
             @dblclick='handleDblClick($event, ae, recKey)'
             :id='`ae${aeIdx}rec${recIdx}`'
@@ -136,8 +136,6 @@
               </div>
             </div>
           </div>
-
-
         </div>
       </div>
     </div>
@@ -367,6 +365,36 @@ export default defineComponent({
 
   methods: {
 
+    permissionToViewRec(recording: RecType) {
+      const ep = recording.explicitPermissions!;
+      const id = this.$store.state.userID!;
+      return ep.publicView || 
+        ep.view.includes(id) || 
+        ep.edit.includes(id) ||
+        recording.userID === id
+    },
+
+    permissionToEditRec(recording: RecType) {
+      const ep = recording.explicitPermissions!;
+      const id = this.$store.state.userID!;
+      return ep.edit.includes(id) || recording.userID === id
+    },
+
+    permissionToViewAE(audioEvent: AudioEventType) {
+      const ep = audioEvent.explicitPermissions!;
+      const id = this.$store.state.userID!;
+      return ep.publicView || 
+        ep.view.includes(id) || 
+        ep.edit.includes(id) ||
+        audioEvent.userID === id
+    },
+
+    permissionToEditAE(audioEvent: AudioEventType) {
+      const ep = audioEvent.explicitPermissions!;
+      const id = this.$store.state.userID!;
+      return ep.edit.includes(id) || audioEvent.userID === id
+    },
+
     async updateAudioEvents() {
       try {
         this.audioEvents = await getAEsFromIds(this.aeIds);
@@ -391,25 +419,28 @@ export default defineComponent({
 
     handleDblClick(e: MouseEvent, ae: AudioEventType, recKey: string) {
       const rec = ae.recordings[Number(recKey)];
+      if (this.permissionToViewRec(rec)) {
+        const playingElem = document.querySelector('.playing');
+        if (playingElem) {
+          playingElem.classList.remove('playing');
+        }
+        // add `.playing` to the clicked element
+        let target = e.target as HTMLElement;
+        if (target.classList.contains('draggableBorder')) {
+          target = target.parentElement!;
+        }
+        if (target.classList.contains('field')) {
+          target = target.parentElement!;
+        }
+        if (target.classList.contains('recsMetadataLabels')) {
+          target = target.parentElement!;
+        }
+        target.classList.add('playing');
+        this.$emit('sendAudioSource', rec.audioFileId, 'audioEvent');
+        this.playingId = `ae${this.audioEvents.indexOf(ae)}rec${recKey}`;
+      }
       // find any with current class `.playing` and remove it
-      const playingElem = document.querySelector('.playing');
-      if (playingElem) {
-        playingElem.classList.remove('playing');
-      }
-      // add `.playing` to the clicked element
-      let target = e.target as HTMLElement;
-      if (target.classList.contains('draggableBorder')) {
-        target = target.parentElement!;
-      }
-      if (target.classList.contains('field')) {
-        target = target.parentElement!;
-      }
-      if (target.classList.contains('recsMetadataLabels')) {
-        target = target.parentElement!;
-      }
-      target.classList.add('playing');
-      this.$emit('sendAudioSource', rec.audioFileId, 'audioEvent');
-      this.playingId = `ae${this.audioEvents.indexOf(ae)}rec${recKey}`;
+      
     },
 
     getAERowHeight(ae: AudioEventType) {
@@ -450,35 +481,25 @@ export default defineComponent({
           newElem.classList.add('playing');
         }
       } else {
-        const currentAEIdx = Number(this.playingId!.split('ae')[1].split('rec')[0]);
-        const currentRecIdx = Number(this.playingId!.split('ae')[1].split('rec')[1]);
-        const currentAE = this.audioEvents[currentAEIdx];
-        const lenRecs = Object.keys(currentAE.recordings).length;
-        if (currentRecIdx + 1 > lenRecs - 1) {
-          const newAEIdx = currentAEIdx + 1 > this.audioEvents.length - 1 ? 0 : currentAEIdx + 1;
-          const newAE = this.audioEvents[newAEIdx];
-          const newRecKey = Object.keys(newAE.recordings)[0];
-          const newRec = newAE.recordings[Number(newRecKey)];
-          this.playingId = `ae${newAEIdx}rec${newRecKey}`;
-          this.$emit('sendAudioSource', newRec.audioFileId, 'audioEvent');
-          
-          // if exists, add .playing to the new one
+        const recIds = this.getAllRecElemIds();
+        const currentIdx = recIds.indexOf(this.playingId!);
+        let nextIdx = currentIdx;
+          nextIdx += 1;
+          if (nextIdx > recIds.length - 1) {
+            nextIdx = 0;
+          }
+          const nextId = recIds[nextIdx];
+          const nextAEIdx = Number(nextId.split('ae')[1].split('rec')[0]);
+          const nextRecIdx = Number(nextId.split('ae')[1].split('rec')[1]);
+          const nextAE = this.audioEvents[nextAEIdx];
+          const nextRecKey = Object.keys(nextAE.recordings)[nextRecIdx];
+          const nextRec = nextAE.recordings[Number(nextRecKey)];
+          this.playingId = `ae${nextAEIdx}rec${nextRecIdx}`;
+          this.$emit('sendAudioSource', nextRec.audioFileId, 'audioEvent');
           const newElem = document.getElementById(this.playingId!);
           if (newElem) {
             newElem.classList.add('playing');
           }
-        } else {
-          const newRecKey = Object.keys(currentAE.recordings)[currentRecIdx + 1];
-          const newRec = currentAE.recordings[Number(newRecKey)];
-          this.playingId = `ae${currentAEIdx}rec${newRecKey}`;
-          this.$emit('sendAudioSource', newRec.audioFileId, 'audioEvent');
-          
-          // if exists, add .playing to the new one
-          const newElem = document.getElementById(this.playingId!);
-          if (newElem) {
-            newElem.classList.add('playing');
-          }
-        }
       }
       
     },
@@ -506,37 +527,26 @@ export default defineComponent({
           newElem.classList.add('playing');
         }
       } else {
-        const currentAEIdx = Number(this.playingId!.split('ae')[1].split('rec')[0]);
-        const currentRecIdx = Number(this.playingId!.split('ae')[1].split('rec')[1]);
-        const currentAE = this.audioEvents[currentAEIdx];
-        const lenRecs = Object.keys(currentAE.recordings).length;
-        if (currentRecIdx - 1 < 0) {
-          const newAEIdx = currentAEIdx - 1 < 0 ? this.audioEvents.length - 1 : currentAEIdx - 1;
-          const newAE = this.audioEvents[newAEIdx];
-          const newRecKey = Object.keys(newAE.recordings)[Object.keys(newAE.recordings).length - 1];
-          const newRec = newAE.recordings[Number(newRecKey)];
-          this.playingId = `ae${newAEIdx}rec${newRecKey}`;
-          this.$emit('sendAudioSource', newRec.audioFileId, 'audioEvent');
-          
-          // if exists, add .playing to the new one
+        const recIds = this.getAllRecElemIds();
+        const currentIdx = recIds.indexOf(this.playingId!);
+        let prevIdx = currentIdx;
+          prevIdx -= 1;
+          if (prevIdx < 0) {
+            prevIdx = recIds.length - 1;
+          }
+          const prevId = recIds[prevIdx];
+          const prevAEIdx = Number(prevId.split('ae')[1].split('rec')[0]);
+          const prevRecIdx = Number(prevId.split('ae')[1].split('rec')[1]);
+          const prevAE = this.audioEvents[prevAEIdx];
+          const prevRecKey = Object.keys(prevAE.recordings)[prevRecIdx];
+          const prevRec = prevAE.recordings[Number(prevRecKey)];
+          this.playingId = `ae${prevAEIdx}rec${prevRecIdx}`;
+          this.$emit('sendAudioSource', prevRec.audioFileId, 'audioEvent');
           const newElem = document.getElementById(this.playingId!);
           if (newElem) {
             newElem.classList.add('playing');
           }
-        } else {
-          const newRecKey = Object.keys(currentAE.recordings)[currentRecIdx - 1];
-          const newRec = currentAE.recordings[Number(newRecKey)];
-          this.playingId = `ae${currentAEIdx}rec${newRecKey}`;
-          this.$emit('sendAudioSource', newRec.audioFileId, 'audioEvent');
-          
-          // if exists, add .playing to the new one
-          const newElem = document.getElementById(this.playingId!);
-          if (newElem) {
-            newElem.classList.add('playing');
-          }
-        }
       }
-
     },
 
     toggleDisplay(t: MouseEvent, audioEvent: AudioEventType, parent: boolean) {
@@ -584,7 +594,10 @@ export default defineComponent({
       this.audioEvents.forEach((ae, aeIdx) => {
         const recKeys = Object.keys(ae.recordings);
         recKeys.forEach((recKey, recIdx) => {
-          recElemIds.push(`ae${aeIdx}rec${recIdx}`);
+          const rec = ae.recordings[Number(recKey)];
+          if (this.permissionToViewRec(rec)) {
+            recElemIds.push(`ae${aeIdx}rec${recIdx}`);
+          }
         });
       });
       return recElemIds;
@@ -1031,7 +1044,12 @@ span.field {
   flex-direction: column;
   justify-content: left;
   align-items: center;
+  color: white;
   width: 100%;
+}
+
+.aeRowHolder.disabled {
+  color: grey;
 }
 
 .recsHolder {
@@ -1055,6 +1073,7 @@ span.field {
   /* border-bottom: 1px solid grey; */
   box-sizing: border-box;
   background-color: #343A35;
+  color: white;
 }
 
 .recsMetadataLabels {
@@ -1086,6 +1105,11 @@ span.field {
   /* border-bottom: 1px solid grey; */
   box-sizing: border-box;
   background-color: #202621;
+  color: white;
+}
+
+.recRow.disabled {
+  color: grey
 }
 
 .recRow:hover {

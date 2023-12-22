@@ -211,6 +211,10 @@ const runServer = async () => {
       try {
         const userID = JSON.parse(req.query.userID);
         const sortKey = JSON.parse(req.query.sortKey);
+        let newPermissions = false;
+        if (req.query.newPermissions && req.query.newPermissions !== 'undefined') {
+          newPermissions = JSON.parse(req.query.newPermissions);
+        }
         let secondarySortKey = undefined;
         if (sortKey === 'family_name') secondarySortKey = 'given_name';
         const sortDir = JSON.parse(req.query.sortDir);
@@ -228,19 +232,32 @@ const runServer = async () => {
           family_name: 1,
           given_name: 1,
           audioID: 1,
-          instrumentation: 1
+          instrumentation: 1,
+          explicitPermissions: 1
         }
-        const query = {
-          '$or': [
-            {
-              '$or': [
-                { 'permissions': 'Public' },
-                { 'permissions': 'Publicly Editable' }
-              ]
-            },
-            { 'userID': userID },
-          ]
-        };
+        let query;
+        if (!newPermissions) {
+          query = {
+            '$or': [
+              {
+                '$or': [
+                  { 'permissions': 'Public' },
+                  { 'permissions': 'Publicly Editable' }
+                ]
+              },
+              { 'userID': userID },
+            ]
+          };
+        } else {
+          query = {
+            $or: [
+              { "explicitPermissions.publicView": true },
+              { "explicitPermissions.edit": userID },
+              { "explicitPermissions.view": userID },
+              { "userID": userID }
+            ]
+          };
+        }
         const sort = {};
         sort[sortKey] = sortDir;
         if (secondarySortKey) sort[secondarySortKey] = sortDir;
@@ -1241,7 +1258,6 @@ const runServer = async () => {
     })
 
     app.post('/getRecsFromIds', async (req, res) => {
-      console.log(req.body.recIDs)
       try {
         const query = { _id: { $in: req.body.recIDs.map(id => ObjectId(id)) } };
         const result = await audioRecordings.find(query).toArray();
@@ -1267,7 +1283,13 @@ const runServer = async () => {
     app.post('/getTranscriptionsFromIds', async (req, res) => {
       try {
         const query = { 
-          _id: { $in: req.body.transIDs.map(id => ObjectId(id)) } 
+          _id: { $in: req.body.transIDs.map(id => ObjectId(id)) },
+          $or: [
+            { "explicitPermissions.view": req.body.userID },
+            { "explicitPermissions.publicView": true },
+            { "userID": req.body.userID },
+            { "explicitPermissions.edit": req.body.userID }
+          ] 
         };
         const proj = {
           title: 1,
@@ -1285,7 +1307,8 @@ const runServer = async () => {
           family_name: 1,
           given_name: 1,
           audioID: 1,
-          instrumentation: 1
+          instrumentation: 1,
+          explicitPermissions: 1
         }
         const result = await transcriptions.find(query).project(proj).toArray();
         res.json(result)

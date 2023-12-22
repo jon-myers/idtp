@@ -734,13 +734,9 @@ export default defineComponent({
       this.freqMax = 2 ** (Math.log2(fund * 4) + this.rangeOffset);
       await this.getPieceFromJson(piece, fund);
       useTitle(this.piece.title);
-      const c1 = this.$store.state.userID === this.piece.userID;
-      const c2 = this.piece.permissions === 'Publicly Editable';
-      const c3 = this.piece.permissions === 'Private';
-      if (c1 || c2) {
-        this.editable = true
-      }
-      if (!c1 && c3) {
+
+      this.editable = this.permissionToEdit(this.piece);
+      if (!this.permissionToView(this.piece)) {
         await this.$router.push({ name: 'Files' });
           throw 'IDTP logger: Piece does not exist, or you do not have \
           permission to view.'
@@ -888,6 +884,22 @@ export default defineComponent({
 
 
   methods: {
+
+    permissionToEdit(piece: Piece) {
+      const id = this.$store.state.userID!;
+      const c1 = id === piece.userID;
+      const c2 = piece.explicitPermissions.edit.includes(id);
+      return c1 || c2;
+    },
+
+    permissionToView(piece: Piece) {
+      const id = this.$store.state.userID!;
+      const c1 = id === piece.userID;
+      const c2 = piece.explicitPermissions.view.includes(id);
+      const c3 = piece.explicitPermissions.edit.includes(id);
+      const c4 = piece.explicitPermissions.publicView;
+      return c1 || c2 || c3 || c4;
+    },
 
     addMelograph(codified=true) {
       d3SelectAll('.melograph').remove();

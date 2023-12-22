@@ -5,7 +5,9 @@
         v-for='(field, fIdx) in metadataFields'
         :style='{
           "width": columnWidths[fIdx] + "px",
-          "max-width": fIdx === metadataFields.length - 2 ? "" : columnWidths[fIdx] + "px",
+          "max-width": fIdx === metadataFields.length - 2 ? 
+            "" : 
+            columnWidths[fIdx] + "px",
           "min-width": minColumnWidths[fIdx] + "px",
           "flex-grow": fIdx === metadataFields.length - 2 ? 1 : 0,
           "position": "relative",
@@ -39,9 +41,11 @@
       ref='fileContainer'
       >
       <div 
-        class='recordingRow'
+        :class='`recordingRow ${permissionToView(recording) ? "" : "disabled"}`'
         v-for='(recording, rIdx) in recs'
-        @dblclick='sendAudioSource($event, recording)'
+        @dblclick='permissionToView(recording) ? 
+          sendAudioSource($event, recording) :
+          null'
         :id='`recRow${rIdx}`'
         >
         <div 
@@ -49,7 +53,9 @@
           v-for='(field, fIdx) in metadataFields'
           :style='{ 
             "width": columnWidths[fIdx] + "px", 
-            "max-width": fIdx === metadataFields.length - 2 ? "" : columnWidths[fIdx] + "px",
+            "max-width": fIdx === metadataFields.length - 2 ? 
+              "" : 
+              columnWidths[fIdx] + "px",
             "min-width": minColumnWidths[fIdx] + "px",
             "flex-grow": fIdx === metadataFields.length - 2 ? 1 : 0 
             }'
@@ -163,7 +169,9 @@ export default defineComponent({
         {
           'name': 'Track #',
           'func': (rec: RecType) => {
-            return rec.parentTrackNumber ? rec.parentTrackNumber : 'None';
+            return rec.parentTrackNumber !== undefined ? 
+              rec.parentTrackNumber : 
+              'None';
           },
           'sortState': 'down',
           'sortType': undefined
@@ -187,12 +195,6 @@ export default defineComponent({
   },
 
   watch: {
-    // recIds: {
-    //   handler: async function() {
-    //     this.recs = await getRecsFromIds(this.recIds);
-    //   },
-    //   deep: true
-    // },
 
     async recIds() {
       try {
@@ -229,6 +231,22 @@ export default defineComponent({
 
   methods: {
 
+    permissionToView(rec: RecType) {
+      const ep = rec.explicitPermissions!;
+      const id = this.$store.state.userID!;
+      const out = ep.publicView || 
+        ep.view.includes(id) || 
+        ep.edit.includes(id) || 
+        rec.userID === id;
+      return out;
+    },
+
+    permissionToEdit(rec: RecType) {
+      const ep = rec.explicitPermissions!;
+      const id = this.$store.state.userID!;
+      return ep.edit.includes(id) || rec.userID === id;
+    },
+
     handleChirp() {
       this.$emit('chirp');
     },
@@ -250,7 +268,7 @@ export default defineComponent({
     },
 
     sendNextTrack(shuffling: boolean, repeat: boolean) {
-      const idx = this.recs.findIndex(rec => {
+      let idx = this.recs.findIndex(rec => {
         return rec._id === this.activeRecording!._id;
       });
       const click = new MouseEvent('dblclick');
@@ -259,16 +277,30 @@ export default defineComponent({
         const playingElem = document.querySelector('.playing');
         playingElem?.dispatchEvent(click);
       } else if (shuffling) {
-        const nextIdx = Math.floor(Math.random() * this.recs.length);
-        const nextElem = document.getElementById(`recRow${nextIdx}`);
-        nextElem?.dispatchEvent(click);
+        let continueLoop = true;
+        while (continueLoop) {
+          const nextIdx = Math.floor(Math.random() * this.recs.length);
+          const rec = this.recs[nextIdx];
+          if (this.permissionToView(rec)) {
+            continueLoop = false;
+            const nextElem = document.getElementById(`recRow${nextIdx}`);
+            nextElem?.dispatchEvent(click);
+          }
+        }
       } else if (!shuffling) {
-        if (idx === this.recs.length - 1) {
-          const nextElem = document.getElementById(`recRow0`);
-          nextElem?.dispatchEvent(click);
-        } else {
-          const nextElem = document.getElementById(`recRow${idx + 1}`);
-          nextElem?.dispatchEvent(click);
+        let continueLoop = true;
+        while (continueLoop) {
+          if (idx === this.recs.length - 1) {
+            idx = 0;
+          } else {
+            idx += 1;
+          }
+          const rec = this.recs[idx];
+          if (this.permissionToView(rec)) {
+            continueLoop = false;
+            const nextElem = document.getElementById(`recRow${idx}`);
+            nextElem?.dispatchEvent(click);
+          }
         }
       }
     },
@@ -284,15 +316,15 @@ export default defineComponent({
         playingElem?.dispatchEvent(click);
       } else if (shuffling) {
         const nextIdx = Math.floor(Math.random() * this.recs.length);
-        const nextElem = document.getElementById(`recRow${nextIdx}`);
-        nextElem?.dispatchEvent(click);
+        const nextEl = document.getElementById(`recRow${nextIdx}`);
+        nextEl?.dispatchEvent(click);
       } else if (!shuffling) {
         if (idx === 0) {
-          const nextElem = document.getElementById(`recRow${this.recs.length - 1}`);
-          nextElem?.dispatchEvent(click);
+          const nextEl = document.getElementById(`recRow${this.recs.length-1}`);
+          nextEl?.dispatchEvent(click);
         } else {
-          const nextElem = document.getElementById(`recRow${idx - 1}`);
-          nextElem?.dispatchEvent(click);
+          const nextEl = document.getElementById(`recRow${idx - 1}`);
+          nextEl?.dispatchEvent(click);
         }
       }
     },
@@ -796,6 +828,11 @@ span.field {
   min-height: 40px;
   width: 100%;
   border-bottom: 1px solid grey;
+  color: white
+}
+
+.recordingRow.disabled {
+  color: grey;
 }
 
 .playing {

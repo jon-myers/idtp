@@ -2101,7 +2101,8 @@ class Piece {
   sectionCategorization: SecCatType[];
   explicitPermissions: {
     edit: string[],
-    view: string[]
+    view: string[],
+    publicView: boolean
   }
 
 
@@ -2150,7 +2151,8 @@ class Piece {
     sectionCategorization?: SecCatType[],
     explicitPermissions?: {
       edit: string[],
-      view: string[]
+      view: string[],
+      publicView: boolean
     }
   } = {}) {
     this.meters = meters;
@@ -2282,7 +2284,8 @@ class Piece {
     if (explicitPermissions === undefined) {
       this.explicitPermissions = {
         edit: [],
-        view: []
+        view: [],
+        publicView: true
       }
     } else {
       this.explicitPermissions = explicitPermissions

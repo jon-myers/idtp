@@ -130,7 +130,8 @@ const savePiece = async (piece: Piece) => {
 const getAllPieces = async (
     userID: string, 
     sortKey: string, 
-    sortDir?: string | number
+    sortDir?: string | number,
+    newPermissions?: boolean
   ): Promise<TranscriptionMetadataType[]> => {
   if (sortKey === undefined) {
     sortKey = 'title'
@@ -145,10 +146,12 @@ const getAllPieces = async (
       "Content-Type": "application/json"
     },
   };
+  console.log(newPermissions)
   const query = '?' + new URLSearchParams({
     userID: JSON.stringify(userID),
     sortKey: JSON.stringify(sortKey),
-    sortDir: JSON.stringify(sortDir)
+    sortDir: JSON.stringify(sortDir),
+    newPermissions: JSON.stringify(newPermissions)
   });
   try {
     const response = await fetch(url + 'getAllTranscriptions' + query, request);
@@ -1715,15 +1718,17 @@ const getAEsFromIds = async (aeIDs: string[]) => {
   }
 };
 
-const getTranscriptionsFromIds = async (transIDs: string[]) => {
+const getTranscriptionsFromIds = async (transIDs: string[], userID: string) => {
   let out;
+  console.log(userID)
   const request = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      transIDs
+      transIDs,
+      userID
     })
   };
   try {

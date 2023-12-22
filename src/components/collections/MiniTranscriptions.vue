@@ -92,9 +92,15 @@ type TranscriptionMetadataType = {
   },
   transcriber: string,
   userID: string,
-  _id: string
+  _id: string,
+  explicitPermissions: {
+    publicView: boolean,
+    edit: string[],
+    view: string[]
+  }
 }
 
+export type { TranscriptionMetadataType }
 // title, transcriber, raga, created, modified, permissions
 
 type MiniTranscriptionsDataType = {
@@ -161,8 +167,8 @@ export default defineComponent({
           sortState: 'down'
         },
         {
-          name: 'Permissions',
-          func: (t: TranscriptionMetadataType) => t.permissions,
+          name: 'Editable',
+          func: (t: TranscriptionMetadataType) => this.permissionToEdit(t) ? 'Yes' : 'No',
           sortType: 'permissions',
           sortState: 'down'
         },
@@ -183,7 +189,8 @@ export default defineComponent({
     this.columnWidths = this.columnWidths.map(width => width * ratio);
     this.initialWidths = this.columnWidths.slice();
     try {
-      this.trans = await getTranscriptionsFromIds(this.tIds);
+      const userID = this.$store.state.userID!;
+      this.trans = await getTranscriptionsFromIds(this.tIds, userID);
     } catch (err) {
       console.error(err);
     }
@@ -201,9 +208,25 @@ export default defineComponent({
 
   methods: {
 
+    permissionToEdit(t: TranscriptionMetadataType) {
+      const ep = t.explicitPermissions;
+      const id = this.$store.state.userID!;
+      return ep.edit.includes(id) || t.userID === id;
+    },
+
+    permissionToView(t: TranscriptionMetadataType) {
+      const ep = t.explicitPermissions;
+      const id = this.$store.state.userID!;
+      return ep.view.includes(id) || 
+        ep.publicView || 
+        t.userID === id || 
+        ep.edit.includes(id);
+    },
+
     async updateTrans() {
       try {
-        this.trans = await getTranscriptionsFromIds(this.tIds);
+        const userID = this.$store.state.userID!;
+        this.trans = await getTranscriptionsFromIds(this.tIds, userID);
       } catch (err) {
         console.error(err);
       }
