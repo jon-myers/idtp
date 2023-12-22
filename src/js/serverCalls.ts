@@ -164,7 +164,11 @@ const getAllPieces = async (
 const updateVisibility = async (
   artifactType: 'audioEvent' | 'audioRecording' | 'transcription', 
   _id: string, 
-  visibility: boolean,
+  explicitPermissions: {
+    edit: string[],
+    view: string[],
+    publicView: boolean
+  }
   ) => {
     let result;
     let request = {
@@ -174,8 +178,8 @@ const updateVisibility = async (
       },
       body: JSON.stringify({
         artifactType: artifactType,
-        _id: _id,
-        visibility: visibility
+        _id,
+        explicitPermissions
       })
     };
     try {

@@ -301,28 +301,7 @@ const runServer = async () => {
         console.error(err);
         res.status(500).send(err);
       }
-
     })
-
-    // app.get('/getAllAudioFileMetaData', async (req, res) => {
-    //   // get all relevent data for audio files
-    //   const projection = {
-    //     raag: 1,
-    //     performers: 1,
-    //     _id: 1,
-    //     duration: 1,
-    //     fundamental: 1,
-    //     fileNumber: 1,
-    //     year: 1,
-    //   }
-    //   try {
-    //     const result = await audioFiles.find().project(projection).toArray();
-    //     res.json(result)
-    //   } catch (err) {
-    //     console.error(err);
-    //     res.status(500).send(err);
-    //   }
-    // });
 
     app.get('/getAllAudioRecordingMetadata', async (req, res) => {
       // get all relevent data for audio files
@@ -478,9 +457,17 @@ const runServer = async () => {
         for (let idx in recordings) {
           if (recordings[idx].audioFileId.toString() !== req.body._id) {
             newRecordings[count] = recordings[idx];
+            if (newRecordings[count].parentTrackNumber !== count) {
+              newRecordings[count].parentTrackNumber = count;
+              // update in audioRecordings collection
+              const query = { '_id': ObjectId(newRecordings[count].audioFileId) };
+              const update = { $set: { 'parentTrackNumber': count } };
+              await audioRecordings.updateOne(query, update);
+            }
             count++;
           }
         }
+        
         result2.recordings = newRecordings;
         const result3 = await audioEvents.updateOne(query2, { 
           $set: {recordings: newRecordings}
@@ -748,7 +735,7 @@ const runServer = async () => {
         try {
           const query = { _id: ObjectId(req.body._id) };
           const update = { $set: { 
-            "explicitPermissions.publicView": req.body.visibility 
+            "explicitPermissions": req.body.explicitPermissions 
           } };
           const result = await transcriptions.updateOne(query, update);
           res.json(result)
@@ -760,7 +747,7 @@ const runServer = async () => {
         try {
           const query = { _id: ObjectId(req.body._id) };
           const update = { $set: { 
-            "explicitPermissions.publicView": req.body.visibility 
+            "explicitPermissions": req.body.explicitPermissions 
           } };
           const options = { returnOriginal: false };
           const result = await audioRecordings.findOneAndUpdate(query, update, options);
@@ -768,8 +755,8 @@ const runServer = async () => {
           const parentID = result.value.parentID;
           const key = result.value.parentTrackNumber;
           const query2 = { _id: ObjectId(parentID) };
-          const path = `recordings.${key}.explicitPermissions.publicView`;
-          const update2 = { $set: { [path]: req.body.visibility } };
+          const path = `recordings.${key}.explicitPermissions`;
+          const update2 = { $set: { [path]: req.body.explicitPermissions } };
           const result2 = await audioEvents.updateOne(query2, update2);
           res.json({ result, result2 })
         } catch (err) {
@@ -781,9 +768,17 @@ const runServer = async () => {
         try {
           const query = { _id: ObjectId(req.body._id) };
           const update = { $set: { 
-            "explicitPermissions.publicView": req.body.visibility 
+            "explicitPermissions": req.body.explicitPermissions 
           } };
-          const result = await audioEvents.updateOne(query, update);
+          const result = await audioEvents.findOneAndUpdate(query, update);
+          const audioEvent = result.value;
+          for (let recording of Object.values(audioEvent.recordings)) {
+            const query = { _id: ObjectId(recording.audioFileId) };
+            const update = { $set: { 
+              "explicitPermissions": req.body.explicitPermissions 
+            } };
+            await audioRecordings.findOneAndUpdate(query, update);
+          }
           res.json(result)
         } catch (err) {
           console.error(err);
@@ -870,6 +865,11 @@ const runServer = async () => {
         const result = await audioEvents.insertOne({ 
           userID: userID,
           permissions: "Public", 
+          explicitPermissions: {
+            publicView: true,
+            edit: [],
+            view: []
+          }
         });
         res.json(result)
       } catch (err) {
@@ -1035,10 +1035,13 @@ const runServer = async () => {
           delete aeUpdate['_id'];
 
           const aeQuery = { _id: ObjectId(req.body.ae_id) };
-          const aeUpdateFull = { $set: { 
-            [`recordings.${req.body.parentTrackNum}`]: aeUpdate,
-            dateModified: isoDateString 
-          } };
+          const aeUpdateKeys = Object.keys(aeUpdate);
+          const aeUpdateFull = { $set: {} };
+          aeUpdateKeys.forEach(key => {
+            const path = `recordings.${req.body.parentTrackNum}.${key}`;
+            aeUpdateFull.$set[path] = aeUpdate[key];
+          });
+          aeUpdateFull.$set['dateModified'] = isoDateString;
           await audioEvents.updateOne(aeQuery, aeUpdateFull);
         }
         res.json(result)
@@ -1491,6 +1494,7 @@ const runServer = async () => {
             const raagsPath = `${recPath}.raags`;
             const octOffsetPath = `${recPath}.octOffset`;
             const dateModifiedPath = `${recPath}.dateModified`
+            const expPermissionsPath = `${recPath}.explicitPermissions`;
             const newUniqueId = await ObjectId();
             const query = { _id: ObjectId(audioEventID) };
             const dateModified = new Date().toISOString();
@@ -1501,8 +1505,12 @@ const runServer = async () => {
               [musiciansPath]: {},
               [raagsPath]: {},
               [octOffsetPath]: 0,
-              [dateModifiedPath]: dateModified
-              
+              [dateModifiedPath]: dateModified,
+              [expPermissionsPath]: {
+                publicView: true,
+                edit: [],
+                view: []
+              }         
             } };
             const options = { upsert: true, returnOriginal: false };
             const result = await audioEvents.findOneAndUpdate(query, update, options);
@@ -1528,6 +1536,11 @@ const runServer = async () => {
               userID: req.body.userID,
               parentTrackNumber: recIdx,
               dateModified: dateModified,
+              explicitPermissions: {
+                publicView: true,
+                edit: [],
+                view: []
+              }
             })
 
             const suffix = getSuffix(audioFile.mimetype);

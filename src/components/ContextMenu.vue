@@ -6,7 +6,7 @@
     <div 
       :class='getClass(choices, choice, cIdx)'
       v-for='(choice, cIdx) in choices' 
-      @click='choice.action'
+      @click='choice.enabled ? choice.action() : null'
 
       >
       <div class='overflowX'>

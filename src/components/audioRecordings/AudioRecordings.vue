@@ -8,7 +8,9 @@
         v-for='(field, fIdx) in metadataFields'
         :style='{
           "width": columnWidths[fIdx] + "px",
-          "max-width": fIdx === metadataFields.length - 2 ? "" : columnWidths[fIdx] + "px",
+          "max-width": fIdx === metadataFields.length - 2 ? 
+            "" : 
+            columnWidths[fIdx] + "px",
           "min-width": columnWidths[fIdx] + "px",
           "flex-grow": fIdx === metadataFields.length - 2 ? 1 : 0,
           "position": "relative" 
@@ -45,9 +47,11 @@
       ref='fileContainer'
       >
       <div 
-        class='recordingRow'
+        :class='`recordingRow ${[permissionToView(recording) ? "" : "disabled"]}`'
         v-for='(recording, rIdx) in allRecordings'
-        @dblclick='sendAudioSource($event, recording)'
+        @dblclick='permissionToView(recording) ? 
+          sendAudioSource($event, recording) : 
+          null'
         :id='`recRow${rIdx}`'
         >
         <div 
@@ -55,7 +59,9 @@
           v-for='(field, fIdx) in metadataFields'
           :style='{ 
             "width": columnWidths[fIdx] + "px", 
-            "max-width": fIdx === metadataFields.length - 2 ? "" : columnWidths[fIdx] + "px",
+            "max-width": fIdx === metadataFields.length - 2 ? 
+              "" : 
+              columnWidths[fIdx] + "px",
             "min-width": columnWidths[fIdx] + "px",
             "flex-grow": fIdx === metadataFields.length - 2 ? 1 : 0 
             }'
@@ -118,7 +124,7 @@
       selectedRecording.explicitPermissions'
     :navHeight='navHeight'
     :artifactID='artifactID'
-    :visibility='selectedRecording.explicitPermissions.publicView'
+    :explicitPermissions='selectedRecording.explicitPermissions'
     artifactType='audioRecording'
     @close='handleClosePermissionsModal'
     />
@@ -141,7 +147,7 @@ import {
 } from '@/js/serverCalls.ts';
 import { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
 import { displayTime } from '@/ts/utils.ts';
-import { CollectionType } from '@/ts/types.ts';
+import { CollectionType, ContextMenuOptionType } from '@/ts/types.ts';
 import PermissionsModal from '@/components/PermissionsModal.vue';
 
 type AudioRecordingsDataType = {
@@ -169,7 +175,7 @@ type AudioRecordingsDataType = {
   selectedSortIdx: number,
   activeRecording: RecType | undefined,
   contextMenuClosed: boolean,
-  contextMenuChoices: { text: string, action: () => void }[],
+  contextMenuChoices: ContextMenuOptionType[],
   userID: string | undefined,
   dropDownLeft: number,
   dropDownTop: number,
@@ -252,7 +258,7 @@ export default defineComponent({
         {
           'name': 'Audio Event',
           'func': (rec: RecType) => {
-            return rec.parentTitle ? rec.parentTitle : 'None';
+            return rec.parentTitle !== undefined ? rec.parentTitle : 'None';
           },
           'sortState': 'down',
           'sortType': 'audioEvent'
@@ -260,7 +266,7 @@ export default defineComponent({
         {
           'name': 'Track #',
           'func': (rec: RecType) => {
-            return rec.parentTrackNumber ? rec.parentTrackNumber : 'None';
+            return rec.parentTrackNumber !== undefined ? rec.parentTrackNumber : 'None';
           },
           'sortState': 'down',
           'sortType': undefined
@@ -354,6 +360,24 @@ export default defineComponent({
   
   methods: {
 
+    permissionToView(recording: RecType) {
+      const ep = recording.explicitPermissions!;
+      return (
+        ep!.view.includes(this.userID!) ||
+        ep!.edit.includes(this.userID!) ||
+        ep!.publicView ||
+        recording.userID === this.userID
+      );
+    },
+
+    permissiontoEdit(recording: RecType) {
+      const ep = recording.explicitPermissions!;
+      return (
+        ep!.edit.includes(this.userID!) ||
+        recording.userID === this.userID
+      );
+    },
+
     async handleClosePermissionsModal() {
       this.permissionsModalClosed = true;
       try {
@@ -372,9 +396,7 @@ export default defineComponent({
       } catch (err) {
         console.log(err);
       }
-
     },
-
 
     resetWidths() {
       const summedWidths = this.columnWidths.reduce((a, b) => a + b, 0);
@@ -475,6 +497,20 @@ export default defineComponent({
           el = el.parentElement!;
         }
         const recording = this.allRecordings[parseInt(el.id.slice(6))];
+        const ep = recording.explicitPermissions!;
+        const editPermission = recording !== undefined && (
+          ep!.edit.includes(this.userID!) ||
+          recording.userID === this.userID
+        );
+        const viewPermission = recording !== undefined && (
+          ep!.view.includes(this.userID!) ||
+          ep!.edit.includes(this.userID!) ||
+          ep!.publicView ||
+          recording.userID === this.userID
+        );
+        const owner = recording !== undefined && (
+          recording.userID === this.userID
+        ); 
         this.contextMenuChoices = [];
         this.contextMenuChoices.push({
           text: 'New Transcription',
@@ -487,7 +523,9 @@ export default defineComponent({
               }
             })
             this.contextMenuClosed = true;
-          }
+          },
+          enabled: viewPermission
+          
         });
 
         // options to edit recording, delete recording, and upload new recording
@@ -496,7 +534,8 @@ export default defineComponent({
           action: () => {
             this.openRecordingModal({ editing: true, recId: recording._id })
             this.contextMenuClosed = true;
-          }
+          },
+          enabled: editPermission
         });
         this.contextMenuChoices.push({
           text: 'Edit Permissions',
@@ -505,7 +544,8 @@ export default defineComponent({
             this.permissionsModalClosed = false;
             this.contextMenuClosed = true;
             this.selectedRecording = recording
-          }
+          },
+          enabled: owner
         })
         this.contextMenuChoices.push({
           text: 'Delete Recording',
@@ -517,18 +557,19 @@ export default defineComponent({
               this.allRecordings = await getAllAudioRecordingMetadata();
               this.toggleSort(this.selectedSortIdx, true);
             } catch (err) {
-              console.log(err);
-              
+              console.log(err); 
             }
-
-          }
+          },
+          enabled: owner
         });
         this.contextMenuChoices.push({
           text: 'Upload New Recording',
           action: () => {
+            this.recModalFrame = 'uploadRec';
             this.openUploadModal();
             this.contextMenuClosed = true;
-          }
+          },
+          enabled: true
         });
 
         try {
@@ -543,7 +584,8 @@ export default defineComponent({
                 this.selectedRecording = recording;
                 this.contextMenuClosed = true;
                 this.addToCollectionModalClosed = false;
-              }
+              },
+              enabled: viewPermission
             });
 
             this.removableCols = this.possibleCols.filter(col => {
@@ -557,7 +599,8 @@ export default defineComponent({
                   this.contextMenuClosed = true;
                   this.removeFromCollectionModalClosed = false;
                   
-                }
+                },
+                enabled: true
               })
             }
           }
@@ -576,23 +619,19 @@ export default defineComponent({
                   name: 'EditorComponent',
                     query: { id: tc._id }
                 })
-              }
+              },
+              enabled: true
             })
           })
-
           this.dropDownHeight = this.contextMenuChoices.length * 30;
           const topPartHeight = rect.height + rect.top;
           if (this.dropDownTop + this.dropDownHeight > topPartHeight - 10) {
             this.dropDownTop = topPartHeight - 10 - this.dropDownHeight;
-          };
-
+          }
         } catch (err) {
           console.log(err);
         }
-        
       }
-      
-      
     },
 
     getShorthand(rec: RecType) {
@@ -620,9 +659,8 @@ export default defineComponent({
       this.initialWidths = this.columnWidths.slice()
       // make cursor resize until drag end
       document.body.style.cursor = 'col-resize';
-      
-
     },
+
     handleDrag(fIdx: number, event: DragEvent) {
       const nextCol = fIdx < this.columnWidths.length - 1;
       // Calculate the new width based on the mouse movement
@@ -638,7 +676,6 @@ export default defineComponent({
             if (nextCol) {
               this.columnWidths[fIdx + 1] = this.initialWidths[fIdx + 1] - deltaX;
             }
-
           }
       }
     },
@@ -851,8 +888,6 @@ export default defineComponent({
         }
       }
     },
-
-
 
     trackNumSorter(a: RecType, b: RecType) {
       if (a.parentTrackNumber === undefined && b.parentTrackNumber === undefined) {
@@ -1089,7 +1124,10 @@ export default defineComponent({
   min-height: 40px;
   width: 100%;
   border-bottom: 1px solid grey;
-  /* overflow-x: hidden; */
+}
+
+.recordingRow.disabled {
+  color: grey;
 }
 
 .recordingRow:hover {

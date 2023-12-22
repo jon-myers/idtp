@@ -5,7 +5,7 @@
       ref='fileContainer' 
       @contextmenu='handleRightClick'>
       <div 
-        class='audioEventRow' 
+        :class='`audioEventRow ${permissionToViewAE(ae) ? "" : "disabled"}`' 
         v-for='(ae, aeIdx) in allAudioEvents'
         :key='ae.name'>
         <div v-if='ae.recordings !== undefined'>
@@ -27,11 +27,13 @@
             </div>
             <div class='audioRecordingCol'>
               <div 
-                :class='`audioRecordingRow height${raagHt(ae, Number(recKey))}`' 
+                :class='computeRecClass(ae, Number(recKey))' 
                 v-for='recKey in Object.keys(ae.recordings)'
+                
                 :id='`arr${aeIdx}_${recKey}`'
                 :key='ae.recordings[Number(recKey)].audioFileId'
-                @dblclick='sendAudioSource($event, ae, aeIdx, Number(recKey))'>
+                @dblclick='permissionToViewRec(ae.recordings[Number(recKey)]) ? 
+                  sendAudioSource($event, ae, aeIdx, Number(recKey)) : null'>
                 <span class='recordingNum'>{{`${Number(recKey)+1}. `}}</span>
                 <div :class='`soloist height${raagHt(ae, Number(recKey))}`'>
                   <span>
@@ -98,7 +100,9 @@
     />
   <RemoveFromCollection
     v-if='removeFromCollectionModalOpen'
-    :possibleCollections='addType === "audioEvent" ? aeRemovableCols : recRemovableCols'
+    :possibleCollections='addType === "audioEvent" ? 
+      aeRemovableCols : 
+      recRemovableCols'
     :navHeight='navHeight'
     :recID='selectedAF?.audioFileId'
     :aeID='selectedAE!._id'
@@ -110,7 +114,7 @@
         selectedAE.explicitPermissions !== undefined && 
         permissionsModalOpen'
       :navHeight='navHeight'
-      :visibility='selectedAE.explicitPermissions.publicView'
+      :explicitPermissions='selectedAE.explicitPermissions'
       :artifactType='"audioEvent"'
       :artifactID='selectedAE._id'
       @close='handleClosePermissionsModal'
@@ -269,6 +273,44 @@ export default defineComponent({
 
   methods: {
 
+    computeRecClass(ae: AudioEventType, recKey: number) {
+      const rec = ae.recordings[recKey];
+      const baseClass = 'audioRecordingRow';
+      const heightclass = `height${this.raagHt(ae, Number(recKey))}`;
+      const disabledClass = this.permissionToViewRec(rec) ? '' : 'disabled';
+      return `${baseClass} ${heightclass} ${disabledClass}`;
+    },
+
+    permissionToViewRec(recording: RecType) {
+      const ep = recording.explicitPermissions!;
+      const id = this.$store.state.userID!;
+      return ep.publicView || 
+        ep.view.includes(id) || 
+        ep.edit.includes(id) ||
+        recording.userID === id
+    },
+
+    permissionToEditRec(recording: RecType) {
+      const ep = recording.explicitPermissions!;
+      const id = this.$store.state.userID!;
+      return ep.edit.includes(id) || recording.userID === id
+    },
+
+    permissionToViewAE(audioEvent: AudioEventType) {
+      const ep = audioEvent.explicitPermissions!;
+      const id = this.$store.state.userID!;
+      return ep.publicView || 
+        ep.view.includes(id) || 
+        ep.edit.includes(id) ||
+        audioEvent.userID === id
+    },
+
+    permissionToEditAE(audioEvent: AudioEventType) {
+      const ep = audioEvent.explicitPermissions!;
+      const id = this.$store.state.userID!;
+      return ep.edit.includes(id) || audioEvent.userID === id
+    },
+
     async handleClosePermissionsModal() {
       this.permissionsModalOpen = false;
       try {
@@ -381,33 +423,63 @@ export default defineComponent({
         this.selectedAE = undefined;
         this.selectedAF = undefined;
       }
+      const userID = this.$store.state.userID!;
+      const aeEditPermission = this.selectedAE && (
+          this.selectedAE.userID === userID ||
+          this.selectedAE.explicitPermissions?.edit.includes(userID)
+      )
+      const aeViewPermission = this.selectedAE && (
+          this.selectedAE.userID === userID ||
+          this.selectedAE.explicitPermissions!.view.includes(userID) ||
+          this.selectedAE.explicitPermissions!.publicView ||
+          this.selectedAE.explicitPermissions!.edit.includes(userID)
+      )
+      const aeOwner = this.selectedAE && this.selectedAE.userID === userID;
+
+      const afEditPermission = this.selectedAE && this.selectedAF && (
+          this.selectedAF.userID === userID ||
+          this.selectedAF.explicitPermissions!.edit.includes(userID)
+      );
+      const afViewPermission = this.selectedAE && this.selectedAF &&
+        (this.selectedAF.userID === userID ||
+          this.selectedAF.explicitPermissions!.view.includes(userID) ||
+          this.selectedAF.explicitPermissions!.publicView ||
+          this.selectedAF.explicitPermissions!.edit.includes(userID)
+        );
+
       this.contextMenuChoices.push({
         text: 'Add Audio Event',
         action: () => {
           this.toggleAddEvent();
           this.contextMenuClosed = true;
-        }
+        },
+        enabled: true
       });
       this.contextMenuChoices.push({
         text: 'Edit Audio Event',
         action: () => {
+          console.log('edit audio event')
           this.openEditWindow(this.selectedAE!._id);
           this.contextMenuClosed = true;
-        }
+        },
+        enabled: aeEditPermission
+        
       });
       this.contextMenuChoices.push({
         text: 'Delete Audio Event',
         action: () => {
           this.deleteAE();
           this.contextMenuClosed = true;
-        }
+        },
+        enabled: aeOwner
       });
       this.contextMenuChoices.push({
         text: 'Edit Permissions',
         action: () => {
           this.permissionsModalOpen = true;
           this.contextMenuClosed = true;
-        }
+        },
+        enabled: aeOwner
       });
       if (this.editableCols.length > 0) {
         this.contextMenuChoices.push({
@@ -416,7 +488,8 @@ export default defineComponent({
             this.addToCollectionModalOpen = true;
             
             this.contextMenuClosed = true;
-          }
+          },
+          enabled: aeViewPermission
         });
         this.aeRemovableCols = this.editableCols.filter(c => {
           if (this.selectedAE === undefined) {
@@ -430,7 +503,8 @@ export default defineComponent({
             action: () => {
               this.removeFromCollectionModalOpen = true;
               this.contextMenuClosed = true;
-            }
+            },
+            enabled: true
           })
         }
       }
@@ -449,7 +523,8 @@ export default defineComponent({
               }
             })
             this.contextMenuClosed = true;
-          }
+          },
+          enabled: afViewPermission
         });
         if (this.editableCols.length > 0) {
           this.contextMenuChoices.push({
@@ -458,7 +533,8 @@ export default defineComponent({
               this.addType = 'recording';
               this.addToCollectionModalOpen = true;
               this.contextMenuClosed = true;
-            }
+            },
+            enabled: afViewPermission
           });
           this.recRemovableCols = this.editableCols.filter(c => {
             if (this.selectedAF === undefined) {
@@ -473,7 +549,8 @@ export default defineComponent({
                 this.addType = 'recording';
                 this.removeFromCollectionModalOpen = true;
                 this.contextMenuClosed = true;
-              }
+              },
+              enabled: true
             })
           }
         }
@@ -714,6 +791,9 @@ button {
   border-bottom: 1px solid black;
 }
 
+.audioEventRow.disabled {
+  color: grey;
+}
 .audioEventNameRow {
   width: 100%;
   height: 40px;
@@ -760,7 +840,12 @@ button {
   flex-direction: row;
   align-items: center;
   justify-content: left;
-  cursor: pointer
+  cursor: pointer;
+  color: white;
+}
+
+.audioRecordingRow.disabled {
+  color: grey;
 }
 
 

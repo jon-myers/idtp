@@ -151,6 +151,7 @@ type RecType = {
     publicView: boolean
   },
   dateModified: string | Date,
+  userID: string,
 }
 
 type AudioEventType = {

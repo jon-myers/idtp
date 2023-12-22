@@ -3,13 +3,66 @@
     <div class='modal-content'>
       <div class='modalRow'>
         <label>{{  `Visibility: ` }}</label>
-        <select v-model='visible'>
+        <select v-model='visible' class='visibility'>
           <option :value='true'>Public</option>
           <option :value='false'>Private</option>
         </select>
       </div>
+      <div class='modalRow users' >
+        <div class='modalColumn wide'>
+          <div class='labelBox'>
+            <label for ='editors'>Editors</label>
+          </div>
+          <div class='userSelectColumn'>
+            <div class='usersBox'>
+              <div v-for='(editor, i) in selectedEditors' :key='i'>
+                <select v-model='selectedEditors[i]'>
+                  <option 
+                    v-for='(user, j) in allUsers' 
+                    :key='j'
+                    :value='user'
+                    >
+                    {{ `${user.name} , (${user.email})` }}
+                  </option>
+                </select>
+                <button @click='selectedEditors.splice(i, 1)'>-</button>
+              </div>
+            </div>
+            <div class='addButton'>
+              <button @click='addEditor'>+</button>
+            </div>
+          </div>
+        </div>
+        <div class='modalColumn wide' v-if='!visible'>
+          <div class='labelBox'>
+            <label for='viewers'>Viewers</label>
+          </div>
+          <div class='userSelectColumn'>
+            <div class='usersBox'>
+              <div v-for='(viewer, i) in selectedViewers' :key='i'>
+                <select v-model='selectedViewers[i]'>
+                  <option 
+                    v-for='(user, j) in allUsers' 
+                    :key='j'
+                    :value='user'
+                    >
+                    {{ `${user.name} , (${user.email})` }}
+                  </option>
+                </select>
+                <button @click='selectedViewers.splice(i, 1)'>-</button>
+              </div>
+            </div>
+            <div>
+              <button @click='addViewer'>+</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class='modalRow'>
-        <button @click='handleUpdate'>Update</button>
+        <button class='update' @click='handleUpdate'>Update</button>
+      </div>
+      <div class='modalRow tall' v-if='artifactType === "audioEvent"'>
+        {{ warningText }}
       </div>
     </div>
   </div>
@@ -17,8 +70,8 @@
 <script lang='ts'>
 
 import { defineComponent, PropType } from 'vue';
-import { TranscriptionMetadataType } from '@/ts/types';
-import { updateVisibility } from '@/js/serverCalls';
+import { UserType } from '@/ts/types';
+import { updateVisibility, getAllUsers } from '@/js/serverCalls';
 import { 
   AudioEventType, 
   RecType 
@@ -26,14 +79,26 @@ import {
 
 
 type PermissionsModalDataType = {
-  visible: boolean
+  visible: boolean,
+  allUsers: UserType[],
+  selectedViewers: (UserType | undefined)[],
+  selectedEditors: (UserType | undefined)[],
+  userSelectHeight: number,
+  warningText: string,
 }
 
 export default defineComponent({
   name: 'PermissionsModal',
   data(): PermissionsModalDataType {
     return {
-      visible: true
+      visible: true,
+      allUsers: [],
+      selectedViewers: [],
+      selectedEditors: [],
+      userSelectHeight: 100,
+      warningText: 'Warning: Updating the permissions of an audioEvent will \
+      overwrite the permissions of all recordings associated with that \
+      audioEvent.'
     }
   },
   props: {
@@ -41,11 +106,15 @@ export default defineComponent({
       type: Number,
       required: true
     },
-    visibility: {
-      type: Boolean,
+    explicitPermissions: {
+      type: Object as PropType<{
+        publicView: boolean,
+        edit: string[],
+        view: string[]
+      }>,
       required: true
     },
-    artifactType:{
+    artifactType: {
       type: String as PropType<'audioEvent' | 'audioRecording' | 'transcription'>,
       required: true
     },
@@ -55,8 +124,30 @@ export default defineComponent({
     }
   },
 
-  created() {
-    this.visible = this.visibility;
+  async created() {
+    this.visible = this.explicitPermissions.publicView;
+    
+    try {
+      this.allUsers = await getAllUsers();
+      this.allUsers = this.allUsers.filter(user => {
+        return user._id !== this.$store.state.userID
+      });
+      this.allUsers.sort((a, b) => {
+        if (a.family_name < b.family_name) return -1;
+        else if (a.family_name > b.family_name) return 1;
+        else if (a.given_name < b.given_name) return -1;
+        else if (a.given_name > b.given_name) return 1;
+        else return 0
+      })
+      this.selectedEditors = this.explicitPermissions.edit.map(userID => {
+        return this.allUsers.find(user => user._id === userID);
+      });
+      this.selectedViewers = this.explicitPermissions.view.map(userID => {
+        return this.allUsers.find(user => user._id === userID);
+      });
+    } catch (error) {
+      console.log(error);
+    }
   },
   mounted() {
     window.addEventListener('keydown', (e) => {
@@ -75,9 +166,28 @@ export default defineComponent({
 
   methods: {
     async handleUpdate() {
-      const res = await updateVisibility(this.artifactType, this.artifactID, this.visible);
+      const edit = this.selectedEditors
+        .filter(editor => editor !== undefined)
+        .map(editor => editor!._id) as string[];
+      const view = this.selectedViewers
+        .filter(viewer => viewer !== undefined)
+        .map(viewer => viewer!._id) as string[];
+      const explicitPermissions = {
+        publicView: this.visible,
+        edit,
+        view
+      }
+      const res = await updateVisibility(this.artifactType, this.artifactID, explicitPermissions);
       this.$emit('close');
-    }
+    },
+
+    addViewer() {
+      this.selectedViewers.push(undefined);
+    },
+
+    addEditor() {
+      this.selectedEditors.push(undefined);
+    },
   },
 
   unmounted() {
@@ -117,8 +227,8 @@ export default defineComponent({
   background-color: lightgrey;
   padding: 20px;
   border-radius: 4px;
-  height: 80px;
-  width: 350px;
+  height: 250px;
+  width: 500px;
   display: flex;
   flex-direction: column;
   justify-content: top;
@@ -132,6 +242,17 @@ export default defineComponent({
   width: 100%;
   height: 32px;
 }
+.modalRow.users {
+  margin-top: 10px;
+  align-items: top;
+  height: v-bind(userSelectHeight + 30 + 'px');
+  border: 1px solid black;
+}
+
+.modalRow.tall {
+  height: 50px;
+
+}
 
 label {
   margin-right: 5px;
@@ -140,6 +261,74 @@ label {
 
 select {
   margin-left: 5px;
+}
+
+select.visibility {
+  width: 80px;
+}
+
+.modalColumn {
+  display: flex;
+  flex-direction: column;
+  justify-content: left;
+  align-items: left;
+  height: 50px;
+}
+
+.wide {
+  width: 250px;
+  height: v-bind(userSelectHeight + 30 + 'px');
+
+}
+
+.userSelectColumn {
+  display: flex;
+  flex-direction: column;
+  justify-content: left;
+  align-items: left;
+  height: v-bind(userSelectHeight + 'px');
+
+  width: 100%;;
+}
+
+.usersBox {
+  display: flex;
+  flex-direction: column;
+  justify-content: left;
+  align-items: left;
+  max-height: v-bind(userSelectHeight - 30 + 'px');
+  width: 200px;
+  margin-bottom: 5px;
+  overflow-y: scroll;
+}
+
+
+.labelBox {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  height: 30px;
+  min-height: 30px;
+  /* width: 200px; */
+}
+
+.addButton {
+  height: 30px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+}
+
+select {
+  margin-right: 5px;
+  width: 150px;
+}
+
+button.update {
+  margin-top: 5px;
 }
 
 

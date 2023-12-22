@@ -1152,7 +1152,7 @@ export default defineComponent({
 
 .progress {
   width: v-bind(progressWidth + 'px');
-  height: 20px;
+  height: 100%;
   background-color: lightblue;
 }
 
