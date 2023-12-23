@@ -878,16 +878,19 @@ const runServer = async () => {
       // Creates a new (empty) AudioEvent mongDB entry, and receives back a 
       // unique _id for use throughout the upload / metadata entry process.
       const userID = req.body.userID;
+      const insertion = {
+        userID: userID,
+        permissions: "Public",
+        explicitPermissions: {
+          publicView: true,
+          edit: [],
+          view: []
+        },
+      };
+      if (req.body.name) insertion.name = req.body.name;
+      if (req.body.eventType) insertion['event type'] = req.body.eventType;
       try {
-        const result = await audioEvents.insertOne({ 
-          userID: userID,
-          permissions: "Public", 
-          explicitPermissions: {
-            publicView: true,
-            edit: [],
-            view: []
-          }
-        });
+        const result = await audioEvents.insertOne(insertion);
         res.json(result)
       } catch (err) {
         console.error(err);
@@ -1505,7 +1508,10 @@ const runServer = async () => {
         if (!req.files) {
           res.send({ status: false, message: 'No file uploaded' });
         } else {
-          if (req.body.audioEventType === 'add') {
+          if (
+            req.body.audioEventType === 'add' || 
+            req.body.audioEventType === 'create'
+            ) {
             const audioEventID = req.body.audioEventID;
             const recIdx = req.body.recIdx;
             const audioFile = req.files.audioFile;

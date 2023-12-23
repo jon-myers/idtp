@@ -254,7 +254,7 @@ export default defineComponent({
     }
     
     this.eventTypes = await getEventTypes()
-    await this.eventTypes.push('Other (specify)');  
+    this.eventTypes.push('Other (specify)');  
   },
   
   

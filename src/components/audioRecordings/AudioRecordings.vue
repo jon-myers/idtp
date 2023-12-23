@@ -1070,8 +1070,6 @@ export default defineComponent({
       this.saEstimate = recording.saEstimate;
       this.saVerified = recording.saVerified;
       this.activeRecording = recording;
-
-
     },
 
     openRecordingModal({ 
@@ -1090,10 +1088,8 @@ export default defineComponent({
     },
 
     openUploadModal() {
-      console.log('open upload modal');
       this.uploadRecModalClosed = false;
     }
-
   }
 })
 </script>

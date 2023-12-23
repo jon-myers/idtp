@@ -957,15 +957,31 @@ const deleteRecording = async (recID: string) => {
   }
 };
 
-const initializeAudioEvent = async (userID: string) => {
+const initializeAudioEvent = async (
+    userID: string, 
+    name?: string, 
+    eventType?: string
+    ): Promise<{ acknowledged: boolean, insertedId: string }> => {
+  const bodyObj: {
+    'userID': string,
+    'name'?: string,
+    'eventType'?: string
+  } = {
+    'userID': userID,
+  };
+  if (name !== undefined) {
+    bodyObj['name'] = name
+  }
+  if (eventType !== undefined) {
+    bodyObj['eventType'] = eventType
+  }
+  console.log(bodyObj)
   const request = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      'userID': userID
-    })
+    body: JSON.stringify(bodyObj)
   };
   let out;
   try {
@@ -973,10 +989,11 @@ const initializeAudioEvent = async (userID: string) => {
     if (response.ok) {
       out = await response.json();
     }
-    return out
+    
   } catch (err) {
     console.error(err)
-  }  
+  }
+  return out
 }
 
 const cleanEmptyDoc = async (_id: string) => {
@@ -1183,14 +1200,17 @@ const newUploadFile = async (file: File, onProgress: OnProgressType, {
   audioEventType = 'add',
   audioEventID = undefined,
   recIdx = undefined,
-  userID = undefined
+  userID = undefined,
+  aeName = undefined,
+  aeType = undefined,
 }: {
   audioEventType?: 'add' | 'create' | 'none',
   audioEventID?: string,
   recIdx?: number,
-  userID?: string
+  userID?: string,
+  aeName?: string,
+  aeType?: string
 } = {}) => {
-  console.log('getting to newUploadFile server call')
   if (audioEventType === 'add') {
     if (audioEventID === undefined) {
       throw new Error('audioEventID must be defined')
@@ -1204,6 +1224,38 @@ const newUploadFile = async (file: File, onProgress: OnProgressType, {
     formData.append('recIdx', String(recIdx));
     formData.append('audioEventType', audioEventType);
     formData.append('userID', userID || '');
+    const config = {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress: (progressEvent: AxiosProgressEvent) => {
+        const progressPercent = 100 * progressEvent.loaded / progressEvent.total!;
+        if (onProgress) onProgress(progressPercent);
+        return progressPercent
+      }
+    };
+    try {
+      const response = await axios.post(url+'newUploadFile', formData, config)
+      if (response.statusText !== 'OK') {
+        throw new Error(`Error! status: ${response.status}`)
+      }
+      return response.data;
+    } catch (err) {
+      console.log(err)
+    }
+  } else if (audioEventType === 'create') {
+    // first create new audio event
+    if (userID === undefined) {
+      throw new Error('userID must be defined')
+    }
+    const result = await initializeAudioEvent(userID, aeName, aeType);
+    audioEventID = result.insertedId;
+    const formData = new FormData();
+    formData.append('audioFile', file);
+    formData.append('audioEventID', audioEventID);
+    formData.append('recIdx', '0');
+    formData.append('audioEventType', audioEventType);
+    formData.append('userID', userID);
     const config = {
       headers: {
         'Content-Type': 'multipart/form-data'

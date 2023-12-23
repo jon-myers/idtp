@@ -13,7 +13,7 @@
         </div>
         <div class='modalRow taller'>
           <div class='subColumn'>
-            <div class='subRow'>
+            <div class='subRow' v-if='allAudioEvents.length > 0'>
               <input 
                 type='radio' 
                 id='addToAudioEvent' 
@@ -52,8 +52,23 @@
               </option>
             </select>
           </div>
-          <div class='subColumn' v-if='aeChoice === "createNewAudioEvent"'>
-            <input type='text' class='textInput' v-model='newAEName'>
+          <div class='subColumn newAE' v-if='aeChoice === "createNewAudioEvent"'>
+            <div class='subRow'>
+              <label>Event Name</label>
+              <input type='text' class='textInput' v-model='newAEName'>
+            </div>
+            <div class='subRow'>
+              <label>Event Type</label>
+              <select v-model='newAEType'>
+                <option 
+                  v-for='(aeType, i) in aeTypes' 
+                  :key='i'
+                  :value='aeType'
+                  >
+                  {{aeType}}
+                </option>
+              </select>
+            </div>
           </div>
         </div>
         <div class='modalRow'>
@@ -270,7 +285,12 @@
               
           </div>
           <div class='modalRow'>
-            <div class='modalCol' v-for='(sec, i) in editingSecs' :key='i'>
+            <div 
+              class='modalCol' 
+              v-for='(sec, i) in editingSecs' 
+              :key='i'
+              v-if='selectedRaag !== undefined'
+              >
               <div class='modalColRow'>
                 <label>Section</label>
                 <select v-model='sec.name'>
@@ -285,6 +305,9 @@
                 <!-- <input type='text' v-model='sec.name'> -->
               </div>
               
+            </div>
+            <div v-else>
+              Please select a raag first
             </div>
           </div>
         </div>
@@ -336,6 +359,7 @@ import {
   updateAudioRecording,
   verifySpectrogram,
   verifyMelograph,
+  getEventTypes,
 } from '@/js/serverCalls.ts';
 import SaTuner from '@/components/audioRecordings/SaTuner.vue';
 import { 
@@ -391,7 +415,10 @@ type UploadRecordingDataType = {
   saVerified: boolean,
   octOffset: -1 | 0,
   spectrogramExists: boolean,
-  melographExists: boolean
+  melographExists: boolean,
+  newAEType?: string,
+  aeTypes: string[],
+  startedUpload: boolean,
 }
 
 type RecUpdateType = {
@@ -488,7 +515,9 @@ export default defineComponent({
       octOffset: 0,
       spectrogramExists: false,
       melographExists: false,
-      
+      newAEType: "Unknown",
+      aeTypes: [],
+      startedUpload: false,
     };
   },
 
@@ -519,7 +548,7 @@ export default defineComponent({
     },
     
     uploadButtonDisabled() {
-      return this.numFiles < 1;
+      return this.numFiles < 1 || this.startedUpload;
     },
 
     getCountries() {
@@ -590,6 +619,10 @@ export default defineComponent({
         this.allAudioEvents = this.allAudioEvents.filter(ae => {
           return this.permissionToEditAE(ae)
         });
+        if (this.allAudioEvents.length === 0) {
+          this.aeChoice = 'createNewAudioEvent'
+        }
+        this.aeTypes = await getEventTypes()
       }
     } catch (err) {
       console.log(err);
@@ -644,7 +677,6 @@ export default defineComponent({
       const ep = audioEvent.explicitPermissions!;
       const id = this.$store.state.userID!;
       const out = ep.edit.includes(id) || audioEvent.userID === id;
-      console.log(out)
       return out;
     },
 
@@ -862,6 +894,7 @@ export default defineComponent({
     },
 
     async prepareForEditing() {
+      this.editingSecs = []
       
 
       try {
@@ -976,7 +1009,6 @@ export default defineComponent({
         this.saVerified = this.editingRec!.saVerified;
         this.spectrogramExists = await verifySpectrogram(this.audioFileId);
         this.melographExists = await verifyMelograph(this.audioFileId)
-        console.log(this.melographExists)
       } catch (err) {
         console.log(err);
       }
@@ -995,6 +1027,7 @@ export default defineComponent({
     async uploadRecording() {
       // Perform the upload logic here
       console.log('Uploading recording...');
+      this.startedUpload = true;
       const fileElem = this.$refs.file as HTMLInputElement;
       if (fileElem.files && fileElem.files.length > 0) {
         const file = fileElem.files[0];
@@ -1010,7 +1043,7 @@ export default defineComponent({
               audioEventType = 'none';
             }
             let recIdx = 0;
-            if (this.selectedAE!.recordings) {
+            if (this.selectedAE && this.selectedAE.recordings) {
               recIdx = Object.keys(this.selectedAE!.recordings).length;
             }
             const res = await newUploadFile(file, this.onProgress, {
@@ -1018,6 +1051,8 @@ export default defineComponent({
               audioEventID: this.selectedAE?._id,
               recIdx,
               userID: this.$store.state.userID,
+              aeName: this.newAEName,
+              aeType: this.newAEType,
             });
             this.audioFileId = res.data.audioFileId;
             this.processingDone = true;
@@ -1201,6 +1236,22 @@ export default defineComponent({
   height: 100%;
   width: 250px;
 
+}
+
+.subColumn.newAE > * > select {
+  max-width: 150px;
+  box-sizing: border-box;
+}
+
+.subColumn.newAE > * > input {
+  max-width: 150px;
+  box-sizing: border-box;
+}
+
+.subColumn.newAE > * > label {
+  width: 100px;
+  text-align: right;
+  margin-right: 5px;
 }
 
 select {
