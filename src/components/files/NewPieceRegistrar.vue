@@ -18,7 +18,12 @@
         </select>
         <div class='noneSel'>
           {{ "(None: " }}
-          <input type='checkbox' v-model='noAE' :value='undefined'>
+          <input 
+          type='checkbox' 
+          v-model='noAE' 
+          :value='undefined'
+          :disabled='aeDisabled'
+          >
           {{ ")" }}
         </div>
 
@@ -57,7 +62,12 @@
         </select>
         <div class='noneSel'>
           {{ "(None: " }}
-          <input type='checkbox' v-model='noRec' :value='undefined'>
+          <input 
+            type='checkbox' 
+            v-model='noRec' 
+            :value='undefined'
+            :disabled='recDisabled'
+            >
           {{ ")" }}
         </div>
 
@@ -73,10 +83,37 @@
         </select>
       </div>
       <div class='formRow'>
-        <label>Permissions</label>
-        <select v-model='permissions'>
-          <option v-for='pType in permissionTypes' :key='pType'>
-            {{pType}}
+        <label>Visibility</label>
+        <select v-model='explicitPermissions.publicView'>
+          <option :value='true'>
+            {{ "Public" }}
+          </option>
+          <option :value='false'>
+            {{ "Private" }}
+          </option>
+        </select>
+      </div>
+      <div class='formRow tall'>
+        <label>Editors</label>
+        <select v-model='explicitPermissions.edit' multiple>
+          <option 
+            v-for='user in allUsers' 
+            :key='user._id' 
+            :value='user._id'
+            >
+            {{ `${user.name} , (${user.email})` }}
+          </option>
+        </select>
+      </div>
+      <div class='formRow tall' v-if='!explicitPermissions.publicView'>
+        <label>Viewers</label>
+        <select v-model='explicitPermissions.view' multiple>
+          <option 
+            v-for='user in allUsers' 
+            :key='user._id' 
+            :value='user._id'
+            >
+            {{ `${user.name} , (${user.email})` }}
           </option>
         </select>
       </div>
@@ -208,8 +245,10 @@ import {
   saveRaagRules,
   getInstruments,
   getInstrumentation,
-  getLooseRecordings
+  getLooseRecordings,
+  getAllUsers
 } from '@/js/serverCalls.ts';
+import { UserType } from '@/ts/types';
 import RaagEditor from '@/components/RaagEditor.vue';
 import type { AudioEventMetadataType } from '@/js/serverCalls.ts';
 import { defineComponent } from 'vue';
@@ -254,6 +293,11 @@ type NewPieceRegistrarDataType = {
   savedMsg: string;
   passedInData?: PassedDataType;
   permissions: string;
+  explicitPermissions: {
+    edit: string[],
+    view: string[]
+    publicView: boolean
+  }
   cloning: boolean;
   permissionTypes: string[];
   rulesTemplate: RulesType;
@@ -264,6 +308,9 @@ type NewPieceRegistrarDataType = {
   noRec: boolean;
   ragaExists: boolean;
   errors: string[];
+  allUsers: UserType[];
+  aeDisabled: boolean;
+  recDisabled: boolean;
 }
 
 export default defineComponent({
@@ -305,6 +352,11 @@ export default defineComponent({
       savedMsg: 'unsaved',
       passedInData: undefined,
       permissions: 'Public',
+      explicitPermissions: {
+        edit: [],
+        view: [],
+        publicView: true
+      },
       cloning: false,
       permissionTypes: [
         'Public',
@@ -341,7 +393,10 @@ export default defineComponent({
       looseRecs: [],
       noRec: false,
       ragaExists: false,
-      errors: []
+      errors: [],
+      allUsers: [],
+      aeDisabled: false,
+      recDisabled: false
     }
   },
   
@@ -359,10 +414,23 @@ export default defineComponent({
   },
     
   async mounted() {
+    this.aeDisabled = false;
+    this.recDisabled = false;
     try {
       this.allEvents = await getAllAudioEventMetadata();
       this.raags = await getRagaNames();
       this.looseRecs = await getLooseRecordings(this.$store.state.userID!);
+      this.allUsers = await getAllUsers();
+      this.allUsers = this.allUsers.filter(user => {
+        return user._id !== this.$store.state.userID
+      });
+      this.allUsers.sort((a, b) => {
+        if (a.family_name < b.family_name) return -1;
+        else if (a.family_name > b.family_name) return 1;
+        else if (a.given_name < b.given_name) return -1;
+        else if (a.given_name > b.given_name) return 1;
+        else return 0
+      })
       this.rules = this.rulesTemplate;
       if (this.dataObj) { // this is exclusively for cloning
         this.clonePiece()
@@ -450,6 +518,7 @@ export default defineComponent({
 
     dataObj(newObj) {
       this.passedInData = JSON.parse(newObj);
+      
 
     }
   },
@@ -493,6 +562,24 @@ export default defineComponent({
         if (this.passedInData === undefined) {
           throw new Error('passedInData is undefined')
         }
+        const d = this.passedInData!;
+        const noAE = d.audioEvent === undefined;
+        const noRec = d.audioRecording === undefined;
+        if (noAE && noRec) {
+          this.noAE = true;
+          this.noRec = true;
+        } else if (noAE && !noRec) {
+          this.noAE = true;
+          this.noRec = false;
+        } else if (!noAE && noRec) {
+          this.noAE = false;
+          this.noRec = true;
+        } else {
+          this.noAE = false;
+          this.noRec = false;
+        }
+        this.aeDisabled = true;
+        this.recDisabled = true;
         this.title = this.passedInData.title;
         this.instrumentation = this.passedInData.instrumentation!;
         if (this.passedInData.audioEvent && this.passedInData.audioRecording) {
@@ -547,6 +634,7 @@ export default defineComponent({
             transcriber: this.passedInData.transcriber,
             raga: this.raga,
             permissions: this.permissions,
+            explicitPermissions: this.explicitPermissions,
             clone: true,
             origID: this.passedInData.origID,
             instrumentation: this.instrumentation,
@@ -560,6 +648,7 @@ export default defineComponent({
             transcriber: this.passedInData.transcriber,
             raga: this.passedInData.raga,
             permissions: this.permissions,
+            explicitPermissions: this.explicitPermissions,
             audioID: ae.recordings[(this.recording as number)!].audioFileId,
             clone: true,
             origID: this.passedInData.origID,
@@ -576,20 +665,40 @@ export default defineComponent({
             transcriber?: string,
             raga?: string,
             permissions?: string,
+            explicitPermissions?: {
+              edit: string[],
+              view: string[]
+              publicView: boolean
+            }
             clone: boolean,
             audioID?: string,
             instrumentation: string[]
           };
         if (this.noAE) {
-          newPieceInfo = {
-            title: this.title,
-            transcriber: this.transcriber,
-            raga: this.raga,
-            permissions: this.permissions,
-            clone: false,
-            instrumentation: this.instrumentation,
-            audioID: (this.recording as RecType)._id
+          if (this.noRec) {
+            newPieceInfo = {
+              title: this.title,
+              transcriber: this.transcriber,
+              raga: this.raga,
+              permissions: this.permissions,
+              explicitPermissions: this.explicitPermissions,
+              clone: false,
+              instrumentation: this.instrumentation,
+            }
+
+          } else {
+            newPieceInfo = {
+              title: this.title,
+              transcriber: this.transcriber,
+              raga: this.raga,
+              permissions: this.permissions,
+              explicitPermissions: this.explicitPermissions,
+              clone: false,
+              instrumentation: this.instrumentation,
+              audioID: (this.recording as RecType)._id
+            }
           }
+          
 
         } else {
           newPieceInfo = {
@@ -597,6 +706,7 @@ export default defineComponent({
             transcriber: this.transcriber,
             raga: this.raga,
             permissions: this.permissions,
+            explicitPermissions: this.explicitPermissions,
             clone: false,
             instrumentation: this.instrumentation
           };
@@ -658,6 +768,10 @@ export default defineComponent({
   justify-content: left;
   align-items: center;
   height: 45px;
+}
+
+.formRow.tall {
+  height: 80px;
 }
 
 .errorRow {
@@ -858,6 +972,10 @@ input {
 select {
   background-color: #2f3830;
   color: white
+}
+
+select[multiple] {
+  height: 70px;
 }
 
 button {

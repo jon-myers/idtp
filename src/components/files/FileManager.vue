@@ -195,6 +195,11 @@ type NewPieceInfoType = {
   raga: string | Raga;
   audioID: string;
   permissions: string;
+  explicitPermissions: {
+    publicView: boolean;
+    edit: string[];
+    view: string[];
+  };
   clone?: boolean;
   origID: string;
   instrumentation?: string[];
@@ -210,6 +215,11 @@ type RagaNewPieceInfoType = {
   raga: Raga;
   audioID: string;
   permissions: string;
+  explicitPermissions: {
+    publicView: boolean;
+    edit: string[];
+    view: string[];
+  };
   clone?: boolean;
   origID: string;
   instrumentation?: string[];
@@ -259,7 +269,7 @@ export default defineComponent({
       deleteActive: true,
       selectedPiece: undefined,
       modalWidth: 650,
-      modalHeight: 450,
+      modalHeight: 550,
       titleModalWidth: 500,
       titleModalHeight: 100,
       permissionsModalWidth: 300,
@@ -397,6 +407,7 @@ export default defineComponent({
           const id = newPieceInfo.origID;
           const title = newPieceInfo.title;
           const perm = newPieceInfo.permissions;
+          const expPerm = newPieceInfo.explicitPermissions;
           const newOwner = this.$store.state.userID;
           const name = this.$store.state.name;
           const family_name = this.$store.state.lastName;
@@ -408,7 +419,8 @@ export default defineComponent({
             permissions: perm, 
             name: name, 
             family_name: family_name, 
-            given_name: given_name
+            given_name: given_name,
+            explicitPermissions: expPerm,
           });
           this.$router.push({
             name: 'EditorComponent',
@@ -545,6 +557,7 @@ export default defineComponent({
       // const dropDown = this.$refs.dropDown as HTMLElement;
       // dropDown.classList.add('closed');
       this.designPieceModal = true;
+      this.passedInDataObj = '';
     },
 
     createNewPiece(obj: RagaNewPieceInfoType) {

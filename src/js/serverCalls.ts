@@ -1625,7 +1625,12 @@ const cloneTranscription = async ({
   permissions = undefined,
   name = undefined,
   family_name = undefined,
-  given_name = undefined
+  given_name = undefined,
+  explicitPermissions = {
+    edit: [],
+    view: [],
+    publicView: false
+  },
 }: {
   id?: string,
   title?: string,
@@ -1633,7 +1638,12 @@ const cloneTranscription = async ({
   permissions?: string,
   name?: string,
   family_name?: string,
-  given_name?: string
+  given_name?: string,
+  explicitPermissions?: {
+    edit: string[],
+    view: string[]
+    publicView: boolean
+  }
 } = {}) => {
   let out;
   const request = {
@@ -1648,7 +1658,8 @@ const cloneTranscription = async ({
       permissions: permissions,
       name: name,
       family_name: family_name,
-      given_name: given_name
+      given_name: given_name,
+      explicitPermissions: explicitPermissions
     })
   };
   try {

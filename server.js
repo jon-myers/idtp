@@ -1429,6 +1429,9 @@ const runServer = async () => {
         copy.given_name = req.body.given_name;
         copy.dateModified = new Date();
         copy.dateCreated = new Date();
+        if (req.body.explicitPermissions) {
+          copy.explicitPermissions = req.body.explicitPermissions;
+        }
         const result = await transcriptions.insertOne(copy);
         res.json(result);
       } catch (err) {
