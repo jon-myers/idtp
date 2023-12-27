@@ -52,12 +52,13 @@ duration = ess.Duration()(audio)
 tonic_guess = ess.TonicIndianArtMusic(maxTonicFrequency=200)(audio)
 
 dur = duration
-query = { '_id': ObjectId(objectId) }
-dur_path = 'recordings.' + str(recording_idx) + '.duration'
-sa_path = 'recordings.' + str(recording_idx) + '.saEstimate'
-verified_path = 'recordings.' + str(recording_idx) + '.saVerified'
-update = { '$set': { dur_path: dur, sa_path: tonic_guess, verified_path: False } }
-audio_events.update_one(query, update, upsert=True)
+if objectId != 'undefined':
+    query = { '_id': ObjectId(objectId) }
+    dur_path = 'recordings.' + str(recording_idx) + '.duration'
+    sa_path = 'recordings.' + str(recording_idx) + '.saEstimate'
+    verified_path = 'recordings.' + str(recording_idx) + '.saVerified'
+    update = { '$set': { dur_path: dur, sa_path: tonic_guess, verified_path: False } }
+    audio_events.update_one(query, update, upsert=True)
 
 if recording_id:
     query = { '_id': ObjectId(recording_id) }

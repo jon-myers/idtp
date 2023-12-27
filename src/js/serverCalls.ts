@@ -1276,7 +1276,33 @@ const newUploadFile = async (file: File, onProgress: OnProgressType, {
       console.log(err)
     }
   } else {
-    throw new Error('Not implemented yet')
+    if (userID === undefined) {
+      throw new Error('userID must be defined')
+    }
+    const formData = new FormData();
+    formData.append('audioFile', file);
+    formData.append('audioEventType', audioEventType);
+    formData.append('userID', userID);
+    const config = {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress: (progressEvent: AxiosProgressEvent) => {
+        const progressPercent = 100 * progressEvent.loaded / progressEvent.total!;
+        if (onProgress) onProgress(progressPercent);
+        return progressPercent
+      }
+    };
+    try {
+      const response = await axios.post(url+'newUploadFile', formData, config)
+      if (response.statusText !== 'OK') {
+        throw new Error(`Error! status: ${response.status}`)
+      }
+      return response.data;
+    } catch (err) {
+      console.log(err)
+    }
+
   }
 }
 
@@ -1291,6 +1317,27 @@ const addRecordingToCollection = async (recordingID: string, collectionID: strin
   };
   try {
     const response = await fetch(url + 'addRecordingToCollection', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const getLooseRecordings = async (userID: string): Promise<RecType[]> => {
+// gets all recordings that are not part of an audio event
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const params = new URLSearchParams({ userID: userID });
+    const response = await fetch(url + 'getLooseRecordings?' + params, request);
     if (response.ok) {
       out = await response.json()
     }
@@ -1889,5 +1936,6 @@ export {
   updateAudioRecording,
   verifySpectrogram,
   verifyMelograph,
-  updateVisibility
+  updateVisibility,
+  getLooseRecordings
 }

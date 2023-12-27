@@ -749,15 +749,19 @@ export default defineComponent({
     },
 
     eventSorter(a: RecType, b: RecType) {
-      if (a.parentTitle === undefined && b.parentTitle === undefined) {
+      const apt = a.parentTitle;
+      const bpt = b.parentTitle;
+      const aptUndefined = apt === undefined || apt === null;
+      const bptUndefined = bpt === undefined || bpt === null;
+      if (aptUndefined && bptUndefined) {
         return 0;
-      } else if (a.parentTitle === undefined && b.parentTitle !== undefined) {
+      } else if (aptUndefined && !bptUndefined) {
         return 1;
-      } else if (a.parentTitle !== undefined && b.parentTitle === undefined) {
+      } else if (!aptUndefined && bptUndefined) {
         return -1;
       } else {
-        const aTitleLower = a.parentTitle ? a.parentTitle.toLowerCase() : '';
-        const bTitleLower = b.parentTitle? b.parentTitle.toLowerCase() : '';
+        const aTitleLower = apt ? apt.toLowerCase() : '';
+        const bTitleLower = bpt? bpt.toLowerCase() : '';
 
         if (aTitleLower < bTitleLower) {
           return -1;

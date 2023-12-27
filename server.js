@@ -1272,6 +1272,17 @@ const runServer = async () => {
       }
     })
 
+    app.get('/getLooseRecordings', async (req, res) => {
+      try {
+        const query = { parentID: null };
+        const result = await audioRecordings.find(query).toArray();
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err)
+      }
+    })
+
     app.post('/getAEsFromIds', async (req, res) => {
       try {
         const query = { _id: { $in: req.body.aeIDs.map(id => ObjectId(id)) } };
@@ -1508,13 +1519,17 @@ const runServer = async () => {
         if (!req.files) {
           res.send({ status: false, message: 'No file uploaded' });
         } else {
+          const newUniqueId = await ObjectId();
+          const dateModified = new Date().toISOString();
+          const audioEventID = req.body.audioEventID;
+          let recIdx = req.body.recIdx;
+          const audioFile = req.files.audioFile;
+          let parentTitle = undefined;
+          let aeUserID = undefined;
           if (
             req.body.audioEventType === 'add' || 
             req.body.audioEventType === 'create'
             ) {
-            const audioEventID = req.body.audioEventID;
-            const recIdx = req.body.recIdx;
-            const audioFile = req.files.audioFile;
             const recPath = `recordings.${recIdx}`;
             const afIdPath = `${recPath}.audioFileId`;
             const datePath = `${recPath}.date`;
@@ -1524,9 +1539,7 @@ const runServer = async () => {
             const octOffsetPath = `${recPath}.octOffset`;
             const dateModifiedPath = `${recPath}.dateModified`
             const expPermissionsPath = `${recPath}.explicitPermissions`;
-            const newUniqueId = await ObjectId();
             const query = { _id: ObjectId(audioEventID) };
-            const dateModified = new Date().toISOString();
             const update = { $set: { 
               [afIdPath]: newUniqueId,
               [datePath]: {},
@@ -1543,71 +1556,71 @@ const runServer = async () => {
             } };
             const options = { upsert: true, returnOriginal: false };
             const result = await audioEvents.findOneAndUpdate(query, update, options);
+            parentTitle = result.value.name;
+            aeUserID = result.value.userID;
             console.log(result.value)
+          }
             // here we should also update the audioRecordings collection
             // with the new audio file, so as not to rely on the aggregation
             // which generates from audioEvents forever.
-            await audioRecordings.insertOne({
-              _id: newUniqueId,
-              duration: 0,
-              saEstimate: 0,
-              saVerified: false,
-              octOffset: 0,
-              collections: [],
-              musicians: {},
-              title: '',
-              date: {},
-              location: {},
-              raags: {},
-              parentID: audioEventID,
-              parentTitle: result.value.name,
-              aeUserID: result.value.userID,
-              userID: req.body.userID,
-              parentTrackNumber: recIdx,
-              dateModified: dateModified,
-              explicitPermissions: {
-                publicView: true,
-                edit: [],
-                view: []
-              }
-            })
-
-            const suffix = getSuffix(audioFile.mimetype);
-            let fileName = newUniqueId + suffix;
-            audioFile.mv('./uploads/' + fileName);
-            if (suffix === '.opus') {
-              const newFileName = newUniqueId + '.wav';
-              const spawnArgs = ['-i', './uploads/' + fileName, './uploads/' + newFileName];
-              const convertToOpus = spawn('ffmpeg', spawnArgs)
-              fileName = newFileName;
-              convertToOpus.stderr.on('data', data => {
-                console.error(`stderr: ${data}`)
-              });
-              convertToOpus.on('close', () => {
-                console.log('opus conversion finished')
-              })
+          await audioRecordings.insertOne({
+            _id: newUniqueId,
+            duration: 0,
+            saEstimate: 0,
+            saVerified: false,
+            octOffset: 0,
+            collections: [],
+            musicians: {},
+            title: '',
+            date: {},
+            location: {},
+            raags: {},
+            parentID: audioEventID,
+            parentTitle: parentTitle,
+            aeUserID: aeUserID,
+            userID: req.body.userID,
+            parentTrackNumber: recIdx,
+            dateModified: dateModified,
+            explicitPermissions: {
+              publicView: true,
+              edit: [],
+              view: []
             }
-            const spawnArr = ['process_audio.py', fileName, audioEventID, recIdx, newUniqueId];
-            const processAudio = spawn('python3', spawnArr);
-            processAudio.stderr.on('data', data => {
+          })
+
+          const suffix = getSuffix(audioFile.mimetype);
+          let fileName = newUniqueId + suffix;
+          audioFile.mv('./uploads/' + fileName);
+          if (suffix === '.opus') {
+            const newFileName = newUniqueId + '.wav';
+            const spawnArgs = ['-i', './uploads/' + fileName, './uploads/' + newFileName];
+            const convertToOpus = spawn('ffmpeg', spawnArgs)
+            fileName = newFileName;
+            convertToOpus.stderr.on('data', data => {
               console.error(`stderr: ${data}`)
             });
-            processAudio.on('close', () => {
-              console.log('audio processing finished')
-              res.send({
-                status: true,
-                message: 'File is uploaded',
-                data: {
-                  name: audioFile.name,
-                  mimetype: audioFile.mimetype,
-                  size: audioFile.size,
-                  audioFileId: newUniqueId
-                }
-              });
-            });
-          } else {
-            throw new Error('audioEventType not yet implemented')
+            convertToOpus.on('close', () => {
+              console.log('opus conversion finished')
+            })
           }
+          const spawnArr = ['process_audio.py', fileName, audioEventID, recIdx, newUniqueId];
+          const processAudio = spawn('python3', spawnArr);
+          processAudio.stderr.on('data', data => {
+            console.error(`stderr: ${data}`)
+          });
+          processAudio.on('close', () => {
+            console.log('audio processing finished')
+            res.send({
+              status: true,
+              message: 'File is uploaded',
+              data: {
+                name: audioFile.name,
+                mimetype: audioFile.mimetype,
+                size: audioFile.size,
+                audioFileId: newUniqueId
+              }
+            });
+          });
         }
       } catch (err) {
         console.error(err);

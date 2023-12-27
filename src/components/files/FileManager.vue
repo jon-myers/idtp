@@ -257,7 +257,7 @@ export default defineComponent({
       open_: true,
       deleteActive: true,
       selectedPiece: undefined,
-      modalWidth: 600,
+      modalWidth: 650,
       modalHeight: 450,
       titleModalWidth: 500,
       titleModalHeight: 100,
