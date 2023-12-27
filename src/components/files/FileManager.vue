@@ -184,6 +184,7 @@ type FileManagerType = {
   addToCollectionModalOpen: boolean,
   removeFromCollectionModalOpen: boolean,
   permissionsModalOpen: boolean,
+  fileContainerHeight: number,
 }
 
 type PieceInfoType = [string?, string?, string?, string?, string?, string?];
@@ -291,6 +292,7 @@ export default defineComponent({
       removeFromCollectionModalOpen: false,
       removableCols: [],
       permissionsModalOpen: false,
+      fileContainerHeight: 800,
     };
   },
 
@@ -346,6 +348,8 @@ export default defineComponent({
     if (this.$route.query.aeName && this.$route.query.afName) {
       this.designNewPiece();
     }
+    this.fileContainerHeight = window.innerHeight - this.navHeight;
+
     try {
       this.allUsers = await getAllUsers();
       if (this.allUsers !== undefined) {
@@ -944,7 +948,7 @@ export default defineComponent({
 .fileContainer {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: v-bind(fileContainerHeight + 'px');
   width: 100%;
   background-image: linear-gradient(black, #1e241e);
   border-top: 1px solid grey;
