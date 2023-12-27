@@ -45,6 +45,7 @@
           class='c2' 
           v-model='recording' 
           ref='audioRec'
+          :disabled='noRec'
           >
           <option
             v-for='(rec, i) in looseRecs'
@@ -54,6 +55,12 @@
             {{getShorthand(rec)}}
           </option>
         </select>
+        <div class='noneSel'>
+          {{ "(None: " }}
+          <input type='checkbox' v-model='noRec' :value='undefined'>
+          {{ ")" }}
+        </div>
+
 
       </div>
       <div class="formRow">
@@ -83,8 +90,15 @@
       </div>
       <div class='buttonRow'>
         <div class='buttonCol'>
-          <button @click="makeNewPiece">submit</button>
+          <button 
+            :class='readyToSubmit() ? "" : "disabled"'
+            @click="makeNewPiece"
+            :disabled='!readyToSubmit()'
+            >submit</button>
         </div>
+      </div>
+      <div class='errorRow' v-for='err in errors' :key='err'>
+        <span style='color: red'>{{err}}</span>
       </div>
     </div>
     <div class='raagEditorBox' v-if='showRaagEditor'>
@@ -247,6 +261,9 @@ type NewPieceRegistrarDataType = {
   instruments?: string[];
   noAE: boolean;
   looseRecs: RecType[];
+  noRec: boolean;
+  ragaExists: boolean;
+  errors: string[];
 }
 
 export default defineComponent({
@@ -322,6 +339,9 @@ export default defineComponent({
       instruments: undefined,
       noAE: false,
       looseRecs: [],
+      noRec: false,
+      ragaExists: false,
+      errors: []
     }
   },
   
@@ -419,9 +439,11 @@ export default defineComponent({
           this.rules = rules.rules;
           const date = new Date(rules.updatedDate);
           this.savedMsg = 'Saved: ' + date.toLocaleString();
+          this.ragaExists = true;
         } else {
           this.rules = this.rulesTemplate;
           this.savedMsg = 'unsaved';
+          this.ragaExists = false;
         }
       })
     },
@@ -437,6 +459,31 @@ export default defineComponent({
   },
   
   methods: {
+
+    readyToSubmit() {
+      this.errors = [];
+      if (this.title === undefined || this.title === '') {
+       this.errors.push('No title')
+      }
+      if (this.raga === undefined) {
+        this.errors.push('No selected raga')
+      }
+      if (this.raga && !this.ragaExists) {
+        this.errors.push('Raga ruleset has not been saved.')
+      }
+      if (this.instrumentation.length === 0) {
+        this.errors.push('No instrumentation')
+      }
+      if ((this.aeIdx === undefined && this.recording === undefined) && !this.noRec) {
+        this.errors.push('No audio event or recording has been selected. If no \
+          recording is desired, "None" must be checked.' )
+      }
+      if (this.errors.length === 0) {
+        return true
+      } else {
+        return false
+      }
+    },
 
     async clonePiece() {
       this.cloning = true;
@@ -480,7 +527,8 @@ export default defineComponent({
       const date = new Date();
       const res = await saveRaagRules(this.raga!, this.rules!, date);
       if (res) {
-        this.savedMsg = 'Saved: ' + date.toLocaleString()
+        this.savedMsg = 'Saved: ' + date.toLocaleString();
+        this.ragaExists = true;
       }
     },
     
@@ -609,12 +657,28 @@ export default defineComponent({
   flex-direction: row;
   justify-content: left;
   align-items: center;
-  height: 50px;
+  height: 45px;
+}
+
+.errorRow {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: left;
+  align-items: center;
+  height: 30px;
+}
+
+.errorRow > span {
+  color: red;
+  font-weight: bold;
+  margin-left: 10px;
+  line-height: 15px;
+  text-align: left;
 }
 
 label {
-  /* padding-left: 20px;
-  padding-right: 20px; */
+
   width: 120px;
   min-width: 120px;
   display: flex;
@@ -645,8 +709,24 @@ label {
 button {
   width: 80px;
   height: 25px;
+}
+button.disabled {
+  background-color: #4f5f4f;
+  color: #a0a0a0;
+}
+
+button:hover {
+  background-color: #4f5f4f;
+  color: white;
   cursor: pointer;
 }
+
+button.disabled:hover {
+  background-color: #4f5f4f;
+  color: #a0a0a0;
+  cursor: auto;
+}
+
 
 .buttonRow {
   display: flex;
@@ -658,6 +738,8 @@ button {
 
 select {
   width: 208px;
+  max-width: 208px;
+  min-width: 208px;
 }
 
 .buttonCol {
@@ -705,6 +787,12 @@ select {
   align-items: center;
 }
 
+.smallInfoRow > label {
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+}
+
 .sapa {
   width: 200px;
   height: 50px;
@@ -726,6 +814,7 @@ select {
 .outer {
   display: flex;
   flex-direction: row;
+  justify-content: space-between;
   background-color: #202621;
   border: 1px solid white;
   border-radius: 5px;
