@@ -198,7 +198,8 @@ type FileManagerType = {
   editOwnerModal: boolean,
   allUsers?: UserType[],
   allNames?: string[],
-  editingUserIdx?: number
+  editingUserIdx?: number,
+  fileContainerHeight: number,
 }
 
 type PieceInfoType = [string?, string?, string?, string?, string?, string?];
@@ -299,6 +300,7 @@ export default defineComponent({
       allUsers: undefined,
       allNames: undefined,
       editingUserIdx: undefined,
+      fileContainerHeight: 800,
     };
   },
 
@@ -343,6 +345,10 @@ export default defineComponent({
     if (this.$route.query.aeName && this.$route.query.afName) {
       this.designNewPiece();
     }
+    this.fileContainerHeight = window.innerHeight - this.navHeight;
+    window.addEventListener('resize', () => {
+      this.fileContainerHeight = window.innerHeight - this.navHeight;
+    });
     try {
       this.allUsers = await getAllUsers();
       if (this.allUsers !== undefined) {
@@ -360,6 +366,16 @@ export default defineComponent({
 
   beforeUnmount() {
     window.removeEventListener('keydown', this.handleKeydown);
+    window.removeEventListener('resize', () => {
+      this.fileContainerHeight = window.innerHeight - this.navHeight;
+    });
+  },
+
+  props: {
+    navHeight: {
+      type: Number,
+      required: true,
+    },
   },
 
   methods: {
@@ -781,7 +797,7 @@ export default defineComponent({
 .fileContainer {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: v-bind(fileContainerHeight + 'px');
   width: 100%;
   background-image: linear-gradient(black, #1e241e);
   border-top: 1px solid grey;
