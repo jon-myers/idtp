@@ -349,7 +349,9 @@ export default defineComponent({
       this.designNewPiece();
     }
     this.fileContainerHeight = window.innerHeight - this.navHeight;
-
+    window.addEventListener('resize', () => {
+      this.fileContainerHeight = window.innerHeight - this.navHeight;
+    });
     try {
       this.allUsers = await getAllUsers();
       if (this.allUsers !== undefined) {
@@ -361,7 +363,7 @@ export default defineComponent({
       }
 
       this.editableCols = await getEditableCollections(this.$store.state.userID!);
-        
+      
     } catch (err) {
       console.log(err)
     }
@@ -369,6 +371,9 @@ export default defineComponent({
 
   beforeUnmount() {
     window.removeEventListener('keydown', this.handleKeydown);
+    window.removeEventListener('resize', () => {
+      this.fileContainerHeight = window.innerHeight - this.navHeight;
+    });
   },
 
   methods: {
