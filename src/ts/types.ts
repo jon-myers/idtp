@@ -52,7 +52,12 @@ type TranscriptionMetadataType = {
   family_name: string;
   given_name: string;
   audioID?: string;
-  instrumentation: string[]
+  instrumentation: string[];
+  explicitPermissions: {
+    view: string[];
+    edit: string[];
+    publicView: boolean;
+  }
 }
 
 

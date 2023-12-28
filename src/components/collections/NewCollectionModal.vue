@@ -148,7 +148,33 @@ export default defineComponent({
     };
   },
 
-  async created() {
+  // async created() {
+  //   try {
+  //     this.allUsers = await getAllUsers();
+  //     this.allUsers = this.allUsers.filter(user => {
+  //       return user._id !== this.$store.state.userID
+  //     });
+  //     this.allUsers.sort((a, b) => {
+  //       if (a.family_name < b.family_name) return -1;
+  //       else if (a.family_name > b.family_name) return 1;
+  //       else if (a.given_name < b.given_name) return -1;
+  //       else if (a.given_name > b.given_name) return 1;
+  //       else return 0
+  //     })
+  //   } catch (error) {
+  //     console.log(error);
+  //   }
+  // },
+
+  async mounted() {
+    // escape key closes modal
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') this.close();
+    });
+    // or if you click outside the modal-content, it closes the modal
+    window.addEventListener('click', (e) => {
+      if (e.target === this.$el) this.close();
+    });
     try {
       this.allUsers = await getAllUsers();
       this.allUsers = this.allUsers.filter(user => {
@@ -164,18 +190,7 @@ export default defineComponent({
     } catch (error) {
       console.log(error);
     }
-  },
-
-  mounted() {
-    // escape key closes modal
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') this.close();
-    });
-    // or if you click outside the modal-content, it closes the modal
-    window.addEventListener('click', (e) => {
-      if (e.target === this.$el) this.close();
-    });
-
+    
     if (this.editing && this.collection !== undefined) {
       this.title = this.collection.title;
       this.description = this.collection.description!;
@@ -280,8 +295,7 @@ export default defineComponent({
         color: this.color,
       };
       try {
-        const response = await updateCollection(collection);
-        console.log(response)
+        await updateCollection(collection);
       } catch (error) {
         console.log(error);
       }

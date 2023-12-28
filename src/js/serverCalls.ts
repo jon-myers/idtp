@@ -360,11 +360,10 @@ const getAudioRecording = async (_id: string): Promise<RecType> => {
   return audioRecording
 };
 
-const getAllTransOfAudioFile = async (audioID: string, userID: string): Promise<{
-  name: string,
-  title: string,
-  _id: string
-}[]> => {
+const getAllTransOfAudioFile = async (
+    audioID: string, 
+    userID: string
+  ): Promise<TranscriptionMetadataType[]> => {
   let allTrans;
   const suffix = '?' + new URLSearchParams({
     audioID: audioID,

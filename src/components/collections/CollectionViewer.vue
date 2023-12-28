@@ -66,19 +66,26 @@
 
 <script lang='ts'>
 import { defineComponent, PropType } from 'vue';
-import type { CollectionType, ContextMenuOptionType } from '@/ts/types.ts';
+import type { 
+  CollectionType, 
+  ContextMenuOptionType,
+  TranscriptionMetadataType, 
+} from '@/ts/types.ts';
 import { getContrastingTextColor } from '@/ts/utils';
 import GenericAudioPlayer from '@/components/GenericAudioPlayer.vue';
 import { 
   getEditableCollections,
   removeAudioEventFromCollection,
   removeRecordingFromCollection,
-  removeTranscriptionFromCollection 
+  removeTranscriptionFromCollection,
+  getAllTransOfAudioFile
 } from '@/js/serverCalls';
 import MiniAudioRecordings from '@/components/collections/MiniAudioRecordings.vue';
 import MiniAudioEvents from '@/components/collections/MiniAudioEvents.vue';
 import MiniTranscriptions from '@/components/collections/MiniTranscriptions.vue';
 import ContextMenu from '@/components/ContextMenu.vue';
+import { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
+import { AudioEventType } from '@/components/audioEvents/AddAudioEvent.vue';
 
 type CollectionViewerDataType = {
   audioSource: string | undefined,
@@ -168,11 +175,42 @@ export default defineComponent({
 
   methods: {
 
+    permissionToViewRec(rec: RecType) {
+      const ep = rec.explicitPermissions!;
+      const id = this.$store.state.userID!;
+      const out = ep.publicView || 
+        ep.view.includes(id) || 
+        ep.edit.includes(id) || 
+        rec.userID === id;
+      return out;
+    },
+
+    permissionToEditRec(rec: RecType) {
+      const ep = rec.explicitPermissions!;
+      const id = this.$store.state.userID!;
+      return ep.edit.includes(id) || rec.userID === id;
+    },
+
+    permissionToViewTrans(transcription: TranscriptionMetadataType) {
+      const ep = transcription.explicitPermissions;
+      const id = this.$store.state.userID!;
+      return ep.publicView || 
+        transcription.userID === id ||
+        ep.edit.includes(id) ||
+        ep.view.includes(id);
+    },
+
+    permissionToEditTrans(transcription: TranscriptionMetadataType) {
+      const ep = transcription.explicitPermissions;
+      const id = this.$store.state.userID!;
+      return transcription.userID === id || ep.edit.includes(id);
+    },
+
     handleChirp(fromType: 'recording' | 'audioEvent' | 'transcription') {
       this.chirpSource = fromType;
     },
 
-    handleContextClick(e: MouseEvent) {
+    async handleContextClick(e: MouseEvent) {
       this.contextMenuOptions = [];
 
       e.preventDefault();
@@ -245,6 +283,7 @@ export default defineComponent({
         }   
       } else if (this.chirpSource === 'audioEvent') {
         let target = e.target as HTMLElement;
+        let recRowID = undefined;
         if (target.classList.contains('draggableBorder')) {
           target = target.parentElement!
         }
@@ -264,33 +303,79 @@ export default defineComponent({
           target = target.parentElement!
         }
         if (target.classList.contains('recRow')) {
+          recRowID = target.id
           target = target.parentElement!
+          
         }
         if (target.classList.contains('recsHolder')) {
           target = target.parentElement!
         }
         if (target.classList.contains('aeRowHolder')) {
           const idx = Number(target.id.slice(11));
-          if (this.editor) {
+          
+          this.contextMenuOptions.push({
+            text: 'Remove from Collection',
+            action: async () => {
+              try {
+                const miniAE = this.$refs.miniAE as typeof MiniAudioEvents;
+                const aeId = miniAE.audioEvents[idx]._id!;
+                await removeAudioEventFromCollection(aeId, this.collection._id!);
+                await this.$nextTick();
+                await miniAE.updateAEs();
+              } catch (err) {
+                console.log(err);
+              }
+              this.$emit('updateCollections');
+              this.contextMenuOpen = false;
+            },
+            enabled: this.editor,
+          });
+          this.contextMenuOpen = true;
+          if (recRowID !== undefined) {
+            const split = recRowID.split('rec');
+            const recIdx = Number(split[1]);
+            const aeIdx = Number(split[0].slice(2));
+            const aeComp = this.$refs.miniAE as typeof MiniAudioEvents;
+            const ae = aeComp.audioEvents[aeIdx] as AudioEventType;
+            const rec = ae.recordings[recIdx];
             this.contextMenuOptions.push({
-              text: 'Remove from Collection',
-              action: async () => {
-                try {
-                  const miniAE = this.$refs.miniAE as typeof MiniAudioEvents;
-                  const aeId = miniAE.audioEvents[idx]._id!;
-                  await removeAudioEventFromCollection(aeId, this.collection._id!);
-                  await this.$nextTick();
-                  await miniAE.updateAEs();
-                } catch (err) {
-                  console.log(err);
+              text: 'New Transcription',
+              action: () => {
+                const recID = rec.audioFileId!;
+                const aeName = ae.name;
+                const afName = this.getShorthand(rec);
+                const query = {
+                  aeName: JSON.stringify(aeName),
+                  afName: JSON.stringify(afName),
+                  recID: recID
                 }
-                this.$emit('updateCollections');
-                this.contextMenuOpen = false;
+                this.$router.push({
+                  name: 'Files',
+                  query
+                });
+                this.contextMenuOpen = false
               },
-              enabled: true,
-            });
-            this.contextMenuOpen = true;
-          }
+              enabled: this.permissionToViewRec(rec)
+            })
+            const tChoices = await getAllTransOfAudioFile(
+              rec.audioFileId,
+              this.$store.state.userID!
+            );
+            tChoices.forEach(tc => {
+              this.contextMenuOptions.push({
+                text: `Open transcription: "${ tc.title }" by ${ tc.name }`,
+                action: () => {
+                  this.$store.commit('update_id', tc._id);
+                  this.$cookies.set('currentPieceId', tc._id);
+                  this.$router.push({
+                    name: 'EditorComponent',
+                    query: { id: tc._id }
+                  })
+                },
+                enabled: this.permissionToViewTrans(tc)
+              })
+            })
+          } 
         }
       } else if (this.chirpSource === 'recording') {
         let target = e.target as HTMLElement;
@@ -305,50 +390,83 @@ export default defineComponent({
         }
         if (target.classList.contains('recordingRow')) {
           const idx = Number(target.id.slice(6));
-          if (this.editor) {
-            this.contextMenuOptions.push({
-              text: 'Remove from Collection',
-              action: async () => {
-                try {
-                  const miniAR = this.$refs.miniAR as typeof MiniAudioRecordings;
-                  const recId = miniAR.recs[idx]._id!;
-                  await removeRecordingFromCollection(recId, this.collection._id!);
-                  // await this.$nextTick();
-                  // await miniAR.updateRecs();
-                } catch (err) {
-                  console.log(err);
-                }
-                this.$emit('updateCollections');
-                this.contextMenuOpen = false;
-              },
-              enabled: true,
-            });
-            this.contextMenuOpen = true;
-          }
+          const miniAR = this.$refs.miniAR as typeof MiniAudioRecordings;
+          const rec = miniAR.recs[idx];
 
-          // if (this.editor) {
-          //   this.contextMenuOptions.push({
-          //     text: 'Remove from Collection',
-          //     action: async () => {
-          //       try {
-          //         const miniAR = this.$refs.miniAR as typeof MiniAudioRecordings;
-          //         const recId = miniAR.audioRecordings[idx]._id!;
-          //         await removeAudioRecordingFromCollection(recId, this.collection._id!);
-          //         await this.$nextTick();
-          //         await miniAR.updateRecs();
-          //       } catch (err) {
-          //         console.log(err);
-          //       }
-          //       this.$emit('updateCollections');
-          //       this.contextMenuOpen = false;
-          //     },
-          //     enabled: true,
-          //   });
-          //   this.contextMenuOpen = true;
-          // }
-          
+          this.contextMenuOptions.push({
+            text: 'Remove from Collection',
+            action: async () => {
+              try {
+                const recId = rec._id!;
+                await removeRecordingFromCollection(recId, this.collection._id!);
+              } catch (err) {
+                console.log(err);
+              }
+              this.$emit('updateCollections');
+              this.contextMenuOpen = false;
+            },
+            enabled: this.editor,
+          });
+          this.contextMenuOptions.push({
+            text: 'New Transcription',
+            action: () => {
+              
+              const recID = rec._id!;
+              const aeName = rec.parentTitle;
+              const afName = this.getShorthand(rec);
+              const query = {
+                aeName: JSON.stringify(aeName),
+                afName: JSON.stringify(afName),
+                recID: recID
+              }
+              this.$router.push({
+                name: 'Files',
+                query
+              });
+              this.contextMenuOpen = false
+            },
+            enabled: this.permissionToViewRec(rec)
+          })
+          const tChoices = await getAllTransOfAudioFile(
+            rec._id!,
+            this.$store.state.userID!
+          );
+          tChoices.forEach(tc => {
+            this.contextMenuOptions.push({
+              text: `Open transcription: "${ tc.title }" by ${ tc.name }`,
+              action: () => {
+                this.$store.commit('update_id', tc._id);
+                this.$cookies.set('currentPieceId', tc._id);
+                this.$router.push({
+                  name: 'EditorComponent',
+                  query: { id: tc._id }
+                })
+              },
+              enabled: this.permissionToViewTrans(tc)
+            })
+          })
+
+          this.contextMenuOpen = true;
         }
       }
+    },
+
+    getShorthand(rec: RecType) {
+      const out: string[] = [];
+      const raagNames = Object.keys(rec.raags);
+      raagNames.forEach(rn => {
+        const raag = rec.raags[rn];
+        const pSecsObj = raag['performance sections'];
+        if (pSecsObj === undefined) {
+          throw new Error('no pSecsObj')
+        }
+        out.push(rn, ' - ');
+        const pSecs = Object.keys(pSecsObj);
+        pSecs.forEach((pSec, i) => {
+          out.push(pSec, i !== pSecs.length - 1 ? ', ' : '; ');
+        })
+      })
+      return out.join('')
     },
 
     updateContextMenuPosition() {

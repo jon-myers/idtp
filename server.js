@@ -284,7 +284,20 @@ const runServer = async () => {
       };
       const projection = {
         title: 1,
+        dateCreated: 1,
+        dateModified: 1,
+        location: 1,
+        _id: 1,
+        durTot: 1,
+        raga: 1,
+        userID: 1,
+        permissions: 1,
         name: 1,
+        family_name: 1,
+        given_name: 1,
+        audioID: 1,
+        instrumentation: 1,
+        explicitPermissions: 1
       };
       try {
         const result = await transcriptions.find(query)

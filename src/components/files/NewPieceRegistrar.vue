@@ -436,7 +436,6 @@ export default defineComponent({
         this.clonePiece()
       }
       if (this.$route.query.aeName !== 'null') {
-        console.log(this.$route.query.aeName)
         const allNames = this.allEvents.map(obj => obj.name);
         this.aeIdx = allNames.indexOf(JSON.parse(this.$route.query.aeName as string));
         const recs = this.allEvents[this.aeIdx].recordings;
@@ -449,6 +448,7 @@ export default defineComponent({
         this.raga = Object.keys(recs[this.recording].raags)[0];
         this.instrumentation = this.getInstrumentation();
       } else if (this.$route.query.recID) {
+        console.log('recID')
         const id = this.$route.query.recID as string;
         this.noAE = true;
         this.noRec = false;
