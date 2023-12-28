@@ -313,6 +313,47 @@
         </div>
 
         <div class='editingSubFrame' v-if='editRecIdx === 3'>
+          <div class='modalRow'>
+            <label>Visibility</label>
+            <select v-model='editingRec!.explicitPermissions!.publicView'>
+              <option :value='true'>Public</option>
+              <option :value='false'>Private</option>
+            </select>
+          </div>
+          <div class='modalRow'>
+            <label>Edit</label>
+            <select 
+              multiple 
+              v-model='editingRec!.explicitPermissions!.edit'
+              class='users'>
+              <option 
+                v-for='(user, i) in allUsers' 
+                :key='i'
+                :value='user._id'
+                >
+                {{ `${user.name} , (${user.email})` }}
+              </option>
+            </select>
+          
+          
+            <label v-if='!editingRec!.explicitPermissions!.publicView'>View</label>
+            <select 
+              v-if='!editingRec!.explicitPermissions!.publicView'
+              multiple 
+              v-model='editingRec!.explicitPermissions!.view'
+              class='users'>
+              <option 
+                v-for='(user, i) in allUsers' 
+                :key='i'
+                :value='user._id'
+                >
+                {{ `${user.name} , (${user.email})` }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class='editingSubFrame' v-if='editRecIdx === 4'>
           <SaTuner v-if='editingRec'
             :rec='editingRec'
             v-model:sa-estimate='saEstimate'
@@ -326,7 +367,7 @@
         <div class='modalRow centered short'>
           <button @click='editRecIdx--' :disabled='editRecIdx===0'>{{ "<" }}</button>
           <button @click='saveUpdates'>Save Updates</button>
-          <button @click='editRecIdx++' :disabled='editRecIdx>2'>{{ ">" }}</button>
+          <button @click='editRecIdx++' :disabled='editRecIdx>3'>{{ ">" }}</button>
         </div>
         <div class='modalRow centered short'>
           <span>{{ dateModified }}</span>
@@ -360,6 +401,7 @@ import {
   verifySpectrogram,
   verifyMelograph,
   getEventTypes,
+  getAllUsers
 } from '@/js/serverCalls.ts';
 import SaTuner from '@/components/audioRecordings/SaTuner.vue';
 import { 
@@ -367,7 +409,7 @@ import {
   PSecType, 
   MusicianType 
 } from '@/components/audioEvents/AddAudioEvent.vue';
-import { MusicianDBType, GharanaType } from '@/ts/types.ts';
+import { MusicianDBType, GharanaType, UserType } from '@/ts/types.ts';
 type UploadRecordingDataType = {
   progressWidth: number;
   file: File | null;
@@ -419,6 +461,8 @@ type UploadRecordingDataType = {
   newAEType?: string,
   aeTypes: string[],
   startedUpload: boolean,
+  visible: boolean,
+  allUsers: UserType[],
 }
 
 type RecUpdateType = {
@@ -442,7 +486,12 @@ type RecUpdateType = {
     },
     saEstimate: number,
     saVerified: boolean,
-    octOffset: -1 | 0
+    octOffset: -1 | 0,
+    explicitPermissions: {
+      publicView: boolean,
+      edit: string[],
+      view: string[]
+    }
   };
 
 export type { RecUpdateType };
@@ -518,6 +567,8 @@ export default defineComponent({
       newAEType: "Unknown",
       aeTypes: [],
       startedUpload: false,
+      visible: true,
+      allUsers: []
     };
   },
 
@@ -822,6 +873,7 @@ export default defineComponent({
         saEstimate: this.saEstimate,
         saVerified: this.saVerified,
         octOffset: this.octOffset,
+        explicitPermissions: this.editingRec!.explicitPermissions!,
 
       };
       try {
@@ -906,7 +958,7 @@ export default defineComponent({
           'Initial Name': 'Other',
           _id: '',
         })
-
+        
         this.allGharanas = await getAllGharanas();
         this.allGharanas.push({
           name: 'Other',
@@ -920,6 +972,7 @@ export default defineComponent({
         this.allRaags = await getRagaNames();
         this.allRaags.push('Other (specify)');
         this.performanceSections = await getPerformanceSections();
+        this.allUsers = await getAllUsers();
 
         this.selectedContinent = this.editingRec!.location.continent;
         this.selectedCountry = this.editingRec!.location.country;
@@ -1322,6 +1375,10 @@ audio {
 
 *, *::before, *::after {
   box-sizing: border-box;
+}
+
+select.users {
+  width: 200px;
 }
 
 </style>
