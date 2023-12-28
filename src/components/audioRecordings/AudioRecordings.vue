@@ -515,12 +515,20 @@ export default defineComponent({
         this.contextMenuChoices.push({
           text: 'New Transcription',
           action: () => {
+            let query: {
+              aeName?: string,
+              afName?: string,
+              recID?: string
+            } = {
+              aeName: JSON.stringify(recording.parentTitle),
+              afName: JSON.stringify(this.getShorthand(recording)),
+            }
+            if (recording.parentTitle === null) {
+              query.recID = recording._id;
+            }
             this.$router.push({
               name: 'Files',
-              query: {
-                aeName: JSON.stringify(recording.parentTitle),
-                afName: JSON.stringify(this.getShorthand(recording)),
-              }
+              query
             })
             this.contextMenuClosed = true;
           },

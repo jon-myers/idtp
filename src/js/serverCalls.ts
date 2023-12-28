@@ -146,7 +146,6 @@ const getAllPieces = async (
       "Content-Type": "application/json"
     },
   };
-  console.log(newPermissions)
   const query = '?' + new URLSearchParams({
     userID: JSON.stringify(userID),
     sortKey: JSON.stringify(sortKey),

@@ -465,39 +465,45 @@ const runServer = async () => {
         const result1 = await audioRecordings.deleteOne(query1);
         // also delete recording from audioevent, if rec has associated audio
         // event
-        const query2 = { "_id": ObjectId(parentID) };
-        const projection = { 'recordings': 1, '_id': 0 };
-        const result2 = await audioEvents.findOne(query2, projection);
-        const recordings = result2.recordings;
-        const newRecordings = {};
-        let count = 0;
-        for (let idx in recordings) {
-          if (recordings[idx].audioFileId.toString() !== req.body._id) {
-            newRecordings[count] = recordings[idx];
-            if (newRecordings[count].parentTrackNumber !== count) {
-              newRecordings[count].parentTrackNumber = count;
-              // update in audioRecordings collection
-              const query = { '_id': ObjectId(newRecordings[count].audioFileId) };
-              const update = { $set: { 'parentTrackNumber': count } };
-              await audioRecordings.updateOne(query, update);
+        // if parentID is not null
+        if (parentID) {
+
+          const query2 = { "_id": ObjectId(parentID) };
+          const projection = { 'recordings': 1, '_id': 0 };
+          const result2 = await audioEvents.findOne(query2, projection);
+          const recordings = result2.recordings;
+          const newRecordings = {};
+          let count = 0;
+          for (let idx in recordings) {
+            if (recordings[idx].audioFileId.toString() !== req.body._id) {
+              newRecordings[count] = recordings[idx];
+              if (newRecordings[count].parentTrackNumber !== count) {
+                newRecordings[count].parentTrackNumber = count;
+                // update in audioRecordings collection
+                const query = { '_id': ObjectId(newRecordings[count].audioFileId) };
+                const update = { $set: { 'parentTrackNumber': count } };
+                await audioRecordings.updateOne(query, update);
+              }
+              count++;
             }
-            count++;
           }
-        }
-        
-        result2.recordings = newRecordings;
-        const result3 = await audioEvents.updateOne(query2, { 
-          $set: {recordings: newRecordings}
-        });
-        // if no recs left, delete audio event
-        let result4 = undefined;
-        if (Object.keys(newRecordings).length === 0) {
-          result4 = await audioEvents.deleteOne(query2);
-        }
-        if (result4 !== undefined) {
-          res.json({ result1, result2, result3, result4 });
+          
+          result2.recordings = newRecordings;
+          const result3 = await audioEvents.updateOne(query2, { 
+            $set: {recordings: newRecordings}
+          });
+          // if no recs left, delete audio event
+          let result4 = undefined;
+          if (Object.keys(newRecordings).length === 0) {
+            result4 = await audioEvents.deleteOne(query2);
+          }
+          if (result4 !== undefined) {
+            res.json({ result1, result2, result3, result4 });
+          } else {
+            res.json({ result1, result2, result3 });
+          }
         } else {
-          res.json({ result1, result2, result3 });
+          res.json(result1);
         }
 
         const peaksPath = 'peaks/' + req.body._id + '.json';

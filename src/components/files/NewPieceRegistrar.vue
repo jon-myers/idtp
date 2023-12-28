@@ -435,7 +435,8 @@ export default defineComponent({
       if (this.dataObj) { // this is exclusively for cloning
         this.clonePiece()
       }
-      if (this.$route.query.aeName) {
+      if (this.$route.query.aeName !== 'null') {
+        console.log(this.$route.query.aeName)
         const allNames = this.allEvents.map(obj => obj.name);
         this.aeIdx = allNames.indexOf(JSON.parse(this.$route.query.aeName as string));
         const recs = this.allEvents[this.aeIdx].recordings;
@@ -447,6 +448,15 @@ export default defineComponent({
         this.recording = allRecNames.indexOf(parsed);
         this.raga = Object.keys(recs[this.recording].raags)[0];
         this.instrumentation = this.getInstrumentation();
+      } else if (this.$route.query.recID) {
+        const id = this.$route.query.recID as string;
+        this.noAE = true;
+        this.noRec = false;
+        await this.$nextTick();
+        this.recording = this.looseRecs.find(rec => rec._id === id)!;
+        this.raga = Object.keys(this.recording.raags)[0];
+        console.log(this.recording)
+        this.instrumentation = this.getInstrumentation();
       }
       this.instruments = await getInstruments();
     } catch (err) {
@@ -457,6 +467,7 @@ export default defineComponent({
   
   watch: {
     aeIdx() {
+      console.log('aeIdx changed')
       this.recording = undefined
     },
 
@@ -721,7 +732,13 @@ export default defineComponent({
     },
 
     getInstrumentation() {
-      const rec = this.allEvents[Number(this.aeIdx)].recordings[Number(this.recording)];
+      let rec: RecType;
+      if (!this.noAE) {
+        rec = this.allEvents[Number(this.aeIdx)].recordings[Number(this.recording)];
+      } else {
+        rec = this.recording as RecType;
+      }
+      
       const musicians = Object.keys(rec.musicians);
       const instrumentation: string[] = [];
       musicians.forEach(m => {
