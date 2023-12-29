@@ -1828,7 +1828,6 @@ const getAEsFromIds = async (aeIDs: string[]) => {
 
 const getTranscriptionsFromIds = async (transIDs: string[], userID: string) => {
   let out;
-  console.log(userID)
   const request = {
     method: 'POST',
     headers: {
