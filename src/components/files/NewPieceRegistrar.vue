@@ -6,32 +6,72 @@
         <input v-model="title"/>
       </div>
       <div class='formRow'>
-        <label>Recording</label>
-        <div class='formCol'>
-          <select v-model='aeIdx' ref='audioEvent'>
-            <option 
-              v-for='(ae, i) in allEvents' 
-              :key='ae.name'
-              :value='i'
-            >
-              {{ae.name}}
-            </option>
-          </select>
-          <select 
-            class='c2' 
-            v-model='recording' 
-            v-if='aeIdx && aeIdx >= 0' 
-            ref='audioRec'
+        <label>Audio Event</label>
+        <select v-model='aeIdx' ref='audioEvent' :disabled='noAE'>
+          <option 
+            v-for='(ae, i) in allEvents' 
+            :key='ae.name'
+            :value='i'
           >
-            <option
-              v-for='(recIdx, i) in Object.keys(allEvents[aeIdx].recordings)'
-              :key='i'
-              :value='recIdx'
-            >
-              {{getShorthand(allEvents[aeIdx].recordings[Number(recIdx)])}}
-            </option>
-          </select>
+            {{ae.name}}
+          </option>
+        </select>
+        <div class='noneSel'>
+          {{ "(None: " }}
+          <input 
+          type='checkbox' 
+          v-model='noAE' 
+          :value='undefined'
+          :disabled='aeDisabled'
+          >
+          {{ ")" }}
         </div>
+
+      </div>
+      <div class='formRow' v-if='(aeIdx && aeIdx >= 0)'>
+        <label>Recording</label>
+        <select 
+          class='c2' 
+          v-model='recording' 
+          ref='audioRec'
+        >
+          <option
+            v-for='(recIdx, i) in Object.keys(allEvents[aeIdx].recordings)'
+            :key='i'
+            :value='recIdx'
+          >
+            {{getShorthand(allEvents[aeIdx].recordings[Number(recIdx)])}}
+          </option>
+        </select>
+      </div>
+      <div class='formRow' v-if='noAE'>
+        <label>Recording</label>
+        <select 
+          class='c2' 
+          v-model='recording' 
+          ref='audioRec'
+          :disabled='noRec'
+          >
+          <option
+            v-for='(rec, i) in looseRecs'
+            :key='i'
+            :value='rec'
+          >
+            {{getShorthand(rec)}}
+          </option>
+        </select>
+        <div class='noneSel'>
+          {{ "(None: " }}
+          <input 
+            type='checkbox' 
+            v-model='noRec' 
+            :value='undefined'
+            :disabled='recDisabled'
+            >
+          {{ ")" }}
+        </div>
+
+
       </div>
       <div class="formRow">
         <label class='ragaLabel'>Raga</label>
@@ -43,10 +83,37 @@
         </select>
       </div>
       <div class='formRow'>
-        <label>Permissions</label>
-        <select v-model='permissions'>
-          <option v-for='pType in permissionTypes' :key='pType'>
-            {{pType}}
+        <label>Visibility</label>
+        <select v-model='explicitPermissions.publicView'>
+          <option :value='true'>
+            {{ "Public" }}
+          </option>
+          <option :value='false'>
+            {{ "Private" }}
+          </option>
+        </select>
+      </div>
+      <div class='formRow tall'>
+        <label>Editors</label>
+        <select v-model='explicitPermissions.edit' multiple>
+          <option 
+            v-for='user in allUsers' 
+            :key='user._id' 
+            :value='user._id'
+            >
+            {{ `${user.name} , (${user.email})` }}
+          </option>
+        </select>
+      </div>
+      <div class='formRow tall' v-if='!explicitPermissions.publicView'>
+        <label>Viewers</label>
+        <select v-model='explicitPermissions.view' multiple>
+          <option 
+            v-for='user in allUsers' 
+            :key='user._id' 
+            :value='user._id'
+            >
+            {{ `${user.name} , (${user.email})` }}
           </option>
         </select>
       </div>
@@ -60,8 +127,15 @@
       </div>
       <div class='buttonRow'>
         <div class='buttonCol'>
-          <button @click="makeNewPiece">submit</button>
+          <button 
+            :class='readyToSubmit() ? "" : "disabled"'
+            @click="makeNewPiece"
+            :disabled='!readyToSubmit()'
+            >submit</button>
         </div>
+      </div>
+      <div class='errorRow' v-for='err in errors' :key='err'>
+        <span style='color: red'>{{err}}</span>
       </div>
     </div>
     <div class='raagEditorBox' v-if='showRaagEditor'>
@@ -171,7 +245,10 @@ import {
   saveRaagRules,
   getInstruments,
   getInstrumentation,
+  getLooseRecordings,
+  getAllUsers
 } from '@/js/serverCalls.ts';
+import { UserType } from '@/ts/types';
 import RaagEditor from '@/components/RaagEditor.vue';
 import type { AudioEventMetadataType } from '@/js/serverCalls.ts';
 import { defineComponent } from 'vue';
@@ -209,18 +286,31 @@ type NewPieceRegistrarDataType = {
   raga?: string;
   allEvents: AudioEventMetadataType[];
   aeIdx?: number;
-  recording?: number;
+  recording?: number | RecType;
   raags?: string[];
   showRaagEditor: boolean;
   rules: RulesType,
   savedMsg: string;
   passedInData?: PassedDataType;
   permissions: string;
+  explicitPermissions: {
+    edit: string[],
+    view: string[]
+    publicView: boolean
+  }
   cloning: boolean;
   permissionTypes: string[];
   rulesTemplate: RulesType;
   instrumentation: string[];
   instruments?: string[];
+  noAE: boolean;
+  looseRecs: RecType[];
+  noRec: boolean;
+  ragaExists: boolean;
+  errors: string[];
+  allUsers: UserType[];
+  aeDisabled: boolean;
+  recDisabled: boolean;
 }
 
 export default defineComponent({
@@ -262,6 +352,11 @@ export default defineComponent({
       savedMsg: 'unsaved',
       passedInData: undefined,
       permissions: 'Public',
+      explicitPermissions: {
+        edit: [],
+        view: [],
+        publicView: true
+      },
       cloning: false,
       permissionTypes: [
         'Public',
@@ -293,7 +388,15 @@ export default defineComponent({
         }
       },
       instrumentation: ['Sitar'],
-      instruments: undefined
+      instruments: undefined,
+      noAE: false,
+      looseRecs: [],
+      noRec: false,
+      ragaExists: false,
+      errors: [],
+      allUsers: [],
+      aeDisabled: false,
+      recDisabled: false
     }
   },
   
@@ -311,14 +414,28 @@ export default defineComponent({
   },
     
   async mounted() {
+    this.aeDisabled = false;
+    this.recDisabled = false;
     try {
       this.allEvents = await getAllAudioEventMetadata();
       this.raags = await getRagaNames();
+      this.looseRecs = await getLooseRecordings(this.$store.state.userID!);
+      this.allUsers = await getAllUsers();
+      this.allUsers = this.allUsers.filter(user => {
+        return user._id !== this.$store.state.userID
+      });
+      this.allUsers.sort((a, b) => {
+        if (a.family_name < b.family_name) return -1;
+        else if (a.family_name > b.family_name) return 1;
+        else if (a.given_name < b.given_name) return -1;
+        else if (a.given_name > b.given_name) return 1;
+        else return 0
+      })
       this.rules = this.rulesTemplate;
       if (this.dataObj) { // this is exclusively for cloning
         this.clonePiece()
       }
-      if (this.$route.query.aeName) {
+      if (this.$route.query.aeName !== 'null') {
         const allNames = this.allEvents.map(obj => obj.name);
         this.aeIdx = allNames.indexOf(JSON.parse(this.$route.query.aeName as string));
         const recs = this.allEvents[this.aeIdx].recordings;
@@ -330,6 +447,16 @@ export default defineComponent({
         this.recording = allRecNames.indexOf(parsed);
         this.raga = Object.keys(recs[this.recording].raags)[0];
         this.instrumentation = this.getInstrumentation();
+      } else if (this.$route.query.recID) {
+        console.log('recID')
+        const id = this.$route.query.recID as string;
+        this.noAE = true;
+        this.noRec = false;
+        await this.$nextTick();
+        this.recording = this.looseRecs.find(rec => rec._id === id)!;
+        this.raga = Object.keys(this.recording.raags)[0];
+        console.log(this.recording)
+        this.instrumentation = this.getInstrumentation();
       }
       this.instruments = await getInstruments();
     } catch (err) {
@@ -340,25 +467,49 @@ export default defineComponent({
   
   watch: {
     aeIdx() {
+      console.log('aeIdx changed')
       this.recording = undefined
+    },
+
+    noAE(newVal) {
+      if (newVal === true) {
+        this.aeIdx = undefined;
+        this.recording = undefined;
+      }
     },
     
     async recording(newVal) {
-      if (newVal) {
-        if (this.aeIdx === undefined) {
-          throw new Error('aeIdx is undefined')
+      try {
+        if (newVal) {
+          let audioID;
+          if (this.aeIdx === undefined) {
+            const raags = newVal.raags;
+            const keys = Object.keys(raags);
+            if (keys.length === 1) {
+              this.raga = keys[0]
+            } else if (keys.length > 1) {
+              this.raga = keys.filter(key => raags[key].start === 0)[0]
+            }
+            audioID = newVal._id;
+          } else {
+            const ae = this.allEvents[this.aeIdx];
+            const raags = ae.recordings[newVal].raags;
+            const keys = Object.keys(raags);
+            if (keys.length === 1) {
+              this.raga = keys[0]
+            } else if (keys.length > 1) {
+              this.raga = keys.filter(key => raags[key].start === 0)[0]
+            }
+            audioID = ae.recordings[newVal].audioFileId;
+          }
+          if (audioID === undefined) {
+            throw new Error('audioID is undefined')
+          }
+          this.instrumentation = await getInstrumentation(audioID)
         }
-        const ae = this.allEvents[this.aeIdx];
-        const raags = ae.recordings[newVal].raags;
-        const keys = Object.keys(raags);
-        if (keys.length === 1) {
-          this.raga = keys[0]
-        } else if (keys.length > 1) {
-          this.raga = keys.filter(key => raags[key].start === 0)[0]
-        }
-        const audioID = ae.recordings[newVal].audioFileId;
-        this.instrumentation = await getInstrumentation(audioID)
-      }
+      } catch (err) {
+        console.log(err)
+      }   
     },
     
     raga(newVal) {
@@ -367,15 +518,18 @@ export default defineComponent({
           this.rules = rules.rules;
           const date = new Date(rules.updatedDate);
           this.savedMsg = 'Saved: ' + date.toLocaleString();
+          this.ragaExists = true;
         } else {
           this.rules = this.rulesTemplate;
           this.savedMsg = 'unsaved';
+          this.ragaExists = false;
         }
       })
     },
 
     dataObj(newObj) {
       this.passedInData = JSON.parse(newObj);
+      
 
     }
   },
@@ -386,6 +540,31 @@ export default defineComponent({
   
   methods: {
 
+    readyToSubmit() {
+      this.errors = [];
+      if (this.title === undefined || this.title === '') {
+       this.errors.push('No title')
+      }
+      if (this.raga === undefined) {
+        this.errors.push('No selected raga')
+      }
+      if (this.raga && !this.ragaExists) {
+        this.errors.push('Raga ruleset has not been saved.')
+      }
+      if (this.instrumentation.length === 0) {
+        this.errors.push('No instrumentation')
+      }
+      if ((this.aeIdx === undefined && this.recording === undefined) && !this.noRec) {
+        this.errors.push('No audio event or recording has been selected. If no \
+          recording is desired, "None" must be checked.' )
+      }
+      if (this.errors.length === 0) {
+        return true
+      } else {
+        return false
+      }
+    },
+
     async clonePiece() {
       this.cloning = true;
       
@@ -394,24 +573,47 @@ export default defineComponent({
         if (this.passedInData === undefined) {
           throw new Error('passedInData is undefined')
         }
+        const d = this.passedInData!;
+        const noAE = d.audioEvent === undefined;
+        const noRec = d.audioRecording === undefined;
+        if (noAE && noRec) {
+          this.noAE = true;
+          this.noRec = true;
+        } else if (noAE && !noRec) {
+          this.noAE = true;
+          this.noRec = false;
+        } else if (!noAE && noRec) {
+          this.noAE = false;
+          this.noRec = true;
+        } else {
+          this.noAE = false;
+          this.noRec = false;
+        }
+        this.aeDisabled = true;
+        this.recDisabled = true;
         this.title = this.passedInData.title;
         this.instrumentation = this.passedInData.instrumentation!;
-        this.aeIdx = this.allEvents.findIndex(ae => {
-          return ae.name === this.passedInData!.audioEvent
-        });
-        const recs = this.allEvents[this.aeIdx].recordings;
-        const allRecNames = await Object.keys(recs).map(key => {
-          const rec = recs[Number(key)];
-          return this.getShorthand(rec)
-        });
-        const rec = this.getShorthand(this.passedInData.audioRecording);
-        this.recording = allRecNames.indexOf(rec);
+        if (this.passedInData.audioEvent && this.passedInData.audioRecording) {
+
+          this.aeIdx = this.allEvents.findIndex(ae => {
+            return ae.name === this.passedInData!.audioEvent
+          });
+          const recs = this.allEvents[this.aeIdx].recordings;
+          console.log(recs)
+          const allRecNames = await Object.keys(recs).map(key => {
+            const rec = recs[Number(key)];
+            return this.getShorthand(rec)
+          });
+          let rec;
+          rec = this.getShorthand(this.passedInData.audioRecording);
+          this.recording = allRecNames.indexOf(rec);
+        }
         this.raga = this.passedInData.raga.name;
         const aeElem = this.$refs.audioEvent as HTMLSelectElement;
         const arElem = this.$refs.audioRec as HTMLSelectElement;
         const rElem = this.$refs.raga as HTMLSelectElement;
         aeElem.disabled = true;
-        arElem.disabled = true;
+        if (arElem) arElem.disabled = true;
         rElem.disabled = true;
       } catch (err) {
         console.log(err)
@@ -423,7 +625,8 @@ export default defineComponent({
       const date = new Date();
       const res = await saveRaagRules(this.raga!, this.rules!, date);
       if (res) {
-        this.savedMsg = 'Saved: ' + date.toLocaleString()
+        this.savedMsg = 'Saved: ' + date.toLocaleString();
+        this.ragaExists = true;
       }
     },
     
@@ -432,41 +635,96 @@ export default defineComponent({
         if (this.passedInData === undefined) {
           throw new Error('passedInData is undefined')
         }
-        const ae = this.allEvents[this.aeIdx!];
-        const newPieceInfo = {
-          title: this.title,
-          transcriber: this.passedInData.transcriber,
-          raga: this.passedInData.raga,
-          permissions: this.permissions,
-          audioID: ae.recordings[this.recording!].audioFileId,
-          clone: true,
-          origID: this.passedInData.origID,
-          instrumentation: this.instrumentation
-        };
+        let newPieceInfo;
+        if (this.noAE) {
+          if (this.recording === undefined) {
+            throw new Error('recording is undefined')
+          }
+          newPieceInfo = {
+            title: this.title,
+            transcriber: this.passedInData.transcriber,
+            raga: this.raga,
+            permissions: this.permissions,
+            explicitPermissions: this.explicitPermissions,
+            clone: true,
+            origID: this.passedInData.origID,
+            instrumentation: this.instrumentation,
+            audioID: (this.recording as RecType)._id
+          };
+          
+        } else {
+          const ae = this.allEvents[this.aeIdx!];
+          newPieceInfo = {
+            title: this.title,
+            transcriber: this.passedInData.transcriber,
+            raga: this.passedInData.raga,
+            permissions: this.permissions,
+            explicitPermissions: this.explicitPermissions,
+            audioID: ae.recordings[(this.recording as number)!].audioFileId,
+            clone: true,
+            origID: this.passedInData.origID,
+            instrumentation: this.instrumentation
+          };
+        }
+        
         this.$emit('newPieceInfoEmit', newPieceInfo);
         // this.emitter.emit('newPieceInfo', newPieceInfo);
         
       } else {
-        const newPieceInfo: {
-          title?: string,
-          transcriber?: string,
-          raga?: string,
-          permissions?: string,
-          clone: boolean,
-          audioID?: string,
-          instrumentation: string[]
-        } = {
-          title: this.title,
-          transcriber: this.transcriber,
-          raga: this.raga,
-          permissions: this.permissions,
-          clone: false,
-          instrumentation: this.instrumentation
-        };
-        if (this.aeIdx !== undefined && this.recording !== undefined) {
-          const ae = this.allEvents[this.aeIdx];
-          newPieceInfo.audioID = ae.recordings[this.recording].audioFileId;
-          // newPieceInfo.instrumentation = this.getInstrumentation()
+        let newPieceInfo: {
+            title?: string,
+            transcriber?: string,
+            raga?: string,
+            permissions?: string,
+            explicitPermissions?: {
+              edit: string[],
+              view: string[]
+              publicView: boolean
+            }
+            clone: boolean,
+            audioID?: string,
+            instrumentation: string[]
+          };
+        if (this.noAE) {
+          if (this.noRec) {
+            newPieceInfo = {
+              title: this.title,
+              transcriber: this.transcriber,
+              raga: this.raga,
+              permissions: this.permissions,
+              explicitPermissions: this.explicitPermissions,
+              clone: false,
+              instrumentation: this.instrumentation,
+            }
+
+          } else {
+            newPieceInfo = {
+              title: this.title,
+              transcriber: this.transcriber,
+              raga: this.raga,
+              permissions: this.permissions,
+              explicitPermissions: this.explicitPermissions,
+              clone: false,
+              instrumentation: this.instrumentation,
+              audioID: (this.recording as RecType)._id
+            }
+          }
+          
+
+        } else {
+          newPieceInfo = {
+            title: this.title,
+            transcriber: this.transcriber,
+            raga: this.raga,
+            permissions: this.permissions,
+            explicitPermissions: this.explicitPermissions,
+            clone: false,
+            instrumentation: this.instrumentation
+          };
+          if (this.aeIdx !== undefined && this.recording !== undefined) {
+            const ae = this.allEvents[this.aeIdx];
+            newPieceInfo.audioID = ae.recordings[(this.recording as number)].audioFileId;
+          }
         }
         this.$emit('newPieceInfoEmit', newPieceInfo)
       }
@@ -474,12 +732,18 @@ export default defineComponent({
     },
 
     getInstrumentation() {
-      const rec = this.allEvents[Number(this.aeIdx)].recordings[Number(this.recording)];
+      let rec: RecType;
+      if (!this.noAE) {
+        rec = this.allEvents[Number(this.aeIdx)].recordings[Number(this.recording)];
+      } else {
+        rec = this.recording as RecType;
+      }
+      
       const musicians = Object.keys(rec.musicians);
       const instrumentation: string[] = [];
       musicians.forEach(m => {
         if (rec.musicians[m].role === 'Soloist') {
-          instrumentation.push(rec.musicians[m].instrument)
+          instrumentation.push(rec.musicians[m].instrument!)
         }
       })
       return instrumentation
@@ -507,7 +771,7 @@ export default defineComponent({
 
 .formContainer {
   height: 100%;
-  width: 350px;
+  width: 400px;
   display: flex;
   flex-direction: column;
   justify-content: top;
@@ -520,13 +784,34 @@ export default defineComponent({
   flex-direction: row;
   justify-content: left;
   align-items: center;
-  height: 50px;
+  height: 45px;
+}
+
+.formRow.tall {
+  height: 80px;
+}
+
+.errorRow {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: left;
+  align-items: center;
+  height: 30px;
+}
+
+.errorRow > span {
+  color: red;
+  font-weight: bold;
+  margin-left: 10px;
+  line-height: 15px;
+  text-align: left;
 }
 
 label {
-  /* padding-left: 20px;
-  padding-right: 20px; */
+
   width: 120px;
+  min-width: 120px;
   display: flex;
   flex-direction: row;
   justify-content: right;
@@ -535,6 +820,7 @@ label {
 
 .ragaLabel {
   width: 95px;
+  min-width: 95px;
   max-width: 95px;
   padding-right: 0px;
   margin-right: 5px;
@@ -554,8 +840,24 @@ label {
 button {
   width: 80px;
   height: 25px;
+}
+button.disabled {
+  background-color: #4f5f4f;
+  color: #a0a0a0;
+}
+
+button:hover {
+  background-color: #4f5f4f;
+  color: white;
   cursor: pointer;
 }
+
+button.disabled:hover {
+  background-color: #4f5f4f;
+  color: #a0a0a0;
+  cursor: auto;
+}
+
 
 .buttonRow {
   display: flex;
@@ -567,6 +869,8 @@ button {
 
 select {
   width: 208px;
+  max-width: 208px;
+  min-width: 208px;
 }
 
 .buttonCol {
@@ -614,6 +918,12 @@ select {
   align-items: center;
 }
 
+.smallInfoRow > label {
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+}
+
 .sapa {
   width: 200px;
   height: 50px;
@@ -635,6 +945,7 @@ select {
 .outer {
   display: flex;
   flex-direction: row;
+  justify-content: space-between;
   background-color: #202621;
   border: 1px solid white;
   border-radius: 5px;
@@ -680,9 +991,29 @@ select {
   color: white
 }
 
+select[multiple] {
+  height: 70px;
+}
+
 button {
   background-color: #2f3830;
   color: white
+}
+
+.noneSel {
+  width: 120px;
+  max-width: 120px;
+  display: flex;
+  flex-direction: row;
+  justify-content: left;
+  align-items: center;
+  margin-left: 10px;
+}
+
+.noneSel > input {
+  width: 20px;
+  max-width: 20px;
+  margin: 0px;
 }
 
 </style>

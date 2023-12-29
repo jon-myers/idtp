@@ -5,7 +5,7 @@
       ref='fileContainer' 
       @contextmenu='handleRightClick'>
       <div 
-        class='audioEventRow' 
+        :class='`audioEventRow ${permissionToViewAE(ae) ? "" : "disabled"}`' 
         v-for='(ae, aeIdx) in allAudioEvents'
         :key='ae.name'>
         <div v-if='ae.recordings !== undefined'>
@@ -27,11 +27,13 @@
             </div>
             <div class='audioRecordingCol'>
               <div 
-                :class='`audioRecordingRow height${raagHt(ae, Number(recKey))}`' 
+                :class='computeRecClass(ae, Number(recKey))' 
                 v-for='recKey in Object.keys(ae.recordings)'
+                
                 :id='`arr${aeIdx}_${recKey}`'
                 :key='ae.recordings[Number(recKey)].audioFileId'
-                @dblclick='sendAudioSource($event, ae, aeIdx, Number(recKey))'>
+                @dblclick='permissionToViewRec(ae.recordings[Number(recKey)]) ? 
+                  sendAudioSource($event, ae, aeIdx, Number(recKey)) : null'>
                 <span class='recordingNum'>{{`${Number(recKey)+1}. `}}</span>
                 <div :class='`soloist height${raagHt(ae, Number(recKey))}`'>
                   <span>
@@ -87,6 +89,36 @@
     :closed='contextMenuClosed'
     :choices='contextMenuChoices'
     />
+  <AddToCollection
+    v-if='addToCollectionModalOpen'
+    :possibleCollections='editableCols'
+    :navHeight='navHeight'
+    :recID='selectedAF?.audioFileId'
+    :aeID='selectedAE?._id'
+    @close='closeCollectionsModal'
+    :addType='addType'
+    />
+  <RemoveFromCollection
+    v-if='removeFromCollectionModalOpen'
+    :possibleCollections='addType === "audioEvent" ? 
+      aeRemovableCols : 
+      recRemovableCols'
+    :navHeight='navHeight'
+    :recID='selectedAF?.audioFileId'
+    :aeID='selectedAE!._id'
+    @close='closeCollectionsModal'
+    :removeType='addType'
+    />
+    <PermissionsModal
+      v-if='selectedAE !== undefined && 
+        selectedAE.explicitPermissions !== undefined && 
+        permissionsModalOpen'
+      :navHeight='navHeight'
+      :explicitPermissions='selectedAE.explicitPermissions'
+      :artifactType='"audioEvent"'
+      :artifactID='selectedAE._id'
+      @close='handleClosePermissionsModal'
+      />
   
 </template>
 <script lang='ts'>
@@ -94,26 +126,18 @@ import {
   getAllAudioEventMetadata, 
   deleteAudioEvent,
   getAllTransOfAudioFile,
+  getEditableCollections,
 } from '@/js/serverCalls.ts';
 import AddAudioEvent from '@/components/audioEvents/AddAudioEvent.vue';
 import AudioPlayer from '@/components/audioEvents/AudioPlayer.vue';
 import { defineComponent } from 'vue';
 import ContextMenu from '@/components/ContextMenu.vue';
-
-const displayTime = (dur: number) => {
-  const hours = Math.floor(dur / 3600);
-  let minutes: string | number = Math.floor((dur - hours * 3600) / 60);
-  let seconds: string | number = dur % 60;
-  if (seconds.toString().length === 1) seconds = '0' + seconds;
-  if (hours !== 0) {
-    if (minutes.toString().length === 1) minutes = '0' + minutes;
-    return ([hours, minutes, seconds]).join(':')
-  } else {
-    return minutes + ':' + seconds 
-  }
-}
+import AddToCollection from '@/components/AddToCollection.vue';
+import RemoveFromCollection from '@/components/RemoveFromCollection.vue';
+import PermissionsModal from '@/components/PermissionsModal.vue'; 
 
 import type { AudioEventType, RecType, RaagType } from '@/components/audioEvents/AddAudioEvent.vue'
+import { ContextMenuOptionType, CollectionType } from '@/ts/types.ts';
 
 type AudioEventsDataType = {
   infoKeys: string[],
@@ -141,7 +165,14 @@ type AudioEventsDataType = {
   audioEventId?: string,
   recIdx?: number,
   contextMenuClosed: boolean,
-  contextMenuChoices: { text: string, action: () => void }[],
+  contextMenuChoices: ContextMenuOptionType[],
+  editableCols: CollectionType[],
+  aeRemovableCols: CollectionType[],
+  recRemovableCols: CollectionType[],
+  addToCollectionModalOpen: boolean,
+  removeFromCollectionModalOpen: boolean,
+  permissionsModalOpen: boolean,
+  addType: "audioEvent" | "recording" | "transcription",
 }
 
 export default defineComponent({
@@ -178,10 +209,29 @@ export default defineComponent({
       audioEventId: undefined,
       contextMenuClosed: true,
       contextMenuChoices: [],
+      editableCols: [],
+      aeRemovableCols: [],
+      recRemovableCols: [],
+      addToCollectionModalOpen: false,
+      removeFromCollectionModalOpen: false,
+      permissionsModalOpen: false,
+      addType: 'audioEvent'
     }
   },
   components: {
-    AddAudioEvent, AudioPlayer, ContextMenu
+    AddAudioEvent, 
+    AudioPlayer, 
+    ContextMenu, 
+    AddToCollection, 
+    RemoveFromCollection,
+    PermissionsModal
+  },
+
+  props: {
+    navHeight: {
+      type: Number,
+      required: true
+    },
   },
 
   async created() {
@@ -203,6 +253,14 @@ export default defineComponent({
       console.log(err)
     }
   },
+
+  async mounted() {
+    try {
+      this.editableCols = await getEditableCollections(this.$store.state.userID!)
+    } catch (err) {
+      console.log(err)
+    }
+  },
   
   beforeUnmount() {
     const audioPlayer = this.$refs.audioPlayer as typeof AudioPlayer;
@@ -214,6 +272,69 @@ export default defineComponent({
   },
 
   methods: {
+
+    computeRecClass(ae: AudioEventType, recKey: number) {
+      const rec = ae.recordings[recKey];
+      const baseClass = 'audioRecordingRow';
+      const heightclass = `height${this.raagHt(ae, Number(recKey))}`;
+      const disabledClass = this.permissionToViewRec(rec) ? '' : 'disabled';
+      return `${baseClass} ${heightclass} ${disabledClass}`;
+    },
+
+    permissionToViewRec(recording: RecType) {
+      const ep = recording.explicitPermissions!;
+      const id = this.$store.state.userID!;
+      return ep.publicView || 
+        ep.view.includes(id) || 
+        ep.edit.includes(id) ||
+        recording.userID === id
+    },
+
+    permissionToEditRec(recording: RecType) {
+      const ep = recording.explicitPermissions!;
+      const id = this.$store.state.userID!;
+      return ep.edit.includes(id) || recording.userID === id
+    },
+
+    permissionToViewAE(audioEvent: AudioEventType) {
+      const ep = audioEvent.explicitPermissions!;
+      const id = this.$store.state.userID!;
+      return ep.publicView || 
+        ep.view.includes(id) || 
+        ep.edit.includes(id) ||
+        audioEvent.userID === id
+    },
+
+    permissionToEditAE(audioEvent: AudioEventType) {
+      const ep = audioEvent.explicitPermissions!;
+      const id = this.$store.state.userID!;
+      return ep.edit.includes(id) || audioEvent.userID === id
+    },
+
+    async handleClosePermissionsModal() {
+      this.permissionsModalOpen = false;
+      try {
+        this.allAudioEvents = await getAllAudioEventMetadata();
+        this.allAudioEvents?.sort((a, b) => a.name.localeCompare(b.name));
+        this.editableCols = await getEditableCollections(this.$store.state.userID!)
+
+      } catch (err) {
+        console.log(err)
+      }
+    },
+
+    async closeCollectionsModal() {
+      this.addToCollectionModalOpen = false;
+      this.removeFromCollectionModalOpen = false;
+      try {
+        this.allAudioEvents = await getAllAudioEventMetadata();
+        this.allAudioEvents?.sort((a, b) => a.name.localeCompare(b.name));
+        this.editableCols = await getEditableCollections(this.$store.state.userID!)
+
+      } catch (err) {
+        console.log(err)
+      }
+    },
 
     resetAddEvent() {
       this.showAddEvent = false;
@@ -302,27 +423,92 @@ export default defineComponent({
         this.selectedAE = undefined;
         this.selectedAF = undefined;
       }
+      const userID = this.$store.state.userID!;
+      const aeEditPermission = this.selectedAE && (
+          this.selectedAE.userID === userID ||
+          this.selectedAE.explicitPermissions?.edit.includes(userID)
+      )
+      const aeViewPermission = this.selectedAE && (
+          this.selectedAE.userID === userID ||
+          this.selectedAE.explicitPermissions!.view.includes(userID) ||
+          this.selectedAE.explicitPermissions!.publicView ||
+          this.selectedAE.explicitPermissions!.edit.includes(userID)
+      )
+      const aeOwner = this.selectedAE && this.selectedAE.userID === userID;
+
+      const afEditPermission = this.selectedAE && this.selectedAF && (
+          this.selectedAF.userID === userID ||
+          this.selectedAF.explicitPermissions!.edit.includes(userID)
+      );
+      const afViewPermission = this.selectedAE && this.selectedAF &&
+        (this.selectedAF.userID === userID ||
+          this.selectedAF.explicitPermissions!.view.includes(userID) ||
+          this.selectedAF.explicitPermissions!.publicView ||
+          this.selectedAF.explicitPermissions!.edit.includes(userID)
+        );
+
       this.contextMenuChoices.push({
         text: 'Add Audio Event',
         action: () => {
           this.toggleAddEvent();
           this.contextMenuClosed = true;
-        }
+        },
+        enabled: true
       });
       this.contextMenuChoices.push({
         text: 'Edit Audio Event',
         action: () => {
+          console.log('edit audio event')
           this.openEditWindow(this.selectedAE!._id);
           this.contextMenuClosed = true;
-        }
+        },
+        enabled: aeEditPermission
+        
       });
       this.contextMenuChoices.push({
         text: 'Delete Audio Event',
         action: () => {
           this.deleteAE();
           this.contextMenuClosed = true;
+        },
+        enabled: aeOwner
+      });
+      this.contextMenuChoices.push({
+        text: 'Edit Permissions',
+        action: () => {
+          this.permissionsModalOpen = true;
+          this.contextMenuClosed = true;
+        },
+        enabled: aeOwner
+      });
+      if (this.editableCols.length > 0) {
+        this.contextMenuChoices.push({
+          text: 'Add Event to Collection',
+          action: () => {
+            this.addToCollectionModalOpen = true;
+            
+            this.contextMenuClosed = true;
+          },
+          enabled: aeViewPermission
+        });
+        this.aeRemovableCols = this.editableCols.filter(c => {
+          if (this.selectedAE === undefined) {
+            throw new Error('selectedAE is undefined')
+          }
+          return c.audioEvents.includes(this.selectedAE._id!)
+        });
+        if (this.aeRemovableCols.length > 0) {
+          this.contextMenuChoices.push({
+            text: 'Remove Event from Collection',
+            action: () => {
+              this.removeFromCollectionModalOpen = true;
+              this.contextMenuClosed = true;
+            },
+            enabled: true
+          })
         }
-      })
+      }
+      
       if (this.selectedAF !== undefined) {
         this.contextMenuChoices.push({
           text: 'New Transcription',
@@ -337,8 +523,37 @@ export default defineComponent({
               }
             })
             this.contextMenuClosed = true;
-          }
+          },
+          enabled: afViewPermission
         });
+        if (this.editableCols.length > 0) {
+          this.contextMenuChoices.push({
+            text: 'Add Recording to Collection',
+            action: () => {
+              this.addType = 'recording';
+              this.addToCollectionModalOpen = true;
+              this.contextMenuClosed = true;
+            },
+            enabled: afViewPermission
+          });
+          this.recRemovableCols = this.editableCols.filter(c => {
+            if (this.selectedAF === undefined) {
+              throw new Error('selectedAF is undefined')
+            }
+            return c.audioRecordings.includes(this.selectedAF.audioFileId)
+          });
+          if (this.recRemovableCols.length > 0) {
+            this.contextMenuChoices.push({
+              text: 'Remove Recording from Collection',
+              action: () => {
+                this.addType = 'recording';
+                this.removeFromCollectionModalOpen = true;
+                this.contextMenuClosed = true;
+              },
+              enabled: true
+            })
+          }
+        }
         try {
           const tChoices = await getAllTransOfAudioFile(
             this.selectedAF.audioFileId, this.$store.state.userID!
@@ -503,13 +718,15 @@ export default defineComponent({
       if (!audioEvent.recordings) return 0;
       Object.values(audioEvent.recordings).forEach(rec => {
         Object.keys(rec.raags).forEach(() => ct ++)
+        if (Object.keys(rec.raags).length === 0) ct ++;
       });
       return ct
     },
     
     raagHt(audioEvent: AudioEventType, recKey: number) {
       const rec = audioEvent.recordings[recKey];
-      return Object.keys(rec.raags).length
+      let len = rec.raags ? Object.keys(rec.raags).length: 1;
+      return len === 0 ? 1 : len
     },
     
     openEditWindow(_id: string) {
@@ -574,6 +791,9 @@ button {
   border-bottom: 1px solid black;
 }
 
+.audioEventRow.disabled {
+  color: grey;
+}
 .audioEventNameRow {
   width: 100%;
   height: 40px;
@@ -620,7 +840,12 @@ button {
   flex-direction: row;
   align-items: center;
   justify-content: left;
-  cursor: pointer
+  cursor: pointer;
+  color: white;
+}
+
+.audioRecordingRow.disabled {
+  color: grey;
 }
 
 
@@ -754,6 +979,7 @@ button {
   justify-content: left;
   width: 160px;
   padding-left: 10px;
+  border-right: 1px dotted grey;
 }
 
 .playCol {

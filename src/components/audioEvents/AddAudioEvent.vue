@@ -21,7 +21,7 @@
         <div class='inputPair'>
           <label class='recLabel'>Recordings: </label>
           <select class='recSelect' v-model='numRecordings'>
-            <option v-for='i in 20' :key='i'>{{i}}</option>
+            <option v-for='i in 20' :key='i' :value='i-1'>{{i-1}}</option>
           </select>
         </div>
         <button @click='saveMetadata'>Save</button>
@@ -96,12 +96,12 @@ type AddAudioEventDataType = {
   audioEvent?: AudioEventType,
 }
 
-export type { AddAudioEventDataType }
+export type { AddAudioEventDataType, MusicianType }
 
 type MusicianType = {
-  instrument: string,
-  role: string,
-  gharana: string
+  instrument?: string,
+  role?: 'Soloist' | 'Accompanist' | 'Percussionist' | 'Drone',
+  gharana?: string
 }
 
 import type { RecObjType } from '@/components/audioEvents/AddAudioFile.vue';
@@ -123,7 +123,7 @@ type RecType = {
   audioFileId: string,
   date: {
     day: number,
-    month: number,
+    month: string,
     year: number
   },
   duration: number,
@@ -144,7 +144,14 @@ type RecType = {
   _id?: string,
   parentID?: string,
   parentTitle?: string,
-  parentTrackNumber?: string
+  parentTrackNumber?: string,
+  explicitPermissions?: {
+    edit: string[],
+    view: string[],
+    publicView: boolean
+  },
+  dateModified: string | Date,
+  userID: string,
 }
 
 type AudioEventType = {
@@ -157,6 +164,11 @@ type AudioEventType = {
     [key: number]: RecType
   },
   visible?: boolean,
+  explicitPermissions?: {
+    edit: string[],
+    view: string[],
+    publicView: boolean
+  }
 }
 
 export type { AudioEventType, RecType, RaagType, PSecType }
@@ -173,7 +185,7 @@ export default defineComponent({
   data(): AddAudioEventDataType {
     return {
       eventTypes: undefined,
-      numRecordings: 1,
+      numRecordings: 0,
       keyElems: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
       selectedRecording: 1,
       leftIsDisabled: true,
@@ -242,7 +254,7 @@ export default defineComponent({
     }
     
     this.eventTypes = await getEventTypes()
-    await this.eventTypes.push('Other (specify)');  
+    this.eventTypes.push('Other (specify)');  
   },
   
   

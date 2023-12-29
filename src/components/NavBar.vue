@@ -86,12 +86,13 @@ export default defineComponent({
       lastName: undefined,
       name: undefined,
       navChoices: [
-        { name: 'Files', path: '/files' },
+        { name: 'Transcriptions', path: '/files' },
         { name: 'Editor', path: '/editor' },
         { name: 'Audio Events', path: '/audioEvents' },
         // { name: 'Recordings', path: '/audioRecordings'},
         { name: 'Raag Editor', path: '/raagEditor' },
-        { name: 'Analyzer', path: '/analyzer' }
+        { name: 'Analyzer', path: '/analyzer' },
+        { name: 'Collections', path: '/collections' }
       ]
     }
   },
@@ -349,7 +350,7 @@ a {
   display: flex;
   flex-direction: column;
   user-select: none;
-  z-index: 1
+  z-index: 5
 }
 
 .userMenuRow {

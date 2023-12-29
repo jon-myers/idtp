@@ -41,6 +41,11 @@ const routes = [
     path: '/',
     name: 'LandingPage',
     component: () => import('@/components/LandingPage.vue')
+  },
+  {
+    path: '/collections',
+    name: 'Collections',
+    component: () => import('@/components/collections/CollectionsComponent.vue')
   }
 ];
 

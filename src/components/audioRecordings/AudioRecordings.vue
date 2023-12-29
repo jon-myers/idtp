@@ -8,7 +8,9 @@
         v-for='(field, fIdx) in metadataFields'
         :style='{
           "width": columnWidths[fIdx] + "px",
-          "max-width": fIdx === metadataFields.length - 2 ? "" : columnWidths[fIdx] + "px",
+          "max-width": fIdx === metadataFields.length - 2 ? 
+            "" : 
+            columnWidths[fIdx] + "px",
           "min-width": columnWidths[fIdx] + "px",
           "flex-grow": fIdx === metadataFields.length - 2 ? 1 : 0,
           "position": "relative" 
@@ -28,7 +30,8 @@
           </span>
         </span>
         
-        <div 
+        <div
+          v-if='fIdx !== metadataFields.length - 1'
           class='draggableBorder'
           draggable='true'
           @dragstart='handleDragStart(fIdx, $event)'
@@ -44,9 +47,11 @@
       ref='fileContainer'
       >
       <div 
-        class='recordingRow'
+        :class='`recordingRow ${[permissionToView(recording) ? "" : "disabled"]}`'
         v-for='(recording, rIdx) in allRecordings'
-        @dblclick='sendAudioSource($event, recording)'
+        @dblclick='permissionToView(recording) ? 
+          sendAudioSource($event, recording) : 
+          null'
         :id='`recRow${rIdx}`'
         >
         <div 
@@ -54,7 +59,9 @@
           v-for='(field, fIdx) in metadataFields'
           :style='{ 
             "width": columnWidths[fIdx] + "px", 
-            "max-width": fIdx === metadataFields.length - 2 ? "" : columnWidths[fIdx] + "px",
+            "max-width": fIdx === metadataFields.length - 2 ? 
+              "" : 
+              columnWidths[fIdx] + "px",
             "min-width": columnWidths[fIdx] + "px",
             "flex-grow": fIdx === metadataFields.length - 2 ? 1 : 0 
             }'
@@ -89,7 +96,39 @@
     />
   <UploadRecording 
     v-if='!uploadRecModalClosed'
+    :navHeight='navHeight'
+    :frameView='recModalFrame'
+    :recId='editingRecId'  
+    @closeModal='handleCloseRecModal'
+    @updateFrameView='newVal => recModalFrame = newVal'
+    @updateEditingRecId='newVal => editingRecId = newVal'
   />
+  <AddToCollection 
+    v-if='!addToCollectionModalClosed && selectedRecording'
+    :possibleCollections='possibleCols'
+    :navHeight='navHeight'
+    :recID='selectedRecording._id!'
+    addType='recording'
+    @close='addToCollectionModalClosed = true'
+  />
+  <RemoveFromCollection
+    v-if='!removeFromCollectionModalClosed && selectedRecording'
+    :possibleCollections='removableCols'
+    :navHeight='navHeight'
+    :recID='selectedRecording._id!'
+    removeType='recording'
+    @close='removeFromCollectionModalClosed = true'
+  />
+  <PermissionsModal
+    v-if='!permissionsModalClosed && artifactID && selectedRecording &&
+      selectedRecording.explicitPermissions'
+    :navHeight='navHeight'
+    :artifactID='artifactID'
+    :explicitPermissions='selectedRecording.explicitPermissions'
+    artifactType='audioRecording'
+    @close='handleClosePermissionsModal'
+    />
+
 </template>
 
 <script lang='ts'>
@@ -97,14 +136,20 @@ import { defineComponent } from 'vue';
 import AudioPlayer from '@/components/audioRecordings/ARAudioPlayer.vue';
 import ContextMenu from '@/components/ContextMenu.vue';
 import UploadRecording from '@/components/audioRecordings/UploadRecording.vue';
+import AddToCollection from '@/components/AddToCollection.vue';
+import RemoveFromCollection from '@/components/RemoveFromCollection.vue';
 import { 
   getAllAudioRecordingMetadata, 
   getSortedMusicians,
   getAllTransOfAudioFile,
-  deleteRecording 
+  deleteRecording,
+  getEditableCollections
 } from '@/js/serverCalls.ts';
 import { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
-import { displayTime } from '@/js/utils.ts';
+import { displayTime } from '@/ts/utils.ts';
+import { CollectionType, ContextMenuOptionType } from '@/ts/types.ts';
+import PermissionsModal from '@/components/PermissionsModal.vue';
+
 type AudioRecordingsDataType = {
   audioSource: string | undefined,
   saEstimate: number | undefined,
@@ -120,6 +165,7 @@ type AudioRecordingsDataType = {
   columnWidths: number[],
   initialMouseX?: number,
   initialWidths: number[],
+  minColumnWidths: number[],
   allMusicians?: { 
     'First Name'?: string,
     'Last Name'?: string,
@@ -129,7 +175,7 @@ type AudioRecordingsDataType = {
   selectedSortIdx: number,
   activeRecording: RecType | undefined,
   contextMenuClosed: boolean,
-  contextMenuChoices: { text: string, action: () => void }[],
+  contextMenuChoices: ContextMenuOptionType[],
   userID: string | undefined,
   dropDownLeft: number,
   dropDownTop: number,
@@ -137,6 +183,15 @@ type AudioRecordingsDataType = {
   labelRowHeight: number,
   dropDownHeight: number,
   uploadRecModalClosed: boolean,
+  possibleCols: CollectionType[],
+  removableCols: CollectionType[],
+  addToCollectionModalClosed: boolean,
+  removeFromCollectionModalClosed: boolean,
+  selectedRecording: RecType | undefined,
+  recModalFrame: 'uploadRec' | 'editRecMetadata',
+  editingRecId?: string,
+  permissionsModalClosed: boolean,
+  artifactID: string | undefined,
   
 
 }
@@ -203,7 +258,7 @@ export default defineComponent({
         {
           'name': 'Audio Event',
           'func': (rec: RecType) => {
-            return rec.parentTitle ? rec.parentTitle : 'None';
+            return rec.parentTitle !== undefined ? rec.parentTitle : 'None';
           },
           'sortState': 'down',
           'sortType': 'audioEvent'
@@ -211,7 +266,7 @@ export default defineComponent({
         {
           'name': 'Track #',
           'func': (rec: RecType) => {
-            return rec.parentTrackNumber ? rec.parentTrackNumber : 'None';
+            return rec.parentTrackNumber !== undefined ? rec.parentTrackNumber : 'None';
           },
           'sortState': 'down',
           'sortType': undefined
@@ -219,6 +274,7 @@ export default defineComponent({
       ],
       columnWidths: [200, 180, 180, 80, 400, 80],
       initialWidths: [200, 180, 180, 80, 400, 80],
+      minColumnWidths: [90, 80, 190, 100, 130, 80],
       selectedSortIdx: 0,
       contextMenuClosed: true,
       contextMenuChoices: [],
@@ -229,12 +285,32 @@ export default defineComponent({
       labelRowHeight: 40,
       dropDownHeight: 30,
       uploadRecModalClosed: true,
-
-
+      addToCollectionModalClosed: true,
+      removeFromCollectionModalClosed: true,
+      possibleCols: [],
+      removableCols: [],
+      selectedRecording: undefined,
+      recModalFrame: 'uploadRec',
+      permissionsModalClosed: true,
+      artifactID: undefined,
     }
   },
 
-  components: { AudioPlayer, ContextMenu, UploadRecording },
+  components: { 
+    AudioPlayer, 
+    ContextMenu, 
+    UploadRecording, 
+    AddToCollection,
+    RemoveFromCollection,
+    PermissionsModal
+  },
+
+  props: {
+    navHeight: {
+      type: Number,
+      required: true
+    }
+  },
 
   async created() {
     window.addEventListener('keydown', this.handleKeydown);
@@ -269,22 +345,66 @@ export default defineComponent({
   },
   
   mounted() {
-    const summedWidths = this.columnWidths.reduce((a, b) => a + b, 0);
-    if (summedWidths > window.innerWidth) {
-      const ratio = window.innerWidth / summedWidths;
-      this.columnWidths = this.columnWidths.map(width => width * ratio);
-      this.initialWidths = this.columnWidths.slice();
-    }
-    this.ensureDurationWidth();
-
-    // add observers to resize columns when window is resized
+    this.resetWidths();
+    // add event listener to resize columns when window is resized
+    window.addEventListener('resize', this.resetWidths);
     
+  },
+
+  unmounted() {
+    window.removeEventListener('resize', this.resetWidths);
   },
   
   computed: {
   },
   
   methods: {
+
+    permissionToView(recording: RecType) {
+      const ep = recording.explicitPermissions!;
+      return (
+        ep!.view.includes(this.userID!) ||
+        ep!.edit.includes(this.userID!) ||
+        ep!.publicView ||
+        recording.userID === this.userID
+      );
+    },
+
+    permissiontoEdit(recording: RecType) {
+      const ep = recording.explicitPermissions!;
+      return (
+        ep!.edit.includes(this.userID!) ||
+        recording.userID === this.userID
+      );
+    },
+
+    async handleClosePermissionsModal() {
+      this.permissionsModalClosed = true;
+      try {
+        this.allRecordings = await getAllAudioRecordingMetadata();
+        this.toggleSort(this.selectedSortIdx, true);
+      } catch (err) {
+        console.log(err);
+      }
+    },
+
+    async handleCloseRecModal() {
+      this.uploadRecModalClosed = true;
+      try {
+        this.allRecordings = await getAllAudioRecordingMetadata();
+        this.toggleSort(this.selectedSortIdx, true);
+      } catch (err) {
+        console.log(err);
+      }
+    },
+
+    resetWidths() {
+      const summedWidths = this.columnWidths.reduce((a, b) => a + b, 0);
+      const ratio = window.innerWidth / summedWidths;
+      this.columnWidths = this.columnWidths.map(width => width * ratio);
+      this.initialWidths = this.columnWidths.slice();
+      this.ensureMinWidths();
+    },
 
     nextTrack(shuffling: boolean, initial: boolean) {
 
@@ -377,26 +497,64 @@ export default defineComponent({
           el = el.parentElement!;
         }
         const recording = this.allRecordings[parseInt(el.id.slice(6))];
+        const ep = recording.explicitPermissions!;
+        const editPermission = recording !== undefined && (
+          ep!.edit.includes(this.userID!) ||
+          recording.userID === this.userID
+        );
+        const viewPermission = recording !== undefined && (
+          ep!.view.includes(this.userID!) ||
+          ep!.edit.includes(this.userID!) ||
+          ep!.publicView ||
+          recording.userID === this.userID
+        );
+        const owner = recording !== undefined && (
+          recording.userID === this.userID
+        ); 
         this.contextMenuChoices = [];
         this.contextMenuChoices.push({
           text: 'New Transcription',
           action: () => {
+            let query: {
+              aeName?: string,
+              afName?: string,
+              recID?: string
+            } = {
+              aeName: JSON.stringify(recording.parentTitle),
+              afName: JSON.stringify(this.getShorthand(recording)),
+            }
+            if (recording.parentTitle === null) {
+              query.recID = recording._id;
+            }
             this.$router.push({
               name: 'Files',
-              query: {
-                aeName: JSON.stringify(recording.parentTitle),
-                afName: JSON.stringify(this.getShorthand(recording)),
-              }
+              query
             })
             this.contextMenuClosed = true;
-          }
+          },
+          enabled: viewPermission
+          
         });
 
         // options to edit recording, delete recording, and upload new recording
         this.contextMenuChoices.push({
           text: 'Edit Recording',
-          action: () => this.openRecordingModal({ editing: true })
+          action: () => {
+            this.openRecordingModal({ editing: true, recId: recording._id })
+            this.contextMenuClosed = true;
+          },
+          enabled: editPermission
         });
+        this.contextMenuChoices.push({
+          text: 'Edit Permissions',
+          action: () => {
+            this.artifactID = recording._id!;
+            this.permissionsModalClosed = false;
+            this.contextMenuClosed = true;
+            this.selectedRecording = recording
+          },
+          enabled: owner
+        })
         this.contextMenuChoices.push({
           text: 'Delete Recording',
           action: async () => {
@@ -407,26 +565,58 @@ export default defineComponent({
               this.allRecordings = await getAllAudioRecordingMetadata();
               this.toggleSort(this.selectedSortIdx, true);
             } catch (err) {
-              console.log(err);
-              
+              console.log(err); 
             }
-
-          }
+          },
+          enabled: owner
         });
         this.contextMenuChoices.push({
           text: 'Upload New Recording',
           action: () => {
+            this.recModalFrame = 'uploadRec';
             this.openUploadModal();
             this.contextMenuClosed = true;
-          }
+          },
+          enabled: true
         });
 
         try {
+          // show option to add to collection, if there are any avaliable to
+          // the user
+          this.possibleCols = await getEditableCollections(this.$store.state.userID!);
+          if (this.possibleCols.length > 0) {
+            this.contextMenuChoices.push({
+              text: 'Add to Collection',
+              action: () => {
+
+                this.selectedRecording = recording;
+                this.contextMenuClosed = true;
+                this.addToCollectionModalClosed = false;
+              },
+              enabled: viewPermission
+            });
+
+            this.removableCols = this.possibleCols.filter(col => {
+              return col.audioRecordings.includes(recording._id!);
+            })
+            if (this.removableCols.length > 0) {
+              this.contextMenuChoices.push({
+                text: 'Remove from Collection',
+                action: () => {
+                  this.selectedRecording = recording;
+                  this.contextMenuClosed = true;
+                  this.removeFromCollectionModalClosed = false;
+                  
+                },
+                enabled: true
+              })
+            }
+          }
+
           const tChoices = await getAllTransOfAudioFile(
             recording._id!, 
             this.userID!
           );
-          console.log(tChoices)
           tChoices.forEach(tc => {
             this.contextMenuChoices.push({
               text: `Open file: "${tc.title}" by ${tc.name}`,
@@ -437,10 +627,10 @@ export default defineComponent({
                   name: 'EditorComponent',
                     query: { id: tc._id }
                 })
-              }
+              },
+              enabled: true
             })
           })
-
           this.dropDownHeight = this.contextMenuChoices.length * 30;
           const topPartHeight = rect.height + rect.top;
           if (this.dropDownTop + this.dropDownHeight > topPartHeight - 10) {
@@ -450,8 +640,6 @@ export default defineComponent({
           console.log(err);
         }
       }
-      
-      
     },
 
     getShorthand(rec: RecType) {
@@ -479,25 +667,23 @@ export default defineComponent({
       this.initialWidths = this.columnWidths.slice()
       // make cursor resize until drag end
       document.body.style.cursor = 'col-resize';
-      
-
     },
+
     handleDrag(fIdx: number, event: DragEvent) {
       const nextCol = fIdx < this.columnWidths.length - 1;
       // Calculate the new width based on the mouse movement
       document.body.style.cursor = 'col-resize';
         if (event.clientX !== 0) {
           const deltaX = event.clientX - this.initialMouseX!;
-          if (this.initialWidths[fIdx]! + deltaX < 50) {
+          if (this.initialWidths[fIdx]! + deltaX < this.minColumnWidths[fIdx]!) {
             return;
-          } else if (nextCol && (this.initialWidths[fIdx + 1]! - deltaX < 50)) {
+          } else if (nextCol && (this.initialWidths[fIdx + 1]! - deltaX < this.minColumnWidths[fIdx + 1]!)) {
             return
           } else {
             this.columnWidths[fIdx] = this.initialWidths[fIdx]! + deltaX;
             if (nextCol) {
               this.columnWidths[fIdx + 1] = this.initialWidths[fIdx + 1] - deltaX;
             }
-
           }
       }
     },
@@ -505,9 +691,9 @@ export default defineComponent({
       document.body.style.cursor = 'auto';
       const nextCol = fIdx < this.columnWidths.length - 1;
       const deltaX = event.clientX - this.initialMouseX!;
-      if (this.initialWidths[fIdx] + deltaX < 50) {
+      if (this.initialWidths[fIdx] + deltaX < this.minColumnWidths[fIdx]) {
         return;
-      } else if (nextCol && this.initialWidths[fIdx + 1] - deltaX < 50) {
+      } else if (nextCol && this.initialWidths[fIdx + 1] - deltaX < this.minColumnWidths[fIdx + 1]) {
         return
       } else {
         this.columnWidths[fIdx] = this.initialWidths[fIdx] + deltaX;
@@ -531,6 +717,20 @@ export default defineComponent({
         this.columnWidths[idx] = minWidth;
         this.columnWidths[audioEventIdx] -= extra;
       }
+    },
+
+    ensureMinWidths() {
+      this.columnWidths.forEach((width, idx) => {
+        if (width < this.minColumnWidths[idx]) {
+          const diff = this.minColumnWidths[idx] - width;
+          this.columnWidths[idx] += diff;
+          if (idx < this.columnWidths.length - 1) {
+            this.columnWidths[idx + 1] -= diff;
+          } else {
+            this.columnWidths[0] -= diff;
+          }
+        }
+      })
     },
 
     toggleSort(fIdx: number, ensureCurrentState: boolean = false) {
@@ -557,15 +757,19 @@ export default defineComponent({
     },
 
     eventSorter(a: RecType, b: RecType) {
-      if (a.parentTitle === undefined && b.parentTitle === undefined) {
+      const apt = a.parentTitle;
+      const bpt = b.parentTitle;
+      const aptUndefined = apt === undefined || apt === null;
+      const bptUndefined = bpt === undefined || bpt === null;
+      if (aptUndefined && bptUndefined) {
         return 0;
-      } else if (a.parentTitle === undefined && b.parentTitle !== undefined) {
+      } else if (aptUndefined && !bptUndefined) {
         return 1;
-      } else if (a.parentTitle !== undefined && b.parentTitle === undefined) {
+      } else if (!aptUndefined && bptUndefined) {
         return -1;
       } else {
-        const aTitleLower = a.parentTitle!.toLowerCase();
-        const bTitleLower = b.parentTitle!.toLowerCase();
+        const aTitleLower = apt ? apt.toLowerCase() : '';
+        const bTitleLower = bpt? bpt.toLowerCase() : '';
 
         if (aTitleLower < bTitleLower) {
           return -1;
@@ -695,28 +899,6 @@ export default defineComponent({
           return 0;
         }
       }
-    },
-
-    sendAudioSource(event: MouseEvent, recording: RecType) {
-      const audioFileId = recording._id; 
-      let target = event.target as HTMLElement;
-      if (target.tagName === 'SPAN') {
-        target = target.parentElement!;
-        if (target.classList.contains('metadataLabels')) {
-          target = target.parentElement!;
-        }
-      };
-      const playingElem = document.querySelector('.playing');
-      if (playingElem) {
-        playingElem.classList.remove('playing');
-      }
-      target.classList.add('playing');
-      this.audioSource = `Https://swara.studio/audio/mp3/${audioFileId}.mp3`;
-      this.saEstimate = recording.saEstimate;
-      this.saVerified = recording.saVerified;
-      this.activeRecording = recording;
-
-
     },
 
     trackNumSorter(a: RecType, b: RecType) {
@@ -882,15 +1064,44 @@ export default defineComponent({
 
     },
 
-    openRecordingModal({ editing = true }: { editing?: boolean } = {}) {
-      console.log(`open recording modal, ${editing}`);
+    sendAudioSource(event: MouseEvent, recording: RecType) {
+      const audioFileId = recording._id; 
+      let target = event.target as HTMLElement;
+      if (target.tagName === 'SPAN') {
+        target = target.parentElement!;
+        if (target.classList.contains('metadataLabels')) {
+          target = target.parentElement!;
+        }
+      };
+      const playingElem = document.querySelector('.playing');
+      if (playingElem) {
+        playingElem.classList.remove('playing');
+      }
+      target.classList.add('playing');
+      this.audioSource = `Https://swara.studio/audio/mp3/${audioFileId}.mp3`;
+      this.saEstimate = recording.saEstimate;
+      this.saVerified = recording.saVerified;
+      this.activeRecording = recording;
+    },
+
+    openRecordingModal({ 
+      editing = true, 
+      recId = undefined 
+    }: { 
+      editing?: boolean,
+      recId?: string 
+    } = {}) {
+      // console.log(`open recording modal, ${editing}`);
+      this.uploadRecModalClosed = false;
+      this.recModalFrame = editing ? 'editRecMetadata' : 'uploadRec';
+      if (editing) {
+        this.editingRecId = recId;
+      }
     },
 
     openUploadModal() {
-      console.log('open upload modal');
       this.uploadRecModalClosed = false;
     }
-
   }
 })
 </script>
@@ -921,7 +1132,10 @@ export default defineComponent({
   min-height: 40px;
   width: 100%;
   border-bottom: 1px solid grey;
-  /* overflow-x: hidden; */
+}
+
+.recordingRow.disabled {
+  color: grey;
 }
 
 .recordingRow:hover {

@@ -2083,11 +2083,9 @@ class Piece {
   durArray?: number[];
   raga: Raga;
   title: string;
-  performers: string[];
   dateCreated: Date;
   dateModified: Date;
   location: string;
-  transcriber: string;
   _id?: string;
   audioID?: string;
   audio_DB_ID?: string;
@@ -2101,6 +2099,11 @@ class Piece {
   possibleTrajs: { [key: string]: number[] };
   meters: Meter[];
   sectionCategorization: SecCatType[];
+  explicitPermissions: {
+    edit: string[],
+    view: string[],
+    publicView: boolean
+  }
 
 
   constructor({
@@ -2109,11 +2112,9 @@ class Piece {
     durArray = undefined,
     raga = new Raga(),
     title = 'untitled',
-    performers = [],
     dateCreated = new Date(),
     dateModified = new Date(),
     location = 'Santa Cruz',
-    transcriber = 'Anonymous User',
     _id = undefined,
     audioID = undefined,
     audio_DB_ID = undefined,
@@ -2126,17 +2127,16 @@ class Piece {
     instrumentation = ['Sitar'],
     meters = [],
     sectionCategorization = undefined,
+    explicitPermissions = undefined,
   }: {
     phrases?: Phrase[],
     durTot?: number,
     durArray?: number[],
     raga?: Raga,
     title?: string,
-    performers?: string[],
     dateCreated?: Date,
     dateModified?: Date,
     location?: string,
-    transcriber?: string,
     _id?: string,
     audioID?: string,
     audio_DB_ID?: string,
@@ -2149,6 +2149,11 @@ class Piece {
     instrumentation?: string[],
     meters?: Meter[],
     sectionCategorization?: SecCatType[],
+    explicitPermissions?: {
+      edit: string[],
+      view: string[],
+      publicView: boolean
+    }
   } = {}) {
     this.meters = meters;
     this.phrases = phrases;
@@ -2188,11 +2193,9 @@ class Piece {
     }
     this.putRagaInPhrase();
     this.title = title;
-    this.performers = performers;
     this.dateCreated = dateCreated;
     this.dateModified = dateModified;
     this.location = location;
-    this.transcriber = transcriber;
     this._id = _id;
     this.audioID = audioID;
     this.audio_DB_ID = audio_DB_ID;
@@ -2277,6 +2280,15 @@ class Piece {
       for (let i = 0; i < diff; i++) {
         this.sectionCategorization.push(initSectionCategorization())
       }
+    }
+    if (explicitPermissions === undefined) {
+      this.explicitPermissions = {
+        edit: [],
+        view: [],
+        publicView: true
+      }
+    } else {
+      this.explicitPermissions = explicitPermissions
     }
   }
 
@@ -2494,7 +2506,6 @@ class Piece {
       lastTraj.durTot += extraDur;
       lastPhrase.durTotFromTrajectories();
       lastPhrase.durArrayFromTrajectories();
-      // this.durTot = durTot;
       this.durArrayFromPhrases();
       this.updateStartTimes();
     }
@@ -2539,11 +2550,9 @@ class Piece {
       durTot: this.durTot,
       durArray: this.durArray,
       title: this.title,
-      performers: this.performers,
       dateCreated: this.dateCreated,
       dateModified: this.dateModified,
       location: this.location,
-      transcriber: this.transcriber,
       _id: this._id,
       audioID: this.audioID,
       userID: this.userID,
@@ -2555,6 +2564,7 @@ class Piece {
       instrumentation: this.instrumentation,
       meters: this.meters,
       sectionCategorization: this.sectionCategorization,
+      explicitPermissions: this.explicitPermissions
     }
   }
 }

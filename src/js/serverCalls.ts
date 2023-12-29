@@ -4,7 +4,15 @@ import { AxiosProgressEvent } from 'axios';
 import fetch from 'cross-fetch';
 import { Piece } from './classes.ts';
 import { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
-import { UserType } from '@/components/files/FileManager.vue';
+import { UserType } from '@/ts/types.ts';
+import { CollectionType } from '@/ts/types.ts';
+
+import { 
+  MusicianDBType, 
+  GharanaType,
+  TranscriptionMetadataType
+} from '@/ts/types.ts';
+import { RecUpdateType } from '@/components/audioRecordings/UploadRecording.vue';
 // import { URLSearchParams } from 'url';
 const getPiece = async (id: string): Promise<Piece> => {
   let piece;
@@ -122,8 +130,9 @@ const savePiece = async (piece: Piece) => {
 const getAllPieces = async (
     userID: string, 
     sortKey: string, 
-    sortDir?: string | number
-  ): Promise<Piece[]> => {
+    sortDir?: string | number,
+    newPermissions?: boolean
+  ): Promise<TranscriptionMetadataType[]> => {
   if (sortKey === undefined) {
     sortKey = 'title'
   }
@@ -140,7 +149,8 @@ const getAllPieces = async (
   const query = '?' + new URLSearchParams({
     userID: JSON.stringify(userID),
     sortKey: JSON.stringify(sortKey),
-    sortDir: JSON.stringify(sortDir)
+    sortDir: JSON.stringify(sortDir),
+    newPermissions: JSON.stringify(newPermissions)
   });
   try {
     const response = await fetch(url + 'getAllTranscriptions' + query, request);
@@ -153,29 +163,109 @@ const getAllPieces = async (
   return allPieces
 };
 
-// const getAllAudioFileMetaData = async () => {
-//   let allAudio;
-//   let request = {
-//     method: 'GET',
-//     headers: {
-//       'Content-Type': 'application/json'
-//     },
-//   };
-//   await fetch(url + 'getAllAudioFileMetaData', request)
-//     .then(response => {
-//       if (response.ok) {
-//         return response.json();
-//       }
-//     }).then(data => {
-//       if (data) {
-//         allAudio = data
-//       }
-//     }).catch(err => console.error(err));
-//   return allAudio
-// };
+const updateVisibility = async (
+  artifactType: 'audioEvent' | 'audioRecording' | 'transcription', 
+  _id: string, 
+  explicitPermissions: {
+    edit: string[],
+    view: string[],
+    publicView: boolean
+  }
+  ) => {
+    let result;
+    let request = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        artifactType: artifactType,
+        _id,
+        explicitPermissions
+      })
+    };
+    try {
+      const res = await fetch(url + 'updateVisibility', request);
+      if (res.ok) {
+        result = await res.json()
+      }
+      return result
+    } catch (err) {
+      console.error(err)
+    }  
+  }
 
-const getAllAudioRecordingMetadata = async () => {
-  let allAudio;
+const createCollection = async (collection: CollectionType) => {
+  let result: undefined | { acknowledged: boolean, insertedId: string };
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(collection)
+  };
+  try {
+    const res = await fetch(url + 'createCollection', request);
+    if (res.ok) {
+      result = await res.json()
+    } else {
+      console.error(res)
+    }
+    
+  } catch (err) {
+    console.error(err)
+  }
+  return result
+}
+
+const deleteCollection = async (collectionID: string) => {
+  let result: undefined | { acknowledged: boolean, deletedCount: number };
+  const request = {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ _id: collectionID })
+  };
+  try {
+    const res = await fetch(url + 'deleteCollection', request);
+    if (res.ok) {
+      result = await res.json()
+    } else {
+      console.error(res)
+    }
+    
+  } catch (err) {
+    console.error(err)
+  }
+  return result
+}
+
+const updateCollection = async (collection: CollectionType) => {
+  let result: undefined | { acknowledged: boolean, modifiedCount: number };
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(collection)
+  };
+  try {
+    const res = await fetch(url + 'updateCollection', request);
+    if (res.ok) {
+      result = await res.json()
+    } else {
+      console.error(res)
+    }
+    
+  } catch (err) {
+    console.error(err)
+  }
+  return result
+}
+
+const getAllAudioRecordingMetadata = async (): Promise<RecType[]> => {
+  let allAudio: RecType[] = [];
   let request = {
     method: 'GET',
     headers: {
@@ -201,7 +291,12 @@ type AudioEventMetadataType = {
   permissions: string,
   "event type": string,
   name: string,
-  recordings: RecType[]
+  recordings: RecType[],
+  explicitPermissions?: {
+    edit: string[],
+    view: string[]
+    publicView: boolean
+  }
 }
 
 const getAllAudioEventMetadata = async (): Promise<AudioEventMetadataType[]> => {
@@ -265,11 +360,10 @@ const getAudioRecording = async (_id: string): Promise<RecType> => {
   return audioRecording
 };
 
-const getAllTransOfAudioFile = async (audioID: string, userID: string): Promise<{
-  name: string,
-  title: string,
-  _id: string
-}[]> => {
+const getAllTransOfAudioFile = async (
+    audioID: string, 
+    userID: string
+  ): Promise<TranscriptionMetadataType[]> => {
   let allTrans;
   const suffix = '?' + new URLSearchParams({
     audioID: audioID,
@@ -293,6 +387,25 @@ const getAllTransOfAudioFile = async (audioID: string, userID: string): Promise<
   }
   return allTrans
 };
+
+const getAllMusicians = async (): Promise<MusicianDBType[]> => {
+  let allMusicians: MusicianDBType[] = [];
+  let request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  };
+  try {
+    const res = await fetch(url + 'getAllMusicians', request);
+    if (res.ok) {
+      allMusicians = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return allMusicians
+}
 
 const getSortedMusicians = async (verbose=false): Promise<(string | {
   'First Name'?: string,
@@ -368,6 +481,161 @@ const getGharana = async (initName: string) => {
     return gharana  
 };
 
+const addMusicianToDB = async (data: {
+  fullName: string,
+  initName: string,
+  gharana: string,
+  instrument: string
+}): Promise<{ acknowledged: boolean, insertedId: string}> => {
+  // add musician to DB
+  let out;
+  let request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ 
+      fullName: data.fullName, 
+      initName: data.initName, 
+      gharana: data.gharana, 
+      instrument: data.instrument 
+    })
+  };
+  try {
+    const res = await fetch(url + 'addMusicianToDB', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+    
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+
+};
+
+const addGharanaToDB = async (data: { name: string, members: string[] }) => {
+  // add gharana to DB
+  let out;
+  let request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ name: data.name, members: data.members })
+  };
+  try {
+    const res = await fetch(url + 'addGharanaToDB', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+};
+
+const addCountryToDB = async (continent: string, country: string) => {
+  // add country to DB
+  let out;
+  let request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ country: country, continent: continent })
+  };
+  try {
+    const res = await fetch(url + 'addCountryToDB', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+};
+
+const addCityToDB = async (continent: string, country: string, city: string) => {
+  // add city to DB
+  let out;
+  let request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ continent: continent, country: country, city: city })
+  };
+  try {
+    const res = await fetch(url + 'addCityToDB', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+};
+
+const addRaagToDB = async (raag: string) => {
+  // add raag to DB
+  let out;
+  let request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ raag: raag })
+  };
+  console.log(request)
+  try {
+    const res = await fetch(url + 'addRaagToDB', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+};
+
+const updateAudioRecording = async (
+  recID: string, 
+  updates: RecUpdateType, 
+  aeId?: string,
+  parentTrackNum?: number | string
+  ) => {
+  // update audio recording
+  let out;
+  if (aeId !== undefined && parentTrackNum === undefined) {
+    throw new Error('parentTrackNum must be defined if ae_id is defined')
+  }
+  let request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ 
+      _id: recID, 
+      updates: updates, 
+      ae_id: aeId, 
+      parentTrackNum: parentTrackNum 
+    })
+  };
+  try {
+    const res = await fetch(url + 'updateAudioRecording', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+    
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+};
+
+
+
 const getInstruments = async (melody: boolean = true): Promise<string[]> => {
   melody = melody || false;
   const searchParams = new URLSearchParams({ melody: 'true' });
@@ -404,6 +672,50 @@ const getNumberOfSpectrograms = async (id: string) => {
   };
   try {
     const res = await fetch(url + 'getNumberOfSpectrograms' + suffix, request);
+    if (res.ok) {
+      out = await res.json();
+      return out
+    }
+  } catch (err) {
+    console.error(err)
+  }  
+};
+
+const verifySpectrogram = async (id: string) => {
+  const suffix = '?' + new URLSearchParams({
+    id: id
+  });
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  };
+  try {
+    const res = await fetch(url + 'verifySpectrogram' + suffix, request);
+    if (res.ok) {
+      out = await res.json();
+      return out
+    }
+  } catch (err) {
+    console.error(err)
+  }  
+};
+
+const verifyMelograph = async (id: string) => {
+  const suffix = '?' + new URLSearchParams({
+    id: id
+  });
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+  };
+  try {
+    const res = await fetch(url + 'verifyMelograph' + suffix, request);
     if (res.ok) {
       out = await res.json();
       return out
@@ -643,15 +955,31 @@ const deleteRecording = async (recID: string) => {
   }
 };
 
-const initializeAudioEvent = async (userID: string) => {
+const initializeAudioEvent = async (
+    userID: string, 
+    name?: string, 
+    eventType?: string
+    ): Promise<{ acknowledged: boolean, insertedId: string }> => {
+  const bodyObj: {
+    'userID': string,
+    'name'?: string,
+    'eventType'?: string
+  } = {
+    'userID': userID,
+  };
+  if (name !== undefined) {
+    bodyObj['name'] = name
+  }
+  if (eventType !== undefined) {
+    bodyObj['eventType'] = eventType
+  }
+  console.log(bodyObj)
   const request = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      'userID': userID
-    })
+    body: JSON.stringify(bodyObj)
   };
   let out;
   try {
@@ -659,10 +987,11 @@ const initializeAudioEvent = async (userID: string) => {
     if (response.ok) {
       out = await response.json();
     }
-    return out
+    
   } catch (err) {
     console.error(err)
-  }  
+  }
+  return out
 }
 
 const cleanEmptyDoc = async (_id: string) => {
@@ -793,6 +1122,46 @@ const saveRaagRules = async (
   }
 }
 
+const getAllCollections = async (): Promise<CollectionType[]> => {
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const response = await fetch(url + 'getAllCollections', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+
+}
+
+const getAllGharanas = async (): Promise<GharanaType[]> => {
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const response = await fetch(url + 'getAllGharanas', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+
+}
+
 type OnProgressType = (percent: number) => void;
 
 const uploadFile = async (
@@ -828,13 +1197,18 @@ const uploadFile = async (
 const newUploadFile = async (file: File, onProgress: OnProgressType, {
   audioEventType = 'add',
   audioEventID = undefined,
-  recIdx = undefined
+  recIdx = undefined,
+  userID = undefined,
+  aeName = undefined,
+  aeType = undefined,
 }: {
   audioEventType?: 'add' | 'create' | 'none',
   audioEventID?: string,
-  recIdx?: number
+  recIdx?: number,
+  userID?: string,
+  aeName?: string,
+  aeType?: string
 } = {}) => {
-  console.log('getting to newUploadFile server call')
   if (audioEventType === 'add') {
     if (audioEventID === undefined) {
       throw new Error('audioEventID must be defined')
@@ -847,6 +1221,39 @@ const newUploadFile = async (file: File, onProgress: OnProgressType, {
     formData.append('audioEventID', audioEventID);
     formData.append('recIdx', String(recIdx));
     formData.append('audioEventType', audioEventType);
+    formData.append('userID', userID || '');
+    const config = {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress: (progressEvent: AxiosProgressEvent) => {
+        const progressPercent = 100 * progressEvent.loaded / progressEvent.total!;
+        if (onProgress) onProgress(progressPercent);
+        return progressPercent
+      }
+    };
+    try {
+      const response = await axios.post(url+'newUploadFile', formData, config)
+      if (response.statusText !== 'OK') {
+        throw new Error(`Error! status: ${response.status}`)
+      }
+      return response.data;
+    } catch (err) {
+      console.log(err)
+    }
+  } else if (audioEventType === 'create') {
+    // first create new audio event
+    if (userID === undefined) {
+      throw new Error('userID must be defined')
+    }
+    const result = await initializeAudioEvent(userID, aeName, aeType);
+    audioEventID = result.insertedId;
+    const formData = new FormData();
+    formData.append('audioFile', file);
+    formData.append('audioEventID', audioEventID);
+    formData.append('recIdx', '0');
+    formData.append('audioEventType', audioEventType);
+    formData.append('userID', userID);
     const config = {
       headers: {
         'Content-Type': 'multipart/form-data'
@@ -867,8 +1274,175 @@ const newUploadFile = async (file: File, onProgress: OnProgressType, {
       console.log(err)
     }
   } else {
-    throw new Error('Not implemented yet')
+    if (userID === undefined) {
+      throw new Error('userID must be defined')
+    }
+    const formData = new FormData();
+    formData.append('audioFile', file);
+    formData.append('audioEventType', audioEventType);
+    formData.append('userID', userID);
+    const config = {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress: (progressEvent: AxiosProgressEvent) => {
+        const progressPercent = 100 * progressEvent.loaded / progressEvent.total!;
+        if (onProgress) onProgress(progressPercent);
+        return progressPercent
+      }
+    };
+    try {
+      const response = await axios.post(url+'newUploadFile', formData, config)
+      if (response.statusText !== 'OK') {
+        throw new Error(`Error! status: ${response.status}`)
+      }
+      return response.data;
+    } catch (err) {
+      console.log(err)
+    }
+
   }
+}
+
+const addRecordingToCollection = async (recordingID: string, collectionID: string) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ recordingID, collectionID })
+  };
+  try {
+    const response = await fetch(url + 'addRecordingToCollection', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const getLooseRecordings = async (userID: string): Promise<RecType[]> => {
+// gets all recordings that are not part of an audio event
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const params = new URLSearchParams({ userID: userID });
+    const response = await fetch(url + 'getLooseRecordings?' + params, request);
+    if (response.ok) {
+      out = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const addAudioEventToCollection = async (audioEventID: string, collectionID: string) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ audioEventID, collectionID })
+  };
+  try {
+    const response = await fetch(url + 'addAudioEventToCollection', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const addTranscriptionToCollection = async (transcriptionID: string, collectionID: string) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ transcriptionID, collectionID })
+  };
+  try {
+    const response = await fetch(url + 'addTranscriptionToCollection', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const removeRecordingFromCollection = async (recordingID: string, collectionID: string) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ recordingID, collectionID })
+  };
+  try {
+    const response = await fetch(url + 'removeRecordingFromCollection', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const removeAudioEventFromCollection = async (audioEventID: string, collectionID: string) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ audioEventID, collectionID })
+  };
+  try {
+    const response = await fetch(url + 'removeAudioEventFromCollection', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const removeTranscriptionFromCollection = async (transcriptionID: string, collectionID: string) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ transcriptionID, collectionID })
+  };
+  try {
+    const response = await fetch(url + 'removeTranscriptionFromCollection', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
 }
 
 type UserDataType = {
@@ -1049,7 +1623,12 @@ const cloneTranscription = async ({
   permissions = undefined,
   name = undefined,
   family_name = undefined,
-  given_name = undefined
+  given_name = undefined,
+  explicitPermissions = {
+    edit: [],
+    view: [],
+    publicView: false
+  },
 }: {
   id?: string,
   title?: string,
@@ -1057,7 +1636,12 @@ const cloneTranscription = async ({
   permissions?: string,
   name?: string,
   family_name?: string,
-  given_name?: string
+  given_name?: string,
+  explicitPermissions?: {
+    edit: string[],
+    view: string[]
+    publicView: boolean
+  }
 } = {}) => {
   let out;
   const request = {
@@ -1072,7 +1656,8 @@ const cloneTranscription = async ({
       permissions: permissions,
       name: name,
       family_name: family_name,
-      given_name: given_name
+      given_name: given_name,
+      explicitPermissions: explicitPermissions
     })
   };
   try {
@@ -1129,10 +1714,10 @@ const getIpaVowels = async (): Promise<IpaVowelType[]> => {
     if (response.ok) {
       out = await response.json()
     }
-    return out
   } catch (err) {
     console.error(err)
   }
+  return out
 }
 
 type IPAConsonantType = {
@@ -1157,10 +1742,11 @@ const getConsonants = async (): Promise<IPAConsonantType[]> => {
     if (response.ok) {
       out = await response.json()
     }
-    return out
+    
   } catch (err) {
     console.error(err)
   }
+  return out
 }
 
 const getAllUsers = async () => {
@@ -1196,6 +1782,94 @@ const getMelographJSON = async (recID: string) => {
   }
 }
 
+const getRecsFromIds = async (recIDs: string[]) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      recIDs
+    })
+  };
+  try {
+    const response = await fetch(url + 'getRecsFromIds', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const getAEsFromIds = async (aeIDs: string[]) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      aeIDs
+    })
+  };
+  try {
+    const response = await fetch(url + 'getAEsFromIds', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+};
+
+const getTranscriptionsFromIds = async (transIDs: string[], userID: string) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      transIDs,
+      userID
+    })
+  };
+  try {
+    const response = await fetch(url + 'getTranscriptionsFromIds', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const getEditableCollections = async (userID: string): Promise<CollectionType[]> => {
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const params = new URLSearchParams({ userID: JSON.stringify(userID) });
+    const response = await fetch(url + 'getEditableCollections?' + params, request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
 
 export { 
   getPiece,
@@ -1205,7 +1879,6 @@ export {
   deletePiece,
   deleteAudioEvent,
   getAudioDBEntry,
-  // getAllAudioFileMetaData,
   getAllAudioRecordingMetadata,
   uploadFile,
   newUploadFile,
@@ -1246,5 +1919,31 @@ export {
   updateTranscriptionOwner,
   getMelographJSON,
   makeMelograph,
-  deleteRecording
+  deleteRecording,
+  createCollection,
+  deleteCollection,
+  updateCollection,
+  getAllCollections,
+  getEditableCollections,
+  addRecordingToCollection,
+  addAudioEventToCollection,
+  addTranscriptionToCollection,
+  removeRecordingFromCollection,
+  removeAudioEventFromCollection,
+  removeTranscriptionFromCollection,
+  getRecsFromIds,
+  getAEsFromIds,
+  getTranscriptionsFromIds,
+  getAllMusicians,
+  getAllGharanas,
+  addMusicianToDB,
+  addGharanaToDB,
+  addCountryToDB,
+  addCityToDB,
+  addRaagToDB,
+  updateAudioRecording,
+  verifySpectrogram,
+  verifyMelograph,
+  updateVisibility,
+  getLooseRecordings
 }
