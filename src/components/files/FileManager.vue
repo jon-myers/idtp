@@ -387,13 +387,6 @@ export default defineComponent({
 
   },
 
-  props: {
-    navHeight: {
-      type: Number,
-      required: true,
-    },
-  },
-
   methods: {
 
     async closeCollectionsModal() {
