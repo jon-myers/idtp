@@ -384,6 +384,14 @@ export default defineComponent({
     window.removeEventListener('resize', () => {
       this.fileContainerHeight = window.innerHeight - this.navHeight;
     });
+
+  },
+
+  props: {
+    navHeight: {
+      type: Number,
+      required: true,
+    },
   },
 
   methods: {
