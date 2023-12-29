@@ -11,11 +11,11 @@ const routes = [
     name: 'AudioEvents',
     component: () => import('@/components/audioEvents/AudioEvents.vue')
   },
-  // {
-  //   path: '/audioRecordings',
-  //   name: 'AudioRecordings',
-  //   component: () => import('@/components/audioRecordings/AudioRecordings.vue')
-  // },
+  {
+    path: '/audioRecordings',
+    name: 'AudioRecordings',
+    component: () => import('@/components/audioRecordings/AudioRecordings.vue')
+  },
   {
     path: '/raagEditor',
     name: 'RaagEditor',
