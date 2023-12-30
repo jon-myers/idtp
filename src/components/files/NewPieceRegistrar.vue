@@ -128,9 +128,9 @@
       <div class='buttonRow'>
         <div class='buttonCol'>
           <button 
-            :class='readyToSubmit() ? "" : "disabled"'
+            :class='readyToSubmit ? "" : "disabled"'
             @click="makeNewPiece"
-            :disabled='!readyToSubmit()'
+            :disabled='!readyToSubmit'
             >submit</button>
         </div>
       </div>
@@ -403,19 +403,33 @@ export default defineComponent({
   props: {
     modalWidth: {
       type: Number,
+      required: true,
     },
     modalHeight: {
       type: Number,
+      required: true,
     },
     dataObj: {
       type: String,
       required: true
     },
   },
+
+  computed: {
+    readyToSubmit() {
+      console.log('readyToSubmit getting called')
+      if (this.errors.length === 0) {
+        return true
+      } else {
+        return false
+      }
+    }
+  },
     
   async mounted() {
-    this.aeDisabled = false;
-    this.recDisabled = false;
+    // this.aeDisabled = false;
+    // this.recDisabled = false;
+    this.updateErrors();
     try {
       this.allEvents = await getAllAudioEventMetadata();
       this.raags = await getRagaNames();
@@ -435,7 +449,7 @@ export default defineComponent({
       if (this.dataObj) { // this is exclusively for cloning
         this.clonePiece()
       }
-      if (this.$route.query.aeName !== 'null') {
+      if (this.$route.query.aeName !== 'null' && this.$route.query.aeName !== undefined) {
         const allNames = this.allEvents.map(obj => obj.name);
         this.aeIdx = allNames.indexOf(JSON.parse(this.$route.query.aeName as string));
         const recs = this.allEvents[this.aeIdx].recordings;
@@ -468,7 +482,8 @@ export default defineComponent({
   watch: {
     aeIdx() {
       console.log('aeIdx changed')
-      this.recording = undefined
+      this.recording = undefined;
+      this.updateErrors();
     },
 
     noAE(newVal) {
@@ -476,6 +491,7 @@ export default defineComponent({
         this.aeIdx = undefined;
         this.recording = undefined;
       }
+      this.updateErrors();
     },
     
     async recording(newVal) {
@@ -507,6 +523,7 @@ export default defineComponent({
           }
           this.instrumentation = await getInstrumentation(audioID)
         }
+        this.updateErrors();
       } catch (err) {
         console.log(err)
       }   
@@ -524,23 +541,39 @@ export default defineComponent({
           this.savedMsg = 'unsaved';
           this.ragaExists = false;
         }
+        this.updateErrors();
       })
     },
 
     dataObj(newObj) {
       this.passedInData = JSON.parse(newObj);
-      
+    },
 
-    }
+    title(newTitle) {
+      this.updateErrors();
+    },
+
+    instrumentation(newInst) {
+      this.updateErrors();
+    },
   },
   
   components: {
-    RaagEditor
+    // RaagEditor
   },
   
   methods: {
 
-    readyToSubmit() {
+    // readyToSubmit() {
+    //   console.log('readyToSubmit getting called')
+    //   if (this.errors.length === 0) {
+    //     return true
+    //   } else {
+    //     return false
+    //   }
+    // },
+
+    updateErrors() {
       this.errors = [];
       if (this.title === undefined || this.title === '') {
        this.errors.push('No title')
@@ -557,11 +590,6 @@ export default defineComponent({
       if ((this.aeIdx === undefined && this.recording === undefined) && !this.noRec) {
         this.errors.push('No audio event or recording has been selected. If no \
           recording is desired, "None" must be checked.' )
-      }
-      if (this.errors.length === 0) {
-        return true
-      } else {
-        return false
       }
     },
 
@@ -622,11 +650,16 @@ export default defineComponent({
     },
     
     async save() {
-      const date = new Date();
-      const res = await saveRaagRules(this.raga!, this.rules!, date);
-      if (res) {
-        this.savedMsg = 'Saved: ' + date.toLocaleString();
-        this.ragaExists = true;
+      try {
+        const date = new Date();
+        const res = await saveRaagRules(this.raga!, this.rules!, date);
+        if (res) {
+          this.savedMsg = 'Saved: ' + date.toLocaleString();
+          this.ragaExists = true;
+        }
+        this.updateErrors();
+      } catch (err) {
+        console.log(err)
       }
     },
     
