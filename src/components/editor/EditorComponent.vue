@@ -242,6 +242,7 @@ import { detect, BrowserInfo } from 'detect-browser';
 import { defineComponent } from 'vue';
 
 import { RecType } from '@/components/audioEvents/AddAudioEvent.vue'
+import { ContextMenuOptionType } from '@/ts/types';
 
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
 
@@ -408,7 +409,7 @@ type EditorDataType = {
   contextMenuX: number,
   contextMenuY: number,
   contextMenuClosed: boolean,
-  contextMenuChoices: { text: string, action: () => void }[],
+  contextMenuChoices: ContextMenuOptionType[],
   selBoxStartX?: number,
   selBoxStartY?: number,
   fullWidth: number,
@@ -2011,7 +2012,8 @@ export default defineComponent({
           d3Select(`#dragDot${ddIdx}`)
             .on('.drag', null)
             .call(newDrag())
-        }
+        },
+        enabled: true
       })
       this.contextMenuClosed = false;
     },
@@ -3064,7 +3066,8 @@ export default defineComponent({
                     this.contextMenuClosed = true;
                     this.resetZoom();
                     this.selectMeter(pulse.uniqueId)
-                  }
+                  },
+                  enabled: true
                 })
               } else if (cycle === this.selectedMeter!.repetitions - 1) {
                 this.contextMenuChoices.push({
@@ -3074,7 +3077,8 @@ export default defineComponent({
                     this.contextMenuClosed = true;
                     this.resetZoom();
                     this.selectMeter(pulse.uniqueId)
-                  }
+                  },
+                  enabled: true
                 })
               }
               if (!this.selectedMeter!.allPulses[0].corporeal) {
@@ -3085,7 +3089,8 @@ export default defineComponent({
                     this.contextMenuClosed = true;
                     this.resetZoom();
                     this.selectMeter(pulse.uniqueId)
-                  }
+                  },
+                  enabled: true
                 })
               }
               const ap = this.selectedMeter!.allPulses;
@@ -3097,7 +3102,8 @@ export default defineComponent({
                     this.contextMenuClosed = true;
                     this.resetZoom();
                     this.selectMeter(pulse.uniqueId)
-                  }
+                  },
+                  enabled: true
                 })
               }
             }
@@ -6178,7 +6184,8 @@ export default defineComponent({
             labelEditor.selectedHierarchy = 'Section';
             labelEditor.scrollToSection(sectionIdx);
           })
-        }
+        },
+        enabled: true
       });
       this.contextMenuChoices.push({
         text: `Edit Phrase ${pIdx} labels`,
@@ -6191,8 +6198,8 @@ export default defineComponent({
             labelEditor.selectedHierarchy = 'Phrase';
             labelEditor.scrollToPhrase(pIdx);
           })
-
-        }
+        },
+        enabled: true
       })
       this.contextMenuClosed = false;
       
@@ -6264,7 +6271,8 @@ export default defineComponent({
               action: () => {
                 this.insertSilentTrajLeft(traj);
                 this.contextMenuClosed = true;
-              }
+              },
+              enabled: true
             })
           }
           if (insertSilenceRight) {
@@ -6273,7 +6281,8 @@ export default defineComponent({
               action: () => {
                 this.insertSilentTrajRight(traj);
                 this.contextMenuClosed = true;
-              }
+              },
+              enabled: true
             })
           } 
           if (insertFixedLeft) {
@@ -6282,7 +6291,8 @@ export default defineComponent({
               action: () => {
                 this.insertFixedTrajLeft(traj);
                 this.contextMenuClosed = true;
-              }
+              },
+              enabled: true
             })
           }
           if (insertFixedRight) {
@@ -6291,7 +6301,9 @@ export default defineComponent({
               action: () => {
                 this.insertFixedTrajRight(traj);
                 this.contextMenuClosed = true;
-              }
+              },
+              enabled: true
+
             })
           };
           if (tIdx > 0) {
@@ -6302,7 +6314,8 @@ export default defineComponent({
                 action: () => {
                   this.addTrajToSelectedGroup(traj);
                   this.contextMenuClosed = true;
-                }
+                },
+                enabled: true
               })
             }
           }
@@ -6314,7 +6327,8 @@ export default defineComponent({
                 action: () => {
                   this.addTrajToSelectedGroup(traj);
                   this.contextMenuClosed = true;
-                }
+                },
+                enabled: true
               })
             }
           }
@@ -6373,7 +6387,8 @@ export default defineComponent({
               action: () => {
                 this.insertSilentTrajLeft(firstTraj);
                 this.contextMenuClosed = true;
-              }
+              },
+              enabled: true
             })
           }
           if (groupInsertSilenceRight) {
@@ -6382,7 +6397,8 @@ export default defineComponent({
               action: () => {
                 this.insertSilentTrajRight(lastTraj);
                 this.contextMenuClosed = true;
-              }
+              },
+              enabled: true
             })
           }
           if (groupInsertFixedLeft) {
@@ -6391,7 +6407,8 @@ export default defineComponent({
               action: () => {
                 this.insertFixedTrajLeft(firstTraj);
                 this.contextMenuClosed = true;
-              }
+              },
+              enabled: true
             })
           }
           if (groupInsertFixedRight) {
@@ -6400,7 +6417,8 @@ export default defineComponent({
               action: () => {
                 this.insertFixedTrajRight(lastTraj);
                 this.contextMenuClosed = true;
-              }
+              },
+              enabled: true
             })
           }
         };
