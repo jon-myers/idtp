@@ -129,9 +129,6 @@ export default defineComponent({
     
     try {
       this.allUsers = await getAllUsers();
-      this.allUsers = this.allUsers.filter(user => {
-        return user._id !== this.$store.state.userID
-      });
       this.allUsers.sort((a, b) => {
         if (a.family_name < b.family_name) return -1;
         else if (a.family_name > b.family_name) return 1;
