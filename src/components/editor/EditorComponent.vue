@@ -4082,7 +4082,7 @@ export default defineComponent({
         d3SelectAll('.newSeriesDot').remove();
       }
       if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
-      if (this.regionG && !regionToo) {
+      if (this.regionG && regionToo) {
         this.regionG.remove();
         this.regionG = undefined;
         this.regionStartTime = 0;
