@@ -383,9 +383,9 @@ import Gradient from 'javascript-color-gradient';
 import * as d3 from 'd3';
 import { defineComponent } from 'vue';
 
-import SegmentDisplay from '@/components/analysis/SegmentDisplay.vue';
-import QueryControls from '@/components/analysis/QueryControls.vue';
-import PitchPrevalence from '@/components/analysis/PitchPrevalence.vue';
+import SegmentDisplay from '@/comps/analysis/SegmentDisplay.vue';
+import QueryControls from '@/comps/analysis/QueryControls.vue';
+import PitchPrevalence from '@/comps/analysis/PitchPrevalence.vue';
 import categorization from '@/assets/json/categorization.json';
 
 const phraseTop = categorization['Phrase'];

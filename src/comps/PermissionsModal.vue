@@ -75,7 +75,7 @@ import { updateVisibility, getAllUsers } from '@/js/serverCalls';
 import { 
   AudioEventType, 
   RecType 
-} from '@/components/audioEvents/AddAudioEvent.vue';
+} from '@/comps/audioEvents/AddAudioEvent.vue';
 
 
 type PermissionsModalDataType = {

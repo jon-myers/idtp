@@ -231,17 +231,17 @@ import {
   getMelographJSON
 } from '@/js/serverCalls.ts';
 import { Meter, Pulse } from '@/js/meter.ts';
-import EditorAudioPlayer from '@/components/editor/EditorAudioPlayer.vue';
-import MeterControls from '@/components/editor/MeterControls.vue';
-import TrajSelectPanel from '@/components/editor/TrajSelectPanel.vue';
-import ContextMenu from'@/components/ContextMenu.vue';
-import LabelEditor from '@/components/editor/LabelEditor.vue';
+import EditorAudioPlayer from '@/comps/editor/EditorAudioPlayer.vue';
+import MeterControls from '@/comps/editor/MeterControls.vue';
+import TrajSelectPanel from '@/comps/editor/TrajSelectPanel.vue';
+import ContextMenu from'@/comps/ContextMenu.vue';
+import LabelEditor from '@/comps/editor/LabelEditor.vue';
 import instructionsText from '@/assets/texts/editor_instructions.html?raw';
 import { detect, BrowserInfo } from 'detect-browser';
 
 import { defineComponent } from 'vue';
 
-import { RecType } from '@/components/audioEvents/AddAudioEvent.vue'
+import { RecType } from '@/comps/audioEvents/AddAudioEvent.vue'
 import { ContextMenuOptionType } from '@/ts/types';
 
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);

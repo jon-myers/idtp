@@ -149,7 +149,7 @@ import { displayTime } from '@/ts/utils';
 import type { 
   RecType, 
   AudioEventType 
-} from '@/components/audioEvents/AddAudioEvent.vue';
+} from '@/comps/audioEvents/AddAudioEvent.vue';
 import { getAEsFromIds } from '@/js/serverCalls';
 
 type MiniAudioEventsDataType = {

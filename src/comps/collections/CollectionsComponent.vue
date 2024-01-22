@@ -25,7 +25,11 @@
           <div 
             v-for='(collection, cIdx) in collector.collections' 
             :key='cIdx' 
-            :class='`collection ${ cIdx === collector.collections.length - 1 ? "last" : "" }`'
+            :class='`collection ${ 
+              cIdx === collector.collections.length - 1 ? 
+              "last" : 
+              "" 
+              }`'
             :id='collection._id'
             :style='{ 
               "background-color": collection.color,
@@ -75,13 +79,12 @@ import {
   deleteCollection, 
   getAllCollections 
 } from '@/js/serverCalls.ts';
-import NewCollectionModal from '@/components/collections/NewCollectionModal.vue';
+const collectionsDir = '@/comps/collections/';
+import NewCollectionModal from '@/comps/collections/NewCollectionModal.vue';
 import { getContrastingTextColor } from '@/ts/utils';
 import { defineComponent } from 'vue';
-import ContextMenu from '@/components/ContextMenu.vue';
-import CollectionViewer from '@/components/collections/CollectionViewer.vue';
-import MiniAudioRecordings from '@/components/collections/MiniAudioRecordings.vue';
-import MiniTranscriptions from '@/components/collections/MiniTranscriptions.vue';
+import ContextMenu from '@/comps/ContextMenu.vue';
+import CollectionViewer from '@/comps/collections/CollectionViewer.vue';
 
 type CollectionsComponentDataType = {
   newCollectionModalOpen: boolean,

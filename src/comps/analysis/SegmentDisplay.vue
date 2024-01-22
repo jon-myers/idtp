@@ -57,7 +57,7 @@ type SegmentDisplayDataType = {
   contextMenuChoices: { text: string, action: (e) => void }[],
 };
 
-import ContextMenu from '@/components/ContextMenu.vue';
+import ContextMenu from '@/comps/ContextMenu.vue';
 
 export default defineComponent({
   name: 'SegmentDisplay',

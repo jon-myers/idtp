@@ -6,8 +6,8 @@
       @mouseleave='hoverTrigger(false)'
       @mousemove='handleCircleMouseMove'
       @mouseup='handleCircleMouseUp'>
-      <div class='progressBarOuter' @click='handleProgressClick' ref='pbOuter'>
-        <div class='progressBarInner'>
+      <div class='progBarOuter' @click='handleProgressClick' ref='pbOuter'>
+        <div class='progBarInner'>
           <div :class='`currentTime tooLeft`'>
             {{formattedCurrentTime}}
           </div>
@@ -40,19 +40,19 @@
           </div>
         </div>
         <div class='recInfo right'>
-          <!-- <div class='rulerBox'>
+          <div class='rulerBox'>
             <img :src='icons.ruler' @click='toggleWaveform' />
-          </div> -->
+          </div>
         </div>
       </div>
     </div>
-    <!-- <WaveformAnalyzer
+    <WaveformAnalyzer
       class='waveformAnalyzer'
       v-show='showWaveform' 
       :initSaEstimate='saEstimate' 
       :initSaVerified='saVerified'
       ref='waveformAnalyzer'
-      :key='waKey'/> -->
+      :key='waKey'/>
     
   
   </div>
@@ -65,8 +65,8 @@ import loopIcon from '@/assets/icons/loop.svg';
 import pauseIcon from '@/assets/icons/pause.svg';
 import playIcon from '@/assets/icons/play.svg';
 import shuffleIcon from '@/assets/icons/shuffle.svg';
-// import rulerIcon from '@/assets/icons/ruler.svg';
-// import WaveformAnalyzer from '@/components/audioEvents/WaveformAnalyzer.vue';
+import rulerIcon from '@/assets/icons/ruler.svg';
+import WaveformAnalyzer from '@/comps/audioEvents/WaveformAnalyzer.vue';
 
 const structuredTime = (dur: number) => {
   const hours = String(Math.floor(dur / 3600));
@@ -98,7 +98,7 @@ type AudioPlayerData = {
     pause: string,
     play: string,
     shuffle: string,
-    // ruler: string
+    ruler: string
   },
   circleDragging: boolean,
   formattedCurrentTime: string,
@@ -109,7 +109,7 @@ type AudioPlayerData = {
 
 
 export default {
-  name: 'GenericAudioPlayer',
+  name: 'AudioPlayer',
   
   data(): AudioPlayerData {
     return {
@@ -126,7 +126,7 @@ export default {
         pause: pauseIcon,
         play: playIcon,
         shuffle: shuffleIcon,
-        // ruler: rulerIcon
+        ruler: rulerIcon
       },
       circleDragging: false,
       formattedCurrentTime: '00:00',
@@ -137,7 +137,7 @@ export default {
   },
   
   components: {
-    // WaveformAnalyzer
+    WaveformAnalyzer
   },
   
   props: [
@@ -151,8 +151,8 @@ export default {
     this.audio = new Audio() as HTMLAudioElement;
     this.audio.ontimeupdate = () => {
       this.progress = this.audio!.currentTime / this.audio!.duration;
-      const pbi = document.querySelector('.progressBarInner') as HTMLDivElement;
-      const pbo = document.querySelector('.progressBarOuter');
+      const pbi = document.querySelector('.progBarInner') as HTMLDivElement;
+      const pbo = document.querySelector('.progBarOuter');
       if (pbo) {
         const totWidth = pbo.getBoundingClientRect().width;
         pbi!.style.width = this.progress * totWidth + 'px'
@@ -233,11 +233,7 @@ export default {
       if (this.audio === undefined) {
         throw new Error('audio is undefined')
       }
-      if (this.audio.currentTime > 2) {
-        this.audio.currentTime = 0
-      } else {
-        this.$emit('emitPrevTrack', this.shuffling, this.looping)
-      }
+      this.audio.currentTime = 0
     },
     
     handleProgressClick(e: MouseEvent) {
@@ -351,8 +347,8 @@ export default {
     handleCircleMouseMove(e: MouseEvent) {
       if (this.circleDragging) {
         const diff = this.dragStart - e.clientX;
-        const pbi = document.querySelector('.progressBarInner') as HTMLDivElement;
-        const pbo = document.querySelector('.progressBarOuter') as HTMLDivElement;
+        const pbi = document.querySelector('.progBarInner') as HTMLDivElement;
+        const pbo = document.querySelector('.progBarOuter') as HTMLDivElement;
         const pboBox = pbo.getBoundingClientRect()
         pbi.style.width = pboBox.width * this.progress - diff + 'px';
       }
@@ -380,25 +376,25 @@ export default {
   pointer-events: auto;
 }
 
-.progressBarOuter {
+.progBarOuter {
   width: 100%;
   height: 8px;
   background-color: #242424;
   overflow-x: hidden;
 }
 
-.progressBarOuter:hover {
+.progBarOuter:hover {
   cursor: pointer
 }
 
-.progressBarInner {
+.progBarInner {
   width: 0px;
   background-color: lightgrey;
   height: 6px;
   position: absolute;
 }
 
-.progressBarInner:hover {
+.progBarInner:hover {
   cursor: pointer
 }
 
@@ -438,7 +434,7 @@ export default {
   align-items: center;
   justify-content: right;
 }
-/* 
+
 .rulerBox {
   width: 100px;
   height: 100%;
@@ -462,7 +458,7 @@ export default {
 .rulerBox > .showWaveform {
   filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) 
     brightness(97%) contrast(97%);
-} */
+}
 
 .controlFlexer {
   width: 100%;
@@ -601,7 +597,7 @@ export default {
   pointer-events: auto;
 }
 
-/* .waveformAnalyzer {
+.waveformAnalyzer {
   z-index: -2
-} */
+}
 </style>

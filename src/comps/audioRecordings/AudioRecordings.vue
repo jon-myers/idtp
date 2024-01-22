@@ -47,9 +47,9 @@
       ref='fileContainer'
       >
       <div 
-        :class='`recordingRow ${[permissionToView(recording) ? "" : "disabled"]}`'
+        :class='`recordingRow ${[canView(recording) ? "" : "disabled"]}`'
         v-for='(recording, rIdx) in allRecordings'
-        @dblclick='permissionToView(recording) ? 
+        @dblclick='canView(recording) ? 
           sendAudioSource($event, recording) : 
           null'
         :id='`recRow${rIdx}`'
@@ -133,11 +133,11 @@
 
 <script lang='ts'>
 import { defineComponent } from 'vue';
-import AudioPlayer from '@/components/audioRecordings/ARAudioPlayer.vue';
-import ContextMenu from '@/components/ContextMenu.vue';
-import UploadRecording from '@/components/audioRecordings/UploadRecording.vue';
-import AddToCollection from '@/components/AddToCollection.vue';
-import RemoveFromCollection from '@/components/RemoveFromCollection.vue';
+import AudioPlayer from '@/comps/audioRecordings/ARAudioPlayer.vue';
+import ContextMenu from '@/comps/ContextMenu.vue';
+import UploadRecording from '@/comps/audioRecordings/UploadRecording.vue';
+import AddToCollection from '@/comps/AddToCollection.vue';
+import RemoveFromCollection from '@/comps/RemoveFromCollection.vue';
 import { 
   getAllAudioRecordingMetadata, 
   getSortedMusicians,
@@ -145,10 +145,10 @@ import {
   deleteRecording,
   getEditableCollections
 } from '@/js/serverCalls.ts';
-import { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
+import { RecType } from '@/comps/audioEvents/AddAudioEvent.vue';
 import { displayTime } from '@/ts/utils.ts';
 import { CollectionType, ContextMenuOptionType } from '@/ts/types.ts';
-import PermissionsModal from '@/components/PermissionsModal.vue';
+import PermissionsModal from '@/comps/PermissionsModal.vue';
 
 type AudioRecordingsDataType = {
   audioSource: string | undefined,
@@ -360,7 +360,7 @@ export default defineComponent({
   
   methods: {
 
-    permissionToView(recording: RecType) {
+    canView(recording: RecType) {
       const ep = recording.explicitPermissions!;
       return (
         ep!.view.includes(this.userID!) ||
@@ -583,7 +583,8 @@ export default defineComponent({
         try {
           // show option to add to collection, if there are any avaliable to
           // the user
-          this.possibleCols = await getEditableCollections(this.$store.state.userID!);
+          const userID = this.$store.state.userID!;
+          this.possibleCols = await getEditableCollections(userID);
           if (this.possibleCols.length > 0) {
             this.contextMenuChoices.push({
               text: 'Add to Collection',
@@ -675,14 +676,18 @@ export default defineComponent({
       document.body.style.cursor = 'col-resize';
         if (event.clientX !== 0) {
           const deltaX = event.clientX - this.initialMouseX!;
-          if (this.initialWidths[fIdx]! + deltaX < this.minColumnWidths[fIdx]!) {
+          const initW = this.initialWidths[fIdx]!;
+          const nextInitW = this.initialWidths[fIdx + 1]!;
+          const nextMinW = this.minColumnWidths[fIdx + 1]!;
+          if (initW + deltaX < this.minColumnWidths[fIdx]!) {
             return;
-          } else if (nextCol && (this.initialWidths[fIdx + 1]! - deltaX < this.minColumnWidths[fIdx + 1]!)) {
+            
+          } else if (nextCol && (initW - deltaX < nextMinW)) {
             return
           } else {
-            this.columnWidths[fIdx] = this.initialWidths[fIdx]! + deltaX;
+            this.columnWidths[fIdx] = initW + deltaX;
             if (nextCol) {
-              this.columnWidths[fIdx + 1] = this.initialWidths[fIdx + 1] - deltaX;
+              this.columnWidths[fIdx + 1] = nextInitW - deltaX;
             }
           }
       }
@@ -691,9 +696,10 @@ export default defineComponent({
       document.body.style.cursor = 'auto';
       const nextCol = fIdx < this.columnWidths.length - 1;
       const deltaX = event.clientX - this.initialMouseX!;
+      const nextMinCW = this.minColumnWidths[fIdx + 1];
       if (this.initialWidths[fIdx] + deltaX < this.minColumnWidths[fIdx]) {
         return;
-      } else if (nextCol && this.initialWidths[fIdx + 1] - deltaX < this.minColumnWidths[fIdx + 1]) {
+      } else if (nextCol && this.initialWidths[fIdx + 1] - deltaX < nextMinCW) {
         return
       } else {
         this.columnWidths[fIdx] = this.initialWidths[fIdx] + deltaX;
@@ -902,16 +908,17 @@ export default defineComponent({
     },
 
     trackNumSorter(a: RecType, b: RecType) {
-      if (a.parentTrackNumber === undefined && b.parentTrackNumber === undefined) {
+      const ptn = (rec: RecType) => rec.parentTrackNumber;
+      if (ptn(a) === undefined && ptn(b) === undefined) {
         return 0;
-      } else if (a.parentTrackNumber === undefined && b.parentTrackNumber !== undefined) {
+      } else if (ptn(a) === undefined && ptn(b) !== undefined) {
         return 1;
-      } else if (a.parentTrackNumber !== undefined && b.parentTrackNumber === undefined) {
+      } else if (ptn(a) !== undefined && ptn(b) === undefined) {
         return -1;
       } else {
-        if (a.parentTrackNumber! < b.parentTrackNumber!) {
+        if (ptn(a)! < ptn(b)!) {
           return -1;
-        } else if (a.parentTrackNumber! > b.parentTrackNumber!) {
+        } else if (ptn(a)! > ptn(b)!) {
           return 1;
         } else {
           return 0;
@@ -965,10 +972,10 @@ export default defineComponent({
             const bFirstName = this.allMusicians!.find(musician => {
               return musician['Initial Name'] === bSoloist;
             })!['First Name'];
-            const aMiddleName = this.allMusicians!.find(musician => {
+            const aMidName = this.allMusicians!.find(musician => {
               return musician['Initial Name'] === aSoloist;
             })!['Middle Name'];
-            const bMiddleName = this.allMusicians!.find(musician => {
+            const bMidName = this.allMusicians!.find(musician => {
               return musician['Initial Name'] === bSoloist;
             })!['Middle Name'];
             if (aLastName < bLastName) {
@@ -988,16 +995,16 @@ export default defineComponent({
                 } else if (aFirstName! > bFirstName!) {
                   return 1;
                 } else {
-                  if (aMiddleName !== undefined && bMiddleName === undefined) {
+                  if (aMidName !== undefined && bMidName === undefined) {
                     return -1;
-                  } else if (aMiddleName === undefined && bMiddleName !== undefined) {
+                  } else if (aMidName === undefined && bMidName !== undefined) {
                     return 1;
-                  } else if (aMiddleName === undefined && bMiddleName === undefined) {
+                  } else if (aMidName === undefined && bMidName === undefined) {
                     return 0;
                   } else {
-                    if (aMiddleName! < bMiddleName!) {
+                    if (aMidName! < bMidName!) {
                       return -1;
-                    } else if (aMiddleName! > bMiddleName!) {
+                    } else if (aMidName! > bMidName!) {
                       return 1;
                     } else {
                       return 0;

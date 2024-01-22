@@ -133,16 +133,16 @@ import {
   getAllUsers,
   getEditableCollections,
 } from '@/js/serverCalls.ts';
-import NewPieceRegistrar from '@/components/files/NewPieceRegistrar.vue';
-import AddToCollection from '@/components/AddToCollection.vue';
-import RemoveFromCollection from '@/components/RemoveFromCollection.vue';
+import NewPieceRegistrar from '@/comps/files/NewPieceRegistrar.vue';
+import AddToCollection from '@/comps/AddToCollection.vue';
+import RemoveFromCollection from '@/comps/RemoveFromCollection.vue';
 import { Raga, Piece, Trajectory, Phrase } from '@/js/classes.ts';
-import PermissionsModal from '@/components/PermissionsModal.vue';
+import PermissionsModal from '@/comps/PermissionsModal.vue';
 import { defineComponent } from 'vue';
-import { RecType } from '@/components/audioEvents/AddAudioEvent.vue'
-import ContextMenu from '@/components/ContextMenu.vue';
+import { RecType } from '@/comps/audioEvents/AddAudioEvent.vue'
+import ContextMenu from '@/comps/ContextMenu.vue';
 import { ContextMenuOptionType, UserType, CollectionType } from '@/ts/types.ts';
-import { TranscriptionMetadataType } from '@/components/collections/MiniTranscriptions.vue';
+import { TranscriptionMetadataType } from '@/comps/collections/MiniTranscriptions.vue';
 type FileManagerType = {
   infoKeys: string[];
   designPieceModal: boolean;

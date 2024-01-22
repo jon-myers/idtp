@@ -52,7 +52,10 @@
               </option>
             </select>
           </div>
-          <div class='subColumn newAE' v-if='aeChoice === "createNewAudioEvent"'>
+          <div 
+            class='subColumn newAE' 
+            v-if='aeChoice === "createNewAudioEvent"'
+            >
             <div class='subRow'>
               <label>Event Name</label>
               <input type='text' class='textInput' v-model='newAEName'>
@@ -118,7 +121,7 @@
               @input='updateNumMusicians'>
           </div>
           <div class='modalRow tall musicians'>
-            <div class='modalCol' v-for='(mus, i) in editingMusicians' :key='i'>
+            <div class='modalCol' v-for='(mus, i) in editMus' :key='i'>
               <div class='modalColRow'>
                 <label>Name</label>
                 <div class='selHolder'>
@@ -131,7 +134,11 @@
                       {{aMus["Full Name"]}}
                     </option>
                   </select>
-                  <input type='text' v-model='newMusNames[i]' v-if='mus.name === "Other"'>
+                  <input 
+                    type='text' 
+                    v-model='newMusNames[i]' 
+                    v-if='mus.name === "Other"'
+                    >
                 </div>
               </div>
               <div class='modalColRow'>
@@ -167,7 +174,11 @@
                       {{gharana.name}}
                     </option>
                   </select>
-                  <input type='text' v-model='newGharanas[i]' v-if='mus.gharana === "Other"'>
+                  <input 
+                  type='text' 
+                  v-model='newGharanas[i]' 
+                  v-if='mus.gharana === "Other"'
+                  >
                 </div>
               </div>
             </div>
@@ -190,7 +201,7 @@
             </select>
             <div class='selHolder'>
               <select 
-                v-model='selectedCountry' 
+                v-model='selCountry' 
                 v-if='selectedContinent !== undefined'>
                 <option 
                   v-for='(coun, i) in getCountries' 
@@ -200,12 +211,16 @@
                   {{coun}}
                 </option>
               </select>
-              <input type='text' v-model='newSelectedCountry' v-if='selectedCountry === "Other (specify)"'>
+              <input 
+                type='text' 
+                v-model='newselCountry' 
+                v-if='selCountry === "Other (specify)"'
+                >
             </div>
             <div class='selHolder'>
               <select 
                 v-model='selectedCity' 
-                v-if='selectedCountry !== undefined && selectedCountry !== "Unknown"'
+                v-if='selCountry !== undefined && selCountry !== "Unknown"'
                 >
                 <option 
                   v-for='(city, i) in getCities' 
@@ -215,7 +230,11 @@
                   {{city}}
                 </option>
               </select>
-              <input type='text' v-model='newSelectedCity' v-if='selectedCity === "Other (specify)"'>
+              <input 
+                type='text' 
+                v-model='newSelectedCity' 
+                v-if='selectedCity === "Other (specify)"'
+                >
             </div>
           </div>
           <!-- date -->
@@ -253,7 +272,7 @@
           <div class='modalRow'>
             <label>Raag</label>
             <div class='selHolder'>
-              <select v-model='selectedRaag'>
+              <select v-model='selRaag'>
                 <option 
                   v-for='(raag, i) in allRaags' 
                   :key='i'
@@ -265,7 +284,7 @@
               <input 
                 type='text' 
                 v-model='newRaag' 
-                v-if='selectedRaag === "Other (specify)"'
+                v-if='selRaag === "Other (specify)"'
                 >
             </div>
           </div>
@@ -289,7 +308,7 @@
               class='modalCol' 
               v-for='(sec, i) in editingSecs' 
               :key='i'
-              v-if='selectedRaag !== undefined'
+              v-if='selRaag !== undefined'
               >
               <div class='modalColRow'>
                 <label>Section</label>
@@ -336,7 +355,9 @@
             </select>
           
           
-            <label v-if='!editingRec!.explicitPermissions!.publicView'>View</label>
+            <label v-if='!editingRec!.explicitPermissions!.publicView'>
+              View
+            </label>
             <select 
               v-if='!editingRec!.explicitPermissions!.publicView'
               multiple 
@@ -365,9 +386,13 @@
         </div>
 
         <div class='modalRow centered short'>
-          <button @click='editRecIdx--' :disabled='editRecIdx===0'>{{ "<" }}</button>
+          <button @click='editRecIdx--' :disabled='editRecIdx===0'>
+            {{ "<" }}
+          </button>
           <button @click='saveUpdates'>Save Updates</button>
-          <button @click='editRecIdx++' :disabled='editRecIdx>3'>{{ ">" }}</button>
+          <button @click='editRecIdx++' :disabled='editRecIdx>3'>
+            {{ ">" }}
+          </button>
         </div>
         <div class='modalRow centered short'>
           <span>{{ dateModified }}</span>
@@ -403,12 +428,12 @@ import {
   getEventTypes,
   getAllUsers
 } from '@/js/serverCalls.ts';
-import SaTuner from '@/components/audioRecordings/SaTuner.vue';
+import SaTuner from '@/comps/audioRecordings/SaTuner.vue';
 import { 
   RecType, 
   PSecType, 
   MusicianType 
-} from '@/components/audioEvents/AddAudioEvent.vue';
+} from '@/comps/audioEvents/AddAudioEvent.vue';
 import { MusicianDBType, GharanaType, UserType } from '@/ts/types.ts';
 type UploadRecordingDataType = {
   progressWidth: number;
@@ -426,7 +451,7 @@ type UploadRecordingDataType = {
   numMusicians: number;
   allMusicians: MusicianDBType[];
   allGharanas: GharanaType[];
-  editingMusicians: {
+  editMus: {
     name?: string;
     id?: string;
     role?: 'Soloist' | 'Accompanist' | 'Percussionist' | 'Drone';
@@ -439,16 +464,16 @@ type UploadRecordingDataType = {
   editRecIdx: number, // which page of metadata editing you're on
   locObj: {[continent: string]: {[country: string]: string[]}},
   selectedContinent?: string,
-  selectedCountry?: string,
+  selCountry?: string,
   selectedCity?: string,
   months: string[],
   selectedYear?: number,
   selectedMonth?: string,
   selectedDay?: number,
-  newSelectedCountry?: string,
+  newselCountry?: string,
   newSelectedCity?: string,
   allRaags: string[],
-  selectedRaag?: string,
+  selRaag?: string,
   newRaag?: string,
   numSecs: number,
   editingSecs: EditingSecType[],
@@ -524,7 +549,7 @@ export default defineComponent({
       editingRec: undefined,
       numMusicians: 1,
       allMusicians: [],
-      editingMusicians: [],
+      editMus: [],
       allGharanas: [],
       newMusNames: new Array(6).fill(undefined),
       newGharanas: new Array(6).fill(undefined),
@@ -532,7 +557,7 @@ export default defineComponent({
       editRecIdx: 0,
       locObj: {},
       selectedContinent: undefined,
-      selectedCountry: undefined,
+      selCountry: undefined,
       selectedCity: undefined,
       months: [
         'January',
@@ -548,13 +573,13 @@ export default defineComponent({
         'November',
         'December'
       ], 
-      newSelectedCountry: undefined,
+      newselCountry: undefined,
       newSelectedCity: undefined,
       selectedYear: undefined,
       selectedMonth: undefined,
       selectedDay: undefined,
       allRaags: [],
-      selectedRaag: undefined,
+      selRaag: undefined,
       newRaag: undefined,
       numSecs: 1,
       editingSecs: [],
@@ -618,7 +643,7 @@ export default defineComponent({
     getCities() {
       const sCont = this.selectedContinent;
       const loc = this.locObj;
-      const sCoun = this.selectedCountry;
+      const sCoun = this.selCountry;
       if (sCont && loc && sCoun && loc[sCont][sCoun]) {
         const cities = loc[sCont][sCoun];
         return cities.concat(['Unknown', 'Other (specify)'])
@@ -747,7 +772,7 @@ export default defineComponent({
     },
 
     async saveMusicians(recUpdates: RecUpdateType) {
-      this.editingMusicians.forEach(async (mus, musIdx) => {
+      this.editMus.forEach(async (mus, musIdx) => {
         try {
           const gharana = mus.gharana === 'Other' ? 
             this.newGharanas[musIdx] : 
@@ -772,7 +797,9 @@ export default defineComponent({
               gharana: gharana,
               instrument: mus.instrument,
             };
-            const mObj = this.allMusicians.find(m => m['Full Name'] === mus.name);
+            const mObj = this.allMusicians.find(m => {
+              return m['Full Name'] === mus.name
+            });
             musId = mObj? mObj!._id: '';
           }
           if (mus.gharana === 'Other') {
@@ -791,20 +818,20 @@ export default defineComponent({
       try {
         if (this.selectedContinent) {
           recUpdates.location.continent = this.selectedContinent;
-          if (this.selectedCountry) {
-            if (this.selectedCountry === 'Other (specify)') {
-              recUpdates.location.country = this.newSelectedCountry!;
+          if (this.selCountry) {
+            if (this.selCountry === 'Other (specify)') {
+              recUpdates.location.country = this.newselCountry!;
               const continent = this.selectedContinent;
-              const country = this.newSelectedCountry!;
+              const country = this.newselCountry!;
               const res = await addCountryToDB(continent, country);
             } else {
-              recUpdates.location.country = this.selectedCountry;
+              recUpdates.location.country = this.selCountry;
             }
             if (this.selectedCity) {
               if (this.selectedCity === 'Other (specify)') {
                 recUpdates.location.city = this.newSelectedCity!;
                 const continent = this.selectedContinent;
-                const country = this.selectedCountry;
+                const country = this.selCountry;
                 const city = this.newSelectedCity!;
                 const res = await addCityToDB(continent, country, city);
               } else {
@@ -828,30 +855,30 @@ export default defineComponent({
         undefined;
     },
 
-    async saveRaag(recUpdates: RecUpdateType) {
+    async saveRaag(update: RecUpdateType) {
       try {
-        if (this.selectedRaag) {
+        if (this.selRaag) {
           const pSecNames = this.editingSecs.map((pSec) => pSec.name);
-          if (this.selectedRaag === 'Other (specify)') {
+          if (this.selRaag === 'Other (specify)') {
             const res = await addRaagToDB(this.newRaag!);
-            recUpdates.raags[this.newRaag!] = {
+            update.raags[this.newRaag!] = {
               'performance sections': {},
             };
-            pSecNames.forEach(psName => {
-              if (psName !== undefined) {
-                recUpdates.raags[this.newRaag!]['performance sections'][psName] = {
+            pSecNames.forEach(psn => {
+              if (psn !== undefined) {
+                update.raags[this.newRaag!]['performance sections'][psn] = {
                   start: 0,
                   end: 0,
                 }
               }
             })
           } else {
-            recUpdates.raags[this.selectedRaag] = {
+            update.raags[this.selRaag] = {
               'performance sections': {},
             };
-            pSecNames.forEach(psName => {
-              if (psName !== undefined) {
-                recUpdates.raags[this.selectedRaag!]['performance sections'][psName] = {
+            pSecNames.forEach(psn => {
+              if (psn !== undefined) {
+                update.raags[this.selRaag!]['performance sections'][psn] = {
                   start: 0,
                   end: 0,
                 }
@@ -897,11 +924,11 @@ export default defineComponent({
     },
 
     updateNumMusicians() {
-      while (this.editingMusicians.length < this.numMusicians) {
-        this.growEditingMusicians();
+      while (this.editMus.length < this.numMusicians) {
+        this.groweditMus();
       }
-      while (this.editingMusicians.length > this.numMusicians) {
-        this.shrinkEditingMusicians();
+      while (this.editMus.length > this.numMusicians) {
+        this.shrinkeditMus();
       }
     },
 
@@ -932,8 +959,8 @@ export default defineComponent({
       this.editingSecs.pop();
     },
 
-    growEditingMusicians() {
-      this.editingMusicians.push({
+    groweditMus() {
+      this.editMus.push({
         name: undefined,
         id: undefined,
         role: undefined,
@@ -941,8 +968,8 @@ export default defineComponent({
       })
     },
 
-    shrinkEditingMusicians() {
-      this.editingMusicians.pop();
+    shrinkeditMus() {
+      this.editMus.pop();
     },
 
     async prepareForEditing() {
@@ -975,7 +1002,7 @@ export default defineComponent({
         this.allUsers = await getAllUsers();
 
         this.selectedContinent = this.editingRec!.location.continent;
-        this.selectedCountry = this.editingRec!.location.country;
+        this.selCountry = this.editingRec!.location.country;
         this.selectedCity = this.editingRec!.location.city;
         this.selectedYear = this.editingRec!.date.year ? 
           Number(this.editingRec!.date.year): 
@@ -987,7 +1014,7 @@ export default defineComponent({
         const raags = Object.keys(this.editingRec!.raags);
         let numSecs = 0;
         if (raags.length > 0) {
-          this.selectedRaag = raags[0];
+          this.selRaag = raags[0];
           raags.forEach(raagKey => {
             const raag = this.editingRec!.raags[raagKey];
             const pSecs = raag['performance sections']!;
@@ -999,7 +1026,7 @@ export default defineComponent({
 
               const sHrs = Math.floor(pSec.start / 3600);
               const sMins = Math.floor((pSec.start - Number(sHrs) * 3600) / 60);
-              const sSecs = pSec.start - Number(sHrs) * 3600 - Number(sMins) * 60;
+              const sSecs = pSec.start - Number(sHrs) * 3600 - sMins * 60;
               const eHrs = Math.floor(pSec.end / 3600);
               const eMins = Math.floor((pSec.end - Number(eHrs) * 3600) / 60);
               const eSecs = pSec.end - Number(eHrs) * 3600 - Number(eMins) * 60;
@@ -1031,12 +1058,15 @@ export default defineComponent({
 
         if (this.numMusicians === 0) {
           this.numMusicians = 1;
-          this.editingMusicians = [];
-          this.growEditingMusicians();
+          this.editMus = [];
+          this.groweditMus();
         } else {
-          this.editingMusicians = Object.keys(this.editingRec!.musicians).map((musKey) => {
+          const keys = Object.keys(this.editingRec!.musicians);
+          this.editMus = keys.map((musKey) => {
             const mus = this.editingRec!.musicians[musKey];
-            const musObj = this.allMusicians.find((m) => m['Full Name'] === musKey);
+            const musObj = this.allMusicians.find((m) => {
+              return m['Full Name'] === musKey
+            });
             return {
               name: musKey,
               id: musObj ? musObj._id: undefined,
@@ -1112,8 +1142,6 @@ export default defineComponent({
             this.$emit('updateFrameView', 'editRecMetadata');
             this.$emit('updateEditingRecId', this.audioFileId);
             await this.prepareForEditing();
-            // this.editingRec = await getAudioRecording(this.audioFileId);
-
           } else {
             throw new Error('File must be an audio file');
           }
@@ -1186,9 +1214,6 @@ export default defineComponent({
 .modalRow > .selHolder > select {
   width: 100px;
   box-sizing: border-box;
-  /* margin-left: 5px;
-  margin-right: 5px; */
-
 }
 
 .modalRow > .selHolder {
@@ -1196,13 +1221,6 @@ export default defineComponent({
   margin-right: 5px;
 }
 
-/* .modalRow > .selHolder > input[type='text'] {
-  width: 100px;
-  padding: 0px;
-  margin-left: 5px;
-  margin-right: 5px;
-  box-sizing: border-box;
-} */
 .modalColRow {
   display: flex;
   flex-direction: row;
@@ -1326,7 +1344,6 @@ input[type='text'] {
   justify-content: left;
   align-items: center;
   height: 100%;
-  /* width: 150px; */
 }
 
 .modalFrame {
@@ -1353,14 +1370,10 @@ audio {
   max-height: 45px;
 }
 
-
-
 .selHolder > input[type='text'] {
   width: 100px;
   margin-top: 5px;
   box-sizing: border-box;
-  /* margin-left: 5px; */
-  /* margin-right: 5px; */
 }
 
 .editingSubFrame {

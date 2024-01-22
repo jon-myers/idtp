@@ -128,18 +128,18 @@ import {
   getAllTransOfAudioFile,
   getEditableCollections,
 } from '@/js/serverCalls.ts';
-import AddAudioEvent from '@/components/audioEvents/AddAudioEvent.vue';
-import AudioPlayer from '@/components/audioEvents/AudioPlayer.vue';
+import AddAudioEvent from '@/comps/audioEvents/AddAudioEvent.vue';
+import AudioPlayer from '@/comps/audioEvents/AudioPlayer.vue';
 import { defineComponent } from 'vue';
-import ContextMenu from '@/components/ContextMenu.vue';
-import AddToCollection from '@/components/AddToCollection.vue';
-import RemoveFromCollection from '@/components/RemoveFromCollection.vue';
-import PermissionsModal from '@/components/PermissionsModal.vue'; 
+import ContextMenu from '@/comps/ContextMenu.vue';
+import AddToCollection from '@/comps/AddToCollection.vue';
+import RemoveFromCollection from '@/comps/RemoveFromCollection.vue';
+import PermissionsModal from '@/comps/PermissionsModal.vue'; 
 import type { 
   AudioEventType, 
   RecType, 
   RaagType 
-} from '@/components/audioEvents/AddAudioEvent.vue'
+} from '@/comps/audioEvents/AddAudioEvent.vue'
 import { ContextMenuOptionType, CollectionType } from '@/ts/types.ts';
 
 type AudioEventsDataType = {

@@ -4,48 +4,48 @@ const routes = [
   {
     path: '/files',
     name: 'Files',
-    component: () => import('@/components/files/FileManager.vue')
+    component: () => import('@/comps/files/FileManager.vue')
   },
   {
     path: '/audioEvents',
     name: 'AudioEvents',
-    component: () => import('@/components/audioEvents/AudioEvents.vue')
+    component: () => import('@/comps/audioEvents/AudioEvents.vue')
   },
   {
     path: '/audioRecordings',
     name: 'AudioRecordings',
-    component: () => import('@/components/audioRecordings/AudioRecordings.vue')
+    component: () => import('@/comps/audioRecordings/AudioRecordings.vue')
   },
   {
     path: '/raagEditor',
     name: 'RaagEditor',
-    component: () => import('@/components/RaagEditor.vue')
+    component: () => import('@/comps/RaagEditor.vue')
   },
   {
     path: '/editor',
     name: 'EditorComponent',
-    component: () => import('@/components/editor/EditorComponent.vue')
+    component: () => import('@/comps/editor/EditorComponent.vue')
   },
   {
     path: '/analyzer',
     name: 'AnalyzerComponent',
-    component: () => import('@/components/analysis/AnalyzerComponent.vue')
+    component: () => import('@/comps/analysis/AnalyzerComponent.vue')
 
   },
   {
     path: '/logIn',
     name: 'LogIn',
-    component: () => import('@/components/LogIn.vue')
+    component: () => import('@/comps/LogIn.vue')
   },
   {
     path: '/',
     name: 'LandingPage',
-    component: () => import('@/components/LandingPage.vue')
+    component: () => import('@/comps/LandingPage.vue')
   },
   {
     path: '/collections',
     name: 'Collections',
-    component: () => import('@/components/collections/CollectionsComponent.vue')
+    component: () => import('@/comps/collections/CollectionsComponent.vue')
   }
 ];
 

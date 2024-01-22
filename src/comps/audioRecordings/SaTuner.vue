@@ -51,7 +51,7 @@
     <div class='dataRow'>
       <button 
         class='processing' 
-        :disabled='!rec.saVerified || freqVal !== rec.saEstimate || octOffset !== rec.octOffset'
+        :disabled='recDisabled'
         @click='handleGenerateSpectrogram'>
         Generate Spectrogram
       </button>
@@ -60,7 +60,7 @@
     <div class='dataRow'>
       <button 
         class='processing' 
-        :disabled='!rec.saVerified || freqVal !== rec.saEstimate || octOffset !== rec.octOffset'
+        :disabled='recDisabled'
         @click='handleGenerateMelograph'>
         Generate Melograph
       </button>
@@ -73,7 +73,7 @@
 <script lang='ts'>
 
 import { defineComponent, PropType } from 'vue';
-import { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
+import { RecType } from '@/comps/audioEvents/AddAudioEvent.vue';
 import { makeSpectrograms, makeMelograph } from '@/js/serverCalls.ts';
 
 type SaTunerDataType = {
@@ -145,6 +145,12 @@ export default defineComponent({
   computed: {
     freq() {
       return this.freqVal * 2 ** this.octOffset;
+    },
+
+    recDisabled() {
+      return !this.rec.saVerified || 
+        this.freqVal !== this.rec.saEstimate || 
+        this.octOffset !== this.rec.octOffset
     }
   },
 

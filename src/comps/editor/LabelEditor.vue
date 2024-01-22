@@ -50,8 +50,8 @@
 <script lang='ts'>
 
 import { defineComponent, PropType } from 'vue';
-import SectionLabelEditor from '@/components/editor/SectionLabelEditor.vue';
-import PhraseLabelEditor from '@/components/editor/PhraseLabelEditor.vue';
+import SectionLabelEditor from '@/comps/editor/SectionLabelEditor.vue';
+import PhraseLabelEditor from '@/comps/editor/PhraseLabelEditor.vue';
 import { Piece } from '@/js/classes.ts'
 
 export default defineComponent({

@@ -249,11 +249,11 @@ import {
   getAllUsers
 } from '@/js/serverCalls.ts';
 import { UserType } from '@/ts/types';
-import RaagEditor from '@/components/RaagEditor.vue';
+import RaagEditor from '@/comps/RaagEditor.vue';
 import type { AudioEventMetadataType } from '@/js/serverCalls.ts';
 import { defineComponent } from 'vue';
-import type { PassedDataType } from '@/components/files/FileManager.vue';
-import type { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
+import type { PassedDataType } from '@/comps/files/FileManager.vue';
+import type { RecType } from '@/comps/audioEvents/AddAudioEvent.vue';
 
 type RulesType = {
   sa: boolean,

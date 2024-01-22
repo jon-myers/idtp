@@ -3,7 +3,7 @@ import axios from 'axios';
 import { AxiosProgressEvent } from 'axios';
 import fetch from 'cross-fetch';
 import { Piece } from './classes.ts';
-import { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
+import { RecType } from '@/comps/audioEvents/AddAudioEvent.vue';
 import { UserType } from '@/ts/types.ts';
 import { CollectionType } from '@/ts/types.ts';
 
@@ -12,7 +12,7 @@ import {
   GharanaType,
   TranscriptionMetadataType
 } from '@/ts/types.ts';
-import { RecUpdateType } from '@/components/audioRecordings/UploadRecording.vue';
+import { RecUpdateType } from '@/comps/audioRecordings/UploadRecording.vue';
 // import { URLSearchParams } from 'url';
 const getPiece = async (id: string): Promise<Piece> => {
   let piece;

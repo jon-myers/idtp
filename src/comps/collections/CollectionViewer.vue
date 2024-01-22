@@ -72,7 +72,7 @@ import type {
   TranscriptionMetadataType, 
 } from '@/ts/types.ts';
 import { getContrastingTextColor } from '@/ts/utils';
-import GenericAudioPlayer from '@/components/GenericAudioPlayer.vue';
+import GenericAudioPlayer from '@/comps/GenericAudioPlayer.vue';
 import { 
   getEditableCollections,
   removeAudioEventFromCollection,
@@ -80,12 +80,12 @@ import {
   removeTranscriptionFromCollection,
   getAllTransOfAudioFile
 } from '@/js/serverCalls';
-import MiniAudioRecordings from '@/components/collections/MiniAudioRecordings.vue';
-import MiniAudioEvents from '@/components/collections/MiniAudioEvents.vue';
-import MiniTranscriptions from '@/components/collections/MiniTranscriptions.vue';
-import ContextMenu from '@/components/ContextMenu.vue';
-import { RecType } from '@/components/audioEvents/AddAudioEvent.vue';
-import { AudioEventType } from '@/components/audioEvents/AddAudioEvent.vue';
+import MiniAudioRecordings from '@/comps/collections/MiniAudioRecordings.vue';
+import MiniAudioEvents from '@/comps/collections/MiniAudioEvents.vue';
+import MiniTranscriptions from '@/comps/collections/MiniTranscriptions.vue';
+import ContextMenu from '@/comps/ContextMenu.vue';
+import { RecType } from '@/comps/audioEvents/AddAudioEvent.vue';
+import { AudioEventType } from '@/comps/audioEvents/AddAudioEvent.vue';
 
 type CollectionViewerDataType = {
   audioSource: string | undefined,
