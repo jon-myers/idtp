@@ -334,8 +334,8 @@ type QueryControlsDataType = {
   incidentals: (keyof PhraseCatType["Incidental"])[],
 
 }
-type PitchNameType = 'Sa' | 're' | 'Re' | 'ga' | 'Ga' | 'ma' | 'Ma' | 'Pa' | 'dha' | 
-  'Dha' | 'ni' | 'Ni';
+type PitchNameType = 'Sa' | 're' | 'Re' | 'ga' | 'Ga' | 'ma' | 'Ma' | 'Pa' | 
+  'dha' | 'Dha' | 'ni' | 'Ni';
 type ParamType = (
   number | 
   { value: (CategoryType | DesignatorType), text: string } | 
@@ -719,7 +719,8 @@ export default defineComponent({
       const n = this.numPitches[qIdx];
       const oldLen = this.pitchSeqObjs[qIdx].length;
       if (n > oldLen) {
-        this.growParam(this.pitchSeqObjs[qIdx], { swara: 'Sa', oct: 0 }, n, oldLen);
+        const init = { swara: 'Sa', oct: 0 } as ParamType;
+        this.growParam(this.pitchSeqObjs[qIdx], init, n, oldLen);
       } else {
         this.pitchSeqObjs[qIdx].splice(n, oldLen - n);
       }
@@ -735,14 +736,14 @@ export default defineComponent({
       }
     },
 
-    growParam(param: ParamType[], preset: ParamType, newVal: number, oldVal: number) {
+    growParam(param: ParamType[], preset: ParamType, nV: number, oV: number) {
       let add = [];
       if (preset instanceof Object) {
-        add = Array.from({ length: newVal - oldVal }, () => ({ ...preset }));
+        add = Array.from({ length: nV - oV }, () => ({ ...preset }));
       } else {
-        add = Array(newVal - oldVal).fill(preset);
+        add = Array(nV - oV).fill(preset);
       }
-      param.splice(oldVal, 0, ...add);
+      param.splice(oV, 0, ...add);
     },
 
     runQuery() {

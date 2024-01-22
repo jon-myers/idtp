@@ -6,8 +6,8 @@
       @mouseleave='hoverTrigger(false)'
       @mousemove='handleCircleMouseMove'
       @mouseup='handleCircleMouseUp'>
-      <div class='progressBarOuter' @click='handleProgressClick' ref='pbOuter'>
-        <div class='progressBarInner'>
+      <div class='progBarOuter' @click='handleProgressClick' ref='pbOuter'>
+        <div class='progBarInner'>
           <div :class='`currentTime tooLeft`'>
             {{formattedCurrentTime}}
           </div>
@@ -151,8 +151,8 @@ export default {
     this.audio = new Audio() as HTMLAudioElement;
     this.audio.ontimeupdate = () => {
       this.progress = this.audio!.currentTime / this.audio!.duration;
-      const pbi = document.querySelector('.progressBarInner') as HTMLDivElement;
-      const pbo = document.querySelector('.progressBarOuter');
+      const pbi = document.querySelector('.progBarInner') as HTMLDivElement;
+      const pbo = document.querySelector('.progBarOuter');
       if (pbo) {
         const totWidth = pbo.getBoundingClientRect().width;
         pbi!.style.width = this.progress * totWidth + 'px'
@@ -347,8 +347,8 @@ export default {
     handleCircleMouseMove(e: MouseEvent) {
       if (this.circleDragging) {
         const diff = this.dragStart - e.clientX;
-        const pbi = document.querySelector('.progressBarInner') as HTMLDivElement;
-        const pbo = document.querySelector('.progressBarOuter') as HTMLDivElement;
+        const pbi = document.querySelector('.progBarInner') as HTMLDivElement;
+        const pbo = document.querySelector('.progBarOuter') as HTMLDivElement;
         const pboBox = pbo.getBoundingClientRect()
         pbi.style.width = pboBox.width * this.progress - diff + 'px';
       }
@@ -376,25 +376,25 @@ export default {
   pointer-events: auto;
 }
 
-.progressBarOuter {
+.progBarOuter {
   width: 100%;
   height: 8px;
   background-color: #242424;
   overflow-x: hidden;
 }
 
-.progressBarOuter:hover {
+.progBarOuter:hover {
   cursor: pointer
 }
 
-.progressBarInner {
+.progBarInner {
   width: 0px;
   background-color: lightgrey;
   height: 6px;
   position: absolute;
 }
 
-.progressBarInner:hover {
+.progBarInner:hover {
   cursor: pointer
 }
 

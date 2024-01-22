@@ -27,7 +27,7 @@ type SegmentDisplayDataType = {
   svg?: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>,
   verticalPadding: number,
   horizontalPadding: number,
-  // verticalMargin: number,
+  // VertMargin: number,
   // horizontalMargin: number,
   titleMargin: number,
   outerMargin: {
@@ -64,7 +64,7 @@ export default defineComponent({
 
   data(): SegmentDisplayDataType {
     return {
-      // verticalMargin: 0.2,
+      // VertMargin: 0.2,
       titleMargin: 30,
       outerMargin: {
         top: 20,
@@ -101,18 +101,18 @@ export default defineComponent({
 
   mounted() {
     const horizontalMargin = this.outerMargin.left + this.outerMargin.right;
-    const verticalMargin = this.outerMargin.top + this.outerMargin.bottom;
+    const VertMargin = this.outerMargin.top + this.outerMargin.bottom;
     this
     this.svg = d3.select(this.$refs.graph)
       .append('svg')
       .classed('svg', true)
       .attr('width', this.displayWidth - horizontalMargin + 'px')
-      .attr('height', this.displayHeight - verticalMargin + 'px')
+      .attr('height', this.displayHeight - VertMargin + 'px')
     
     this.svg
       .append('rect')
       .attr('width', this.displayWidth - horizontalMargin + 'px')
-      .attr('height', this.displayHeight - verticalMargin - this.titleMargin + 'px')
+      .attr('height', this.displayHeight - VertMargin - this.titleMargin + 'px')
       .attr('x', 0)
       .attr('y', this.titleMargin + 'px')
       .style('fill', 'lightgrey')
@@ -123,7 +123,7 @@ export default defineComponent({
     
     let totWidth = this.displayWidth  - horizontalMargin;
     totWidth -= this.innerMargin.left + this.innerMargin.right;
-    let totHeight = this.displayHeight - verticalMargin;
+    let totHeight = this.displayHeight - VertMargin;
     totHeight -= this.innerMargin.top + this.innerMargin.bottom;
     this.visibleSargam = this.piece.raga.getFrequencies({
       low: 2 ** this.minLogFreq,
@@ -152,7 +152,7 @@ export default defineComponent({
       .range([0, totWidth]);
     this.xAxis = d3.axisTop(this.xScale);
     let numTicks;
-    if (this.$parent.horizontalProportionalDisplay) {
+    if (this.horizontalProportionalDisplay) {
       numTicks = Math.round(3 * this.proportion);
     } else {
       numTicks = 3
@@ -270,6 +270,10 @@ export default defineComponent({
     },
     queryAnswer: {
       type: Object as PropType<QueryAnswerType>,
+      required: true
+    },
+    horizontalProportionalDisplay: {
+      type: Boolean,
       required: true
     }
   },
@@ -446,13 +450,15 @@ export default defineComponent({
         .x(d => d.x)
         .y(d => d.y)
         .curve(d3.curveLinear);
+      const yVal = this.innerMargin.top + this.titleMargin;
+      const xVal = this.innerMargin.left;
       this.svg!.append('path')
         .datum(samplePoints)
         .attr('d', line)
         .attr('fill', 'none')
         .attr('stroke', 'black')
         .attr('stroke-width', '1.5px')
-        .attr('transform', `translate(${this.innerMargin.left}, ${this.innerMargin.top + this.titleMargin})`)
+        .attr('transform', `translate(${ xVal }, ${ yVal })`)
 
       // add articulations
       const artKeys = Object.keys(traj.articulations);
@@ -625,7 +631,8 @@ export default defineComponent({
           const xTime = phrase.startTime! + traj.startTime! + traj.durTot;
           const yVal = traj.compute(1, true);
           const xPos = this.xScale!(xTime) + this.innerMargin.left;
-          const yPos = this.yScale!(yVal) + this.innerMargin.top + this.titleMargin;
+          const summedMargins = this.innerMargin.top + this.titleMargin;
+          const yPos = this.yScale!(yVal) + summedMargins;
           let text: string;
           if (this.phonemeRepresentation === 'IPA') {
             text = arts['1.00'].ipa!;

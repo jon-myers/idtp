@@ -49,7 +49,7 @@
                     </span>
                   </div>
                 </div>
-                <div :class='`performanceSectionCol height${raagHt(ae, Number(recKey))}`'>
+                <div :class='`pSecCol height${raagHt(ae, Number(recKey))}`'>
                   <div 
                     class='performanceSections' 
                     v-for='raag in getRaags(ae.recordings[Number(recKey)])'
@@ -91,7 +91,7 @@
     />
   <AddToCollection
     v-if='addToCollectionModalOpen'
-    :possibleCollections='editableCols'
+    :possibleCollections='editCols'
     :navHeight='navHeight'
     :recID='selectedAF?.audioFileId'
     :aeID='selectedAE?._id'
@@ -135,8 +135,11 @@ import ContextMenu from '@/components/ContextMenu.vue';
 import AddToCollection from '@/components/AddToCollection.vue';
 import RemoveFromCollection from '@/components/RemoveFromCollection.vue';
 import PermissionsModal from '@/components/PermissionsModal.vue'; 
-
-import type { AudioEventType, RecType, RaagType } from '@/components/audioEvents/AddAudioEvent.vue'
+import type { 
+  AudioEventType, 
+  RecType, 
+  RaagType 
+} from '@/components/audioEvents/AddAudioEvent.vue'
 import { ContextMenuOptionType, CollectionType } from '@/ts/types.ts';
 
 type AudioEventsDataType = {
@@ -166,7 +169,7 @@ type AudioEventsDataType = {
   recIdx?: number,
   contextMenuClosed: boolean,
   contextMenuChoices: ContextMenuOptionType[],
-  editableCols: CollectionType[],
+  editCols: CollectionType[],
   aeRemovableCols: CollectionType[],
   recRemovableCols: CollectionType[],
   addToCollectionModalOpen: boolean,
@@ -184,7 +187,6 @@ export default defineComponent({
         'Name', 
       ],
       playingIdx: undefined,
-      // getAllAudioRecordingMetadata: getAllAudioRecordingMetadata,
       allAudioEvents: undefined,
       performers: undefined,
       colHeight: 30,
@@ -209,7 +211,7 @@ export default defineComponent({
       audioEventId: undefined,
       contextMenuClosed: true,
       contextMenuChoices: [],
-      editableCols: [],
+      editCols: [],
       aeRemovableCols: [],
       recRemovableCols: [],
       addToCollectionModalOpen: false,
@@ -256,7 +258,7 @@ export default defineComponent({
 
   async mounted() {
     try {
-      this.editableCols = await getEditableCollections(this.$store.state.userID!)
+      this.editCols = await getEditableCollections(this.$store.state.userID!)
     } catch (err) {
       console.log(err)
     }
@@ -316,7 +318,7 @@ export default defineComponent({
       try {
         this.allAudioEvents = await getAllAudioEventMetadata();
         this.allAudioEvents?.sort((a, b) => a.name.localeCompare(b.name));
-        this.editableCols = await getEditableCollections(this.$store.state.userID!)
+        this.editCols = await getEditableCollections(this.$store.state.userID!)
 
       } catch (err) {
         console.log(err)
@@ -329,7 +331,7 @@ export default defineComponent({
       try {
         this.allAudioEvents = await getAllAudioEventMetadata();
         this.allAudioEvents?.sort((a, b) => a.name.localeCompare(b.name));
-        this.editableCols = await getEditableCollections(this.$store.state.userID!)
+        this.editCols = await getEditableCollections(this.$store.state.userID!)
 
       } catch (err) {
         console.log(err)
@@ -481,7 +483,7 @@ export default defineComponent({
         },
         enabled: aeOwner
       });
-      if (this.editableCols.length > 0) {
+      if (this.editCols.length > 0) {
         this.contextMenuChoices.push({
           text: 'Add Event to Collection',
           action: () => {
@@ -491,7 +493,7 @@ export default defineComponent({
           },
           enabled: aeViewPermission
         });
-        this.aeRemovableCols = this.editableCols.filter(c => {
+        this.aeRemovableCols = this.editCols.filter(c => {
           if (this.selectedAE === undefined) {
             throw new Error('selectedAE is undefined')
           }
@@ -526,7 +528,7 @@ export default defineComponent({
           },
           enabled: afViewPermission
         });
-        if (this.editableCols.length > 0) {
+        if (this.editCols.length > 0) {
           this.contextMenuChoices.push({
             text: 'Add Recording to Collection',
             action: () => {
@@ -536,7 +538,7 @@ export default defineComponent({
             },
             enabled: afViewPermission
           });
-          this.recRemovableCols = this.editableCols.filter(c => {
+          this.recRemovableCols = this.editCols.filter(c => {
             if (this.selectedAF === undefined) {
               throw new Error('selectedAF is undefined')
             }
@@ -954,7 +956,7 @@ button {
   justify-content: left;
 }
 
-.performanceSectionCol {
+.pSecCol {
   width: 250px;
   display: flex;
   flex-direction: column;

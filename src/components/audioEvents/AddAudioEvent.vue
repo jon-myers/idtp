@@ -419,11 +419,13 @@ export default defineComponent({
             recElem.gharana[idx] = musician.gharana;
             recElem.selectedRoles[idx] = musician.role;
           });
-          const locKeys = Object.keys(rec.location) as Array<keyof typeof rec.location>;
+          const loc = rec.location;
+          const locKeys = Object.keys(loc) as Array<keyof typeof loc>;
           locKeys.forEach((placeType) => {
             recElem[`selected${capFirst(placeType)}`] = rec.location[placeType];
           });
-          const dateKeys = Object.keys(rec.date) as Array<keyof typeof rec.date>;
+          const date_ = rec.date;
+          const dateKeys = Object.keys(date_) as Array<keyof typeof date_>;
           dateKeys.forEach(dateType => {
             recElem[`selected${capFirst(dateType)}`] = rec.date[dateType]
           });
