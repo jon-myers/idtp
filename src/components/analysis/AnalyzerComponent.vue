@@ -300,7 +300,10 @@
         :trajIdxs='piece.trajIdxs'
         />
     </div>
-    <div class='segmentDisplayHolder' v-if='piece && displayTrajs && selectedATIdx === 2'>
+    <div 
+      class='segmentDisplayHolder' 
+      v-if='piece && displayTrajs && selectedATIdx === 2'
+      >
         <SegmentDisplay
           :id='`segmentDisplay${idx}`'
           v-for='(trajectories, idx) in displayTrajs'
@@ -509,9 +512,18 @@ type PCountType = {
     },
     phraseInfo: {
       phraseTypes: { name: keyof PhraseCatType['Phrase'], bool: boolean }[],
-      elaborations: { name: keyof PhraseCatType['Elaboration'], bool: boolean }[],
-      vocalArticulations: { name: keyof PhraseCatType['Vocal Articulation'], bool: boolean }[],
-      instArticulations: { name: keyof PhraseCatType['Instrumental Articulation'], bool: boolean }[],
+      elaborations: { 
+        name: keyof PhraseCatType['Elaboration'], 
+        bool: boolean 
+      }[],
+      vocalArticulations: { 
+        name: keyof PhraseCatType['Vocal Articulation'], 
+        bool: boolean 
+      }[],
+      instArticulations: { 
+        name: keyof PhraseCatType['Instrumental Articulation'], 
+        bool: boolean 
+      }[],
       incidentals: { name: keyof PhraseCatType['Incidental'], bool: boolean }[],
     }
 
@@ -781,7 +793,12 @@ type PCountType = {
         y2?: number,
         stroke?: string,
       } = {}) {
-        if (x1 === undefined || y1 === undefined || x2 === undefined || y2 === undefined) {
+        if (
+          x1 === undefined || 
+          y1 === undefined || 
+          x2 === undefined || 
+          y2 === undefined
+          ) {
           throw new Error('x1, y1, x2, or y2 is undefined');
         }
         return this.svg!.append('line')
@@ -841,7 +858,6 @@ type PCountType = {
       createPitchFrequencyGraph({
         segmentation = 'Duration', // or 'Phrase' or 'Section'
         duration = 30, // in seconds, only if segmentation is 'Duration'
-        // displayType = 'simple', // or 'gradient'
         pitchChroma = false,
         condensed = false,
         heatmap = false,
@@ -1331,7 +1347,9 @@ type PCountType = {
             }
             const tp = tpChoices[this.targetPitchIdx];
             const targetPitch = this.targetPitchBool ? tp : undefined;
-            const minPatSize = this.minPatternSize ? this.minPatternSizeValue : 1;
+            const minPatSize = this.minPatternSize ? 
+              this.minPatternSizeValue : 
+              1;
             this.createPatternCounterGraph({
               segmentation: this.segmentationType,
               duration: this.duration,
@@ -1506,7 +1524,8 @@ type PCountType = {
               const x = Number(size) * 20 + ct * 20 + 15;
               // const y = (verticalOffset + aIdx) * 20 + 10;
               this.addRect({ x: x-10, y: y, w: 20, h: 20, fill: 'black' })
-              this.addText({ x: x, y: y + 10, text: patternObj.count, fill: 'white' })
+              const p_ct = patternObj.count;
+              this.addText({ x: x, y: y + 10, text: p_ct, fill: 'white' })
 
               if (plot) {
                 let pattern = patternObj.pattern;
@@ -1666,7 +1685,8 @@ type PCountType = {
     },
 
     async mounted() {
-      const aboveHeight = this.controlsHeight + this.typeRowHeight + this.navHeight;
+      const nh = this.navHeight
+      const aboveHeight = this.controlsHeight + this.typeRowHeight + nh;
       this.graphRowHeight = window.innerHeight - aboveHeight;
       try {
         const storedId = this.$store.state._id;
@@ -1701,7 +1721,6 @@ type PCountType = {
   .main_ {
     background-image: linear-gradient(black, #1e241e);
     height: 100vh;
-    /* height: 2000px; */
     color: white;
     user-select: none;
     display: flex;
@@ -1722,9 +1741,6 @@ type PCountType = {
   .graphContainer {
     width: 100%;
     height: calc(100% - v-bind(controlsHeight + typeRowHeight + 100 + 'px'));
-    /* height: 200px; */
-    /* min-height: calc(100% - v-bind(controlsHeight + typeRowHeight + 100 + 'px')); */
-
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1769,7 +1785,6 @@ type PCountType = {
 
   .selected {
     background-color: #586958;
-    /* color: white; */
   }
 
   .controls { 
@@ -1792,7 +1807,6 @@ type PCountType = {
     height: v-bind(controlsHeight - 20 + 'px');
     padding: 5px;
     box-sizing: border-box;
-    /* border: 1px solid black; */
   }
   
   .controlBox > div:not(.scrolling) {
@@ -1930,8 +1944,6 @@ type PCountType = {
   }
 
   .segmentDisplay {
-    /* width: v-bind(segmentDisplayWidth + 'px'); */
-    /* min-width: v-bind(segmentDisplayWidth + 'px'); */
     height: v-bind(segmentDisplayHeight + 'px');
     box-sizing: border-box;
     display: flex;
@@ -1939,9 +1951,6 @@ type PCountType = {
     justify-content: center;
     align-items: center;
     border-right: 1px dotted black;
-
-    /* white-space: nowrap; */
-    /* overflow: none; */
   }
 
   .segmentDisplayHolder {
@@ -1951,8 +1960,6 @@ type PCountType = {
     display: flex;
     flex-direction: row;
     overflow-x: scroll;
-    /* justify-content: center; */
-    /* align-items: center; */
   }
 
   .title {
@@ -1960,7 +1967,6 @@ type PCountType = {
     font-weight: bold;
     margin-bottom: 5px;
     width: 100%;
-    
   }
 
   .scrolling {
@@ -1972,11 +1978,9 @@ type PCountType = {
     flex-direction: column;
     justify-content: top;
     align-items: center;
-
   }
 
   .spaceBelow {
     margin-bottom: 5px;
   }
-
 </style>
