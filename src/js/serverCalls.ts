@@ -299,7 +299,7 @@ type AudioEventMetadataType = {
   }
 }
 
-const getAllAudioEventMetadata = async (): Promise<AudioEventMetadataType[]> => {
+const getAllAEMetadata = async (): Promise<AudioEventMetadataType[]> => {
   let allAudioEvents;
   const request = {
     method: 'GET',
@@ -420,8 +420,9 @@ const getSortedMusicians = async (verbose=false): Promise<(string | {
       'Content-Type': 'application/json'
     },
   };
-  // const query = '?' + new URLSearchParams({ verbose: verbose.toString() });
-  const query = verbose ? '?' + new URLSearchParams({ verbose: verbose.toString() }): '';
+  const query = verbose ? '?' + new URLSearchParams({ 
+    verbose: verbose.toString() 
+  }): '';
   const fullQuery = url + 'getSortedMusicians' + query;
   try {
     
@@ -556,7 +557,7 @@ const addCountryToDB = async (continent: string, country: string) => {
   return out
 };
 
-const addCityToDB = async (continent: string, country: string, city: string) => {
+const addCityToDB = async (cont: string, country: string, city: string) => {
   // add city to DB
   let out;
   let request = {
@@ -564,7 +565,7 @@ const addCityToDB = async (continent: string, country: string, city: string) => 
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ continent: continent, country: country, city: city })
+    body: JSON.stringify({ continent: cont, country: country, city: city })
   };
   try {
     const res = await fetch(url + 'addCityToDB', request);
@@ -864,7 +865,9 @@ type NewPieceDataType = {
 }
 
 
-const createNewPiece = async (obj: object): Promise<NewPieceDataType | undefined> => {
+const createNewPiece = async (obj: object): Promise<
+  (NewPieceDataType | undefined)
+  > => {
   const data = JSON.stringify(obj);
   let out;
   let request = {
@@ -1226,8 +1229,8 @@ const newUploadFile = async (file: File, onProgress: OnProgressType, {
       headers: {
         'Content-Type': 'multipart/form-data'
       },
-      onUploadProgress: (progressEvent: AxiosProgressEvent) => {
-        const progressPercent = 100 * progressEvent.loaded / progressEvent.total!;
+      onUploadProgress: (progEvent: AxiosProgressEvent) => {
+        const progressPercent = 100 * progEvent.loaded / progEvent.total!;
         if (onProgress) onProgress(progressPercent);
         return progressPercent
       }
@@ -1258,8 +1261,8 @@ const newUploadFile = async (file: File, onProgress: OnProgressType, {
       headers: {
         'Content-Type': 'multipart/form-data'
       },
-      onUploadProgress: (progressEvent: AxiosProgressEvent) => {
-        const progressPercent = 100 * progressEvent.loaded / progressEvent.total!;
+      onUploadProgress: (progEvent: AxiosProgressEvent) => {
+        const progressPercent = 100 * progEvent.loaded / progEvent.total!;
         if (onProgress) onProgress(progressPercent);
         return progressPercent
       }
@@ -1285,8 +1288,8 @@ const newUploadFile = async (file: File, onProgress: OnProgressType, {
       headers: {
         'Content-Type': 'multipart/form-data'
       },
-      onUploadProgress: (progressEvent: AxiosProgressEvent) => {
-        const progressPercent = 100 * progressEvent.loaded / progressEvent.total!;
+      onUploadProgress: (progEvent: AxiosProgressEvent) => {
+        const progressPercent = 100 * progEvent.loaded / progEvent.total!;
         if (onProgress) onProgress(progressPercent);
         return progressPercent
       }
@@ -1304,14 +1307,14 @@ const newUploadFile = async (file: File, onProgress: OnProgressType, {
   }
 }
 
-const addRecordingToCollection = async (recordingID: string, collectionID: string) => {
+const addRecordingToCollection = async (recordingID: string, colID: string) => {
   let out;
   const request = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ recordingID, collectionID })
+    body: JSON.stringify({ recordingID, colID })
   };
   try {
     const response = await fetch(url + 'addRecordingToCollection', request);
@@ -1345,14 +1348,14 @@ const getLooseRecordings = async (userID: string): Promise<RecType[]> => {
   return out
 }
 
-const addAudioEventToCollection = async (audioEventID: string, collectionID: string) => {
+const addAEToCollection = async (audioEventID: string, colID: string) => {
   let out;
   const request = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ audioEventID, collectionID })
+    body: JSON.stringify({ audioEventID, colID })
   };
   try {
     const response = await fetch(url + 'addAudioEventToCollection', request);
@@ -1365,14 +1368,14 @@ const addAudioEventToCollection = async (audioEventID: string, collectionID: str
   return out
 }
 
-const addTranscriptionToCollection = async (transcriptionID: string, collectionID: string) => {
+const addTransToCollection = async (transcriptionID: string, colID: string) => {
   let out;
   const request = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ transcriptionID, collectionID })
+    body: JSON.stringify({ transcriptionID, colID })
   };
   try {
     const response = await fetch(url + 'addTranscriptionToCollection', request);
@@ -1395,9 +1398,9 @@ const removeRecFromColl = async (recordingID: string, collectionID: string) => {
     body: JSON.stringify({ recordingID, collectionID })
   };
   try {
-    const response = await fetch(url + 'removeRecordingFromCollection', request);
-    if (response.ok) {
-      out = await response.json()
+    const res = await fetch(url + 'removeRecordingFromCollection', request);
+    if (res.ok) {
+      out = await res.json()
     }
   } catch (err) {
     console.error(err)
@@ -1415,9 +1418,9 @@ const removeAEfromColl = async (audioEventID: string, collectionID: string) => {
     body: JSON.stringify({ audioEventID, collectionID })
   };
   try {
-    const response = await fetch(url + 'removeAudioEventFromCollection', request);
-    if (response.ok) {
-      out = await response.json()
+    const res = await fetch(url + 'removeAudioEventFromCollection', request);
+    if (res.ok) {
+      out = await res.json()
     }
   } catch (err) {
     console.error(err)
@@ -1425,19 +1428,19 @@ const removeAEfromColl = async (audioEventID: string, collectionID: string) => {
   return out
 }
 
-const removeTFromColl = async (transcriptionID: string, collectionID: string) => {
+const removeTFromColl = async (transcriptionID: string, colID: string) => {
   let out;
   const request = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ transcriptionID, collectionID })
+    body: JSON.stringify({ transcriptionID, colID })
   };
   try {
-    const response = await fetch(url + 'removeTranscriptionFromCollection', request);
-    if (response.ok) {
-      out = await response.json()
+    const res = await fetch(url + 'removeTranscriptionFromCollection', request);
+    if (res.ok) {
+      out = await res.json()
     }
   } catch (err) {
     console.error(err)
@@ -1567,7 +1570,7 @@ const updateTranscriptionTitle = async (id: string, title: string) => {
   }
 }
 
-const updateTranscriptionPermissions = async (id: string, permissions: string) => {
+const updateTranscriptionPermissions = async (id: string, perm: string) => {
   let out;
   const request = {
     method: 'POST',
@@ -1576,7 +1579,7 @@ const updateTranscriptionPermissions = async (id: string, permissions: string) =
     },
     body: JSON.stringify({
       id: id,
-      permissions: permissions
+      permissions: perm
     })
   };
   try {
@@ -1859,9 +1862,9 @@ const getEditableCollections = async (userID: string): Promise<CollectionType[]>
   };
   try {
     const params = new URLSearchParams({ userID: JSON.stringify(userID) });
-    const response = await fetch(url + 'getEditableCollections?' + params, request);
-    if (response.ok) {
-      out = await response.json()
+    const res = await fetch(url + 'getEditableCollections?' + params, request);
+    if (res.ok) {
+      out = await res.json()
     }
     
   } catch (err) {
@@ -1892,7 +1895,7 @@ export {
   initializeAudioEvent,
   cleanEmptyDoc,
   saveAudioMetadata,
-  getAllAudioEventMetadata,
+  getAllAEMetadata,
   getAudioEvent,
   updateSaEstimate,
   getVerifiedStatus,
@@ -1926,8 +1929,8 @@ export {
   getAllCollections,
   getEditableCollections,
   addRecordingToCollection,
-  addAudioEventToCollection,
-  addTranscriptionToCollection,
+  addAEToCollection,
+  addTransToCollection,
   removeRecFromColl,
   removeAEfromColl,
   removeTFromColl,

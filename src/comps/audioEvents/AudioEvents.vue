@@ -123,7 +123,7 @@
 </template>
 <script lang='ts'>
 import { 
-  getAllAudioEventMetadata, 
+  getAllAEMetadata, 
   deleteAudioEvent,
   getAllTransOfAudioFile,
   getEditableCollections,
@@ -249,7 +249,7 @@ export default defineComponent({
     }
     
     try {
-      this.allAudioEvents = await getAllAudioEventMetadata();
+      this.allAudioEvents = await getAllAEMetadata();
       this.allAudioEvents?.sort((a, b) => a.name.localeCompare(b.name));
     } catch (err) {
       console.log(err)
@@ -316,7 +316,7 @@ export default defineComponent({
     async handleClosePermissionsModal() {
       this.permissionsModalOpen = false;
       try {
-        this.allAudioEvents = await getAllAudioEventMetadata();
+        this.allAudioEvents = await getAllAEMetadata();
         this.allAudioEvents?.sort((a, b) => a.name.localeCompare(b.name));
         this.editCols = await getEditableCollections(this.$store.state.userID!)
 
@@ -329,7 +329,7 @@ export default defineComponent({
       this.addToCollectionModalOpen = false;
       this.removeFromCollectionModalOpen = false;
       try {
-        this.allAudioEvents = await getAllAudioEventMetadata();
+        this.allAudioEvents = await getAllAEMetadata();
         this.allAudioEvents?.sort((a, b) => a.name.localeCompare(b.name));
         this.editCols = await getEditableCollections(this.$store.state.userID!)
 
@@ -345,7 +345,7 @@ export default defineComponent({
     },
 
     async reset() {
-      this.allAudioEvents = await getAllAudioEventMetadata();
+      this.allAudioEvents = await getAllAEMetadata();
       this.allAudioEvents?.sort((a, b) => a.name.localeCompare(b.name));
     },
 
@@ -743,7 +743,7 @@ export default defineComponent({
       const result = await deleteAudioEvent(this.selectedAE._id);
       console.log(result);
       if (result.deletedCount === 1) {
-        this.allAudioEvents = await getAllAudioEventMetadata();
+        this.allAudioEvents = await getAllAEMetadata();
         this.allAudioEvents?.sort((a, b) => a.name.localeCompare(b.name));
       }
     }

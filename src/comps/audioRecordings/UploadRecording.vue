@@ -407,7 +407,7 @@
 <script lang="ts">
 import { defineComponent, PropType } from 'vue';
 import { 
-  getAllAudioEventMetadata, 
+  getAllAEMetadata, 
   AudioEventMetadataType,
   newUploadFile,
   getAudioRecording,
@@ -691,7 +691,7 @@ export default defineComponent({
         this.audioFileId = this.recId;
         await this.prepareForEditing();
       } else if (this.frameView === 'uploadRec') {
-        this.allAudioEvents = await getAllAudioEventMetadata();
+        this.allAudioEvents = await getAllAEMetadata();
         this.allAudioEvents = this.allAudioEvents.filter(ae => {
           return this.permissionToEditAE(ae)
         });

@@ -162,19 +162,19 @@ const pitchNumberToChroma = (pitchNumber: number) => {
 }
 
 /**
- * Generates an array of evenly spaced values between startValue and stopValue.
+ * Generates an array of evenly spaced values between startVal and stopVal.
  * The number of values in the array is determined by cardinality.
  *
- * @param {number} startValue - The start value of the sequence.
- * @param {number} stopValue - The end value of the sequence.
+ * @param {number} startVal - The start value of the sequence.
+ * @param {number} stopVal - The end value of the sequence.
  * @param {number} cardinality - The number of values to generate.
  * @returns {number[]} An array of evenly spaced values.
  */
-const linSpace = (startValue: number, stopValue: number, cardinality: number) => {
+const linSpace = (startVal: number, stopVal: number, cardinality: number) => {
   var arr = [];
-  var step = (stopValue - startValue) / (cardinality - 1);
+  var step = (stopVal - startVal) / (cardinality - 1);
   for (var i = 0; i < cardinality; i++) {
-    arr.push(startValue + (step * i));
+    arr.push(startVal + (step * i));
   }
   return arr;
 };
@@ -187,12 +187,16 @@ type OutputType = 'pitchNumber' | 'chroma' | 'pitch' | 'pitchClass';
  * @param {Trajectory[]} trajs - An array of Trajectory objects.
  * @param {Object} options - An object containing optional parameters.
  * @param {number} options.inst - The instrument number. Default is 0.
- * @param {OutputType} options.outputType - The type of output. Can be 'pitchNumber', 'chroma', 'pitch', or 'pitchClass'. Default is 'pitchNumber'.
- * @param {'cumulative' | 'proportional'} options.countType - The type of count. Can be 'cumulative' or 'proportional'. Default is 'cumulative'.
+ * @param {OutputType} options.outputType - The type of output. Can be 
+ * 'pitchNumber', 'chroma', 'pitch', or 'pitchClass'. Default is 'pitchNumber'.
+ * @param {'cumulative' | 'proportional'} options.countType - The type of count. 
+ * Can be 'cumulative' or 'proportional'. Default is 'cumulative'.
  *
- * @returns {NumObj} An object where the keys are pitch numbers and the values are their corresponding durations.
+ * @returns {NumObj} An object where the keys are pitch numbers and the values 
+ * are their corresponding durations.
  *
- * @throws {SyntaxError} If the durations of fixed pitches in a trajectory is not an object.
+ * @throws {SyntaxError} If the durations of fixed pitches in a trajectory is 
+ * not an object.
  */
 const durationsOfFixedPitches = (trajs: Trajectory[], {
   inst = 0, 
@@ -234,15 +238,9 @@ const durationsOfFixedPitches = (trajs: Trajectory[], {
   }
 }
 
-
-
 const isObject = (argument: any) => {
   return typeof argument === 'object' && argument !== null
 }
-
-// const cumsum: (value: number) => number = (sum => value => sum += value)(0);
-
-// const cumsum = (sum => value => sum += value)(0);
 
 const getStarts = (durArray: number[]) => {
   const cumsum: (value: number) => number = (sum => value => sum += value)(0);
@@ -373,21 +371,6 @@ class Pitch {
     else {
       this.fundamental = fundamental
     }
-    // let ratio;
-    // if (this.swara === 0 || this.swara === 4) {
-    //   ratio = this.ratios[this.swara]
-    //   if (typeof ratio !== 'number') {
-    //     throw new SyntaxError(`invalid ratio type, must be float: ${ratio}`)
-    //   }
-    // } else {
-    //   const nestedRatios = this.ratios[this.swara];
-    //   if (typeof nestedRatios !== 'object') {
-    //     throw new SyntaxError(`invalid nestedRatios type, ` + 
-    //       `must be array: ${nestedRatios}`)
-    //   }
-    //   ratio = nestedRatios[Number(this.raised)]
-    // }
-    // this.frequency = ratio * this.fundamental * (2 ** this.oct);
   }
 
   static fromPitchNumber(pitchNumber: number, fundamental: number  = 261.63) {
@@ -415,7 +398,7 @@ class Pitch {
       }
     } else {
       if (typeof this.swara !== 'number') {
-        throw new SyntaxError(`invalid swara type, must be number: ${this.swara}`)
+        throw new SyntaxError(`wrong swara type, must be number: ${this.swara}`)
       }
       const nestedRatios = this.ratios[this.swara];
       if (typeof nestedRatios !== 'object') {
@@ -437,7 +420,7 @@ class Pitch {
       }
     } else {
       if (typeof this.swara !== 'number') {
-        throw new SyntaxError(`invalid swara type, must be number: ${this.swara}`)
+        throw new SyntaxError(`wrong swara type, must be number: ${this.swara}`)
       }
       const nestedRatios = this.ratios[this.swara];
       if (typeof nestedRatios !== 'object') {
@@ -472,7 +455,6 @@ class Pitch {
       }
       ratio = nestedRatios[Number(this.raised)]
     }
-    // this.frequency = ratio * this.fundamental * (2 ** this.oct);
   }
 
   get sargamLetter() {
@@ -930,7 +912,10 @@ class Trajectory {
         name: 'hammer-on'
       });
     } else if (this.id === 11) {
-      if (this.durArray === undefined || (Array.isArray(this.durArray) && this.durArray.length === 1)) {
+      if (
+        this.durArray === undefined || 
+        (Array.isArray(this.durArray) && this.durArray.length === 1)
+        ) {
         this.durArray = [0.5, 0.5]
       }
       const starts = getStarts(this.durArray);
@@ -1035,7 +1020,7 @@ class Trajectory {
     return 2 ** logFreqOut
   }
 
-  id3(x: number, lf?: number[], sl?: number): number { // reverse asymptotic approach
+  id3(x: number, lf?: number[], sl?: number): number { // reverse asymptote
     const logFreqs = lf === undefined ? this.logFreqs : lf;
     const slope = sl === undefined ? this.slope : sl;
     const a = logFreqs[0];
@@ -1138,7 +1123,8 @@ class Trajectory {
     return 2 ** logFreqs[index]
   }
 
-  id10(x: number, lf?: number[], da?: number[]): number { // fancy krintin slide hammer
+  id10(x: number, lf?: number[], da?: number[]): number { 
+    // fancy krintin slide hammer
     const logFreqs = lf === undefined ? this.logFreqs : lf;
     let durArray = da === undefined ? this.durArray : da;
     if (durArray === undefined) durArray = [...Array(6)].map((_, i) => i / 6);
@@ -1460,15 +1446,11 @@ class Trajectory {
 class Group { 
   trajectories: Trajectory[];
   id: string;
-
-
-
-  
   //  a group of adjacent trajectories, cloneable for copy and paste
   // takes the trajectories as input (they should have already been tested for 
   // adjacency, but testing again just in case).
   // this will sit in in the phrase object, within a `groupsGrid` nested array. 
-  // A reference to this group, via ID, will be held in each relevent trajectory.
+  // A reference to this group, via ID, is held in each relevent trajectory.
   // (if we held the group itself in the traj, we would get circularity ...)
 
   // when reconstructing this upon loading the piece from JSON, need to make 
@@ -2276,8 +2258,8 @@ class Piece {
       })
     }
     if (this.sectionStarts.length > this.sectionCategorization.length) {
-      const diff = this.sectionStarts.length - this.sectionCategorization.length;
-      for (let i = 0; i < diff; i++) {
+      const dif = this.sectionStarts.length - this.sectionCategorization.length;
+      for (let i = 0; i < dif; i++) {
         this.sectionCategorization.push(initSecCategorization())
       }
     }
@@ -2391,10 +2373,8 @@ class Piece {
       let slice;
       if (i === this.sectionStarts!.length - 1) {
         slice = this.phrases.slice(s)
-        // sections.push(this.phrases.slice(s))
       } else {
         slice = this.phrases.slice(s, this.sectionStarts![i + 1])
-        // sections.push(this.phrases.slice(s, this.sectionStarts[i + 1]))
       }
       sections.push(new Section({ 
         phrases: slice, 
@@ -2749,7 +2729,8 @@ class Raga {
     return out
   }
 
-  getPitchNumbers(low: number, high: number) { // returns all pitch numbers, inclusive
+  getPitchNumbers(low: number, high: number) { // returns all pitch numbers, 
+    // inclusive
     let pitchNumbers = [];
     for (let i = low; i <= high; i++) {
       const oct = Math.floor(i / 12);

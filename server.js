@@ -212,7 +212,8 @@ const runServer = async () => {
         const userID = JSON.parse(req.query.userID);
         const sortKey = JSON.parse(req.query.sortKey);
         let newPermissions = false;
-        if (req.query.newPermissions && req.query.newPermissions !== 'undefined') {
+        const reqNP = req.query.newPermissions;
+        if (reqNP && reqNP !== 'undefined') {
           newPermissions = JSON.parse(req.query.newPermissions);
         }
         let secondarySortKey = undefined;
@@ -354,8 +355,8 @@ const runServer = async () => {
         explicitPermissions: 1
       }
       try {
-        const result = await audioRecordings.find().project(projection).toArray();
-        res.json(result)
+        const out = await audioRecordings.find().project(projection).toArray();
+        res.json(out)
       } catch (err) {
         console.error(err);
         res.status(500).send(err);
@@ -493,7 +494,9 @@ const runServer = async () => {
               if (newRecordings[count].parentTrackNumber !== count) {
                 newRecordings[count].parentTrackNumber = count;
                 // update in audioRecordings collection
-                const query = { '_id': ObjectId(newRecordings[count].audioFileId) };
+                const query = { 
+                  '_id': ObjectId(newRecordings[count].audioFileId) 
+                };
                 const update = { $set: { 'parentTrackNumber': count } };
                 await audioRecordings.updateOne(query, update);
               }
@@ -624,7 +627,9 @@ const runServer = async () => {
       }
       try {
         let result = await musicians.find().sort(sorts).project(proj).toArray();
-        const output = req.query.verbose === 'true' ? result : result.map(r => r['Initial Name']);
+        const output = req.query.verbose === 'true' ? 
+          result : 
+          result.map(r => r['Initial Name']);
         res.json(output)
       } catch (err) {
         console.error(err);
@@ -781,12 +786,12 @@ const runServer = async () => {
         }
       } else if (req.body.artifactType === 'audioRecording') {
         try {
-          const query = { _id: ObjectId(req.body._id) };
-          const update = { $set: { 
+          const q = { _id: ObjectId(req.body._id) };
+          const up = { $set: { 
             "explicitPermissions": req.body.explicitPermissions 
           } };
           const options = { returnOriginal: false };
-          const result = await audioRecordings.findOneAndUpdate(query, update, options);
+          const result = await audioRecordings.findOneAndUpdate(q, up, options);
           console.log(result)
           const parentID = result.value.parentID;
           const key = result.value.parentTrackNumber;
@@ -1541,7 +1546,7 @@ const runServer = async () => {
         if (!req.files) {
           res.send({ status: false, message: 'No file uploaded' });
         } else {
-          const newUniqueId = await ObjectId();
+          const newId = await ObjectId();
           const dateModified = new Date().toISOString();
           const audioEventID = req.body.audioEventID;
           let recIdx = req.body.recIdx;
@@ -1561,9 +1566,9 @@ const runServer = async () => {
             const octOffsetPath = `${recPath}.octOffset`;
             const dateModifiedPath = `${recPath}.dateModified`
             const expPermissionsPath = `${recPath}.explicitPermissions`;
-            const query = { _id: ObjectId(audioEventID) };
+            const q = { _id: ObjectId(audioEventID) };
             const update = { $set: { 
-              [afIdPath]: newUniqueId,
+              [afIdPath]: newId,
               [datePath]: {},
               [locationPath]: {},
               [musiciansPath]: {},
@@ -1576,8 +1581,8 @@ const runServer = async () => {
                 view: []
               }         
             } };
-            const options = { upsert: true, returnOriginal: false };
-            const result = await audioEvents.findOneAndUpdate(query, update, options);
+            const op = { upsert: true, returnOriginal: false };
+            const result = await audioEvents.findOneAndUpdate(q, update, op);
             parentTitle = result.value.name;
             aeUserID = result.value.userID;
             console.log(result.value)
@@ -1586,7 +1591,7 @@ const runServer = async () => {
             // with the new audio file, so as not to rely on the aggregation
             // which generates from audioEvents forever.
           await audioRecordings.insertOne({
-            _id: newUniqueId,
+            _id: newId,
             duration: 0,
             saEstimate: 0,
             saVerified: false,
@@ -1611,13 +1616,13 @@ const runServer = async () => {
           })
 
           const suffix = getSuffix(audioFile.mimetype);
-          let fileName = newUniqueId + suffix;
-          audioFile.mv('./uploads/' + fileName);
+          let fn = newId + suffix;
+          audioFile.mv('./uploads/' + fn);
           if (suffix === '.opus') {
-            const newFileName = newUniqueId + '.wav';
-            const spawnArgs = ['-i', './uploads/' + fileName, './uploads/' + newFileName];
+            const newFN = newId + '.wav';
+            const spawnArgs = ['-i', './uploads/' + fn, './uploads/' + newFN];
             const convertToOpus = spawn('ffmpeg', spawnArgs)
-            fileName = newFileName;
+            fn = newFN;
             convertToOpus.stderr.on('data', data => {
               console.error(`stderr: ${data}`)
             });
@@ -1625,8 +1630,8 @@ const runServer = async () => {
               console.log('opus conversion finished')
             })
           }
-          const spawnArr = ['process_audio.py', fileName, audioEventID, recIdx, newUniqueId];
-          const processAudio = spawn('python3', spawnArr);
+          const spawns = ['process_audio.py', fn, audioEventID, recIdx, newId];
+          const processAudio = spawn('python3', spawns);
           processAudio.stderr.on('data', data => {
             console.error(`stderr: ${data}`)
           });
@@ -1639,7 +1644,7 @@ const runServer = async () => {
                 name: audioFile.name,
                 mimetype: audioFile.mimetype,
                 size: audioFile.size,
-                audioFileId: newUniqueId
+                audioFileId: newId
               }
             });
           });
@@ -1673,21 +1678,22 @@ const runServer = async () => {
           const idx = req.body.idx;
           const avatar = req.files.avatar;
           const tempString = `recordings.${idx}.audioFileId`;
-          const newUniqueId = await ObjectId();
+          const newId = await ObjectId();
           const query = { _id: ObjectId(parentId) };
-          const update = { $set: { [tempString]: newUniqueId } };
+          const update = { $set: { [tempString]: newId } };
           const options = { upsert: true };
           // first, find the existing audio event.
           // if there is another audio file already, use that id to search
           // the transcriptions db via the audioID field. For each transcription
-          // found, update the audioID field to the new id. Then, delete any audio, 
-          // spectrograms, melographs, and peaks files associated with the old id.
+          // found, update the audioID field to the new id. Then, delete any 
+          // audio, spectrograms, melographs, and peaks files associated with 
+          // the old id.
           // Then, delete the old id from the audioRecordings db.
           const ae = await audioEvents.findOne(query);
           if (ae.recordings && ae.recordings[idx]) {
             const oldId = ae.recordings[idx].audioFileId.toString();
             const tQuery = { audioID: oldId };
-            const tUpdate = { $set: { audioID: newUniqueId } };
+            const tUpdate = { $set: { audioID: newId } };
             const tOptions = { upsert: true };
             await transcriptions.updateMany(tQuery, tUpdate, tOptions);
             await deleteFiles(oldId);
@@ -1696,13 +1702,13 @@ const runServer = async () => {
           }
           await audioEvents.updateOne(query, update, options)
           const suffix = getSuffix(avatar.mimetype);
-          let fileName = newUniqueId + suffix;
-          avatar.mv('./uploads/' + fileName);
+          let fn = newId + suffix;
+          avatar.mv('./uploads/' + fn);
           if (suffix === '.opus') {
-            const newFileName = newUniqueId + '.wav';
-            const spawnArgs = ['-i', './uploads/' + fileName, './uploads/' + newFileName];
+            const newFN = newId + '.wav';
+            const spawnArgs = ['-i', './uploads/' + fn, './uploads/' + newFN];
             const convertToOpus = spawn('ffmpeg', spawnArgs)
-            fileName = newFileName;
+            fn = newFN;
             convertToOpus.stderr.on('data', data => {
               console.error(`stderr: ${data}`)
             });
@@ -1710,7 +1716,7 @@ const runServer = async () => {
               console.log('opus conversion finished')
             })
           }
-          const spawnArr = ['process_audio.py', fileName, parentId, idx];
+          const spawnArr = ['process_audio.py', fn, parentId, idx];
           const processAudio = spawn('python3', spawnArr);
           processAudio.stderr.on('data', data => {
             console.error(`stderr: ${data}`)
@@ -1724,11 +1730,11 @@ const runServer = async () => {
                 name: avatar.name,
                 mimetype: avatar.mimetype,
                 size: avatar.size,
-                audioFileId: newUniqueId
+                audioFileId: newId
               }
             });
           });
-          spawn('python3', ['make_images.py', newUniqueId.toString()])
+          spawn('python3', ['make_images.py', newId.toString()])
         }
       } catch (err) {
         console.error(err)

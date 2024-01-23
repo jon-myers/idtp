@@ -6,8 +6,8 @@
       @mouseleave='hoverTrigger(false)'
       @mousemove='handleCircleMouseMove'
       @mouseup='handleCircleMouseUp'>
-      <div class='progressBarOuter' @click='handleProgressClick' ref='pbOuter'>
-        <div class='progressBarInner'>
+      <div class='progBarOuter' @click='handleProgressClick' ref='pbOuter'>
+        <div class='progBarInner'>
           <div :class='`currentTime tooLeft`'>
             {{formattedCurrentTime}}
           </div>
@@ -40,21 +40,9 @@
           </div>
         </div>
         <div class='recInfo right'>
-          <!-- <div class='rulerBox'>
-            <img :src='icons.ruler' @click='toggleWaveform' />
-          </div> -->
         </div>
       </div>
     </div>
-    <!-- <WaveformAnalyzer
-      class='waveformAnalyzer'
-      v-show='showWaveform' 
-      :initSaEstimate='saEstimate' 
-      :initSaVerified='saVerified'
-      ref='waveformAnalyzer'
-      :key='waKey'/> -->
-    
-  
   </div>
 </template>
 <script lang='ts'>
@@ -65,8 +53,6 @@ import loopIcon from '@/assets/icons/loop.svg';
 import pauseIcon from '@/assets/icons/pause.svg';
 import playIcon from '@/assets/icons/play.svg';
 import shuffleIcon from '@/assets/icons/shuffle.svg';
-// import rulerIcon from '@/assets/icons/ruler.svg';
-// import WaveformAnalyzer from '@/comps/audioEvents/WaveformAnalyzer.vue';
 
 const structuredTime = (dur: number) => {
   const hours = String(Math.floor(dur / 3600));
@@ -82,7 +68,6 @@ const leadingZeros = (int: number) => {
     return String(int)
   }
 }
-
 
 type AudioPlayerData = {
   progress: number,
@@ -106,7 +91,6 @@ type AudioPlayerData = {
   waKey: number,
   dragStart: number,
 }
-
 
 export default {
   name: 'GenericAudioPlayer',
@@ -136,10 +120,6 @@ export default {
     }
   },
   
-  components: {
-    // WaveformAnalyzer
-  },
-  
   props: [
     'audioSource',
     'saEstimate',
@@ -151,8 +131,8 @@ export default {
     this.audio = new Audio() as HTMLAudioElement;
     this.audio.ontimeupdate = () => {
       this.progress = this.audio!.currentTime / this.audio!.duration;
-      const pbi = document.querySelector('.progressBarInner') as HTMLDivElement;
-      const pbo = document.querySelector('.progressBarOuter');
+      const pbi = document.querySelector('.progBarInner') as HTMLDivElement;
+      const pbo = document.querySelector('.progBarOuter');
       if (pbo) {
         const totWidth = pbo.getBoundingClientRect().width;
         pbi!.style.width = this.progress * totWidth + 'px'
@@ -296,7 +276,6 @@ export default {
           this.formattedTimeLeft = [st.hours, st.minutes, st.seconds].join(':')
         } 
       }
-    
     },
     
     hoverTrigger(bool: boolean) {
@@ -351,8 +330,8 @@ export default {
     handleCircleMouseMove(e: MouseEvent) {
       if (this.circleDragging) {
         const diff = this.dragStart - e.clientX;
-        const pbi = document.querySelector('.progressBarInner') as HTMLDivElement;
-        const pbo = document.querySelector('.progressBarOuter') as HTMLDivElement;
+        const pbi = document.querySelector('.progBarInner') as HTMLDivElement;
+        const pbo = document.querySelector('.progBarOuter') as HTMLDivElement;
         const pboBox = pbo.getBoundingClientRect()
         pbi.style.width = pboBox.width * this.progress - diff + 'px';
       }
@@ -380,25 +359,25 @@ export default {
   pointer-events: auto;
 }
 
-.progressBarOuter {
+.progBarOuter {
   width: 100%;
   height: 8px;
   background-color: #242424;
   overflow-x: hidden;
 }
 
-.progressBarOuter:hover {
+.progBarOuter:hover {
   cursor: pointer
 }
 
-.progressBarInner {
+.progBarInner {
   width: 0px;
   background-color: lightgrey;
   height: 6px;
   position: absolute;
 }
 
-.progressBarInner:hover {
+.progBarInner:hover {
   cursor: pointer
 }
 
@@ -438,31 +417,6 @@ export default {
   align-items: center;
   justify-content: right;
 }
-/* 
-.rulerBox {
-  width: 100px;
-  height: 100%;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-}
-
-.rulerBox > img {
-  height: 40px;
-  filter: brightness(400%);
-  cursor: pointer;
-}
-
-.rulerBox > img:hover {
-  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg) 
-    brightness(94%) contrast(97%);
-}
-
-.rulerBox > .showWaveform {
-  filter: invert(46%) sepia(75%) saturate(292%) hue-rotate(85deg) 
-    brightness(97%) contrast(97%);
-} */
 
 .controlFlexer {
   width: 100%;

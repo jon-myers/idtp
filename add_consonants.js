@@ -249,15 +249,24 @@ const upload = async () => {
   try {
     // const result = await phonemes.insertMany(consonants);
     const result = await phonemes.aggregate([
-      {$group: {_id: {item: "$item", qty: "$qty", size: "$size", status: "$status"}}},
-      {$project: {_id: 0, item: "$_id.item", qty: "$_id.qty", size: "$_id.size", status: "$_id.status"}},
-      {$out: "phonemes"}
+      { 
+        $group: { 
+          _id: { item: "$item", qty: "$qty", size: "$size", status: "$status" }
+        } 
+      },
+      { 
+        $project: { 
+          _id: 0, 
+          item: "$_id.item", 
+          qty: "$_id.qty", 
+          size: "$_id.size", 
+          status: "$_id.status" 
+        } 
+      },
+      { $out: "phonemes" }
    ])
    console.log(result)
 
-
-    // close connection
-    // client.close();
   }
   catch (err) {
     console.log(err);

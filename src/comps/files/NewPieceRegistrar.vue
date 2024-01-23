@@ -239,7 +239,7 @@
 <script lang='ts'>
 
 import { 
-  getAllAudioEventMetadata, 
+  getAllAEMetadata, 
   getRagaNames, 
   getRaagRule, 
   saveRaagRules,
@@ -431,7 +431,7 @@ export default defineComponent({
     // this.recDisabled = false;
     this.updateErrors();
     try {
-      this.allEvents = await getAllAudioEventMetadata();
+      this.allEvents = await getAllAEMetadata();
       this.raags = await getRagaNames();
       this.looseRecs = await getLooseRecordings(this.$store.state.userID!);
       this.allUsers = await getAllUsers();
@@ -449,9 +449,11 @@ export default defineComponent({
       if (this.dataObj) { // this is exclusively for cloning
         this.clonePiece()
       }
-      if (this.$route.query.aeName !== 'null' && this.$route.query.aeName !== undefined) {
+      const aeName = this.$route.query.aeName;
+      if (aeName !== 'null' && aeName !== undefined) {
         const allNames = this.allEvents.map(obj => obj.name);
-        this.aeIdx = allNames.indexOf(JSON.parse(this.$route.query.aeName as string));
+        const parsedName = JSON.parse(aeName as string);
+        this.aeIdx = allNames.indexOf(parsedName);
         const recs = this.allEvents[this.aeIdx].recordings;
         const allRecNames = await Object.keys(recs).map(key => {
           const rec = recs[Number(key)];
@@ -558,20 +560,7 @@ export default defineComponent({
     },
   },
   
-  components: {
-    // RaagEditor
-  },
-  
   methods: {
-
-    // readyToSubmit() {
-    //   console.log('readyToSubmit getting called')
-    //   if (this.errors.length === 0) {
-    //     return true
-    //   } else {
-    //     return false
-    //   }
-    // },
 
     updateErrors() {
       this.errors = [];
@@ -587,7 +576,8 @@ export default defineComponent({
       if (this.instrumentation.length === 0) {
         this.errors.push('No instrumentation')
       }
-      if ((this.aeIdx === undefined && this.recording === undefined) && !this.noRec) {
+      const noAudio = this.aeIdx === undefined && this.recording === undefined;
+      if (noAudio && !this.noRec) {
         this.errors.push('No audio event or recording has been selected. If no \
           recording is desired, "None" must be checked.' )
       }
@@ -756,7 +746,8 @@ export default defineComponent({
           };
           if (this.aeIdx !== undefined && this.recording !== undefined) {
             const ae = this.allEvents[this.aeIdx];
-            newPieceInfo.audioID = ae.recordings[(this.recording as number)].audioFileId;
+            const recNum = this.recording as number;
+            newPieceInfo.audioID = ae.recordings[recNum].audioFileId;
           }
         }
         this.$emit('newPieceInfoEmit', newPieceInfo)
@@ -767,7 +758,8 @@ export default defineComponent({
     getInstrumentation() {
       let rec: RecType;
       if (!this.noAE) {
-        rec = this.allEvents[Number(this.aeIdx)].recordings[Number(this.recording)];
+        const recNum = Number(this.recording);
+        rec = this.allEvents[Number(this.aeIdx)].recordings[recNum];
       } else {
         rec = this.recording as RecType;
       }

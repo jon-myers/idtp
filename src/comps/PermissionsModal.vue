@@ -115,7 +115,9 @@ export default defineComponent({
       required: true
     },
     artifactType: {
-      type: String as PropType<'audioEvent' | 'audioRecording' | 'transcription'>,
+      type: String as PropType<(
+        'audioEvent' | 'audioRecording' | 'transcription')
+        >,
       required: true
     },
     artifactID: {
@@ -174,7 +176,8 @@ export default defineComponent({
         edit,
         view
       }
-      const res = await updateVisibility(this.artifactType, this.artifactID, explicitPermissions);
+      const exp = explicitPermissions;
+      await updateVisibility(this.artifactType, this.artifactID, exp);
       this.$emit('close');
     },
 

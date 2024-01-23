@@ -479,9 +479,6 @@ class Meter {
             this.pulseStructures[i - 1].forEach(parentPS => {
               parentPS.pulses.forEach(p => {
                 let duration = parentPS.pulseDur;
-                // const tempo = 60 * h / duration;
-                // let startTime = p.realTime + parentPS.pulseDur * j;
-                // console.log(p, parentPS, duration, h)
                 const ps = PulseStructure.fromPulse(p, duration, h, { 
                   layer: i 
                 })
@@ -850,12 +847,14 @@ class Meter {
     const cycleNums = idxs.map(idx => {
       return Math.floor(idx / summed)
     });
-    const prevNumPulses = this.pulseStructures[layer].map(ps => ps.pulses).flat().length;
+    const prevPLen = this.pulseStructures[layer]
+      .map(ps => ps.pulses).flat().length;
     this.growCycles(Math.max(...cycleNums) + 1);
     for (let l = 0; l <= layer; l++) {
       idxs.forEach((idx, i) => {
-        const layerPulses = this.pulseStructures[layer].map(ps => ps.pulses).flat();
-        const pulse = layerPulses[prevNumPulses + idx];
+        const layerPulses = this.pulseStructures[layer]
+          .map(ps => ps.pulses).flat();
+        const pulse = layerPulses[prevPLen + idx];
         const offset = timePoints[i] - pulse.realTime;
         if (l === pulse.lowestLayer) {
           this.offsetPulse(pulse, offset)
@@ -1111,9 +1110,6 @@ class Meter {
       deletedPSs.forEach(ps => {
         ps.pulses.forEach(p => p.removeAffiliation(ps.uniqueId))
       })
-      // const nextLps = this.pulseStructures[relLayer].map(ps => {
-      // return ps.pulses
-      // }).flat();
     })
   }
 
@@ -1659,9 +1655,6 @@ class Meter {
 }
 
 const findClosestIdxs = (trials: number[], items: number[]) => {
-  // if (trials.length === 1) {
-  //   return [findClosestIdx(trials[0], items)];
-  // }
   const usedIndexes = new Set();
   return trials.map(trial => {
     let diffs = items.map((item, index) => [Math.abs(trial - item), index]);
@@ -1671,15 +1664,6 @@ const findClosestIdxs = (trials: number[], items: number[]) => {
     return diffs[0][1];
   });
 }
-
-// const findClosestIdx = (trial: number, items: number[]) => {
-//   let diffs = items.map((item, index) => [Math.abs(trial - item), index]);
-//   diffs.sort((a, b) => a[0] - b[0]);
-//   console.log(diffs, items)
-//   return diffs[0][1];
-// }
-
-
 
 export { Meter, Pulse, PulseStructure, findClosestIdxs }
 

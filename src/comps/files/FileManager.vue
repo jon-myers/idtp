@@ -371,8 +371,8 @@ export default defineComponent({
       } else {
         throw new Error('this.allUsers is undefined');
       }
-
-      this.editableCols = await getEditableCollections(this.$store.state.userID!);
+      const userID = this.$store.state.userID!;
+      this.editableCols = await getEditableCollections(userID);
       
     } catch (err) {
       console.log(err)
@@ -396,7 +396,8 @@ export default defineComponent({
         el.classList.remove('selected');
       });
       try {
-        this.editableCols = await getEditableCollections(this.$store.state.userID!);
+        const userID = this.$store.state.userID!;
+        this.editableCols = await getEditableCollections(userID);
       } catch (err) {
         console.log(err)
       }
@@ -555,8 +556,6 @@ export default defineComponent({
     },
 
     designNewPiece() {
-      // const dropDown = this.$refs.dropDown as HTMLElement;
-      // dropDown.classList.add('closed');
       this.designPieceModal = true;
       this.passedInDataObj = '';
     },
@@ -665,7 +664,8 @@ export default defineComponent({
     async handleRightClick(e: MouseEvent) {
       e.preventDefault();
       try {
-        this.editableCols = await getEditableCollections(this.$store.state.userID!);
+        const userID = this.$store.state.userID!;
+        this.editableCols = await getEditableCollections(userID);
       } catch (err) {
         console.log(err)
       }
@@ -692,27 +692,17 @@ export default defineComponent({
         if (this.dropDownTop + cmRect.height > rect.height - 20) {
           this.dropDownTop = rect.height - 20 - cmRect.height;
         }
-        // const dd = this.$refs.dropDown as HTMLElement;
-        // const dropDownRect = dd.getBoundingClientRect();
-        // const dropDownHeight = dropDownRect.height;
-        // if (this.dropDownTop + dropDownHeight > rect.height - 20) {
-        //   this.dropDownTop = rect.height - 20 - dropDownHeight;
-        // }
         this.designPieceModal = false;
-
         document.querySelectorAll('.selected').forEach((el) => {
           el.classList.remove('selected');
         });
-        // dd.classList.remove('closed');
         let el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement;
         const parentNode = el.parentNode as HTMLElement;
         if (el.classList[0] === 'overflowX') {
           el = el.parentElement!.parentElement!;
         }
         if (el.classList[0] === 'fileInfoRow') {
-
           addOptions = true;
-
           const num = Number(el.id.slice(3));
           el.classList.add('selected');
           this.selectedPiece = this.allPieces![num];
@@ -724,9 +714,7 @@ export default defineComponent({
             this.deleteActive = false;
           }
         } else if (parentNode.classList[0] === 'fileInfoRow') {
-          
           addOptions = true;
-
           const num = Number(parentNode.id.slice(3));
           parentNode.classList.add('selected');
           this.selectedPiece = this.allPieces![num];
@@ -742,9 +730,7 @@ export default defineComponent({
           this.open_ = false;
           this.deleteActive = false;
         }
-
         if (addOptions) {
-
           this.contextMenuClosed = false;
           this.contextMenuChoices = [];
           this.contextMenuChoices.push({

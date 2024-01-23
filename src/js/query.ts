@@ -259,7 +259,7 @@ class Query {
       }
     } else if (category === 'trajectoryID') {
       if (trajectoryID === undefined) {
-        throw new Error('trajectoryID is required when category is trajectoryID');
+        throw new Error('trajectoryID is required, category is trajectoryID');
       }
     } else if (category === 'vowel') {
       const inst = piece.instrumentation[this.instrumentIdx];
@@ -277,11 +277,17 @@ class Query {
       if (consonant === undefined) {
         throw new Error('consonant is required when category is consonant');
       }
-    } else if (category === 'pitchSequenceStrict' || category === 'pitchSequenceLoose') {
+    } else if (
+        category === 'pitchSequenceStrict' || 
+        category === 'pitchSequenceLoose'
+        ) {
       if (this.pitchSequence === undefined) {
         throw new Error('pitchSequence is required');
       }
-    } else if (category === 'trajSequenceStrict' || category === 'trajSequenceLoose') {
+    } else if (
+        category === 'trajSequenceStrict' || 
+        category === 'trajSequenceLoose'
+        ) {
       if (this.trajIdSequence === undefined) {
         throw new Error('trajIdSequence is required');
       }
@@ -744,7 +750,7 @@ class Query {
       boolean = numPitchSeq.every((pitch, idx) => pitch === nPitches[idx]);
     } else if (this.designator === 'endsWith') {
       const startIdx = nPitches.length - numPitchSeq.length;
-      boolean = numPitchSeq.every((pitch, idx) => pitch === nPitches[startIdx + idx]);
+      boolean = numPitchSeq.every((p, i) => p === nPitches[startIdx + i]);
     }
     return boolean;
   }
@@ -806,10 +812,12 @@ class Query {
     * 
     * @param {number} trajID - The trajectory ID to Diff.
     * @param {string} designator - The designator to use for differentiation. 
-    *                              It can be 'includes', 'excludes', 'startsWith', or 'endsWith'.
-    * @param {Trajectory[]} trajectories - The array of trajectories to check against.
+*               It can be 'includes', 'excludes', 'startsWith', or 'endsWith'.
+    * @param {Trajectory[]} trajectories - The array of trajectories to check 
+    * against.
     * 
-    * @returns {boolean} - Returns true if the trajectory ID matches the condition specified by the designator, false otherwise.
+    * @returns {boolean} - Returns true if the trajectory ID matches the 
+    * condition specified by the designator, false otherwise.
     */
   private trajIDDiff(trajID: number, trajectories: Trajectory[]) {
     let boolean: boolean = false;
@@ -1009,7 +1017,9 @@ class Query {
     let outputTrajectories: Trajectory[][] = [];
     let outputIdentifiers: string[] = [];
     let queryAnswers: QueryAnswerType[] = [];
-    let nonStringifiedOutputIdentifiers: (number | string | { phraseIdx: number, trajIdx: number })[] = [];
+    let nonStringifiedOutputIdentifiers: (
+      number | string | { phraseIdx: number, trajIdx: number }
+      )[] = [];
     try {
       if (piece === undefined) {
         piece = await instantiatePiece(transcriptionID);
@@ -1045,16 +1055,19 @@ class Query {
       });
       if (every) { // only selects trajectories that are in all answers
         outputIdentifiers = answers.reduce((acc, answer) => {
-          const ids = answer.stringifiedIdentifier.filter(id => acc.includes(id));
+          const ids = answer.stringifiedIdentifier.filter(id => {
+            return acc.includes(id)
+          });
           return ids.length > 0 ? ids : [];
         }, answers[0].stringifiedIdentifier);
         const idxs = outputIdentifiers.map(id => {
           return answers[0].stringifiedIdentifier.indexOf(id);
         });
         outputTrajectories = idxs.map(idx => answers[0].trajectories[idx]);
-        nonStringifiedOutputIdentifiers = idxs.map(idx => answers[0].identifier[idx]);
+        nonStringifiedOutputIdentifiers = idxs.map(idx => { 
+          return answers[0].identifier[idx]
+        });
         queryAnswers = idxs.map(idx => answers[0].queryAnswers[idx]);
-
       } else { // selects trajectories that are in any answer
         const startTimes = [] as number[];
         answers.forEach(answer => {
@@ -1071,7 +1084,9 @@ class Query {
         const sortIdxs = Array.from({length: startTimes.length}, (_, i) => i);
         sortIdxs.sort((a, b) => startTimes[a] - startTimes[b]);
         outputTrajectories = sortIdxs.map(idx => outputTrajectories[idx]);
-        nonStringifiedOutputIdentifiers = sortIdxs.map(idx => nonStringifiedOutputIdentifiers[idx]);
+        nonStringifiedOutputIdentifiers = sortIdxs.map(idx => {
+          return nonStringifiedOutputIdentifiers[idx]
+        });
         queryAnswers = sortIdxs.map(idx => queryAnswers[idx]);
       }   
     } catch (err) {
@@ -1091,39 +1106,13 @@ type MultipleOptionType = {
   every?: boolean,
 }
 
-// const query_1 = {
-//   designator: 'includes' as DesignatorType,
-//   category: 'sectionTopLevel' as CategoryType,
-//   sectionTopLevel: 'Alap' as SecCatType['Top Level']
-// }
+export { Query }
 
-// const query_2 = {
-//   designator: 'includes' as DesignatorType,
-//   category: 'pitchSequenceStrict' as CategoryType,
-//   pitchSequence: [
-//     new Pitch({ swara: 'dha', oct: -1}), 
-//     new Pitch({ swara: 'sa'}),
-//     new Pitch({ swara: 'ni', oct: -1}),
-//     new Pitch({ swara: 'sa'}),
-//   ],
-// }
-
-// Query.multiple([query_1], { 
-//   segmentation: 'phrase',
-//   transcriptionID: '64fd37ffca8171903f8165bc',
-// })
-//   .then(q => {
-//     console.log(q)
-//   })
-
-
-  export { Query }
-
-  export type { 
-    QueryType, 
-    MultipleOptionType, 
-    SegmentationType,
-    CategoryType,
-    DesignatorType,
-    QueryAnswerType
-  }
+export type { 
+  QueryType, 
+  MultipleOptionType, 
+  SegmentationType,
+  CategoryType,
+  DesignatorType,
+  QueryAnswerType
+}

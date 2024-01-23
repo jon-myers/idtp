@@ -29,8 +29,8 @@ import { defineComponent, PropType } from 'vue';
 import type { CollectionType } from '@/ts/types.ts';
 import { 
   addRecordingToCollection,
-  addAudioEventToCollection,
-  addTranscriptionToCollection
+  addAEToCollection,
+  addTransToCollection
 } from '@/js/serverCalls';
 
 type AddToCollectionDataType = {
@@ -107,15 +107,16 @@ export default defineComponent({
   methods: {
     async addToCollection() {
       try {
+        const sCollId = this.selectedCollection!._id!;
         if (this.addType === 'recording') {
           if (this.recID === undefined) throw new Error('recID is undefined');
-          const res = await addRecordingToCollection(this.recID, this.selectedCollection!._id!);
+          const res = await addRecordingToCollection(this.recID, sCollId);
         } else if (this.addType === 'audioEvent') {
           if (this.aeID === undefined) throw new Error('aeID is undefined');
-          const res = await addAudioEventToCollection(this.aeID, this.selectedCollection!._id!);
+          const res = await addAEToCollection(this.aeID, sCollId);
         } else if (this.addType === 'transcription') {
           if (this.tID === undefined) throw new Error('tID is undefined');
-          const res = await addTranscriptionToCollection(this.tID, this.selectedCollection!._id!);
+          const res = await addTransToCollection(this.tID, sCollId);
         } else {
           throw new Error('Invalid addType');
         }
