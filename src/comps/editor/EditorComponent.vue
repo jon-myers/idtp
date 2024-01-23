@@ -8590,7 +8590,8 @@ export default defineComponent({
     },
 
     addClipPaths() {
-      this.defs = this.svg.append('defs') as Selection<SVGDefsElement, unknown, null, undefined>;
+      this.defs = this.svg.append('defs') as 
+        Selection<SVGDefsElement, unknown, null, undefined>;
       const rect = this.rect();
       this.defs.append('clipPath')
         .attr('id', 'clip')
