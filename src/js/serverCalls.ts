@@ -10,7 +10,7 @@ import { CollectionType } from '@/ts/types.ts';
 import { 
   MusicianDBType, 
   GharanaType,
-  TranscriptionMetadataType
+  TransMetadataType
 } from '@/ts/types.ts';
 import { RecUpdateType } from '@/comps/audioRecordings/UploadRecording.vue';
 // import { URLSearchParams } from 'url';
@@ -132,7 +132,7 @@ const getAllPieces = async (
     sortKey: string, 
     sortDir?: string | number,
     newPermissions?: boolean
-  ): Promise<TranscriptionMetadataType[]> => {
+  ): Promise<TransMetadataType[]> => {
   if (sortKey === undefined) {
     sortKey = 'title'
   }
@@ -363,7 +363,7 @@ const getAudioRecording = async (_id: string): Promise<RecType> => {
 const getAllTransOfAudioFile = async (
     audioID: string, 
     userID: string
-  ): Promise<TranscriptionMetadataType[]> => {
+  ): Promise<TransMetadataType[]> => {
   let allTrans;
   const suffix = '?' + new URLSearchParams({
     audioID: audioID,
@@ -1385,7 +1385,7 @@ const addTranscriptionToCollection = async (transcriptionID: string, collectionI
   return out
 }
 
-const removeRecordingFromCollection = async (recordingID: string, collectionID: string) => {
+const removeRecFromColl = async (recordingID: string, collectionID: string) => {
   let out;
   const request = {
     method: 'POST',
@@ -1405,7 +1405,7 @@ const removeRecordingFromCollection = async (recordingID: string, collectionID: 
   return out
 }
 
-const removeAudioEventFromCollection = async (audioEventID: string, collectionID: string) => {
+const removeAEfromColl = async (audioEventID: string, collectionID: string) => {
   let out;
   const request = {
     method: 'POST',
@@ -1425,7 +1425,7 @@ const removeAudioEventFromCollection = async (audioEventID: string, collectionID
   return out
 }
 
-const removeTranscriptionFromCollection = async (transcriptionID: string, collectionID: string) => {
+const removeTFromColl = async (transcriptionID: string, collectionID: string) => {
   let out;
   const request = {
     method: 'POST',
@@ -1928,9 +1928,9 @@ export {
   addRecordingToCollection,
   addAudioEventToCollection,
   addTranscriptionToCollection,
-  removeRecordingFromCollection,
-  removeAudioEventFromCollection,
-  removeTranscriptionFromCollection,
+  removeRecFromColl,
+  removeAEfromColl,
+  removeTFromColl,
   getRecsFromIds,
   getAEsFromIds,
   getTranscriptionsFromIds,

@@ -142,7 +142,7 @@ import { defineComponent } from 'vue';
 import { RecType } from '@/comps/audioEvents/AddAudioEvent.vue'
 import ContextMenu from '@/comps/ContextMenu.vue';
 import { ContextMenuOptionType, UserType, CollectionType } from '@/ts/types.ts';
-import { TranscriptionMetadataType } from '@/comps/collections/MiniTranscriptions.vue';
+import { TransMetadataType } from '@/comps/collections/MiniTranscriptions.vue';
 type FileManagerType = {
   infoKeys: string[];
   designPieceModal: boolean;
@@ -501,7 +501,7 @@ export default defineComponent({
       this.editOwnerModal = false;
     },
 
-    pieceInfo(p: TranscriptionMetadataType): PieceInfoType {
+    pieceInfo(p: TransMetadataType): PieceInfoType {
       const title = p.title;
       const raga = p.raga.name;
       let name = undefined;
@@ -945,7 +945,7 @@ export default defineComponent({
       }
     },
 
-    permissionToView(transcription: TranscriptionMetadataType) {
+    permissionToView(transcription: TransMetadataType) {
       const ep = transcription.explicitPermissions;
       const id = this.$store.state.userID!;
       return ep.publicView || 
@@ -954,7 +954,7 @@ export default defineComponent({
         ep.view.includes(id);
     },
 
-    permissionToEdit(transcription: TranscriptionMetadataType) {
+    permissionToEdit(transcription: TransMetadataType) {
       const ep = transcription.explicitPermissions;
       const id = this.$store.state.userID!;
       return transcription.userID === id || ep.edit.includes(id);

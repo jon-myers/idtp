@@ -69,15 +69,15 @@ import { defineComponent, PropType } from 'vue';
 import type { 
   CollectionType, 
   ContextMenuOptionType,
-  TranscriptionMetadataType, 
+  TransMetadataType, 
 } from '@/ts/types.ts';
 import { getContrastingTextColor } from '@/ts/utils';
 import GenericAudioPlayer from '@/comps/GenericAudioPlayer.vue';
 import { 
   getEditableCollections,
-  removeAudioEventFromCollection,
-  removeRecordingFromCollection,
-  removeTranscriptionFromCollection,
+  removeAEfromColl,
+  removeRecFromColl,
+  removeTFromColl,
   getAllTransOfAudioFile
 } from '@/js/serverCalls';
 import MiniAudioRecordings from '@/comps/collections/MiniAudioRecordings.vue';
@@ -191,7 +191,7 @@ export default defineComponent({
       return ep.edit.includes(id) || rec.userID === id;
     },
 
-    permissionToViewTrans(transcription: TranscriptionMetadataType) {
+    permissionToViewTrans(transcription: TransMetadataType) {
       const ep = transcription.explicitPermissions;
       const id = this.$store.state.userID!;
       return ep.publicView || 
@@ -200,7 +200,7 @@ export default defineComponent({
         ep.view.includes(id);
     },
 
-    permissionToEditTrans(transcription: TranscriptionMetadataType) {
+    permissionToEditTrans(transcription: TransMetadataType) {
       const ep = transcription.explicitPermissions;
       const id = this.$store.state.userID!;
       return transcription.userID === id || ep.edit.includes(id);
@@ -258,14 +258,14 @@ export default defineComponent({
               enabled: true
             },
           ];
-          // if you are the owner, or have editing permissions for the collection
-          // const editors = this.collection.permissions.edit;
+          // if you are the owner, or have editing permissions for the 
+          // collection
           if (this.editor) {
             this.contextMenuOptions.push({
               text: 'Remove from Collection',
               action: async () => {
                 try {
-                  await removeTranscriptionFromCollection(t._id, this.collection._id!);
+                  await removeTFromColl(t._id, this.collection._id!);
                   await this.$nextTick();
                   await tComp.updateTrans();
                 } catch (err) {
@@ -273,7 +273,6 @@ export default defineComponent({
                 }
                 this.$emit('updateCollections');
                 this.contextMenuOpen = false;
-
               },
               enabled: true
             });
@@ -305,21 +304,19 @@ export default defineComponent({
         if (target.classList.contains('recRow')) {
           recRowID = target.id
           target = target.parentElement!
-          
         }
         if (target.classList.contains('recsHolder')) {
           target = target.parentElement!
         }
         if (target.classList.contains('aeRowHolder')) {
           const idx = Number(target.id.slice(11));
-          
           this.contextMenuOptions.push({
             text: 'Remove from Collection',
             action: async () => {
               try {
                 const miniAE = this.$refs.miniAE as typeof MiniAudioEvents;
                 const aeId = miniAE.audioEvents[idx]._id!;
-                await removeAudioEventFromCollection(aeId, this.collection._id!);
+                await removeAEfromColl(aeId, this.collection._id!);
                 await this.$nextTick();
                 await miniAE.updateAEs();
               } catch (err) {
@@ -398,7 +395,7 @@ export default defineComponent({
             action: async () => {
               try {
                 const recId = rec._id!;
-                await removeRecordingFromCollection(recId, this.collection._id!);
+                await removeRecFromColl(recId, this.collection._id!);
               } catch (err) {
                 console.log(err);
               }
@@ -472,7 +469,8 @@ export default defineComponent({
     updateContextMenuPosition() {
       const CM = this.$refs.contextMenu as typeof ContextMenu;
       const height = this.contextMenuOptions.length * CM.rowHeight;
-      if (this.contextMenuY + height > window.innerHeight - this.navHeight - 100) {
+      const vertSpace = window.innerHeight - this.navHeight - 100;
+      if (this.contextMenuY + height > vertSpace) {
         this.contextMenuY = window.innerHeight - 100 - this.navHeight - height;
       }
       if (this.contextMenuX + CM.dropDownWidth > window.innerWidth - 20) {
@@ -481,7 +479,8 @@ export default defineComponent({
     },
 
     setContainerHeight() {
-      this.containerHeight = window.innerHeight - this.navHeight - 101 - this.titleRowHeight - this.descriptionRowHeight;
+      this.containerHeight = window.innerHeight - this.navHeight - 101 
+      this.containerHeight -= (this.titleRowHeight + this.descriptionRowHeight);
     },
 
     getEditableCollections,

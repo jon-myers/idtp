@@ -27,9 +27,9 @@
 import { defineComponent, PropType } from 'vue';
 import type { CollectionType } from '@/ts/types.ts';
 import { 
-  removeRecordingFromCollection,
-  removeAudioEventFromCollection,
-  removeTranscriptionFromCollection
+  removeRecFromColl,
+  removeAEfromColl,
+  removeTFromColl
 } from '@/js/serverCalls';
 
 type RemoveFromCollectionDataType = {
@@ -110,20 +110,20 @@ export default defineComponent({
           if (this.recID === undefined) {
             throw new Error('recID is undefined');
           }
-          const remove = removeRecordingFromCollection;
+          const remove = removeRecFromColl;
           const res = await remove(this.recID, this.selectedCollection!._id!);
         } else if (this.removeType === 'audioEvent') {
           if (this.aeID === undefined) {
             throw new Error('aeID is undefined');
           }
-          const remove = removeAudioEventFromCollection;
+          const remove = removeAEfromColl;
           const res = await remove(this.aeID, this.selectedCollection!._id!);
 
         } else if (this.removeType === 'transcription') {
           if (this.tID === undefined) {
             throw new Error('tID is undefined');
           }
-          const remove = removeTranscriptionFromCollection;
+          const remove = removeTFromColl;
           const res = await remove(this.tID, this.selectedCollection!._id!);
         }
         this.$emit('close');

@@ -2,11 +2,11 @@
   <div class='miniAEMain' @contextmenu='handleContextMenu($event)'>
     <div class='labelRow'>
       <div class='metadataLabels'
-        v-for='(field, fIdx) in metadataFields'
+        v-for='(field, fIdx) in mdFields'
         :style='{
-          "width": columnWidths[fIdx] + "px",
-          "max-width": fIdx === 0 ? "" : columnWidths[fIdx] + "px",
-          "min-width": minColumnWidths[fIdx] + "px",
+          "width": colWidths[fIdx] + "px",
+          "max-width": fIdx === 0 ? "" : colWidths[fIdx] + "px",
+          "min-width": mincolWidths[fIdx] + "px",
           "flex-grow": fIdx === 0 ? 1 : 0,
           "position": "relative",
         }'
@@ -51,11 +51,11 @@
           >
           <div 
             class='metadataLabels'
-            v-for='(field, fIdx) in metadataFields'
+            v-for='(field, fIdx) in mdFields'
             :style='{
-              "width": columnWidths[fIdx] + "px",
-              "max-width": fIdx === 0 ? "" : columnWidths[fIdx] + "px",
-              "min-width": minColumnWidths[fIdx] + "px",
+              "width": colWidths[fIdx] + "px",
+              "max-width": fIdx === 0 ? "" : colWidths[fIdx] + "px",
+              "min-width": mincolWidths[fIdx] + "px",
               "flex-grow": fIdx === 0 ? 1 : 0,
             }'
             >
@@ -84,11 +84,11 @@
           >
           <div class='recsLabelRow'>
             <div class='recsMetadataLabels' 
-              v-for='(field, fIdx) in recMetadataFields'
+              v-for='(field, fIdx) in recmdFields'
               :style='{
-                "width": recColumnWidths[fIdx] + "px",
-                "max-width": fIdx === 1 ? "" : recColumnWidths[fIdx] + "px",
-                "min-width": recMinColumnWidths[fIdx] + "px",
+                "width": reccolWidths[fIdx] + "px",
+                "max-width": fIdx === 1 ? "" : reccolWidths[fIdx] + "px",
+                "min-width": recMincolWidths[fIdx] + "px",
                 "flex-grow": fIdx === 1 ? 1 : 0,
                 "position": "relative",
               }'
@@ -115,11 +115,11 @@
             >
             <div 
               :class='recClass(recIdx, aeIdx, audioEvents)'
-              v-for='(field, fIdx) in recMetadataFields'
+              v-for='(field, fIdx) in recmdFields'
               :style='{
-                "width": recColumnWidths[fIdx] + "px",
-                "max-width": fIdx === 1 ? "" : recColumnWidths[fIdx] + "px",
-                "min-width": recMinColumnWidths[fIdx] + "px",
+                "width": reccolWidths[fIdx] + "px",
+                "max-width": fIdx === 1 ? "" : reccolWidths[fIdx] + "px",
+                "min-width": recMincolWidths[fIdx] + "px",
                 "flex-grow": fIdx === 1 ? 1 : 0,
               }'
               >
@@ -154,21 +154,21 @@ import { getAEsFromIds } from '@/js/serverCalls';
 
 type MiniAudioEventsDataType = {
   audioEvents: AudioEventType[],
-  metadataFields: {
+  mdFields: {
     name: string,
     func: (ae: AudioEventType) => string,
     sortState: 'up' | 'down',
     sortType?: string
   }[],
-  recMetadataFields: {
+  recmdFields: {
     name: string,
     func: (rec: RecType) => string,
   }[],
-  columnWidths: number[],
-  minColumnWidths: number[],
+  colWidths: number[],
+  mincolWidths: number[],
   initialWidths: number[],
-  recColumnWidths: number[],
-  recMinColumnWidths: number[],
+  reccolWidths: number[],
+  recMincolWidths: number[],
   recInitialWidths: number[],
   selectedSortIdx: number,
   labelRowHeight: number,
@@ -184,7 +184,7 @@ export default defineComponent({
   data(): MiniAudioEventsDataType {
     return {
       audioEvents: [],
-      metadataFields: [
+      mdFields: [
         {
           name: 'Title',
           func: (ae: AudioEventType) => ae.name,
@@ -227,16 +227,16 @@ export default defineComponent({
         }
       ],
 
-      columnWidths: [200, 150, 150, 125, 140],
+      colWidths: [200, 150, 150, 125, 140],
       initialWidths: [200, 150, 150, 125, 140],
-      minColumnWidths: [80, 150, 120, 125, 140],
-      recColumnWidths: [140, 160, 150, 150, 125],
+      mincolWidths: [80, 150, 120, 125, 140],
+      reccolWidths: [140, 160, 150, 150, 125],
       recInitialWidths: [140, 160, 150, 150, 125],
-      recMinColumnWidths: [70, 80, 70, 80, 80],
+      recMincolWidths: [70, 80, 70, 80, 80],
       selectedSortIdx: 0,
       labelRowHeight: 40,
       initialMouseX: undefined,
-      recMetadataFields: [
+      recmdFields: [
         {
           name: 'Track #',
           func: (rec: RecType) => {
@@ -307,27 +307,27 @@ export default defineComponent({
   },
 
   async mounted() {
-    const summedWidths = this.columnWidths.reduce((a, b) => a + b, 0);
+    const summedWidths = this.colWidths.reduce((a, b) => a + b, 0);
     const ratio = this.$el.offsetWidth / summedWidths;
-    this.columnWidths = this.columnWidths.map(w => w * ratio);
-    this.initialWidths = this.columnWidths.slice();
+    this.colWidths = this.colWidths.map(w => w * ratio);
+    this.initialWidths = this.colWidths.slice();
 
-    const summedRecWidths = this.recColumnWidths.reduce((a, b) => a + b, 0);
-    const recRatio = (this.$el.offsetWidth - this.indentWidth) / summedRecWidths;
-    this.recColumnWidths = this.recColumnWidths.map(w => w * recRatio);
-    this.recInitialWidths = this.recColumnWidths.slice();
+    const fullRecWidth = this.reccolWidths.reduce((a, b) => a + b, 0);
+    const rRatio = (this.$el.offsetWidth - this.indentWidth) / fullRecWidth;
+    this.reccolWidths = this.reccolWidths.map(w => w * rRatio);
+    this.recInitialWidths = this.reccolWidths.slice();
 
     // handle resizing
     window.addEventListener('resize', () => {
-      const summedWidths = this.columnWidths.reduce((a, b) => a + b, 0);
+      const summedWidths = this.colWidths.reduce((a, b) => a + b, 0);
       const ratio = this.$el.offsetWidth / summedWidths;
-      this.columnWidths = this.columnWidths.map(w => w * ratio);
-      this.initialWidths = this.columnWidths.slice();
+      this.colWidths = this.colWidths.map(w => w * ratio);
+      this.initialWidths = this.colWidths.slice();
 
-      const summedRecWidths = this.recColumnWidths.reduce((a, b) => a + b, 0);
-      const recRatio = (this.$el.offsetWidth - this.indentWidth) / summedRecWidths;
-      this.recColumnWidths = this.recColumnWidths.map(w => w * recRatio);
-      this.recInitialWidths = this.recColumnWidths.slice();
+      const fullRecWidth = this.reccolWidths.reduce((a, b) => a + b, 0);
+      const rRatio = (this.$el.offsetWidth - this.indentWidth) / fullRecWidth;
+      this.reccolWidths = this.reccolWidths.map(w => w * rRatio);
+      this.recInitialWidths = this.reccolWidths.slice();
     });
     try {
       this.audioEvents = await getAEsFromIds(this.aeIds);
@@ -347,15 +347,15 @@ export default defineComponent({
 
   beforeUnmount() {
     window.removeEventListener('resize', () => {
-      const summedWidths = this.columnWidths.reduce((a, b) => a + b, 0);
+      const summedWidths = this.colWidths.reduce((a, b) => a + b, 0);
       const ratio = this.$el.offsetWidth / summedWidths;
-      this.columnWidths = this.columnWidths.map(w => w * ratio);
-      this.initialWidths = this.columnWidths.slice();
+      this.colWidths = this.colWidths.map(w => w * ratio);
+      this.initialWidths = this.colWidths.slice();
 
-      const summedRecWidths = this.recColumnWidths.reduce((a, b) => a + b, 0);
-      const recRatio = (this.$el.offsetWidth - this.indentWidth) / summedRecWidths;
-      this.recColumnWidths = this.recColumnWidths.map(w => w * recRatio);
-      this.recInitialWidths = this.recColumnWidths.slice();
+      const fullRecWidth = this.reccolWidths.reduce((a, b) => a + b, 0);
+      const rRatio = (this.$el.offsetWidth - this.indentWidth) / fullRecWidth;
+      this.reccolWidths = this.reccolWidths.map(w => w * rRatio);
+      this.recInitialWidths = this.reccolWidths.slice();
     });
   },
   components: {
@@ -634,29 +634,31 @@ export default defineComponent({
       // Store the initial mouse position and column widths
       // event.preventDefault();
       this.initialMouseX = event.clientX;
-      this.initialWidths = this.columnWidths.slice()
+      this.initialWidths = this.colWidths.slice()
       // make cursor resize until drag end
       document.body.style.cursor = 'col-resize';
     },
     handleDrag(fIdx: number, event: DragEvent) {
-      const nextCol = fIdx < this.columnWidths.length - 1;
+      const nextCol = fIdx < this.colWidths.length - 1;
       // Calculate the new width based on the mouse movement
       document.body.style.cursor = 'col-resize';
         if (event.clientX !== 0) {
-          
+          const initW = this.initialWidths[fIdx]!;
+          const nextInitW = this.initialWidths[fIdx + 1]!;
+          const nextMinW = this.mincolWidths[fIdx + 1];
           const deltaX = event.clientX - this.initialMouseX!;
-          if (this.initialWidths[fIdx]! + deltaX < 50) {
+          if (initW + deltaX < 50) {
             return;
-          } else if (nextCol && (this.initialWidths[fIdx + 1]! - deltaX < 50)) {
+          } else if (nextCol && (nextInitW - deltaX < 50)) {
             return
-          } else if (this.initialWidths[fIdx] + deltaX < this.minColumnWidths[fIdx]) {
+          } else if (initW + deltaX < this.mincolWidths[fIdx]) {
             return
-          } else if (nextCol && this.initialWidths[fIdx + 1] -deltaX < this.minColumnWidths[fIdx + 1]) {
+          } else if (nextCol && nextInitW - deltaX < nextMinW) {
             return
           } else {
-            this.columnWidths[fIdx] = this.initialWidths[fIdx]! + deltaX;
+            this.colWidths[fIdx] = initW + deltaX;
             if (nextCol) {
-              this.columnWidths[fIdx + 1] = this.initialWidths[fIdx + 1] - deltaX;
+              this.colWidths[fIdx + 1] = nextInitW - deltaX;
             }
 
           }
@@ -664,20 +666,23 @@ export default defineComponent({
     },
     handleDragEnd(fIdx: number, event: DragEvent) {
       document.body.style.cursor = 'auto';
-      const nextCol = fIdx < this.columnWidths.length - 1;
+      const nextCol = fIdx < this.colWidths.length - 1;
       const deltaX = event.clientX - this.initialMouseX!;
-      if (this.initialWidths[fIdx] + deltaX < 50) {
+      const initW = this.initialWidths[fIdx]!;
+      const nextInitW = this.initialWidths[fIdx + 1]!;
+      const nextMinW = this.mincolWidths[fIdx + 1];
+      if (initW + deltaX < 50) {
         return;
-      } else if (nextCol && this.initialWidths[fIdx + 1] - deltaX < 50) {
+      } else if (nextCol && nextInitW - deltaX < 50) {
         return
-      } else if (this.initialWidths[fIdx] + deltaX < this.minColumnWidths[fIdx]) {
+      } else if (initW + deltaX < this.mincolWidths[fIdx]) {
         return
-      } else if (nextCol && this.initialWidths[fIdx + 1] -deltaX < this.minColumnWidths[fIdx + 1]) {
+      } else if (nextCol && nextInitW - deltaX < nextMinW) {
         return
       } else {
-        this.columnWidths[fIdx] = this.initialWidths[fIdx] + deltaX;
+        this.colWidths[fIdx] = initW + deltaX;
         if (nextCol) {
-          this.columnWidths[fIdx + 1] = this.initialWidths[fIdx + 1] - deltaX;
+          this.colWidths[fIdx + 1] = nextInitW - deltaX;
         }  
       } 
     },
@@ -686,30 +691,32 @@ export default defineComponent({
       // Store the initial mouse position and column widths
       // event.preventDefault();
       this.initialMouseX = event.clientX;
-      this.recInitialWidths = this.recColumnWidths.slice()
+      this.recInitialWidths = this.reccolWidths.slice()
       // make cursor resize until drag end
       document.body.style.cursor = 'col-resize';
     },
 
     recHandleDrag(fIdx: number, event: DragEvent) {
-      const nextCol = fIdx < this.recColumnWidths.length - 1;
+      const nextCol = fIdx < this.reccolWidths.length - 1;
       // Calculate the new width based on the mouse movement
       document.body.style.cursor = 'col-resize';
         if (event.clientX !== 0) {
-          
+          const rInitW = this.recInitialWidths[fIdx]!;
+          const nextRInitW = this.recInitialWidths[fIdx + 1]!;
+          const nextRMinW = this.recMincolWidths[fIdx + 1];
           const deltaX = event.clientX - this.initialMouseX!;
           if (this.recInitialWidths[fIdx]! + deltaX < 50) {
             return;
-          } else if (nextCol && (this.recInitialWidths[fIdx + 1]! - deltaX < 50)) {
+          } else if (nextCol && (nextRInitW - deltaX < 50)) {
             return
-          } else if (this.recInitialWidths[fIdx] + deltaX < this.recMinColumnWidths[fIdx]) {
+          } else if (rInitW + deltaX < this.recMincolWidths[fIdx]) {
             return
-          } else if (nextCol && this.recInitialWidths[fIdx + 1] -deltaX < this.recMinColumnWidths[fIdx + 1]) {
+          } else if (nextCol && nextRInitW - deltaX < nextRMinW) {
             return
           } else {
-            this.recColumnWidths[fIdx] = this.recInitialWidths[fIdx]! + deltaX;
+            this.reccolWidths[fIdx] = rInitW + deltaX;
             if (nextCol) {
-              this.recColumnWidths[fIdx + 1] = this.recInitialWidths[fIdx + 1] - deltaX;
+              this.reccolWidths[fIdx + 1] = nextRInitW - deltaX;
             }
 
           }
@@ -718,26 +725,29 @@ export default defineComponent({
 
     recHandleDragEnd(fIdx: number, event: DragEvent) {
       document.body.style.cursor = 'auto';
-      const nextCol = fIdx < this.recColumnWidths.length - 1;
+      const nextCol = fIdx < this.reccolWidths.length - 1;
       const deltaX = event.clientX - this.initialMouseX!;
-      if (this.recInitialWidths[fIdx] + deltaX < 50) {
+      const rInitW = this.recInitialWidths[fIdx]!;
+      const nextRInitW = this.recInitialWidths[fIdx + 1]!;
+      const nextRMinW = this.recMincolWidths[fIdx + 1];
+      if (rInitW + deltaX < 50) {
         return;
-      } else if (nextCol && this.recInitialWidths[fIdx + 1] - deltaX < 50) {
+      } else if (nextCol && nextRInitW - deltaX < 50) {
         return
-      } else if (this.recInitialWidths[fIdx] + deltaX < this.recMinColumnWidths[fIdx]) {
+      } else if (rInitW + deltaX < this.recMincolWidths[fIdx]) {
         return
-      } else if (nextCol && this.recInitialWidths[fIdx + 1] -deltaX < this.recMinColumnWidths[fIdx + 1]) {
+      } else if (nextCol && nextRInitW - deltaX < nextRMinW) {
         return
       } else {
-        this.recColumnWidths[fIdx] = this.recInitialWidths[fIdx] + deltaX;
+        this.reccolWidths[fIdx] = rInitW + deltaX;
         if (nextCol) {
-          this.recColumnWidths[fIdx + 1] = this.recInitialWidths[fIdx + 1] - deltaX;
+          this.reccolWidths[fIdx + 1] = nextRInitW - deltaX;
         }  
       } 
     },
 
     toggleSort(fIdx: number, ensureCurrentState: boolean = false) {
-      const field = this.metadataFields[fIdx];
+      const field = this.mdFields[fIdx];
       if (this.selectedSortIdx === fIdx) {
         if (
           (field.sortState === 'down' && !ensureCurrentState) || 

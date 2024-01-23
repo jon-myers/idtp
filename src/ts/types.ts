@@ -38,7 +38,7 @@ type ContextMenuOptionType = {
   enabled?: boolean,
 }
 
-type TranscriptionMetadataType = {
+type TransMetadataType = {
   title: string;
   dateCreated: string;
   dateModified: string;
@@ -91,5 +91,5 @@ export type {
   ContextMenuOptionType,
   MusicianDBType,
   GharanaType,
-  TranscriptionMetadataType,
+  TransMetadataType,
 };

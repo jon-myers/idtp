@@ -2,14 +2,14 @@
   <div class='miniARMain' @contextmenu='handleChirp'>
     <div class='labelRow'>
       <div class='metadataLabels'
-        v-for='(field, fIdx) in metadataFields'
+        v-for='(field, fIdx) in mdFields'
         :style='{
-          "width": columnWidths[fIdx] + "px",
-          "max-width": fIdx === metadataFields.length - 2 ? 
+          "width": colWidths[fIdx] + "px",
+          "max-width": fIdx === mdFields.length - 2 ? 
             "" : 
-            columnWidths[fIdx] + "px",
-          "min-width": minColumnWidths[fIdx] + "px",
-          "flex-grow": fIdx === metadataFields.length - 2 ? 1 : 0,
+            colWidths[fIdx] + "px",
+          "min-width": mincolWidths[fIdx] + "px",
+          "flex-grow": fIdx === mdFields.length - 2 ? 1 : 0,
           "position": "relative",
         }'
       >
@@ -50,14 +50,14 @@
         >
         <div 
           class='metadataLabels' 
-          v-for='(field, fIdx) in metadataFields'
+          v-for='(field, fIdx) in mdFields'
           :style='{ 
-            "width": columnWidths[fIdx] + "px", 
-            "max-width": fIdx === metadataFields.length - 2 ? 
+            "width": colWidths[fIdx] + "px", 
+            "max-width": fIdx === mdFields.length - 2 ? 
               "" : 
-              columnWidths[fIdx] + "px",
-            "min-width": minColumnWidths[fIdx] + "px",
-            "flex-grow": fIdx === metadataFields.length - 2 ? 1 : 0 
+              colWidths[fIdx] + "px",
+            "min-width": mincolWidths[fIdx] + "px",
+            "flex-grow": fIdx === mdFields.length - 2 ? 1 : 0 
             }'
           >
           <span class='field'>{{ field.func(recording) }}</span>
@@ -83,13 +83,13 @@ import {
 } from '@/js/serverCalls';
 type MiniAudioRecordingsDataType = {
   recs: RecType[],
-  metadataFields: {
+  mdFields: {
     name: string,
     func: (rec: RecType) => string,
     sortState: 'up' | 'down',
     sortType: string | undefined
   }[],
-  columnWidths: number[],
+  colWidths: number[],
   labelRowHeight: number,
   allMusicians: { 
     'First Name'?: string,
@@ -101,7 +101,7 @@ type MiniAudioRecordingsDataType = {
   activeRecording?: RecType,
   initialMouseX?: number,
   initialWidths: number[],
-  minColumnWidths: number[]
+  mincolWidths: number[]
 }
 import { displayTime } from '@/ts/utils.ts';
 
@@ -111,7 +111,7 @@ export default defineComponent({
   data(): MiniAudioRecordingsDataType {
     return {
       recs: [],
-      metadataFields: [
+      mdFields: [
         { 
           'name': 'Soloist', 
           'func': (rec: RecType) => {
@@ -177,14 +177,14 @@ export default defineComponent({
           'sortType': undefined
         }   
       ],
-      columnWidths: [100, 100, 100, 100, 120, 70],
+      colWidths: [100, 100, 100, 100, 120, 70],
       initialWidths: [100, 100, 100, 100, 120, 70],
       initialMouseX: undefined,
       labelRowHeight: 40,
       allMusicians: [],
       selectedSortIdx: 0,
       activeRecording: undefined,
-      minColumnWidths: [90, 75, 90, 110, 130, 80]
+      mincolWidths: [90, 75, 90, 110, 130, 80]
     }
   },
   props: {
@@ -207,11 +207,11 @@ export default defineComponent({
   },
 
   async mounted() {
-    const summedWidths = this.columnWidths.reduce((a, b) => a + b, 0);
+    const summedWidths = this.colWidths.reduce((a, b) => a + b, 0);
     // if (summedWidths > this.$el.offsetWidth) {
       const ratio = this.$el.offsetWidth / summedWidths;
-      this.columnWidths = this.columnWidths.map(width => width * ratio);
-      this.initialWidths = this.columnWidths.slice();
+      this.colWidths = this.colWidths.map(width => width * ratio);
+      this.initialWidths = this.colWidths.slice();
     // }
     this.ensureDurationWidth();
     try {
@@ -254,16 +254,16 @@ export default defineComponent({
     ensureDurationWidth() {
       // ensure duration column is wide enough to display duration label
       const minWidth = 100;
-      const idx = this.metadataFields.findIndex(field => {
+      const idx = this.mdFields.findIndex(field => {
         return field.name === 'Duration';
       });
-      const audioEventIdx = this.metadataFields.findIndex(field => {
+      const audioEventIdx = this.mdFields.findIndex(field => {
         return field.name === 'Audio Event';
       });
-      if (this.columnWidths[idx] < minWidth) {
-        const extra = minWidth - this.columnWidths[idx];
-        this.columnWidths[idx] = minWidth;
-        this.columnWidths[audioEventIdx] -= extra;
+      if (this.colWidths[idx] < minWidth) {
+        const extra = minWidth - this.colWidths[idx];
+        this.colWidths[idx] = minWidth;
+        this.colWidths[audioEventIdx] -= extra;
       }
     },
 
@@ -351,7 +351,7 @@ export default defineComponent({
     },
 
     toggleSort(fIdx: number, ensureCurrentState: boolean = false) {
-      const field = this.metadataFields[fIdx];
+      const field = this.mdFields[fIdx];
       if (this.selectedSortIdx === fIdx) {
         if (
           (field.sortState === 'down' && !ensureCurrentState) || 
@@ -514,19 +514,18 @@ export default defineComponent({
       }
     },
 
-
-
     trackNumSorter(a: RecType, b: RecType) {
-      if (a.parentTrackNumber === undefined && b.parentTrackNumber === undefined) {
+      const ptn = (rec: RecType) => rec.parentTrackNumber;
+      if (ptn(a) === undefined && ptn(b) === undefined) {
         return 0;
-      } else if (a.parentTrackNumber === undefined && b.parentTrackNumber !== undefined) {
+      } else if (ptn(a) === undefined && ptn(b) !== undefined) {
         return 1;
-      } else if (a.parentTrackNumber !== undefined && b.parentTrackNumber === undefined) {
+      } else if (ptn(a) !== undefined && ptn(b) === undefined) {
         return -1;
       } else {
-        if (a.parentTrackNumber! < b.parentTrackNumber!) {
+        if (ptn(a)! < ptn(b)!) {
           return -1;
-        } else if (a.parentTrackNumber! > b.parentTrackNumber!) {
+        } else if (ptn(a)! > ptn(b)!) {
           return 1;
         } else {
           return 0;
@@ -580,10 +579,10 @@ export default defineComponent({
             const bFirstName = this.allMusicians!.find(musician => {
               return musician['Initial Name'] === bSoloist;
             })!['First Name'];
-            const aMiddleName = this.allMusicians!.find(musician => {
+            const aMidName = this.allMusicians!.find(musician => {
               return musician['Initial Name'] === aSoloist;
             })!['Middle Name'];
-            const bMiddleName = this.allMusicians!.find(musician => {
+            const bMidName = this.allMusicians!.find(musician => {
               return musician['Initial Name'] === bSoloist;
             })!['Middle Name'];
             if (aLastName < bLastName) {
@@ -603,16 +602,16 @@ export default defineComponent({
                 } else if (aFirstName! > bFirstName!) {
                   return 1;
                 } else {
-                  if (aMiddleName !== undefined && bMiddleName === undefined) {
+                  if (aMidName !== undefined && bMidName === undefined) {
                     return -1;
-                  } else if (aMiddleName === undefined && bMiddleName !== undefined) {
+                  } else if (aMidName === undefined && bMidName !== undefined) {
                     return 1;
-                  } else if (aMiddleName === undefined && bMiddleName === undefined) {
+                  } else if (aMidName === undefined && bMidName === undefined) {
                     return 0;
                   } else {
-                    if (aMiddleName! < bMiddleName!) {
+                    if (aMidName! < bMidName!) {
                       return -1;
-                    } else if (aMiddleName! > bMiddleName!) {
+                    } else if (aMidName! > bMidName!) {
                       return 1;
                     } else {
                       return 0;
@@ -683,31 +682,33 @@ export default defineComponent({
       // Store the initial mouse position and column widths
       // event.preventDefault();
       this.initialMouseX = event.clientX;
-      this.initialWidths = this.columnWidths.slice()
+      this.initialWidths = this.colWidths.slice()
       // make cursor resize until drag end
       document.body.style.cursor = 'col-resize';
       
 
     },
     handleDrag(fIdx: number, event: DragEvent) {
-      const nextCol = fIdx < this.columnWidths.length - 1;
+      const nextCol = fIdx < this.colWidths.length - 1;
       // Calculate the new width based on the mouse movement
       document.body.style.cursor = 'col-resize';
         if (event.clientX !== 0) {
-          
+          const minW = this.mincolWidths[fIdx];
+          const nextMinW = this.mincolWidths[fIdx + 1];
+          const nextInitW = this.initialWidths[fIdx + 1];
           const deltaX = event.clientX - this.initialMouseX!;
           if (this.initialWidths[fIdx]! + deltaX < 50) {
             return;
-          } else if (nextCol && (this.initialWidths[fIdx + 1]! - deltaX < 50)) {
+          } else if (nextCol && (nextInitW! - deltaX < 50)) {
             return
-          } else if (this.initialWidths[fIdx] + deltaX < this.minColumnWidths[fIdx]) {
+          } else if (this.initialWidths[fIdx] + deltaX < minW) {
             return
-          } else if (nextCol && this.initialWidths[fIdx + 1] -deltaX < this.minColumnWidths[fIdx + 1]) {
+          } else if (nextCol && nextInitW -deltaX < nextMinW) {
             return
           } else {
-            this.columnWidths[fIdx] = this.initialWidths[fIdx]! + deltaX;
+            this.colWidths[fIdx] = this.initialWidths[fIdx]! + deltaX;
             if (nextCol) {
-              this.columnWidths[fIdx + 1] = this.initialWidths[fIdx + 1] - deltaX;
+              this.colWidths[fIdx + 1] = nextInitW - deltaX;
             }
 
           }
@@ -715,20 +716,23 @@ export default defineComponent({
     },
     handleDragEnd(fIdx: number, event: DragEvent) {
       document.body.style.cursor = 'auto';
-      const nextCol = fIdx < this.columnWidths.length - 1;
+      const nextCol = fIdx < this.colWidths.length - 1;
       const deltaX = event.clientX - this.initialMouseX!;
+      const nextMinW = this.mincolWidths[fIdx + 1];
+      const minW = this.mincolWidths[fIdx];
+      const nextInitW = this.initialWidths[fIdx + 1];
       if (this.initialWidths[fIdx] + deltaX < 50) {
         return;
-      } else if (nextCol && this.initialWidths[fIdx + 1] - deltaX < 50) {
+      } else if (nextCol && nextInitW - deltaX < 50) {
         return
-      } else if (this.initialWidths[fIdx] + deltaX < this.minColumnWidths[fIdx]) {
+      } else if (this.initialWidths[fIdx] + deltaX < minW) {
         return
-      } else if (nextCol && this.initialWidths[fIdx + 1] -deltaX < this.minColumnWidths[fIdx + 1]) {
+      } else if (nextCol && nextInitW -deltaX < nextMinW) {
         return
       } else {
-        this.columnWidths[fIdx] = this.initialWidths[fIdx] + deltaX;
+        this.colWidths[fIdx] = this.initialWidths[fIdx] + deltaX;
         if (nextCol) {
-          this.columnWidths[fIdx + 1] = this.initialWidths[fIdx + 1] - deltaX;
+          this.colWidths[fIdx + 1] = nextInitW - deltaX;
         }  
       } 
     },

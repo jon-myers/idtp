@@ -111,7 +111,11 @@
 <script lang='ts'>
 import { defineComponent } from 'vue';
 import { CollectionType, UserType } from '@/ts/types.ts';
-import { getAllUsers, createCollection, updateCollection } from '@/js/serverCalls.ts';
+import { 
+  getAllUsers, 
+  createCollection, 
+  updateCollection 
+} from '@/js/serverCalls.ts';
 import type { PropType } from 'vue';
 type NewCollectionModalDataType = {
   purposeChoices: CollectionType['purpose'][],
@@ -147,24 +151,6 @@ export default defineComponent({
       color: '#D2B48C',
     };
   },
-
-  // async created() {
-  //   try {
-  //     this.allUsers = await getAllUsers();
-  //     this.allUsers = this.allUsers.filter(user => {
-  //       return user._id !== this.$store.state.userID
-  //     });
-  //     this.allUsers.sort((a, b) => {
-  //       if (a.family_name < b.family_name) return -1;
-  //       else if (a.family_name > b.family_name) return 1;
-  //       else if (a.given_name < b.given_name) return -1;
-  //       else if (a.given_name > b.given_name) return 1;
-  //       else return 0
-  //     })
-  //   } catch (error) {
-  //     console.log(error);
-  //   }
-  // },
 
   async mounted() {
     // escape key closes modal

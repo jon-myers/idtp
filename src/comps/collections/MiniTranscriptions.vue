@@ -2,12 +2,14 @@
   <div class='miniTMain' @contextmenu='handleChirp'>
     <div class='labelRow'>
       <div class='metadataLabels'
-        v-for='(field, fIdx) in metadataFields'
+        v-for='(field, fIdx) in mdFields'
         :style='{
-          "width": columnWidths[fIdx] + "px",
-          "max-width": fIdx === metadataFields.length - 2 ? "" : columnWidths[fIdx] + "px",
-          "min-width": minColumnWidths[fIdx] + "px",
-          "flex-grow": fIdx === metadataFields.length - 2 ? 1 : 0,
+          "width": colWidths[fIdx] + "px",
+          "max-width": fIdx === mdFields.length - 2 ? 
+            "" : 
+            colWidths[fIdx] + "px",
+          "min-width": mincolWidths[fIdx] + "px",
+          "flex-grow": fIdx === mdFields.length - 2 ? 1 : 0,
           "position": "relative",
         }'
       >
@@ -45,12 +47,14 @@
         >
         <div 
           class='metadataLabels' 
-          v-for='(field, fIdx) in metadataFields'
+          v-for='(field, fIdx) in mdFields'
           :style='{ 
-            "width": columnWidths[fIdx] + "px", 
-            "max-width": fIdx === metadataFields.length - 2 ? "" : columnWidths[fIdx] + "px",
-            "min-width": minColumnWidths[fIdx] + "px",
-            "flex-grow": fIdx === metadataFields.length - 2 ? 1 : 0 
+            "width": colWidths[fIdx] + "px", 
+            "max-width": fIdx === mdFields.length - 2 ? 
+              "" : 
+              colWidths[fIdx] + "px",
+            "min-width": mincolWidths[fIdx] + "px",
+            "flex-grow": fIdx === mdFields.length - 2 ? 1 : 0 
             }'
           >
           <span class='field'>{{ field.func(transcription) }}</span>
@@ -72,7 +76,7 @@
 import { defineComponent, PropType } from 'vue';
 import { getTranscriptionsFromIds } from '@/js/serverCalls.ts';
 
-type TranscriptionMetadataType = {
+type TransMetadataType = {
   title: string,
   audioID: string,
   dateCreated: string,
@@ -100,17 +104,17 @@ type TranscriptionMetadataType = {
   }
 }
 
-export type { TranscriptionMetadataType }
+export type { TransMetadataType }
 // title, transcriber, raga, created, modified, permissions
 
 type MiniTranscriptionsDataType = {
-  trans: TranscriptionMetadataType[],
-  columnWidths: number[],
-  minColumnWidths: number[],
+  trans: TransMetadataType[],
+  colWidths: number[],
+  mincolWidths: number[],
   initialWidths: number[],
-  metadataFields: {
+  mdFields: {
     name: string,
-    func: (t: TranscriptionMetadataType) => string,
+    func: (t: TransMetadataType) => string,
     sortType?: string,
     sortState?: 'up' | 'down',
   }[],
@@ -129,28 +133,28 @@ export default defineComponent({
   data(): MiniTranscriptionsDataType {
     return {
       trans: [],
-      metadataFields: [
+      mdFields: [
         {
           name: 'Title',
-          func: (t: TranscriptionMetadataType) => t.title,
+          func: (t: TransMetadataType) => t.title,
           sortType: 'title',
           sortState: 'down'
         },
         {
           name: 'Transcriber',
-          func: (t: TranscriptionMetadataType) => t.name,
+          func: (t: TransMetadataType) => t.name,
           sortType: 'transcriber',
           sortState: 'down'
         },
         {
           name: 'Raga',
-          func: (t: TranscriptionMetadataType) => t.raga.name,
+          func: (t: TransMetadataType) => t.raga.name,
           sortType: 'raga',
           sortState: 'down'
         },
         {
           name: 'Created',
-          func: (t: TranscriptionMetadataType) => {
+          func: (t: TransMetadataType) => {
             const date = new Date(t.dateCreated);
             return date.toLocaleDateString();
           },
@@ -159,7 +163,7 @@ export default defineComponent({
         },
         {
           name: 'Modified',
-          func: (t: TranscriptionMetadataType) => {
+          func: (t: TransMetadataType) => {
             const date = new Date(t.dateModified);
             return date.toLocaleDateString();
           },
@@ -168,13 +172,13 @@ export default defineComponent({
         },
         {
           name: 'Editable',
-          func: (t: TranscriptionMetadataType) => this.permissionToEdit(t) ? 'Yes' : 'No',
+          func: (t: TransMetadataType) => this.canEdit(t) ? 'Yes' : 'No',
           sortType: 'permissions',
           sortState: 'down'
         },
       ],
-      columnWidths: [80, 115, 75, 100, 100, 125],
-      minColumnWidths: [80, 115, 75, 100, 100, 125],
+      colWidths: [80, 115, 75, 100, 100, 125],
+      mincolWidths: [80, 115, 75, 100, 100, 125],
       initialWidths: [80, 115, 75, 100, 100, 125],
       initialMouseX: undefined,
       selectedSortIdx: 0,
@@ -184,10 +188,10 @@ export default defineComponent({
   },
 
   async mounted() {
-    const summedWidths = this.columnWidths.reduce((a, b) => a + b, 0);
+    const summedWidths = this.colWidths.reduce((a, b) => a + b, 0);
     const ratio = this.$el.offsetWidth / summedWidths;
-    this.columnWidths = this.columnWidths.map(width => width * ratio);
-    this.initialWidths = this.columnWidths.slice();
+    this.colWidths = this.colWidths.map(width => width * ratio);
+    this.initialWidths = this.colWidths.slice();
     try {
       const userID = this.$store.state.userID!;
       this.trans = await getTranscriptionsFromIds(this.tIds, userID);
@@ -208,13 +212,13 @@ export default defineComponent({
 
   methods: {
 
-    permissionToEdit(t: TranscriptionMetadataType) {
+    canEdit(t: TransMetadataType) {
       const ep = t.explicitPermissions;
       const id = this.$store.state.userID!;
       return ep.edit.includes(id) || t.userID === id;
     },
 
-    permissionToView(t: TranscriptionMetadataType) {
+    permissionToView(t: TransMetadataType) {
       const ep = t.explicitPermissions;
       const id = this.$store.state.userID!;
       return ep.view.includes(id) || 
@@ -240,31 +244,34 @@ export default defineComponent({
       // Store the initial mouse position and column widths
       // event.preventDefault();
       this.initialMouseX = event.clientX;
-      this.initialWidths = this.columnWidths.slice()
+      this.initialWidths = this.colWidths.slice()
       // make cursor resize until drag end
       document.body.style.cursor = 'col-resize';
       
 
     },
     handleDrag(fIdx: number, event: DragEvent) {
-      const nextCol = fIdx < this.columnWidths.length - 1;
+      const nextCol = fIdx < this.colWidths.length - 1;
       // Calculate the new width based on the mouse movement
       document.body.style.cursor = 'col-resize';
         if (event.clientX !== 0) {
+          const nextInitW = this.initialWidths[fIdx + 1];
+          const initW = this.initialWidths[fIdx];
+          const nextMinW = this.mincolWidths[fIdx + 1];
           
           const deltaX = event.clientX - this.initialMouseX!;
-          if (this.initialWidths[fIdx]! + deltaX < 50) {
+          if (initW! + deltaX < 50) {
             return;
-          } else if (nextCol && (this.initialWidths[fIdx + 1]! - deltaX < 50)) {
+          } else if (nextCol && (nextInitW! - deltaX < 50)) {
             return
-          } else if (this.initialWidths[fIdx] + deltaX < this.minColumnWidths[fIdx]) {
+          } else if (initW + deltaX < this.mincolWidths[fIdx]) {
             return
-          } else if (nextCol && this.initialWidths[fIdx + 1] -deltaX < this.minColumnWidths[fIdx + 1]) {
+          } else if (nextCol && nextInitW - deltaX < nextMinW) {
             return
           } else {
-            this.columnWidths[fIdx] = this.initialWidths[fIdx]! + deltaX;
+            this.colWidths[fIdx] = initW! + deltaX;
             if (nextCol) {
-              this.columnWidths[fIdx + 1] = this.initialWidths[fIdx + 1] - deltaX;
+              this.colWidths[fIdx + 1] = nextInitW - deltaX;
             }
 
           }
@@ -272,26 +279,29 @@ export default defineComponent({
     },
     handleDragEnd(fIdx: number, event: DragEvent) {
       document.body.style.cursor = 'auto';
-      const nextCol = fIdx < this.columnWidths.length - 1;
+      const nextCol = fIdx < this.colWidths.length - 1;
       const deltaX = event.clientX - this.initialMouseX!;
-      if (this.initialWidths[fIdx] + deltaX < 50) {
+      const nextInitW = this.initialWidths[fIdx + 1];
+      const initW = this.initialWidths[fIdx];
+      const nextMinW = this.mincolWidths[fIdx + 1];
+      if (initW + deltaX < 50) {
         return;
-      } else if (nextCol && this.initialWidths[fIdx + 1] - deltaX < 50) {
+      } else if (nextCol && nextInitW - deltaX < 50) {
         return
-      } else if (this.initialWidths[fIdx] + deltaX < this.minColumnWidths[fIdx]) {
+      } else if (initW + deltaX < this.mincolWidths[fIdx]) {
         return
-      } else if (nextCol && this.initialWidths[fIdx + 1] -deltaX < this.minColumnWidths[fIdx + 1]) {
+      } else if (nextCol && nextInitW -deltaX < nextMinW) {
         return
       } else {
-        this.columnWidths[fIdx] = this.initialWidths[fIdx] + deltaX;
+        this.colWidths[fIdx] = initW + deltaX;
         if (nextCol) {
-          this.columnWidths[fIdx + 1] = this.initialWidths[fIdx + 1] - deltaX;
+          this.colWidths[fIdx + 1] = nextInitW - deltaX;
         }  
       } 
     },
 
     toggleSort(fIdx: number, ensureCurrentState: boolean = false) {
-      const field = this.metadataFields[fIdx];
+      const field = this.mdFields[fIdx];
       if (this.selectedSortIdx === fIdx) {
         if (
           (field.sortState === 'down' && !ensureCurrentState) || 
@@ -313,7 +323,7 @@ export default defineComponent({
       this.selectedSortIdx = fIdx;
     },
 
-    titleSorter(a: TranscriptionMetadataType, b: TranscriptionMetadataType) {
+    titleSorter(a: TransMetadataType, b: TransMetadataType) {
       const aTitle = a.title.toLowerCase();
       const bTitle = b.title.toLowerCase();
       if (aTitle < bTitle) {
@@ -325,7 +335,7 @@ export default defineComponent({
       }
     },
 
-    transcriberSorter(a: TranscriptionMetadataType, b: TranscriptionMetadataType) {
+    transcriberSorter(a: TransMetadataType, b: TransMetadataType) {
       const aName = a.name.toLowerCase();
       const bName = b.name.toLowerCase();
       if (aName < bName) {
@@ -337,7 +347,7 @@ export default defineComponent({
       }
     },
 
-    ragaSorter(a: TranscriptionMetadataType, b: TranscriptionMetadataType) {
+    ragaSorter(a: TransMetadataType, b: TransMetadataType) {
       const aRaga = a.raga.name.toLowerCase();
       const bRaga = b.raga.name.toLowerCase();
       if (aRaga < bRaga) {
@@ -349,7 +359,7 @@ export default defineComponent({
       }
     },
 
-    createdSorter(a: TranscriptionMetadataType, b: TranscriptionMetadataType) {
+    createdSorter(a: TransMetadataType, b: TransMetadataType) {
       const aDate = new Date(a.dateCreated);
       const bDate = new Date(b.dateCreated);
       if (aDate < bDate) {
@@ -361,7 +371,7 @@ export default defineComponent({
       }
     },
 
-    modifiedSorter(a: TranscriptionMetadataType, b: TranscriptionMetadataType) {
+    modifiedSorter(a: TransMetadataType, b: TransMetadataType) {
       const aDate = new Date(a.dateModified);
       const bDate = new Date(b.dateModified);
       if (aDate < bDate) {
@@ -373,7 +383,7 @@ export default defineComponent({
       }
     },
 
-    permissionsSorter(a: TranscriptionMetadataType, b: TranscriptionMetadataType) {
+    permissionsSorter(a: TransMetadataType, b: TransMetadataType) {
       const aPerm = a.permissions.toLowerCase();
       const bPerm = b.permissions.toLowerCase();
       if (aPerm < bPerm) {
