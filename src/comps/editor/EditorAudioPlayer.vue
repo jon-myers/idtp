@@ -7,13 +7,12 @@
       @mousemove="handleCircleMouseMove"
       @mouseup="handleCircleMouseUp"
     >
-      <div class="progressBarOuter" @click="handleProgressClick" ref="pbOuter">
-        <div class="progressBarInner">
+      <div class="progBarOuter" @click="handleProgressClick" ref="pbOuter">
+        <div class="progBarInner">
           <div :class="`currentTime tooLeft`">
             {{ formattedCurrentTime }}
           </div>
           <div class="progressCircle">
-            <!-- <div class="invisibleProgressCircle"></div> -->
           </div>
         </div>
         <div class="timeLeft">{{ '-' + formattedTimeLeft }}</div>
@@ -22,7 +21,6 @@
         <div class="spacer">
           <div class="innerSpacer"></div>
           <div class="recInfo left">
-            <!-- <span>{{pieceTitle}}</span> -->
             <div class="span">
               {{ performers.join(', ') }}
             </div>
@@ -263,7 +261,7 @@
         :insertPulses='insertPulses'
         ref='meterControls'
         @passthroughResetZoomEmit='passthroughResetZoom'
-        @passthroughSelectMeterEmit='passthroughSelectMeter'
+        @pSelectMeterEmit='passthroughSelectMeter'
         @passthroughAddMeterEmit='passthroughAddMeter'
         @passthroughAddMetricGridEmit='passthroughAddMetricGrid'
         @passthroughRemoveMeterEmit='passthroughRemoveMeter'
@@ -474,7 +472,6 @@ interface CaptureNodeType extends AudioWorkletNode {
 }
 
 interface KlattNodeType extends AudioWorkletNode {
-  // [key: string]: AudioParam;
   extGain?: AudioParam;
   f0?: AudioParam;
   f1?: AudioParam;
@@ -521,9 +518,6 @@ interface KlattNodeType extends AudioWorkletNode {
   fricationMod?: AudioParam;
   parallelBypassDb?: AudioParam;
   nasalFormantDb?: AudioParam;
-  // [key: string]: AudioParam;
-
-
 }
 
 type MusicianType = {
@@ -683,10 +677,6 @@ export default defineComponent({
       tuningMasterGainNode: undefined,
       tuningGainNodes: [],
       tuningSines: [],
-
-
-
-
     };
   },
   props: {
@@ -885,7 +875,7 @@ export default defineComponent({
       this.preSetFirstEnvelope(256);
       if (this.playing) {
         this.cancelPlayTrajs(this.now(), false);
-        this.playTrajs(this.getCurrentTime(), this.now());
+        this.playTrajs(this.getCurTime(), this.now());
       }
       const raga = this.piece.raga;
       const freqs = raga.chikariPitches.map((p) => p.frequency);
@@ -920,7 +910,7 @@ export default defineComponent({
       this.gainNode = this.ac.createGain();
       this.gainNode.gain.setValueAtTime(Number(this.recGain), this.now());
       this.synthGainNode = this.ac.createGain();
-      this.synthGainNode.gain.setValueAtTime(Number(this.synthGain), this.now());
+      this.synthGainNode.gain.setValueAtTime(this.synthGain, this.now());
       this.intSynthGainNode = this.ac.createGain();
       this.intSynthGainNode.connect(this.synthGainNode);
       this.chikariGainNode = this.ac.createGain();
@@ -963,11 +953,11 @@ export default defineComponent({
 
     dragging(e: DragEvent) {
       const diff = this.dragStartX! - e.x;
-      const pbi = document.querySelector('.progressBarInner') as HTMLElement;
-      const pbo = document.querySelector('.progressBarOuter');
+      const pbi = document.querySelector('.progBarInner') as HTMLElement;
+      const pbo = document.querySelector('.progBarOuter');
       const pboBox = pbo!.getBoundingClientRect();
       pbi!.style.width = pboBox.width * this.progress - diff + 'px';
-      const ct = this.getCurrentTime();
+      const ct = this.getCurTime();
       const dur = this.audioBuffer!.duration;
       const newTime = ct + (dur * (e.x - this.dragStartX!)) / pboBox.width;      
       this.updateFormattedCurrentTime(newTime);
@@ -977,7 +967,7 @@ export default defineComponent({
     dragEnd(e: DragEvent) {
       const pbOuter = this.$refs.pbOuter as HTMLElement;
       const bb = pbOuter.getBoundingClientRect();
-      const ct = this.getCurrentTime();
+      const ct = this.getCurTime();
       const dur = this.audioBuffer!.duration;
       const newTime = ct + (dur * (e.x - this.dragStartX!)) / bb.width;
       if (!this.playing) {
@@ -1040,8 +1030,8 @@ export default defineComponent({
       this.$emit('resetZoomEmit')
     },
 
-    passthroughSelectMeter(pulseUniqueId: string, turnMeterModeOn: boolean = false) {
-      this.$emit('selectMeterEmit', pulseUniqueId, turnMeterModeOn)
+    passthroughSelectMeter(pulseUniqueId: string, turnMMOn: boolean = false) {
+      this.$emit('selectMeterEmit', pulseUniqueId, turnMMOn) //turn metermode on
     },
 
     passthroughAddMeter(meter: Meter) {
@@ -1382,7 +1372,7 @@ export default defineComponent({
         Object.keys(phrase.chikaris).forEach((key) => {
           const time = now + phrase.startTime! + Number(key) - curPlayTime;
           if (time >= this.now()) {
-            this.sendNoiseBurst(time, 0.01, otherNode, 0.025, 0.2);
+            this.sendBurst(time, 0.01, otherNode, 0.025, 0.2);
           }
         });
       });
@@ -1445,19 +1435,19 @@ export default defineComponent({
         const dampens = keys.filter(key => arts[key].name === 'dampen');
         plucks.forEach((time) => {
           const when = Number(startTime) + Number(time) * Number(traj.durTot);
-          this.sendNoiseBurst(when, 0.01, this.pluckNode!, 0.05, 1);
+          this.sendBurst(when, 0.01, this.pluckNode!, 0.05, 1);
         });
         hammerOffs.forEach((time) => {
           const when = Number(startTime) + Number(time) * Number(traj.durTot);
-          this.sendNoiseBurst(when, 0.01, this.pluckNode!, 0.05, 0.5);
+          this.sendBurst(when, 0.01, this.pluckNode!, 0.05, 0.5);
         });
         hammerOns.forEach((time) => {
           const when = Number(startTime) + Number(time) * Number(traj.durTot);
-          this.sendNoiseBurst(when, 0.01, this.pluckNode!, 0.05, 0.3);
+          this.sendBurst(when, 0.01, this.pluckNode!, 0.05, 0.3);
         });
         slides.forEach((time) => {
           const when = Number(startTime) + Number(time) * Number(traj.durTot);
-          this.sendNoiseBurst(when, 0.01, this.pluckNode!, 0.05, 0.1);
+          this.sendBurst(when, 0.01, this.pluckNode!, 0.05, 0.1);
         });
         dampens.forEach(time => {
           const when = Number(startTime) + Number(time) * Number(traj.durTot);
@@ -1495,14 +1485,14 @@ export default defineComponent({
         computedVals.push(val);
       }
     },
-    sendNoiseBurst(when: number, dur: number, where: AudioNode, attack = 0.05, amp = 1) {
+    sendBurst(when: number, dur: number, to: AudioNode, atk = 0.05, amp = 1) {
       amp *= 2;
       if (this.ac === undefined) {
         throw new Error('audio context is undefined');
       }
       const bufSize = this.ac.sampleRate * dur;
       const noiseBuffer = this.ac.createBuffer(1, bufSize, this.ac.sampleRate);
-      const attackSize = this.ac.sampleRate * attack;
+      const attackSize = this.ac.sampleRate * atk;
       const output = noiseBuffer.getChannelData(0);
       let b0 = 0,
         b1 = 0,
@@ -1530,11 +1520,11 @@ export default defineComponent({
       }
       const bufferSourceNode = this.ac.createBufferSource();
       this.bufferSourceNodes.push(bufferSourceNode);
-      // console.log(where)
-      bufferSourceNode.connect(where);
+      bufferSourceNode.connect(to);
       bufferSourceNode.buffer = noiseBuffer;
       bufferSourceNode.start(when);
     },
+
 
     playStringTraj(
         traj: Trajectory, 
@@ -1691,13 +1681,14 @@ export default defineComponent({
       this.intChikariGainNode = this.ac.createGain();
       if (this.chikariNodes) this.chikariNodes.forEach((cn) => cn.disconnect());
       const options = { numberOfInputs: 1, numberOfOutputs: 2 };
+      const sName = 'chikaris'
       try {
-        this.otherNode = await new AudioWorkletNode(this.ac, 'chikaris', options);
+        this.otherNode = await new AudioWorkletNode(this.ac, sName, options);
       } catch (e) {
         console.log(e);
         this.ac.audioWorklet.addModule(AudioWorklet(cURL))
           .then(() => {
-            this.otherNode = new AudioWorkletNode(this.ac!, 'chikaris', options);
+            this.otherNode = new AudioWorkletNode(this.ac!, sName, options);
           });
       }
       if (this.otherNode === undefined) {
@@ -1832,7 +1823,7 @@ export default defineComponent({
       }
     },
     back_15() {
-      let newTime = this.getCurrentTime() - 15;
+      let newTime = this.getCurTime() - 15;
       if (newTime < 0) newTime = 0;
       if (!this.playing) {
         this.pausedAt = newTime;
@@ -1846,7 +1837,7 @@ export default defineComponent({
       }
     },
     forward_15() {
-      let newTime = this.getCurrentTime() + 15;
+      let newTime = this.getCurTime() + 15;
       if (newTime > this.audioBuffer!.duration) {
         newTime = this.audioBuffer!.duration;
       }
@@ -1893,7 +1884,7 @@ export default defineComponent({
         // if the sourceNode has ended naturally (without the user pausing it),
         // then it should return to the beginning, otehrwise, stay where it is.
         this.$emit('stopStretchedAnimationEmit')
-        this.$emit('currentTimeEmit', this.getStretchedCurrentTime());
+        this.$emit('currentTimeEmit', this.getStretchedCurTime());
       })
       this.playing = true;
       this.pausedAt = 0;
@@ -1936,11 +1927,12 @@ export default defineComponent({
       this.sourceNode.connect(this.gainNode!);
       this.sourceNode.buffer = this.audioBuffer!;
       this.sourceNode.start(this.now(), offset);
-      if (this.loop && this.loopStart && this.loopEnd && this.pausedAt < this.loopEnd) {
+      const allLoops = this.loop && this.loopStart && this.loopEnd;
+      if (allLoops && this.pausedAt < this.loopEnd!) {
         this.sourceNode.loop = this.loop;
-        this.sourceNode.loopStart = this.loopStart;
-        this.sourceNode.loopEnd = this.loopEnd;
-        if (this.pausedAt > this.loopStart) {
+        this.sourceNode.loopStart = this.loopStart!;
+        this.sourceNode.loopEnd = this.loopEnd!;
+        if (this.pausedAt > this.loopStart!) {
           console.error("Can't loop a recording that starts after the loop \
           start point.")
           this.cancelPlayTrajs();
@@ -1951,8 +1943,8 @@ export default defineComponent({
           const endTime = this.now() + this.lagTime;
           this.intSynthGainNode!.gain.setValueAtTime(0, endTime);
         } else {
-          const startRecTime = this.now() + this.loopStart - offset;
-          const duration = this.loopEnd - this.loopStart;
+          const startRecTime = this.now() + this.loopStart! - offset;
+          const duration = this.loopEnd! - this.loopStart!;
           this.endRecTime = startRecTime + duration;
           const bufSize = duration * this.ac!.sampleRate;
           this.capture!.bufferSize!.setValueAtTime(bufSize, this.now());
@@ -2039,7 +2031,7 @@ export default defineComponent({
       } 
     },
 
-    getCurrentTime() {
+    getCurTime() {
       if (this.pausedAt) {
         return this.pausedAt;
       } else if (this.playing) {
@@ -2063,7 +2055,7 @@ export default defineComponent({
       }
     },
 
-    getStretchedCurrentTime() {
+    getStretchedCurTime() {
       let out;
       if (this.pausedAt) {
         out = this.pausedAt;
@@ -2108,12 +2100,12 @@ export default defineComponent({
     },
     updateProgress() {
       if (this.noAudio) {
-        this.progress = this.getCurrentTime() / this.piece.durTot!;
+        this.progress = this.getCurTime() / this.piece.durTot!;
       } else {
-        this.progress = this.getCurrentTime() / this.audioBuffer!.duration;
+        this.progress = this.getCurTime() / this.audioBuffer!.duration;
       }
-      const pbi = document.querySelector('.progressBarInner') as HTMLDivElement;
-      const pbo = document.querySelector('.progressBarOuter') as HTMLDivElement;
+      const pbi = document.querySelector('.progBarInner') as HTMLDivElement;
+      const pbo = document.querySelector('.progBarOuter') as HTMLDivElement;
       const totWidth = pbo.getBoundingClientRect().width;
       pbi.style.width = this.progress * totWidth + 'px';
     },
@@ -2122,7 +2114,7 @@ export default defineComponent({
       this.updateProgress();
       this.updateFormattedCurrentTime();
       this.updateFormattedTimeLeft();
-      this.$emit('currentTimeEmit', this.getCurrentTime());
+      this.$emit('currentTimeEmit', this.getCurTime());
       this.startPlayCursorAnimation();
     },
     stopPlayCursorAnimation() {
@@ -2137,7 +2129,7 @@ export default defineComponent({
           this.playStretched();
           const playImg = this.$refs.playImg as HTMLImageElement;
           playImg.classList.add('playing');
-          this.$emit('startStretchedAnimationEmit', this.getStretchedCurrentTime())
+          this.$emit('startStretchedAnimationEmit', this.getStretchedCurTime())
         } else {
           this.pauseStretched();
           const playImg = this.$refs.playImg as HTMLImageElement;
@@ -2150,11 +2142,11 @@ export default defineComponent({
           const playImg = this.$refs.playImg as HTMLImageElement;
           playImg.classList.add('playing');
           this.$emit('startAnimationFrameEmit')
-          this.$emit('setAnimationStartEmit', this.getCurrentTime())
+          this.$emit('setAnimationStartEmit', this.getCurTime())
           this.startPlayCursorAnimation();
-          this.playTrajs(this.getCurrentTime(), this.now());
+          this.playTrajs(this.getCurTime(), this.now());
           if (this.string) {
-            this.playChikaris(this.getCurrentTime(), this.now(), this.otherNode!);
+            this.playChikaris(this.getCurTime(), this.now(), this.otherNode!);
           }
           
         } else {
@@ -2416,7 +2408,7 @@ export default defineComponent({
       }
     },
     updateFormattedCurrentTime(ct?: number) {
-      const st = structuredTime(ct ? ct : this.getCurrentTime());
+      const st = structuredTime(ct ? ct : this.getCurTime());
       const ms = st.minutes + ':' + st.seconds;
       this.formattedCurrentTime = st.hours !== '0' ? ms : st.hours + ':' + ms;
     },
@@ -2427,10 +2419,10 @@ export default defineComponent({
         let ut;
         if (!this.noAudio) {
           const buf = this.audioBuffer!;
-          ut = Number(buf.duration) - Number(ct ? ct : this.getCurrentTime());
+          ut = Number(buf.duration) - Number(ct ? ct : this.getCurTime());
         } else {
           const dt = Number(this.piece.durTot);
-          ut = dt - Number(ct ? ct : this.getCurrentTime());
+          ut = dt - Number(ct ? ct : this.getCurTime());
         }
         
         const st = structuredTime(ut);
@@ -2466,7 +2458,7 @@ export default defineComponent({
       if (this.circleDragging) {
         const pbOuter = this.$refs.pbOuter as HTMLDivElement;
         const bb = pbOuter.getBoundingClientRect();
-        const ct = this.getCurrentTime();
+        const ct = this.getCurTime();
         const dur = this.audioBuffer!.duration;
         const newTime = ct + (dur * (e.clientX - this.dragStartX!)) / bb.width;
         if (!this.playing) {
@@ -2479,7 +2471,7 @@ export default defineComponent({
           this.pausedAt = newTime;
           this.play();
         }
-        const pc = document.querySelector('.progressCircle') as HTMLDivElement; ;
+        const pc = document.querySelector('.progressCircle') as HTMLDivElement;
         pc.style.right = '-7px';
         this.circleDragging = false;
         const main = this.$refs.main as HTMLDivElement;
@@ -2489,8 +2481,8 @@ export default defineComponent({
     handleCircleMouseMove(e: MouseEvent) {
       if (this.circleDragging) {
         const diff = this.dragStartX! - e.clientX;
-        const pbi = document.querySelector('.progressBarInner') as HTMLDivElement;
-        const pbo = document.querySelector('.progressBarOuter') as HTMLDivElement;
+        const pbi = document.querySelector('.progBarInner') as HTMLDivElement;
+        const pbo = document.querySelector('.progBarOuter') as HTMLDivElement;
         const pboBox = pbo.getBoundingClientRect();
         pbi.style.width = pboBox.width * this.progress - diff + 'px';
       }
@@ -2542,22 +2534,22 @@ export default defineComponent({
   border-top: 1px solid black;
   /* pointer-events: auto; */
 }
-.progressBarOuter {
+.progBarOuter {
   width: 100%;
   height: 8px;
   background-color: #242424;
   overflow-x: hidden;
 }
-.progressBarOuter:hover {
+.progBarOuter:hover {
   cursor: pointer;
 }
-.progressBarInner {
+.progBarInner {
   width: 0px;
   background-color: lightgrey;
   height: 6px;
   position: absolute;
 }
-.progressBarInner:hover {
+.progBarInner:hover {
   cursor: pointer;
 }
 .progressCircle {

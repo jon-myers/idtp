@@ -234,7 +234,7 @@ export default defineComponent({
           const newHi = this.pulseDivisions[i].slice(0, this.layerCompounds[i]);
           this.meter.alterLayer(i, newHi);
           this.$emit('passthroughResetZoomEmit')
-          this.$emit('passthroughSelectMeterEmit', this.meter.allPulses[0].uniqueId)
+          this.$emit('pSelectMeterEmit', this.meter.allPulses[0].uniqueId)
           this.$emit('passthroughUnsavedChangesEmit', true)
         }
       }
@@ -251,7 +251,7 @@ export default defineComponent({
           this.meter.alterLayer(i, newHi);
           // editor.resetZoom();
           this.$emit('passthroughResetZoomEmit')
-          this.$emit('passthroughSelectMeterEmit', this.meter.allPulses[0].uniqueId)
+          this.$emit('pSelectMeterEmit', this.meter.allPulses[0].uniqueId)
           this.$emit('passthroughUnsavedChangesEmit', true)
         }
       }
@@ -268,7 +268,7 @@ export default defineComponent({
         await this.removeMeter();
         this.insertMeter(undefined, startTime)
         await this.$nextTick();
-        this.$emit('passthroughSelectMeterEmit', this.meter.allPulses[0].uniqueId)
+        this.$emit('pSelectMeterEmit', this.meter.allPulses[0].uniqueId)
       }
     },
 
@@ -292,7 +292,7 @@ export default defineComponent({
           this.meter.growLayers(newHierarchies);
         }
         this.$emit('passthroughResetZoomEmit')
-        this.$emit('passthroughSelectMeterEmit', this.meter.allPulses[0].uniqueId)
+        this.$emit('pSelectMeterEmit', this.meter.allPulses[0].uniqueId)
         this.$emit('passthroughUnsavedChangesEmit', true)
       }
     },
@@ -308,7 +308,7 @@ export default defineComponent({
           this.meter.shrinkCycles(-diff);
         }
         this.$emit('passthroughResetZoomEmit')
-        this.$emit('passthroughSelectMeterEmit', this.meter.allPulses[0].uniqueId)
+        this.$emit('pSelectMeterEmit', this.meter.allPulses[0].uniqueId)
         this.$emit('passthroughUnsavedChangesEmit', true)
       }
     },
@@ -329,7 +329,7 @@ export default defineComponent({
         } else {
           this.meter.alterLayer(i, newHierarchy[i]);
           this.$emit('passthroughResetZoomEmit')
-          this.$emit('passthroughSelectMeterEmit', this.meter.allPulses[0].uniqueId)
+          this.$emit('pSelectMeterEmit', this.meter.allPulses[0].uniqueId)
         }
         this.$emit('passthroughUnsavedChangesEmit', true)
       } 
@@ -377,7 +377,7 @@ export default defineComponent({
       if (this.meter !== undefined) {
         this.meter?.adjustTempo(this.tempo);
         this.$emit('passthroughResetZoomEmit')
-        this.$emit('passthroughSelectMeterEmit', this.meter.allPulses[0].uniqueId)
+        this.$emit('pSelectMeterEmit', this.meter.allPulses[0].uniqueId)
       }
     },
 
@@ -436,7 +436,7 @@ export default defineComponent({
       this.$emit('passthroughUnsavedChangesEmit', true)
       this.$emit('passthroughAddMetricGridEmit', true);
       this.meterSelected = true;
-      this.$emit('passthroughSelectMeterEmit', meter.allPulses[0].uniqueId)
+      this.$emit('pSelectMeterEmit', meter.allPulses[0].uniqueId)
     },
 
     insertMeterFromPulses() {
@@ -460,7 +460,7 @@ export default defineComponent({
       this.$emit('passthroughAddMeterEmit', meter);
       this.$emit('passthroughAddMetricGridEmit', true);
       this.meterSelected = true;
-      this.$emit('passthroughSelectMeterEmit', meter.allPulses[0].uniqueId)
+      this.$emit('pSelectMeterEmit', meter.allPulses[0].uniqueId)
       d3SelectAll('.insertPulse').remove();
       this.insertPulseMode = false;
     },
@@ -471,7 +471,7 @@ export default defineComponent({
       this.meter!.addTimePoints(timePoints, this.insertLayer);
       this.$emit('passthroughAddMetricGridEmit', true);
       this.meterSelected = true;
-      this.$emit('passthroughSelectMeterEmit', this.meter!.allPulses[0].uniqueId, true)
+      this.$emit('pSelectMeterEmit', this.meter!.allPulses[0].uniqueId, true)
       this.$emit('passthroughUnsavedChangesEmit', true)
       d3SelectAll('.insertPulse').remove();
       this.insertPulseMode = false;

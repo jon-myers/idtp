@@ -16,7 +16,7 @@
       ref='sectionLabelHolder'>
       <SectionLabelEditor 
       v-for='(section, i) in piece.sections'
-        :sectionNum='i'
+        :sNum='i'
         :piece='piece'
         :editable='editable'
         @unsavedChanges='$emit("unsavedChanges")'
@@ -98,7 +98,8 @@ export default defineComponent({
 
     scrollToPhrase(pIdx: number) {
       this.selectedHierarchy = 'Phrase';
-      const pLabelEditors = this.$refs.phraseLabelEditors as typeof PhraseLabelEditor[];
+      const pLabelEditors = this.$refs.phraseLabelEditors as 
+        typeof PhraseLabelEditor[];
       const pLabelEditor = pLabelEditors[pIdx];
       this.$nextTick(() => {
         const container = this.$refs.phraseLabelHolder as HTMLElement;
@@ -113,7 +114,8 @@ export default defineComponent({
 
     scrollToSection(sIdx: number) {
       this.selectedHierarchy = 'Section';
-      const sLabelEditors = this.$refs.sectionLabelEditors as typeof SectionLabelEditor[];
+      const sLabelEditors = this.$refs.sectionLabelEditors as 
+        typeof SectionLabelEditor[];
       const sLabelEditor = sLabelEditors[sIdx];
       const container = this.$refs.sectionLabelHolder as HTMLElement;
       container.scrollTo({

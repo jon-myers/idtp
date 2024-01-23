@@ -27,7 +27,10 @@
         <div class='titleRow'>
           <label>Elaboration Type</label>
         </div>
-        <div class='checkRow' v-for='(elaborationType, etIdx) in elaborationTypes'>
+        <div 
+          class='checkRow' 
+          v-for='(elaborationType, etIdx) in elaborationTypes'
+          >
           <input 
             type='checkbox' 
             :id='elaborationType + "p" + phraseNum + "idx" + etIdx' 
@@ -48,19 +51,19 @@
         </div>
         <div 
           class='checkRow'
-          v-for='(vArtType, vaIdx) in vocalArtTypes'
+          v-for='(vArt, vaIdx) in vocalArtTypes'
           >
           <input 
             type='checkbox' 
-            :id='vArtType + "p" + phraseNum + "idx" + vaIdx' 
-            :name='vArtType' 
-            :value='vArtType'
-            v-model='phrase.categorizationGrid[0]["Vocal Articulation"][vArtType]'
+            :id='vArt + "p" + phraseNum + "idx" + vaIdx' 
+            :name='vArt' 
+            :value='vArt'
+            v-model='phrase.categorizationGrid[0]["Vocal Articulation"][vArt]'
             @change='$emit("unsavedChanges")'
             :disabled='!editable'
             >
-          <label :for='vArtType + "p" + phraseNum + "idx" + vaIdx' >
-            {{vArtType}}
+          <label :for='vArt + "p" + phraseNum + "idx" + vaIdx' >
+            {{vArt}}
           </label>
         </div>
       </div>
@@ -77,7 +80,7 @@
             :id='iArtType + "p" + phraseNum + "idx" + iaIdx' 
             :name='iArtType' 
             :value='iArtType'
-            v-model='phrase.categorizationGrid[0]["Instrumental Articulation"][iArtType]'
+            v-model='iArtModelPath[iArtType]'
             @change='$emit("unsavedChanges")'
             :disabled='!editable'
             
@@ -91,18 +94,18 @@
         <div class='titleRow'>
           <label>Incidental</label>
         </div>
-        <div class='checkRow' v-for='(incidentalType, itIdx) in incidentalTypes'>
+        <div class='checkRow' v-for='(incType, itIdx) in incidentalTypes'>
           <input 
             type='checkbox' 
-            :id='incidentalType + "p" + phraseNum + "idx" + itIdx' 
-            :name='incidentalType' 
-            :value='incidentalType'
-            v-model='phrase.categorizationGrid[0].Incidental[incidentalType]'
+            :id='incType + "p" + phraseNum + "idx" + itIdx' 
+            :name='incType' 
+            :value='incType'
+            v-model='phrase.categorizationGrid[0].Incidental[incType]'
             @change='$emit("unsavedChanges")'
             :disabled='!editable'
             >
-          <label :for='incidentalType + "p" + phraseNum + "idx" + itIdx'>
-            {{incidentalType}}
+          <label :for='incType + "p" + phraseNum + "idx" + itIdx'>
+            {{incType}}
           </label>
         </div>
       </div>
@@ -138,6 +141,12 @@ type PIncidentalType = keyof PhraseCatType['Incidental'];
 
 export default defineComponent({
   name: 'PhraseLabelEditor',
+  computed: {
+    iArtModelPath() {
+      const cat = this.phrase.categorizationGrid[0];
+      return cat['Instrumental Articulation'];
+    },
+  },
   data(): PhraseLabelEditorDataType {
     return {
       phraseTypes: phraseData['Phrase Type'] as PPhraseType[],
@@ -166,18 +175,6 @@ export default defineComponent({
       required: true
     }
   },
-  methods: {
-    // updatePhraseType(e: Event) {
-    //   const target = e.target as HTMLInputElement;
-    //   const phraseType = target.value;
-    //   const phrase = this.piece.phrases[this.phraseNum];
-    //   if (target.checked) {
-    //     phrase.categorizationGrid[0].Phrase[phraseType] = true;
-    //   } else {
-    //     phrase.categorizationGrid[0].Phrase[phraseType] = false;
-    //   }
-    // }
-  }
 })
 </script>
 

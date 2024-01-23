@@ -2,7 +2,7 @@
   <div class='outerSecLabel'>
     <div class='topRow'>
       <label>
-      {{`Section ${sectionNum}`  }}
+      {{`Section ${sNum}`  }}
       </label>
     </div>
     <div class='middleRow'>
@@ -48,7 +48,8 @@
             :disabled='!editable'
             >
             <option 
-              v-for='option in Object.keys(section.categorization["Composition Type"])' 
+              v-for='option in 
+                Object.keys(section.categorization["Composition Type"])' 
               :value='option'
               >
               {{option}}
@@ -66,7 +67,8 @@
             :disabled='!editable'
             >
             <option 
-              v-for='option in Object.keys(section.categorization["Comp.-section/Tempo"])' 
+              v-for='option in 
+                Object.keys(section.categorization["Comp.-section/Tempo"])' 
               :value='option'
               >
               {{option}}
@@ -99,7 +101,7 @@
 <script lang='ts'>
 
 import { defineComponent, PropType } from 'vue';
-import { Piece, initSectionCategorization, Section } from '@/js/classes.ts';
+import { Piece, initSecCategorization, Section } from '@/js/classes.ts';
 type topLevelOptionsType = (
   'Pre-Chiz Alap' | 
   'Alap' | 
@@ -143,7 +145,7 @@ export default defineComponent({
     }
   },
   props: {
-    sectionNum: {
+    sNum: {
       type: Number,
       required: true
     },
@@ -218,34 +220,35 @@ export default defineComponent({
     updateTopLevel() {
       this.compositionType = undefined,
       this.section_tempo = undefined,
-      this.section.categorization = initSectionCategorization();
-      this.piece.sectionCategorization[this.sectionNum] = initSectionCategorization();
+      this.section.categorization = initSecCategorization();
+      this.piece.sectionCategorization[this.sNum] = initSecCategorization();
 
       if (this.topLevel === 'Pre-Chiz Alap') {
         const cat = this.section.categorization;
-        const altCat = this.piece.sectionCategorization[this.sectionNum];
+        const altCat = this.piece.sectionCategorization[this.sNum];
         cat['Pre-Chiz Alap']['Pre-Chiz Alap'] = true;
         altCat['Pre-Chiz Alap']['Pre-Chiz Alap'] = true;
       } else if (this.topLevel === 'Improvisation') {
         const cat = this.section.categorization;
-        const altCat = this.piece.sectionCategorization[this.sectionNum];
+        const altCat = this.piece.sectionCategorization[this.sNum];
         cat['Improvisation']['Improvisation'] = true;
         altCat['Improvisation']['Improvisation'] = true;
       } else if (this.topLevel === 'Other') {
         const cat = this.section.categorization;
-        const altCat = this.piece.sectionCategorization[this.sectionNum];
+        const altCat = this.piece.sectionCategorization[this.sNum];
         cat['Other']['Other'] = true;
         altCat['Other']['Other'] = true;
       }
       this.section.categorization['Top Level'] = this.topLevel;
-      this.piece.sectionCategorization[this.sectionNum]['Top Level'] = this.topLevel;
+      this.piece.sectionCategorization[this.sNum]['Top Level'] = this.topLevel;
       this.$emit('unsavedChanges');
     },
     updateCompositionType() {
       if (this.compositionType) {
         const cat = this.section.categorization;
-        const altCat = this.piece.sectionCategorization[this.sectionNum];
-        const allKeys = Object.keys(cat['Composition Type']) as CompositionType[];
+        const altCat = this.piece.sectionCategorization[this.sNum];
+        const allKeys = Object.keys(cat['Composition Type']) as 
+          CompositionType[];
         allKeys.forEach(key => cat['Composition Type'][key] = false);
         cat['Composition Type'][this.compositionType] = true;
         altCat['Composition Type'][this.compositionType] = true;
@@ -255,8 +258,9 @@ export default defineComponent({
     updateSection_Tempo() {
       if (this.section_tempo) {
         const cat = this.section.categorization;
-        const altCat = this.piece.sectionCategorization[this.sectionNum];
-        const allKeys = Object.keys(cat['Comp.-section/Tempo']) as Section_TempoType[];
+        const altCat = this.piece.sectionCategorization[this.sNum];
+        const allKeys = Object.keys(cat['Comp.-section/Tempo']) as 
+          Section_TempoType[];
         allKeys.forEach(key => cat['Comp.-section/Tempo'][key] = false);
         cat['Comp.-section/Tempo'][this.section_tempo] = true;
         altCat['Comp.-section/Tempo'][this.section_tempo] = true;
@@ -266,7 +270,7 @@ export default defineComponent({
     updateTala() {
       if (this.tala) {
         const cat = this.section.categorization;
-        const altCat = this.piece.sectionCategorization[this.sectionNum];
+        const altCat = this.piece.sectionCategorization[this.sNum];
         const allKeys = Object.keys(cat['Tala']) as TalaType[];
         allKeys.forEach(key => cat['Tala'][key] = false);
         cat['Tala'][this.tala] = true;
@@ -277,7 +281,7 @@ export default defineComponent({
     updateAlapType() {
       if (this.alapType) {
         const cat = this.section.categorization;
-        const altCat = this.piece.sectionCategorization[this.sectionNum];
+        const altCat = this.piece.sectionCategorization[this.sNum];
         const allKeys = Object.keys(cat['Alap']) as AlapType[];
         allKeys.forEach(key => cat['Alap'][key] = false);
         cat['Alap'][this.alapType] = true;

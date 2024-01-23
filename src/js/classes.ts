@@ -2,7 +2,7 @@ import { findLastIndex } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 import { Meter } from './meter.ts';
 
-const initSectionCategorization = (): SecCatType => {
+const initSecCategorization = (): SecCatType => {
   return {
     "Pre-Chiz Alap": {
       "Pre-Chiz Alap": false
@@ -2272,13 +2272,13 @@ class Piece {
       })
     } else {
       this.sectionCategorization = this.sectionStarts.map(() => {
-        return initSectionCategorization()
+        return initSecCategorization()
       })
     }
     if (this.sectionStarts.length > this.sectionCategorization.length) {
       const diff = this.sectionStarts.length - this.sectionCategorization.length;
       for (let i = 0; i < diff; i++) {
-        this.sectionCategorization.push(initSectionCategorization())
+        this.sectionCategorization.push(initSecCategorization())
       }
     }
     if (explicitPermissions === undefined) {
@@ -2609,7 +2609,7 @@ class Section {
     if (categorization !== undefined) {
       this.categorization = categorization;
     } else {
-      this.categorization = initSectionCategorization();
+      this.categorization = initSecCategorization();
     }
   }
 
@@ -2971,7 +2971,7 @@ export {
   durationsOfFixedPitches,
   pitchNumberToChroma,
   linSpace,
-  initSectionCategorization
+  initSecCategorization
 }
 
 export type {

@@ -285,7 +285,7 @@ const  findClosestStartTime = (startTimes: number[], timepoint: number) => {
   let closestDiff = Infinity;
 
   for (let i = 0; i < startTimes.length; i++) {
-    if (startTimes[i] > timepoint) continue; // Skip start times after the timepoint
+    if (startTimes[i] > timepoint) continue; // Skip start times after timepoint
 
     const diff = timepoint - startTimes[i];
     if (diff < closestDiff) {
@@ -302,7 +302,7 @@ function findClosestStartTimeAfter(startTimes: number[], timepoint: number) {
   let closestDiff = Infinity;
 
   for (let i = 0; i < startTimes.length; i++) {
-    if (startTimes[i] <= timepoint) continue; // Skip start times before or at the timepoint
+    if (startTimes[i] <= timepoint) continue; // Skip start times <= timepoint
 
     const diff = startTimes[i] - timepoint;
     if (diff < closestDiff) {
@@ -397,9 +397,9 @@ type EditorDataType = {
   vocal: boolean,
   controlsHeight: number,
   unsavedChanges: boolean,
-  selectedMeterColor: string,
+  selMeterColor: string,
   meterMode: boolean,
-  selectedMeter?: Meter,
+  selMeter?: Meter,
   meterColor: string,
   pulseDragEnabled: boolean,
   pulseDragInitX?: number,
@@ -565,9 +565,9 @@ export default defineComponent({
       vocal: false,
       controlsHeight: 200,
       unsavedChanges: false,
-      selectedMeterColor: '#3dcc63',
+      selMeterColor: '#3dcc63',
       meterMode: false,
-      selectedMeter: undefined,
+      selMeter: undefined,
       meterColor: '#0D3D0E',
       pulseDragEnabled: false,
       pulseDragInitX: undefined,
@@ -685,7 +685,8 @@ export default defineComponent({
 
     try {
       // if there's a query id, 1. check if exists, 2. if so, load it, else:
-      // send some sort of message that entered piece didn't exist and go to files.
+      // send some sort of message that entered piece didn't exist and go to 
+      // files.
       // check if stored piece esists. if so, load it, else: load default piece.
       // push the id to router. 
       
@@ -925,7 +926,8 @@ export default defineComponent({
     },
 
     addTrajToSelectedGroup(traj: Trajectory) {
-      if (this.selectedTrajs.length > 1 && this.selectedTrajs[0].groupId !== undefined) {
+      const longEnough = this.selectedTrajs.length > 1;
+      if (longEnough && this.selectedTrajs[0].groupId !== undefined) {
         const pIdx = this.selectedTrajs[0].phraseIdx!;
         const phrase = this.piece.phrases[pIdx];
         const group = phrase.getGroupFromId(this.selectedTrajs[0].groupId!)!;
@@ -949,8 +951,8 @@ export default defineComponent({
     assignPrevMeter() {
       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
       const meterControls = ap.$refs.meterControls as typeof MeterControls;
-      const meterStarts = this.piece.meters.map(m => m.startTime);
-      const mIdx = findClosestStartTime(meterStarts, this.insertPulses[0]);
+      const mtrStarts = this.piece.meters.map(m => m.startTime);
+      const mIdx = findClosestStartTime(mtrStarts, this.insertPulses[0]);
       meterControls.meter = this.piece.meters[mIdx];
     },
 
@@ -961,7 +963,7 @@ export default defineComponent({
     addMeter(meter: Meter) {
       this.piece.addMeter(meter);
       this.unsavedChanges = true;
-      this.selectedMeter = meter;
+      this.selMeter = meter;
       this.meterMode = true;
     },
 
@@ -978,24 +980,24 @@ export default defineComponent({
     },
 
     updateIPLims() {
-      const meterStarts = this.piece.meters
+      const mtrStarts = this.piece.meters
         .map(m => m.startTime)
       const ip = this.insertPulses[0];
-      if (Math.min(...meterStarts) > ip) {
-        const afterIdx = findClosestStartTimeAfter(meterStarts, ip);
+      if (Math.min(...mtrStarts) > ip) {
+        const afterIdx = findClosestStartTimeAfter(mtrStarts, ip);
         const after = this.piece.meters[afterIdx];
         if (after === undefined) {
           this.IPLims = [0, this.durTot];
         } else {
           this.IPLims = [0, after.startTime];
         }
-      } else if (Math.max(...meterStarts) < ip) {
-        const beforeIdx = findClosestStartTime(meterStarts, ip);
+      } else if (Math.max(...mtrStarts) < ip) {
+        const beforeIdx = findClosestStartTime(mtrStarts, ip);
         const before = this.piece.meters[beforeIdx];
         this.IPLims = [before.startTime + before.durTot, this.durTot];
       } else {
-        const beforeIdx = findClosestStartTime(meterStarts, ip);
-        const afterIdx = findClosestStartTimeAfter(meterStarts, ip);
+        const beforeIdx = findClosestStartTime(mtrStarts, ip);
+        const afterIdx = findClosestStartTimeAfter(mtrStarts, ip);
         const before = this.piece.meters[beforeIdx];
         const after = this.piece.meters[afterIdx];
         this.IPLims = [before.startTime + before.durTot, after.startTime];
@@ -1005,21 +1007,8 @@ export default defineComponent({
       if (this.insertPulses.length === 0) {
         meterControls.prevMeter = false;
       } else {
-        meterControls.prevMeter = Math.min(...meterStarts) < this.insertPulses[0];
+        meterControls.prevMeter = Math.min(...mtrStarts) < this.insertPulses[0];
       }
-
-    //   prevMeter() {
-    //   if (editor.insertPulses.length === 0) {
-    //     return false
-    //   }
-    //   const editor = this.$parent!.$parent!;
-    //   const meterStarts = editor.piece.meters.map(m => m.startTime);
-    //   return Math.min(meterStarts) < editor.insertPulses[0];
-
-
-    // }
-      
-
     },
 
     endConsonantEmit(endConsonant: string) {
@@ -1029,7 +1018,8 @@ export default defineComponent({
       const tIdx = selT.num!;
       const id = `p${pIdx}t${tIdx}`;
       const phrase = this.piece.phrases[pIdx];
-      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as Selection<SVGGElement, any, any, any>;
+      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
+        Selection<SVGGElement, any, any, any>;
       if (endConsonant === undefined) {
         // false indicates that this is the end consonant
         selT.removeConsonant(false);
@@ -1051,7 +1041,8 @@ export default defineComponent({
       const pIdx = selT.phraseIdx!;
       const tIdx = selT.num!;
       const id = `p${pIdx}t${tIdx}`;
-      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as Selection<SVGGElement, any, any, any>;
+      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
+        Selection<SVGGElement, any, any, any>;
       const phrase = this.piece.phrases[pIdx];
       if (startConsonant === undefined) {
         selT.removeConsonant();   
@@ -1077,7 +1068,8 @@ export default defineComponent({
       const pIdx = selT.phraseIdx!;
       const tIdx = selT.num!;
       const phrase = this.piece.phrases[pIdx];
-      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as Selection<SVGGElement, any, any, any>;
+      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
+        Selection<SVGGElement, any, any, any>;
       const selected = d3Select(`#vowelp${pIdx}t${tIdx}`);
       if (selected.node() === null) {
         this.addVowel(selT, phrase.startTime!, g, true)
@@ -1107,7 +1099,8 @@ export default defineComponent({
           name: 'dampen',
         });
         const phrase = this.piece!.phrases[pIdx];
-        const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as Selection<SVGGElement, any, any, any> ;
+        const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
+          Selection<SVGGElement, any, any, any> ;
         this.codifiedAddDampener(selT, phrase.startTime!, g);
         d3Select(`#dampen${this.selectedTrajID}`)
           .attr('stroke', this.selTrajColor)
@@ -1327,7 +1320,8 @@ export default defineComponent({
           const pIdx = selT.phraseIdx!;
           const tIdx = selT.num!;
           const phrase = this.piece!.phrases[pIdx];
-          const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as Selection<SVGGElement, any, any, any>
+          const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
+            Selection<SVGGElement, any, any, any>
           this.codifiedAddPlucks(selT, phrase.startTime!, g)
         }
       } else {
@@ -1413,7 +1407,8 @@ export default defineComponent({
         phrase.trajectories.forEach(traj => {
           const pIdx = phrase.pieceIdx;
           const tIdx = traj.num;
-          const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as Selection<SVGGElement, any, any, any>;
+          const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
+            Selection<SVGGElement, any, any, any>;
           if (traj.id !== 12) {
             this.addEndingConsonant(traj, phrase.startTime!, g, true);
             if (vowelIdxs.includes(traj.num!)) {
@@ -1733,13 +1728,13 @@ export default defineComponent({
           const origPhraseStart = origPhrase.startTime!;
           const origTrajStart = origPhraseStart + traj.startTime!;
           const offsetTrajStart = origTrajStart - fPStart;
-          const realStartTime = realST + offsetTrajStart;
+          const realST = realST + offsetTrajStart;
 
           // get idx of phrase and traj in which to paste
-          const targetPhraseIdx = this.phraseIdxFromTime(realStartTime);
-          const targetPhrase = this.piece.phrases[targetPhraseIdx!];
-          const targetTrajIdx = this.trajIdxFromTime(targetPhrase, realStartTime)!;
-          const targetTraj = targetPhrase.trajectories[targetTrajIdx];
+          const targetPIdx = this.phraseIdxFromTime(realST);
+          const targetP = this.piece.phrases[targetPIdx!];
+          const targetTIdx = this.trajIdxFromTime(targetP, realST)!;
+          const targetT = targetP.trajectories[targetTIdx];
           // make a copy of traj.toJSON() without reference to original
           const copyObj = JSON.parse(JSON.stringify(traj.toJSON()))
           copyObj.groupId = undefined;
@@ -1747,22 +1742,22 @@ export default defineComponent({
             copyObj.pitches[pIdx] = new Pitch(pitch)
           })
           const newTraj = new Trajectory(copyObj);
-          const startingTime = realStartTime - targetPhrase.startTime!;
-          const startsTogether = targetTraj.startTime! === startingTime;
-          const targetEnd = targetTraj.startTime! + targetTraj.durTot;
-          const computedEnd = realStartTime - targetPhrase.startTime! + traj.durTot;
+          const startingTime = realST - targetP.startTime!;
+          const startsTogether = targetT.startTime! === startingTime;
+          const targetEnd = targetT.startTime! + targetT.durTot;
+          const computedEnd = realST - targetP.startTime! + traj.durTot;
           const endsTogether = targetEnd === computedEnd;
-          const trajs = targetPhrase.trajectories;
+          const trajs = targetP.trajectories;
           if (startsTogether && endsTogether) {
             // replace silent traj with copied traj
-            trajs[targetTrajIdx] = newTraj;
-            targetPhrase.reset();
+            trajs[targetTIdx] = newTraj;
+            targetP.reset();
           } else if (startsTogether) {
             // replace with copied traj followed by silent traj
-            targetTraj.durTot = targetTraj.durTot - newTraj.durTot;
-            trajs.splice(targetTrajIdx, 0, newTraj);
-            targetPhrase.reset();
-            const followingTrajs = trajs.slice(targetTrajIdx + 1, trajs.length);
+            targetT.durTot = targetT.durTot - newTraj.durTot;
+            trajs.splice(targetTIdx, 0, newTraj);
+            targetP.reset();
+            const followingTrajs = trajs.slice(targetTIdx + 1, trajs.length);
             followingTrajs.reverse().forEach(t => {
               if (t.id !== 12) {
                 const oldId = `p${t.phraseIdx}t${t.num! - 1}`;
@@ -1772,10 +1767,10 @@ export default defineComponent({
             })
           } else if (endsTogether) {
             // replace with silent traj followed by copied traj
-            targetTraj.durTot = targetTraj.durTot - newTraj.durTot;
-            trajs.splice(targetTrajIdx + 1, 0, newTraj);
-            targetPhrase.reset();
-            const followingTrajs = trajs.slice(targetTrajIdx + 1, trajs.length);
+            targetT.durTot = targetT.durTot - newTraj.durTot;
+            trajs.splice(targetTIdx + 1, 0, newTraj);
+            targetP.reset();
+            const followingTrajs = trajs.slice(targetTIdx + 1, trajs.length);
             followingTrajs.reverse().forEach(t => {
               if (t.id !== 12) {
                 const oldId = `p${t.phraseIdx}t${t.num! - 1}`;
@@ -1784,10 +1779,11 @@ export default defineComponent({
               }
             })
           } else {
-            // replace with silent traj followed by copied traj followed by silent traj
-            const firstDur = realStartTime - targetPhrase.startTime! - targetTraj.startTime!;
-            const lastDur = targetTraj.durTot - firstDur - newTraj.durTot;
-            targetTraj.durTot = firstDur;
+            // replace with silent traj followed by copied traj followed by 
+            // silent traj
+            const firstDur = realST - targetP.startTime! - targetT.startTime!;
+            const lastDur = targetT.durTot - firstDur - newTraj.durTot;
+            targetT.durTot = firstDur;
             const lstObj: {
               id: number,
               pitches: Pitch[],
@@ -1804,10 +1800,10 @@ export default defineComponent({
               lstObj.instrument = this.piece.instrumentation[0];
             }
             const lastTraj = new Trajectory(lstObj);
-            trajs.splice(targetTrajIdx + 1, 0, newTraj);
-            trajs.splice(targetTrajIdx + 2, 0, lastTraj);
-            targetPhrase.reset();
-            const followingTrajs = trajs.slice(targetTrajIdx + 2, trajs.length);
+            trajs.splice(targetTIdx + 1, 0, newTraj);
+            trajs.splice(targetTIdx + 2, 0, lastTraj);
+            targetP.reset();
+            const followingTrajs = trajs.slice(targetTIdx + 2, trajs.length);
             followingTrajs.reverse().forEach(t => {
               if (t.id !== 12) {
                 const oldId = `p${t.phraseIdx}t${t.num! - 2}`;
@@ -1816,8 +1812,8 @@ export default defineComponent({
               }
             })
           }
-          const vowelIdxs = targetPhrase.firstTrajIdxs();
-          this.codifiedAddTraj(newTraj, targetPhrase.startTime!, vowelIdxs)
+          const vowelIdxs = targetP.firstTrajIdxs();
+          this.codifiedAddTraj(newTraj, targetP.startTime!, vowelIdxs)
           this.pastedTrajs.push(newTraj);
         });
         
@@ -1827,7 +1823,8 @@ export default defineComponent({
         }
         if (this.selectedTrajs.length === 1) {
           this.selectedTraj = this.selectedTrajs[0];
-          this.selectedTrajID = `p${this.selectedTraj.phraseIdx}t${this.selectedTraj.num}`
+          const st = this.selectedTraj;
+          this.selectedTrajID = `p${st.phraseIdx}t${st.num}`
           d3Select('#' + this.selectedTrajID)
             .attr('stroke', this.selTrajColor)
           d3Select(`#dampen${this.selectedTrajID}`)
@@ -2032,7 +2029,8 @@ export default defineComponent({
         const currentXK = this.tx!().k;
         const currentYK = this.ty!().k;
         const yProp = this.getScrollYDraggerTranslate();
-        const backColorElem = document.querySelector('#backColor') as HTMLElement;
+        const backColorElem = document.querySelector('#backColor') as 
+          HTMLElement;
         const currentHeight = backColorElem.getBoundingClientRect().height;
         const scalingParam = currentYK * currentHeight;
         await this.initializePiece(leftTime, currentXK, scalingParam, yProp);
@@ -2129,9 +2127,9 @@ export default defineComponent({
           prevTraj.durTot += delta;
           if (traj.durArray!.length > 1) {
             const initPortionA = traj.durArray![0] * traj.durTot;
-            const newDurTot = traj.durTot - delta;
-            const newPropA = (initPortionA - delta) / newDurTot;
-            let newDurArr = traj.durArray!.map(i => i * traj.durTot / newDurTot);
+            const newDur = traj.durTot - delta;
+            const newPropA = (initPortionA - delta) / newDur;
+            let newDurArr = traj.durArray!.map(i => i * traj.durTot / newDur);
             newDurArr[0] = newPropA;
             traj.durArray = newDurArr;
           }
@@ -2139,9 +2137,9 @@ export default defineComponent({
           phrase.startTime! += delta;
           // update the chikari times
           Object.keys(phrase.chikaris).forEach(key => {
-            let newKey = (Math.round(100 * (Number(key) - delta)) / 100).toString();
-            if (newKey !== key) {
-              phrase.chikaris[newKey] = phrase.chikaris[key];
+            let nK = (Math.round(100 * (Number(key) - delta)) / 100).toString();
+            if (nK !== key) {
+              phrase.chikaris[nK] = phrase.chikaris[key];
               delete phrase.chikaris[key];
             }
           })
@@ -2155,9 +2153,9 @@ export default defineComponent({
           prevTraj.durTot += delta;
           if (traj.durArray!.length > 1) {
             const initPortionA = traj.durArray![0] * traj.durTot;
-            const newDurTot = traj.durTot - delta;
-            const newPropA = (initPortionA - delta) / newDurTot;
-            let newDurArr = traj.durArray!.map(i => i * traj.durTot / newDurTot);
+            const newDur = traj.durTot - delta;
+            const newPropA = (initPortionA - delta) / newDur;
+            let newDurArr = traj.durArray!.map(i => i * traj.durTot / newDur);
             newDurArr[0] = newPropA;
             traj.durArray = newDurArr;
           }
@@ -2197,10 +2195,10 @@ export default defineComponent({
             nextPhrase.assignStartTimes();
             const tda = traj.durArray!;
             if (tda.length > 1) {
-              const initPortionZ = tda[tda.length - 1] * traj.durTot;
-              const newDurTot = traj.durTot + delta;
-              const newPropZ = (initPortionZ + delta) / newDurTot;
-              let newDurArray = tda.map((i => i * traj.durTot / newDurTot));
+              const initPartZ = tda[tda.length - 1] * traj.durTot;
+              const newDur = traj.durTot + delta;
+              const newPropZ = (initPartZ + delta) / newDur;
+              let newDurArray = tda.map((i => i * traj.durTot / newDur));
               newDurArray[newDurArray.length - 1] = newPropZ;
               traj.durArray = newDurArray;
             }
@@ -2209,11 +2207,11 @@ export default defineComponent({
             phrase.durArrayFromTrajectories();
             phrase.assignStartTimes();
             // move chikaris in next phrase
-            Object.keys(nextPhrase.chikaris).forEach(key => {
-              const newKey = (Math.round(100 * (Number(key) - delta)) / 100).toString();
-              if (newKey !== key) {
-                nextPhrase.chikaris[newKey] = nextPhrase.chikaris[key];
-                delete nextPhrase.chikaris[key];
+            Object.keys(nextPhrase.chikaris).forEach(k => {
+              let nK = (Math.round(100 * (Number(k) - delta)) / 100).toString();
+              if (nK !== k) {
+                nextPhrase.chikaris[nK] = nextPhrase.chikaris[k];
+                delete nextPhrase.chikaris[k];
               }
             })
           }
@@ -2346,9 +2344,9 @@ export default defineComponent({
           traj.durTot += delta;
           if (traj.durArray!.length > 1) {
             const tda = traj.durArray!;
-            const initPortionZ = tda[tda.length - 1] * traj.durTot;
+            const initPartZ = tda[tda.length - 1] * traj.durTot;
             const durTot = traj.durTot + delta;
-            const newPropZ = (initPortionZ + delta) / durTot;
+            const newPropZ = (initPartZ + delta) / durTot;
             let newDurArray = tda.map((i => i * traj.durTot / durTot));
             newDurArray[newDurArray.length - 1] = newPropZ;
             traj.durArray = newDurArray;
@@ -2471,14 +2469,15 @@ export default defineComponent({
             this.moveSlides(newNextTraj, phrase.startTime!);
             this.codifiedRedrawDampener(newNextTraj, phrase.startTime!);
             if (this.vocal) {
-              this.moveStartingConsonant(newNextTraj, phrase.startTime!, true);
-              this.moveEndingConsonant(newNextTraj, phrase.startTime!, true);
+              this.moveSConsonant(newNextTraj, phrase.startTime!, true);
+              this.moveEConsonant(newNextTraj, phrase.startTime!, true);
               this.moveVowel(newNextTraj, phrase.startTime!, true);
               this.moveConsonantSymbols(newNextTraj, phrase.startTime!, true);
             }
             
             this.removePlucks(newNextTraj);
-            const g = d3Select(`#articulations__p${pIdx}t${tIdx+1}`) as Selection<SVGGElement, any, any, any>;
+            const g = d3Select(`#articulations__p${pIdx}t${tIdx+1}`) as 
+              Selection<SVGGElement, any, any, any>;
             this.codifiedAddPlucks(newNextTraj, phrase.startTime!, g);
           }
           
@@ -2504,19 +2503,21 @@ export default defineComponent({
             this.moveSlides(newNextTraj, nextPhrase.startTime!)
             this.codifiedRedrawDampener(newNextTraj, nextPhrase.startTime!)
             if (this.vocal) {
-              this.moveStartingConsonant(newNextTraj, nextPhrase.startTime!, true);
-              this.moveEndingConsonant(newNextTraj, nextPhrase.startTime!, true);
+              this.moveSConsonant(newNextTraj, nextPhrase.startTime!, true);
+              this.moveEConsonant(newNextTraj, nextPhrase.startTime!, true);
               this.moveVowel(newNextTraj, nextPhrase.startTime!, true);
             }
             this.removePlucks(newNextTraj);
-            const g = d3Select(`#articulations__p${pIdx+1}t${0}`) as Selection<SVGGElement, any, any, any>;
+            const g = d3Select(`#articulations__p${pIdx+1}t${0}`) as 
+              Selection<SVGGElement, any, any, any>;
             this.codifiedAddPlucks(newNextTraj, nextPhrase.startTime!, g);
             this.movePhraseDivs()
           }
         }
       }
       this.removePlucks(traj);
-      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as Selection<SVGGElement, any, any, any>;
+      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
+        Selection<SVGGElement, any, any, any>;
       this.codifiedAddPlucks(traj, phrase.startTime!, g);
       const newTraj = this.fixTrajectory(traj)
       this.piece.phrases[pIdx].trajectories[tIdx] = newTraj
@@ -2530,8 +2531,8 @@ export default defineComponent({
       
       this.codifiedRedrawDampener(this.selectedTraj, phrase.startTime!);
       if (this.vocal) {
-        this.moveStartingConsonant(this.selectedTraj, phrase.startTime!, true);
-        this.moveEndingConsonant(this.selectedTraj, phrase.startTime!, true);
+        this.moveSConsonant(this.selectedTraj, phrase.startTime!, true);
+        this.moveEConsonant(this.selectedTraj, phrase.startTime!, true);
         this.moveVowel(this.selectedTraj, phrase.startTime!, true);
         this.moveConsonantSymbols(this.selectedTraj, phrase.startTime!, true);
       }
@@ -2635,7 +2636,9 @@ export default defineComponent({
         const logSGLines = this.visibleSargam.map(s => Math.log2(s));
         const closest = getClosest(logSGLines, basicLogFreq);
         const lIdx = logSGLines.indexOf(closest);
-        let logMax = logSGLines.length > lIdx + 1 ? logSGLines[lIdx + 1] : logSGLines[lIdx];
+        let logMax = logSGLines.length > lIdx + 1 ? 
+          logSGLines[lIdx + 1] : 
+          logSGLines[lIdx];
         logMax = (logMax + basicLogFreq) / 2;
         let logMin = lIdx > 0 ? logSGLines[lIdx - 1] : logSGLines[lIdx];
         logMin = (logMin + basicLogFreq) / 2;
@@ -2663,13 +2666,14 @@ export default defineComponent({
         this.moveSlides(traj, pst);
         this.codifiedRedrawDampener(traj, pst);
         if (this.vocal) {
-          this.moveStartingConsonant(traj, pst, true);
-          this.moveEndingConsonant(traj, pst, true);
+          this.moveSConsonant(traj, pst, true);
+          this.moveEConsonant(traj, pst, true);
           this.moveVowel(traj, pst, true);
           this.moveConsonantSymbols(traj, pst, true);
         }
         this.removePlucks(traj);
-        const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as Selection<SVGGElement, any, any, any>;
+        const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
+          Selection<SVGGElement, any, any, any>;
         this.codifiedAddPlucks(traj, pst, g);
         this.addAllDragDots();
         this.unsavedChanges = true;
@@ -2719,18 +2723,18 @@ export default defineComponent({
 
     newDurArrayA(traj: Trajectory, delta: number) {
       const initPortionA = traj.durArray![0] * traj.durTot;
-      const newDurTot = traj.durTot - delta;
-      const newPropA = (initPortionA - delta) / newDurTot;
-      let newDurArray = traj.durArray!.map((i => i * traj.durTot / newDurTot));
+      const newDur = traj.durTot - delta;
+      const newPropA = (initPortionA - delta) / newDur;
+      let newDurArray = traj.durArray!.map((i => i * traj.durTot / newDur));
       newDurArray[0] = newPropA;
       return newDurArray
     },
 
     newDurArrayZ(traj: Trajectory, delta: number) {
-      const initPortionZ = traj.durArray![traj.durArray!.length-1] * traj.durTot;
-      const newDurTot = traj.durTot + delta;
-      const newPropZ = (initPortionZ + delta) / newDurTot;
-      let newDurArray = traj.durArray!.map((i => i * traj.durTot / newDurTot));
+      const initPartZ = traj.durArray![traj.durArray!.length-1] * traj.durTot;
+      const newDur = traj.durTot + delta;
+      const newPropZ = (initPartZ + delta) / newDur;
+      let newDurArray = traj.durArray!.map((i => i * traj.durTot / newDur));
       newDurArray[newDurArray.length - 1] = newPropZ;
       return newDurArray;
     },
@@ -2792,7 +2796,8 @@ export default defineComponent({
           if (prevTraj.durArray && prevTraj.durArray.length > 1) {
             let prevTrajTimes = [0, ...prevTraj.durArray.map(cumsum())];
             prevTrajTimes = prevTrajTimes.map(a => {
-              return a * prevTraj.durTot + phrase.startTime! + prevTraj.startTime!
+              const pst = phrase.startTime! + prevTraj.startTime!;
+              return a * prevTraj.durTot + pst
             });
             start = prevTrajTimes[prevTrajTimes.length - 2]
           } else {
@@ -3007,10 +3012,7 @@ export default defineComponent({
             strokeWidth += 0.5;
           }
         }
-        const meter = this.piece.meters.find(m => m.uniqueId === pulse.meterId)!;
-        const ps = meter.getPSFromId(pulse.affiliations[0].psId);
         const drag = (pulse: Pulse) => {
-
           return d3Drag()
             .on('start', this.pulseDragStart(pulse))
             .on('drag', this.pulseDragging(pulse))
@@ -3055,25 +3057,25 @@ export default defineComponent({
               this.contextMenuY = e.y;
               this.contextMenuClosed = false;
               const pulseId = target.id.slice(11);
-              const pulse = this.selectedMeter!.getPulseFromId(pulseId)!;
-              const cycle = this.selectedMeter!.cycleOfPulse(pulse);
+              const pulse = this.selMeter!.getPulseFromId(pulseId)!;
+              const cycle = this.selMeter!.cycleOfPulse(pulse);
               this.contextMenuChoices = [];
               if (cycle === 0) {
                 this.contextMenuChoices.push({
                   text: 'Hide Pulse and priors',
                   action: () => {
-                    this.selectedMeter!.hidePulseAndPriors(pulse);
+                    this.selMeter!.hidePulseAndPriors(pulse);
                     this.contextMenuClosed = true;
                     this.resetZoom();
                     this.selectMeter(pulse.uniqueId)
                   },
                   enabled: true
                 })
-              } else if (cycle === this.selectedMeter!.repetitions - 1) {
+              } else if (cycle === this.selMeter!.repetitions - 1) {
                 this.contextMenuChoices.push({
                   text: 'Hide Pulse and nexts',
                   action: () => {
-                    this.selectedMeter!.hidePulseAndFollowing(pulse);
+                    this.selMeter!.hidePulseAndFollowing(pulse);
                     this.contextMenuClosed = true;
                     this.resetZoom();
                     this.selectMeter(pulse.uniqueId)
@@ -3081,11 +3083,11 @@ export default defineComponent({
                   enabled: true
                 })
               }
-              if (!this.selectedMeter!.allPulses[0].corporeal) {
+              if (!this.selMeter!.allPulses[0].corporeal) {
                 this.contextMenuChoices.push({
                   text: 'Show all Prior Pulses',
                   action: () => {
-                    this.selectedMeter!.showPriorPulses();
+                    this.selMeter!.showPriorPulses();
                     this.contextMenuClosed = true;
                     this.resetZoom();
                     this.selectMeter(pulse.uniqueId)
@@ -3093,12 +3095,12 @@ export default defineComponent({
                   enabled: true
                 })
               }
-              const ap = this.selectedMeter!.allPulses;
+              const ap = this.selMeter!.allPulses;
               if (!ap[ap.length - 1].corporeal) {
                 this.contextMenuChoices.push({
                   text: 'Show all Later Pulses',
                   action: () => {
-                    this.selectedMeter!.showLaterPulses();
+                    this.selMeter!.showLaterPulses();
                     this.contextMenuClosed = true;
                     this.resetZoom();
                     this.selectMeter(pulse.uniqueId)
@@ -3154,7 +3156,7 @@ export default defineComponent({
     pulseDragStart(pulse: Pulse) {
       return (e: D3DragEvent<HTMLDivElement, any, MouseEvent>) => {
         this.pulseDragInitX = e.x;
-        if (this.selectedMeter && pulse.meterId === this.selectedMeter.uniqueId) {
+        if (this.selMeter && pulse.meterId === this.selMeter.uniqueId) {
           this.pulseDragEnabled = true;
         }
       }
@@ -3163,16 +3165,16 @@ export default defineComponent({
     pulseDragging(pulse: Pulse) {
       return (e: D3DragEvent<HTMLDivElement, any, MouseEvent>) => {
         // get affiliation with
-        const c1 = pulse.meterId === this.selectedMeter!.uniqueId;
-        if (this.selectedMeter && c1 && this.editable) {
+        const c1 = pulse.meterId === this.selMeter!.uniqueId;
+        if (this.selMeter && c1 && this.editable) {
           const aff = pulse.affiliations[0];
           const psId = pulse.affiliations[0].psId;
-          const ps = this.selectedMeter.getPSFromId(psId)
+          const ps = this.selMeter.getPSFromId(psId)
           let minTime, maxTime;
           if (aff.idx === 0 && aff.segmentedMeterIdx === 0 && aff.layer === 0) {
-            const psIdx = this.selectedMeter.pulseStructures[0].indexOf(ps);
+            const psIdx = this.selMeter.pulseStructures[0].indexOf(ps);
             let cycleNum, subdivs;
-            const hierarchy = this.selectedMeter.hierarchy[0];
+            const hierarchy = this.selMeter.hierarchy[0];
             if (typeof hierarchy === 'number') {
               cycleNum = psIdx
               subdivs = hierarchy
@@ -3180,9 +3182,9 @@ export default defineComponent({
               cycleNum = Math.floor(psIdx / hierarchy.length);
               subdivs = sum(hierarchy);
             }
-            const st = this.selectedMeter.startTime;
-            const center = st + this.selectedMeter.cycleDur * cycleNum;
-            const subDur = this.selectedMeter.cycleDur / subdivs;
+            const st = this.selMeter.startTime;
+            const center = st + this.selMeter.cycleDur * cycleNum;
+            const subDur = this.selMeter.cycleDur / subdivs;
             const maxOff = subDur / 2;
             maxTime = center + maxOff;
             minTime = center - maxOff;
@@ -3212,12 +3214,12 @@ export default defineComponent({
         if (this.pulseDragEnabled && this.editable) {
           const aff = pulse.affiliations[0];
           const psId = pulse.affiliations[0].psId;
-          const ps = this.selectedMeter!.getPSFromId(psId);
+          const ps = this.selMeter!.getPSFromId(psId);
           let minTime, maxTime;
           if (aff.idx === 0 && aff.segmentedMeterIdx === 0 && aff.layer === 0) {
-            const psIdx = this.selectedMeter!.pulseStructures[0].indexOf(ps);
+            const psIdx = this.selMeter!.pulseStructures[0].indexOf(ps);
             let cycleNum, subdivs;
-            const hierarchy = this.selectedMeter!.hierarchy[0];
+            const hierarchy = this.selMeter!.hierarchy[0];
             if (typeof hierarchy === 'number') {
               cycleNum = psIdx
               subdivs = hierarchy
@@ -3225,9 +3227,9 @@ export default defineComponent({
               cycleNum = Math.floor(psIdx / hierarchy.length);
               subdivs = sum(hierarchy);
             }
-            const st = this.selectedMeter!.startTime;
-            const center = st + this.selectedMeter!.cycleDur * cycleNum;
-            const subDur = this.selectedMeter!.cycleDur / subdivs;
+            const st = this.selMeter!.startTime;
+            const center = st + this.selMeter!.cycleDur * cycleNum;
+            const subDur = this.selMeter!.cycleDur / subdivs;
             const maxOff = subDur / 2;
             maxTime = center + maxOff;
             minTime = center - maxOff;
@@ -3247,8 +3249,8 @@ export default defineComponent({
           const oldTime = pulse.realTime;
           const newTime = this.codifiedXR!.invert(newX);
           const time = newTime - oldTime;
-          this.selectedMeter!.offsetPulse(pulse, time, true);
-          this.selectedMeter!.resetTempo();
+          this.selMeter!.offsetPulse(pulse, time, true);
+          this.selMeter!.resetTempo();
           this.resetZoom();
           this.pulseDragEnabled = false;
           this.pulseDragInitX = undefined
@@ -3276,11 +3278,11 @@ export default defineComponent({
           })!;
           pulse = meter.allPulses[0];
         }     
-        if (this.selectedMeter !== meter) {
+        if (this.selMeter !== meter) {
           this.svg.style('cursor', 'pointer')
           d3SelectAll(`.meterId_${pulse.meterId}`)
             .filter((d, i, nodes) => !d3Select(nodes[i]).classed('overlay'))
-            .attr('stroke', this.selectedMeterColor)
+            .attr('stroke', this.selMeterColor)
         } else {
           if (pulseId) { 
             // prevents final dotted ghost pulse from hovering as col resize
@@ -3311,7 +3313,7 @@ export default defineComponent({
           pulse = meter.allPulses[0];
         }
         
-        if (this.selectedMeter !== meter) {
+        if (this.selMeter !== meter) {
           d3SelectAll(`.meterId_${pulse.meterId}`)
           .filter((d, i, nodes) => !d3Select(nodes[i]).classed('overlay'))
           .attr('stroke', this.meterColor)
@@ -3320,8 +3322,8 @@ export default defineComponent({
       }
     },
 
-    selectMeter(id: string, turnMeterModeOn: boolean = false, pulseId: boolean = true) {
-      if (turnMeterModeOn) {
+    selectMeter(id: string, turnMMOn = false, pulseId = true) {
+      if (turnMMOn) {
         this.meterMode = true;
         this.insertPulseMode = false;
         d3SelectAll('.insertPulse').remove();
@@ -3333,7 +3335,8 @@ export default defineComponent({
         });
         
         const audioPlayer = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-        const meterControls = audioPlayer.$refs.meterControls as typeof MeterControls;
+        const meterControls = audioPlayer.$refs.meterControls as 
+          typeof MeterControls;
         meterControls.meterSelected = true;
         let pulse: Pulse;
         let meter: Meter;
@@ -3349,7 +3352,7 @@ export default defineComponent({
           pulse = meter.allPulses[0];
         }
         
-        this.selectedMeter = meter;
+        this.selMeter = meter;
         meterControls.meter = meter;
         //should go to the meter controls, if not selected
         if (audioPlayer.showMeterControls === false) {
@@ -3359,7 +3362,7 @@ export default defineComponent({
           .attr('stroke', this.meterColor)
         d3SelectAll(`.meterId_${pulse.meterId}`)
           .filter((d, i, nodes) => !d3Select(nodes[i]).classed('overlay'))
-          .attr('stroke', this.selectedMeterColor)
+          .attr('stroke', this.selMeterColor)
         meterControls.assignData();
       }   
     },
@@ -3477,12 +3480,12 @@ export default defineComponent({
           const tTraj = tPhrase.trajectories[tempTIdx];
           let doNormal = true;
           if (tTraj.id === 12) {
-              // this is hard
-              if (i === tempPIdx && tempTIdx === tPhrase.trajectories.length - 1) {         
+              const tpLen = tPhrase.trajectories.length;
+              if (i === tempPIdx && tempTIdx === tpLen - 1) {         
                 const phraseA = this.piece.phrases[i];
                 const phraseB = this.piece.phrases[i+1];
                 const origDivTime = phraseA.startTime! + phraseA.durTot!;
-                if (phraseB.trajectories[0].id === 12) { // if next is also silent
+                if (phraseB.trajectories[0].id === 12) { // if next is silent
                   doNormal = false;
                   const pATrajs = phraseA.trajectories;
                   const prevTraj = pATrajs[pATrajs.length-1];
@@ -3603,7 +3606,8 @@ export default defineComponent({
                 Object.keys(phraseB.chikaris).forEach(key => {
                   const delta = time - origDivTime;
                   if (Number(key) < delta) {
-                    const newKey = (phraseA.durTot! - ((delta) - Number(key))).toFixed(2);
+                    const num = phraseA.durTot! - (delta - Number(key));
+                    let newKey = num.toFixed(2);
                     phraseA.chikaris[newKey] = phraseB.chikaris[key];
                     delete phraseB.chikaris[key];
                     this.reIdChikari(key, newKey, phraseB, phraseA);
@@ -4096,7 +4100,7 @@ export default defineComponent({
       d3SelectAll('.metricGrid')
         .filter((d, i, nodes) => !d3Select(nodes[i]).classed('overlay'))
         .attr('stroke', this.meterColor)
-      this.selectedMeter = undefined;
+      this.selMeter = undefined;
       const meterControls = ap.$refs.meterControls;
       meterControls.meter = undefined;
       meterControls.meterSelected = false;
@@ -4240,9 +4244,9 @@ export default defineComponent({
             phrase.consolidateSilentTrajs()
           });
           this.cleanPhrases();
-        } else if (this.meterMode && this.selectedMeter) {
+        } else if (this.meterMode && this.selMeter) {
           const meterControls = ap.$refs.meterControls;
-          meterControls.removeMeter(this.selectedMeter.uniqueId);
+          meterControls.removeMeter(this.selMeter.uniqueId);
         }
       } else if (e.key === 'c' && this.editable) {
         if (this.metad) {
@@ -4331,14 +4335,20 @@ export default defineComponent({
           if (ap.showMeterControls === false) {
             ap.toggleMeterControls();
           }
-          d3SelectAll('.phrase').style('cursor', 's-resize');
-          d3SelectAll('.articulation').selectAll('*').style('cursor', 's-resize');
+          d3SelectAll('.phrase')
+            .style('cursor', 's-resize');
+          d3SelectAll('.articulation')
+            .selectAll('*')
+            .style('cursor', 's-resize');
         } else {
           this.clearAll();
           this.meterMode = true;
           this.svg.style('cursor', 'crosshair');
-          d3SelectAll('.phrase').style('cursor', 'crosshair');
-          d3SelectAll('.articulation').selectAll('*').style('cursor', 'crosshair');
+          d3SelectAll('.phrase')
+            .style('cursor', 'crosshair');
+          d3SelectAll('.articulation')
+            .selectAll('*')
+            .style('cursor', 'crosshair');
         }
       }
       if (this.setNewTraj || this.selectedTraj) {
@@ -4366,7 +4376,7 @@ export default defineComponent({
           if (this.editable) this.adjustChikari(false)
         }
       }
-      if (this.selectedMeter !== undefined) {
+      if (this.selMeter !== undefined) {
         if (e.key === 'ArrowLeft') {
           if (this.editable) this.adjustMeter(true)
         } else if (e.key === 'ArrowRight') {
@@ -4563,7 +4573,9 @@ export default defineComponent({
         }
       });
       piece.phrases = piece.phrases.map(phrase => new Phrase(phrase));
-      if (piece.meters) piece.meters = piece.meters.map(meter => new Meter(meter));
+      if (piece.meters) {
+        piece.meters = piece.meters.map(meter => new Meter(meter))
+      }
       this.piece = new Piece(piece);
       this.dateModified = new Date(this.piece.dateModified);
       this.fixTrajs();
@@ -5006,9 +5018,8 @@ export default defineComponent({
     },
 
     async selBoxDragEnd(e: MouseEvent) {
-      const c1 = this.selBoxStartX === e.x;
-      const c2 = this.selBoxStartY === e.y;
-      if (this.shifted && this.selBoxStartX && this.selBoxStartY && !(c1 && c2)) {
+      const c = this.selBoxStartX === e.x && this.selBoxStartY === e.y;
+      if (this.shifted && this.selBoxStartX && this.selBoxStartY && !c) {
         const x = Math.min(this.selBoxStartX, e.x);
         const y = Math.min(this.selBoxStartY, e.y);
         const width = Math.abs(this.selBoxStartX - e.x);
@@ -5115,7 +5126,9 @@ export default defineComponent({
         const c4 = traj.id !== 12;
         return (c1 || c2 || c3) && c4
       });
-      let collectedTrajs = await this.collectTrajs(timelyTrajs, startTime, endTime, lowFreq, highFreq);
+      type ArgsT = [Trajectory[], number, number, number, number];
+      const args: ArgsT = [timelyTrajs, startTime, endTime, lowFreq, highFreq];
+      let collectedTrajs = await this.collectTrajs(...args);
       if (this.selectedTrajs.length >= 1) {
         collectedTrajs = collectedTrajs.filter(traj => {
           return !this.selectedTrajs.includes(traj)
@@ -5305,9 +5318,9 @@ export default defineComponent({
             ap.cancelBursts();
           }
           ap.bufferSourceNodes = [];
-          ap.playTrajs(ap.getCurrentTime(), ap.now());
+          ap.playTrajs(ap.getCurTime(), ap.now());
           if (ap.string) {
-            ap.playChikaris(ap.getCurrentTime(), ap.now(), ap.otherNode)
+            ap.playChikaris(ap.getCurTime(), ap.now(), ap.otherNode)
           }
         }
         this.movePlayhead();
@@ -5625,7 +5638,7 @@ export default defineComponent({
             .append('path')
             .classed('insertPulse', true)
             .attr('id', `insertPulse${this.insertPulses.length - 1}`)
-            .attr('stroke', this.selectedMeterColor)
+            .attr('stroke', this.selMeterColor)
             .attr('stroke-width', 2)
             .attr('d', this.playheadLine(true))
             .attr('transform', `translate(${this.codifiedXR!(time)}, 0)`)
@@ -6082,7 +6095,11 @@ export default defineComponent({
           ) => g
         .attr('transform', `translate(0,${this.xAxHeight})`)
         .style('font-size', '13px')
-        .call(d3AxisTop(scale).ticks(10).tickFormat(d => structuredTime(Number(d))))
+        .call(
+          d3AxisTop(scale)
+          .ticks(10)
+          .tickFormat(d => structuredTime(Number(d)))
+          )
         .call(g => g.select('.domain'))
       const yTickLabels = this.getYTickLabels();
       this.yAxis = (
@@ -6148,7 +6165,6 @@ export default defineComponent({
               .attr('stroke-width', '6px')
               .attr('d', this.phraseLine())
               .style('opacity', '0')
-              // .style('cursor', () => this.meterMode ? '' : 'pointer')
               .on('mouseover', this.handleMouseOver)
               .on('mouseout', this.handleMouseOut)
               .on('click', this.handleClickTraj)
@@ -6253,9 +6269,9 @@ export default defineComponent({
               insertFixedLeft = true;
             }
           } else if (pIdx > 0) {
-            const prevPhrase = this.piece.phrases[pIdx - 1];
-            if (prevPhrase.trajectories.length > 0) {
-              const prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
+            const prevP = this.piece.phrases[pIdx - 1];
+            if (prevP.trajectories.length > 0) {
+              const prevTraj = prevP.trajectories[prevP.trajectories.length - 1];
               if (prevTraj.id !== 12) {
                 insertSilenceLeft = true;
               }
@@ -6369,13 +6385,13 @@ export default defineComponent({
               groupInsertFixedLeft = true;
             }
           } else if (pIdx > 0) {
-            const prevPhrase = this.piece.phrases[pIdx - 1];
-            if (prevPhrase.trajectories.length > 0) {
-              const prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
-              if (prevTraj.id !== 12) {
+            const prevP = this.piece.phrases[pIdx - 1];
+            if (prevP.trajectories.length > 0) {
+              const prevT = prevP.trajectories[prevP.trajectories.length - 1];
+              if (prevT.id !== 12) {
                 groupInsertSilenceLeft = true;
               }
-              if (prevTraj.id !== 0 && firstTraj.id !== 0) {
+              if (prevT.id !== 0 && firstTraj.id !== 0) {
                 groupInsertFixedLeft = true;
               }
             }
@@ -6586,7 +6602,8 @@ export default defineComponent({
         endOnly=false) {
       if (traj.id !== 12) {
         const arts = traj.articulations;
-        const c1 = arts['0.00'] !== undefined && arts['0.00'].name === 'consonant';
+        const a = arts['0.00'];
+        const c1 = a !== undefined && a.name === 'consonant';
 
         if (c1 && !endOnly) {
           const x = phraseStart + traj.startTime!;
@@ -6607,7 +6624,8 @@ export default defineComponent({
             .attr('transform', `translate(${scaledX}, ${scaledY})`)
 
         }
-        const c2 = arts['1.00'] !== undefined && arts['1.00'].name === 'consonant';
+        const a1 = arts['1.00'];
+        const c2 = a1 !== undefined && a1.name === 'consonant';
         if (c2 && !startOnly) {
           const x = phraseStart + traj.startTime! + traj.durTot;
           const y = traj.compute(1, true);
@@ -6770,7 +6788,9 @@ export default defineComponent({
         if (this.phonemeRepresentation === 'IPA') {
           text = withC ? art!.ipa! + ' ' + traj.vowelIpa! : traj.vowelIpa!;
         } else if (this.phonemeRepresentation === 'Devanagari') {
-          text = withC ? art!.hindi! + ' ' + traj.vowelHindi! : traj.vowelHindi!;
+          text = withC ? 
+            art!.hindi! + ' ' + traj.vowelHindi! : 
+            traj.vowelHindi!;
         } else if (this.phonemeRepresentation === 'English') {
           text = withC ? 
             art!.engTrans! + ' ' + traj.vowelEngTrans! : 
@@ -6808,7 +6828,7 @@ export default defineComponent({
       }
     },
 
-    moveStartingConsonant(
+    moveSConsonant(
         traj: Trajectory, 
         phraseStart: number, 
         codified=false
@@ -6908,7 +6928,7 @@ export default defineComponent({
       return c1 && c2
     },
 
-    moveEndingConsonant(
+    moveEConsonant(
         traj: Trajectory, 
         phraseStart: number, 
         codified=false
@@ -7527,7 +7547,8 @@ export default defineComponent({
         const pIdx = this.selectedTraj.phraseIdx;
         const tIdx = this.selectedTraj.num;
         const phrase = this.piece.phrases[Number(pIdx)];
-        const g: Selection<SVGGElement, unknown, any, any> = d3Select(`#articulations__p${pIdx}t${tIdx}`);
+        type GType = Selection<SVGGElement, unknown, any, any>;
+        const g: GType = d3Select(`#articulations__p${pIdx}t${tIdx}`);
         const selected = d3Select(`#vowelp${pIdx}t${tIdx}`);
         if (selected.node() === null) {
           this.addVowel(this.selectedTraj, phrase.startTime!, g, true)
@@ -7680,27 +7701,27 @@ export default defineComponent({
     },
 
     adjustMeter(left = true) {
-      if (this.selectedMeter === undefined) {
+      if (this.selMeter === undefined) {
         throw new Error('No meter selected')
       }
       const offset = 0.02;
-      const startTime = this.selectedMeter.startTime;
+      const startTime = this.selMeter.startTime;
       let adjustment = 0;
       if (left) {
         if (startTime - offset >= 0) {
-          this.selectedMeter.adjustStartTime(-offset);
+          this.selMeter.adjustStartTime(-offset);
           adjustment = this.codifiedXR!(0) - this.codifiedXR!(0.02);
         } else if (startTime !== 0) {
-          this.selectedMeter.setStartTime(0);
+          this.selMeter.setStartTime(0);
           adjustment = this.codifiedXR!(0) - this.codifiedXR!(startTime);
         } else {
           return
         }
       } else {
-        this.selectedMeter.adjustStartTime(offset);
+        this.selMeter.adjustStartTime(offset);
         adjustment = this.codifiedXR!(0.02) - this.codifiedXR!(0);
       }
-      const selected = d3SelectAll(`.meterId_${this.selectedMeter.uniqueId}`);
+      const selected = d3SelectAll(`.meterId_${this.selMeter.uniqueId}`);
       const nodes = selected.nodes() as SVGPathElement[];
       nodes.forEach(node => {
         console.log(node)
@@ -7709,7 +7730,7 @@ export default defineComponent({
         d3Select(node).attr('transform', `translate(${newX}, 0)`);
       })
       this.resetZoom();
-      this.selectMeter(this.selectedMeter.allPulses[0].uniqueId);
+      this.selectMeter(this.selMeter.allPulses[0].uniqueId);
       this.unsavedChanges = true;
       
     },
@@ -7756,9 +7777,9 @@ export default defineComponent({
         this.groupable = false;
         if (this.shifted && this.selectedTrajs.length >= 1) {
           const id = this.getIdFromTrajClick(e)!;
-          const pIdx = id.split('t')[0].slice(1);
-          const tIdx = id.split('t')[1];
-          const newTraj = this.piece.phrases[Number(pIdx)].trajectories[Number(tIdx)];
+          const pIdx = Number(id.split('t')[0].slice(1));
+          const tIdx = Number(id.split('t')[1]);
+          const newTraj = this.piece.phrases[pIdx].trajectories[tIdx];
           if (!this.selectedTrajs.includes(newTraj)) {
             if (newTraj.groupId === undefined) {
               this.selectedTrajs.push(newTraj);
@@ -8229,7 +8250,9 @@ export default defineComponent({
       this.visibleSargam.forEach((s, i) => { // draws hoizontal sargam lines
         const fund = this.piece.raga.fundamental;
         const logOverFund = (freq: number) => Math.log2(freq / fund);
-        const saFilter = (freq: number) => Math.abs(logOverFund(freq) % 1) === 0;
+        const saFilter = (freq: number) => {
+          return Math.abs(logOverFund(freq) % 1) === 0
+        }
         const paFilter = (idx: number) => {
           return this.visPitches[idx].swara === 4
         };
@@ -8458,8 +8481,8 @@ export default defineComponent({
       }
     },
 
-    codifiedAddTraj(traj: Trajectory, phraseStart: number, vowelIdxs: number[]) {
-      const data = this.makeTrajData(traj, phraseStart);
+    codifiedAddTraj(traj: Trajectory, pStart: number, vowelIdxs: number[]) {
+      const data = this.makeTrajData(traj, pStart);
       this.phraseG.append('path')
         .datum(data)
         .classed('phrase', true)
@@ -8483,7 +8506,7 @@ export default defineComponent({
         .on('mouseout', this.handleMouseOut)
         .on('click', this.handleClickTraj)
         .on('contextmenu', this.trajContextMenuClick)
-      this.codifiedAddArticulations(traj, phraseStart, vowelIdxs)
+      this.codifiedAddArticulations(traj, pStart, vowelIdxs)
     },
     
     codifiedAddPhrases() {
@@ -8535,8 +8558,8 @@ export default defineComponent({
             this.redrawSlide(traj, phrase.startTime!);
             this.redrawDampener(traj, phrase.startTime!);
             if (this.vocal) {
-              this.moveStartingConsonant(traj, phrase.startTime!);
-              this.moveEndingConsonant(traj, phrase.startTime!);
+              this.moveSConsonant(traj, phrase.startTime!);
+              this.moveEConsonant(traj, phrase.startTime!);
               this.moveVowel(traj, phrase.startTime!, false);
               this.moveConsonantSymbols(traj, phrase.startTime!);
             } 
@@ -8733,7 +8756,7 @@ export default defineComponent({
       this.requestId = undefined;
       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
       const latency = ap.ac.outputLatency;
-      this.currentTime = ap.getCurrentTime() - latency;
+      this.currentTime = ap.getCurTime() - latency;
       if (this.currentTime < this.animationStart) {
         this.currentTime = this.animationStart;
       }
@@ -8753,7 +8776,7 @@ export default defineComponent({
         window.cancelAnimationFrame(this.requestId);
         this.requestId = undefined;
         const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-        this.currentTime = ap.getCurrentTime();
+        this.currentTime = ap.getCurTime();
         const latency = ap.ac.outputLatency;
         this.movePlayhead(latency * 2.0 * 1000);
       }
@@ -8770,7 +8793,7 @@ export default defineComponent({
       this.requestId = undefined;
       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
       const latency = ap.ac.outputLatency;
-      this.currentTime = ap.getStretchedCurrentTime() - latency;
+      this.currentTime = ap.getStretchedCurTime() - latency;
       if (!ap.loop && this.currentTime < this.stretchedAnimationStart!) {
         this.currentTime = this.stretchedAnimationStart!;
       }
@@ -8783,7 +8806,7 @@ export default defineComponent({
         window.cancelAnimationFrame(this.requestId);
         this.requestId = undefined;
         const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-        this.currentTime = ap.getStretchedCurrentTime();
+        this.currentTime = ap.getStretchedCurTime();
         const latency = ap.ac.outputLatency;
         this.movePlayhead(latency * 2.0 * 1000);
       }
@@ -8945,8 +8968,8 @@ export default defineComponent({
         this.codifiedRedrawSlide(traj, st)
         this.codifiedRedrawDampener(traj, st)
         if (this.vocal) {
-          this.moveStartingConsonant(traj, st, true)
-          this.moveEndingConsonant(traj, st, true);
+          this.moveSConsonant(traj, st, true)
+          this.moveEConsonant(traj, st, true);
           this.moveVowel(traj, st, true);
           this.moveConsonantSymbols(traj, st, true);
         }

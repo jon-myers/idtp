@@ -323,7 +323,7 @@ import t13 from '@/assets/thumbnails/13.png';
 import { select as d3Select } from 'd3';
 import { getIpaVowels, getConsonants } from '@/js/serverCalls.ts';
 import { defineComponent } from 'vue';
-import { initSectionCategorization, Piece, Trajectory } from '@/js/classes.ts';
+import { initSecCategorization, Piece, Trajectory } from '@/js/classes.ts';
 import type { PropType } from 'vue';
 
 type TrajSelectPanelDataType = {
@@ -477,28 +477,19 @@ export default defineComponent({
     this.vowelList = result.map(v => {
       return `${v.hindi.initial} - ${v.iso_15919} (${v.english})`
     })
-
     const consonantResults = await getConsonants();
     this.cIpa = consonantResults.map(v => v.ipa);
     this.cIso_15919 = consonantResults.map(v => v.iso_15919);
     this.cEngTrans = consonantResults.map(v => v.eng_trans);
-    
     this.cExample = consonantResults.map(v => v.example);
     this.hindiConsonants = consonantResults.map(v => v.hindi);
-
     this.consonantList = this.cIso_15919.map((iso, idx) => {
       return `${this.hindiConsonants[idx]} - ${iso} (${this.cExample[idx]})`
     })
-
-    // add 'none' to end of consonantlist
     this.consonantList.push('none');
-
     this.cIso_15919.push(undefined);
-
     if (this.vocal) this.octShiftTop = 75;
     if (this.vocal && this.showSlope) this.octShiftTop = 97
-
-
   },
   
   watch: {
@@ -562,7 +553,7 @@ export default defineComponent({
           piece.sectionStarts.sort((a, b) => a - b);
           const newIdx = piece.sectionStarts.indexOf(realPhraseStart);
           piece.sectionCategorization
-            .splice(newIdx, 0, initSectionCategorization());
+            .splice(newIdx, 0, initSecCategorization());
           d3Select(`#phraseLine${realPhraseStart-1}`)
             .attr('stroke-width', '4px')
         }
@@ -836,7 +827,6 @@ export default defineComponent({
   height: v-bind(panelHeight + ctrlBoxWidth/2 + 'px');
 }
 
-
 .imgContainer {
   width: v-bind((ctrlBoxWidth - 3) / 4 + 'px');
   height: v-bind((ctrlBoxWidth - 3) / 4 + 'px');
@@ -844,18 +834,11 @@ export default defineComponent({
   border-top: 1px solid black;
   margin: 0px;
   position: relative;
-  /* display: inline-block */
 }
 
 .thumb {
   width: 100%;
   height: 100%;
-  /* width: calc((100% - 3px) / 4);
-  border-right: 1px solid black;
-  border-top: 1px solid black;
-  margin: 0;
-  display: inline-block; */
-  /* cursor: pointer; */
 }
 
 .right {
@@ -924,7 +907,6 @@ label.wide {
 }
 
 .keyNum {
-  /* display: inline-block; */
   position: absolute;
   bottom: 0px;
   right: 0px;
@@ -954,13 +936,10 @@ label.wide {
 
 .octShift button {
   width: 25px;
-  /* height: 25px; */
   text-align: center;
   font-size: 16px;
   font-weight: bold;
   cursor: pointer;
   margin: 2px;
 }
-
-
 </style>
