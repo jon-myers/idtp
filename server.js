@@ -865,10 +865,22 @@ const runServer = async () => {
         makingMelograph.stderr.on('data', data => {
           console.error(`stderr: ${data}`)
         });
-        await makingMelograph.on('close', (msg) => {
-          console.log(msg)
-          res.json('made the melograph')
-        })
+        // await makingMelograph.on('close', (msg) => {
+        //   console.log(msg)
+        //   res.json('made the melograph')
+        // })
+        await new Promise((resolve, reject) => {
+          makingMelograph.on('close', (msg) => {
+            console.log(msg);
+            resolve();
+          });
+    
+          makingMelograph.on('error', (err) => {
+            console.error(err);
+            reject(err);
+          });
+        });
+        res.json('made the melograph')
       } catch (err) {
         console.error(err)
       }
