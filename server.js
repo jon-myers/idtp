@@ -853,6 +853,7 @@ const runServer = async () => {
     })
 
     app.post('/makeMelograph', async (req, res) => {
+      res.setTimeout(10 * 60 * 1000); // 10 minutes
       const makingMelograph = spawn(
         'python3', 
         ['generate_melograph.py', req.body.recId, req.body.saEst]
