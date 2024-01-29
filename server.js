@@ -13,6 +13,7 @@ const aggregations = require('./aggregations.js');
 const { OAuth2Client } = require('google-auth-library');
 require('dotenv').config();
 const console = require('console');
+const { $push } = require('mongo-dot-notation');
 
 async function exists (path) {  
   try {
@@ -149,7 +150,14 @@ const runServer = async () => {
         const insert = req.body;
         insert['dateCreated'] = new Date(insert.dateCreated);
         insert['dateModified'] = new Date(insert.dateModified);
+        
         const result = await transcriptions.insertOne(req.body)
+
+        const userID = insert.userID;
+        const query = { _id: ObjectId(userID) };
+        // const update = { transcriptions: $push(result.insertedId) };
+        const update = { $push: { transcriptions: result.insertedId } };
+        await users.updateOne(query, update);
         res.send(JSON.stringify(result));
       } catch (err) {
         console.error(err);

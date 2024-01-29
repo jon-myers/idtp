@@ -865,7 +865,7 @@ type NewPieceDataType = {
 }
 
 
-const createNewPiece = async (obj: object): Promise<
+const createNewPiece = async (obj: Piece): Promise<
   (NewPieceDataType | undefined)
   > => {
   const data = JSON.stringify(obj);
