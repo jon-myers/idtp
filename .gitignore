@@ -39,3 +39,5 @@ credentials
 docs
 .direnv
 idtp_env
+
+__pycache__
