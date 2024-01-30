@@ -1162,22 +1162,16 @@ const runServer = async () => {
         } };
         const result = await transcriptions.updateOne(query, update);
         // remove from old user's transcriptions array
-        console.log(req.body.originalOwnerID)
         const query2 = { _id: ObjectId(req.body.originalOwnerID) };
         const tID = ObjectId(req.body.transcriptionID);
-        const result2 = await users.updateOne(query2, { $pull: {
+        await users.updateOne(query2, { $pull: {
           transcriptions: { $in: [tID] }
         } });
         // add to new user's transcriptions array
         const query3 = { _id: ObjectId(req.body.userID) };
-        const result3 = await users.updateOne(query3, { $push: {
+        await users.updateOne(query3, { $push: {
           transcriptions: tID
         } });
-        console.log(result2, result3)
-
-
-
-
         res.json(result)
       } catch (err) {
         console.error(err);
