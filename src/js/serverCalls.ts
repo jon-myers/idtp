@@ -1465,7 +1465,9 @@ const userLoginGoogle = async (userData: UserDataType) => {
     email: userData.email,
     name: userData.name,
     given_name: userData.given_name,
-    family_name: userData.family_name
+    family_name: userData.family_name,
+    collections: [],
+    transcriptions: [],
   });
   let out;
   let request = {
