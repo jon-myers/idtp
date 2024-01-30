@@ -21,7 +21,7 @@ class Pitch:
             self.swara = self.swara.lower()
             self.swara = sargam.index(self.swara)
         self.oct = options.get('oct', 0)
-        self.raised = options.get('raised', False)
+        self.raised = options.get('raised', True)
         self.fundamental = options.get('fundamental', 261.63)
         self.ratios = options.get('ratios', [
             1,

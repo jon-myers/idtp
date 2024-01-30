@@ -322,15 +322,15 @@ class Pitch {
       this.raised = raised
     }
     if (typeof(swara) === 'string') {
-      if (swara.length === 2 && swara[1] === "̲") {
-        if (!sargamLetters.includes(swara[0].toLowerCase())) {
-          throw new SyntaxError(`invalid swara string: "${swara}"`)
-        } else {
-          this.swara = sargamLetters.indexOf(swara[0].toLowerCase())
-          this.raised = false
-        }
-      }
-      else if (swara.length > 1) {
+      // if (swara.length === 2 && swara[1] === "̲") {
+      //   if (!sargamLetters.includes(swara[0].toLowerCase())) {
+      //     throw new SyntaxError(`invalid swara string: "${swara}"`)
+      //   } else {
+      //     this.swara = sargamLetters.indexOf(swara[0].toLowerCase())
+      //     this.raised = false
+      //   }
+      // }
+      if (swara.length > 1) {
         if (!this.sargam.includes(swara.toLowerCase())) {
           throw new SyntaxError(`invalid swara string: "${swara}"`)
         } else {
@@ -370,6 +370,11 @@ class Pitch {
     }
     else {
       this.fundamental = fundamental
+    }
+
+    if (this.swara === 0 || this.swara == 4) {
+      // raised override
+      this.raised = true
     }
   }
 
