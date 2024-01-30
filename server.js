@@ -13,6 +13,7 @@ const aggregations = require('./aggregations.js');
 const { OAuth2Client } = require('google-auth-library');
 require('dotenv').config();
 const console = require('console');
+const { $push } = require('mongo-dot-notation');
 
 async function exists (path) {  
   try {
@@ -149,7 +150,14 @@ const runServer = async () => {
         const insert = req.body;
         insert['dateCreated'] = new Date(insert.dateCreated);
         insert['dateModified'] = new Date(insert.dateModified);
+        
         const result = await transcriptions.insertOne(req.body)
+
+        const userID = insert.userID;
+        const query = { _id: ObjectId(userID) };
+        // const update = { transcriptions: $push(result.insertedId) };
+        const update = { $push: { transcriptions: result.insertedId } };
+        await users.updateOne(query, update);
         res.send(JSON.stringify(result));
       } catch (err) {
         console.error(err);
@@ -463,6 +471,17 @@ const runServer = async () => {
       try {
         const query = { "_id": ObjectId(req.body._id) };
         const result = await transcriptions.deleteOne(query);
+        
+        // also, remove from user's transcriptions array
+        const userID = req.body.userID;
+        const query2 = { _id: ObjectId(userID) };
+        const tID = ObjectId(req.body._id);
+        const result2 = await users.updateOne(query2, { $pull: { 
+          transcriptions: { $in: [tID] } 
+        } });
+        console.log(userID)
+        console.log(query2)
+        console.log(result2)
         res.json(result);
       } catch (err) {
         console.error(err);
@@ -1142,6 +1161,17 @@ const runServer = async () => {
           given_name: req.body.given_name
         } };
         const result = await transcriptions.updateOne(query, update);
+        // remove from old user's transcriptions array
+        const query2 = { _id: ObjectId(req.body.originalOwnerID) };
+        const tID = ObjectId(req.body.transcriptionID);
+        await users.updateOne(query2, { $pull: {
+          transcriptions: { $in: [tID] }
+        } });
+        // add to new user's transcriptions array
+        const query3 = { _id: ObjectId(req.body.userID) };
+        await users.updateOne(query3, { $push: {
+          transcriptions: tID
+        } });
         res.json(result)
       } catch (err) {
         console.error(err);

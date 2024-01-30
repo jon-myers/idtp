@@ -492,9 +492,10 @@ export default defineComponent({
 
     async saveNewOwner() {
       const id = this.selectedPiece!._id!;
+      const originalOwnerID = this.selectedPiece!.userID!;
       const ownerObj = this.allUsers![this.editingUserIdx!];
       try {
-        await updateTranscriptionOwner(id, ownerObj);
+        await updateTranscriptionOwner(id, ownerObj, originalOwnerID);
         await this.updateSort();
       } catch (err) {
         console.log(err);
