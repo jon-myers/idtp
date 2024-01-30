@@ -865,7 +865,7 @@ type NewPieceDataType = {
 }
 
 
-const createNewPiece = async (obj: object): Promise<
+const createNewPiece = async (obj: Piece): Promise<
   (NewPieceDataType | undefined)
   > => {
   const data = JSON.stringify(obj);
@@ -898,7 +898,8 @@ const deletePiece = async (piece: Piece) => {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      '_id': piece._id
+      '_id': piece._id,
+      'userID': piece.userID
     })
   };
   try {
@@ -1464,7 +1465,9 @@ const userLoginGoogle = async (userData: UserDataType) => {
     email: userData.email,
     name: userData.name,
     given_name: userData.given_name,
-    family_name: userData.family_name
+    family_name: userData.family_name,
+    collections: [],
+    transcriptions: [],
   });
   let out;
   let request = {
@@ -1593,7 +1596,9 @@ const updateTranscriptionPermissions = async (id: string, perm: string) => {
   }
 }
 
-const updateTranscriptionOwner = async (id: string, ownerObj: UserType) => {
+const updateTranscriptionOwner = async (
+    id: string, ownerObj: UserType, originalOwnerID: string
+    ) => {
   let out;
   const request = {
     method: 'POST',
@@ -1605,7 +1610,8 @@ const updateTranscriptionOwner = async (id: string, ownerObj: UserType) => {
       userID: ownerObj['_id'],
       name: ownerObj['name'],
       family_name: ownerObj['family_name'],
-      given_name: ownerObj['given_name']
+      given_name: ownerObj['given_name'],
+      originalOwnerID: originalOwnerID
     })
   };
   try {
