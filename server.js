@@ -476,9 +476,12 @@ const runServer = async () => {
         const userID = req.body.userID;
         const query2 = { _id: ObjectId(userID) };
         const tID = ObjectId(req.body._id);
-        await users.updateOne(query2, { $pull: { 
+        const result2 = await users.updateOne(query2, { $pull: { 
           transcriptions: { $in: [tID] } 
         } });
+        console.log(userID)
+        console.log(query2)
+        console.log(result2)
         res.json(result);
       } catch (err) {
         console.error(err);
@@ -1158,6 +1161,23 @@ const runServer = async () => {
           given_name: req.body.given_name
         } };
         const result = await transcriptions.updateOne(query, update);
+        // remove from old user's transcriptions array
+        console.log(req.body.originalOwnerID)
+        const query2 = { _id: ObjectId(req.body.originalOwnerID) };
+        const tID = ObjectId(req.body.transcriptionID);
+        const result2 = await users.updateOne(query2, { $pull: {
+          transcriptions: { $in: [tID] }
+        } });
+        // add to new user's transcriptions array
+        const query3 = { _id: ObjectId(req.body.userID) };
+        const result3 = await users.updateOne(query3, { $push: {
+          transcriptions: tID
+        } });
+        console.log(result2, result3)
+
+
+
+
         res.json(result)
       } catch (err) {
         console.error(err);

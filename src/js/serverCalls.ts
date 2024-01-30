@@ -1594,7 +1594,9 @@ const updateTranscriptionPermissions = async (id: string, perm: string) => {
   }
 }
 
-const updateTranscriptionOwner = async (id: string, ownerObj: UserType) => {
+const updateTranscriptionOwner = async (
+    id: string, ownerObj: UserType, originalOwnerID: string
+    ) => {
   let out;
   const request = {
     method: 'POST',
@@ -1606,7 +1608,8 @@ const updateTranscriptionOwner = async (id: string, ownerObj: UserType) => {
       userID: ownerObj['_id'],
       name: ownerObj['name'],
       family_name: ownerObj['family_name'],
-      given_name: ownerObj['given_name']
+      given_name: ownerObj['given_name'],
+      originalOwnerID: originalOwnerID
     })
   };
   try {
