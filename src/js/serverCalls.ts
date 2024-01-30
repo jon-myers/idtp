@@ -898,7 +898,8 @@ const deletePiece = async (piece: Piece) => {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      '_id': piece._id
+      '_id': piece._id,
+      'userID': piece.userID
     })
   };
   try {

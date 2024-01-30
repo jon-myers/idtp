@@ -471,6 +471,14 @@ const runServer = async () => {
       try {
         const query = { "_id": ObjectId(req.body._id) };
         const result = await transcriptions.deleteOne(query);
+        
+        // also, remove from user's transcriptions array
+        const userID = req.body.userID;
+        const query2 = { _id: ObjectId(userID) };
+        const tID = ObjectId(req.body._id);
+        await users.updateOne(query2, { $pull: { 
+          transcriptions: { $in: [tID] } 
+        } });
         res.json(result);
       } catch (err) {
         console.error(err);
