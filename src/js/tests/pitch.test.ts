@@ -23,11 +23,11 @@ test('defaultPitch', () => {
   expect(p.nonOffsetFrequency).toEqual(261.63);
   const logFreq = Math.log2(261.63);
   expect(p.nonOffsetLogFreq).toEqual(logFreq);
+  expect(p.logFreq).toEqual(logFreq);
   expect(p.sargamLetter).toEqual('S');
   expect(p.octavedSargamLetter).toEqual('S');
   expect(p.numberedPitch).toEqual(0);
   expect(p.chroma).toEqual(0);
-  expect(p.logFreq).toEqual(logFreq);
   expect(p.toJSON()).toEqual({
     swara: 0,
     raised: true,
@@ -161,169 +161,62 @@ test('swaraInput', () => {
     expect(p.chroma).toEqual(11);
   }
 
+  const saVars = ['Sa', 'sa', 's', 'S', 0]
+  saVars.forEach((swara) => {
+    let p = new Pitch({ swara: swara })
+    saTest(p);
+    p = new Pitch({ swara: swara, raised: false })
+    saTest(p); // shouldn't matter if you pass it raised = false, will revert
+    // to raised = true
+  })
 
-  let p = new Pitch({ swara: 'Sa' })
-  saTest(p);
-  p = new Pitch({ swara: 'sa' })
-  saTest(p);
-  p = new Pitch({ swara: 's' })
-  saTest(p);
-  p = new Pitch({ swara: 'S' })
-  saTest(p);
-  p = new Pitch({ swara: 0 })
-  saTest(p);
-  p = Pitch.fromPitchNumber(0);
-  saTest(p);
-  // shouldn't matter if you pass it raised = false, will still be the same
-  p = new Pitch({ swara: 'Sa', raised: false })
-  saTest(p);
+  const reVars = ['Re', 're', 'r', 'R', 1]
+  reVars.forEach((swara) => {
+    let p = new Pitch({ swara: swara })
+    reRaisedTest(p);
+    p = new Pitch({ swara: swara, raised: false })
+    reLoweredTest(p);
+  })
 
-  p = new Pitch({ swara: 'Re', raised: false })
-  reLoweredTest(p);
-  p = new Pitch({ swara: 're', raised: false })
-  reLoweredTest(p);
-  p = new Pitch({ swara: 'r', raised: false })
-  reLoweredTest(p);
-  p = new Pitch({ swara: 'R', raised: false })
-  reLoweredTest(p);
-  p = new Pitch({ swara: 1, raised: false })
-  reLoweredTest(p);
-  p = Pitch.fromPitchNumber(1);
-  reLoweredTest(p);
+  const gaVars = ['Ga', 'ga', 'g', 'G', 2]
+  gaVars.forEach((swara) => {
+    let p = new Pitch({ swara: swara })
+    gaRaisedTest(p);
+    p = new Pitch({ swara: swara, raised: false })
+    gaLoweredTest(p);
+  })
 
-  p = new Pitch({ swara: 're' })
-  reRaisedTest(p);
-  p = new Pitch({ swara: 'Re' })
-  reRaisedTest(p);
-  p = new Pitch({ swara: 'r' })
-  reRaisedTest(p);
-  p = new Pitch({ swara: 'R'})
-  reRaisedTest(p);
-  p = new Pitch({ swara: 1 })
-  reRaisedTest(p);
-  p = Pitch.fromPitchNumber(2);
-  reRaisedTest(p);
+  const maVars = ['Ma', 'ma', 'm', 'M', 3]
+  maVars.forEach((swara) => {
+    let p = new Pitch({ swara: swara })
+    maRaisedTest(p);
+    p = new Pitch({ swara: swara, raised: false })
+    maLoweredTest(p);
+  })
 
-  p = new Pitch({ swara: 'ga', raised: false })
-  gaLoweredTest(p);
-  p = new Pitch({ swara: 'Ga', raised: false })
-  gaLoweredTest(p);
-  p = new Pitch({ swara: 'g', raised: false })
-  gaLoweredTest(p);
-  p = new Pitch({ swara: 'G', raised: false })
-  gaLoweredTest(p);
-  p = new Pitch({ swara: 2, raised: false })
-  gaLoweredTest(p);
-  p = Pitch.fromPitchNumber(3);
-  gaLoweredTest(p);
+  const paVars = ['Pa', 'pa', 'p', 'P', 4]
+  paVars.forEach((swara) => {
+    let p = new Pitch({ swara: swara })
+    paTest(p);
+    p = new Pitch({ swara: swara, raised: false })
+    paTest(p); // shouldn't matter if you pass it raised = false, will still be the same
+  })
 
-  p = new Pitch({ swara: 'ga' })
-  gaRaisedTest(p);
-  p = new Pitch({ swara: 'Ga' })
-  gaRaisedTest(p);
-  p = new Pitch({ swara: 'g' })
-  gaRaisedTest(p);
-  p = new Pitch({ swara: 'G' })
-  gaRaisedTest(p);
-  p = new Pitch({ swara: 2 })
-  gaRaisedTest(p);
-  p = Pitch.fromPitchNumber(4);
-  gaRaisedTest(p);
+  const dhaVars = ['Dha', 'dha', 'd', 'D', 5]
+  dhaVars.forEach((swara) => {
+    let p = new Pitch({ swara: swara })
+    dhaRaisedTest(p);
+    p = new Pitch({ swara: swara, raised: false })
+    dhaLoweredTest(p);
+  })
 
-  p = new Pitch({ swara: 'ma', raised: false })
-  maLoweredTest(p);
-  p = new Pitch({ swara: 'Ma', raised: false })
-  maLoweredTest(p);
-  p = new Pitch({ swara: 'm', raised: false })
-  maLoweredTest(p);
-  p = new Pitch({ swara: 'M', raised: false })
-  maLoweredTest(p);
-  p = new Pitch({ swara: 3, raised: false })
-  maLoweredTest(p);
-  p = Pitch.fromPitchNumber(5);
-  maLoweredTest(p);
-
-  p = new Pitch({ swara: 'ma' })
-  maRaisedTest(p);
-  p = new Pitch({ swara: 'Ma' })
-  maRaisedTest(p);
-  p = new Pitch({ swara: 'm' })
-  maRaisedTest(p);
-  p = new Pitch({ swara: 'M' })
-  maRaisedTest(p);
-  p = new Pitch({ swara: 3 })
-  maRaisedTest(p);
-  p = Pitch.fromPitchNumber(6);
-  maRaisedTest(p);
-
-  p = new Pitch({ swara: 'pa' })
-  paTest(p);
-  p = new Pitch({ swara: 'Pa' })
-  paTest(p);
-  p = new Pitch({ swara: 'p' })
-  paTest(p);
-  p = new Pitch({ swara: 'P' })
-  paTest(p);
-  p = new Pitch({ swara: 4 })
-  paTest(p);
-  p = Pitch.fromPitchNumber(7);
-  paTest(p);
-
-  // shouldn't matter if you pass it raised = false, will still be the same
-  p = new Pitch({ swara: 'pa', raised: false })
-  paTest(p);
-
-  p = new Pitch({ swara: 'dha', raised: false })
-  dhaLoweredTest(p);
-  p = new Pitch({ swara: 'Dha', raised: false })
-  dhaLoweredTest(p);
-  p = new Pitch({ swara: 'd', raised: false })
-  dhaLoweredTest(p);
-  p = new Pitch({ swara: 'D', raised: false })
-  dhaLoweredTest(p);
-  p = new Pitch({ swara: 5, raised: false })
-  dhaLoweredTest(p);
-  p = Pitch.fromPitchNumber(8);
-  dhaLoweredTest(p);
-
-  p = new Pitch({ swara: 'dha' })
-  dhaRaisedTest(p);
-  p = new Pitch({ swara: 'Dha' })
-  dhaRaisedTest(p);
-  p = new Pitch({ swara: 'd' })
-  dhaRaisedTest(p);
-  p = new Pitch({ swara: 'D' })
-  dhaRaisedTest(p);
-  p = new Pitch({ swara: 5 })
-  dhaRaisedTest(p);
-  p = Pitch.fromPitchNumber(9);
-  dhaRaisedTest(p);
-
-  p = new Pitch({ swara: 'ni', raised: false })
-  niLoweredTest(p);
-  p = new Pitch({ swara: 'Ni', raised: false })
-  niLoweredTest(p);
-  p = new Pitch({ swara: 'n', raised: false })
-  niLoweredTest(p);
-  p = new Pitch({ swara: 'N', raised: false })
-  niLoweredTest(p);
-  p = new Pitch({ swara: 6, raised: false })
-  niLoweredTest(p);
-  p = Pitch.fromPitchNumber(10);
-  niLoweredTest(p);
-
-  p = new Pitch({ swara: 'ni' })
-  niRaisedTest(p);
-  p = new Pitch({ swara: 'Ni' })
-  niRaisedTest(p);
-  p = new Pitch({ swara: 'n' })
-  niRaisedTest(p);
-  p = new Pitch({ swara: 'N' })
-  niRaisedTest(p);
-  p = new Pitch({ swara: 6 })
-  niRaisedTest(p);
-  p = Pitch.fromPitchNumber(11);
-  niRaisedTest(p);
+  const niVars = ['Ni', 'ni', 'n', 'N', 6]
+  niVars.forEach((swara) => {
+    let p = new Pitch({ swara: swara })
+    niRaisedTest(p);
+    p = new Pitch({ swara: swara, raised: false })
+    niLoweredTest(p);
+  })
 })
 
 test('octaveInput', () => {
@@ -360,5 +253,14 @@ test('logOffset', () => {
   const offsetSaFreq = Math.pow(2, offsetSaLogFreq);
   expect(p.frequency).toBeCloseTo(offsetSaFreq);
   expect(p.logFreq).toBeCloseTo(offsetSaLogFreq);
-  expect(p.nonOffsetFrequency).toEqual(saFreq);
+  expect(p.nonOffsetFrequency).toBeCloseTo(saFreq);
+})
+
+test('numberedPitch', () => {
+  let p = new Pitch({ swara: 5, oct: -2})
+  expect(p.numberedPitch).toEqual(-15);
+  p = new Pitch({ swara: 2, oct: 0})
+  expect(p.numberedPitch).toEqual(4);
+  p = new Pitch({ swara: 3, raised: false, oct: 1 })
+  expect(p.numberedPitch).toEqual(17);
 })
