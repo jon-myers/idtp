@@ -47,6 +47,7 @@ test('swaraInput', () => {
     expect(p.logFreq).toEqual(saLogFreq);
     expect(p.sargamLetter).toEqual('S');
     expect(p.raised).toEqual(true);
+    expect(p.chroma).toEqual(0);
   };
   const reLoweredTest = (p: Pitch) => {
     const reFreq = 277.19;
@@ -55,6 +56,8 @@ test('swaraInput', () => {
     expect(p.frequency).toBeCloseTo(reFreq);
     expect(p.logFreq).toBeCloseTo(reLogFreq);
     expect(p.sargamLetter).toEqual('r');
+    expect(p.raised).toEqual(false);
+    expect(p.chroma).toEqual(1);
   }
   const reRaisedTest = (p: Pitch) => {
     const reFreq = 293.67;
@@ -63,6 +66,8 @@ test('swaraInput', () => {
     expect(p.frequency).toBeCloseTo(reFreq);
     expect(p.logFreq).toBeCloseTo(reLogFreq);
     expect(p.sargamLetter).toEqual('R');
+    expect(p.raised).toEqual(true);
+    expect(p.chroma).toEqual(2);
   }
   const gaLoweredTest = (p: Pitch) => {
     const gaFreq = 311.13;
@@ -71,6 +76,8 @@ test('swaraInput', () => {
     expect(p.frequency).toBeCloseTo(gaFreq);
     expect(p.logFreq).toBeCloseTo(gaLogFreq);
     expect(p.sargamLetter).toEqual('g');
+    expect(p.raised).toEqual(false);
+    expect(p.chroma).toEqual(3);
   }
   const gaRaisedTest = (p: Pitch) => {
     const gaFreq = 329.63;
@@ -79,6 +86,8 @@ test('swaraInput', () => {
     expect(p.frequency).toBeCloseTo(gaFreq);
     expect(p.logFreq).toBeCloseTo(gaLogFreq);
     expect(p.sargamLetter).toEqual('G');
+    expect(p.raised).toEqual(true);
+    expect(p.chroma).toEqual(4);
   }
   const maLoweredTest = (p: Pitch) => {
     const maFreq = 349.23;
@@ -87,6 +96,8 @@ test('swaraInput', () => {
     expect(p.frequency).toBeCloseTo(maFreq);
     expect(p.logFreq).toBeCloseTo(maLogFreq);
     expect(p.sargamLetter).toEqual('m');
+    expect(p.raised).toEqual(false);
+    expect(p.chroma).toEqual(5);
   }
   const maRaisedTest = (p: Pitch) => {
     const maFreq = 370;
@@ -95,6 +106,8 @@ test('swaraInput', () => {
     expect(p.frequency).toBeCloseTo(maFreq);
     expect(p.logFreq).toBeCloseTo(maLogFreq);
     expect(p.sargamLetter).toEqual('M');
+    expect(p.raised).toEqual(true);
+    expect(p.chroma).toEqual(6);
   }
   const paTest = (p: Pitch) => {
     const paFreq = 392;
@@ -104,6 +117,8 @@ test('swaraInput', () => {
     expect(p.logFreq).toBeCloseTo(paLogFreq);
     expect(p.sargamLetter).toEqual('P');
     expect(p.raised).toEqual(true);
+    expect(p.chroma).toEqual(7);
+
   }
   const dhaLoweredTest = (p: Pitch) => {
     const dhaFreq = 415.31;
@@ -111,6 +126,9 @@ test('swaraInput', () => {
     expect (p.swara).toEqual(5);
     expect(p.frequency).toBeCloseTo(dhaFreq);
     expect(p.logFreq).toBeCloseTo(dhaLogFreq);
+    expect(p.sargamLetter).toEqual('d');
+    expect(p.raised).toEqual(false);
+    expect(p.chroma).toEqual(8);
   }
   const dhaRaisedTest = (p: Pitch) => {
     const dhaFreq = 440.01;
@@ -118,6 +136,9 @@ test('swaraInput', () => {
     expect (p.swara).toEqual(5);
     expect(p.frequency).toBeCloseTo(dhaFreq);
     expect(p.logFreq).toBeCloseTo(dhaLogFreq);
+    expect(p.sargamLetter).toEqual('D');
+    expect(p.raised).toEqual(true);
+    expect(p.chroma).toEqual(9);
   }
   const niLoweredTest = (p: Pitch) => {
     const niFreq = 466.17;
@@ -125,6 +146,9 @@ test('swaraInput', () => {
     expect (p.swara).toEqual(6);
     expect(p.frequency).toBeCloseTo(niFreq);
     expect(p.logFreq).toBeCloseTo(niLogFreq);
+    expect(p.sargamLetter).toEqual('n');
+    expect(p.raised).toEqual(false);
+    expect(p.chroma).toEqual(10);
   }
   const niRaisedTest = (p: Pitch) => {
     const niFreq = 493.89;
@@ -132,6 +156,9 @@ test('swaraInput', () => {
     expect (p.swara).toEqual(6);
     expect(p.frequency).toBeCloseTo(niFreq);
     expect(p.logFreq).toBeCloseTo(niLogFreq);
+    expect(p.sargamLetter).toEqual('N');
+    expect(p.raised).toEqual(true);
+    expect(p.chroma).toEqual(11);
   }
 
 
@@ -323,3 +350,15 @@ test('octaveInput', () => {
 
 })
 
+test('logOffset', () => {
+  const offset = 0.1
+  let p = new Pitch({ swara: 'Sa', logOffset: offset })
+  expect(p.logOffset).toEqual(offset);
+  const saFreq = 261.63;
+  const saLogFreq = Math.log2(saFreq);
+  const offsetSaLogFreq = saLogFreq + offset;
+  const offsetSaFreq = Math.pow(2, offsetSaLogFreq);
+  expect(p.frequency).toBeCloseTo(offsetSaFreq);
+  expect(p.logFreq).toBeCloseTo(offsetSaLogFreq);
+  expect(p.nonOffsetFrequency).toEqual(saFreq);
+})
