@@ -996,7 +996,7 @@ class Trajectory {
     * 
     * @returns The value of the function at point x. If logScale is true, the result is in logarithmic scale.
     */
-  compute(x: number, logScale = false) {
+  compute(x: number, logScale = false): number {
     const value = this.ids[this.id](x);
     return logScale ? Math.log2(value) : value;
   }
