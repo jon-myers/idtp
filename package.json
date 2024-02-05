@@ -24,6 +24,7 @@
     "test": "vitest"
   },
   "main": "background.js",
+  "type": "module",
   "dependencies": {
     "@soundtouchjs/audio-worklet": "^0.1.17",
     "@types/d3-drag": "^3.0.2",
