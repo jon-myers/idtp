@@ -1,5 +1,6 @@
 from typing import List, Dict, TypedDict, Optional, Union
 import humps
+import math
 
 # this should all be implemented in snake_case, even though the TypeScript 
 # version is in camelCase
@@ -38,12 +39,87 @@ class Pitch:
         ])
         self.log_offset = options.get('log_offset', 0.0)
 
-    # @property
-    # def frequency(self) -> float:
-    #     ratio: float
-    #     if type(self.ratios[self.swara]) == list:
-    #         ratio = self.ratios[self.swara][self.oct]
-    #     else:
-    #         ratio = self.ratios[self.swara]
-    #     return self.fundamental * ratio * (2 ** (self.oct + self.log_offset))
+    @property
+    def frequency(self):
+        ratio = 0
+        if type(self.ratios[self.swara]) == list:
+            ratio = self.ratios[self.swara][self.oct]
+        else:
+            ratio = self.ratios[self.swara]
+        return self.fundamental * ratio * (2 ** (self.oct + self.log_offset))
+
+    @property
+    def non_offset_frequency(self):
+        ratio = 0
+        if type(self.ratios[self.swara]) == list:
+            ratio = self.ratios[self.swara][self.oct]
+        else:
+            ratio = self.ratios[self.swara]
+        return self.fundamental * ratio * (2 ** (self.oct))
     
+    @property
+    def non_offset_log_freq(self):
+        return math.log2(self.non_offset_frequency)
+
+    @property
+    def log_freq(self):
+        return math.log2(self.frequency)
+
+    @property
+    def sargam_letter(self):
+        sargam = ['sa', 're', 'ga', 'ma', 'pa', 'dha', 'ni'] #redefined sargam because doesnt work otherwise
+        s = sargam[int(self.swara)][0]
+        if (self.raised):
+            s = s.upper()
+        return s
+    
+    @property
+    def octaved_sargam_letter(self):
+        s = self.sargam_letter
+        if (self.oct == -2):
+            s = s + '\u0324'
+        elif (self.oct == -1):
+            s = s + '\u0323'
+        elif (self.oct == 1):
+            s = s + '\u0307'
+        elif (self.oct == 2):
+            s = s + '\u0308'
+        return s
+
+    @property
+    def numbered_pitch(self):
+        # something like a midi pitch, but centered on 0 instead of 60
+        if self.swara == 0:
+            return self.oct * 12 + 0
+        elif self.swara == 1:
+            return self.oct * 12 + 1 + int(self.raised)
+        elif self.swara == 2:
+            return self.oct * 12 + 3 + int(self.raised)
+        elif self.swara == 3:
+            return self.oct * 12 + 5 + int(self.raised)
+        elif self.swara == 4:
+            return self.oct * 12 + 7
+        elif self.swara == 5:
+            return self.oct * 12 + 8 + int(self.raised)
+        elif self.swara == 6:
+            return self.oct * 12 + 10 + int(self.raised)
+        else:
+            raise SyntaxError(f"invalid swara: {self.swara}")
+
+    @property
+    def chroma(self):
+        np = self.numbered_pitch
+        while np < 0:
+            np += 12
+        return np % 12
+    
+    #method
+    def to_JSON(self):
+        return { # this should still be camelCase
+            'swara': self.swara,
+            'raised': self.raised,
+            'oct': self.oct,
+            'ratios': self.ratios,
+            'fundamental': self.fundamental,
+            'logOffset': self.log_offset,
+        } 
