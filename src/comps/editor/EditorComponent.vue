@@ -8402,9 +8402,20 @@ export default defineComponent({
       this.moveRegion();
     },
 
-    resetAudio() {
-      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+    resetAudio(e: PointerEvent) {
+      if (e.pointerType === '') {
+        this.preventSpaceToggle(e);
+      } else {
+        const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
       ap.reinitializeAC();
+      // also, need to (if Pitch Shift is checked), uncheck pitch shift, and 
+      // set its default back to 0.
+      const eap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+      eap.shiftOn = false;
+      eap.transposition = 0
+      }
+      
+      
     },
 
     resetZoom() {
