@@ -125,10 +125,13 @@
               <div class='modalColRow'>
                 <label>Name</label>
                 <div class='selHolder'>
-                  <select v-model='mus.name'>
+                  <select 
+                    v-model='mus.name' 
+                    @change='mus.name ? handleSelMusChange(mus.name, i) : ""'
+                    >
                     <option 
                       v-for='(aMus, amIdx) in allMusicians' 
-                      :key='i'
+                      :key='amIdx'
                       :value='aMus["Full Name"]'
                       >
                       {{aMus["Full Name"]}}
@@ -738,6 +741,24 @@ export default defineComponent({
   },
 
   methods: {
+
+    handleSelMusChange(name: string, selIdx: number) {
+      const mus = this.allMusicians.find(m => {
+        return m['Full Name'] === name
+      });
+      if (mus) {
+        if (mus.Instrument === 'Vocal') {
+          if (mus.Gender === 'M') {
+            this.editMus[selIdx].instrument = "Vocal (M)"
+          } else {
+            this.editMus[selIdx].instrument = "Vocal (F)"
+          }
+        } else {
+          this.editMus[selIdx].instrument = mus.Instrument;
+        }
+        this.editMus[selIdx].gharana = mus.Gharana;
+      }
+    },
 
     permissionToViewAE(audioEvent: AudioEventMetadataType) {
       const ep = audioEvent.explicitPermissions!;
