@@ -40,21 +40,9 @@
           </div>
         </div>
         <div class='recInfo right'>
-          <div class='rulerBox'>
-            <img :src='icons.ruler' @click='toggleWaveform' />
-          </div>
         </div>
       </div>
     </div>
-    <WaveformAnalyzer
-      class='waveformAnalyzer'
-      v-show='showWaveform' 
-      :initSaEstimate='saEstimate' 
-      :initSaVerified='saVerified'
-      ref='waveformAnalyzer'
-      :key='waKey'/>
-    
-  
   </div>
 </template>
 <script lang='ts'>
@@ -66,7 +54,6 @@ import pauseIcon from '@/assets/icons/pause.svg';
 import playIcon from '@/assets/icons/play.svg';
 import shuffleIcon from '@/assets/icons/shuffle.svg';
 import rulerIcon from '@/assets/icons/ruler.svg';
-import WaveformAnalyzer from '@/comps/audioEvents/WaveformAnalyzer.vue';
 
 const structuredTime = (dur: number) => {
   const hours = String(Math.floor(dur / 3600));
@@ -134,10 +121,6 @@ export default {
       waKey: 0,
       dragStart: 0
     }
-  },
-  
-  components: {
-    WaveformAnalyzer
   },
   
   props: [
