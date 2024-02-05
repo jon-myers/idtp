@@ -8490,6 +8490,7 @@ export default defineComponent({
           .attr('stroke', this.selArtColor)
           .attr('fill', this.selArtColor)
       }
+      this.unsavedChanges = true;
     },
 
     codifiedAddTraj(traj: Trajectory, pStart: number, vowelIdxs: number[]) {
