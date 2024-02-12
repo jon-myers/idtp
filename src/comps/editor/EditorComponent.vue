@@ -6626,6 +6626,7 @@ export default defineComponent({
         }
         const a1 = arts['1.00'];
         const c2 = a1 !== undefined && a1.name === 'consonant';
+
         if (c2 && !startOnly) {
           const x = phraseStart + traj.startTime! + traj.durTot;
           const y = traj.compute(1, true);
@@ -6747,6 +6748,8 @@ export default defineComponent({
           } else if (this.phonemeRepresentation === 'English') {
             text = traj.articulations[key].engTrans!;
           }
+          
+
           const cd = {
             x: phraseStart + traj.startTime! + normedX,
             y: y_,
@@ -6758,8 +6761,21 @@ export default defineComponent({
             x = (d: DrawDataType) => this.codifiedXR!(d.x);
             y = (d: DrawDataType) => this.codifiedYR!(d.y);
           }
+          let offset = 0;
+          // if next traj is not silent, the x needs to be adjusted to the left
+          // so as not to overlap
+          const phrase = this.piece.phrases[traj.phraseIdx!];
+          let nextTraj: Trajectory | undefined = undefined;
+          if (traj.num! < phrase.trajectories.length - 1) {
+            nextTraj = phrase.trajectories[traj.num! + 1];
+          } else if (this.piece.phrases.length > traj.phraseIdx! + 1) {
+            nextTraj = this.piece.phrases[traj.phraseIdx! + 1].trajectories[0];
+          }
+          if (nextTraj !== undefined && nextTraj.id !== 12) {
+            offset = -5;
+          }          
           const tFunc = (d: DrawDataType) => {
-            return `translate(${x(d)}, ${y(d) - 14})`;
+            return `translate(${x(d) + offset}, ${y(d) - 14})`;
           }
           g.append('text')
             .classed('articulation', true)
@@ -6786,14 +6802,14 @@ export default defineComponent({
         const art = withC ? traj.articulations['0.00'] : undefined;
         let text: string = '';
         if (this.phonemeRepresentation === 'IPA') {
-          text = withC ? art!.ipa! + ' ' + traj.vowelIpa! : traj.vowelIpa!;
+          text = withC ? art!.ipa! + traj.vowelIpa! : traj.vowelIpa!;
         } else if (this.phonemeRepresentation === 'Devanagari') {
           text = withC ? 
-            art!.hindi! + ' ' + traj.vowelHindi! : 
+            art!.hindi! + traj.vowelHindi! : 
             traj.vowelHindi!;
         } else if (this.phonemeRepresentation === 'English') {
           text = withC ? 
-            art!.engTrans! + ' ' + traj.vowelEngTrans! : 
+            art!.engTrans! + traj.vowelEngTrans! : 
             traj.vowelEngTrans!;
         }
         let x = (d: DrawDataType) => this.xr()(d.x);
@@ -6809,7 +6825,6 @@ export default defineComponent({
         }
         const pxlOffset = 12;
         const timeOffset = this.xr().invert(pxlOffset) - this.xr().invert(0);
-        const leftTime = phraseStart + traj.startTime! - timeOffset;
         let ctrCompute = traj.compute(0, true);
         ctrCompute = y({ y:ctrCompute, x: 0 });
         let yVal = ctrCompute;
@@ -6820,8 +6835,9 @@ export default defineComponent({
           .attr('id', `vowelp${traj.phraseIdx}t${traj.num}`)
           .attr('stroke', 'black')
           .attr('font-size', '15px')
-          .attr('text-anchor', 'middle')
+          .attr('text-anchor', 'left')
           .data([cd])
+        
         txtElem.attr('transform', function(d){
             return `translate(${x(d)}, ${yVal - 14})`
         })
