@@ -8491,6 +8491,7 @@ export default defineComponent({
           .attr('fill', this.selArtColor)
       }
       this.unsavedChanges = true;
+      this.moveChikaris(phrase);
     },
 
     codifiedAddTraj(traj: Trajectory, pStart: number, vowelIdxs: number[]) {
