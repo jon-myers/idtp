@@ -1071,11 +1071,28 @@ export default defineComponent({
       const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
         Selection<SVGGElement, any, any, any>;
       const selected = d3Select(`#vowelp${pIdx}t${tIdx}`);
+      let dontReplace = false;
+      let prevTraj: Trajectory | undefined;
+      if (tIdx > 0) {
+        prevTraj = phrase.trajectories[tIdx - 1];
+      } else if (pIdx > 0) {
+        const prevPhrase = this.piece.phrases[pIdx - 1];
+        prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
+      }
+      if (prevTraj) {
+        if (prevTraj.vowel === vowel) {
+          dontReplace = true;
+        }
+      }
       if (selected.node() === null) {
-        this.addVowel(selT, phrase.startTime!, g, true)
+        if (!dontReplace) {
+          this.addVowel(selT, phrase.startTime!, g, true)
+        }
       } else {
         selected.remove();
-        this.addVowel(selT, phrase.startTime!, g, true)
+        if (!dontReplace) {
+          this.addVowel(selT, phrase.startTime!, g, true)
+        }
       }
       // if there is a next traj, check its vowel, and change it if necessary
       const nextTraj = phrase.trajectories[tIdx + 1];
