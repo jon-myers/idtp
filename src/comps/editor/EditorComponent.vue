@@ -2335,6 +2335,18 @@ export default defineComponent({
           }
           traj.durTot -= delta;
         }
+        let prevTraj: Trajectory | undefined;
+        if (tIdx > 0) {
+          prevTraj = phrase.trajectories[tIdx - 1];
+        } else if (traj.phraseIdx! > 0) {
+          const prevPhrase = this.piece.phrases[pIdx - 1];
+          const pTrajs = prevPhrase.trajectories;
+          prevTraj = pTrajs[pTrajs.length - 1];
+        }
+        if (prevTraj && prevTraj.id !== 12 && prevTraj.endConsonant) {
+          this.moveEConsonant(prevTraj, phrase.startTime!, true)
+          this.moveConsonantSymbols(prevTraj, phrase.startTime!, true)
+        }
       } else if (idx === traj.durArray!.length) {
         if (tIdx < phrase.trajectories.length - 1) {
           const nextTraj = phrase.trajectories[tIdx + 1];
@@ -6626,6 +6638,7 @@ export default defineComponent({
         }
         const a1 = arts['1.00'];
         const c2 = a1 !== undefined && a1.name === 'consonant';
+
         if (c2 && !startOnly) {
           const x = phraseStart + traj.startTime! + traj.durTot;
           const y = traj.compute(1, true);
@@ -6747,6 +6760,8 @@ export default defineComponent({
           } else if (this.phonemeRepresentation === 'English') {
             text = traj.articulations[key].engTrans!;
           }
+          
+
           const cd = {
             x: phraseStart + traj.startTime! + normedX,
             y: y_,
@@ -6758,8 +6773,21 @@ export default defineComponent({
             x = (d: DrawDataType) => this.codifiedXR!(d.x);
             y = (d: DrawDataType) => this.codifiedYR!(d.y);
           }
+          let offset = 0;
+          // if next traj is not silent, the x needs to be adjusted to the left
+          // so as not to overlap
+          const phrase = this.piece.phrases[traj.phraseIdx!];
+          let nextTraj: Trajectory | undefined = undefined;
+          if (traj.num! < phrase.trajectories.length - 1) {
+            nextTraj = phrase.trajectories[traj.num! + 1];
+          } else if (this.piece.phrases.length > traj.phraseIdx! + 1) {
+            nextTraj = this.piece.phrases[traj.phraseIdx! + 1].trajectories[0];
+          }
+          if (nextTraj !== undefined && nextTraj.id !== 12) {
+            offset = -5;
+          }          
           const tFunc = (d: DrawDataType) => {
-            return `translate(${x(d)}, ${y(d) - 14})`;
+            return `translate(${x(d) + offset}, ${y(d) - 14})`;
           }
           g.append('text')
             .classed('articulation', true)
@@ -6786,14 +6814,14 @@ export default defineComponent({
         const art = withC ? traj.articulations['0.00'] : undefined;
         let text: string = '';
         if (this.phonemeRepresentation === 'IPA') {
-          text = withC ? art!.ipa! + ' ' + traj.vowelIpa! : traj.vowelIpa!;
+          text = withC ? art!.ipa! + traj.vowelIpa! : traj.vowelIpa!;
         } else if (this.phonemeRepresentation === 'Devanagari') {
           text = withC ? 
-            art!.hindi! + ' ' + traj.vowelHindi! : 
+            art!.hindi! + traj.vowelHindi! : 
             traj.vowelHindi!;
         } else if (this.phonemeRepresentation === 'English') {
           text = withC ? 
-            art!.engTrans! + ' ' + traj.vowelEngTrans! : 
+            art!.engTrans! + traj.vowelEngTrans! : 
             traj.vowelEngTrans!;
         }
         let x = (d: DrawDataType) => this.xr()(d.x);
@@ -6809,7 +6837,6 @@ export default defineComponent({
         }
         const pxlOffset = 12;
         const timeOffset = this.xr().invert(pxlOffset) - this.xr().invert(0);
-        const leftTime = phraseStart + traj.startTime! - timeOffset;
         let ctrCompute = traj.compute(0, true);
         ctrCompute = y({ y:ctrCompute, x: 0 });
         let yVal = ctrCompute;
@@ -6820,8 +6847,9 @@ export default defineComponent({
           .attr('id', `vowelp${traj.phraseIdx}t${traj.num}`)
           .attr('stroke', 'black')
           .attr('font-size', '15px')
-          .attr('text-anchor', 'middle')
+          .attr('text-anchor', 'left')
           .data([cd])
+        
         txtElem.attr('transform', function(d){
             return `translate(${x(d)}, ${yVal - 14})`
         })
@@ -6949,9 +6977,22 @@ export default defineComponent({
             x = (d: DrawDataType) => this.codifiedXR!(d.x);
             y = (d: DrawDataType) => this.codifiedYR!(d.y);
           }
+          let offset = 0;
+          // if next traj is not silent, the x needs to be adjusted to the left
+          // so as not to overlap
+          const phrase = this.piece.phrases[traj.phraseIdx!];
+          let nextTraj: Trajectory | undefined = undefined;
+          if (traj.num! < phrase.trajectories.length - 1) {
+            nextTraj = phrase.trajectories[traj.num! + 1];
+          } else if (this.piece.phrases.length > traj.phraseIdx! + 1) {
+            nextTraj = this.piece.phrases[traj.phraseIdx! + 1].trajectories[0];
+          }
+          if (nextTraj !== undefined && nextTraj.id !== 12) {
+            offset = -5;
+          } 
           d3Select(`#endConsonantp${traj.phraseIdx}t${traj.num}`)
             .data([cd])
-            .attr('transform', d => `translate(${x(d)}, ${y(d) - 14})`)
+            .attr('transform', d => `translate(${x(d) + offset}, ${y(d) - 14})`)
         }
       }
     },
@@ -8519,7 +8560,21 @@ export default defineComponent({
         .on('mouseout', this.handleMouseOut)
         .on('click', this.handleClickTraj)
         .on('contextmenu', this.trajContextMenuClick)
-      this.codifiedAddArticulations(traj, pStart, vowelIdxs)
+      this.codifiedAddArticulations(traj, pStart, vowelIdxs);
+      // if there is a prev traj, and that traj is not silent, and that traj
+      // has a ending consonant, move E Consonant
+      const phrase = this.piece.phrases[traj.phraseIdx!];
+      let prevTraj: Trajectory | undefined = undefined;
+      if (traj.num! > 0) {
+        prevTraj = phrase.trajectories[traj.num! - 1];
+      } else if (traj.phraseIdx! > 0) {
+        prevTraj = this.piece.phrases[traj.phraseIdx! - 1].trajectories[
+          this.piece.phrases[traj.phraseIdx! - 1].trajectories.length - 1
+        ];
+      }
+      if (prevTraj && prevTraj.id !== 12 && prevTraj.endConsonant) {
+        this.moveEConsonant(prevTraj, pStart, true);
+      }
     },
     
     codifiedAddPhrases() {
