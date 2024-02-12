@@ -5030,25 +5030,30 @@ export default defineComponent({
     },
 
     selBoxDrag(e: MouseEvent) {
-      if (this.shifted && this.selBoxStartX && this.selBoxStartY) {
-        const x = Math.min(this.selBoxStartX, e.x);
-        const y = Math.min(this.selBoxStartY, e.y);
-        const width = Math.abs(this.selBoxStartX - e.x);
-        const height = Math.abs(this.selBoxStartY - e.y);
-        this.selBox.attr('x', x)
-          .attr('y', y)
-          .attr('width', width)
-          .attr('height', height)
-          .attr('fill', 'none')
-          .attr('stroke', 'black')
-          .attr('stroke-width', 1)
-          .attr('stroke-dasharray', '5,5')
+      if (this.selBoxStartX && this.selBoxStartY) {
+        if (this.shifted) {
+          const x = Math.min(this.selBoxStartX, e.x);
+          const y = Math.min(this.selBoxStartY, e.y);
+          const width = Math.abs(this.selBoxStartX - e.x);
+          const height = Math.abs(this.selBoxStartY - e.y);
+          this.selBox.attr('x', x)
+            .attr('y', y)
+            .attr('width', width)
+            .attr('height', height)
+            .attr('fill', 'none')
+            .attr('stroke', 'black')
+            .attr('stroke-width', 1)
+            .attr('stroke-dasharray', '5,5')
+        } else {
+          this.selBoxDragEnd(e)
+        }
+        
       }
     },
 
-    async selBoxDragEnd(e: MouseEvent) {
+    selBoxDragEnd(e: MouseEvent) {
       const c = this.selBoxStartX === e.x && this.selBoxStartY === e.y;
-      if (this.shifted && this.selBoxStartX && this.selBoxStartY && !c) {
+      if (this.selBoxStartX && this.selBoxStartY && !c) {
         const x = Math.min(this.selBoxStartX, e.x);
         const y = Math.min(this.selBoxStartY, e.y);
         const width = Math.abs(this.selBoxStartX - e.x);
@@ -5057,9 +5062,11 @@ export default defineComponent({
         const endTime = this.xr().invert(x + width);
         const lowFreq = this.yr().invert(y + height);
         const highFreq = this.yr().invert(y);
-        await this.selectTrajectories(startTime, endTime, lowFreq, highFreq);
+        this.selectTrajectories(startTime, endTime, lowFreq, highFreq);
         this.groupable = this.selectedTrajsGroupable();
         d3Select('#selBox').remove();
+        this.selBoxStartX = undefined;
+        this.selBoxStartY = undefined;
       } else {
         if (e.y < this.xAxHeight && this.drawingRegion) {
           if (e.x < this.regionStartPx) {
@@ -5085,7 +5092,7 @@ export default defineComponent({
       }
     },
 
-    async collectTrajs(
+    collectTrajs(
         timelyTrajs: Trajectory[], 
         startTime: number, 
         endTime: number, 
@@ -5138,7 +5145,7 @@ export default defineComponent({
       return collectedTrajs
     },
 
-    async selectTrajectories(
+    selectTrajectories(
         startTime: number, 
         endTime: number, 
         lowFreq: number, 
@@ -5157,7 +5164,7 @@ export default defineComponent({
       });
       type ArgsT = [Trajectory[], number, number, number, number];
       const args: ArgsT = [timelyTrajs, startTime, endTime, lowFreq, highFreq];
-      let collectedTrajs = await this.collectTrajs(...args);
+      let collectedTrajs = this.collectTrajs(...args);
       if (this.selectedTrajs.length >= 1) {
         collectedTrajs = collectedTrajs.filter(traj => {
           return !this.selectedTrajs.includes(traj)
