@@ -214,46 +214,8 @@ import {
 
 import AddRaag from '@/comps/audioEvents/AddRaag.vue';
 
-import type { LocationType } from '@/js/serverCalls.ts';
-import { RaagType } from '@/comps/audioEvents/AddAudioEvent.vue';
+import { LocationType, RaagType, RaagTimingType } from '@/ts/types.ts';
 
-type RaagTimingType = {
-  start: {
-    hours: string,
-    minutes: string,
-    seconds: string
-  },
-  end: {
-    hours: string,
-    minutes: string,
-    seconds: string
-  }
-}
-
-type RecObjType = {
-  musicians: {
-    [key: string]: {
-      instrument: string,
-      role: string,
-      gharana: string
-    }
-  },
-  date: {
-    year: string,
-    month: string,
-    day: string
-  },
-  location: {
-    continent: string,
-    country: string,
-    city: string
-  },
-  raags: {
-    [key: string]: RaagType
-  }
-}
-
-export type { RecObjType };
 
 type AddAudioFileDataType = {
   allMusicians?: string[];

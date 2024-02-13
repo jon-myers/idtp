@@ -19,10 +19,11 @@ import Gradient from 'javascript-color-gradient';
 import { defineComponent, PropType } from 'vue';
 import { 
   Piece,
-  durationsOfFixedPitches,
-  PhraseCatType
-  
+  durationsOfFixedPitches,  
 } from '@/js/classes.ts';
+import { 
+  PhraseCatType
+} from '@/ts/types.ts'
 import * as d3 from 'd3';
 import { 
   segmentByDuration,

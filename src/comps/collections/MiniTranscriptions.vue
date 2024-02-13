@@ -75,36 +75,9 @@
 <script lang='ts'>
 import { defineComponent, PropType } from 'vue';
 import { getTranscriptionsFromIds } from '@/js/serverCalls.ts';
+import { TransMetadataType } from '@/ts/types.ts';
 
-type TransMetadataType = {
-  title: string,
-  audioID: string,
-  dateCreated: string,
-  dateModified: string,
-  durTot: number,
-  family_name: string,
-  given_name: string,
-  instrumentation: string[],
-  location: string,
-  name: string,
-  permissions: string,
-  performers: string[],
-  raga: {
-    name: string,
-    fundamental: number,
-    ratios: number[]
-  },
-  transcriber: string,
-  userID: string,
-  _id: string,
-  explicitPermissions: {
-    publicView: boolean,
-    edit: string[],
-    view: string[]
-  }
-}
 
-export type { TransMetadataType }
 // title, transcriber, raga, created, modified, permissions
 
 type MiniTranscriptionsDataType = {

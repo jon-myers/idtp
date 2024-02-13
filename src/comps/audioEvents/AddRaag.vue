@@ -96,7 +96,6 @@ import {
   getPerformanceSections
 } from '@/js/serverCalls.ts';
 
-export type { AddRaagDataType };
 type AddRaagDataType = {
   raags?: string[],
   selectedRaag?: string,

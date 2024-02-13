@@ -375,9 +375,11 @@ import {
   pitchNumberToChroma,
   Trajectory,
   Piece,
-  PhraseCatType,
-  SecCatType
 } from '@/js/classes.ts';
+
+import  { 
+  PhraseCatType
+} from '@/ts/types.ts';
 import { pieceExists } from '@/js/serverCalls.ts';
 import Gradient from 'javascript-color-gradient';
 import * as d3 from 'd3';
@@ -402,17 +404,18 @@ const incidentals = phraseTop['Incidental'] as
 
 import { 
   Query, 
-  QueryType, 
-  MultipleOptionType, 
-  QueryAnswerType 
 } from '@/js/query.ts';
 
 import { displayTime } from '@/ts/utils.ts';
+import  {
+  QueryType, 
+  MultipleOptionType, 
+  QueryAnswerType,
+  SecCatType,
+  PCountType
+} from '@/ts/types.ts'
 
-type PCountType = {
-  [key: number]: { pattern: number[], count: number }[],
-  maxSize: number
-}
+
 
 
 

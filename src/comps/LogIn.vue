@@ -21,7 +21,6 @@
 // import { decodeCredential } from 'vue3-google-login';
 import { agreeToWaiver } from '@/js/serverCalls.ts';
 
-
 type LoginDataType = {
   firstTime: boolean,
   returning: boolean,

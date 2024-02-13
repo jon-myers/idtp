@@ -111,19 +111,8 @@
 <script lang='ts'>
  
 import { getRagaNames, getRaagRule, saveRaagRules } from '@/js/serverCalls.ts';
-type RaisedLoweredType = {
-  lowered: boolean,
-  raised: boolean
-}
-type RuleProfileType = {
-  sa: boolean,
-  re: RaisedLoweredType,
-  ga: RaisedLoweredType,
-  ma: RaisedLoweredType,
-  pa: boolean,
-  dha: RaisedLoweredType,
-  ni: RaisedLoweredType
-}
+import { RuleProfileType } from '@/ts/types.ts';
+
 
 type RaagEditorDataType = {
   raagNames: string[],

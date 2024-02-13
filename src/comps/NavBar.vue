@@ -50,8 +50,10 @@ import {
 import { 
   userLoginGoogle, 
   handleGoogleAuthCode, 
-  UserDataType 
 } from '@/js/serverCalls.ts';
+import  { 
+  UserDataType
+} from '@/ts/types.ts';
 import { defineComponent } from 'vue';
 import defaultUsrImgUrl from '@/assets/icons/user_head.svg';
 import { LocationQueryRaw } from 'vue-router';

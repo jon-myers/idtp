@@ -1,6 +1,10 @@
 import { findLastIndex } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 import { Meter } from './meter.ts';
+import { 
+  SecCatType,
+  PhraseCatType 
+} from '@/ts/types.ts';
 
 const initSecCategorization = (): SecCatType => {
   return {
@@ -1563,104 +1567,6 @@ class Group {
   }
 }
 
-type PhraseCatType = {
-  "Phrase": {
-    "Mohra": boolean,
-    "Mukra": boolean,
-    "Asthai": boolean,
-    "Antara": boolean,
-    "Manjha": boolean,
-    "Abhog": boolean,
-    "Sanchari": boolean,
-    "Jhala": boolean
-  },
-  "Elaboration": {
-    "Vistar": boolean,
-    "Barhat": boolean,
-    "Prastar": boolean,
-    "Bol Banao": boolean,
-    "Bol Alap": boolean,
-    "Bol Bandt": boolean,
-    "Behlava": boolean,
-    "Gat-kari": boolean,
-    "Tan (Sapat)": boolean,
-    "Tan (Gamak)": boolean,
-    "Laykari": boolean,
-    "Tihai": boolean,
-    "Chakradar": boolean,
-  },
-  "Vocal Articulation": {
-    "Bol": boolean,
-    "Non-Tom": boolean,
-    "Tarana": boolean,
-    "Aakar": boolean,
-    "Sargam": boolean
-  },
-  "Instrumental Articulation": {
-    "Bol": boolean,
-    "Non-Bol": boolean
-  },
-  "Incidental": {
-    "Talk/Conversation": boolean,
-      "Praise ('Vah')": boolean,
-      "Tuning": boolean,
-      "Pause": boolean,
-  }
-}
-
-type SecCatType = {
-  "Pre-Chiz Alap": {
-    "Pre-Chiz Alap": boolean,
-  },
-  "Alap": {
-    "Alap": boolean,
-    "Jor": boolean,
-    "Alap-Jhala": boolean,
-  },
-  "Composition Type": {
-    "Dhrupad": boolean,
-    "Bandish": boolean,
-    "Thumri": boolean,
-    "Ghazal": boolean,
-    "Qawwali": boolean,
-    "Dhun": boolean,
-    "Tappa": boolean,
-    "Bhajan": boolean,
-    "Kirtan": boolean,
-    "Kriti": boolean,
-    "Masitkhani Gat": boolean,
-    "Razakhani Gat": boolean,
-    "Ferozkhani Gat": boolean,
-  },
-  "Comp.-section/Tempo": {
-    "Ati Vilambit": boolean,
-    "Vilambit": boolean,
-    "Madhya": boolean,
-    "Drut": boolean,
-    "Ati Drut": boolean,
-    "Jhala": boolean,
-  },
-  "Tala": {
-    "Ektal": boolean,
-    "Tintal": boolean,
-    "Rupak": boolean
-  },
-  "Improvisation": {
-    "Improvisation": boolean,
-  },
-  "Other": {
-    "Other": boolean,
-  },
-  "Top Level": (
-    "Pre-Chiz Alap" | 
-    "Alap" | 
-    "Composition" | 
-    "Improvisation" | 
-    "Other" |
-    "None"
-  )
-}
-
 
 class Phrase {
   startTime?: number;
@@ -2958,6 +2864,4 @@ export {
 export type {
   RuleSetType,
   VibObjType,
-  PhraseCatType,
-  SecCatType
 }

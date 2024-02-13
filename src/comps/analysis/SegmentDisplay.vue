@@ -19,7 +19,7 @@
 
 import { defineComponent, PropType } from 'vue';
 import { Trajectory, Piece, Phrase, Pitch, linSpace } from '@/js/classes.ts';
-import { QueryAnswerType } from '@/js/query.ts';
+import { QueryAnswerType } from '@/ts/types.ts';
 
 import * as d3 from 'd3';
 
@@ -27,8 +27,6 @@ type SegmentDisplayDataType = {
   svg?: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>,
   verticalPadding: number,
   horizontalPadding: number,
-  // VertMargin: number,
-  // horizontalMargin: number,
   titleMargin: number,
   outerMargin: {
     top: number,

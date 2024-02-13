@@ -71,7 +71,7 @@ const leadingZeros = (int: number) => {
 }
 
 
-type AudioPlayerData = {
+type AudioPlayerDataType = {
   progress: number,
   playing: boolean,
   looping: boolean,
@@ -98,7 +98,7 @@ type AudioPlayerData = {
 export default {
   name: 'AudioPlayer',
   
-  data(): AudioPlayerData {
+  data(): AudioPlayerDataType {
     return {
       progress: 0.0,
       playing: false,

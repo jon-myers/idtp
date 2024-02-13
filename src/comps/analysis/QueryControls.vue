@@ -280,13 +280,16 @@ import {
   CategoryType,
   DesignatorType,
   MultipleOptionType,
-} from '@/js/query.ts';
+  SecCatType,
+  PhraseCatType, 
+  PitchNameType,
+  ParamType,
+  PitchSeqObjType
+} from '@/ts/types.ts';
 import {
   Pitch,
   Raga,
   Trajectory,
-  SecCatType,
-  PhraseCatType
 } from '@/js/classes.ts';
 
 type QueryControlsDataType = {
@@ -332,23 +335,6 @@ type QueryControlsDataType = {
   vocalArtTypes: (keyof PhraseCatType["Vocal Articulation"])[],
   instArtTypes: (keyof PhraseCatType["Instrumental Articulation"])[],
   incidentals: (keyof PhraseCatType["Incidental"])[],
-
-}
-type PitchNameType = 'Sa' | 're' | 'Re' | 'ga' | 'Ga' | 'ma' | 'Ma' | 'Pa' | 
-  'dha' | 'Dha' | 'ni' | 'Ni';
-type ParamType = (
-  number | 
-  { value: (CategoryType | DesignatorType), text: string } | 
-  PitchNameType |
-  string |
-  PitchSeqObjType[] | 
-  PitchSeqObjType |
-  number[]
-  );
-
-type PitchSeqObjType = {
-  swara: PitchNameType,
-  oct: number,
 }
 
 const sectionData = categoryData['Section'];

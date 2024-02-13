@@ -3,17 +3,18 @@ import axios from 'axios';
 import { AxiosProgressEvent } from 'axios';
 import fetch from 'cross-fetch';
 import { Piece } from './classes.ts';
-import { RecType } from '@/comps/audioEvents/AddAudioEvent.vue';
-import { UserType } from '@/ts/types.ts';
-import { CollectionType } from '@/ts/types.ts';
+import { 
+  CollectionType 
+} from '@/ts/types.ts';
 
 import { 
   MusicianDBType, 
   GharanaType,
-  TransMetadataType
+  TransMetadataType,
+  RecUpdateType,
+  UserType,
+  RecType
 } from '@/ts/types.ts';
-import { RecUpdateType } from '@/comps/audioRecordings/UploadRecording.vue';
-// import { URLSearchParams } from 'url';
 const getPiece = async (id: string): Promise<Piece> => {
   let piece;
   const request = {
@@ -1449,14 +1450,7 @@ const removeTFromColl = async (transcriptionID: string, colID: string) => {
   return out
 }
 
-type UserDataType = {
-  sub: string,
-  picture: string,
-  email: string,
-  name: string,
-  given_name: string,
-  family_name: string
-}
+import { UserDataType } from '@/ts/types.ts'
 
 const userLoginGoogle = async (userData: UserDataType) => {
   const data = JSON.stringify({
