@@ -6936,7 +6936,7 @@ export default defineComponent({
         ctrCompute = y({ y: ctrCompute, x: 0 });
         let yVal = ctrCompute;
         const id = `#vowelp${traj.phraseIdx}t${traj.num}`;
-        d3Select(`#vowelp${traj.phraseIdx}t${traj.num}`)
+        d3Select(id)
           .data([cd])
           .attr('transform', d => `translate(${x(d)}, ${yVal - 14})`)
       }
@@ -8947,7 +8947,7 @@ export default defineComponent({
       }
       // if before and after are silence; combine all three trajs into single
       //silent traj
-    d3Select(`#${trajID}`).remove();
+      d3Select(`#${trajID}`).remove();
       d3Select(`#overlay__${trajID}`).remove();
       d3Select(`#articulations__${trajID}`).remove();
       
@@ -9046,6 +9046,7 @@ export default defineComponent({
     codifiedRedrawPhrase(pIdx: number) {
       const phrase = this.piece.phrases[pIdx];
       const st = phrase.startTime!;
+      const vowelIdxs = phrase.firstTrajIdxs();
       phrase.trajectories.forEach((traj, tIdx) => {
         if (traj.id !== 12) {
           const data = this.makeTrajData(traj, st);
@@ -9063,7 +9064,14 @@ export default defineComponent({
         if (this.vocal) {
           this.moveSConsonant(traj, st, true)
           this.moveEConsonant(traj, st, true);
-          this.moveVowel(traj, st, true);
+          // remove vowel
+          const selected = d3Select(`#vowel${pIdx}t${tIdx}`);
+          if (selected) selected.remove();
+          const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
+            Selection<SVGGElement, any, any, any>;
+          if (vowelIdxs.includes(tIdx)) {
+            this.addVowel(traj, st, g, true);
+          }
           this.moveConsonantSymbols(traj, st, true);
         }
       })
