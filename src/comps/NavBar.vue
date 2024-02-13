@@ -86,7 +86,7 @@ export default defineComponent({
       lastName: undefined,
       name: undefined,
       navChoices: [
-        { name: 'Transcriptions', path: '/files' },
+        { name: 'Transcriptions', path: '/transcriptions' },
         { name: 'Editor', path: '/editor' },
         { name: 'Audio Events', path: '/audioEvents' },
         { name: 'Recordings', path: '/audioRecordings'},
@@ -185,8 +185,8 @@ export default defineComponent({
         // this.$store.commit('update_query', this.$route.query);
         this.$router.push('/logIn');
       } else {
-        if (category === '/files') {
-          useTitle('File Manager')
+        if (category === '/transcriptoins') {
+          useTitle('Transcriptions')
         } else if (category === '/audioEvents') {
           useTitle('Audio Events')
         } else if (category === '/audioRecordings') {

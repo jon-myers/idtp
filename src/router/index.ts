@@ -2,8 +2,8 @@ import { createWebHistory, createRouter } from 'vue-router';
 import store from '@/main.ts'
 const routes = [
   {
-    path: '/files',
-    name: 'Files',
+    path: '/transcriptions',
+    name: 'Transcriptions',
     component: () => import('@/comps/files/FileManager.vue')
   },
   {
@@ -57,13 +57,12 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  if (store.state.userID === undefined) {
-    if (to.name !== 'LogIn') {
-      next({ name: 'LogIn' })
-    } else {
-      next()
-    }
+  if (to.name !== 'LandingPage' && to.name !== 'LogIn' && store.state.userID === undefined) {
     
+    console.log('redirecting to login')
+      next({ name: 'LogIn' })
+  } else {
+      next()
   }
 })
 
