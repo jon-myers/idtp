@@ -181,15 +181,21 @@ export default defineComponent({
     },
 
     clickLink(category: string) {
-      if (category === '/files') {
-        useTitle('File Manager')
-      } else if (category === '/audioEvents') {
-        useTitle('Audio Events')
-      } else if (category === '/audioRecordings') {
-        useTitle('Audio Recordings')
-      } else if (category === '/raagEditor') {
-        useTitle('Raag Editor')
+      if (this.$store.state.userID === undefined) {
+        // this.$store.commit('update_query', this.$route.query);
+        this.$router.push('/logIn');
+      } else {
+        if (category === '/files') {
+          useTitle('File Manager')
+        } else if (category === '/audioEvents') {
+          useTitle('Audio Events')
+        } else if (category === '/audioRecordings') {
+          useTitle('Audio Recordings')
+        } else if (category === '/raagEditor') {
+          useTitle('Raag Editor')
+        }
       }
+      
     },
 
     handleUsrImgClick(e) {

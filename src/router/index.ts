@@ -1,5 +1,5 @@
 import { createWebHistory, createRouter } from 'vue-router';
-
+import store from '@/main.ts'
 const routes = [
   {
     path: '/files',
@@ -54,6 +54,17 @@ const router = createRouter({
   routes,
   linkActiveClass: 'active',
   linkExactActiveClass: 'active'
+})
+
+router.beforeEach((to, from, next) => {
+  if (store.state.userID === undefined) {
+    if (to.name !== 'LogIn') {
+      next({ name: 'LogIn' })
+    } else {
+      next()
+    }
+    
+  }
 })
 
 export default router; 
