@@ -145,9 +145,12 @@ import {
   deleteRecording,
   getEditableCollections
 } from '@/js/serverCalls.ts';
-import { RecType } from '@/comps/audioEvents/AddAudioEvent.vue';
 import { displayTime } from '@/ts/utils.ts';
-import { CollectionType, ContextMenuOptionType } from '@/ts/types.ts';
+import { 
+  CollectionType, 
+  ContextMenuOptionType,
+  RecType
+} from '@/ts/types.ts';
 import PermissionsModal from '@/comps/PermissionsModal.vue';
 
 type AudioRecordingsDataType = {

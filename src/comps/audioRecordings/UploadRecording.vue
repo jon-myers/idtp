@@ -411,7 +411,6 @@
 import { defineComponent, PropType } from 'vue';
 import { 
   getAllAEMetadata, 
-  AudioEventMetadataType,
   newUploadFile,
   getAudioRecording,
   getAllMusicians,
@@ -440,7 +439,8 @@ import {
   PSecType, 
   MusicianType,
   RecUpdateType,
-  EditingSecType
+  EditingSecType,
+  AudioEventMetadataType,
 } from '@/ts/types.ts';
 type UploadRecordingDataType = {
   progressWidth: number;

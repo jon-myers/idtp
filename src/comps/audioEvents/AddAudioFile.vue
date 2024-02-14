@@ -214,7 +214,12 @@ import {
 
 import AddRaag from '@/comps/audioEvents/AddRaag.vue';
 
-import { LocationType, RaagType, RaagTimingType } from '@/ts/types.ts';
+import { 
+  LocationType, 
+  RaagType, 
+  RaagTimingType,
+  RecObjType 
+} from '@/ts/types.ts';
 
 
 type AddAudioFileDataType = {
@@ -366,7 +371,7 @@ export default {
   mounted() {
     getSortedMusicians()
       .then(result => {
-        this.allMusicians = result;
+        this.allMusicians = result as string[];
         if (this.allMusicians === undefined) {
           throw new Error('Could not get musicians')
         } else {
