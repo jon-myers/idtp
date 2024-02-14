@@ -2160,7 +2160,7 @@ class Piece {
         }
         if (c['Comp.-section/Tempo'] === undefined) {
           c['Comp.-section/Tempo'] = c['Composition-section/Tempo'];
-=          delete c['Composition-section/Tempo']
+          delete c['Composition-section/Tempo']
         }
       })
     } else {
