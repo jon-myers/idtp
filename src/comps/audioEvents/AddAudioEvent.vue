@@ -96,82 +96,10 @@ type AddAudioEventDataType = {
   audioEvent?: AudioEventType,
 }
 
-export type { AddAudioEventDataType, MusicianType }
-
-type MusicianType = {
-  instrument?: string,
-  role?: 'Soloist' | 'Accompanist' | 'Percussionist' | 'Drone',
-  gharana?: string
-}
-
-import type { RecObjType } from '@/comps/audioEvents/AddAudioFile.vue';
-
-type PSecType = {
-  end: number,
-  start: number
-}
-
-type RaagType = {
-  end: number,
-  start: number,
-  'performance sections'?: {
-    [key: string]: PSecType
-  }
-}
-
-type RecType = {
-  audioFileId: string,
-  date: {
-    day: number,
-    month: string,
-    year: number
-  },
-  duration: number,
-  location: {
-    city: string,
-    country: string,
-    continent: string
-  },
-  musicians: {
-    [key: string]: MusicianType
-  },
-  octOffset: number,
-  raags: {
-    [key: string]: RaagType
-  },
-  saEstimate: number,
-  saVerified: boolean,
-  _id?: string,
-  parentID?: string,
-  parentTitle?: string,
-  parentTrackNumber?: string,
-  explicitPermissions?: {
-    edit: string[],
-    view: string[],
-    publicView: boolean
-  },
-  dateModified: string | Date,
-  userID: string,
-}
-
-type AudioEventType = {
-  'event type': string,
-  name: string,
-  permissions: string,
-  userID: string,
-  _id: string,
-  recordings: {
-    [key: number]: RecType
-  },
-  visible?: boolean,
-  explicitPermissions?: {
-    edit: string[],
-    view: string[],
-    publicView: boolean
-  }
-}
-
-export type { AudioEventType, RecType, RaagType, PSecType }
+import { 
+  RecObjType,
+  AudioEventType 
+} from '@/ts/types.ts';
 
 const capitalizeWords = (str: string) => {
   return str.replace(/\b\w/g, function(char) {

@@ -76,7 +76,7 @@
 </template>
 <script lang="ts">
 import { defineComponent, PropType } from 'vue';
-import type { RecType } from '@/comps/audioEvents/AddAudioEvent.vue';
+import { RecType } from '@/ts/types.ts';
 import { 
   getRecsFromIds,
   getSortedMusicians, 

@@ -20,7 +20,7 @@
 
 <script lang='ts'>
 import { defineComponent } from 'vue';
-import type { PropType } from 'vue';
+import { PropType } from 'vue';
 
 import { ContextMenuOptionType } from '@/ts/types.ts';
 

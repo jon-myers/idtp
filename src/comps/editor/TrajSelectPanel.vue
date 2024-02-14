@@ -322,9 +322,8 @@ import t12 from '@/assets/thumbnails/12.png';
 import t13 from '@/assets/thumbnails/13.png';
 import { select as d3Select } from 'd3';
 import { getIpaVowels, getConsonants } from '@/js/serverCalls.ts';
-import { defineComponent } from 'vue';
+import { PropType, defineComponent } from 'vue';
 import { initSecCategorization, Piece, Trajectory } from '@/js/classes.ts';
-import type { PropType } from 'vue';
 
 type TrajSelectPanelDataType = {
   urls: string[],

@@ -139,15 +139,23 @@ import RemoveFromCollection from '@/comps/RemoveFromCollection.vue';
 import { Raga, Piece, Trajectory, Phrase } from '@/js/classes.ts';
 import PermissionsModal from '@/comps/PermissionsModal.vue';
 import { defineComponent } from 'vue';
-import { RecType } from '@/comps/audioEvents/AddAudioEvent.vue'
 import ContextMenu from '@/comps/ContextMenu.vue';
-import { ContextMenuOptionType, UserType, CollectionType } from '@/ts/types.ts';
-import { TransMetadataType } from '@/comps/collections/MiniTranscriptions.vue';
-type FileManagerType = {
+import { 
+  ContextMenuOptionType, 
+  UserType, 
+  CollectionType,
+  TransMetadataType,
+  RecType,
+  NewPieceInfoType,
+  RagaNewPieceInfoType,
+  PassedDataType
+} from '@/ts/types.ts';
+
+type FileManagerDataType = {
   infoKeys: string[];
   designPieceModal: boolean;
-  selectedPiece?: Piece,
-  allPieces?: Piece[];
+  selectedPiece?: TransMetadataType,
+  allPieces?: TransMetadataType[];
   allPieceInfo: PieceInfoType[];
   dropDownLeft: number;
   dropDownTop: number;
@@ -189,64 +197,9 @@ type FileManagerType = {
 
 type PieceInfoType = [string?, string?, string?, string?, string?, string?];
 
-type NewPieceInfoType = {
-  title: string;
-  transcriber?: string;
-  raga: string | Raga;
-  audioID: string;
-  permissions: string;
-  explicitPermissions: {
-    publicView: boolean;
-    edit: string[];
-    view: string[];
-  };
-  clone?: boolean;
-  origID: string;
-  instrumentation?: string[];
-  phrases?: Phrase[];
-  family_name?: string;
-  given_name?: string;
-  name?: string;
-}
-
-type RagaNewPieceInfoType = {
-  title: string;
-  transcriber?: string;
-  raga: Raga;
-  audioID: string;
-  permissions: string;
-  explicitPermissions: {
-    publicView: boolean;
-    edit: string[];
-    view: string[];
-  };
-  clone?: boolean;
-  origID: string;
-  instrumentation?: string[];
-  phrases?: Phrase[];
-  family_name?: string;
-  given_name?: string;
-  name?: string;
-}
-
-type PassedDataType = {
-  title: string;
-  raga: Raga;
-  audioEvent: string;
-  audioRecording?: RecType;
-  origID: string;
-  family_name?: string;
-  given_name?: string;
-  name?: string;
-  instrumentation?: string[];
-  transcriber?: string;
-}
-
-export type { PassedDataType }
-
 export default defineComponent({
   name: 'FileManager',
-  data(): FileManagerType {
+  data(): FileManagerDataType {
     return {
       infoKeys: [
         'Title',
@@ -528,7 +481,7 @@ export default defineComponent({
       return month + '/' + day + '/' + year;
     },
 
-    openPieceAlt(piece?: Piece) {
+    openPieceAlt(piece?: TransMetadataType) {
       if (piece) {
         this.selectedPiece = piece;
       }
@@ -596,9 +549,6 @@ export default defineComponent({
       if (piece === undefined) {
         throw new Error('piece is undefined')
       }
-      // if (piece.audioID === undefined) {
-      //   throw new Error('piece.audioId is undefined')
-      // }
       try {
         let audioEvent, audioRecording;
         if (piece.audioID !== undefined) {
@@ -878,14 +828,6 @@ export default defineComponent({
       await updateTranscriptionPermissions(id, permissions);
       await this.updateSort();
       this.editPermissionsModal = false;
-    },
-
-    async saveOwner() {
-      const id = this.selectedPiece!._id!;
-      const ownerObj = this.allUsers![this.editingUserIdx!];
-      await updateTranscriptionOwner(id, ownerObj);
-      await this.updateSort();
-      this.editOwnerModal = false;
     },
 
     editTitle() {

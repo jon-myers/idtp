@@ -193,12 +193,6 @@ const structuredTime = (dur: number) => {
 };
 const cumsum = (sum: number = 0) => (sum = 0, (n: number) => sum += n);
 
-type DrawDataType = {
-  x: number,
-  y: number,
-  i?: number,
-}
-
 
 const leadingZeros = (int: number) => {
   if (int < 10) {
@@ -241,8 +235,12 @@ import { detect, BrowserInfo } from 'detect-browser';
 
 import { defineComponent } from 'vue';
 
-import { RecType } from '@/comps/audioEvents/AddAudioEvent.vue'
-import { ContextMenuOptionType } from '@/ts/types';
+import { 
+  ContextMenuOptionType, 
+  RecType, 
+  TFuncType,
+  DrawDataType 
+} from '@/ts/types';
 
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
 
@@ -314,21 +312,10 @@ function findClosestStartTimeAfter(startTimes: number[], timepoint: number) {
   return closestIndex;
 }
 
-// import { D3ZoomEvent } from '@types/d3-zoom';
-// import { SelectionFn } from '@types/d3-selection';
 
-type TFuncType = ValueFn<
-  SVGPathElement, 
-  { x: number, y: number | null; }, 
-  string>
 
-type CircleFuncType = ValueFn<
-  SVGCircleElement, 
-  { x: number, y: number; }, 
-  number>
 
 type EditorDataType = {
-  // group: Group,
   piece: Piece,
   durTot: number,
   freqMin: number,

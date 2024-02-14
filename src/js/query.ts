@@ -3,80 +3,23 @@ import {
   Piece, 
   Pitch, 
   Trajectory, 
-  SecCatType,
-  PhraseCatType
 } from './classes.ts';
 
-
-type CategoryType = (
-  'trajectoryID' |
-  'pitch' |
-  'vowel' |
-  'startingConsonant' |
-  'endingConsonant' |
-  'anyConsonant' |
-  'pitchSequenceStrict' |
-  'pitchSequenceLoose' |
-  'trajSequenceStrict' | 
-  'trajSequenceLoose' |
-  'sectionTopLevel' |
-  'alapSection' |
-  'compType' | 
-  'compSecTempo' |
-  'tala' | 
-  'phraseType' |
-  'elaborationType' |
-  'vocalArtType' | 
-  'instArtType' |
-  'incidental'
-)
-
-type DesignatorType = 'includes' | 'excludes' | 'startsWith' | 'endsWith';
-
-type SegmentationType = (
-  'phrase' |
-  'group' |
-  'sequenceOfTrajectories' |
-  'connectedSequenceOfTrajectories'
-)
-
-type QueryType = {
-  category: CategoryType,
-  designator: DesignatorType,
-  pitch?: Pitch,
-  trajectoryID?: number,
-  vowel?: string,
-  consonant?: string,
-  pitchSequence?: Pitch[],
-  trajIdSequence?: number[],
-  sectionTopLevel?: SecCatType['Top Level'],
-  alapSection?:  keyof SecCatType['Alap'],
-  compType?: keyof SecCatType['Composition Type'],
-  compSecTempo?: keyof SecCatType['Comp.-section/Tempo'],
-  tala?: keyof SecCatType['Tala'],
-  phraseType?: keyof PhraseCatType['Phrase'],
-  elaborationType?: keyof PhraseCatType['Elaboration'],
-  vocalArtType?: keyof PhraseCatType['Vocal Articulation'],
-  instArtType?: keyof PhraseCatType['Instrumental Articulation'],
-  incidental?: keyof PhraseCatType['Incidental'],
-}
-
-type MultipleReturnType = [
-  Trajectory[][], 
-  (number | string | { phraseIdx: number, trajIdx: number })[],
-  QueryAnswerType[],
-];
+import { 
+  CategoryType,
+  DesignatorType,
+  SegmentationType,
+  QueryType,
+  MultipleReturnType,
+  QueryAnswerType,
+  MultipleOptionType,
+  SecCatType,
+  PhraseCatType
 
 
-type QueryAnswerType = {
-  trajectories: Trajectory[],
-  identifier: (number | string | { phraseIdx: number, trajIdx: number }),
-  title: string,
-  startTime: number,
-  endTime: number,
-  duration: number,
-  segmentation: SegmentationType,
-}
+} from '@/ts/types.ts';
+
+
 
 const findSequenceIndexes = (sequence: number[], longerSequence: number[]) => {
   const indexes: number[] = [];
@@ -1089,30 +1032,11 @@ class Query {
         });
         queryAnswers = sortIdxs.map(idx => queryAnswers[idx]);
       }   
-    } catch (err) {
+    } catch (err: any) {
       throw new Error(err);
     }
     return [outputTrajectories, nonStringifiedOutputIdentifiers, queryAnswers];
   }
 }
 
-type MultipleOptionType = {
-  transcriptionID?: string,
-  segmentation?: SegmentationType,
-  sequenceLength?: number,
-  piece?: Piece,
-  minDur?: number,
-  maxDur?: number,
-  every?: boolean,
-}
-
 export { Query }
-
-export type { 
-  QueryType, 
-  MultipleOptionType, 
-  SegmentationType,
-  CategoryType,
-  DesignatorType,
-  QueryAnswerType
-}

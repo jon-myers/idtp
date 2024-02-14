@@ -3,14 +3,7 @@ const approxEqual = (v1: number, v2: number, epsilon = 0.001) => {
   return Math.abs(v1 - v2) <= epsilon
 };
 
-type AffiliationType = { 
-    psId: string, 
-    idx: number, 
-    layer?: number,
-    segmentedMeterIdx: number,
-    strong: boolean,
-};
-
+import { AffiliationType } from '@/ts/types.ts'
 class Pulse {
   realTime: number;
   uniqueId: string;

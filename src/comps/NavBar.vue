@@ -50,8 +50,10 @@ import {
 import { 
   userLoginGoogle, 
   handleGoogleAuthCode, 
-  UserDataType 
 } from '@/js/serverCalls.ts';
+import  { 
+  UserDataType
+} from '@/ts/types.ts';
 import { defineComponent } from 'vue';
 import defaultUsrImgUrl from '@/assets/icons/user_head.svg';
 import { LocationQueryRaw } from 'vue-router';
@@ -126,8 +128,8 @@ export default defineComponent({
     } else {
       try {
         console.log('trying this first')
-        const response = await googleOneTap({ autoLogin: false });
-          const userData = decodeCredential(response.credential);
+        const res = await googleOneTap({ autoLogin: false });
+          const userData = decodeCredential(res.credential) as UserDataType;
           await this.loggedIn(userData);     
       } catch (err) {
         console.error(err);
@@ -172,9 +174,10 @@ export default defineComponent({
         this.returning = true
         this.$store.commit('update_returning', this.returning);
         if (this.$store.state.query) {
+          const q = this.$store.state.query as unknown as LocationQueryRaw;
           this.$router.push({
             name: 'EditorComponent',
-            query: this.$store.state.query
+            query: q
           })
         }
       }
@@ -198,7 +201,7 @@ export default defineComponent({
       
     },
 
-    handleUsrImgClick(e) {
+    handleUsrImgClick(e: Event) {
       this.showUserMenu = !this.showUserMenu;
       e.stopPropagation();
     },
@@ -225,8 +228,8 @@ export default defineComponent({
       this.showUserMenu = false;
       if (this.$store.state.userID === undefined) {
         try {
-          const response = await googleOneTap({ autoLogin: false });
-          const userData = decodeCredential(response.credential);
+          const res = await googleOneTap({ autoLogin: false });
+          const userData = decodeCredential(res.credential) as UserDataType;
           await this.loggedIn(userData);     
         } catch (err) {
           console.error(err);

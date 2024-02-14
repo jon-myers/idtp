@@ -116,8 +116,8 @@
 <script lang='ts'>
 
 import { defineComponent, PropType } from 'vue';
-import { Piece, Phrase, PhraseCatType } from '@/js/classes.ts';
-
+import { Piece, Phrase } from '@/js/classes.ts';
+import { PhraseCatType } from '@/ts/types.ts';
 import categoryData from '@/assets/json/categorization.json';
 const phraseData = categoryData['Phrase'];
 const articulationTypes = phraseData['Articulation Type'];

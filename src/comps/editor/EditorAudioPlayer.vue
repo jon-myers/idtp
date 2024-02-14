@@ -294,7 +294,7 @@ import shuffleIcon from '@/assets/icons/shuffle.svg';
 import rulerIcon from '@/assets/icons/ruler.svg';
 import tagsIcon from '@/assets/icons/tags.svg';
 import { defineComponent } from 'vue';
-import type { PropType } from 'vue';
+import { PropType } from 'vue';
 import { 
   getStarts, 
   getEnds, 
@@ -320,8 +320,8 @@ import { drag as d3Drag, select as d3Select } from 'd3';
 import stretcherURL from '@/js/bundledStretcherWorker.js?url';
 import MeterControls from '@/comps/editor/MeterControls.vue';
 import LabelEditor from '@/comps/editor/LabelEditor.vue';
-import { RecType } from '@/comps/audioEvents/AddAudioEvent.vue'
 import { Meter } from '@/js/meter.ts'
+import { PhraseCatType, RecType, MusicianType } from '@/ts/types.ts';
 
 
 type EditorAudioPlayerData = {
@@ -518,12 +518,6 @@ interface KlattNodeType extends AudioWorkletNode {
   fricationMod?: AudioParam;
   parallelBypassDb?: AudioParam;
   nasalFormantDb?: AudioParam;
-}
-
-type MusicianType = {
-  gharana: string,
-  instrument: string,
-  role: string,
 }
 
 const structuredTime = (dur: number) => {

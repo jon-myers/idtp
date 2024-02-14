@@ -135,12 +135,14 @@ import ContextMenu from '@/comps/ContextMenu.vue';
 import AddToCollection from '@/comps/AddToCollection.vue';
 import RemoveFromCollection from '@/comps/RemoveFromCollection.vue';
 import PermissionsModal from '@/comps/PermissionsModal.vue'; 
-import type { 
+
+import { 
+  ContextMenuOptionType, 
+  CollectionType,
   AudioEventType, 
   RecType, 
-  RaagType 
-} from '@/comps/audioEvents/AddAudioEvent.vue'
-import { ContextMenuOptionType, CollectionType } from '@/ts/types.ts';
+  RaagType  
+} from '@/ts/types.ts';
 
 type AudioEventsDataType = {
   infoKeys: string[],

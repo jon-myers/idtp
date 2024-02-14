@@ -1,6 +1,14 @@
 import { findLastIndex } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 import { Meter } from './meter.ts';
+import { 
+  SecCatType,
+  PhraseCatType,
+  VibObjType,
+  IdType,
+  TrajIdFunction,
+  OutputType
+} from '@/ts/types.ts';
 
 const initSecCategorization = (): SecCatType => {
   return {
@@ -179,7 +187,7 @@ const linSpace = (startVal: number, stopVal: number, cardinality: number) => {
   return arr;
 };
 
-type OutputType = 'pitchNumber' | 'chroma' | 'pitch' | 'pitchClass';
+// type OutputType = 'pitchNumber' | 'chroma' | 'pitch' | 'pitchClass';
 
 /**
  * Calculates the durations of fixed pitches in a set of trajectories.
@@ -597,22 +605,22 @@ class Chikari {
   }
 }
 
-type VibObjType = {
-  periods: number;
-  vertOffset: number;
-  initUp: boolean;
-  extent: number;
-}
+// type VibObjType = {
+//   periods: number;
+//   vertOffset: number;
+//   initUp: boolean;
+//   extent: number;
+// }
 
-type IdType = 'id0' | 'id1' | 'id2' | 'id3' | 'id4' | 'id5' | 'id6' | 'id7' |
-  'id8' | 'id9' | 'id10' | 'id12' | 'id13';
+// type IdType = 'id0' | 'id1' | 'id2' | 'id3' | 'id4' | 'id5' | 'id6' | 'id7' |
+//   'id8' | 'id9' | 'id10' | 'id12' | 'id13';
 
-type IdFunction =
-  ((x: number, lf?: number[], sl?: number, da?: number[]) => number) |
-  ((x: number, lf?: number[], da?: number[]) => number) |
-  ((x: number, lf?: number[], sl?: number) => number) |
-  ((x: number, lf?: number[]) => number) |
-  ((x: number) => number);
+// type TrajIdFunction =
+//   ((x: number, lf?: number[], sl?: number, da?: number[]) => number) |
+//   ((x: number, lf?: number[], da?: number[]) => number) |
+//   ((x: number, lf?: number[], sl?: number) => number) |
+//   ((x: number, lf?: number[]) => number) |
+//   ((x: number) => number);
 
 class Trajectory {
   // archetypal motion from pitch to pitch, or through series of pitches
@@ -642,7 +650,7 @@ class Trajectory {
   groupId?: string;
   // freqs: number[];
   // logFreqs: number[];
-  ids: IdFunction[];
+  ids: TrajIdFunction[];
   structuredNames: object;
   cIpas: string[];
   cIsos: string[];
@@ -1563,104 +1571,6 @@ class Group {
   }
 }
 
-type PhraseCatType = {
-  "Phrase": {
-    "Mohra": boolean,
-    "Mukra": boolean,
-    "Asthai": boolean,
-    "Antara": boolean,
-    "Manjha": boolean,
-    "Abhog": boolean,
-    "Sanchari": boolean,
-    "Jhala": boolean
-  },
-  "Elaboration": {
-    "Vistar": boolean,
-    "Barhat": boolean,
-    "Prastar": boolean,
-    "Bol Banao": boolean,
-    "Bol Alap": boolean,
-    "Bol Bandt": boolean,
-    "Behlava": boolean,
-    "Gat-kari": boolean,
-    "Tan (Sapat)": boolean,
-    "Tan (Gamak)": boolean,
-    "Laykari": boolean,
-    "Tihai": boolean,
-    "Chakradar": boolean,
-  },
-  "Vocal Articulation": {
-    "Bol": boolean,
-    "Non-Tom": boolean,
-    "Tarana": boolean,
-    "Aakar": boolean,
-    "Sargam": boolean
-  },
-  "Instrumental Articulation": {
-    "Bol": boolean,
-    "Non-Bol": boolean
-  },
-  "Incidental": {
-    "Talk/Conversation": boolean,
-      "Praise ('Vah')": boolean,
-      "Tuning": boolean,
-      "Pause": boolean,
-  }
-}
-
-type SecCatType = {
-  "Pre-Chiz Alap": {
-    "Pre-Chiz Alap": boolean,
-  },
-  "Alap": {
-    "Alap": boolean,
-    "Jor": boolean,
-    "Alap-Jhala": boolean,
-  },
-  "Composition Type": {
-    "Dhrupad": boolean,
-    "Bandish": boolean,
-    "Thumri": boolean,
-    "Ghazal": boolean,
-    "Qawwali": boolean,
-    "Dhun": boolean,
-    "Tappa": boolean,
-    "Bhajan": boolean,
-    "Kirtan": boolean,
-    "Kriti": boolean,
-    "Masitkhani Gat": boolean,
-    "Razakhani Gat": boolean,
-    "Ferozkhani Gat": boolean,
-  },
-  "Comp.-section/Tempo": {
-    "Ati Vilambit": boolean,
-    "Vilambit": boolean,
-    "Madhya": boolean,
-    "Drut": boolean,
-    "Ati Drut": boolean,
-    "Jhala": boolean,
-  },
-  "Tala": {
-    "Ektal": boolean,
-    "Tintal": boolean,
-    "Rupak": boolean
-  },
-  "Improvisation": {
-    "Improvisation": boolean,
-  },
-  "Other": {
-    "Other": boolean,
-  },
-  "Top Level": (
-    "Pre-Chiz Alap" | 
-    "Alap" | 
-    "Composition" | 
-    "Improvisation" | 
-    "Other" |
-    "None"
-  )
-}
-
 
 class Phrase {
   startTime?: number;
@@ -2225,6 +2135,7 @@ class Piece {
           const com = c['Composition Type'];
           let comSecTemp = c['Comp.-section/Tempo'];
           if (comSecTemp === undefined) {
+            // tslint:disable-next-line
             comSecTemp = c['Composition-section/Tempo']
           }
           const tala = c['Tala'];
@@ -2249,7 +2160,7 @@ class Piece {
         }
         if (c['Comp.-section/Tempo'] === undefined) {
           c['Comp.-section/Tempo'] = c['Composition-section/Tempo'];
-          delete c['Composition-section/Tempo']
+=          delete c['Composition-section/Tempo']
         }
       })
     } else {
@@ -2958,6 +2869,4 @@ export {
 export type {
   RuleSetType,
   VibObjType,
-  PhraseCatType,
-  SecCatType
 }

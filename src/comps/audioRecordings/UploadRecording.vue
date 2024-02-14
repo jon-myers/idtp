@@ -411,7 +411,6 @@
 import { defineComponent, PropType } from 'vue';
 import { 
   getAllAEMetadata, 
-  AudioEventMetadataType,
   newUploadFile,
   getAudioRecording,
   getAllMusicians,
@@ -433,11 +432,16 @@ import {
 } from '@/js/serverCalls.ts';
 import SaTuner from '@/comps/audioRecordings/SaTuner.vue';
 import { 
+  MusicianDBType, 
+  GharanaType, 
+  UserType,
   RecType, 
   PSecType, 
-  MusicianType 
-} from '@/comps/audioEvents/AddAudioEvent.vue';
-import { MusicianDBType, GharanaType, UserType } from '@/ts/types.ts';
+  MusicianType,
+  RecUpdateType,
+  EditingSecType,
+  AudioEventMetadataType,
+} from '@/ts/types.ts';
 type UploadRecordingDataType = {
   progressWidth: number;
   file: File | null;
@@ -491,49 +495,6 @@ type UploadRecordingDataType = {
   startedUpload: boolean,
   visible: boolean,
   allUsers: UserType[],
-}
-
-type RecUpdateType = {
-    musicians: { [name: string]: MusicianType },
-    location: {
-      continent?: string,
-      country?: string,
-      city?: string,
-    },
-    date: {
-      year?: string,
-      month?: string,
-      day?: string,
-    },
-    raags: {
-      [name: string]: {
-        'performance sections': {
-          [name: string]: PSecType
-        }
-      }
-    },
-    saEstimate: number,
-    saVerified: boolean,
-    octOffset: -1 | 0,
-    explicitPermissions: {
-      publicView: boolean,
-      edit: string[],
-      view: string[]
-    }
-  };
-
-export type { RecUpdateType };
-
-type EditingSecType = {
-  name?: string,
-  start: number, 
-  end: number, 
-  startSecs: string, 
-  startMins: string, 
-  startHours: string,
-  endSecs: string,
-  endMins: string,
-  endHours: string,
 }
 export default defineComponent({
   data(): UploadRecordingDataType {

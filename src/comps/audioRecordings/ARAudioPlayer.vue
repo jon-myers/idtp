@@ -81,8 +81,7 @@ const leadingZeros = (int: number) => {
   }
 }
 
-
-type AudioPlayerData = {
+type ARAudioPlayerDataType = {
   progress: number,
   playing: boolean,
   looping: boolean,
@@ -96,7 +95,6 @@ type AudioPlayerData = {
     pause: string,
     play: string,
     shuffle: string,
-    // ruler: string
   },
   circleDragging: boolean,
   formattedCurrentTime: string,
@@ -109,7 +107,7 @@ type AudioPlayerData = {
 export default {
   name: 'AudioPlayer',
   
-  data(): AudioPlayerData {
+  data(): ARAudioPlayerDataType {
     return {
       progress: 0.0,
       playing: false,

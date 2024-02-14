@@ -3,17 +3,18 @@ import axios from 'axios';
 import { AxiosProgressEvent } from 'axios';
 import fetch from 'cross-fetch';
 import { Piece } from './classes.ts';
-import { RecType } from '@/comps/audioEvents/AddAudioEvent.vue';
-import { UserType } from '@/ts/types.ts';
-import { CollectionType } from '@/ts/types.ts';
+import { 
+  CollectionType 
+} from '@/ts/types.ts';
 
 import { 
   MusicianDBType, 
   GharanaType,
-  TransMetadataType
+  TransMetadataType,
+  RecUpdateType,
+  UserType,
+  RecType
 } from '@/ts/types.ts';
-import { RecUpdateType } from '@/comps/audioRecordings/UploadRecording.vue';
-// import { URLSearchParams } from 'url';
 const getPiece = async (id: string): Promise<Piece> => {
   let piece;
   const request = {
@@ -285,19 +286,7 @@ const getAllAudioRecordingMetadata = async (): Promise<RecType[]> => {
   return allAudio
 }
 
-type AudioEventMetadataType = {
-  _id: string,
-  userID: string,
-  permissions: string,
-  "event type": string,
-  name: string,
-  recordings: RecType[],
-  explicitPermissions?: {
-    edit: string[],
-    view: string[]
-    publicView: boolean
-  }
-}
+
 
 const getAllAEMetadata = async (): Promise<AudioEventMetadataType[]> => {
   let allAudioEvents;
@@ -806,18 +795,7 @@ const getRaagRule = async (name: string) => {
   } catch (err) {
     console.error(err)
   }
-  
 }
-
-type LocationType = {
-  _id: string,
-} & {
-  [key: string]: {
-    [key: string]: string[]
-  }
-}
-
-export type { LocationType, AudioEventMetadataType, UserDataType };
 
 const getLocationObject = async (): Promise<LocationType> => {
   // gets location object
@@ -859,12 +837,6 @@ const getPerformanceSections = async (): Promise<string[]> => {
   return performanceSections
 };
 
-type NewPieceDataType = {
-  acknowledged: boolean,
-  insertedId: string
-}
-
-
 const createNewPiece = async (obj: Piece): Promise<
   (NewPieceDataType | undefined)
   > => {
@@ -890,7 +862,7 @@ const createNewPiece = async (obj: Piece): Promise<
   return out
 };
 
-const deletePiece = async (piece: Piece) => {
+const deletePiece = async (piece: TransMetadataType) => {
   let out;
   let request = {
     method: 'DELETE',
@@ -1165,8 +1137,6 @@ const getAllGharanas = async (): Promise<GharanaType[]> => {
   return out
 
 }
-
-type OnProgressType = (percent: number) => void;
 
 const uploadFile = async (
   file: File, 
@@ -1449,14 +1419,15 @@ const removeTFromColl = async (transcriptionID: string, colID: string) => {
   return out
 }
 
-type UserDataType = {
-  sub: string,
-  picture: string,
-  email: string,
-  name: string,
-  given_name: string,
-  family_name: string
-}
+import { 
+  UserDataType,
+  AudioEventMetadataType,
+  IpaVowelType,
+  IPAConsonantType,
+  LocationType,
+  NewPieceDataType,
+  OnProgressType
+} from '@/ts/types.ts'
 
 const userLoginGoogle = async (userData: UserDataType) => {
   const data = JSON.stringify({
@@ -1700,16 +1671,6 @@ const getInstrumentation = async (audioID: string) => {
   }
 }
 
-type IpaVowelType = {
-  eng_trans: string,
-  english: string,
-  hindi: { initial: string, final: string | null },
-  ipa: string,
-  iso_15919: string,
-  type: string
-  urdu: { initial: string, final: string, medial?: string }
-}
-
 const getIpaVowels = async (): Promise<IpaVowelType[]> => {
   let out;
   const request = {
@@ -1727,15 +1688,6 @@ const getIpaVowels = async (): Promise<IpaVowelType[]> => {
     console.error(err)
   }
   return out
-}
-
-type IPAConsonantType = {
-  eng_trans: string,
-  example: string,
-  hindi: string,
-  ipa: string,
-  iso_15919: string,
-  type: string,
 }
 
 const getConsonants = async (): Promise<IPAConsonantType[]> => {
