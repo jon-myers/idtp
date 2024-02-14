@@ -37,3 +37,6 @@ credentials
 
 .envrc
 docs
+.direnv
+__pycache__
+idtp_env
