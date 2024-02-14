@@ -52,6 +52,13 @@
             v-model='showSargam' 
             @click='preventSpaceToggle'>
         </div>
+        <div v-if='!vocal' class='cbRow'>
+          <label>Bols</label>
+          <input 
+            type='checkbox' 
+            v-model='showBols' 
+            @click='preventSpaceToggle'>
+        </div>
         <div class='cbRow'>
           <label>Playhead Return</label>
           <input 
@@ -357,6 +364,7 @@ type EditorDataType = {
   synthGain: number,
   synthDamping: number,
   showSargam: boolean,
+  showBols: boolean,
   rangeOffset: number,
   scrollYWidth: number,
   scrollXHeight: number,
@@ -525,6 +533,7 @@ export default defineComponent({
       synthGain: 0,
       synthDamping: 0.5,
       showSargam: false,
+      showBols: false,
       rangeOffset: 0.1,
       scrollYWidth: 20,
       scrollXHeight: 20,
@@ -828,6 +837,16 @@ export default defineComponent({
           .style('opacity', '1')
       } else {
         d3SelectAll('.sargamLabels')
+          .style('opacity', '0')
+      }
+    },
+
+    showBols(newVal) {
+      if (newVal) {
+        d3SelectAll('.bolLabels')
+          .style('opacity', '1')
+      } else {
+        d3SelectAll('.bolLabels')
           .style('opacity', '0')
       }
     },
@@ -1945,6 +1964,10 @@ export default defineComponent({
       })
     },
 
+    codifiedAddBolLabels() {
+      
+    },
+
     clearSargamLabels() {
       d3Select('.sargamLabels').remove();
     },
@@ -1952,6 +1975,15 @@ export default defineComponent({
     resetSargam() {
       this.clearSargamLabels();
       this.codifiedAddSargamLabels();
+    },
+
+    clearBolLabels() {
+      d3Select('.bolLabels').remove();
+    },
+
+    resetBols() {
+      this.clearBolLabels();
+      this.codifiedAddBolLabels();
     },
 
     addAllDragDots() {
@@ -6556,35 +6588,34 @@ export default defineComponent({
         if (relKeys.length > 0) {
           
           const pluckData = relKeys.map(p => {
-          const normedX = Number(p) * traj.durTot;
-          const y = traj.compute(normedX, true);
-          return {
-            x: phraseStart + traj.startTime! + Number(p),
-            y: y
-          }
-        });
-        
-        const sym = d3Symbol().type(d3SymbolTriangle).size(size);
-        const x = (d: DrawDataType) => this.xr()(d.x);
-        const y = (d: DrawDataType) => this.yr()(d.y);
-        g.append('g')
-          .classed('articulation', true)
-          .classed('pluck', true)
-          .append('path')
-          .attr('d', sym)
-          .attr('id', `pluckp${traj.phraseIdx}t${traj.num}`)
-          .attr('stroke', 'black')
-          .attr('stroke-width', 1.5)
-          .attr('fill', 'black')
-          .attr('cursor', 'pointer')
-          .on('mouseover', this.handleMouseOver)
-          .on('mouseout', this.handleMouseOut)
-          .on('click', this.handleClickTraj)
-          .data(pluckData)
-          .attr('transform', d => {
-            return `translate(${x(d) + offset}, ${y(d)}) rotate(90)`
-          })
-
+            const normedX = Number(p) * traj.durTot;
+            const y = traj.compute(normedX, true);
+            return {
+              x: phraseStart + traj.startTime! + Number(p),
+              y: y
+            }
+          });
+          
+          const sym = d3Symbol().type(d3SymbolTriangle).size(size);
+          const x = (d: DrawDataType) => this.xr()(d.x);
+          const y = (d: DrawDataType) => this.yr()(d.y);
+          g.append('g')
+            .classed('articulation', true)
+            .classed('pluck', true)
+            .append('path')
+            .attr('d', sym)
+            .attr('id', `pluckp${traj.phraseIdx}t${traj.num}`)
+            .attr('stroke', 'black')
+            .attr('stroke-width', 1.5)
+            .attr('fill', 'black')
+            .attr('cursor', 'pointer')
+            .on('mouseover', this.handleMouseOver)
+            .on('mouseout', this.handleMouseOut)
+            .on('click', this.handleClickTraj)
+            .data(pluckData)
+            .attr('transform', d => {
+              return `translate(${x(d) + offset}, ${y(d)}) rotate(90)`
+            })          
         }
       }
     },
@@ -6630,6 +6661,19 @@ export default defineComponent({
           .data(pluckData)
           .attr('transform', d => {
             return `translate(${x(d) + offset}, ${y(d)}) rotate(90)`
+          })
+        const strokeTxt = traj.articulations['0.00'].strokeNickname!;
+        const opacity = this.showBols ? '1' : '0';
+        g.append('text')
+          .classed('bolLabels', true)
+          .data(pluckData)
+          .text(strokeTxt)
+          .attr('font-size', '14px')
+          .attr('fill', 'black')
+          .attr('text-anchor', 'middle')
+          .style('opacity', opacity)
+          .attr('transform', d => {
+            return `translate(${x(d) + offset}, ${y(d) - 10})`
           })
         }
       }
