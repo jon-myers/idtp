@@ -239,7 +239,8 @@ import {
   ContextMenuOptionType, 
   RecType, 
   TFuncType,
-  DrawDataType 
+  DrawDataType,
+  StrokeNicknameType
 } from '@/ts/types';
 
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
@@ -6461,6 +6462,24 @@ export default defineComponent({
             })
           }
         };
+        const pArt = traj.articulations['0.00'];
+        if (pArt && pArt.name === 'pluck') {
+          const nChoices: StrokeNicknameType[] = 
+            ['da', 'di', 'd', 'ra', 'ri', 'r',];
+          nChoices.forEach(n => {
+            const add = pArt.strokeNickname === n ? ' \u2713' : '';
+            this.contextMenuChoices.push({
+              text: `Stroke: ${n + add}`,
+              action: () => {
+                if (pArt.strokeNickname !== n) {
+                  this.updatePluckNickname(traj, n)
+                }
+                this.contextMenuClosed = true;
+              },
+              enabled: true
+            })
+          })
+        }
         if (this.contextMenuChoices.length > 0) {
           this.contextMenuClosed = false;
         }
@@ -7006,6 +7025,20 @@ export default defineComponent({
             .attr('transform', d => `translate(${x(d) + offset}, ${y(d) - 14})`)
         }
       }
+    },
+
+    updatePluckNickname(traj: Trajectory, n: StrokeNicknameType) {
+      const dNames = ['da', 'd', 'di'];
+      const rNames = ['ra', 'r', 'ri'];
+      if (dNames.includes(n)) {
+        traj.articulations['0.00'].stroke = 'd';
+        
+      } else if (rNames.includes(n)) {
+        traj.articulations['0.00'].stroke = 'r';
+      }
+      traj.articulations['0.00'].strokeNickname = n;
+      // update save status
+      this.unsavedChanges = true;
     },
 
     addKrintin(

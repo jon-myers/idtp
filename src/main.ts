@@ -59,7 +59,7 @@ import { createHead } from '@vueuse/head';
 const head = createHead();
 const emitter = mitt();
 const app = createApp(App);
-export default store;
+export { store };
 app.config.globalProperties.emitter = emitter;
 app
   .use(router)

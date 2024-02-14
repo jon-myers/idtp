@@ -1,5 +1,5 @@
 import { createWebHistory, createRouter } from 'vue-router';
-import store from '@/main.ts'
+import {store, VueCookies } from '@/main.ts'
 const routes = [
   {
     path: '/transcriptions',
@@ -57,8 +57,10 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  if (to.name !== 'LandingPage' && to.name !== 'LogIn' && store.state.userID === undefined) {
-    
+  const userID = window.$cookies.get('userID')
+  if (
+    to.name !== 'LandingPage' && to.name !== 'LogIn' && userID === 'undefined'
+  ) {
     console.log('redirecting to login')
       next({ name: 'LogIn' })
   } else {

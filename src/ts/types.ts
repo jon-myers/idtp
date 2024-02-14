@@ -641,6 +641,11 @@ type AffiliationType = {
   strong: boolean,
 };
 
+type ArtNameType = (
+  'pluck' | 'hammer-off' | 'hammer-on' | 'slide' | 'dampen' | 'consonant'
+)
+type StrokeNicknameType = "d" | "r" | "da" | "ra" | "di" | "ri"
+
 export type { 
   CollectionType, 
   UserType, 
@@ -689,5 +694,7 @@ export type {
   IdType,
   TrajIdFunction,
   OutputType,
-  AffiliationType
+  AffiliationType,
+  ArtNameType,
+  StrokeNicknameType,
 };
