@@ -145,17 +145,12 @@
 <script lang='ts'>
 
 import { Meter } from '@/js/meter.ts';
-import { Piece } from '@/js/classes.ts';
-import { findClosestStartTime } from '@/comps/editor/EditorComponent.vue'
 import { 
   selectAll as d3SelectAll,
   select as d3Select,
  } from 'd3';
-
 import { defineComponent, PropType } from 'vue';
-import EditorComponent from '@/comps/editor/EditorComponent.vue';
  
-
 type MeterControlsDataType = {
   numLayers: number,
   layerCompounds: number[],
@@ -576,7 +571,7 @@ button {
 .buttonCol > button:disabled {
   cursor: auto;
 }
-/* input type number */
+
 input[type=number] {
   width: 45px;
   max-width: 45px;

@@ -3,7 +3,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { Meter } from './meter.ts';
 import { 
   SecCatType,
-  PhraseCatType 
+  PhraseCatType,
+  VibObjType,
+  IdType,
+  TrajIdFunction,
+  OutputType
 } from '@/ts/types.ts';
 
 const initSecCategorization = (): SecCatType => {
@@ -183,7 +187,7 @@ const linSpace = (startVal: number, stopVal: number, cardinality: number) => {
   return arr;
 };
 
-type OutputType = 'pitchNumber' | 'chroma' | 'pitch' | 'pitchClass';
+// type OutputType = 'pitchNumber' | 'chroma' | 'pitch' | 'pitchClass';
 
 /**
  * Calculates the durations of fixed pitches in a set of trajectories.
@@ -601,22 +605,22 @@ class Chikari {
   }
 }
 
-type VibObjType = {
-  periods: number;
-  vertOffset: number;
-  initUp: boolean;
-  extent: number;
-}
+// type VibObjType = {
+//   periods: number;
+//   vertOffset: number;
+//   initUp: boolean;
+//   extent: number;
+// }
 
-type IdType = 'id0' | 'id1' | 'id2' | 'id3' | 'id4' | 'id5' | 'id6' | 'id7' |
-  'id8' | 'id9' | 'id10' | 'id12' | 'id13';
+// type IdType = 'id0' | 'id1' | 'id2' | 'id3' | 'id4' | 'id5' | 'id6' | 'id7' |
+//   'id8' | 'id9' | 'id10' | 'id12' | 'id13';
 
-type IdFunction =
-  ((x: number, lf?: number[], sl?: number, da?: number[]) => number) |
-  ((x: number, lf?: number[], da?: number[]) => number) |
-  ((x: number, lf?: number[], sl?: number) => number) |
-  ((x: number, lf?: number[]) => number) |
-  ((x: number) => number);
+// type TrajIdFunction =
+//   ((x: number, lf?: number[], sl?: number, da?: number[]) => number) |
+//   ((x: number, lf?: number[], da?: number[]) => number) |
+//   ((x: number, lf?: number[], sl?: number) => number) |
+//   ((x: number, lf?: number[]) => number) |
+//   ((x: number) => number);
 
 class Trajectory {
   // archetypal motion from pitch to pitch, or through series of pitches
@@ -646,7 +650,7 @@ class Trajectory {
   groupId?: string;
   // freqs: number[];
   // logFreqs: number[];
-  ids: IdFunction[];
+  ids: TrajIdFunction[];
   structuredNames: object;
   cIpas: string[];
   cIsos: string[];
@@ -2131,6 +2135,7 @@ class Piece {
           const com = c['Composition Type'];
           let comSecTemp = c['Comp.-section/Tempo'];
           if (comSecTemp === undefined) {
+            // tslint:disable-next-line
             comSecTemp = c['Composition-section/Tempo']
           }
           const tala = c['Tala'];
@@ -2155,7 +2160,7 @@ class Piece {
         }
         if (c['Comp.-section/Tempo'] === undefined) {
           c['Comp.-section/Tempo'] = c['Composition-section/Tempo'];
-          delete c['Composition-section/Tempo']
+=          delete c['Composition-section/Tempo']
         }
       })
     } else {

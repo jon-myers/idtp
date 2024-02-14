@@ -1032,7 +1032,7 @@ class Query {
         });
         queryAnswers = sortIdxs.map(idx => queryAnswers[idx]);
       }   
-    } catch (err) {
+    } catch (err: any) {
       throw new Error(err);
     }
     return [outputTrajectories, nonStringifiedOutputIdentifiers, queryAnswers];

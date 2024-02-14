@@ -248,37 +248,15 @@ import {
   getLooseRecordings,
   getAllUsers
 } from '@/js/serverCalls.ts';
-import { UserType } from '@/ts/types';
-import RaagEditor from '@/comps/RaagEditor.vue';
-import type { AudioEventMetadataType } from '@/js/serverCalls.ts';
 import { defineComponent } from 'vue';
-import type { PassedDataType } from '@/comps/files/FileManager.vue';
-import type { RecType } from '@/comps/audioEvents/AddAudioEvent.vue';
 
-type RulesType = {
-  sa: boolean,
-  re: {
-    lowered: boolean,
-    raised: boolean
-  },
-  ga: {
-    lowered: boolean,
-    raised: boolean
-  },
-  ma: {
-    lowered: boolean,
-    raised: boolean
-  },
-  pa: boolean,
-  dha: {
-    lowered: boolean,
-    raised: boolean
-  },
-  ni: {
-    lowered: boolean,
-    raised: boolean
-  }
-}
+import {
+  PassedDataType,
+  RecType, 
+  UserType,
+  AudioEventMetadataType,
+  RulesType
+} from '@/ts/types.ts'
 
 type NewPieceRegistrarDataType = {
   title?: string;
@@ -427,8 +405,6 @@ export default defineComponent({
   },
     
   async mounted() {
-    // this.aeDisabled = false;
-    // this.recDisabled = false;
     this.updateErrors();
     try {
       this.allEvents = await getAllAEMetadata();

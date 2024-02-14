@@ -3,7 +3,12 @@ import {
   Trajectory, 
   Piece,
   Pitch,
+  Phrase
 } from '@/js/classes.ts';
+
+import {
+  ValueFn
+} from 'd3';
 
 type CollectionType = {
   _id?: string;
@@ -474,7 +479,167 @@ type EditingSecType = {
   endHours: string,
 }
 
+type TFuncType = ValueFn<
+  SVGPathElement, 
+  { x: number, y: number | null; }, 
+  string>
 
+type DrawDataType = {
+  x: number,
+  y: number,
+  i?: number,
+}
+
+type NewPieceInfoType = {
+  title: string;
+  transcriber?: string;
+  raga: string | Raga;
+  audioID: string;
+  permissions: string;
+  explicitPermissions: {
+    publicView: boolean;
+    edit: string[];
+    view: string[];
+  };
+  clone?: boolean;
+  origID: string;
+  instrumentation?: string[];
+  phrases?: Phrase[];
+  family_name?: string;
+  given_name?: string;
+  name?: string;
+}
+
+type RagaNewPieceInfoType = {
+  title: string;
+  transcriber?: string;
+  raga: Raga;
+  audioID: string;
+  permissions: string;
+  explicitPermissions: {
+    publicView: boolean;
+    edit: string[];
+    view: string[];
+  };
+  clone?: boolean;
+  origID: string;
+  instrumentation?: string[];
+  phrases?: Phrase[];
+  family_name?: string;
+  given_name?: string;
+  name?: string;
+}
+
+type RagaSeedType = {
+  name: string;
+  fundamental: number;
+  ratios: number[];
+}
+
+type PassedDataType = {
+  title: string;
+  raga: RagaSeedType;
+  audioEvent: string;
+  audioRecording?: RecType;
+  origID: string;
+  family_name?: string;
+  given_name?: string;
+  name?: string;
+  instrumentation?: string[];
+  transcriber?: string;
+}
+
+type AudioEventMetadataType = {
+  _id: string,
+  userID: string,
+  permissions: string,
+  "event type": string,
+  name: string,
+  recordings: RecType[],
+  explicitPermissions?: {
+    edit: string[],
+    view: string[]
+    publicView: boolean
+  }
+}
+
+type IpaVowelType = {
+  eng_trans: string,
+  english: string,
+  hindi: { initial: string, final: string | null },
+  ipa: string,
+  iso_15919: string,
+  type: string
+  urdu: { initial: string, final: string, medial?: string }
+}
+
+type IPAConsonantType = {
+  eng_trans: string,
+  example: string,
+  hindi: string,
+  ipa: string,
+  iso_15919: string,
+  type: string,
+}
+
+type NewPieceDataType = {
+  acknowledged: boolean,
+  insertedId: string
+}
+
+type OnProgressType = (percent: number) => void;
+
+type RulesType = {
+  sa: boolean,
+  re: {
+    lowered: boolean,
+    raised: boolean
+  },
+  ga: {
+    lowered: boolean,
+    raised: boolean
+  },
+  ma: {
+    lowered: boolean,
+    raised: boolean
+  },
+  pa: boolean,
+  dha: {
+    lowered: boolean,
+    raised: boolean
+  },
+  ni: {
+    lowered: boolean,
+    raised: boolean
+  }
+}
+
+type VibObjType = {
+  periods: number;
+  vertOffset: number;
+  initUp: boolean;
+  extent: number;
+}
+
+type IdType = 'id0' | 'id1' | 'id2' | 'id3' | 'id4' | 'id5' | 'id6' | 'id7' |
+  'id8' | 'id9' | 'id10' | 'id12' | 'id13';
+
+type TrajIdFunction =
+  ((x: number, lf?: number[], sl?: number, da?: number[]) => number) |
+  ((x: number, lf?: number[], da?: number[]) => number) |
+  ((x: number, lf?: number[], sl?: number) => number) |
+  ((x: number, lf?: number[]) => number) |
+  ((x: number) => number);
+
+type OutputType = 'pitchNumber' | 'chroma' | 'pitch' | 'pitchClass';
+
+type AffiliationType = { 
+  psId: string, 
+  idx: number, 
+  layer?: number,
+  segmentedMeterIdx: number,
+  strong: boolean,
+};
 
 export type { 
   CollectionType, 
@@ -509,4 +674,20 @@ export type {
   RecUpdateType,
   EditingSecType,
   TransMetadataType,
+  TFuncType,
+  DrawDataType,
+  NewPieceInfoType,
+  RagaNewPieceInfoType,
+  PassedDataType,
+  AudioEventMetadataType,
+  IpaVowelType,
+  IPAConsonantType,
+  NewPieceDataType,
+  OnProgressType,
+  RulesType,
+  VibObjType,
+  IdType,
+  TrajIdFunction,
+  OutputType,
+  AffiliationType
 };

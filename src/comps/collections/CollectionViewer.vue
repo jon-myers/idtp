@@ -66,7 +66,7 @@
 
 <script lang='ts'>
 import { defineComponent, PropType } from 'vue';
-import type { 
+import { 
   CollectionType, 
   ContextMenuOptionType,
   TransMetadataType, 
