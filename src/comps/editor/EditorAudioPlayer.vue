@@ -2966,6 +2966,11 @@ button {
   appearance: slider-vertical;
   -moz-appearance: slider-vertical;
 }
+
+.cbBoxSmall > input[type=checkbox] {
+  height: 20px;
+  width: 20px;
+}
 .cbBoxSmall > label {
   padding-top: 5px;
   height: 50px;
