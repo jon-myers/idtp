@@ -835,6 +835,9 @@ export default defineComponent({
       if (newVal) {
         d3SelectAll('.sargamLabels')
           .style('opacity', '1')
+        if (this.showBols) {
+          this.showBols = false;
+        }
       } else {
         d3SelectAll('.sargamLabels')
           .style('opacity', '0')
@@ -845,6 +848,9 @@ export default defineComponent({
       if (newVal) {
         d3SelectAll('.bolLabels')
           .style('opacity', '1')
+        if (this.showSargam) {
+          this.showSargam = false;
+        }
       } else {
         d3SelectAll('.bolLabels')
           .style('opacity', '0')
@@ -1985,19 +1991,17 @@ export default defineComponent({
             const x = (d: DrawDataType) => this.codifiedXR!(d.x);
             const y = (d: DrawDataType) => this.codifiedYR!(d.y);
             const strokeText = pArt.strokeNickname!;
-            const opacity = this.showBols ? '1' : '0';
             const size = 20;
             const offset = (size ** 0.5) / 2;
             bolLabels.append('text')
               .data(pluckdata)
               .text(strokeText)
-              .attr('font-size', '14px')
+              .attr('font-size', '16px')
               .attr('fill', 'black')
               .attr('text-anchor', 'middle')
               .attr('transform', d => {
                 return `translate(${x(d) + offset}, ${y(d) - 10})`
               })
-
           }
         }
       })
@@ -8557,7 +8561,7 @@ export default defineComponent({
       this.moveRegion();
     },
 
-    resetAudio(e: PointerEvent) {
+    resetAudio(e: MouseEvent) {
       if (e.pointerType === '') {
         this.preventSpaceToggle(e);
       } else {
