@@ -95,7 +95,7 @@
         </option>
     </select>
     </div>
-    <div class='selectionRow checks' v-if='vocal && showTrajChecks'>
+    <div class='selectionRow checks' v-if='vocal && showVowelTrajCheck'>
       <label class='spaceLeft'>Vowel</label>
       <select
         v-if='editable'
@@ -341,6 +341,7 @@ type TrajSelectPanelDataType = {
   extent: number,
   dampen: boolean,
   showTrajChecks: boolean,
+  showVowelTrajCheck: boolean,
   showPhraseRadio: boolean,
   phraseDivType?: 'phrase' | 'section',
   trajIdxs: number[],
@@ -390,6 +391,7 @@ export default defineComponent({
       extent: 0.05,
       dampen: false,
       showTrajChecks: false,
+      showVowelTrajCheck: false,
       showPhraseRadio: false,
       phraseDivType: undefined,
       trajIdxs: [],
@@ -773,6 +775,8 @@ export default defineComponent({
     updateVowel() {
       if (this.parentSelected) {
         this.$emit('vowel', this.vowel);
+      } else if (this.selectedTrajs.length > 1) {
+        this.$emit('multiVowel', this.vowel);
       }
     },
 

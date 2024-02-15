@@ -2362,6 +2362,22 @@ class Piece {
     return allTrajectories
   }
 
+  mostRecentTraj(time: number) {
+    const trajs = this.allTrajectories();
+    const endTimes = trajs.map(t => {
+      const phrase = this.phrases.find(p => p.trajectories.includes(t));
+      const phraseStart = phrase?.startTime;
+      return phraseStart! + t.startTime! + t.durTot!
+    })
+    // find the latest endTime that is less than time
+    const latestTime = endTimes
+      .filter(t => t <= time)
+      .reduce((max, t) => t > max ? t : max, -Infinity);
+    const idx = endTimes.indexOf(latestTime);
+    return trajs[idx]
+
+  }
+
   durationsOfFixedPitches({ 
     inst = 0, 
     outputType = 'pitchNumber' }: {
