@@ -5558,6 +5558,7 @@ export default defineComponent({
             let fixedTime = time;
             const startTime = phrase.startTime! + traj.startTime!;
             if (time - startTime < this.minTrajDur) {
+              console.log('fixing this way')
               fixedTime = startTime
             } else if (startTime + traj.durTot - time < this.minTrajDur) {
               fixedTime = startTime + traj.durTot
@@ -5575,6 +5576,23 @@ export default defineComponent({
               pIdx: pIdx,
               tIdx: tIdx
             })
+            // if a new traj dot's time is within some small threshold of a
+            // previous traj, then set the trajselect penel's vowel attribute
+            // to be the same as the previous traj's vowel attribute.
+            if (this.vocal) {
+              const prevTraj = this.piece.mostRecentTraj(fixedTime);
+              if (prevTraj.id !== 12) {
+                const phrase = this.piece.phrases[prevTraj.phraseIdx!];
+                const startTime = phrase.startTime! + prevTraj.startTime!; 
+                const endTime = startTime + prevTraj.durTot;
+                const diff = fixedTime - endTime;
+                if (diff < this.minTrajDur) {
+                  const tsp = this.$refs.trajSelectPanel as 
+                    typeof TrajSelectPanel;
+                  tsp.vowel = prevTraj.vowel;
+                }
+              }
+            }
           }
         }
       } else if (this.setNewSeries) {
