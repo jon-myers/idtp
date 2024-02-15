@@ -46,11 +46,13 @@ class Processor extends AudioWorkletProcessor {
         setDelayTime(period);
         const out = outputs[0][0];
         const input = inputs[0][0];
-        for (let i = 0; i < out.length; ++i) {
-            let x = input ? input[i] : 0;
-            x += filter(delayOutput(), cutoff);
-            delayInput(x);
-            out[i] = AMP * x;
+        if (out) {
+          for (let i = 0; i < out.length; ++i) {
+              let x = input ? input[i] : 0;
+              x += filter(delayOutput(), cutoff);
+              delayInput(x);
+              out[i] = AMP * x;
+          }
         }
         if (dead === true) {
             return false;

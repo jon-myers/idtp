@@ -1314,6 +1314,7 @@ export default defineComponent({
         this.extendDurTot();
       }
       this.resetSargam();
+      this.resetBols();
       const stIdx = this.selectedTraj.num!;
       if (this.vocal && phrase.trajectories[stIdx+1]) {
         const followingTraj = phrase.trajectories[stIdx+1];
@@ -1964,8 +1965,42 @@ export default defineComponent({
       })
     },
 
-    codifiedAddBolLabels() {
-      
+    addBolLabels() {
+      const trajs = this.piece.allTrajectories();
+      const bolLabels = this.phraseG.append('g')
+        .classed('bolLabels', true)
+        .style('opacity', Number(this.showBols))
+        .style('pointer-events', 'none');
+      trajs.forEach(traj => {
+        const pIdx = traj.phraseIdx!;
+        const phrase = this.piece.phrases[pIdx];
+        const tIdx = traj.num!;
+        const phraseStart = phrase.startTime!;
+        if (traj.id !== 12) {
+          const pArt = traj.articulations['0.00'];
+          if (pArt && pArt.name === 'pluck') {
+            const pluckdata = [
+              { x: phraseStart + traj.startTime!, y: traj.compute(0, true) }
+            ];
+            const x = (d: DrawDataType) => this.codifiedXR!(d.x);
+            const y = (d: DrawDataType) => this.codifiedYR!(d.y);
+            const strokeText = pArt.strokeNickname!;
+            const opacity = this.showBols ? '1' : '0';
+            const size = 20;
+            const offset = (size ** 0.5) / 2;
+            bolLabels.append('text')
+              .data(pluckdata)
+              .text(strokeText)
+              .attr('font-size', '14px')
+              .attr('fill', 'black')
+              .attr('text-anchor', 'middle')
+              .attr('transform', d => {
+                return `translate(${x(d) + offset}, ${y(d) - 10})`
+              })
+
+          }
+        }
+      })
     },
 
     clearSargamLabels() {
@@ -1982,8 +2017,9 @@ export default defineComponent({
     },
 
     resetBols() {
+      console.log('reset bols')
       this.clearBolLabels();
-      this.codifiedAddBolLabels();
+      this.addBolLabels();
     },
 
     addAllDragDots() {
@@ -2589,6 +2625,7 @@ export default defineComponent({
       this.moveChikaris(phrase);
       if (resetRequired) this.resetZoom();
       this.resetSargam();
+      this.resetBols()
       const stIdx = this.selectedTraj.num;
       if (phrase.trajectories[tIdx+1]) {
         const followingTraj = phrase.trajectories[tIdx+1];
@@ -4108,6 +4145,7 @@ export default defineComponent({
       };
       
       this.resetSargam();
+      this.resetBols();
       const vowelIdxs = phrase.firstTrajIdxs();
     },
     
@@ -6662,19 +6700,6 @@ export default defineComponent({
           .attr('transform', d => {
             return `translate(${x(d) + offset}, ${y(d)}) rotate(90)`
           })
-        const strokeTxt = traj.articulations['0.00'].strokeNickname!;
-        const opacity = this.showBols ? '1' : '0';
-        g.append('text')
-          .classed('bolLabels', true)
-          .data(pluckData)
-          .text(strokeTxt)
-          .attr('font-size', '14px')
-          .attr('fill', 'black')
-          .attr('text-anchor', 'middle')
-          .style('opacity', opacity)
-          .attr('transform', d => {
-            return `translate(${x(d) + offset}, ${y(d) - 10})`
-          })
         }
       }
     },
@@ -8511,6 +8536,7 @@ export default defineComponent({
           });
           this.updatePhraseDivs();
           this.codifiedAddSargamLabels();
+          this.addBolLabels();
         })
         
       } else {
@@ -8560,6 +8586,7 @@ export default defineComponent({
       this.phraseG.selectAll('.phraseDiv').remove();
       this.updatePhraseDivs();
       this.codifiedAddSargamLabels();
+      this.addBolLabels();
       selects.remove();
       this.slidePhrases(
         this.xr()(this.codifiedXOffset),
@@ -9072,6 +9099,7 @@ export default defineComponent({
       this.piece.updateStartTimes();
       this.codifiedRedrawPhrase(pIdx);
       this.resetSargam();
+      this.resetBols();
     },
     
     fixFollowingTrajs(phrase: Phrase, tIdx: number) {
