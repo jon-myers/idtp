@@ -716,7 +716,7 @@ export default defineComponent({
         
         this.audioSource = this.browser.name === 'safari' ?
           `https://swara.studio/audio/mp3/${piece.audioID}.mp3` :
-          `https://swara.studio/audio/opus/${piece.audioID}.opus`;         
+          `https://swara.studio/audio/opus/${piece.audioID}.opus`;        
         this.audioDBDoc = await getAudioRecording(piece.audioID);
         this.melographJSON = await getMelographJSON(piece.audioID);
         this.durTot = this.audioDBDoc!.duration;
@@ -9053,7 +9053,7 @@ export default defineComponent({
     loopAnimationFrame() {
       this.requestId = undefined;
       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-      const latency = ap.ac.outputLatency;
+      const latency = ap.ac.outputLatency ? ap.ac.outputLatency : 0;
       this.currentTime = ap.getCurTime() - latency;
       if (this.currentTime < this.animationStart) {
         this.currentTime = this.animationStart;
