@@ -127,6 +127,7 @@
         @vibObj='vibObjEmit'
         @dampen='dampenEmit'
         @vowel='vowelEmit'
+        @multiVowel='multiVowelEmit'
         @startConsonant='startConsonantEmit'
         @endConsonant='endConsonantEmit'
         @shiftOct='shiftTrajByOctave'
@@ -1072,6 +1073,58 @@ export default defineComponent({
       if (vowelIdxs.includes(selT.num!)) {
         this.addVowel(selT, phrase.startTime!, g, true)
       } 
+    },
+
+    multiVowelEmit(vowel: string) {
+      this.unsavedChanges = true;
+      this.selectedTrajs.sort((a, b) => {
+        if (a.phraseIdx === b.phraseIdx) {
+          return a.num! - b.num!;
+        } else {
+          return a.phraseIdx! - b.phraseIdx!;
+        }
+      })
+      this.selectedTrajs.forEach(t => {
+        t.updateVowel(vowel)
+        const pIdx = t.phraseIdx!;
+        const tIdx = t.num!;
+        const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
+          Selection<SVGGElement, any, any, any>;
+        const phrase = this.piece.phrases[pIdx];
+        const selected = d3Select(`#vowelp${pIdx}t${tIdx}`);
+        let dontReplace = false;
+        let prevTraj: Trajectory | undefined;
+        if (tIdx > 0) {
+          prevTraj = phrase.trajectories[tIdx - 1];
+        } else if (pIdx > 0) {
+          const prevPhrase = this.piece.phrases[pIdx - 1];
+          prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
+        }
+        if (prevTraj) {
+          if (prevTraj.vowel === vowel) {
+            dontReplace = true;
+          }
+        }
+        if (selected.node() === null) {
+          if (!dontReplace) {
+            this.addVowel(t, phrase.startTime!, g, true)
+          }
+        } else {
+          selected.remove();
+          if (!dontReplace) {
+            this.addVowel(t, phrase.startTime!, g, true)
+          }
+        }
+        const nextTraj = phrase.trajectories[tIdx + 1];
+        if (nextTraj) {
+          const sel = d3Select(`#vowelp${pIdx}t${tIdx + 1}`);
+          sel.remove();
+          const vowelIdxs = phrase.firstTrajIdxs();
+          if (vowelIdxs.includes(nextTraj.num!)) {
+            this.addVowel(nextTraj, phrase.startTime!, g, true)
+          }
+        }
+      })
     },
 
     vowelEmit(vowel: string) {
@@ -4376,6 +4429,7 @@ export default defineComponent({
           d3SelectAll('.newSeriesDot').remove();
         }
         tsp.showTrajChecks = true;
+        tsp.showVowelTrajCheck = true;
       } else if ( e.key === 'p' && 
                   this.setNewPhraseDiv === false && 
                   this.editable && 
@@ -5258,7 +5312,7 @@ export default defineComponent({
           this.selectedTrajID = undefined;
           d3SelectAll('.dragDots').remove();
           d3Select('#selBox').remove();
-        }
+        }        
       } else if (collectedTrajs.length === 1) {
         this.selectedTraj = collectedTrajs[0];
         const pIdx = this.selectedTraj!.phraseIdx!;
@@ -5363,6 +5417,7 @@ export default defineComponent({
           }
           this.addAllDragDots();
           tsp.showTrajChecks = true;
+          tsp.showVowelTrajCheck = true;
         }
       } else {
         this.selectedTrajs = collectedTrajs;
@@ -5379,6 +5434,16 @@ export default defineComponent({
             .attr('cursor', 'pointer')
           this.updateArtColors(traj, true)
         })   
+      }
+      if (this.vocal && this.selectedTrajs.length > 1) {
+        tsp.showVowelTrajCheck = true;
+        const vowels = this.selectedTrajs.map(traj => traj.vowel);
+        const uniqueVowels = [...new Set(vowels)];
+        if (uniqueVowels.length === 1) {
+          tsp.vowel = uniqueVowels[0];
+        } else {
+          tsp.vowel = undefined;
+        }
       }
       d3Select('#selBox').remove()        
     },
@@ -5581,7 +5646,7 @@ export default defineComponent({
             // to be the same as the previous traj's vowel attribute.
             if (this.vocal) {
               const prevTraj = this.piece.mostRecentTraj(fixedTime);
-              if (prevTraj.id !== 12) {
+              if (prevTraj && prevTraj.id !== 12) {
                 const phrase = this.piece.phrases[prevTraj.phraseIdx!];
                 const startTime = phrase.startTime! + prevTraj.startTime!; 
                 const endTime = startTime + prevTraj.durTot;
@@ -8009,6 +8074,18 @@ export default defineComponent({
           } else {
             this.groupable = this.selectedTrajsGroupable();
           }
+          if (this.vocal) {
+            tsp.showVowelTrajCheck = true;
+            const vowels = this.selectedTrajs.map(t => t.vowel);
+            const uniqueVowels = [...new Set(vowels)];
+            if (uniqueVowels.length === 1) {
+              tsp.vowel = uniqueVowels[0];
+            } else {
+              tsp.vowel = undefined;
+            }
+          }
+          
+
         } else {
           if (this.selectedTrajs.length > 1) {
             this.selectedTrajs.forEach(traj => {
@@ -8156,6 +8233,7 @@ export default defineComponent({
             }
             this.addAllDragDots();
             tsp.showTrajChecks = true;
+            tsp.showVowelTrajCheck = true;
           }
         }
       }
@@ -8258,6 +8336,7 @@ export default defineComponent({
       tsp.showVibObj = false;
       tsp.showSlope = false;
       tsp.showTrajChecks = false;
+      tsp.showVowelTrajCheck = false;
       tsp.showPhraseRadio = false;
       tsp.startConsonant = undefined;
       tsp.endConsonant = undefined;
