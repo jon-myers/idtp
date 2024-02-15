@@ -1175,7 +1175,11 @@ export default defineComponent({
       if (tsp.vocal || tsp.pluckBool === false) {
         articulations = {};
       } else {
-        articulations = { '0.00': new Articulation({ name: 'pluck' }) }
+        articulations = { '0.00': new Articulation({ 
+          name: 'pluck',
+          stroke: 'd',
+          strokeNickname: 'da' 
+        }) }
       }
       if (!tsp.vocal && tsp.dampen === true) {
         // if (!articulations) articulations = {};
@@ -1347,7 +1351,11 @@ export default defineComponent({
       const c1 = selT.articulations[0] || selT.articulations['0.00'];
       if (pluckBool) {
         if (!c1) {
-          selT.articulations['0.00'] = new Articulation();
+          selT.articulations['0.00'] = new Articulation({
+            name: 'pluck',
+            stroke: 'd',
+            strokeNickname: 'da'
+          });
           const pIdx = selT.phraseIdx!;
           const tIdx = selT.num!;
           const phrase = this.piece!.phrases[pIdx];
@@ -1362,6 +1370,7 @@ export default defineComponent({
           this.removePlucks(selT)
         }
       }
+      this.resetBols();
     },
 
     mutateTrajEmit(newIdx: number) {
@@ -2021,7 +2030,6 @@ export default defineComponent({
     },
 
     resetBols() {
-      console.log('reset bols')
       this.clearBolLabels();
       this.addBolLabels();
     },
@@ -5946,7 +5954,11 @@ export default defineComponent({
       const newPitch = new Pitch(traj.pitches[0]);
       const art = traj.articulations['0.00'];
       const newArts = art && art.name === 'pluck' ? 
-            [{ '0.00': new Articulation({ name: 'pluck' }) }] : 
+            [{ '0.00': new Articulation({ 
+              name: 'pluck',
+              stroke: 'd',
+              strokeNickname: 'da' 
+            }) }] : 
             [{ }];
       const newTraj = new Trajectory({
         id: 0,
@@ -6546,7 +6558,8 @@ export default defineComponent({
               text: `Stroke: ${n + add}`,
               action: () => {
                 if (pArt.strokeNickname !== n) {
-                  this.updatePluckNickname(traj, n)
+                  this.updatePluckNickname(traj, n);
+                  this.resetBols();
                 }
                 this.contextMenuClosed = true;
               },
