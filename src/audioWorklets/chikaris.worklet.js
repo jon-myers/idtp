@@ -57,30 +57,32 @@ class Processor extends AudioWorkletProcessor {
         
         // console.log(inputs[0])
         // console.log(in_)
-        for (let i = 0; i < out.length; ++i) {
-            // let x = t < period ? 2 * Math.random() - 1 : 0;
-            // setDelayTime(1/params['Frequency'][i])
-            let x0 = input ? input[i] : 0;
-            // let x1 = input ? input[i] : 0;
-            // let x2 = input ? input[i] : 0;
-            // let x3 = input ? input[i] : 0;
-            
-            initDelayInput(input ? input[i] : 0)
-            let x1 = initDelayOutput(1);
-            // let x2 = initDelayOutput(2);
-            // let x3 = initDelayOutput(3);
-            
-            x0 += filter(delayOutput(0), cutoff, 0);
-            x1 += filter(delayOutput(1), cutoff, 1);
-            // x2 += filter(delayOutput(2), cutoff, 2);
-            // x3 += filter(delayOutput(3), cutoff, 3);
-            delayInput(x0, x1);
-            outputs[0][0][i] = AMP * x0;
-            outputs[1][0][i] = AMP * x1;
-            // outputs[2][0][i] = AMP * x2;
-            // outputs[3][0][i] = AMP * x3;
-            // eslint-disable-next-line no-undef
-            // t += 1 / sampleRate;
+        if (out) {
+          for (let i = 0; i < out.length; ++i) {
+              // let x = t < period ? 2 * Math.random() - 1 : 0;
+              // setDelayTime(1/params['Frequency'][i])
+              let x0 = input ? input[i] : 0;
+              // let x1 = input ? input[i] : 0;
+              // let x2 = input ? input[i] : 0;
+              // let x3 = input ? input[i] : 0;
+              
+              initDelayInput(input ? input[i] : 0)
+              let x1 = initDelayOutput(1);
+              // let x2 = initDelayOutput(2);
+              // let x3 = initDelayOutput(3);
+              
+              x0 += filter(delayOutput(0), cutoff, 0);
+              x1 += filter(delayOutput(1), cutoff, 1);
+              // x2 += filter(delayOutput(2), cutoff, 2);
+              // x3 += filter(delayOutput(3), cutoff, 3);
+              delayInput(x0, x1);
+              outputs[0][0][i] = AMP * x0;
+              outputs[1][0][i] = AMP * x1;
+              // outputs[2][0][i] = AMP * x2;
+              // outputs[3][0][i] = AMP * x3;
+              // eslint-disable-next-line no-undef
+              // t += 1 / sampleRate;
+          }
         }
         return true;
     }

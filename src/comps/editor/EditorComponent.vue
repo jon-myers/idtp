@@ -52,6 +52,13 @@
             v-model='showSargam' 
             @click='preventSpaceToggle'>
         </div>
+        <div v-if='!vocal' class='cbRow'>
+          <label>Bols</label>
+          <input 
+            type='checkbox' 
+            v-model='showBols' 
+            @click='preventSpaceToggle'>
+        </div>
         <div class='cbRow'>
           <label>Playhead Return</label>
           <input 
@@ -239,7 +246,8 @@ import {
   ContextMenuOptionType, 
   RecType, 
   TFuncType,
-  DrawDataType 
+  DrawDataType,
+  StrokeNicknameType
 } from '@/ts/types';
 
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
@@ -356,6 +364,7 @@ type EditorDataType = {
   synthGain: number,
   synthDamping: number,
   showSargam: boolean,
+  showBols: boolean,
   rangeOffset: number,
   scrollYWidth: number,
   scrollXHeight: number,
@@ -524,6 +533,7 @@ export default defineComponent({
       synthGain: 0,
       synthDamping: 0.5,
       showSargam: false,
+      showBols: false,
       rangeOffset: 0.1,
       scrollYWidth: 20,
       scrollXHeight: 20,
@@ -825,8 +835,24 @@ export default defineComponent({
       if (newVal) {
         d3SelectAll('.sargamLabels')
           .style('opacity', '1')
+        if (this.showBols) {
+          this.showBols = false;
+        }
       } else {
         d3SelectAll('.sargamLabels')
+          .style('opacity', '0')
+      }
+    },
+
+    showBols(newVal) {
+      if (newVal) {
+        d3SelectAll('.bolLabels')
+          .style('opacity', '1')
+        if (this.showSargam) {
+          this.showSargam = false;
+        }
+      } else {
+        d3SelectAll('.bolLabels')
           .style('opacity', '0')
       }
     },
@@ -1294,6 +1320,7 @@ export default defineComponent({
         this.extendDurTot();
       }
       this.resetSargam();
+      this.resetBols();
       const stIdx = this.selectedTraj.num!;
       if (this.vocal && phrase.trajectories[stIdx+1]) {
         const followingTraj = phrase.trajectories[stIdx+1];
@@ -1944,6 +1971,42 @@ export default defineComponent({
       })
     },
 
+    addBolLabels() {
+      const trajs = this.piece.allTrajectories();
+      const bolLabels = this.phraseG.append('g')
+        .classed('bolLabels', true)
+        .style('opacity', Number(this.showBols))
+        .style('pointer-events', 'none');
+      trajs.forEach(traj => {
+        const pIdx = traj.phraseIdx!;
+        const phrase = this.piece.phrases[pIdx];
+        const tIdx = traj.num!;
+        const phraseStart = phrase.startTime!;
+        if (traj.id !== 12) {
+          const pArt = traj.articulations['0.00'];
+          if (pArt && pArt.name === 'pluck') {
+            const pluckdata = [
+              { x: phraseStart + traj.startTime!, y: traj.compute(0, true) }
+            ];
+            const x = (d: DrawDataType) => this.codifiedXR!(d.x);
+            const y = (d: DrawDataType) => this.codifiedYR!(d.y);
+            const strokeText = pArt.strokeNickname!;
+            const size = 20;
+            const offset = (size ** 0.5) / 2;
+            bolLabels.append('text')
+              .data(pluckdata)
+              .text(strokeText)
+              .attr('font-size', '16px')
+              .attr('fill', 'black')
+              .attr('text-anchor', 'middle')
+              .attr('transform', d => {
+                return `translate(${x(d) + offset}, ${y(d) - 10})`
+              })
+          }
+        }
+      })
+    },
+
     clearSargamLabels() {
       d3Select('.sargamLabels').remove();
     },
@@ -1951,6 +2014,16 @@ export default defineComponent({
     resetSargam() {
       this.clearSargamLabels();
       this.codifiedAddSargamLabels();
+    },
+
+    clearBolLabels() {
+      d3Select('.bolLabels').remove();
+    },
+
+    resetBols() {
+      console.log('reset bols')
+      this.clearBolLabels();
+      this.addBolLabels();
     },
 
     addAllDragDots() {
@@ -2556,6 +2629,7 @@ export default defineComponent({
       this.moveChikaris(phrase);
       if (resetRequired) this.resetZoom();
       this.resetSargam();
+      this.resetBols()
       const stIdx = this.selectedTraj.num;
       if (phrase.trajectories[tIdx+1]) {
         const followingTraj = phrase.trajectories[tIdx+1];
@@ -4075,6 +4149,7 @@ export default defineComponent({
       };
       
       this.resetSargam();
+      this.resetBols();
       const vowelIdxs = phrase.firstTrajIdxs();
     },
     
@@ -6461,6 +6536,24 @@ export default defineComponent({
             })
           }
         };
+        const pArt = traj.articulations['0.00'];
+        if (pArt && pArt.name === 'pluck') {
+          const nChoices: StrokeNicknameType[] = 
+            ['da', 'di', 'd', 'ra', 'ri', 'r',];
+          nChoices.forEach(n => {
+            const add = pArt.strokeNickname === n ? ' \u2713' : '';
+            this.contextMenuChoices.push({
+              text: `Stroke: ${n + add}`,
+              action: () => {
+                if (pArt.strokeNickname !== n) {
+                  this.updatePluckNickname(traj, n)
+                }
+                this.contextMenuClosed = true;
+              },
+              enabled: true
+            })
+          })
+        }
         if (this.contextMenuChoices.length > 0) {
           this.contextMenuClosed = false;
         }
@@ -6537,35 +6630,34 @@ export default defineComponent({
         if (relKeys.length > 0) {
           
           const pluckData = relKeys.map(p => {
-          const normedX = Number(p) * traj.durTot;
-          const y = traj.compute(normedX, true);
-          return {
-            x: phraseStart + traj.startTime! + Number(p),
-            y: y
-          }
-        });
-        
-        const sym = d3Symbol().type(d3SymbolTriangle).size(size);
-        const x = (d: DrawDataType) => this.xr()(d.x);
-        const y = (d: DrawDataType) => this.yr()(d.y);
-        g.append('g')
-          .classed('articulation', true)
-          .classed('pluck', true)
-          .append('path')
-          .attr('d', sym)
-          .attr('id', `pluckp${traj.phraseIdx}t${traj.num}`)
-          .attr('stroke', 'black')
-          .attr('stroke-width', 1.5)
-          .attr('fill', 'black')
-          .attr('cursor', 'pointer')
-          .on('mouseover', this.handleMouseOver)
-          .on('mouseout', this.handleMouseOut)
-          .on('click', this.handleClickTraj)
-          .data(pluckData)
-          .attr('transform', d => {
-            return `translate(${x(d) + offset}, ${y(d)}) rotate(90)`
-          })
-
+            const normedX = Number(p) * traj.durTot;
+            const y = traj.compute(normedX, true);
+            return {
+              x: phraseStart + traj.startTime! + Number(p),
+              y: y
+            }
+          });
+          
+          const sym = d3Symbol().type(d3SymbolTriangle).size(size);
+          const x = (d: DrawDataType) => this.xr()(d.x);
+          const y = (d: DrawDataType) => this.yr()(d.y);
+          g.append('g')
+            .classed('articulation', true)
+            .classed('pluck', true)
+            .append('path')
+            .attr('d', sym)
+            .attr('id', `pluckp${traj.phraseIdx}t${traj.num}`)
+            .attr('stroke', 'black')
+            .attr('stroke-width', 1.5)
+            .attr('fill', 'black')
+            .attr('cursor', 'pointer')
+            .on('mouseover', this.handleMouseOver)
+            .on('mouseout', this.handleMouseOut)
+            .on('click', this.handleClickTraj)
+            .data(pluckData)
+            .attr('transform', d => {
+              return `translate(${x(d) + offset}, ${y(d)}) rotate(90)`
+            })          
         }
       }
     },
@@ -7006,6 +7098,20 @@ export default defineComponent({
             .attr('transform', d => `translate(${x(d) + offset}, ${y(d) - 14})`)
         }
       }
+    },
+
+    updatePluckNickname(traj: Trajectory, n: StrokeNicknameType) {
+      const dNames = ['da', 'd', 'di'];
+      const rNames = ['ra', 'r', 'ri'];
+      if (dNames.includes(n)) {
+        traj.articulations['0.00'].stroke = 'd';
+        
+      } else if (rNames.includes(n)) {
+        traj.articulations['0.00'].stroke = 'r';
+      }
+      traj.articulations['0.00'].strokeNickname = n;
+      // update save status
+      this.unsavedChanges = true;
     },
 
     addKrintin(
@@ -8434,6 +8540,7 @@ export default defineComponent({
           });
           this.updatePhraseDivs();
           this.codifiedAddSargamLabels();
+          this.addBolLabels();
         })
         
       } else {
@@ -8454,7 +8561,7 @@ export default defineComponent({
       this.moveRegion();
     },
 
-    resetAudio(e: PointerEvent) {
+    resetAudio(e: MouseEvent) {
       if (e.pointerType === '') {
         this.preventSpaceToggle(e);
       } else {
@@ -8483,6 +8590,7 @@ export default defineComponent({
       this.phraseG.selectAll('.phraseDiv').remove();
       this.updatePhraseDivs();
       this.codifiedAddSargamLabels();
+      this.addBolLabels();
       selects.remove();
       this.slidePhrases(
         this.xr()(this.codifiedXOffset),
@@ -8995,6 +9103,7 @@ export default defineComponent({
       this.piece.updateStartTimes();
       this.codifiedRedrawPhrase(pIdx);
       this.resetSargam();
+      this.resetBols();
     },
     
     fixFollowingTrajs(phrase: Phrase, tIdx: number) {

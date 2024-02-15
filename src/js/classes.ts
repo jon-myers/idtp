@@ -7,8 +7,11 @@ import {
   VibObjType,
   IdType,
   TrajIdFunction,
-  OutputType
+  OutputType,
+  StrokeNicknameType,
+  ArtNameType,
 } from '@/ts/types.ts';
+
 
 const initSecCategorization = (): SecCatType => {
   return {
@@ -539,9 +542,10 @@ class Pitch {
   }
 }
 
-type ArtNameType = (
-  'pluck' | 'hammer-off' | 'hammer-on' | 'slide' | 'dampen' | 'consonant'
-)
+// type ArtNameType = (
+//   'pluck' | 'hammer-off' | 'hammer-on' | 'slide' | 'dampen' | 'consonant'
+// )
+// type StrokeNicknameType = "d" | "r" | "da" | "ra" | "di" | "ri"
 
 class Articulation {
   name: ArtNameType;
@@ -549,6 +553,7 @@ class Articulation {
   hindi: string | undefined;
   ipa: string | undefined;
   engTrans: string | undefined;
+  strokeNickname: StrokeNicknameType | undefined;
 
   // pluck, hammer-off, hammer-on, slide, pluck, dampen
   constructor({
@@ -557,18 +562,26 @@ class Articulation {
     hindi = undefined,
     ipa = undefined,
     engTrans = undefined,
+    strokeNickname = undefined,
   }: {
     name?: ArtNameType,
     stroke?: string,
     hindi?: string,
     ipa?: string,
     engTrans?: string,
+    strokeNickname?: StrokeNicknameType
   } = {}) {
     this.name = name
     if (stroke !== undefined) this.stroke = stroke;
     if (hindi !== undefined) this.hindi = hindi;
     if (ipa !== undefined) this.ipa = ipa;
     if (engTrans !== undefined) this.engTrans = engTrans;
+    if (strokeNickname !== undefined) this.strokeNickname = strokeNickname;
+    if (this.stroke === 'd' && this.strokeNickname === undefined) {
+      this.strokeNickname = 'da'
+    } else if (this.stroke === 'r' && this.strokeNickname === undefined) {
+      this.strokeNickname = 'ra'
+    }
   }
 }
 
@@ -969,6 +982,14 @@ class Trajectory {
     this.vEngTrans = ['a', 'ā', 'i', 'ī', 'u', 'ū', 'ē', 'ai', 'ō', 'au'];
 
     this.convertCIsoToHindiAndIpa()
+
+    const artKeys = Object.keys(this.articulations);
+    artKeys.forEach(k => {
+      if (k === '0') {
+        this.articulations['0.00'] = this.articulations[k];
+        delete this.articulations[k];
+      }
+    })
   }
 
   get minFreq() {
