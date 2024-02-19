@@ -2427,9 +2427,7 @@ class Piece {
     }
     const trajs = lastPhrase.trajectories;
     const lastTraj: Trajectory = trajs[trajs.length - 1];
-    if (lastTraj.id !== 12) {
-      throw new Error('lastTraj is not silent')
-    } else {
+    if (lastTraj.id === 12) {
       const extraDur = durTot - this.durTot!;
       lastTraj.durTot += extraDur;
       lastPhrase.durTotFromTrajectories();
