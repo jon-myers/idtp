@@ -747,6 +747,10 @@ export default defineComponent({
       const vox = ['Vocal (M)', 'Vocal (F)'];
       tsp.vocal = vox.includes(this.piece.instrumentation[0]);
       this.vocal = tsp.vocal;
+      this.sitar = this.piece.instrumentation[0] === 'Sitar';
+      this.sarangi = this.piece.instrumentation[0] === 'Sarangi';
+      tsp.sitar = this.sitar;
+      tsp.sarangi = this.sarangi;
       const leftTime = this.leftTime;
       await this.initializePiece();
       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
@@ -1225,7 +1229,7 @@ export default defineComponent({
       const durArray = times.slice(1).map((x, i) => (x - times[i]) / durTot);
       let articulations: { [key: string]: Articulation };
       const tsp = this.$refs.trajSelectPanel as typeof TrajSelectPanel;
-      if (tsp.vocal || tsp.pluckBool === false) {
+      if (tsp.vocal || tsp.sarangi || tsp.pluckBool === false) {
         articulations = {};
       } else {
         articulations = { '0.00': new Articulation({ 

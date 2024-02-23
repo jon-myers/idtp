@@ -230,7 +230,7 @@ class Processor extends AudioWorkletProcessor {
 }
 
 registerProcessor('sarangi', Processor);
-const sampleRate = 44100;
+const sampleRate = 48000;
 const delay1 = [...Array(2048)].map(() => 0);
 let readPtr1 = 0;
 let writePtr1 = 0;

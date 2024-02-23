@@ -36,7 +36,7 @@
         :disabled='true'
       />
     </div>
-    <div class='selectionRow checks' v-if='!vocal && showTrajChecks'>
+    <div class='selectionRow checks' v-if='sitar && showTrajChecks'>
       <label>Pluck</label>
       <input 
         v-if='editable' 
@@ -52,7 +52,7 @@
         :disabled='true'
       />
     </div>
-    <div class='selectionRow checks' v-if='!vocal && showTrajChecks'>
+    <div class='selectionRow checks' v-if='sitar && showTrajChecks'>
       <label class='spaceLeft'>Dampen</label>
       <input 
         v-if='editable' 
@@ -369,6 +369,8 @@ type TrajSelectPanelDataType = {
   canShiftDown: boolean,
   vowelList: string[],
   cEngTrans: string[],
+  sitar: boolean,
+  sarangi: boolean,
 }
 
 export default defineComponent({
@@ -419,6 +421,8 @@ export default defineComponent({
       englishTrans: [],
       vowelList: [],
       cEngTrans: [],
+      sitar: false,
+      sarangi: false,
     }
   },
   
