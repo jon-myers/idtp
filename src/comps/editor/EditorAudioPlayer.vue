@@ -280,6 +280,11 @@
         @goToSectionEmit='goToSection'
         ref='labelControls'
       />
+      <SarangiSynth 
+        v-if='sarangi && ac'
+        :ac='ac'
+        ref='sarangiSynth'
+        />
   </div>
 </template>
 <script lang='ts'>
@@ -310,6 +315,7 @@ import downloadIcon from '@/assets/icons/download.svg';
 import meterIcon from '@/assets/icons/meter.svg';
 import { excelData, jsonData } from '@/js/serverCalls.ts';
 import ksURL from '@/audioWorklets/karplusStrong.worklet.js?url';
+import ssURL from '@/audioWorklets/sarangi.worklet.js?url';
 import cURL from '@/audioWorklets/chikaris.worklet.js?url';
 import caURL from '@/audioWorklets/captureAudio.worklet.js?url';
 import klattURL from '@/audioWorklets/klattSynth2.worklet.js?url';
@@ -320,6 +326,7 @@ import { drag as d3Drag, select as d3Select } from 'd3';
 import stretcherURL from '@/js/bundledStretcherWorker.js?url';
 import MeterControls from '@/comps/editor/MeterControls.vue';
 import LabelEditor from '@/comps/editor/LabelEditor.vue';
+import SarangiSynth from '@/comps/editor/SarangiSynth.vue';
 import { Meter } from '@/js/meter.ts'
 import { PhraseCatType, RecType, MusicianType } from '@/ts/types.ts';
 
@@ -388,6 +395,7 @@ type EditorAudioPlayerData = {
   transposable: boolean;
   string: boolean | undefined;
   vocal: boolean | undefined;
+  sarangi: boolean;
   dragStartX: number | undefined;
   shiftOn: boolean;
   readyToShift: boolean;
@@ -443,6 +451,8 @@ type EditorAudioPlayerData = {
   tuningMasterGainNode?: GainNode;
   tuningGainNodes: GainNode[];
   tuningSines: OscillatorNode[];
+  testSarangi: boolean;
+  sarangiSynth?: SarangiSynthType;
 }
 
 interface RubberBandNodeType extends AudioWorkletNode {
@@ -518,6 +528,12 @@ interface KlattNodeType extends AudioWorkletNode {
   fricationMod?: AudioParam;
   parallelBypassDb?: AudioParam;
   nasalFormantDb?: AudioParam;
+}
+
+interface SarangiSynthType extends AudioWorkletNode {
+  freq?: AudioParam;
+  bowGain?: AudioParam;
+  gain?: AudioParam;
 }
 
 const structuredTime = (dur: number) => {
@@ -671,6 +687,8 @@ export default defineComponent({
       tuningMasterGainNode: undefined,
       tuningGainNodes: [],
       tuningSines: [],
+      sarangi: false, // placeholder
+      sarangiSynth: undefined,
     };
   },
   props: {
@@ -737,7 +755,8 @@ export default defineComponent({
 
   components: {
     MeterControls,
-    LabelEditor
+    LabelEditor,
+    SarangiSynth
   },
 
   async mounted() {
@@ -1127,6 +1146,20 @@ export default defineComponent({
         console.error(e);
       }
     },
+
+    async setUpSarangiNode(destination: GainNode) {
+      try {
+        await this.ac!.audioWorklet.addModule(ssURL);
+        this.sarangiSynth = new AudioWorkletNode(this.ac!, 'sarangi');
+        this.sarangiSynth.freq = this.sarangiSynth.parameters.get('Frequency');
+        this.sarangiSynth.bowGain = this.sarangiSynth.parameters.get('BowGain');
+        this.sarangiSynth.gain = this.sarangiSynth.parameters.get('Gain');
+        this.sarangiSynth.gain!.setValueAtTime(1.0, this.now());
+        this.sarangiSynth.connect(destination);
+      } catch (e) {
+        console.error(e);
+      }
+    },
     
     async parentLoaded() {
       this.gatherInfo();
@@ -1138,11 +1171,11 @@ export default defineComponent({
         'Veena (Saraswati)',
         'Veena (Vichitra)',
         'Veena, Rudra (Bin)',
-        'Sarangi'
       ];
       const vocInsts = ['Vocal (M)', 'Vocal (F)'];
       this.string = stringInsts.includes(instrumentation);
       this.vocal = vocInsts.includes(instrumentation);
+      this.sarangi = instrumentation === 'Sarangi';
       if (this.string) {
         this.ac!.audioWorklet.addModule(AudioWorklet(ksURL))
           .then(() => {
@@ -1313,6 +1346,8 @@ export default defineComponent({
         } else {
           this.initializeVocalNode()
         }
+      } else if (this.sarangi) {
+        this.setUpSarangiNode(this.intSynthGainNode!)
       }
       this.initializeBufferRecorder();
       this.preSetFirstEnvelope(256);
@@ -1383,6 +1418,7 @@ export default defineComponent({
       });
     },
     playTrajs(curPlayTime = 0, now: number) {
+      
       const phrases = this.piece.phrases;
       const allTrajs = phrases.map((p) => p.trajectories).flat();
       const allStarts = getStarts(allTrajs.map((t) => t.durTot));
@@ -1394,7 +1430,9 @@ export default defineComponent({
       const remainingTrajs = allTrajs.slice(startIdx);
       remainingTrajs.forEach((traj, i_) => {
         const i = i_ + startIdx;
-        this.playArticulations(traj, now + Number(allStarts[i]) - curPlayTime);
+        if (this.string) {
+          this.playArticulations(traj, now + Number(allStarts[i]) - curPlayTime);
+        }
         if (traj.id !== 12) {
           const st = now + allStarts[i] - curPlayTime;
           const et = now + allEnds[i] - curPlayTime;
@@ -1410,7 +1448,8 @@ export default defineComponent({
             } else {
               this.playVocalTraj(traj, st, et, i === 0, fromSil, toSil);
             }
-            
+          } else if (this.sarangi) {
+            this.playSarangiTraj(traj, st, et, fromSil, toSil);
           }
         }
       });
@@ -1655,6 +1694,36 @@ export default defineComponent({
       }
       this.klattNode!.flutterLevel!.setValueAtTime(0.15, startTime);
     },
+
+    playSarangiTraj(
+        traj: Trajectory, 
+        startTime: number, 
+        endTime: number, 
+        fromSil = false, 
+        toSil = false) {
+      const valueDur = 0.02;
+      const valueCt = Math.round((endTime - startTime) / valueDur);
+      const freq = this.sarangiSynth!.freq!;
+      const bowGain = this.sarangiSynth!.bowGain!;
+      const verySmall = 0.000000000001;
+      const envelope = new Float32Array(valueCt);
+      const transp = 2 ** (this.transposition / 1200);
+      for (let i = 0; i < valueCt; i++) {
+        envelope[i] = transp * traj.compute(i / (valueCt - 1));
+      }
+      const duration = endTime - startTime - verySmall;
+      freq.setValueCurveAtTime(envelope, startTime, duration);
+      if (fromSil) {
+        bowGain.setValueAtTime(0, startTime);
+        bowGain.linearRampToValueAtTime(0.5, startTime + 0.01);
+      }
+      if (toSil) {
+        bowGain.setValueAtTime(0.5, endTime - 0.01);
+        bowGain.linearRampToValueAtTime(0, endTime);
+      }
+    },
+    
+
     preSetFirstEnvelope(valueCt: number) {
       const phrases = this.piece.phrases;
       const traj = phrases.map((p) => p.trajectories).flat()[0];
