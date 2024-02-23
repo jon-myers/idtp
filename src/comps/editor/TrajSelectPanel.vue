@@ -187,7 +187,7 @@
         :disabled='true'
       />
     </div>
-    <div class='selectionRow' v-if='showSlope'>
+    <div class='selectionRow slope' v-if='showSlope'>
       <label>Slope</label>
       <input 
         v-if='editable'
@@ -882,7 +882,11 @@ label.wide {
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: left;
+  justify-content: right;
+}
+
+.selectionRow.slope {
+  margin-right: 20px;
 }
 
 .selectionRow.checks {
