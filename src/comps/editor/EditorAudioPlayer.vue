@@ -2247,6 +2247,9 @@ export default defineComponent({
           this.vocalGainNode!.gain.setValueAtTime(curGain, when);
           this.vocalGainNode!.gain.linearRampToValueAtTime(0, when + 0.01);
         }
+      } else if (this.sarangi) {
+        this.sarangiSynth!.freq!.cancelScheduledValues(when);
+        this.sarangiSynth!.bowGain!.cancelScheduledValues(when);
       }
       this.intSynthGainNode!.gain.cancelScheduledValues(when);
       const rampEnd = when + this.slowRamp;
