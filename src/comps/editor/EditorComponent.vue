@@ -182,6 +182,12 @@
     :closed='contextMenuClosed'
     :choices='contextMenuChoices'
     />
+  <AutomationWindow
+    v-if='autoWindowOpen && autoTrajs.length > 0'
+    :trajectories='autoTrajs'
+    :x='autoWindowX'
+    :y='autoWindowY'
+    />
 </template>
 <script lang='ts'>
 const getClosest = (counts: number[], goal: number) => {
@@ -239,6 +245,7 @@ import TrajSelectPanel from '@/comps/editor/TrajSelectPanel.vue';
 import ContextMenu from'@/comps/ContextMenu.vue';
 import LabelEditor from '@/comps/editor/LabelEditor.vue';
 import instructionsText from '@/assets/texts/editor_instructions.html?raw';
+import AutomationWindow from '@/comps/editor/AutomationWindow.vue';
 import { detect, BrowserInfo } from 'detect-browser';
 
 import { defineComponent } from 'vue';
@@ -486,6 +493,10 @@ type EditorDataType = {
     time_increment: number,
   },
   melographVisible: boolean,
+  autoWindowOpen: boolean,
+  autoWindowX: number,
+  autoWindowY: number,
+  autoTrajs: Trajectory[],
 }
 
 export { findClosestStartTime }
@@ -634,12 +645,18 @@ export default defineComponent({
       melographJSON: undefined,
       melographVisible: false,
       selectedPhraseDivIdx: undefined,
+      autoWindowOpen: false,
+      autoWindowX: 500,
+      autoWindowY: 500,
+      autoTrajs: [],
+      
     }
   },
   components: {
     EditorAudioPlayer,
     TrajSelectPanel,
-    ContextMenu
+    ContextMenu,
+    AutomationWindow,
   },
   created() {
     window.addEventListener('keydown', this.handleKeydown);
@@ -4265,6 +4282,7 @@ export default defineComponent({
       meterControls.insertPulseMode = false;
       d3SelectAll('.insertPulse').remove();
       this.contextMenuClosed = true;
+      this.autoWindowOpen = false;
       this.svg.style('cursor', 'auto');
       d3Select('#selBox').remove();
     },
@@ -6544,6 +6562,19 @@ export default defineComponent({
                 enabled: true
               })
             }
+          }
+          if (this.selectedTrajs.length === 0) {
+            this.contextMenuChoices.push({
+              text: 'Adjust Volume',
+              action: () => {
+                this.autoTrajs = [traj];
+                this.autoWindowOpen = true;
+                this.contextMenuClosed = true;
+                this.autoWindowX = this.contextMenuX;
+                this.autoWindowY = this.contextMenuY;
+              },
+              enabled: true
+            })
           }
         } else {
           let groupInsertSilenceLeft = false;
