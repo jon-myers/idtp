@@ -6563,15 +6563,29 @@ export default defineComponent({
               })
             }
           }
-          if (this.selectedTrajs.length === 0) {
+          const selTrajCond = this.selectedTrajs.length === 1 && 
+            this.selectedTrajs[0] === traj;
+          if (this.selectedTrajs.length === 0 || selTrajCond) {
             this.contextMenuChoices.push({
               text: 'Adjust Volume',
               action: () => {
                 this.autoTrajs = [traj];
                 this.autoWindowOpen = true;
                 this.contextMenuClosed = true;
-                this.autoWindowX = this.contextMenuX;
-                this.autoWindowY = this.contextMenuY;
+                this.autoWindowX = e.x;
+                this.autoWindowY = e.y;
+              },
+              enabled: true
+            })
+          } else if (this.selectedTrajsGroupable()) {
+            this.contextMenuChoices.push({
+              text: 'Adjust Volume',
+              action: () => {
+                this.autoTrajs = this.selectedTrajs;
+                this.autoWindowOpen = true;
+                this.autoWindowX = e.x
+                this.autoWindowY = e.y
+                this.contextMenuClosed = true;
               },
               enabled: true
             })
