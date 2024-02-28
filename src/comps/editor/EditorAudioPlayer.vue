@@ -111,7 +111,7 @@
           :disabled='synthGainDisabled'
         />
       </div>
-      <div class="cbBoxSmall" v-if='!vocal'>
+      <div class="cbBoxSmall" v-if='string'>
         <label>Synthesis Damping</label>
         <input
           type="range"
@@ -122,7 +122,7 @@
           orient='vertical'
         />
       </div>
-      <div class="cbBoxSmall" v-if='!vocal'>
+      <div class="cbBoxSmall" v-if='string'>
         <label>Chikari Gain</label>
         <input
           type="range"
@@ -280,11 +280,6 @@
         @goToSectionEmit='goToSection'
         ref='labelControls'
       />
-      <SarangiSynth 
-        v-if='sarangi && ac'
-        :ac='ac'
-        ref='sarangiSynth'
-        />
   </div>
 </template>
 <script lang='ts'>
@@ -326,7 +321,6 @@ import { drag as d3Drag, select as d3Select } from 'd3';
 import stretcherURL from '@/js/bundledStretcherWorker.js?url';
 import MeterControls from '@/comps/editor/MeterControls.vue';
 import LabelEditor from '@/comps/editor/LabelEditor.vue';
-import SarangiSynth from '@/comps/editor/SarangiSynth.vue';
 import { Meter } from '@/js/meter.ts'
 import { PhraseCatType, RecType, MusicianType } from '@/ts/types.ts';
 
@@ -453,6 +447,7 @@ type EditorAudioPlayerData = {
   tuningSines: OscillatorNode[];
   testSarangi: boolean;
   sarangiSynth?: SarangiSynthType;
+  klattMiddleGain?: GainNode;
 }
 
 interface RubberBandNodeType extends AudioWorkletNode {
@@ -689,6 +684,7 @@ export default defineComponent({
       tuningSines: [],
       sarangi: false, // placeholder
       sarangiSynth: undefined,
+      klattMiddleGain: undefined,
     };
   },
   props: {
@@ -750,13 +746,25 @@ export default defineComponent({
     uniformVowel: {
       type: Boolean,
       required: true
-    }
+    },
+    // vocal: {
+    //   type: Boolean,
+    //   required: true
+    // },
+    // sitar: {
+    //   type: Boolean,
+    //   required: true
+    // },
+    // sarangi: {
+    //   type: Boolean,
+    //   required: true
+    // },
   },
 
   components: {
     MeterControls,
     LabelEditor,
-    SarangiSynth
+    // SarangiSynth
   },
 
   async mounted() {
@@ -1140,7 +1148,13 @@ export default defineComponent({
         kn.parallelBypassDb = params.get('parallelBypassDb');
         kn.nasalFormantDb = params.get('nasalFormantDb');
         kn.extGain = params.get('extGain');
+        const max = 0.125;
+
+        kn.extGain?.setValueAtTime(max, this.now());
+        this.klattMiddleGain = this.ac!.createGain();
+        this.klattMiddleGain.gain.setValueAtTime(0, this.now());
         this.klattNode
+          .connect(this.klattMiddleGain)
           .connect(destination)
       } catch (e) {
         console.error(e);
@@ -1155,6 +1169,7 @@ export default defineComponent({
         this.sarangiSynth.bowGain = this.sarangiSynth.parameters.get('BowGain');
         this.sarangiSynth.gain = this.sarangiSynth.parameters.get('Gain');
         this.sarangiSynth.gain!.setValueAtTime(1.0, this.now());
+        this.sarangiSynth.bowGain!.setValueAtTime(0.0, this.now());
         this.sarangiSynth.connect(destination);
       } catch (e) {
         console.error(e);
@@ -1173,9 +1188,9 @@ export default defineComponent({
         'Veena, Rudra (Bin)',
       ];
       const vocInsts = ['Vocal (M)', 'Vocal (F)'];
-      this.string = stringInsts.includes(instrumentation);
       this.vocal = vocInsts.includes(instrumentation);
       this.sarangi = instrumentation === 'Sarangi';
+      this.string = stringInsts.includes(instrumentation);
       if (this.string) {
         this.ac!.audioWorklet.addModule(AudioWorklet(ksURL))
           .then(() => {
@@ -1653,12 +1668,15 @@ export default defineComponent({
         fromSil = false, 
         toSil = false) {
       const valueDur = 0.02;
-      const valueCt = Math.round((endTime - startTime) / valueDur);
+      const durTot = endTime - startTime;
+      const valueCt = Math.round(durTot / valueDur);
       const freq = this.klattNode!.f0!;
       const verySmall = 0.000000000001;
       const shwahTime = 0.3;
       const envelope = new Float32Array(valueCt);
       const transp = 2 ** (this.transposition / 1200);
+      const max = 0.125;
+      const gainEnvelope = traj.automation!.generateValueCurve(valueDur, durTot, max)
       for (let i = 0; i < valueCt; i++) {
         envelope[i] = transp * traj.compute(i / (valueCt - 1));
       }
@@ -1667,6 +1685,7 @@ export default defineComponent({
         console.log(duration, traj)
       }
       freq.setValueCurveAtTime(envelope, startTime, duration);
+      this.klattNode!.extGain!.setValueCurveAtTime(gainEnvelope, startTime, duration);
       const vowels = ['a', 'ā', 'i', 'ī', 'u', 'ū', 'ē', 'ai','ō', 'au'];
       const vpIdxs = [7, 6, 1, 0, 9, 10, 2, 3, 8, 5];
       let vIdx = traj.vowel ? vowels.indexOf(traj.vowel) : 0;
@@ -1683,14 +1702,18 @@ export default defineComponent({
         audioParam.setValueAtTime(s0, startTime);
         audioParam.linearRampToValueAtTime(s1, startTime + shwahTime);
       });
-      const max = 0.125;
+      // const max = 0.125;
       if (fromSil) {
-        this.klattNode!.extGain!.setValueAtTime(0, startTime);
-        this.klattNode!.extGain!.linearRampToValueAtTime(max, startTime + 0.01);
+        // this.klattNode!.extGain!.setValueAtTime(0, startTime);
+        // this.klattNode!.extGain!.linearRampToValueAtTime(max, startTime + 0.01);
+        this.klattMiddleGain!.gain.setValueAtTime(0, startTime);
+        this.klattMiddleGain!.gain.linearRampToValueAtTime(1, startTime + 0.01);
       }
       if (toSil) {
-        this.klattNode!.extGain!.setValueAtTime(max, endTime - 0.01);
-        this.klattNode!.extGain!.linearRampToValueAtTime(0, endTime);
+        // this.klattNode!.extGain!.setValueAtTime(max, endTime - 0.01);
+        // this.klattNode!.extGain!.linearRampToValueAtTime(0, endTime);
+        this.klattMiddleGain!.gain.setValueAtTime(1, endTime - 0.01);
+        this.klattMiddleGain!.gain.linearRampToValueAtTime(0, endTime);
       }
       this.klattNode!.flutterLevel!.setValueAtTime(0.15, startTime);
     },
@@ -1702,17 +1725,20 @@ export default defineComponent({
         fromSil = false, 
         toSil = false) {
       const valueDur = 0.02;
-      const valueCt = Math.round((endTime - startTime) / valueDur);
+      const durTot = endTime - startTime;
+      const valueCt = Math.round(durTot / valueDur);
       const freq = this.sarangiSynth!.freq!;
       const bowGain = this.sarangiSynth!.bowGain!;
       const verySmall = 0.000000000001;
       const envelope = new Float32Array(valueCt);
+      const gainEnv = traj.automation!.generateValueCurve(valueDur, durTot);
       const transp = 2 ** (this.transposition / 1200);
       for (let i = 0; i < valueCt; i++) {
         envelope[i] = transp * traj.compute(i / (valueCt - 1));
       }
       const duration = endTime - startTime - verySmall;
       freq.setValueCurveAtTime(envelope, startTime, duration);
+      this.sarangiSynth!.gain!.setValueCurveAtTime(gainEnv, startTime, duration);
       if (fromSil) {
         bowGain.setValueAtTime(0, startTime);
         bowGain.linearRampToValueAtTime(0.5, startTime + 0.01);
@@ -2250,6 +2276,13 @@ export default defineComponent({
       } else if (this.sarangi) {
         this.sarangiSynth!.freq!.cancelScheduledValues(when);
         this.sarangiSynth!.bowGain!.cancelScheduledValues(when);
+        this.sarangiSynth!.gain!.cancelScheduledValues(when);
+        const curBowGain = this.sarangiSynth!.bowGain!.value;
+        this.sarangiSynth!.bowGain!.setValueAtTime(curBowGain, when);
+        this.sarangiSynth!.bowGain!.linearRampToValueAtTime(0, when + 0.01);
+        const curGain = this.sarangiSynth!.gain!.value;
+        this.sarangiSynth!.gain!.setValueAtTime(curGain, when);
+        this.sarangiSynth!.gain!.linearRampToValueAtTime(0, when + 0.01);
       }
       this.intSynthGainNode!.gain.cancelScheduledValues(when);
       const rampEnd = when + this.slowRamp;

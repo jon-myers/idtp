@@ -701,13 +701,13 @@ class Automation {
     }
   }
 
-  generateValueCurve(valueDur: number, duration: number) {
+  generateValueCurve(valueDur: number, duration: number, max: number = 1) {
     const valueCt = Math.round(duration / valueDur);
     let envelope = new Float32Array(valueCt+1);
     // sort values by normTime
     this.values.sort((a, b) => a.normTime - b.normTime);
     const normTimes = envelope.map((_, i) => i / valueCt);
-    envelope = envelope.map((_, i) => this.valueAtX(normTimes[i]))
+    envelope = envelope.map((_, i) => max * this.valueAtX(normTimes[i]))
     return envelope;
   }
 
@@ -1010,7 +1010,7 @@ class Trajectory {
     this.endConsonantEngTrans = endConsonantEngTrans;
     this.groupId = groupId;
     if (automation !== undefined) {
-      this.automation = automation;
+      this.automation = new Automation(automation);
     } else if (this.id === 12) {
       this.automation = undefined
     } else {
@@ -1623,7 +1623,8 @@ class Trajectory {
       endConsonantHindi: this.endConsonantHindi,
       endConsonantIpa: this.endConsonantIpa,
       endConsonantEngTrans: this.endConsonantEngTrans,
-      groupId: this.groupId
+      groupId: this.groupId,
+      automation: this.automation,
     }
   }
 
