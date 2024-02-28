@@ -22,9 +22,13 @@ class Pitch:
             options = humps.decamelize(options) 
         self.swara = options.get('swara', 'sa')
         sargam = ['sa', 're', 'ga', 'ma', 'pa', 'dha', 'ni']
+        sargamletters = ['s', 'r', 'g', 'm', 'p', 'd', 'n']
         if type(self.swara) == str:
             self.swara = self.swara.lower()
-            self.swara = sargam.index(self.swara)
+            if len(self.swara) == 1:
+                self.swara = sargamletters.index(self.swara)
+            else:
+                self.swara = sargam.index(self.swara)
         self.oct = options.get('oct', 0)
         self.raised = options.get('raised', True)
         self.fundamental = options.get('fundamental', 261.63)
@@ -43,7 +47,7 @@ class Pitch:
     def frequency(self):
         ratio = 0
         if type(self.ratios[self.swara]) == list:
-            ratio = self.ratios[self.swara][self.oct]
+            ratio = self.ratios[self.swara][self.raised]
         else:
             ratio = self.ratios[self.swara]
         return self.fundamental * ratio * (2 ** (self.oct + self.log_offset))
@@ -67,12 +71,15 @@ class Pitch:
 
     @property
     def sargam_letter(self):
-        sargam = ['sa', 're', 'ga', 'ma', 'pa', 'dha', 'ni'] #redefined sargam because doesnt work otherwise
+        sargam = ['sa', 're', 'ga', 'ma', 'pa', 'dha', 'ni']
         s = sargam[int(self.swara)][0]
-        if (self.raised):
-            s = s.upper()
+        if self.swara == 0 or self.swara == 4:
+            # raised override
+            self.raised = True
+        if self.raised:
+            s = s.upper()  # Ensure the first letter is capitalized
         return s
-    
+
     @property
     def octaved_sargam_letter(self):
         s = self.sargam_letter
@@ -123,3 +130,22 @@ class Pitch:
             'fundamental': self.fundamental,
             'logOffset': self.log_offset,
         } 
+
+    #method
+    def set_oct(self, newOct):
+        self.oct = newOct
+        ratio = None
+        
+        if self.swara == 0 or self.swara == 4:
+            ratio = self.ratios[self.swara]
+            if not isinstance(ratio, (int, float)):
+                raise SyntaxError(f"Invalid ratio type, must be int or float: {ratio}")
+        else:
+            if not isinstance(self.swara, int):
+                raise SyntaxError(f"Invalid swara type: {self.swara}")
+            
+            nestedRatios = self.ratios[self.swara]
+            if not isinstance(nestedRatios, list):
+                raise SyntaxError(f"Invalid nestedRatios type, must be array: {nestedRatios}")
+            
+            ratio = nestedRatios[int(self.raised)]
