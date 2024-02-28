@@ -1738,6 +1738,7 @@ export default defineComponent({
       }
       const duration = endTime - startTime - verySmall;
       freq.setValueCurveAtTime(envelope, startTime, duration);
+      console.log(startTime, startTime + duration)
       this.sarangiSynth!.gain!.setValueCurveAtTime(gainEnv, startTime, duration);
       if (fromSil) {
         bowGain.setValueAtTime(0, startTime);
@@ -2281,6 +2282,7 @@ export default defineComponent({
         this.sarangiSynth!.bowGain!.setValueAtTime(curBowGain, when);
         this.sarangiSynth!.bowGain!.linearRampToValueAtTime(0, when + 0.01);
         const curGain = this.sarangiSynth!.gain!.value;
+        console.log(when)
         this.sarangiSynth!.gain!.setValueAtTime(curGain, when);
         this.sarangiSynth!.gain!.linearRampToValueAtTime(0, when + 0.01);
       }
