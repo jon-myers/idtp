@@ -54,8 +54,8 @@ test('Automation', () => {
 test('partition', () => {
   const orig = new Automation();
   orig.addValue(1, 0);
-
-  const children = orig.partition([0.4, 0.6]);
+  const durArray = [0.4, 0.6];
+  const children = orig.partition(durArray);
   expect(children.length).toBe(2);
   const c1 = children[0];
   const c2 = children[1];
@@ -71,5 +71,37 @@ test('partition', () => {
   expect(c2.values[1].value).toBe(0);
   expect(c1.valueAtX(0.5)).toBe(0.8);
   expect(c2.valueAtX(0.5)).toBe(0.3);
+
+  // compress
+  const compressed = Automation.compress(children, durArray)
+  expect(compressed.values.length).toBe(2);
+  expect(compressed.values[0].normTime).toBe(0);
+  expect(compressed.values[0].value).toBe(1);
+  expect(compressed.values[1].normTime).toBe(1);
+  expect(compressed.values[1].value).toBe(0);
+
+  // partition and compress with harder math
+  const orig2 = new Automation();
+  const times = [0.13, 0.38, 0.44, 0.6, 0.77777, 0.912345];
+  const vals = times.map(t => Math.random());
+  times.forEach((t, i) => orig2.addValue(t, vals[i]));
+  const durArray2 = [0.25, 0.3, 0.45];
+  const children2 = orig2.partition(durArray2);
+  expect(children2.length).toBe(3);
+  const compressed2 = Automation.compress(children2, durArray2);
+  expect(compressed2.values.length).toBe(8);
+  const returnedTimes = compressed2.values.map(v => v.normTime);
+  const suplementedTimes = ([0]).concat(times).concat([1]);
+  for (let i = 0; i < returnedTimes.length; i++) {
+    expect(returnedTimes[i]).toBeCloseTo(suplementedTimes[i]);
+  }
+
+  // simple compression of two blank automations
+  const a1 = new Automation();
+  const a2 = new Automation();
+  const durArray3 = [0.4, 0.6];
+  const newAuto = Automation.compress([a1, a2], durArray3);
+  expect(newAuto.values.length).toBe(2);
+
 
 })

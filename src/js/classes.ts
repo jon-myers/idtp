@@ -11,6 +11,7 @@ import {
   StrokeNicknameType,
   ArtNameType,
 } from '@/ts/types.ts';
+import { closeTo } from '@/ts/utils.ts';
 
 
 const initSecCategorization = (): SecCatType => {
@@ -649,6 +650,7 @@ class Automation {
     this.values = values;
     if (values.length == 0) {
       this.values.push({ normTime: 0, value: 1 });
+      this.values.push({ normTime: 1, value: 1 });
     }
   }
 
@@ -661,8 +663,25 @@ class Automation {
       throw new SyntaxError(`invalid value, must be between 0 and 1: ` + 
         `${value}`)
     }
-    this.values.push({ normTime, value });
-    this.values.sort((a, b) => a.normTime - b.normTime);
+    // if the normTime is already in the values, then replace the value
+    const idx = this.values.findIndex(v => v.normTime === normTime);
+    if (idx !== -1) {
+      this.values[idx].value = value;
+    } else {
+      this.values.push({ normTime, value });
+      this.values.sort((a, b) => a.normTime - b.normTime);
+    }
+  }
+
+  removeValue(idx: number) {
+    if (idx < 0 || idx > this.values.length - 1) {
+      throw new SyntaxError(`invalid idx, must be between 0 and ` + 
+        `${this.values.length - 1}: ${idx}`)
+    }
+    if (idx === 0 || idx === this.values.length - 1) {
+      throw new SyntaxError(`cannot remove first or last value`)
+    }
+    this.values.splice(idx, 1);
   }
 
   valueAtX(x: number) {
@@ -728,6 +747,46 @@ class Automation {
     })
     return newAutomations;
   }
+
+  static compress(automations: Automation[], durArray: number[]) {
+    // take a sequence of automations, and compress them into a single one
+    // that represents the entire sequence.
+    let allValues: { normTime: number, value: number }[] = [];
+    let durAccumulator = 0;
+    automations.forEach((a, i) => {
+      const dur = durArray[i];
+      const relValues = a.values.map(v => {
+        return { normTime: v.normTime * dur + durAccumulator, value: v.value }
+      })
+      allValues.push(...relValues);
+      durAccumulator += dur;
+    })
+    // get rid of any duplicate normTimes
+    allValues = allValues.filter((v, i, a) => {
+      return a.findIndex(av => av.normTime === v.normTime) === i
+    });
+    // go through every set of three consective values, and if the slope from 
+    // the first to middle is the same as from the middle to last one, get rid 
+    // of the middle one. Each time you do this, you have to start over, because
+    // the array has changed.
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (let i = 0; i < allValues.length - 2; i++) {
+        const a = allValues[i];
+        const b = allValues[i + 1];
+        const c = allValues[i + 2];
+        const slope1 = (b.value - a.value) / (b.normTime - a.normTime);
+        const slope2 = (c.value - b.value) / (c.normTime - b.normTime);
+        if (closeTo(slope1, slope2)) {
+          allValues.splice(i + 1, 1);
+          changed = true;
+          break;
+        }
+      }
+    }
+    return new Automation({ values: allValues })
+  }
 }
 
 class Trajectory {
@@ -771,6 +830,7 @@ class Trajectory {
   startTime: number | undefined;
   phraseIdx: number | undefined;
   names: string[];
+  automation: Automation | undefined;
 
   get freqs() {
     return this.pitches.map(p => p.frequency)
@@ -805,6 +865,7 @@ class Trajectory {
     endConsonantIpa = undefined,
     endConsonantEngTrans = undefined,
     groupId = undefined,
+    automation = undefined,
   }: {
     id?: number,
     pitches?: Pitch[],
@@ -830,6 +891,7 @@ class Trajectory {
     endConsonantIpa?: string,
     endConsonantEngTrans?: string,
     groupId?: string,
+    automation?: Automation
   } = {}) {
     this.names = [
       'Fixed',
@@ -947,6 +1009,13 @@ class Trajectory {
     this.endConsonantIpa = endConsonantIpa;
     this.endConsonantEngTrans = endConsonantEngTrans;
     this.groupId = groupId;
+    if (automation !== undefined) {
+      this.automation = automation;
+    } else if (this.id === 12) {
+      this.automation = undefined
+    } else {
+      this.automation = new Automation();
+    }
     
 
     if (this.startConsonant !== undefined) {

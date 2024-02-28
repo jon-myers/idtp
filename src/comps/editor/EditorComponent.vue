@@ -183,10 +183,12 @@
     :choices='contextMenuChoices'
     />
   <AutomationWindow
-    v-if='autoWindowOpen && autoTrajs.length > 0'
+    v-if='autoWindowOpen && autoTrajs.length > 0 && piece && editable'
     :trajectories='autoTrajs'
     :x='autoWindowX'
     :y='autoWindowY'
+    :width='autoWindowWidth'
+    :piece='piece'
     />
 </template>
 <script lang='ts'>
@@ -497,6 +499,9 @@ type EditorDataType = {
   autoWindowX: number,
   autoWindowY: number,
   autoTrajs: Trajectory[],
+  autoWindowWidth: number,
+  sarangi: boolean,
+  sitar: boolean
 }
 
 export { findClosestStartTime }
@@ -649,6 +654,9 @@ export default defineComponent({
       autoWindowX: 500,
       autoWindowY: 500,
       autoTrajs: [],
+      autoWindowWidth: 300,
+      sarangi: false,
+      sitar: false
       
     }
   },
@@ -6565,29 +6573,59 @@ export default defineComponent({
           }
           const selTrajCond = this.selectedTrajs.length === 1 && 
             this.selectedTrajs[0] === traj;
-          if (this.selectedTrajs.length === 0 || selTrajCond) {
+          if (
+            (this.selectedTrajs.length === 0 || selTrajCond) &&
+            (this.sarangi || this.vocal)
+            ) {
             this.contextMenuChoices.push({
               text: 'Adjust Volume',
               action: () => {
+                const phrase = this.piece.phrases[pIdx];
+                const startTime = phrase.startTime! + traj.startTime!;
+                const xStart = this.codifiedXR!(startTime);
+                const xEnd = this.codifiedXR!(startTime + traj.durTot);
+                this.autoWindowWidth = xEnd - xStart + 40;
+                const minLogFreq = Math.min(...traj.logFreqs);
+                const yPxl = this.codifiedYR!(minLogFreq) + this.navHeight;
+
+
+
                 this.autoTrajs = [traj];
                 this.autoWindowOpen = true;
                 this.contextMenuClosed = true;
-                this.autoWindowX = e.x;
-                this.autoWindowY = e.y;
+                this.autoWindowX = xStart - 20;
+                this.autoWindowY = yPxl + 20;
               },
-              enabled: true
+              enabled: this.editable
             })
-          } else if (this.selectedTrajsGroupable()) {
+          } else if (this.selectedTrajsGroupable() && (this.sarangi || this.vocal)) {
             this.contextMenuChoices.push({
               text: 'Adjust Volume',
               action: () => {
+                const startTraj = this.selectedTrajs[0];
+                const startPIdx = startTraj.phraseIdx!;
+                const startPhrase = this.piece.phrases[startPIdx];
+                const startTime = phrase.startTime! + startTraj.startTime!;
+                const endTraj = this.selectedTrajs[this.selectedTrajs.length - 1];
+                const endPIdx = endTraj.phraseIdx!;
+                const endPhrase = this.piece.phrases[endPIdx];
+                const xStart = this.codifiedXR!(startTime);
+                const endTime = endPhrase.startTime! + endTraj.startTime! + endTraj.durTot;
+                const xEnd = this.codifiedXR!(endTime);
+                this.autoWindowWidth = xEnd - xStart + 40;
+                let minLogFreq = Infinity;
+                this.selectedTrajs.forEach(traj => {
+                  const min = Math.min(...traj.logFreqs);
+                  if (min < minLogFreq) minLogFreq = min;
+                });
+                const yPxl = this.codifiedYR!(minLogFreq) + this.navHeight;
                 this.autoTrajs = this.selectedTrajs;
                 this.autoWindowOpen = true;
-                this.autoWindowX = e.x
-                this.autoWindowY = e.y
+                this.autoWindowX = xStart - 20;
+                this.autoWindowY = yPxl + 20;
                 this.contextMenuClosed = true;
               },
-              enabled: true
+              enabled: this.editable
             })
           }
         } else {
@@ -6677,6 +6715,36 @@ export default defineComponent({
                 this.contextMenuClosed = true;
               },
               enabled: true
+            })
+          }
+          if (this.selectedTrajsGroupable() && (this.sarangi || this.vocal)) {
+            this.contextMenuChoices.push({
+              text: 'Adjust Volume',
+              action: () => {
+                const startTraj = this.selectedTrajs[0];
+                const startPIdx = startTraj.phraseIdx!;
+                const startPhrase = this.piece.phrases[startPIdx];
+                const startTime = phrase.startTime! + startTraj.startTime!;
+                const endTraj = this.selectedTrajs[this.selectedTrajs.length - 1];
+                const endPIdx = endTraj.phraseIdx!;
+                const endPhrase = this.piece.phrases[endPIdx];
+                const xStart = this.codifiedXR!(startTime);
+                const endTime = endPhrase.startTime! + endTraj.startTime! + endTraj.durTot;
+                const xEnd = this.codifiedXR!(endTime);
+                this.autoWindowWidth = xEnd - xStart + 40;
+                let minLogFreq = Infinity;
+                this.selectedTrajs.forEach(traj => {
+                  const min = Math.min(...traj.logFreqs);
+                  if (min < minLogFreq) minLogFreq = min;
+                });
+                const yPxl = this.codifiedYR!(minLogFreq) + this.navHeight;
+                this.autoTrajs = this.selectedTrajs;
+                this.autoWindowOpen = true;
+                this.autoWindowX = xStart - 20;
+                this.autoWindowY = yPxl + 20;
+                this.contextMenuClosed = true;
+              },
+              enabled: this.editable
             })
           }
         };
@@ -8071,6 +8139,11 @@ export default defineComponent({
       } else {
         return false
       }
+    },
+
+    selectedTrajsGrouped() {
+      const groupIDs = [...new Set(this.selectedTrajs.map(t => t.groupId))];
+      return groupIDs.length === 1 && groupIDs[0] !== undefined;
     },
 
     handleClickTraj(e: MouseEvent) {
