@@ -6,11 +6,11 @@ import math
 # version is in camelCase
 
 class PitchOptionsType(TypedDict, total=False):
-    swara: Union[str, int]
+    swara: str | int
     oct: int
     raised: bool
     fundamental: float
-    ratios: List[Union[float, List[float]]]
+    ratios: list[float | list[float]]
     log_offset: float
 
 class Pitch:
