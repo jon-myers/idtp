@@ -30,6 +30,10 @@ type CollectionType = {
   color?: string;
 }
 
+type AutoValue = {
+  normTime: number,
+  value: number
+}
 
 type UserType = {
   email: string;
@@ -697,4 +701,5 @@ export type {
   AffiliationType,
   ArtNameType,
   StrokeNicknameType,
+  AutoValue,
 };

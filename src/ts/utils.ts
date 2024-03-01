@@ -28,5 +28,8 @@ const displayTime = (dur: number) => {
   }
 }
 
+const closeTo = (a: number, b: number) => Math.abs(a - b) < 0.000001;
 
-export { getContrastingTextColor, displayTime }
+
+
+export { getContrastingTextColor, displayTime, closeTo }
