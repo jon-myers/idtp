@@ -1453,7 +1453,7 @@ export default defineComponent({
           const et = now + allEnds[i] - curPlayTime;
           const lastTraj = remainingTrajs[i_-1];
           const fromSil = i === 0 || !lastTraj || lastTraj.id === 12;
-          const last = i === remainingTrajs.length - 1;
+          const last = i_ === remainingTrajs.length - 1;
           const toSil = last || remainingTrajs[i_+1].id === 12;
           if (this.string) {
             this.playStringTraj(traj, st, et, 64, i === 0);
@@ -1738,7 +1738,6 @@ export default defineComponent({
       }
       const duration = endTime - startTime - verySmall;
       freq.setValueCurveAtTime(envelope, startTime, duration);
-      console.log(startTime, startTime + duration)
       this.sarangiSynth!.gain!.setValueCurveAtTime(gainEnv, startTime, duration);
       if (fromSil) {
         bowGain.setValueAtTime(0, startTime);
@@ -2282,7 +2281,6 @@ export default defineComponent({
         this.sarangiSynth!.bowGain!.setValueAtTime(curBowGain, when);
         this.sarangiSynth!.bowGain!.linearRampToValueAtTime(0, when + 0.01);
         const curGain = this.sarangiSynth!.gain!.value;
-        console.log(when)
         this.sarangiSynth!.gain!.setValueAtTime(curGain, when);
         this.sarangiSynth!.gain!.linearRampToValueAtTime(0, when + 0.01);
       }
