@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { Raga, Pitch } from '../classes';
 
-const yaman_rule_set = {
+const yamanRuleSet = {
   sa: true,
   re: {
     lowered: false,
@@ -26,7 +26,7 @@ const yaman_rule_set = {
   },
 }
 
-const base_tuning = {
+const baseTuning = {
   sa: 2 ** (0 / 12),
   re: {
     lowered: 2 ** (1 / 12),
@@ -51,14 +51,14 @@ const base_tuning = {
   },
 }
 
-const base_ratios = [
-  base_tuning.sa,
-  base_tuning.re.raised,
-  base_tuning.ga.raised,
-  base_tuning.ma.raised,
-  base_tuning.pa,
-  base_tuning.dha.raised,
-  base_tuning.ni.raised,
+const baseRatios = [
+  baseTuning.sa,
+  baseTuning.re.raised,
+  baseTuning.ga.raised,
+  baseTuning.ma.raised,
+  baseTuning.pa,
+  baseTuning.dha.raised,
+  baseTuning.ni.raised,
 ]
 
 test('defaultRaga', () => {
@@ -66,9 +66,9 @@ test('defaultRaga', () => {
   expect(r).toBeInstanceOf(Raga);
   expect(r.name).toEqual('Yaman')
   expect(r.fundamental).toEqual(261.63);
-  expect(r.ruleSet).toEqual(yaman_rule_set);
-  expect(r.tuning).toEqual(base_tuning);
-  expect(r.ratios).toEqual(base_ratios);
+  expect(r.ruleSet).toEqual(yamanRuleSet);
+  expect(r.tuning).toEqual(baseTuning);
+  expect(r.ratios).toEqual(baseRatios);
   expect(r.sargamLetters).toEqual(['S', 'R', 'G', 'M', 'P', 'D', 'N'])
   expect(r.ruleSetNumPitches).toEqual(7);
   const pitchNums = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
@@ -91,23 +91,20 @@ test('defaultRaga', () => {
   })
   const singleOctPNs = [0, 2, 4, 6, 7, 9, 11, 12];
   expect(r.getPitchNumbers(0, 12)).toEqual(singleOctPNs);
-  const threeOctPNs = [
-    -12, -10, -8, -6, -5, -3, -1, 
-    0, 2, 4, 6, 7, 9, 11, 
-    12, 14, 16, 18, 19, 21, 23, 24
-  ];
-  expect(r.getPitchNumbers(-12, 24)).toEqual(threeOctPNs);
+  
   const pns = [
     -12, -10, -8, -6, -5, -3, -1,
     0, 2, 4, 6, 7, 9, 11,
     12, 14, 16, 18, 19, 21, 23, 24
   ]
+  expect(r.getPitchNumbers(-12, 24)).toEqual(pns);
+  
   const sns = [
     -7, -6, -5, -4, -3, -2, -1,
     0, 1, 2, 3, 4, 5, 6,
     7, 8, 9, 10, 11, 12, 13, 14
   ]
-  const throw_pns = [
+  const throwPns = [
     -11, -9, -7, -4, -2, 
     1, 3, 5, 8, 10,
     13, 15, 17, 20, 22
@@ -115,7 +112,7 @@ test('defaultRaga', () => {
   pns.forEach((pn, idx) => {
     expect(r.pitchNumberToScaleNumber(pn)).toEqual(sns[idx]);
   })
-  throw_pns.forEach(pn => {
+  throwPns.forEach(pn => {
     expect(() => r.pitchNumberToScaleNumber(pn)).toThrow()
   })
   sns.forEach((sn, idx) => {
@@ -176,10 +173,10 @@ test('defaultRaga', () => {
   });
   const sNames = ['Sa', 'Re', 'Ga', 'Ma', 'Pa', 'Dha', 'Ni'];
   expect(r.sargamNames).toEqual(sNames);
-  const json = { 
+  const json_obj = { 
     name: 'Yaman',
     fundamental: 261.63,
-    ratios: base_ratios,
+    ratios: baseRatios,
   };
-  expect(r.toJSON()).toEqual(json);
+  expect(r.toJSON()).toEqual(json_obj);
 })
