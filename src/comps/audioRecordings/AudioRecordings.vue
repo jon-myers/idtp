@@ -530,7 +530,7 @@ export default defineComponent({
               query.recID = recording._id;
             }
             this.$router.push({
-              name: 'Files',
+              name: 'Transcriptions',
               query
             })
             this.contextMenuClosed = true;

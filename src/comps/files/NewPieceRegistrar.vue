@@ -395,7 +395,6 @@ export default defineComponent({
 
   computed: {
     readyToSubmit() {
-      console.log('readyToSubmit getting called')
       if (this.errors.length === 0) {
         return true
       } else {
@@ -459,7 +458,6 @@ export default defineComponent({
   
   watch: {
     aeIdx() {
-      console.log('aeIdx changed')
       this.recording = undefined;
       this.updateErrors();
     },
