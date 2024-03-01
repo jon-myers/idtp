@@ -439,7 +439,6 @@ export default defineComponent({
         this.raga = Object.keys(recs[this.recording].raags)[0];
         this.instrumentation = this.getInstrumentation();
       } else if (this.$route.query.recID) {
-        console.log('recID')
         const id = this.$route.query.recID as string;
         this.noAE = true;
         this.noRec = false;

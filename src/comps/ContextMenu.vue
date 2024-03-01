@@ -97,6 +97,7 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   user-select: none;
+  z-index: 2;
 }
 
 .dropDown.closed {
