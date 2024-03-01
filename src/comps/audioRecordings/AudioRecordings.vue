@@ -685,7 +685,8 @@ export default defineComponent({
           if (initW + deltaX < this.mincolWidths[fIdx]!) {
             return;
             
-          } else if (nextCol && (initW - deltaX < nextMinW)) {
+          } else if (nextCol && (nextInitW - deltaX < nextMinW)) {
+
             return
           } else {
             this.colWidths[fIdx] = initW + deltaX;
