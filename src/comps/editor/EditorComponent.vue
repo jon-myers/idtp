@@ -6582,14 +6582,11 @@ export default defineComponent({
               action: () => {
                 const phrase = this.piece.phrases[pIdx];
                 const startTime = phrase.startTime! + traj.startTime!;
-                const xStart = this.codifiedXR!(startTime);
-                const xEnd = this.codifiedXR!(startTime + traj.durTot);
+                const xStart = this.xr()(startTime);
+                const xEnd = this.xr()(startTime + traj.durTot);
                 this.autoWindowWidth = xEnd - xStart + 40;
                 const minLogFreq = Math.min(...traj.logFreqs);
-                const yPxl = this.codifiedYR!(minLogFreq) + this.navHeight;
-
-
-
+                const yPxl = this.yr()(minLogFreq) + this.navHeight;
                 this.autoTrajs = [traj];
                 this.autoWindowOpen = true;
                 this.contextMenuClosed = true;
@@ -6609,16 +6606,16 @@ export default defineComponent({
                 const endTraj = this.selectedTrajs[this.selectedTrajs.length - 1];
                 const endPIdx = endTraj.phraseIdx!;
                 const endPhrase = this.piece.phrases[endPIdx];
-                const xStart = this.codifiedXR!(startTime);
+                const xStart = this.xr()(startTime);
                 const endTime = endPhrase.startTime! + endTraj.startTime! + endTraj.durTot;
-                const xEnd = this.codifiedXR!(endTime);
+                const xEnd = this.xr()(endTime);
                 this.autoWindowWidth = xEnd - xStart + 40;
                 let minLogFreq = Infinity;
                 this.selectedTrajs.forEach(traj => {
                   const min = Math.min(...traj.logFreqs);
                   if (min < minLogFreq) minLogFreq = min;
                 });
-                const yPxl = this.codifiedYR!(minLogFreq) + this.navHeight;
+                const yPxl = this.yr()(minLogFreq) + this.navHeight;
                 this.autoTrajs = this.selectedTrajs;
                 this.autoWindowOpen = true;
                 this.autoWindowX = xStart - 20;
@@ -6728,16 +6725,16 @@ export default defineComponent({
                 const endTraj = this.selectedTrajs[this.selectedTrajs.length - 1];
                 const endPIdx = endTraj.phraseIdx!;
                 const endPhrase = this.piece.phrases[endPIdx];
-                const xStart = this.codifiedXR!(startTime);
+                const xStart = this.xr()(startTime);
                 const endTime = endPhrase.startTime! + endTraj.startTime! + endTraj.durTot;
-                const xEnd = this.codifiedXR!(endTime);
+                const xEnd = this.xr()(endTime);
                 this.autoWindowWidth = xEnd - xStart + 40;
                 let minLogFreq = Infinity;
                 this.selectedTrajs.forEach(traj => {
                   const min = Math.min(...traj.logFreqs);
                   if (min < minLogFreq) minLogFreq = min;
                 });
-                const yPxl = this.codifiedYR!(minLogFreq) + this.navHeight;
+                const yPxl = this.yr()(minLogFreq) + this.navHeight;
                 this.autoTrajs = this.selectedTrajs;
                 this.autoWindowOpen = true;
                 this.autoWindowX = xStart - 20;
