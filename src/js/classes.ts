@@ -2677,8 +2677,6 @@ class Raga {
     } else {
       this.ratios = ratios
     }
-    // this.ratios = this.setRatios(this.ruleSet)
-    
   }
 
   get sargamLetters() {
