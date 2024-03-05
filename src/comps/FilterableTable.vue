@@ -193,8 +193,52 @@ export default defineComponent({
       }
     },
 
-    toggleSort(idx: number) {
+    toggleSort(idx: number, ensureCurrentState = false) {
+      const field = this.labels[idx];
+      if (field.sortFunction === undefined) {
+        return;
+      }
+      if (this.selectedSortIdx === idx) {
+        if (
+          (this.sortStates[idx] === SortState.down && !ensureCurrentState) ||
+          (this.sortStates[idx] === SortState.up && ensureCurrentState)
+        ) {
+          this.sortStates[idx] = SortState.up;
+          this.sortItems({
+            sortFunc: field.sortFunction,
+            fromTop: false
+          })
+        } else {
+          this.sortStates[idx] = SortState.down;
+          this.sortItems({
+            sortFunc: field.sortFunction,
+            fromTop: true
+          })
+        }
+      } else {
+        this.sortItems({
+          sortFunc: field.sortFunction,
+          fromTop: this.sortStates[idx] === SortState.down
+        })
+      }
+      this.displayableData = this.items.map((item, idx) => {
+        return this.labels.map(label => label.getDisplay(item));
+      })
+      
+      this.selectedSortIdx = idx;
+    },
 
+    sortItems({ 
+      sortFunc = undefined, 
+      fromTop = true 
+    }: {
+      sortFunc?: (a: any, b: any) => number,
+      fromTop?: boolean
+    } = {}) {
+      this.items.sort(sortFunc);
+      if (!fromTop) {
+        this.items.reverse();
+      }
     },
 
     handleRightClick(e: MouseEvent) {
