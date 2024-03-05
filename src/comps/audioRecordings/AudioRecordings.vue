@@ -1,6 +1,16 @@
 <template>
+  <FilterableTable
+    v-if='allRecordings.length > 0 && userID !== undefined'
+    :labels='ftLabels'
+    :items='allRecordings'
+    :userID='userID'
+    :canEdit='(permissiontoEdit as UserCheckType)'
+    :canView='(canView as UserCheckType)'
+    :heightOffset='100'
+  />
   <div class='main' @click='handleClick'>
     <div 
+      v-if='false'
       class='labelRow'
       >
       <div 
@@ -41,15 +51,16 @@
         </div>
       </div>
     </div>
-    <div 
+    <div
+      v-if='false'
       class='fileContainer'
       @contextmenu='handleRightClick'
       ref='fileContainer'
       >
       <div 
-        :class='`recordingRow ${[canView(recording) ? "" : "disabled"]}`'
+        :class='`recordingRow ${canView(recording, userID!) ? "" : "disabled"}`'
         v-for='(recording, rIdx) in allRecordings'
-        @dblclick='canView(recording) ? 
+        @dblclick='canView(recording, userID!) ? 
           sendAudioSource($event, recording) : 
           null'
         :id='`recRow${rIdx}`'
@@ -64,7 +75,7 @@
               colWidths[fIdx] + "px",
             "min-width": colWidths[fIdx] + "px",
             "flex-grow": fIdx === mdFields.length - 2 ? 1 : 0 
-            }'
+          }'
           >
           <span class='field'>{{ field.func(recording) }}</span>
           <div 
@@ -149,9 +160,15 @@ import { displayTime } from '@/ts/utils.ts';
 import { 
   CollectionType, 
   ContextMenuOptionType,
-  RecType
+  RecType,
+  FilterableTableType,
+  SortFuncType,
+  GetDisplayType,
+  UserCheckType,
 } from '@/ts/types.ts';
+import { SortState } from '@/ts/enums.ts';
 import PermissionsModal from '@/comps/PermissionsModal.vue';
+import FilterableTable from '@/comps/FilterableTable.vue';
 
 type AudioRecordingsDataType = {
   audioSource: string | undefined,
@@ -195,6 +212,7 @@ type AudioRecordingsDataType = {
   editingRecId?: string,
   permissionsModalClosed: boolean,
   artifactID: string | undefined,
+  ftLabels: FilterableTableType[],
   
 
 }
@@ -296,6 +314,63 @@ export default defineComponent({
       recModalFrame: 'uploadRec',
       permissionsModalClosed: true,
       artifactID: undefined,
+      ftLabels: [
+      {
+        label: 'Soloist',
+        minWidth: 90,
+        prioritization: 0,
+        sortFunction: this.soloistSorter as SortFuncType,
+        growable: true,
+        initSortState: SortState.down,
+        getDisplay: this.getSoloistDisplay as GetDisplayType
+      },
+      {
+        label: 'Raag',
+        minWidth: 80,
+        prioritization: 1,
+        sortFunction: this.raagSorter as SortFuncType,
+        growable: true,
+        initSortState: SortState.down,
+        getDisplay: this.getRaagDisplay as GetDisplayType
+      },
+      {
+        label: 'Performance Section',
+        minWidth: 190,
+        prioritization: 2,
+        sortFunction: this.pSecSorter as SortFuncType,
+        growable: true,
+        initSortState: SortState.down,
+        getDisplay: this.getPSecDisplay as GetDisplayType
+      },
+      {
+        label: 'Duration',
+        minWidth: 100,
+        prioritization: 3,
+        sortFunction: this.durSorter as SortFuncType,
+        growable: false,
+        initSortState: SortState.down,
+        getDisplay: this.getDurDisplay as GetDisplayType
+      },
+      {
+        label: 'Audio Event',
+        minWidth: 130,
+        prioritization: 4,
+        sortFunction: this.eventSorter as SortFuncType,
+        growable: true,
+        initSortState: SortState.down,
+        getDisplay: this.getEventDisplay as GetDisplayType
+      },
+      {
+        label: 'Track #',
+        minWidth: 80,
+        prioritization: 5,
+        sortFunction: undefined,
+        growable: false,
+        initSortState: SortState.down,
+        getDisplay: this.getTrackNumDisplay as GetDisplayType
+        
+      }
+    ],
     }
   },
 
@@ -305,7 +380,8 @@ export default defineComponent({
     UploadRecording, 
     AddToCollection,
     RemoveFromCollection,
-    PermissionsModal
+    PermissionsModal,
+    FilterableTable
   },
 
   props: {
@@ -363,21 +439,63 @@ export default defineComponent({
   
   methods: {
 
-    canView(recording: RecType) {
-      const ep = recording.explicitPermissions!;
-      return (
-        ep!.view.includes(this.userID!) ||
-        ep!.edit.includes(this.userID!) ||
-        ep!.publicView ||
-        recording.userID === this.userID
-      );
+    getSoloistDisplay(rec: RecType) {
+      const keys = Object.keys(rec.musicians).filter(key => {
+        return rec.musicians[key].role === 'Soloist';
+      });
+      if (keys.length > 0) {
+        return keys[0];
+      } else {
+        return 'Unknown';
+      }         
     },
 
-    permissiontoEdit(recording: RecType) {
+    getRaagDisplay(rec: RecType) {
+      return Object.keys(rec.raags).join(', ');
+    },
+
+    getPSecDisplay(rec: RecType) {
+      const raags = Object.keys(rec.raags);
+      return raags.map(raag => {
+        if (rec.raags[raag]['performance sections']) {
+          return Object.keys(rec.raags[raag]['performance sections']!);
+        } else {
+          return []; 
+        }
+      }).flat().join(', ');
+    },
+
+    getDurDisplay(rec: RecType) {
+      return displayTime(rec.duration);
+    },
+
+    getEventDisplay(rec: RecType) {
+      return rec.parentTitle !== undefined && rec.parentTitle !== null ? 
+        rec.parentTitle : 
+        'None';
+    },
+
+    getTrackNumDisplay(rec: RecType) {
+      return rec.parentTrackNumber !== undefined ? 
+        Number(rec.parentTrackNumber) : 
+        'None';
+    },
+
+    canView(recording: RecType, userID: string) {
       const ep = recording.explicitPermissions!;
       return (
-        ep!.edit.includes(this.userID!) ||
-        recording.userID === this.userID
+        ep!.view.includes(userID) ||
+        ep!.edit.includes(userID) ||
+        ep!.publicView ||
+        recording.userID === userID
+      ); 
+    },
+
+    permissiontoEdit(recording: RecType, userID: string) {
+      const ep = recording.explicitPermissions!;
+      return (
+        ep!.edit.includes(userID!) ||
+        recording.userID === userID
       );
     },
 
@@ -677,23 +795,23 @@ export default defineComponent({
       const nextCol = fIdx < this.colWidths.length - 1;
       // Calculate the new width based on the mouse movement
       document.body.style.cursor = 'col-resize';
-        if (event.clientX !== 0) {
-          const deltaX = event.clientX - this.initialMouseX!;
-          const initW = this.initialWidths[fIdx]!;
-          const nextInitW = this.initialWidths[fIdx + 1]!;
-          const nextMinW = this.mincolWidths[fIdx + 1]!;
-          if (initW + deltaX < this.mincolWidths[fIdx]!) {
-            return;
-            
-          } else if (nextCol && (nextInitW - deltaX < nextMinW)) {
+      if (event.clientX !== 0) {
+        const deltaX = event.clientX - this.initialMouseX!;
+        const initW = this.initialWidths[fIdx]!;
+        const nextInitW = this.initialWidths[fIdx + 1]!;
+        const nextMinW = this.mincolWidths[fIdx + 1]!;
+        if (initW + deltaX < this.mincolWidths[fIdx]!) {
+          return;
+          
+        } else if (nextCol && (nextInitW - deltaX < nextMinW)) {
 
-            return
-          } else {
-            this.colWidths[fIdx] = initW + deltaX;
-            if (nextCol) {
-              this.colWidths[fIdx + 1] = nextInitW - deltaX;
-            }
+          return
+        } else {
+          this.colWidths[fIdx] = initW + deltaX;
+          if (nextCol) {
+            this.colWidths[fIdx + 1] = nextInitW - deltaX;
           }
+        }
       }
     },
     handleDragEnd(fIdx: number, event: DragEvent) {

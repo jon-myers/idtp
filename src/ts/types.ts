@@ -650,6 +650,25 @@ type ArtNameType = (
 )
 type StrokeNicknameType = "d" | "r" | "da" | "ra" | "di" | "ri"
 
+import { SortState } from '@/ts/enums';
+
+type SortFuncType = ((a: RecType, b: RecType) => (-1 | 0 | 1)) | 
+                  ((a: TransMetadataType, b: TransMetadataType) => (-1 | 0 | 1))
+
+type GetDisplayType = (item: RecType | TransMetadataType) => string | number;
+
+type FilterableTableType = {
+  label: string,
+  minWidth: number,
+  prioritization: number,
+  sortFunction?: SortFuncType,
+  growable: boolean,
+  initSortState: SortState,
+  getDisplay: GetDisplayType
+}
+
+type UserCheckType = (item: RecType | TransMetadataType, userID: string) => boolean;
+
 export type { 
   CollectionType, 
   UserType, 
@@ -702,4 +721,8 @@ export type {
   ArtNameType,
   StrokeNicknameType,
   AutoValue,
+  FilterableTableType,
+  SortFuncType,
+  GetDisplayType,
+  UserCheckType,
 };
