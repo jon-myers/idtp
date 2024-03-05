@@ -1,12 +1,18 @@
 <template>
   <FilterableTable
-    v-if='allRecordings.length > 0 && userID !== undefined'
+    v-if='
+      allRecordings.length > 0 && 
+      userID !== undefined && 
+      allMusicians && 
+      allMusicians.length > 0
+      '
     :labels='ftLabels'
     :items='allRecordings'
     :userID='userID'
     :canEdit='(permissiontoEdit as UserCheckType)'
     :canView='(canView as UserCheckType)'
     :heightOffset='100'
+    :navHeight='navHeight'
   />
   <div class='main' @click='handleClick'>
     <div 

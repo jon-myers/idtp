@@ -1,5 +1,14 @@
 <template>
   <div class='tableMain'>
+    <div class='searchBar'>
+      <input
+        class='search'
+        type='text'
+        placeholder='Search'
+        v-model='searchQuery'
+        @input='handleSearch'
+        >
+    </div>
     <div class='labelRow'>
       <div 
         class='metadataLabels'
@@ -40,7 +49,7 @@
       ref='fileContainer'
       >
       <div
-        v-for='(row, rIdx) in displayableData'
+        v-for='(row, rIdx) in filteredData'
         :class='`dataRow ${viewable[rIdx] ? "" : "disabled"}`'
         @dblclick='viewable[rIdx] ? 
           $emit("rowdblclick", items[rIdx]) : 
@@ -54,7 +63,7 @@
             "min-width": colWidths[lIdx] + "px",
           }'
           >
-          <span class='field'>{{ displayableData[rIdx][lIdx] }}</span>
+          <span class='field'>{{ filteredData[rIdx][lIdx] }}</span>
           <div 
             class='draggableBorder'
             draggable='true'
@@ -86,8 +95,11 @@ type FilterableTableDataType = {
   initialWidths: number[],
   labelRowHeight: number,
   displayableData: (string | number)[][],
+  filteredData: (string | number)[][],
   viewable: boolean[],
   editable: boolean[],
+  searchBarHeight: number,
+  searchQuery: string,
 }
 
 export default defineComponent({
@@ -100,9 +112,12 @@ export default defineComponent({
       initialMouseX: undefined,
       initialWidths: [],
       labelRowHeight: 40,
+      searchBarHeight: 40,
       displayableData: [],
+      filteredData: [],
       viewable: [],
       editable: [],
+      searchQuery: '',
     }
   },
 
@@ -112,12 +127,17 @@ export default defineComponent({
     // distribute the extra space to the growable columns
     this.resetWidths();
     this.sortStates = this.labels.map(label => label.initSortState);
+    this.toggleSort(0, true);
     this.displayableData = this.items.map((item, idx) => {
       return this.labels.map(label => label.getDisplay(item));
     })
+    this.filteredData = this.displayableData;
     this.viewable = this.items.map(item => this.canView(item, this.userID));
     this.editable = this.items.map(item => this.canEdit(item, this.userID));
     this.$el.style.setProperty('--height-offset', `${this.heightOffset}px`);
+    this.$el.style.setProperty('--nav-height', `${this.navHeight}px`);
+    this.$el.style.setProperty('--label-row-height', `${this.labelRowHeight}px`);
+    this.$el.style.setProperty('--search-bar-height', `${this.searchBarHeight}px`);
     window.addEventListener('resize', this.resetWidths);
 
 
@@ -151,10 +171,22 @@ export default defineComponent({
     heightOffset: {
       type: Number,
       required: true
+    },
+    navHeight: {
+      type: Number,
+      required: true
     }
   },
 
   methods: {
+
+    handleSearch() {
+      this.filteredData = this.displayableData.filter((row, rIdx) => {
+        return row.some((cell, cIdx) => {
+          return cell.toString().toLowerCase().includes(this.searchQuery.toLowerCase());
+        })
+      })
+    },
 
     resetWidths() {
       const totalWidth = this.colWidths.reduce((acc, cur) => acc + cur, 0);
@@ -224,6 +256,7 @@ export default defineComponent({
       this.displayableData = this.items.map((item, idx) => {
         return this.labels.map(label => label.getDisplay(item));
       })
+      this.handleSearch();
       
       this.selectedSortIdx = idx;
     },
@@ -381,11 +414,56 @@ span.field {
 .fileContainer {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--height-offset) - 80px);
+  height: calc(
+    100vh - 
+    var(--height-offset) - 
+    var(--nav-height) - 
+    var(--label-row-height) - 
+    var(--search-bar-height)
+  );
   width: 100%;
   user-select: none;
   overflow-y: scroll;
   overflow-x: hidden;
   border-top: 1px solid grey;
+}
+
+.searchBar {
+  height: v-bind(searchBarHeight + 'px');
+  min-height: v-bind(searchBarHeight + 'px');
+  background-color: #131713;
+  /* border-bottom: 1px solid grey; */
+  display: flex;
+  flex-direction: row;
+  justify-content: right;
+  align-items: center;
+  padding-left: 10px;
+  padding-right: 10px;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.searchOval {
+  width: 400px;
+  height: 30px;
+  border-radius: 5px;
+  background-color: black;
+  border: 1px solid grey;
+  box-sizing: border-box;
+  margin-right: 5px;
+
+}
+
+input.search {
+  width: 300px;
+  height: 30px;
+  background-color: black;
+  border-radius: 5px;
+  border: 1px solid grey;
+  color: white;
+  padding-left: 5px;
+  padding-right: 5px;
+  box-sizing: border-box;
+  user-select: none;
 }
 </style>
