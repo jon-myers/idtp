@@ -49,7 +49,7 @@
       ref='fileContainer'
       >
       <div
-        v-for='(row, rIdx) in filteredData'
+        v-for='(row, rIdx) in highlightedData'
         :class='`dataRow ${viewable[rIdx] ? "" : "disabled"}`'
         @dblclick='viewable[rIdx] ? 
           $emit("rowdblclick", items[rIdx]) : 
@@ -63,7 +63,7 @@
             "min-width": colWidths[lIdx] + "px",
           }'
           >
-          <span class='field'>{{ filteredData[rIdx][lIdx] }}</span>
+          <span class='field' v-html="highlightedData[rIdx][lIdx]"></span>
           <div 
             class='draggableBorder'
             draggable='true'
@@ -175,6 +175,23 @@ export default defineComponent({
     navHeight: {
       type: Number,
       required: true
+    }
+  },
+
+  computed: {
+    highlightedData() {
+    const query = this.searchQuery.toLowerCase();
+      return this.filteredData.map(row => {
+        return row.map(cell => {
+          let cellStr = String(cell);
+          if (query && cellStr.toLowerCase().includes(query)) {
+            cellStr = cellStr.replace(/ /g, '&nbsp;');
+            const highlighted = cellStr.replace(new RegExp(`(${query})`, 'gi'), '<mark class="highlight">$1</mark>');
+            return highlighted;
+          }
+          return cellStr;
+        });
+      });
     }
   },
 
@@ -465,5 +482,10 @@ input.search {
   padding-right: 5px;
   box-sizing: border-box;
   user-select: none;
+}
+
+::v-deep .highlight {
+  background-color: #6dfc89;
+  color: black;
 }
 </style>
