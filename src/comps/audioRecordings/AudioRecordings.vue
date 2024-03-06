@@ -1,19 +1,27 @@
 <template>
-  <FilterableTable
-    v-if='
-      allRecordings.length > 0 && 
-      userID !== undefined && 
-      allMusicians && 
-      allMusicians.length > 0
-      '
-    :labels='ftLabels'
-    :items='allRecordings'
-    :userID='userID'
-    :canEdit='(permissiontoEdit as UserCheckType)'
-    :canView='(canView as UserCheckType)'
-    :heightOffset='100'
-    :navHeight='navHeight'
-  />
+  <div class='blackBackground'>
+    <FilterableTable
+      ref='filterableTable'
+      v-if='
+        allRecordings.length > 0 && 
+        userID !== undefined && 
+        allMusicians && 
+        allMusicians.length > 0
+        '
+      :labels='ftLabels'
+      :items='allRecordings'
+      :userID='userID'
+      :canEdit='(permissiontoEdit as UserCheckType)'
+      :canView='(canView as UserCheckType)'
+      :heightOffset='100'
+      :navHeight='navHeight'
+      @rightClick='handleRightClickEmit'
+      @click='handleClickEmit'
+      @doubleClick='handleDoubleClickEmit'
+    />
+  </div>
+
+
   <div class='main' @click='handleClick'>
     <div 
       v-if='false'
@@ -98,8 +106,6 @@
     </div>
     <AudioPlayer 
       :audioSource='audioSource'
-      :saEstimate='saEstimate'
-      :saVerified='saVerified'
       :id='audioRecId'
       ref='audioPlayer'
       @emitNextTrack='nextTrack'
@@ -178,8 +184,6 @@ import FilterableTable from '@/comps/FilterableTable.vue';
 
 type AudioRecordingsDataType = {
   audioSource: string | undefined,
-  saEstimate: number | undefined,
-  saVerified: boolean | undefined,
   audioRecId: string | undefined,
   allRecordings: RecType[],
   mdFields: { 
@@ -229,8 +233,6 @@ export default defineComponent({
   data(): AudioRecordingsDataType {
     return {
       audioSource: undefined,
-      saEstimate: undefined,
-      saVerified: undefined,
       audioRecId: undefined,
       allMusicians: undefined,
       allRecordings: [],
@@ -598,11 +600,157 @@ export default defineComponent({
       }
     },
 
+    handleClickEmit() {
+      this.contextMenuClosed = true;
+    },
+
     handleClick() {
       this.contextMenuClosed = true;
     },
 
+    handleDoubleClickEmit(rec: RecType, e: MouseEvent) {
+      if (this.canView(rec, this.userID!)) {
+        this.sendAudioSource(e, rec);
+      }
+    },
+
+    async handleRightClickEmit(rec: RecType, e: MouseEvent) {
+      this.dropDownLeft = e.clientX;
+      this.dropDownTop = e.clientY;
+      this.contextMenuClosed = !this.contextMenuClosed;
+      const fTable = this.$refs.filterableTable as typeof FilterableTable;
+      const fileContainer = fTable.$refs.fileContainer as HTMLElement;
+      const rect = fileContainer.getBoundingClientRect();
+      if (this.dropDownLeft + this.dropDownWidth > rect.width - 20) {
+        this.dropDownLeft = rect.width - 30 - this.dropDownWidth;
+      }
+      const editable = this.permissiontoEdit(rec, this.userID!);
+      const viewable = this.canView(rec, this.userID!);
+      const owned = rec.userID === this.userID;
+      this.contextMenuChoices = [];
+      this.contextMenuChoices.push({
+        text: 'New Transcription',
+        action: () => {
+          let query: {
+            aeName?: string,
+            afName?: string,
+            recID?: string
+          } = {
+            aeName: JSON.stringify(rec.parentTitle),
+            afName: JSON.stringify(this.getShorthand(rec)),
+          }
+          if (rec.parentTitle === null) {
+            query.recID = rec._id;
+          }
+          this.$router.push({
+            name: 'Transcriptions',
+            query
+          })
+          this.contextMenuClosed = true;
+        },
+        enabled: viewable
+      });
+      this.contextMenuChoices.push({
+        text: 'Edit Recording',
+        action: () => {
+          this.openRecordingModal({ editing: true, recId: rec._id })
+          this.contextMenuClosed = true;
+        },
+        enabled: editable
+      });
+      this.contextMenuChoices.push({
+        text: 'Edit Permissions',
+        action: () => {
+          this.artifactID = rec._id!;
+          this.permissionsModalClosed = false;
+          this.contextMenuClosed = true;
+          this.selectedRecording = rec
+        },
+        enabled: owned
+      });
+      this.contextMenuChoices.push({
+        text: 'Delete Recording',
+        action: async () => {
+          this.contextMenuClosed = true;
+          try { 
+            await deleteRecording(rec._id!);
+            this.allRecordings = await getAllAudioRecordingMetadata();
+            const fTable = this.$refs.filterableTable as typeof FilterableTable;
+            fTable.toggleSort(fTable.selectedSortIdx, true);
+          } catch (err) {
+            console.log(err); 
+          }
+        },
+        enabled: owned
+      });
+      this.contextMenuChoices.push({
+        text: 'Upload New Recording',
+        action: () => {
+          this.recModalFrame = 'uploadRec';
+          this.openUploadModal();
+          this.contextMenuClosed = true;
+        },
+        enabled: true
+      });
+      try {
+        this.possibleCols = await getEditableCollections(this.userID!);
+        if (this.possibleCols.length > 0) {
+          this.contextMenuChoices.push({
+            text: 'Add to Collection',
+            action: () => {
+              this.selectedRecording = rec;
+              this.contextMenuClosed = true;
+              this.addToCollectionModalClosed = false;
+            },
+            enabled: viewable
+          });
+          this.removableCols = this.possibleCols.filter(col => {
+            return col.audioRecordings.includes(rec._id!);
+          })
+          if (this.removableCols.length > 0) {
+            this.contextMenuChoices.push({
+              text: 'Remove from Collection',
+              action: () => {
+                this.selectedRecording = rec;
+                this.contextMenuClosed = true;
+                this.removeFromCollectionModalClosed = false;
+              },
+              enabled: true
+            })
+          }
+        }
+        const tChoices = await getAllTransOfAudioFile(
+          rec._id!, 
+          this.userID!
+        );
+        tChoices.forEach(tc => {
+          this.contextMenuChoices.push({
+            text: `Open file: "${tc.title}" by ${tc.name}`,
+            action: () => {
+              this.$store.commit('update_id', tc._id);
+              this.$cookies.set('currentPieceID', tc._id);
+              this.$router.push({
+                name: 'EditorComponent',
+                  query: { id: tc._id }
+              })
+            },
+            enabled: true
+          })
+        })
+        this.dropDownHeight = this.contextMenuChoices.length * 30;
+        const topPartHeight = rect.height + rect.top;
+        if (this.dropDownTop + this.dropDownHeight > topPartHeight - 10) {
+          this.dropDownTop = topPartHeight - 10 - this.dropDownHeight;
+        }
+      } catch (err) {
+        console.log(err);
+      }
+    
+
+    },
+
     async handleRightClick(e: MouseEvent) {
+      console.log('old trigger')
       e.preventDefault();
       this.dropDownLeft = e.clientX;
       this.dropDownTop = e.clientY;
@@ -1208,14 +1356,12 @@ export default defineComponent({
           target = target.parentElement!;
         }
       };
-      const playingElem = document.querySelector('.playing');
+      const playingElem = document.querySelector('.playingRec');
       if (playingElem) {
-        playingElem.classList.remove('playing');
+        playingElem.classList.remove('playingRec');
       }
-      target.classList.add('playing');
+      target.classList.add('playingRec');
       this.audioSource = `Https://swara.studio/audio/mp3/${audioFileId}.mp3`;
-      this.saEstimate = recording.saEstimate;
-      this.saVerified = recording.saVerified;
       this.activeRecording = recording;
     },
 
@@ -1277,7 +1423,7 @@ export default defineComponent({
   background-color: #2b332c;
 }
 
-.playing {
+::v-deep .playingRec {
   background-color: #3e4a40;
 }
 
@@ -1337,6 +1483,11 @@ span.field {
 
 .sortTriangle.up {
   transform: rotate(-90deg);
+}
+
+.blackBackground {
+  background-color: black;
+  height: 100%;
 }
 
 </style>

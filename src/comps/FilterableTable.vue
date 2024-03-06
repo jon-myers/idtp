@@ -46,11 +46,14 @@
     <div
       class='fileContainer'
       @contextmenu='handleRightClick'
+      @click='handleClick'
+      @dblclick='handleDoubleClick'
       ref='fileContainer'
       >
       <div
         v-for='(row, rIdx) in highlightedData'
         :class='`dataRow ${viewable[rIdx] ? "" : "disabled"}`'
+        :id='`row${rIdx}`'
         @dblclick='viewable[rIdx] ? 
           $emit("rowdblclick", items[rIdx]) : 
           null'
@@ -64,7 +67,8 @@
           }'
           >
           <span class='field' v-html="highlightedData[rIdx][lIdx]"></span>
-          <div 
+          <div
+            v-if='lIdx !== labels.length - 1'
             class='draggableBorder'
             draggable='true'
             @dragstart='handleDragStart(lIdx, $event)'
@@ -100,6 +104,7 @@ type FilterableTableDataType = {
   editable: boolean[],
   searchBarHeight: number,
   searchQuery: string,
+  itemIdxMapping: number[],
 }
 
 export default defineComponent({
@@ -118,6 +123,7 @@ export default defineComponent({
       viewable: [],
       editable: [],
       searchQuery: '',
+      itemIdxMapping: [],
     }
   },
 
@@ -132,6 +138,7 @@ export default defineComponent({
       return this.labels.map(label => label.getDisplay(item));
     })
     this.filteredData = this.displayableData;
+    
     this.viewable = this.items.map(item => this.canView(item, this.userID));
     this.editable = this.items.map(item => this.canEdit(item, this.userID));
     this.$el.style.setProperty('--height-offset', `${this.heightOffset}px`);
@@ -180,16 +187,15 @@ export default defineComponent({
 
   computed: {
     highlightedData() {
-    const query = this.searchQuery.toLowerCase();
+      const query = this.searchQuery.toLowerCase();
       return this.filteredData.map(row => {
         return row.map(cell => {
-          let cellStr = String(cell);
+          const cellStr = String(cell);
           if (query && cellStr.toLowerCase().includes(query)) {
-            cellStr = cellStr.replace(/ /g, '&nbsp;');
             const highlighted = cellStr.replace(new RegExp(`(${query})`, 'gi'), '<mark class="highlight">$1</mark>');
-            return highlighted;
+            return `<span class="preserve-space">${highlighted}</span>`;
           }
-          return cellStr;
+          return `<span class="preserve-space">${cellStr}</span>`;
         });
       });
     }
@@ -202,6 +208,9 @@ export default defineComponent({
         return row.some((cell, cIdx) => {
           return cell.toString().toLowerCase().includes(this.searchQuery.toLowerCase());
         })
+      });
+      this.itemIdxMapping = this.filteredData.map(fd => {
+        return this.displayableData.indexOf(fd);
       })
     },
 
@@ -276,6 +285,7 @@ export default defineComponent({
       this.handleSearch();
       
       this.selectedSortIdx = idx;
+      this.itemIdxMapping = this.items.map((_, idx) => idx);
     },
 
     sortItems({ 
@@ -291,9 +301,43 @@ export default defineComponent({
       }
     },
 
+    handleClick(e: MouseEvent) {
+      e.preventDefault();
+      this.$emit('click', e);
+    },
+
+    handleDoubleClick(e: MouseEvent) {
+      e.preventDefault();
+      let el = e.target as HTMLElement;
+      if (el) {
+        if (el.classList.contains('metadataLabels')) {
+          el = el.parentElement!;
+        } else if (el.classList.contains('field')) {
+          el = el.parentElement!.parentElement!;
+        } else if (el.classList.contains('draggableBorder')) {
+          el = el.parentElement!;
+        }
+        const id = Number(el.id.slice(3));
+        const item = this.items[this.itemIdxMapping[id]];
+        this.$emit('doubleClick', item, e);
+      }
+    },
+
     handleRightClick(e: MouseEvent) {
       e.preventDefault();
-      console.log('right click');
+      let el = e.target as HTMLElement;
+      if (el) {
+        if (el.classList.contains('metadataLabels')) {
+          el = el.parentElement!;
+        } else if (el.classList.contains('field')) {
+          el = el.parentElement!.parentElement!;
+        } else if (el.classList.contains('draggableBorder')) {
+          el = el.parentElement!;
+        }
+        const id = Number(el.id.slice(3));
+        const item = this.items[this.itemIdxMapping[id]];
+        this.$emit('rightClick', item, e);
+      }
     },
 
     handleDragStart(idx: number, e: DragEvent) {
@@ -395,10 +439,12 @@ span.field {
   justify-content: left;
   white-space: nowrap;
   overflow-x: auto;
-  height: 30px;
+  height: 40px;
   margin-left: 5px;
   margin-right: 5px;
   user-select: none;
+  box-sizing: border-box;
+  overflow-y: hidden;
 }
 
 .draggableBorder {

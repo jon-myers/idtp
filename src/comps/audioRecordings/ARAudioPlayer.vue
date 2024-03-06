@@ -136,12 +136,20 @@ export default {
     // WaveformAnalyzer
   },
   
-  props: [
-    'audioSource',
-    'saEstimate',
-    'saVerified',
-    'id'
-  ],
+  // props: [
+  //   'audioSource',
+  //   'id'
+  // ],
+  props: {
+    audioSource: {
+      type: String,
+      required: false
+    },
+    id: {
+      type: String,
+      required: false
+    }
+  },
   
   mounted() {
     this.audio = new Audio() as HTMLAudioElement;
