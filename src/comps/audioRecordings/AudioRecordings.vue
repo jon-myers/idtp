@@ -18,6 +18,7 @@
       @rightClick='handleRightClickEmit'
       @click='handleClickEmit'
       @doubleClick='handleDoubleClickEmit'
+      @searched='resetPlayingHighlight'
     />
   </div>
 
@@ -223,6 +224,7 @@ type AudioRecordingsDataType = {
   permissionsModalClosed: boolean,
   artifactID: string | undefined,
   ftLabels: FilterableTableType[],
+  playingItemId?: number
   
 
 }
@@ -379,6 +381,7 @@ export default defineComponent({
         
       }
     ],
+    playingItemId: undefined
     }
   },
 
@@ -446,6 +449,19 @@ export default defineComponent({
   },
   
   methods: {
+
+    resetPlayingHighlight() {
+      const playingElem = document.querySelector('.playingRec');
+      if (playingElem) playingElem.classList.remove('playingRec');
+      const ft = this.$refs.filterableTable as typeof FilterableTable;
+      // get index of playing item
+      const rec = this.activeRecording;
+      const recIdx = ft.items.indexOf(rec);
+      const unmapped = ft.itemIdxMapping.indexOf(recIdx);
+      const el = document.querySelector(`#row${unmapped}`);
+      el?.classList.add('playingRec');
+      
+    },
 
     getSoloistDisplay(rec: RecType) {
       const keys = Object.keys(rec.musicians).filter(key => {
@@ -536,61 +552,109 @@ export default defineComponent({
     },
 
     nextTrack(shuffling: boolean, initial: boolean) {
-
+      const ft = this.$refs.filterableTable as typeof FilterableTable;
       if (this.activeRecording) {
-        const playingElem = document.querySelector('.playing');
-        if (playingElem) playingElem.classList.remove('playing');
+        const playingElem = document.querySelector('.playingRec');
+        if (playingElem) playingElem.classList.remove('playingRec');
         if (!shuffling) {
-          const curIdx = this.allRecordings.findIndex(rec => {
-            return rec._id === this.activeRecording!._id;
-          });
-          const nextIdx = (curIdx + 1) % this.allRecordings.length;
-          this.activeRecording = this.allRecordings[nextIdx];
-          const nextElem = document.getElementById(`recRow${nextIdx}`);
-          if (nextElem) nextElem.classList.add('playing');
-          const id = this.activeRecording._id;
+          const recIdx = ft.items.indexOf(this.activeRecording);
+          const unmapped = ft.itemIdxMapping.indexOf(recIdx);
+          const nextUnmapped = (unmapped + 1) % ft.itemIdxMapping.length;
+          const nextIdx = ft.itemIdxMapping[nextUnmapped];
+          this.activeRecording = ft.items[nextIdx];
+          const nextElem = document.getElementById(`row${nextUnmapped}`);
+          if (nextElem) nextElem.classList.add('playingRec');
+          const id = this.activeRecording!._id;
           this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
+          // but if the next item is not viewable, then we need to find the next
+          //  aka the top of the visible list methinks
         } else {
-          if (initial) {
-            const idx = Math.floor(Math.random() * this.allRecordings.length);
-            this.activeRecording = this.allRecordings[idx];
-            const elem = document.getElementById(`recRow${idx}`);
-            if (elem) elem.classList.add('playing');
-            const id = this.activeRecording._id;
-            this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
-          } else {
-            const curIdx = this.allRecordings.findIndex(rec => {
-              return rec._id === this.activeRecording!._id;
-            });
-            let nextIdx = Math.floor(Math.random() * this.allRecordings.length);
-            while (nextIdx === curIdx) {
-              nextIdx = Math.floor(Math.random() * this.allRecordings.length);
-            }
-            this.activeRecording = this.allRecordings[nextIdx];
-            const nextElem = document.getElementById(`recRow${nextIdx}`);
-            if (nextElem) nextElem.classList.add('playing');
-            const id = this.activeRecording._id;
-            this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
-          }
-        
+          console.log('shuffling')
+          // randomly choose from the list of presently displayed items
+          const idx = Math.floor(Math.random() * ft.itemIdxMapping.length);
+          const nextIdx = ft.itemIdxMapping[idx];
+          this.activeRecording = ft.items[nextIdx];
+          const nextElem = document.getElementById(`row${idx}`);
+          if (nextElem) nextElem.classList.add('playingRec');
+          const id = this.activeRecording!._id;
+          this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
+
         }
       } else {
         if (!shuffling) {
-          this.activeRecording = this.allRecordings[0];
-          const elem = document.getElementById('recRow0');
-          if (elem) elem.classList.add('playing');
-          const id = this.activeRecording._id;
+          const idx = 0;
+          const nextIdx = ft.itemIdxMapping[idx];
+          this.activeRecording = ft.items[nextIdx];
+          const nextElem = document.getElementById(`row${idx}`);
+          if (nextElem) nextElem.classList.add('playingRec');
+          const id = this.activeRecording!._id;
           this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
         } else {
-          const idx = Math.floor(Math.random() * this.allRecordings.length);
-          this.activeRecording = this.allRecordings[idx];
-          const elem = document.getElementById(`recRow${idx}`);
-          if (elem) elem.classList.add('playing');
-          const id = this.activeRecording._id;
+          
+          const idx = Math.floor(Math.random() * ft.itemIdxMapping.length);
+          const nextIdx = ft.itemIdxMapping[idx];
+          this.activeRecording = ft.items[nextIdx];
+          const nextElem = document.getElementById(`row${idx}`);
+          if (nextElem) nextElem.classList.add('playingRec');
+          const id = this.activeRecording!._id;
           this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
-        
         }
       }
+
+      // if (this.activeRecording) {
+      //   const playingElem = document.querySelector('.playing');
+      //   if (playingElem) playingElem.classList.remove('playing');
+      //   if (!shuffling) {
+      //     const curIdx = this.allRecordings.findIndex(rec => {
+      //       return rec._id === this.activeRecording!._id;
+      //     });
+      //     const nextIdx = (curIdx + 1) % this.allRecordings.length;
+      //     this.activeRecording = this.allRecordings[nextIdx];
+      //     const nextElem = document.getElementById(`recRow${nextIdx}`);
+      //     if (nextElem) nextElem.classList.add('playing');
+      //     const id = this.activeRecording._id;
+      //     this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
+      //   } else {
+      //     if (initial) {
+      //       const idx = Math.floor(Math.random() * this.allRecordings.length);
+      //       this.activeRecording = this.allRecordings[idx];
+      //       const elem = document.getElementById(`recRow${idx}`);
+      //       if (elem) elem.classList.add('playing');
+      //       const id = this.activeRecording._id;
+      //       this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
+      //     } else {
+      //       const curIdx = this.allRecordings.findIndex(rec => {
+      //         return rec._id === this.activeRecording!._id;
+      //       });
+      //       let nextIdx = Math.floor(Math.random() * this.allRecordings.length);
+      //       while (nextIdx === curIdx) {
+      //         nextIdx = Math.floor(Math.random() * this.allRecordings.length);
+      //       }
+      //       this.activeRecording = this.allRecordings[nextIdx];
+      //       const nextElem = document.getElementById(`recRow${nextIdx}`);
+      //       if (nextElem) nextElem.classList.add('playing');
+      //       const id = this.activeRecording._id;
+      //       this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
+      //     }
+        
+      //   }
+      // } else {
+      //   if (!shuffling) {
+      //     this.activeRecording = this.allRecordings[0];
+      //     const elem = document.getElementById('recRow0');
+      //     if (elem) elem.classList.add('playing');
+      //     const id = this.activeRecording._id;
+      //     this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
+      //   } else {
+      //     const idx = Math.floor(Math.random() * this.allRecordings.length);
+      //     this.activeRecording = this.allRecordings[idx];
+      //     const elem = document.getElementById(`recRow${idx}`);
+      //     if (elem) elem.classList.add('playing');
+      //     const id = this.activeRecording._id;
+      //     this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
+        
+      //   }
+      // }
     },
 
     handleKeydown(e: KeyboardEvent) {
@@ -608,9 +672,9 @@ export default defineComponent({
       this.contextMenuClosed = true;
     },
 
-    handleDoubleClickEmit(rec: RecType, e: MouseEvent) {
+    handleDoubleClickEmit(rec: RecType, target: HTMLElement) {
       if (this.canView(rec, this.userID!)) {
-        this.sendAudioSource(e, rec);
+        this.sendAudioSource(target, rec);
       }
     },
 
@@ -1347,9 +1411,8 @@ export default defineComponent({
 
     },
 
-    sendAudioSource(event: MouseEvent, recording: RecType) {
+    sendAudioSource(target: HTMLElement, recording: RecType) {
       const audioFileId = recording._id; 
-      let target = event.target as HTMLElement;
       if (target.tagName === 'SPAN') {
         target = target.parentElement!;
         if (target.classList.contains('metadataLabels')) {
@@ -1361,6 +1424,10 @@ export default defineComponent({
         playingElem.classList.remove('playingRec');
       }
       target.classList.add('playingRec');
+      const rowIdx = parseInt(target.id.slice(3));
+      const ft = this.$refs.filterableTable as typeof FilterableTable;
+      const unmappedIdx = ft.itemIdxMapping[rowIdx];
+      this.playingItemId = unmappedIdx;
       this.audioSource = `Https://swara.studio/audio/mp3/${audioFileId}.mp3`;
       this.activeRecording = recording;
     },

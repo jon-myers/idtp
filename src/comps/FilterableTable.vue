@@ -212,6 +212,7 @@ export default defineComponent({
       this.itemIdxMapping = this.filteredData.map(fd => {
         return this.displayableData.indexOf(fd);
       })
+      this.$emit('searched');
     },
 
     resetWidths() {
@@ -283,9 +284,8 @@ export default defineComponent({
         return this.labels.map(label => label.getDisplay(item));
       })
       this.handleSearch();
-      
       this.selectedSortIdx = idx;
-      this.itemIdxMapping = this.items.map((_, idx) => idx);
+      // this.$emit('sorted');
     },
 
     sortItems({ 
@@ -316,10 +316,13 @@ export default defineComponent({
           el = el.parentElement!.parentElement!;
         } else if (el.classList.contains('draggableBorder')) {
           el = el.parentElement!;
+        } else if (el.classList.contains('preserve-space')) {
+          el = el.parentElement!.parentElement!.parentElement!;
+
         }
         const id = Number(el.id.slice(3));
         const item = this.items[this.itemIdxMapping[id]];
-        this.$emit('doubleClick', item, e);
+        this.$emit('doubleClick', item, el);
       }
     },
 
