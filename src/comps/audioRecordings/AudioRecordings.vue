@@ -1,88 +1,29 @@
 <template>
-  <div class='main' @click='handleClick'>
-    <div 
-      class='labelRow'
-      >
-      <div 
-        class='metadataLabels' 
-        v-for='(field, fIdx) in mdFields'
-        :style='{
-          "width": colWidths[fIdx] + "px",
-          "max-width": fIdx === mdFields.length - 2 ? 
-            "" : 
-            colWidths[fIdx] + "px",
-          "min-width": colWidths[fIdx] + "px",
-          "flex-grow": fIdx === mdFields.length - 2 ? 1 : 0,
-          "position": "relative" 
-          }'
-        >
-        <span class='field'>
-          {{ field.name }}
-          <span 
-            v-if='field.sortType !== undefined'
-            :class='`sortTriangle ${field.sortState}`'
-            @click='toggleSort(fIdx)'
-            :style='{
-              "color": fIdx === selectedSortIdx ? "white" : "black",
-            }'
-            >
-            &#9654;
-          </span>
-        </span>
-        
-        <div
-          v-if='fIdx !== mdFields.length - 1'
-          class='draggableBorder'
-          draggable='true'
-          @dragstart='handleDragStart(fIdx, $event)'
-          @drag='handleDrag(fIdx, $event)'
-          @dragend='handleDragEnd(fIdx, $event)'
-          >
-        </div>
-      </div>
-    </div>
-    <div 
-      class='fileContainer'
-      @contextmenu='handleRightClick'
-      ref='fileContainer'
-      >
-      <div 
-        :class='`recordingRow ${[canView(recording) ? "" : "disabled"]}`'
-        v-for='(recording, rIdx) in allRecordings'
-        @dblclick='canView(recording) ? 
-          sendAudioSource($event, recording) : 
-          null'
-        :id='`recRow${rIdx}`'
-        >
-        <div 
-          class='metadataLabels' 
-          v-for='(field, fIdx) in mdFields'
-          :style='{ 
-            "width": colWidths[fIdx] + "px", 
-            "max-width": fIdx === mdFields.length - 2 ? 
-              "" : 
-              colWidths[fIdx] + "px",
-            "min-width": colWidths[fIdx] + "px",
-            "flex-grow": fIdx === mdFields.length - 2 ? 1 : 0 
-            }'
-          >
-          <span class='field'>{{ field.func(recording) }}</span>
-          <div 
-            class='draggableBorder'
-            draggable='true'
-            @dragstart='handleDragStart(fIdx, $event)'
-            @drag='handleDrag(fIdx, $event)'
-            @dragend='handleDragEnd(fIdx, $event)'
-            >
-          </div>
-        </div>
-       
-      </div>
-    </div>
+  <div class='blackBackground'>
+    <FilterableTable
+      ref='filterableTable'
+      v-if='
+        allRecordings.length > 0 && 
+        userID !== undefined && 
+        allMusicians && 
+        allMusicians.length > 0
+        '
+      :labels='ftLabels'
+      :items='allRecordings'
+      :userID='userID'
+      :canEdit='(permissiontoEdit as UserCheckType)'
+      :canView='(canView as UserCheckType)'
+      :heightOffset='100'
+      :navHeight='navHeight'
+      @rightClick='handleRightClickEmit'
+      @click='handleClickEmit'
+      @doubleClick='handleDoubleClickEmit'
+      @searched='resetPlayingHighlight'
+    />
+  </div>
+  <div class='main'>
     <AudioPlayer 
       :audioSource='audioSource'
-      :saEstimate='saEstimate'
-      :saVerified='saVerified'
       :id='audioRecId'
       ref='audioPlayer'
       @emitNextTrack='nextTrack'
@@ -128,7 +69,6 @@
     artifactType='audioRecording'
     @close='handleClosePermissionsModal'
     />
-
 </template>
 
 <script lang='ts'>
@@ -149,26 +89,21 @@ import { displayTime } from '@/ts/utils.ts';
 import { 
   CollectionType, 
   ContextMenuOptionType,
-  RecType
+  RecType,
+  FilterableTableType,
+  SortFuncType,
+  GetDisplayType,
+  UserCheckType,
 } from '@/ts/types.ts';
+import { SortState } from '@/ts/enums.ts';
 import PermissionsModal from '@/comps/PermissionsModal.vue';
+import FilterableTable from '@/comps/FilterableTable.vue';
 
 type AudioRecordingsDataType = {
   audioSource: string | undefined,
-  saEstimate: number | undefined,
-  saVerified: boolean | undefined,
   audioRecId: string | undefined,
   allRecordings: RecType[],
-  mdFields: { 
-    'name': string,
-    'func': (rec: RecType) => string | string[],
-    'sortState': 'down' | 'up',
-    'sortType'?: string
-  }[],
-  colWidths: number[],
   initialMouseX?: number,
-  initialWidths: number[],
-  mincolWidths: number[],
   allMusicians?: { 
     'First Name'?: string,
     'Last Name'?: string,
@@ -183,7 +118,6 @@ type AudioRecordingsDataType = {
   dropDownLeft: number,
   dropDownTop: number,
   dropDownWidth: number,
-  labelRowHeight: number,
   dropDownHeight: number,
   uploadRecModalClosed: boolean,
   possibleCols: CollectionType[],
@@ -195,8 +129,8 @@ type AudioRecordingsDataType = {
   editingRecId?: string,
   permissionsModalClosed: boolean,
   artifactID: string | undefined,
-  
-
+  ftLabels: FilterableTableType[],
+  playingItemId?: number
 }
 
 export default defineComponent({
@@ -205,79 +139,10 @@ export default defineComponent({
   data(): AudioRecordingsDataType {
     return {
       audioSource: undefined,
-      saEstimate: undefined,
-      saVerified: undefined,
       audioRecId: undefined,
       allMusicians: undefined,
       allRecordings: [],
       activeRecording: undefined,
-      mdFields: [
-        { 
-          'name': 'Soloist', 
-          'func': (rec: RecType) => {
-            const keys = Object.keys(rec.musicians).filter(key => {
-              return rec.musicians[key].role === 'Soloist';
-            });
-            if (keys.length > 0) {
-              return keys[0];
-            } else {
-              return 'Unknown';
-            }         
-          },
-          'sortState': 'down',
-          'sortType': 'soloist'
-        },
-        {
-          'name': 'Raag',
-          'func': (rec: RecType) => {
-            return Object.keys(rec.raags).join(', ');
-          },
-          'sortState': 'down',
-          'sortType': 'raag'
-        },
-        {
-          'name': 'Performance Section',
-          'func': (rec: RecType) => {
-            const raags = Object.keys(rec.raags);
-            return raags.map(raag => {
-              if (rec.raags[raag]['performance sections']) {
-                return Object.keys(rec.raags[raag]['performance sections']!);
-              } else {
-                return []; 
-              }
-            }).flat().join(', ');
-          },
-          'sortState': 'down',
-          'sortType': 'pSec'
-        },
-        {
-          'name': 'Duration',
-          'func': (rec: RecType) => {
-            return displayTime(rec.duration);
-          },
-          'sortState': 'down',
-          'sortType': 'duration'
-        },
-        {
-          'name': 'Audio Event',
-          'func': (rec: RecType) => {
-            return rec.parentTitle !== undefined ? rec.parentTitle : 'None';
-          },
-          'sortState': 'down',
-          'sortType': 'audioEvent'
-        },
-        {
-          'name': 'Track #',
-          'func': (rec: RecType) => {
-            return rec.parentTrackNumber !== undefined ? rec.parentTrackNumber : 'None';
-          },
-          'sortState': 'down',
-          'sortType': undefined
-        }      
-      ],
-      colWidths: [200, 180, 180, 80, 400, 80],
-      initialWidths: [200, 180, 180, 80, 400, 80],
-      mincolWidths: [90, 80, 190, 100, 130, 80],
       selectedSortIdx: 0,
       contextMenuClosed: true,
       contextMenuChoices: [],
@@ -285,7 +150,6 @@ export default defineComponent({
       dropDownLeft: 200,
       dropDownTop: 300,
       dropDownWidth: 180,
-      labelRowHeight: 40,
       dropDownHeight: 30,
       uploadRecModalClosed: true,
       addToCollectionModalClosed: true,
@@ -296,6 +160,72 @@ export default defineComponent({
       recModalFrame: 'uploadRec',
       permissionsModalClosed: true,
       artifactID: undefined,
+      ftLabels: [
+      {
+        label: 'Soloist',
+        minWidth: 90,
+        prioritization: 0,
+        sortFunction: this.soloistSorter as SortFuncType,
+        growable: true,
+        initSortState: SortState.down,
+        getDisplay: this.getSoloistDisplay as GetDisplayType
+      },
+      {
+        label: 'Solo Instrument',
+        minWidth: 165,
+        prioritization: 1,
+        sortFunction: this.soloInstSorter as SortFuncType,
+        growable: true,
+        initSortState: SortState.down,
+        getDisplay: this.getSoloInstDisplay as GetDisplayType
+      },
+      {
+        label: 'Raag',
+        minWidth: 80,
+        prioritization: 2,
+        sortFunction: this.raagSorter as SortFuncType,
+        growable: true,
+        initSortState: SortState.down,
+        getDisplay: this.getRaagDisplay as GetDisplayType
+      },
+      {
+        label: 'Performance Section',
+        minWidth: 190,
+        prioritization: 3,
+        sortFunction: this.pSecSorter as SortFuncType,
+        growable: true,
+        initSortState: SortState.down,
+        getDisplay: this.getPSecDisplay as GetDisplayType
+      },
+      {
+        label: 'Duration',
+        minWidth: 100,
+        prioritization: 4,
+        sortFunction: this.durSorter as SortFuncType,
+        growable: false,
+        initSortState: SortState.down,
+        getDisplay: this.getDurDisplay as GetDisplayType
+      },
+      {
+        label: 'Audio Event',
+        minWidth: 130,
+        prioritization: 5,
+        sortFunction: this.eventSorter as SortFuncType,
+        growable: true,
+        initSortState: SortState.down,
+        getDisplay: this.getEventDisplay as GetDisplayType
+      },
+      {
+        label: 'Track #',
+        minWidth: 80,
+        prioritization: 6,
+        sortFunction: undefined,
+        growable: false,
+        initSortState: SortState.down,
+        getDisplay: this.getTrackNumDisplay as GetDisplayType
+      }
+    ],
+    playingItemId: undefined
     }
   },
 
@@ -305,7 +235,8 @@ export default defineComponent({
     UploadRecording, 
     AddToCollection,
     RemoveFromCollection,
-    PermissionsModal
+    PermissionsModal,
+    FilterableTable
   },
 
   props: {
@@ -326,9 +257,10 @@ export default defineComponent({
     } else {
       this.userID = this.$store.state.userID;
     }
-
     try {
       this.allRecordings = await getAllAudioRecordingMetadata();
+      // this is not necessary, since sorting is now happening in the filterable
+      // table component. But also doesn't really hurt anything.
       this.allMusicians = await getSortedMusicians(true) as { 
         'First Name'?: string,
         'Last Name'?: string,
@@ -338,7 +270,6 @@ export default defineComponent({
     } catch (err) {
       console.log(err);
     }
-    
   },
 
   beforeUnmount() {
@@ -347,37 +278,88 @@ export default defineComponent({
     window.removeEventListener('keydown', this.handleKeydown);
   },
   
-  mounted() {
-    this.resetWidths();
-    // add event listener to resize columns when window is resized
-    window.addEventListener('resize', this.resetWidths);
-    
-  },
-
-  unmounted() {
-    window.removeEventListener('resize', this.resetWidths);
-  },
-  
-  computed: {
-  },
-  
   methods: {
 
-    canView(recording: RecType) {
-      const ep = recording.explicitPermissions!;
-      return (
-        ep!.view.includes(this.userID!) ||
-        ep!.edit.includes(this.userID!) ||
-        ep!.publicView ||
-        recording.userID === this.userID
-      );
+    resetPlayingHighlight() {
+      const playingElem = document.querySelector('.playingRec');
+      if (playingElem) playingElem.classList.remove('playingRec');
+      const ft = this.$refs.filterableTable as typeof FilterableTable;
+      // get index of playing item
+      const rec = this.activeRecording;
+      const recIdx = ft.items.indexOf(rec);
+      const unmapped = ft.itemIdxMapping.indexOf(recIdx);
+      const el = document.querySelector(`#row${unmapped}`);
+      el?.classList.add('playingRec');
     },
 
-    permissiontoEdit(recording: RecType) {
+    getSoloistDisplay(rec: RecType) {
+      const keys = Object.keys(rec.musicians).filter(key => {
+        return rec.musicians[key].role === 'Soloist';
+      });
+      if (keys.length > 0) {
+        return keys[0];
+      } else {
+        return 'Unknown';
+      }         
+    },
+
+    getSoloInstDisplay(rec: RecType) {
+      const keys = Object.keys(rec.musicians).filter(key => {
+        return rec.musicians[key].role === 'Soloist';
+      });
+      if (keys.length > 0) {
+        return rec.musicians[keys[0]].instrument;
+      } else {
+        return '';
+      }         
+    },
+
+    getRaagDisplay(rec: RecType) {
+      return Object.keys(rec.raags).join(', ');
+    },
+
+    getPSecDisplay(rec: RecType) {
+      const raags = Object.keys(rec.raags);
+      return raags.map(raag => {
+        if (rec.raags[raag]['performance sections']) {
+          return Object.keys(rec.raags[raag]['performance sections']!);
+        } else {
+          return []; 
+        }
+      }).flat().join(', ');
+    },
+
+    getDurDisplay(rec: RecType) {
+      return displayTime(rec.duration);
+    },
+
+    getEventDisplay(rec: RecType) {
+      return rec.parentTitle !== undefined && rec.parentTitle !== null ? 
+        rec.parentTitle : 
+        'None';
+    },
+
+    getTrackNumDisplay(rec: RecType) {
+      return rec.parentTrackNumber !== undefined ? 
+        Number(rec.parentTrackNumber) : 
+        'None';
+    },
+
+    canView(recording: RecType, userID: string) {
       const ep = recording.explicitPermissions!;
       return (
-        ep!.edit.includes(this.userID!) ||
-        recording.userID === this.userID
+        ep!.view.includes(userID) ||
+        ep!.edit.includes(userID) ||
+        ep!.publicView ||
+        recording.userID === userID
+      ); 
+    },
+
+    permissiontoEdit(recording: RecType, userID: string) {
+      const ep = recording.explicitPermissions!;
+      return (
+        ep!.edit.includes(userID!) ||
+        recording.userID === userID
       );
     },
 
@@ -385,7 +367,6 @@ export default defineComponent({
       this.permissionsModalClosed = true;
       try {
         this.allRecordings = await getAllAudioRecordingMetadata();
-        this.toggleSort(this.selectedSortIdx, true);
       } catch (err) {
         console.log(err);
       }
@@ -395,74 +376,55 @@ export default defineComponent({
       this.uploadRecModalClosed = true;
       try {
         this.allRecordings = await getAllAudioRecordingMetadata();
-        this.toggleSort(this.selectedSortIdx, true);
       } catch (err) {
         console.log(err);
       }
     },
 
-    resetWidths() {
-      const summedWidths = this.colWidths.reduce((a, b) => a + b, 0);
-      const ratio = window.innerWidth / summedWidths;
-      this.colWidths = this.colWidths.map(width => width * ratio);
-      this.initialWidths = this.colWidths.slice();
-      this.ensureMinWidths();
-    },
-
     nextTrack(shuffling: boolean, initial: boolean) {
-
+      const ft = this.$refs.filterableTable as typeof FilterableTable;
       if (this.activeRecording) {
-        const playingElem = document.querySelector('.playing');
-        if (playingElem) playingElem.classList.remove('playing');
+        const playingElem = document.querySelector('.playingRec');
+        if (playingElem) playingElem.classList.remove('playingRec');
         if (!shuffling) {
-          const curIdx = this.allRecordings.findIndex(rec => {
-            return rec._id === this.activeRecording!._id;
-          });
-          const nextIdx = (curIdx + 1) % this.allRecordings.length;
-          this.activeRecording = this.allRecordings[nextIdx];
-          const nextElem = document.getElementById(`recRow${nextIdx}`);
-          if (nextElem) nextElem.classList.add('playing');
-          const id = this.activeRecording._id;
+          const recIdx = ft.items.indexOf(this.activeRecording);
+          const unmapped = ft.itemIdxMapping.indexOf(recIdx);
+          const nextUnmapped = (unmapped + 1) % ft.itemIdxMapping.length;
+          const nextIdx = ft.itemIdxMapping[nextUnmapped];
+          this.activeRecording = ft.items[nextIdx];
+          const nextElem = document.getElementById(`row${nextUnmapped}`);
+          if (nextElem) nextElem.classList.add('playingRec');
+          const id = this.activeRecording!._id;
           this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
         } else {
-          if (initial) {
-            const idx = Math.floor(Math.random() * this.allRecordings.length);
-            this.activeRecording = this.allRecordings[idx];
-            const elem = document.getElementById(`recRow${idx}`);
-            if (elem) elem.classList.add('playing');
-            const id = this.activeRecording._id;
-            this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
-          } else {
-            const curIdx = this.allRecordings.findIndex(rec => {
-              return rec._id === this.activeRecording!._id;
-            });
-            let nextIdx = Math.floor(Math.random() * this.allRecordings.length);
-            while (nextIdx === curIdx) {
-              nextIdx = Math.floor(Math.random() * this.allRecordings.length);
-            }
-            this.activeRecording = this.allRecordings[nextIdx];
-            const nextElem = document.getElementById(`recRow${nextIdx}`);
-            if (nextElem) nextElem.classList.add('playing');
-            const id = this.activeRecording._id;
-            this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
-          }
-        
+          // randomly choose from the list of presently displayed items
+          const idx = Math.floor(Math.random() * ft.itemIdxMapping.length);
+          const nextIdx = ft.itemIdxMapping[idx];
+          this.activeRecording = ft.items[nextIdx];
+          const nextElem = document.getElementById(`row${idx}`);
+          if (nextElem) nextElem.classList.add('playingRec');
+          const id = this.activeRecording!._id;
+          this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
+
         }
       } else {
         if (!shuffling) {
-          this.activeRecording = this.allRecordings[0];
-          const elem = document.getElementById('recRow0');
-          if (elem) elem.classList.add('playing');
-          const id = this.activeRecording._id;
+          const idx = 0;
+          const nextIdx = ft.itemIdxMapping[idx];
+          this.activeRecording = ft.items[nextIdx];
+          const nextElem = document.getElementById(`row${idx}`);
+          if (nextElem) nextElem.classList.add('playingRec');
+          const id = this.activeRecording!._id;
           this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
         } else {
-          const idx = Math.floor(Math.random() * this.allRecordings.length);
-          this.activeRecording = this.allRecordings[idx];
-          const elem = document.getElementById(`recRow${idx}`);
-          if (elem) elem.classList.add('playing');
-          const id = this.activeRecording._id;
+          
+          const idx = Math.floor(Math.random() * ft.itemIdxMapping.length);
+          const nextIdx = ft.itemIdxMapping[idx];
+          this.activeRecording = ft.items[nextIdx];
+          const nextElem = document.getElementById(`row${idx}`);
+          if (nextElem) nextElem.classList.add('playingRec');
+          const id = this.activeRecording!._id;
           this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
-        
         }
       }
     },
@@ -474,175 +436,146 @@ export default defineComponent({
       }
     },
 
-    handleClick() {
+    handleClickEmit() {
       this.contextMenuClosed = true;
     },
 
-    async handleRightClick(e: MouseEvent) {
-      e.preventDefault();
+    handleDoubleClickEmit(rec: RecType, target: HTMLElement) {
+      if (this.canView(rec, this.userID!)) {
+        this.sendAudioSource(target, rec);
+      }
+    },
+
+    async handleRightClickEmit(rec: RecType, e: MouseEvent) {
       this.dropDownLeft = e.clientX;
       this.dropDownTop = e.clientY;
       this.contextMenuClosed = !this.contextMenuClosed;
-      const fileContainer = this.$refs.fileContainer as HTMLElement;
+      const fTable = this.$refs.filterableTable as typeof FilterableTable;
+      const fileContainer = fTable.$refs.fileContainer as HTMLElement;
       const rect = fileContainer.getBoundingClientRect();
       if (this.dropDownLeft + this.dropDownWidth > rect.width - 20) {
         this.dropDownLeft = rect.width - 30 - this.dropDownWidth;
       }
-
-      let el = document.elementFromPoint(e.clientX, e.clientY);
-      
-      if (el) {
-        if (el.classList.contains('metadataLabels')) {
-          el = el.parentElement!;
-        } else if (el.classList.contains('field')) {
-          el = el.parentElement!.parentElement!;
-        } else if (el.classList.contains('draggableBorder')) {
-          el = el.parentElement!;
-        }
-        const recording = this.allRecordings[parseInt(el.id.slice(6))];
-        const ep = recording.explicitPermissions!;
-        const editPermission = recording !== undefined && (
-          ep!.edit.includes(this.userID!) ||
-          recording.userID === this.userID
-        );
-        const viewPermission = recording !== undefined && (
-          ep!.view.includes(this.userID!) ||
-          ep!.edit.includes(this.userID!) ||
-          ep!.publicView ||
-          recording.userID === this.userID
-        );
-        const owner = recording !== undefined && (
-          recording.userID === this.userID
-        ); 
-        this.contextMenuChoices = [];
-        this.contextMenuChoices.push({
-          text: 'New Transcription',
-          action: () => {
-            let query: {
-              aeName?: string,
-              afName?: string,
-              recID?: string
-            } = {
-              aeName: JSON.stringify(recording.parentTitle),
-              afName: JSON.stringify(this.getShorthand(recording)),
-            }
-            if (recording.parentTitle === null) {
-              query.recID = recording._id;
-            }
-            this.$router.push({
-              name: 'Transcriptions',
-              query
-            })
-            this.contextMenuClosed = true;
-          },
-          enabled: viewPermission
-          
-        });
-
-        // options to edit recording, delete recording, and upload new recording
-        this.contextMenuChoices.push({
-          text: 'Edit Recording',
-          action: () => {
-            this.openRecordingModal({ editing: true, recId: recording._id })
-            this.contextMenuClosed = true;
-          },
-          enabled: editPermission
-        });
-        this.contextMenuChoices.push({
-          text: 'Edit Permissions',
-          action: () => {
-            this.artifactID = recording._id!;
-            this.permissionsModalClosed = false;
-            this.contextMenuClosed = true;
-            this.selectedRecording = recording
-          },
-          enabled: owner
-        })
-        this.contextMenuChoices.push({
-          text: 'Delete Recording',
-          action: async () => {
-            
-            this.contextMenuClosed = true;
-            try { 
-              await deleteRecording(recording._id!);
-              this.allRecordings = await getAllAudioRecordingMetadata();
-              this.toggleSort(this.selectedSortIdx, true);
-            } catch (err) {
-              console.log(err); 
-            }
-          },
-          enabled: owner
-        });
-        this.contextMenuChoices.push({
-          text: 'Upload New Recording',
-          action: () => {
-            this.recModalFrame = 'uploadRec';
-            this.openUploadModal();
-            this.contextMenuClosed = true;
-          },
-          enabled: true
-        });
-
-        try {
-          // show option to add to collection, if there are any avaliable to
-          // the user
-          const userID = this.$store.state.userID!;
-          this.possibleCols = await getEditableCollections(userID);
-          if (this.possibleCols.length > 0) {
-            this.contextMenuChoices.push({
-              text: 'Add to Collection',
-              action: () => {
-
-                this.selectedRecording = recording;
-                this.contextMenuClosed = true;
-                this.addToCollectionModalClosed = false;
-              },
-              enabled: viewPermission
-            });
-
-            this.removableCols = this.possibleCols.filter(col => {
-              return col.audioRecordings.includes(recording._id!);
-            })
-            if (this.removableCols.length > 0) {
-              this.contextMenuChoices.push({
-                text: 'Remove from Collection',
-                action: () => {
-                  this.selectedRecording = recording;
-                  this.contextMenuClosed = true;
-                  this.removeFromCollectionModalClosed = false;
-                  
-                },
-                enabled: true
-              })
-            }
+      const editable = this.permissiontoEdit(rec, this.userID!);
+      const viewable = this.canView(rec, this.userID!);
+      const owned = rec.userID === this.userID;
+      this.contextMenuChoices = [];
+      this.contextMenuChoices.push({
+        text: 'New Transcription',
+        action: () => {
+          let query: {
+            aeName?: string,
+            afName?: string,
+            recID?: string
+          } = {
+            aeName: JSON.stringify(rec.parentTitle),
+            afName: JSON.stringify(this.getShorthand(rec)),
           }
-
-          const tChoices = await getAllTransOfAudioFile(
-            recording._id!, 
-            this.userID!
-          );
-          tChoices.forEach(tc => {
+          if (rec.parentTitle === null) {
+            query.recID = rec._id;
+          }
+          this.$router.push({
+            name: 'Transcriptions',
+            query
+          })
+          this.contextMenuClosed = true;
+        },
+        enabled: viewable
+      });
+      this.contextMenuChoices.push({
+        text: 'Edit Recording',
+        action: () => {
+          this.openRecordingModal({ editing: true, recId: rec._id })
+          this.contextMenuClosed = true;
+        },
+        enabled: editable
+      });
+      this.contextMenuChoices.push({
+        text: 'Edit Permissions',
+        action: () => {
+          this.artifactID = rec._id!;
+          this.permissionsModalClosed = false;
+          this.contextMenuClosed = true;
+          this.selectedRecording = rec
+        },
+        enabled: owned
+      });
+      this.contextMenuChoices.push({
+        text: 'Delete Recording',
+        action: async () => {
+          this.contextMenuClosed = true;
+          try { 
+            await deleteRecording(rec._id!);
+            this.allRecordings = await getAllAudioRecordingMetadata();
+            const fTable = this.$refs.filterableTable as typeof FilterableTable;
+            fTable.toggleSort(fTable.selectedSortIdx, true);
+          } catch (err) {
+            console.log(err); 
+          }
+        },
+        enabled: owned
+      });
+      this.contextMenuChoices.push({
+        text: 'Upload New Recording',
+        action: () => {
+          this.recModalFrame = 'uploadRec';
+          this.openUploadModal();
+          this.contextMenuClosed = true;
+        },
+        enabled: true
+      });
+      try {
+        this.possibleCols = await getEditableCollections(this.userID!);
+        if (this.possibleCols.length > 0) {
+          this.contextMenuChoices.push({
+            text: 'Add to Collection',
+            action: () => {
+              this.selectedRecording = rec;
+              this.contextMenuClosed = true;
+              this.addToCollectionModalClosed = false;
+            },
+            enabled: viewable
+          });
+          this.removableCols = this.possibleCols.filter(col => {
+            return col.audioRecordings.includes(rec._id!);
+          })
+          if (this.removableCols.length > 0) {
             this.contextMenuChoices.push({
-              text: `Open file: "${tc.title}" by ${tc.name}`,
+              text: 'Remove from Collection',
               action: () => {
-                this.$store.commit('update_id', tc._id);
-                this.$cookies.set('currentPieceID', tc._id);
-                this.$router.push({
-                  name: 'EditorComponent',
-                    query: { id: tc._id }
-                })
+                this.selectedRecording = rec;
+                this.contextMenuClosed = true;
+                this.removeFromCollectionModalClosed = false;
               },
               enabled: true
             })
-          })
-          this.dropDownHeight = this.contextMenuChoices.length * 30;
-          const topPartHeight = rect.height + rect.top;
-          if (this.dropDownTop + this.dropDownHeight > topPartHeight - 10) {
-            this.dropDownTop = topPartHeight - 10 - this.dropDownHeight;
           }
-        } catch (err) {
-          console.log(err);
         }
+        const tChoices = await getAllTransOfAudioFile(
+          rec._id!, 
+          this.userID!
+        );
+        tChoices.forEach(tc => {
+          this.contextMenuChoices.push({
+            text: `Open file: "${tc.title}" by ${tc.name}`,
+            action: () => {
+              this.$store.commit('update_id', tc._id);
+              this.$cookies.set('currentPieceID', tc._id);
+              this.$router.push({
+                name: 'EditorComponent',
+                  query: { id: tc._id }
+              })
+            },
+            enabled: true
+          })
+        })
+        this.dropDownHeight = this.contextMenuChoices.length * 30;
+        const topPartHeight = rect.height + rect.top;
+        if (this.dropDownTop + this.dropDownHeight > topPartHeight - 10) {
+          this.dropDownTop = topPartHeight - 10 - this.dropDownHeight;
+        }
+      } catch (err) {
+        console.log(err);
       }
     },
 
@@ -662,108 +595,6 @@ export default defineComponent({
         })
       })
       return out.join('')
-    },
-
-    handleDragStart(fIdx: number, event: DragEvent) {
-      // Store the initial mouse position and column widths
-      // event.preventDefault();
-      this.initialMouseX = event.clientX;
-      this.initialWidths = this.colWidths.slice()
-      // make cursor resize until drag end
-      document.body.style.cursor = 'col-resize';
-    },
-
-    handleDrag(fIdx: number, event: DragEvent) {
-      const nextCol = fIdx < this.colWidths.length - 1;
-      // Calculate the new width based on the mouse movement
-      document.body.style.cursor = 'col-resize';
-        if (event.clientX !== 0) {
-          const deltaX = event.clientX - this.initialMouseX!;
-          const initW = this.initialWidths[fIdx]!;
-          const nextInitW = this.initialWidths[fIdx + 1]!;
-          const nextMinW = this.mincolWidths[fIdx + 1]!;
-          if (initW + deltaX < this.mincolWidths[fIdx]!) {
-            return;
-            
-          } else if (nextCol && (nextInitW - deltaX < nextMinW)) {
-
-            return
-          } else {
-            this.colWidths[fIdx] = initW + deltaX;
-            if (nextCol) {
-              this.colWidths[fIdx + 1] = nextInitW - deltaX;
-            }
-          }
-      }
-    },
-    handleDragEnd(fIdx: number, event: DragEvent) {
-      document.body.style.cursor = 'auto';
-      const nextCol = fIdx < this.colWidths.length - 1;
-      const deltaX = event.clientX - this.initialMouseX!;
-      const nextMinCW = this.mincolWidths[fIdx + 1];
-      if (this.initialWidths[fIdx] + deltaX < this.mincolWidths[fIdx]) {
-        return;
-      } else if (nextCol && this.initialWidths[fIdx + 1] - deltaX < nextMinCW) {
-        return
-      } else {
-        this.colWidths[fIdx] = this.initialWidths[fIdx] + deltaX;
-        if (nextCol) {
-          this.colWidths[fIdx + 1] = this.initialWidths[fIdx + 1] - deltaX;
-        }  
-      } 
-    },
-
-    ensureDurationWidth() {
-      // ensure duration column is wide enough to display duration label
-      const minWidth = 100;
-      const idx = this.mdFields.findIndex(field => {
-        return field.name === 'Duration';
-      });
-      const audioEventIdx = this.mdFields.findIndex(field => {
-        return field.name === 'Audio Event';
-      });
-      if (this.colWidths[idx] < minWidth) {
-        const extra = minWidth - this.colWidths[idx];
-        this.colWidths[idx] = minWidth;
-        this.colWidths[audioEventIdx] -= extra;
-      }
-    },
-
-    ensureMinWidths() {
-      this.colWidths.forEach((width, idx) => {
-        if (width < this.mincolWidths[idx]) {
-          const diff = this.mincolWidths[idx] - width;
-          this.colWidths[idx] += diff;
-          if (idx < this.colWidths.length - 1) {
-            this.colWidths[idx + 1] -= diff;
-          } else {
-            this.colWidths[0] -= diff;
-          }
-        }
-      })
-    },
-
-    toggleSort(fIdx: number, ensureCurrentState: boolean = false) {
-      const field = this.mdFields[fIdx];
-      if (this.selectedSortIdx === fIdx) {
-        if (
-          (field.sortState === 'down' && !ensureCurrentState) || 
-          (field.sortState === 'up' && ensureCurrentState)
-          ) {
-          field.sortState = 'up';
-          this.sortRecordings({ sort: field.sortType, fromTop: false });
-        } else {
-          field.sortState = 'down';
-          this.sortRecordings({ sort: field.sortType, fromTop: true });
-        }
-      } else {
-        this.sortRecordings({ 
-          sort: field.sortType, 
-          fromTop: field.sortState === 'down' 
-        });
-      }
-
-      this.selectedSortIdx = fIdx;
     },
 
     eventSorter(a: RecType, b: RecType) {
@@ -1022,76 +853,52 @@ export default defineComponent({
       }
     },
 
-    sortRecordings({
-      sort='soloist', 
-      fromTop=true
-    }: {
-      sort?: string,
-      fromTop?: boolean
-    } = {
-    }) {
-      const playingElem = document.querySelector('.playing');
-      if (playingElem) {
-        playingElem.classList.remove('playing');
-      }
-      if (sort === 'soloist') {
-        this.allRecordings.sort(this.soloistSorter);
-        if (!fromTop) {
-          this.allRecordings.reverse();
-        }
-      } else if (sort === 'raag') {
-        this.allRecordings.sort(this.raagSorter);
-        if (!fromTop) {
-          this.allRecordings.reverse();
-        }
-      } else if (sort === 'pSec') {
-        this.allRecordings.sort(this.pSecSorter);
-        if (!fromTop) {
-          this.allRecordings.reverse();
-        }
-      } else if (sort === 'duration') {
-        this.allRecordings.sort(this.durSorter);
-        if (!fromTop) {
-          this.allRecordings.reverse();
-        }
-      } else if (sort === 'audioEvent') {
-        this.allRecordings.sort(this.trackNumSorter)
-        this.allRecordings.sort(this.eventSorter)
-        if (!fromTop) {
-          this.allRecordings.reverse();
-        }
-      } else if (sort === 'trackNum') {
-        this.allRecordings.sort(this.trackNumSorter)
-      }
-      if (this.activeRecording !== undefined) {
-        const idx = this.allRecordings.findIndex(rec => {
-          return rec._id === this.activeRecording!._id;
-        });
-        const elem = document.getElementById(`recRow${idx}`);
-        if (elem) {
-          elem.classList.add('playing');
+    soloInstSorter(a: RecType, b: RecType ) {
+      const aSoloistKey = Object.keys(a.musicians).filter(key => {
+        return a.musicians[key].role === 'Soloist';
+      })[0];
+      const aSoloInst = aSoloistKey !== undefined ? 
+        a.musicians[aSoloistKey].instrument : undefined;
+      const bSoloistKey = Object.keys(b.musicians).filter(key => {
+        return b.musicians[key].role === 'Soloist';
+      })[0];
+      const bSoloInst = bSoloistKey !== undefined ? 
+        b.musicians[bSoloistKey].instrument : undefined;
+      if (aSoloInst === undefined && bSoloInst === undefined) {
+        return 0;
+      } else if (aSoloInst === undefined && bSoloInst !== undefined) {
+        return 1;
+      } else if (aSoloInst !== undefined && bSoloInst === undefined) {
+        return -1;
+      } else {
+        if (aSoloInst! < bSoloInst!) {
+          return -1;
+        } else if (aSoloInst! > bSoloInst!) {
+          return 1;
+        } else {
+          return 0;
         }
       }
-
     },
 
-    sendAudioSource(event: MouseEvent, recording: RecType) {
+    sendAudioSource(target: HTMLElement, recording: RecType) {
       const audioFileId = recording._id; 
-      let target = event.target as HTMLElement;
       if (target.tagName === 'SPAN') {
         target = target.parentElement!;
         if (target.classList.contains('metadataLabels')) {
           target = target.parentElement!;
         }
       };
-      const playingElem = document.querySelector('.playing');
+      const playingElem = document.querySelector('.playingRec');
       if (playingElem) {
-        playingElem.classList.remove('playing');
+        playingElem.classList.remove('playingRec');
       }
-      target.classList.add('playing');
+      target.classList.add('playingRec');
+      const rowIdx = parseInt(target.id.slice(3));
+      const ft = this.$refs.filterableTable as typeof FilterableTable;
+      const unmappedIdx = ft.itemIdxMapping[rowIdx];
+      this.playingItemId = unmappedIdx;
       this.audioSource = `Https://swara.studio/audio/mp3/${audioFileId}.mp3`;
-      this.saEstimate = recording.saEstimate;
-      this.saVerified = recording.saVerified;
       this.activeRecording = recording;
     },
 
@@ -1124,95 +931,14 @@ export default defineComponent({
   background-image: linear-gradient(black, #1e241e);
   color: white;
 }
-.fileContainer {
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 140px - 40px);
-  width: 100%;
-  user-select: none;
-  overflow-y: scroll;
-  overflow-x: hidden;
-  border-top: 1px solid grey;
-}
 
-.recordingRow {
-  display: flex;
-  flex-direction: row;
-  justify-content: left;
-  align-items: center;
-  min-height: 40px;
-  width: 100%;
-  border-bottom: 1px solid grey;
-}
-
-.recordingRow.disabled {
-  color: grey;
-}
-
-.recordingRow:hover {
-  background-color: #2b332c;
-}
-
-.playing {
+::v-deep .playingRec {
   background-color: #3e4a40;
 }
 
-.labelRow { 
-  display: flex;
-  flex-direction: row;
-  justify-content: left;
-  align-items: center;
-  min-height: v-bind(labelRowHeight + 'px');
-  background-color: #1e241e;
-  border-top: 1px solid grey;
-}
-
-.metadataLabels {
-  text-align: center;
-  border-right: 1px solid grey;
-  height: 40px;
-  position: relative;
-  white-space: nowrap;
-  box-sizing: border-box;
-}
-
-span.field {
-  display: flex;
-  align-items: center;
-  justify-content: left;
-  white-space: nowrap;
-  overflow-x: auto;
-  height: 30px;
-  margin-left: 5px;
-  margin-right: 5px;
-  user-select: none;
-}
-
-.draggableBorder {
-  position: absolute;
-  right: -5px;
-  top: 0;
-  width: 10px;
+.blackBackground {
+  background-color: black;
   height: 100%;
-  background-color: none;
-  z-index: 1;
-  opacity: 0;
-  cursor: col-resize;
-  
-  user-select: none;
-  background-color: pink
-}
-
-.draggableBorder:hover {
-  cursor: col-resize
-}
-
-.sortTriangle.down {
-  transform: rotate(90deg);
-}
-
-.sortTriangle.up {
-  transform: rotate(-90deg);
 }
 
 </style>
