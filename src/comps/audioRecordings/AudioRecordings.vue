@@ -21,90 +21,7 @@
       @searched='resetPlayingHighlight'
     />
   </div>
-
-
-  <div class='main' @click='handleClick'>
-    <div 
-      v-if='false'
-      class='labelRow'
-      >
-      <div 
-        class='metadataLabels' 
-        v-for='(field, fIdx) in mdFields'
-        :style='{
-          "width": colWidths[fIdx] + "px",
-          "max-width": fIdx === mdFields.length - 2 ? 
-            "" : 
-            colWidths[fIdx] + "px",
-          "min-width": colWidths[fIdx] + "px",
-          "flex-grow": fIdx === mdFields.length - 2 ? 1 : 0,
-          "position": "relative" 
-          }'
-        >
-        <span class='field'>
-          {{ field.name }}
-          <span 
-            v-if='field.sortType !== undefined'
-            :class='`sortTriangle ${field.sortState}`'
-            @click='toggleSort(fIdx)'
-            :style='{
-              "color": fIdx === selectedSortIdx ? "white" : "black",
-            }'
-            >
-            &#9654;
-          </span>
-        </span>
-        
-        <div
-          v-if='fIdx !== mdFields.length - 1'
-          class='draggableBorder'
-          draggable='true'
-          @dragstart='handleDragStart(fIdx, $event)'
-          @drag='handleDrag(fIdx, $event)'
-          @dragend='handleDragEnd(fIdx, $event)'
-          >
-        </div>
-      </div>
-    </div>
-    <div
-      v-if='false'
-      class='fileContainer'
-      @contextmenu='handleRightClick'
-      ref='fileContainer'
-      >
-      <div 
-        :class='`recordingRow ${canView(recording, userID!) ? "" : "disabled"}`'
-        v-for='(recording, rIdx) in allRecordings'
-        @dblclick='canView(recording, userID!) ? 
-          sendAudioSource($event, recording) : 
-          null'
-        :id='`recRow${rIdx}`'
-        >
-        <div 
-          class='metadataLabels' 
-          v-for='(field, fIdx) in mdFields'
-          :style='{ 
-            "width": colWidths[fIdx] + "px", 
-            "max-width": fIdx === mdFields.length - 2 ? 
-              "" : 
-              colWidths[fIdx] + "px",
-            "min-width": colWidths[fIdx] + "px",
-            "flex-grow": fIdx === mdFields.length - 2 ? 1 : 0 
-          }'
-          >
-          <span class='field'>{{ field.func(recording) }}</span>
-          <div 
-            class='draggableBorder'
-            draggable='true'
-            @dragstart='handleDragStart(fIdx, $event)'
-            @drag='handleDrag(fIdx, $event)'
-            @dragend='handleDragEnd(fIdx, $event)'
-            >
-          </div>
-        </div>
-       
-      </div>
-    </div>
+  <div class='main'>
     <AudioPlayer 
       :audioSource='audioSource'
       :id='audioRecId'
@@ -152,7 +69,6 @@
     artifactType='audioRecording'
     @close='handleClosePermissionsModal'
     />
-
 </template>
 
 <script lang='ts'>
@@ -225,8 +141,6 @@ type AudioRecordingsDataType = {
   artifactID: string | undefined,
   ftLabels: FilterableTableType[],
   playingItemId?: number
-  
-
 }
 
 export default defineComponent({
@@ -335,9 +249,18 @@ export default defineComponent({
         getDisplay: this.getSoloistDisplay as GetDisplayType
       },
       {
+        label: 'Solo Instrument',
+        minWidth: 165,
+        prioritization: 1,
+        sortFunction: this.soloInstSorter as SortFuncType,
+        growable: true,
+        initSortState: SortState.down,
+        getDisplay: this.getSoloInstDisplay as GetDisplayType
+      },
+      {
         label: 'Raag',
         minWidth: 80,
-        prioritization: 1,
+        prioritization: 2,
         sortFunction: this.raagSorter as SortFuncType,
         growable: true,
         initSortState: SortState.down,
@@ -346,7 +269,7 @@ export default defineComponent({
       {
         label: 'Performance Section',
         minWidth: 190,
-        prioritization: 2,
+        prioritization: 3,
         sortFunction: this.pSecSorter as SortFuncType,
         growable: true,
         initSortState: SortState.down,
@@ -355,7 +278,7 @@ export default defineComponent({
       {
         label: 'Duration',
         minWidth: 100,
-        prioritization: 3,
+        prioritization: 4,
         sortFunction: this.durSorter as SortFuncType,
         growable: false,
         initSortState: SortState.down,
@@ -364,7 +287,7 @@ export default defineComponent({
       {
         label: 'Audio Event',
         minWidth: 130,
-        prioritization: 4,
+        prioritization: 5,
         sortFunction: this.eventSorter as SortFuncType,
         growable: true,
         initSortState: SortState.down,
@@ -373,12 +296,11 @@ export default defineComponent({
       {
         label: 'Track #',
         minWidth: 80,
-        prioritization: 5,
+        prioritization: 6,
         sortFunction: undefined,
         growable: false,
         initSortState: SortState.down,
         getDisplay: this.getTrackNumDisplay as GetDisplayType
-        
       }
     ],
     playingItemId: undefined
@@ -471,6 +393,17 @@ export default defineComponent({
         return keys[0];
       } else {
         return 'Unknown';
+      }         
+    },
+
+    getSoloInstDisplay(rec: RecType) {
+      const keys = Object.keys(rec.musicians).filter(key => {
+        return rec.musicians[key].role === 'Soloist';
+      });
+      if (keys.length > 0) {
+        return rec.musicians[keys[0]].instrument;
+      } else {
+        return '';
       }         
     },
 
@@ -1351,6 +1284,34 @@ export default defineComponent({
               }
             }
           }
+        }
+      }
+    },
+
+    soloInstSorter(a: RecType, b: RecType ) {
+      const aSoloistKey = Object.keys(a.musicians).filter(key => {
+        return a.musicians[key].role === 'Soloist';
+      })[0];
+      const aSoloInst = aSoloistKey !== undefined ? 
+        a.musicians[aSoloistKey].instrument : undefined;
+      const bSoloistKey = Object.keys(b.musicians).filter(key => {
+        return b.musicians[key].role === 'Soloist';
+      })[0];
+      const bSoloInst = bSoloistKey !== undefined ? 
+        b.musicians[bSoloistKey].instrument : undefined;
+      if (aSoloInst === undefined && bSoloInst === undefined) {
+        return 0;
+      } else if (aSoloInst === undefined && bSoloInst !== undefined) {
+        return 1;
+      } else if (aSoloInst !== undefined && bSoloInst === undefined) {
+        return -1;
+      } else {
+        if (aSoloInst! < bSoloInst!) {
+          return -1;
+        } else if (aSoloInst! > bSoloInst!) {
+          return 1;
+        } else {
+          return 0;
         }
       }
     },

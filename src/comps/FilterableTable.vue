@@ -8,6 +8,15 @@
         v-model='searchQuery'
         @input='handleSearch'
         >
+        <button 
+          v-show='searchQuery'
+          @click='cancelSearch'
+          class='clearSearch'
+          >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M11.354 4.646a.5.5 0 0 1 0 .708l-3 3 3 3a.5.5 0 0 1-.708.708l-3-3-3 3a.5.5 0 0 1-.708-.708l3-3-3-3a.5.5 0 0 1 .708-.708l3 3 3-3a.5.5 0 0 1 .708 0z"/>
+          </svg>
+        </button>
     </div>
     <div class='labelRow'>
       <div 
@@ -94,7 +103,7 @@ import {
 type FilterableTableDataType = {
   colWidths: number[],
   sortStates: SortState[],
-  selectedSortIdx?: number,
+  selectedSortIdx: number,
   initialMouseX?: number,
   initialWidths: number[],
   labelRowHeight: number,
@@ -203,22 +212,23 @@ export default defineComponent({
 
   watch: {
     items() {
-      this.displayableData = this.items.map((item, idx) => {
-        return this.labels.map(label => label.getDisplay(item));
-      })
-      this.filteredData = this.displayableData;
+      this.toggleSort(this.selectedSortIdx, true);
       this.viewable = this.items.map(item => this.canView(item, this.userID));
       this.editable = this.items.map(item => this.canEdit(item, this.userID));
-      this.handleSearch();
     }
   },
 
   methods: {
 
+    cancelSearch() {
+      this.searchQuery = "";
+      this.handleSearch();
+    },
+
     handleSearch() {
       this.filteredData = this.displayableData.filter((row, rIdx) => {
         return row.some((cell, cIdx) => {
-          return cell.toString().toLowerCase().includes(this.searchQuery.toLowerCase());
+          return cell?.toString().toLowerCase().includes(this.searchQuery.toLowerCase());
         })
       });
       this.itemIdxMapping = this.filteredData.map(fd => {
@@ -525,6 +535,30 @@ span.field {
   padding-right: 10px;
   box-sizing: border-box;
   user-select: none;
+  position: relative;
+}
+
+.clearSearch {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #2e2e2e;
+  color: #6e6e6e;
+  /* border: 1px solid #ccc; */
+  border: 0;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.clearSearch:hover {
+  background: #3e3e3e;
 }
 
 .searchOval {
