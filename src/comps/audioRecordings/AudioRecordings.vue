@@ -566,10 +566,7 @@ export default defineComponent({
           if (nextElem) nextElem.classList.add('playingRec');
           const id = this.activeRecording!._id;
           this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
-          // but if the next item is not viewable, then we need to find the next
-          //  aka the top of the visible list methinks
         } else {
-          console.log('shuffling')
           // randomly choose from the list of presently displayed items
           const idx = Math.floor(Math.random() * ft.itemIdxMapping.length);
           const nextIdx = ft.itemIdxMapping[idx];

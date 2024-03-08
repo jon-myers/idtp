@@ -1,5 +1,25 @@
 <template>
+  <FilterableTable
+    ref='filterableTable'
+    v-if='
+      userID !== undefined
+      && allPieces !== undefined
+      
+      '
+    :labels='ftLabels'
+    :items='allPieces'
+    :userID='userID'
+    :canEdit='(permissionToEdit as UserCheckType)'
+    :canView='(permissionToView as UserCheckType)'
+    :heightOffset='0'
+    :navHeight='navHeight'
+    @doubleClick='handleDoubleClickEmit'
+    @click='handleClickEmit'
+    @rightClick='handleRightClickEmit'
+    />
+
   <div
+    v-if='false'
     class="fileContainer"
     @contextmenu="handleRightClick"
     @click="handleClick"
@@ -140,6 +160,7 @@ import { Raga, Piece, Trajectory, Phrase } from '@/js/classes.ts';
 import PermissionsModal from '@/comps/PermissionsModal.vue';
 import { defineComponent } from 'vue';
 import ContextMenu from '@/comps/ContextMenu.vue';
+import FilterableTable from '@/comps/FilterableTable.vue';
 import { 
   ContextMenuOptionType, 
   UserType, 
@@ -148,8 +169,13 @@ import {
   RecType,
   NewPieceInfoType,
   RagaNewPieceInfoType,
-  PassedDataType
+  PassedDataType,
+  FilterableTableType,
+  SortFuncType,
+  GetDisplayType,
+  UserCheckType,
 } from '@/ts/types.ts';
+import { SortState } from '@/ts/enums.ts';
 
 type FileManagerDataType = {
   infoKeys: string[];
@@ -160,8 +186,6 @@ type FileManagerDataType = {
   dropDownLeft: number;
   dropDownTop: number;
   dropDownWidth: number;
-  delete_: boolean;
-  open_: boolean;
   deleteActive: boolean;
   modalLeft: number;
   modalTop: number;
@@ -193,6 +217,8 @@ type FileManagerDataType = {
   removeFromCollectionModalOpen: boolean,
   permissionsModalOpen: boolean,
   fileContainerHeight: number,
+  userID?: string,
+  ftLabels: FilterableTableType[],
 }
 
 type PieceInfoType = [string?, string?, string?, string?, string?, string?];
@@ -217,8 +243,6 @@ export default defineComponent({
       dropDownWidth: 200,
       modalLeft: 200,
       modalTop: 200,
-      delete_: true,
-      open_: true,
       deleteActive: true,
       selectedPiece: undefined,
       modalWidth: 650,
@@ -256,6 +280,62 @@ export default defineComponent({
       removableCols: [],
       permissionsModalOpen: false,
       fileContainerHeight: 800,
+      userID: undefined,
+      ftLabels: [{
+        label: 'Title',
+        minWidth: 75,
+        prioritization: 0,
+        sortFunction: this.titleSorter as SortFuncType,
+        growable: true,
+        initSortState: SortState.down,
+        getDisplay: this.getTitleDisplay as GetDisplayType
+      },
+      {
+       label: 'Transcriber',
+       minWidth: 125,
+       prioritization: 1,
+       sortFunction: this.transcriberSorter as SortFuncType,
+        growable: true,
+        initSortState: SortState.down,
+        getDisplay: this.getTranscriberDisplay as GetDisplayType
+      },
+      {
+        label: 'Raga',
+        minWidth: 75,
+        prioritization: 2,
+        sortFunction: this.ragaSorter as SortFuncType,
+        growable: true,
+        initSortState: SortState.down,
+        getDisplay: this.getRagaDisplay as GetDisplayType
+      },
+      {
+        label: 'Created',
+        minWidth: 105,
+        prioritization: 3,
+        sortFunction: this.createdSorter as SortFuncType,
+        growable: true,
+        initSortState: SortState.down,
+        getDisplay: this.getCreatedDisplay as GetDisplayType
+      },
+      {
+        label: 'Modified',
+        minWidth: 110,
+        prioritization: 4,
+        sortFunction: this.modifiedSorter as SortFuncType,
+        growable: true,
+        initSortState: SortState.down,
+        getDisplay: this.getModifiedDisplay as GetDisplayType
+      },
+      {
+        label: 'Editable',
+        minWidth: 105,
+        prioritization: 5,
+        sortFunction: this.editableSorter as SortFuncType,
+        growable: true,
+        initSortState: SortState.down,
+        getDisplay: this.getEditableDisplay as GetDisplayType
+      }
+    ]
     };
   },
 
@@ -264,7 +344,8 @@ export default defineComponent({
     ContextMenu,
     AddToCollection,
     RemoveFromCollection,
-    PermissionsModal
+    PermissionsModal,
+    FilterableTable,
   },
 
   props: {
@@ -286,7 +367,7 @@ export default defineComponent({
     } else {
       id = this.$store.state.userID as string;
     }
-    
+    this.userID = id; 
     const sortKey = this.sortKeyNames[this.selectedSort];
     const sortDir = this.sorts[this.selectedSort];
     this.allPieces = await getAllPieces(id, sortKey, String(sortDir), true);
@@ -341,6 +422,274 @@ export default defineComponent({
   },
 
   methods: {
+
+    handleDoubleClickEmit(item: TransMetadataType, el: HTMLElement) {
+      this.openPieceAlt(item);
+    },
+
+    handleClickEmit(item: TransMetadataType, el: HTMLElement) {
+      // this.selectedPiece = item;
+      this.closeDropDown();
+    },
+
+    async handleRightClickEmit(item: TransMetadataType, e: MouseEvent, target: HTMLElement) {
+      // this.handleRightClick(e);
+      try {
+        this.editableCols = await getEditableCollections(this.userID!);
+        let addOptions = false;
+        this.dropDownLeft = e.clientX;
+        this.dropDownTop = e.clientY;
+        this.modalLeft = e.clientX;
+        this.modalTop = e.clientY;
+        const width = window.innerWidth;
+        const height = window.innerHeight - this.navHeight;
+        if (this.modalLeft + this.modalWidth > width - 20) {
+          this.modalLeft = width - 20 - this.modalWidth;
+        }
+        if (this.modalTop + this.modalHeight > height - 20) {
+          this.modalTop = height - 20 - this.modalHeight;
+        }
+        if (this.dropDownLeft + this.dropDownWidth > width - 20) {
+          this.dropDownLeft = width - 20 - this.dropDownWidth;
+        }
+        const cm = this.$refs.contextMenu as typeof ContextMenu;
+        const cmElem = cm.$el as HTMLElement;
+        const cmRect = cmElem.getBoundingClientRect();
+        if (this.dropDownTop + cmRect.height > height - 20) {
+          this.dropDownTop = height - 20 - cmRect.height;
+        }
+        this.designPieceModal = false;
+        document.querySelectorAll('.selected').forEach((el) => {
+          el.classList.remove('selected');
+        });
+        this.selectedPiece = item;
+        this.contextMenuChoices = [];
+        target.classList.add('selected');
+
+        this.contextMenuChoices.push({
+          text: 'New Transcription',
+          enabled: true,
+          action: () => {
+            this.designNewPiece();
+            this.contextMenuClosed = true;
+            // find any with class selected and remove it
+            document.querySelectorAll('.selected').forEach((el) => {
+              el.classList.remove('selected');
+            })
+          }
+        });
+        this.contextMenuChoices.push({
+          text: 'Open In Editor',
+          enabled: true,
+          action: () => {
+            this.openPieceAlt();
+            this.contextMenuClosed = true;
+          }
+        });
+        this.contextMenuChoices.push({
+          text: 'Open In Analyzer',
+          enabled: true,
+          action: () => {
+            this.openInAnalyzer();
+            this.contextMenuClosed = true;
+          }
+        });
+        this.contextMenuChoices.push({
+          text: 'Clone Transcription',
+          enabled: true,
+          action: () => {
+            this.clonePiece();
+            this.contextMenuClosed = true;
+          }
+        });
+        this.contextMenuChoices.push({
+          text: 'Edit Title',
+          enabled: this.owned(item),
+          action: () => {
+            this.editTitle();
+            this.contextMenuClosed = true;
+          }
+        });
+        this.contextMenuChoices.push({
+          text: 'Edit Permissions',
+          enabled: this.owned(item),
+          action: () => {
+            this.permissionsModalOpen = true;
+            this.contextMenuClosed = true;
+          }
+        });
+        this.contextMenuChoices.push({
+          text: 'Edit Owner',
+          enabled: this.owned(item),
+          action: () => {
+            this.editOwner();
+            this.contextMenuClosed = true;
+          }
+        });
+        this.contextMenuChoices.push({
+          text: 'Copy Link',
+          enabled: true,
+          action: () => {
+            this.copyLink();
+            this.contextMenuClosed = true;
+          }
+        });
+        this.contextMenuChoices.push({
+          text: 'Delete Transcription',
+          enabled: this.owned(item),
+          action: () => {
+            this.deletePiece();
+            this.contextMenuClosed = true;
+          }
+        });
+        if (this.editableCols.length > 0) {
+          this.contextMenuChoices.push({
+            text: 'Add To Collection',
+            enabled: true,
+            action: () => {
+              this.contextMenuClosed = true;
+              this.addToCollectionModalOpen = true;
+            }
+          });
+          this.removableCols = this.editableCols.filter(col => {
+            return col.transcriptions.includes(this.selectedPiece!._id!)
+          });
+          if (this.removableCols.length > 0) {
+            this.contextMenuChoices.push({
+              text: 'Remove From Collection',
+              enabled: true,
+              action: () => {
+                this.contextMenuClosed = true;
+                this.removeFromCollectionModalOpen = true;
+              }
+            });
+          }
+        };
+
+
+        
+
+
+        this.contextMenuClosed = false;
+
+
+
+
+
+
+
+
+      } catch (err) {
+        console.log(err)
+      }
+    },
+
+    titleSorter(a: TransMetadataType, b: TransMetadataType) {
+      const titleA = a.title.toLowerCase();
+      const titleB = b.title.toLowerCase();
+
+      if (titleA < titleB) {
+        return -1;
+      }
+      if (titleA > titleB) {
+        return 1;
+      }
+      return 0;
+    },
+
+    transcriberSorter(a: TransMetadataType, b: TransMetadataType) {
+      const familyNameA = a.family_name.toLowerCase();
+      const familyNameB = b.family_name.toLowerCase();
+      const givenNameA = a.given_name.toLowerCase();
+      const givenNameB = b.given_name.toLowerCase();
+      if (familyNameA < familyNameB) {
+        return -1;
+      }
+      if (familyNameA > familyNameB) {
+        return 1;
+      }
+      if (givenNameA < givenNameB) {
+        return -1;
+      }
+      if (givenNameA > givenNameB) {
+        return 1;
+      }
+      return 0;
+    },
+
+    ragaSorter(a: TransMetadataType, b: TransMetadataType) {
+      const ragaA = a.raga.name.toLowerCase();
+      const ragaB = b.raga.name.toLowerCase();
+      if (ragaA < ragaB) {
+        return -1;
+      }
+      if (ragaA > ragaB) {
+        return 1;
+      }
+      return 0;
+    },
+
+    createdSorter(a: TransMetadataType, b: TransMetadataType) {
+      const dateA = new Date(a.dateCreated);
+      const dateB = new Date(b.dateCreated);
+      if (dateA < dateB) {
+        return -1;
+      }
+      if (dateA > dateB) {
+        return 1;
+      }
+      return 0;
+    },
+
+    modifiedSorter(a: TransMetadataType, b: TransMetadataType) {
+      const dateA = new Date(a.dateModified);
+      const dateB = new Date(b.dateModified);
+      if (dateA < dateB) {
+        return -1;
+      }
+      if (dateA > dateB) {
+        return 1;
+      }
+      return 0;
+    },
+
+    editableSorter(a: TransMetadataType, b: TransMetadataType) {
+      const id = this.$store.state.userID!;
+      const aEdit = this.permissionToEdit(a);
+      const bEdit = this.permissionToEdit(b);
+      if (aEdit && !bEdit) {
+        return -1;
+      }
+      if (!aEdit && bEdit) {
+        return 1;
+      }
+      return 0;
+    },
+
+
+    getTitleDisplay(item: TransMetadataType) {
+      return item.title;
+    },
+
+    getTranscriberDisplay(item: TransMetadataType) {
+      return item.given_name + ' ' + item.family_name;
+    },
+
+    getRagaDisplay(item: TransMetadataType) {
+      return item.raga.name;
+    },
+
+    getCreatedDisplay(item: TransMetadataType) {
+      return this.writeDate(new Date(item.dateCreated));
+    },
+
+    getModifiedDisplay(item: TransMetadataType) {
+      return this.writeDate(new Date(item.dateModified));
+    },
+
+    getEditableDisplay(item: TransMetadataType) {
+      return this.permissionToEdit(item) ? 'Yes' : 'No';
+    },
 
     async closeCollectionsModal() {
       this.addToCollectionModalOpen = false;
@@ -580,7 +929,7 @@ export default defineComponent({
         throw new Error('selectedPiece is undefined')
       }
       const isUser = this.$store.state.userID === this.selectedPiece.userID;
-      if (this.delete_ && isUser) {
+      if (isUser) {
         // const dropDown = this.$refs.dropDown as HTMLElement;
         // dropDown.classList.add('closed');
         this.closeDropDown()
@@ -597,7 +946,19 @@ export default defineComponent({
       }
     },
 
+    // async renewPieces() {
+    //   const id = this.$store.state.userID!;
+    //   const sortKey = this.sortKeyNames[this.selectedSort];
+    //   const sortDir = this.sorts[this.selectedSort];
+    //   this.allPieces = await getAllPieces(id, sortKey, sortDir, true);
+    //   this.allPieces.forEach( (piece, i) => {
+    //     this.allPieceInfo[i] = this.pieceInfo(piece);
+    //   });
+    // },
+    
+
     async updateSort() {
+      console.log('updateSort')
       const id = this.$store.state.userID!;
       const sortKey = this.sortKeyNames[this.selectedSort];
       const sortDir = this.sorts[this.selectedSort];
@@ -657,8 +1018,6 @@ export default defineComponent({
           const num = Number(el.id.slice(3));
           el.classList.add('selected');
           this.selectedPiece = this.allPieces![num];
-          this.delete_ = true;
-          this.open_ = true;
           if (this.allPieces![num].userID === this.$store.state.userID) {
             this.deleteActive = true;
           } else {
@@ -669,16 +1028,12 @@ export default defineComponent({
           const num = Number(parentNode.id.slice(3));
           parentNode.classList.add('selected');
           this.selectedPiece = this.allPieces![num];
-          this.delete_ = true;
-          this.open_ = true;
           if (this.allPieces![num].userID === this.$store.state.userID) {
             this.deleteActive = true;
           } else {
             this.deleteActive = false;
           }
         } else {
-          this.delete_ = false;
-          this.open_ = false;
           this.deleteActive = false;
         }
         if (addOptions) {
@@ -696,7 +1051,7 @@ export default defineComponent({
               });
             }
           });
-          if (this.open_) {
+          if (true) {
             this.contextMenuChoices.push({
               text: 'Open In Editor',
               enabled: true,
@@ -887,6 +1242,10 @@ export default defineComponent({
       const ep = transcription.explicitPermissions;
       const id = this.$store.state.userID!;
       return transcription.userID === id || ep.edit.includes(id);
+    },
+
+    owned(transcription: TransMetadataType) {
+      return transcription.userID === this.userID;
     },
   },
 });
@@ -1126,5 +1485,13 @@ button {
 .overflowX::-webkit-scrollbar-thumb {
   background-color: #888;
   border-radius: 0em;
+}
+
+::v-deep .selected {
+  background-color: #3e4a40;
+}
+
+::v-deep .selected:hover {
+  background-color: #3e4a40;
 }
 </style>

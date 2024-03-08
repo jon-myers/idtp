@@ -201,6 +201,18 @@ export default defineComponent({
     }
   },
 
+  watch: {
+    items() {
+      this.displayableData = this.items.map((item, idx) => {
+        return this.labels.map(label => label.getDisplay(item));
+      })
+      this.filteredData = this.displayableData;
+      this.viewable = this.items.map(item => this.canView(item, this.userID));
+      this.editable = this.items.map(item => this.canEdit(item, this.userID));
+      this.handleSearch();
+    }
+  },
+
   methods: {
 
     handleSearch() {
@@ -330,16 +342,22 @@ export default defineComponent({
       e.preventDefault();
       let el = e.target as HTMLElement;
       if (el) {
-        if (el.classList.contains('metadataLabels')) {
+        if (el.classList.contains('preserve-space')) {
           el = el.parentElement!;
-        } else if (el.classList.contains('field')) {
+        }
+        
+        if (el.classList.contains('field')) {
           el = el.parentElement!.parentElement!;
-        } else if (el.classList.contains('draggableBorder')) {
+        }
+        if (el.classList.contains('draggableBorder')) {
+          el = el.parentElement!;
+        }
+        if (el.classList.contains('metadataLabels')) {
           el = el.parentElement!;
         }
         const id = Number(el.id.slice(3));
         const item = this.items[this.itemIdxMapping[id]];
-        this.$emit('rightClick', item, e);
+        this.$emit('rightClick', item, e, el);
       }
     },
 
