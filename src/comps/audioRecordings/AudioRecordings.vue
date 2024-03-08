@@ -103,16 +103,7 @@ type AudioRecordingsDataType = {
   audioSource: string | undefined,
   audioRecId: string | undefined,
   allRecordings: RecType[],
-  mdFields: { 
-    'name': string,
-    'func': (rec: RecType) => string | string[],
-    'sortState': 'down' | 'up',
-    'sortType'?: string
-  }[],
-  colWidths: number[],
   initialMouseX?: number,
-  initialWidths: number[],
-  mincolWidths: number[],
   allMusicians?: { 
     'First Name'?: string,
     'Last Name'?: string,
@@ -127,7 +118,6 @@ type AudioRecordingsDataType = {
   dropDownLeft: number,
   dropDownTop: number,
   dropDownWidth: number,
-  labelRowHeight: number,
   dropDownHeight: number,
   uploadRecModalClosed: boolean,
   possibleCols: CollectionType[],
@@ -153,73 +143,6 @@ export default defineComponent({
       allMusicians: undefined,
       allRecordings: [],
       activeRecording: undefined,
-      mdFields: [
-        { 
-          'name': 'Soloist', 
-          'func': (rec: RecType) => {
-            const keys = Object.keys(rec.musicians).filter(key => {
-              return rec.musicians[key].role === 'Soloist';
-            });
-            if (keys.length > 0) {
-              return keys[0];
-            } else {
-              return 'Unknown';
-            }         
-          },
-          'sortState': 'down',
-          'sortType': 'soloist'
-        },
-        {
-          'name': 'Raag',
-          'func': (rec: RecType) => {
-            return Object.keys(rec.raags).join(', ');
-          },
-          'sortState': 'down',
-          'sortType': 'raag'
-        },
-        {
-          'name': 'Performance Section',
-          'func': (rec: RecType) => {
-            const raags = Object.keys(rec.raags);
-            return raags.map(raag => {
-              if (rec.raags[raag]['performance sections']) {
-                return Object.keys(rec.raags[raag]['performance sections']!);
-              } else {
-                return []; 
-              }
-            }).flat().join(', ');
-          },
-          'sortState': 'down',
-          'sortType': 'pSec'
-        },
-        {
-          'name': 'Duration',
-          'func': (rec: RecType) => {
-            return displayTime(rec.duration);
-          },
-          'sortState': 'down',
-          'sortType': 'duration'
-        },
-        {
-          'name': 'Audio Event',
-          'func': (rec: RecType) => {
-            return rec.parentTitle !== undefined ? rec.parentTitle : 'None';
-          },
-          'sortState': 'down',
-          'sortType': 'audioEvent'
-        },
-        {
-          'name': 'Track #',
-          'func': (rec: RecType) => {
-            return rec.parentTrackNumber !== undefined ? rec.parentTrackNumber : 'None';
-          },
-          'sortState': 'down',
-          'sortType': undefined
-        }      
-      ],
-      colWidths: [200, 180, 180, 80, 400, 80],
-      initialWidths: [200, 180, 180, 80, 400, 80],
-      mincolWidths: [90, 80, 190, 100, 130, 80],
       selectedSortIdx: 0,
       contextMenuClosed: true,
       contextMenuChoices: [],
@@ -227,7 +150,6 @@ export default defineComponent({
       dropDownLeft: 200,
       dropDownTop: 300,
       dropDownWidth: 180,
-      labelRowHeight: 40,
       dropDownHeight: 30,
       uploadRecModalClosed: true,
       addToCollectionModalClosed: true,
@@ -335,9 +257,10 @@ export default defineComponent({
     } else {
       this.userID = this.$store.state.userID;
     }
-
     try {
       this.allRecordings = await getAllAudioRecordingMetadata();
+      // this is not necessary, since sorting is now happening in the filterable
+      // table component. But also doesn't really hurt anything.
       this.allMusicians = await getSortedMusicians(true) as { 
         'First Name'?: string,
         'Last Name'?: string,
@@ -347,27 +270,12 @@ export default defineComponent({
     } catch (err) {
       console.log(err);
     }
-    
   },
 
   beforeUnmount() {
     const audioPlayer = this.$refs.audioPlayer as typeof AudioPlayer;
     audioPlayer.audio.pause();
     window.removeEventListener('keydown', this.handleKeydown);
-  },
-  
-  mounted() {
-    this.resetWidths();
-    // add event listener to resize columns when window is resized
-    window.addEventListener('resize', this.resetWidths);
-    
-  },
-
-  unmounted() {
-    window.removeEventListener('resize', this.resetWidths);
-  },
-  
-  computed: {
   },
   
   methods: {
@@ -382,7 +290,6 @@ export default defineComponent({
       const unmapped = ft.itemIdxMapping.indexOf(recIdx);
       const el = document.querySelector(`#row${unmapped}`);
       el?.classList.add('playingRec');
-      
     },
 
     getSoloistDisplay(rec: RecType) {
@@ -460,7 +367,6 @@ export default defineComponent({
       this.permissionsModalClosed = true;
       try {
         this.allRecordings = await getAllAudioRecordingMetadata();
-        this.toggleSort(this.selectedSortIdx, true);
       } catch (err) {
         console.log(err);
       }
@@ -470,18 +376,9 @@ export default defineComponent({
       this.uploadRecModalClosed = true;
       try {
         this.allRecordings = await getAllAudioRecordingMetadata();
-        this.toggleSort(this.selectedSortIdx, true);
       } catch (err) {
         console.log(err);
       }
-    },
-
-    resetWidths() {
-      const summedWidths = this.colWidths.reduce((a, b) => a + b, 0);
-      const ratio = window.innerWidth / summedWidths;
-      this.colWidths = this.colWidths.map(width => width * ratio);
-      this.initialWidths = this.colWidths.slice();
-      this.ensureMinWidths();
     },
 
     nextTrack(shuffling: boolean, initial: boolean) {
@@ -530,61 +427,6 @@ export default defineComponent({
           this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
         }
       }
-
-      // if (this.activeRecording) {
-      //   const playingElem = document.querySelector('.playing');
-      //   if (playingElem) playingElem.classList.remove('playing');
-      //   if (!shuffling) {
-      //     const curIdx = this.allRecordings.findIndex(rec => {
-      //       return rec._id === this.activeRecording!._id;
-      //     });
-      //     const nextIdx = (curIdx + 1) % this.allRecordings.length;
-      //     this.activeRecording = this.allRecordings[nextIdx];
-      //     const nextElem = document.getElementById(`recRow${nextIdx}`);
-      //     if (nextElem) nextElem.classList.add('playing');
-      //     const id = this.activeRecording._id;
-      //     this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
-      //   } else {
-      //     if (initial) {
-      //       const idx = Math.floor(Math.random() * this.allRecordings.length);
-      //       this.activeRecording = this.allRecordings[idx];
-      //       const elem = document.getElementById(`recRow${idx}`);
-      //       if (elem) elem.classList.add('playing');
-      //       const id = this.activeRecording._id;
-      //       this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
-      //     } else {
-      //       const curIdx = this.allRecordings.findIndex(rec => {
-      //         return rec._id === this.activeRecording!._id;
-      //       });
-      //       let nextIdx = Math.floor(Math.random() * this.allRecordings.length);
-      //       while (nextIdx === curIdx) {
-      //         nextIdx = Math.floor(Math.random() * this.allRecordings.length);
-      //       }
-      //       this.activeRecording = this.allRecordings[nextIdx];
-      //       const nextElem = document.getElementById(`recRow${nextIdx}`);
-      //       if (nextElem) nextElem.classList.add('playing');
-      //       const id = this.activeRecording._id;
-      //       this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
-      //     }
-        
-      //   }
-      // } else {
-      //   if (!shuffling) {
-      //     this.activeRecording = this.allRecordings[0];
-      //     const elem = document.getElementById('recRow0');
-      //     if (elem) elem.classList.add('playing');
-      //     const id = this.activeRecording._id;
-      //     this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
-      //   } else {
-      //     const idx = Math.floor(Math.random() * this.allRecordings.length);
-      //     this.activeRecording = this.allRecordings[idx];
-      //     const elem = document.getElementById(`recRow${idx}`);
-      //     if (elem) elem.classList.add('playing');
-      //     const id = this.activeRecording._id;
-      //     this.audioSource = `Https://swara.studio/audio/mp3/${ id }.mp3`;
-        
-      //   }
-      // }
     },
 
     handleKeydown(e: KeyboardEvent) {
@@ -595,10 +437,6 @@ export default defineComponent({
     },
 
     handleClickEmit() {
-      this.contextMenuClosed = true;
-    },
-
-    handleClick() {
       this.contextMenuClosed = true;
     },
 
@@ -739,177 +577,6 @@ export default defineComponent({
       } catch (err) {
         console.log(err);
       }
-    
-
-    },
-
-    async handleRightClick(e: MouseEvent) {
-      console.log('old trigger')
-      e.preventDefault();
-      this.dropDownLeft = e.clientX;
-      this.dropDownTop = e.clientY;
-      this.contextMenuClosed = !this.contextMenuClosed;
-      const fileContainer = this.$refs.fileContainer as HTMLElement;
-      const rect = fileContainer.getBoundingClientRect();
-      if (this.dropDownLeft + this.dropDownWidth > rect.width - 20) {
-        this.dropDownLeft = rect.width - 30 - this.dropDownWidth;
-      }
-
-      let el = document.elementFromPoint(e.clientX, e.clientY);
-      
-      if (el) {
-        if (el.classList.contains('metadataLabels')) {
-          el = el.parentElement!;
-        } else if (el.classList.contains('field')) {
-          el = el.parentElement!.parentElement!;
-        } else if (el.classList.contains('draggableBorder')) {
-          el = el.parentElement!;
-        }
-        const recording = this.allRecordings[parseInt(el.id.slice(6))];
-        const ep = recording.explicitPermissions!;
-        const editPermission = recording !== undefined && (
-          ep!.edit.includes(this.userID!) ||
-          recording.userID === this.userID
-        );
-        const viewPermission = recording !== undefined && (
-          ep!.view.includes(this.userID!) ||
-          ep!.edit.includes(this.userID!) ||
-          ep!.publicView ||
-          recording.userID === this.userID
-        );
-        const owner = recording !== undefined && (
-          recording.userID === this.userID
-        ); 
-        this.contextMenuChoices = [];
-        this.contextMenuChoices.push({
-          text: 'New Transcription',
-          action: () => {
-            let query: {
-              aeName?: string,
-              afName?: string,
-              recID?: string
-            } = {
-              aeName: JSON.stringify(recording.parentTitle),
-              afName: JSON.stringify(this.getShorthand(recording)),
-            }
-            if (recording.parentTitle === null) {
-              query.recID = recording._id;
-            }
-            this.$router.push({
-              name: 'Transcriptions',
-              query
-            })
-            this.contextMenuClosed = true;
-          },
-          enabled: viewPermission
-          
-        });
-
-        // options to edit recording, delete recording, and upload new recording
-        this.contextMenuChoices.push({
-          text: 'Edit Recording',
-          action: () => {
-            this.openRecordingModal({ editing: true, recId: recording._id })
-            this.contextMenuClosed = true;
-          },
-          enabled: editPermission
-        });
-        this.contextMenuChoices.push({
-          text: 'Edit Permissions',
-          action: () => {
-            this.artifactID = recording._id!;
-            this.permissionsModalClosed = false;
-            this.contextMenuClosed = true;
-            this.selectedRecording = recording
-          },
-          enabled: owner
-        })
-        this.contextMenuChoices.push({
-          text: 'Delete Recording',
-          action: async () => {
-            
-            this.contextMenuClosed = true;
-            try { 
-              await deleteRecording(recording._id!);
-              this.allRecordings = await getAllAudioRecordingMetadata();
-              this.toggleSort(this.selectedSortIdx, true);
-            } catch (err) {
-              console.log(err); 
-            }
-          },
-          enabled: owner
-        });
-        this.contextMenuChoices.push({
-          text: 'Upload New Recording',
-          action: () => {
-            this.recModalFrame = 'uploadRec';
-            this.openUploadModal();
-            this.contextMenuClosed = true;
-          },
-          enabled: true
-        });
-
-        try {
-          // show option to add to collection, if there are any avaliable to
-          // the user
-          const userID = this.$store.state.userID!;
-          this.possibleCols = await getEditableCollections(userID);
-          if (this.possibleCols.length > 0) {
-            this.contextMenuChoices.push({
-              text: 'Add to Collection',
-              action: () => {
-
-                this.selectedRecording = recording;
-                this.contextMenuClosed = true;
-                this.addToCollectionModalClosed = false;
-              },
-              enabled: viewPermission
-            });
-
-            this.removableCols = this.possibleCols.filter(col => {
-              return col.audioRecordings.includes(recording._id!);
-            })
-            if (this.removableCols.length > 0) {
-              this.contextMenuChoices.push({
-                text: 'Remove from Collection',
-                action: () => {
-                  this.selectedRecording = recording;
-                  this.contextMenuClosed = true;
-                  this.removeFromCollectionModalClosed = false;
-                  
-                },
-                enabled: true
-              })
-            }
-          }
-
-          const tChoices = await getAllTransOfAudioFile(
-            recording._id!, 
-            this.userID!
-          );
-          tChoices.forEach(tc => {
-            this.contextMenuChoices.push({
-              text: `Open file: "${tc.title}" by ${tc.name}`,
-              action: () => {
-                this.$store.commit('update_id', tc._id);
-                this.$cookies.set('currentPieceID', tc._id);
-                this.$router.push({
-                  name: 'EditorComponent',
-                    query: { id: tc._id }
-                })
-              },
-              enabled: true
-            })
-          })
-          this.dropDownHeight = this.contextMenuChoices.length * 30;
-          const topPartHeight = rect.height + rect.top;
-          if (this.dropDownTop + this.dropDownHeight > topPartHeight - 10) {
-            this.dropDownTop = topPartHeight - 10 - this.dropDownHeight;
-          }
-        } catch (err) {
-          console.log(err);
-        }
-      }
     },
 
     getShorthand(rec: RecType) {
@@ -928,108 +595,6 @@ export default defineComponent({
         })
       })
       return out.join('')
-    },
-
-    handleDragStart(fIdx: number, event: DragEvent) {
-      // Store the initial mouse position and column widths
-      // event.preventDefault();
-      this.initialMouseX = event.clientX;
-      this.initialWidths = this.colWidths.slice()
-      // make cursor resize until drag end
-      document.body.style.cursor = 'col-resize';
-    },
-
-    handleDrag(fIdx: number, event: DragEvent) {
-      const nextCol = fIdx < this.colWidths.length - 1;
-      // Calculate the new width based on the mouse movement
-      document.body.style.cursor = 'col-resize';
-      if (event.clientX !== 0) {
-        const deltaX = event.clientX - this.initialMouseX!;
-        const initW = this.initialWidths[fIdx]!;
-        const nextInitW = this.initialWidths[fIdx + 1]!;
-        const nextMinW = this.mincolWidths[fIdx + 1]!;
-        if (initW + deltaX < this.mincolWidths[fIdx]!) {
-          return;
-          
-        } else if (nextCol && (nextInitW - deltaX < nextMinW)) {
-
-          return
-        } else {
-          this.colWidths[fIdx] = initW + deltaX;
-          if (nextCol) {
-            this.colWidths[fIdx + 1] = nextInitW - deltaX;
-          }
-        }
-      }
-    },
-    handleDragEnd(fIdx: number, event: DragEvent) {
-      document.body.style.cursor = 'auto';
-      const nextCol = fIdx < this.colWidths.length - 1;
-      const deltaX = event.clientX - this.initialMouseX!;
-      const nextMinCW = this.mincolWidths[fIdx + 1];
-      if (this.initialWidths[fIdx] + deltaX < this.mincolWidths[fIdx]) {
-        return;
-      } else if (nextCol && this.initialWidths[fIdx + 1] - deltaX < nextMinCW) {
-        return
-      } else {
-        this.colWidths[fIdx] = this.initialWidths[fIdx] + deltaX;
-        if (nextCol) {
-          this.colWidths[fIdx + 1] = this.initialWidths[fIdx + 1] - deltaX;
-        }  
-      } 
-    },
-
-    ensureDurationWidth() {
-      // ensure duration column is wide enough to display duration label
-      const minWidth = 100;
-      const idx = this.mdFields.findIndex(field => {
-        return field.name === 'Duration';
-      });
-      const audioEventIdx = this.mdFields.findIndex(field => {
-        return field.name === 'Audio Event';
-      });
-      if (this.colWidths[idx] < minWidth) {
-        const extra = minWidth - this.colWidths[idx];
-        this.colWidths[idx] = minWidth;
-        this.colWidths[audioEventIdx] -= extra;
-      }
-    },
-
-    ensureMinWidths() {
-      this.colWidths.forEach((width, idx) => {
-        if (width < this.mincolWidths[idx]) {
-          const diff = this.mincolWidths[idx] - width;
-          this.colWidths[idx] += diff;
-          if (idx < this.colWidths.length - 1) {
-            this.colWidths[idx + 1] -= diff;
-          } else {
-            this.colWidths[0] -= diff;
-          }
-        }
-      })
-    },
-
-    toggleSort(fIdx: number, ensureCurrentState: boolean = false) {
-      const field = this.mdFields[fIdx];
-      if (this.selectedSortIdx === fIdx) {
-        if (
-          (field.sortState === 'down' && !ensureCurrentState) || 
-          (field.sortState === 'up' && ensureCurrentState)
-          ) {
-          field.sortState = 'up';
-          this.sortRecordings({ sort: field.sortType, fromTop: false });
-        } else {
-          field.sortState = 'down';
-          this.sortRecordings({ sort: field.sortType, fromTop: true });
-        }
-      } else {
-        this.sortRecordings({ 
-          sort: field.sortType, 
-          fromTop: field.sortState === 'down' 
-        });
-      }
-
-      this.selectedSortIdx = fIdx;
     },
 
     eventSorter(a: RecType, b: RecType) {
@@ -1316,59 +881,6 @@ export default defineComponent({
       }
     },
 
-    sortRecordings({
-      sort='soloist', 
-      fromTop=true
-    }: {
-      sort?: string,
-      fromTop?: boolean
-    } = {
-    }) {
-      const playingElem = document.querySelector('.playing');
-      if (playingElem) {
-        playingElem.classList.remove('playing');
-      }
-      if (sort === 'soloist') {
-        this.allRecordings.sort(this.soloistSorter);
-        if (!fromTop) {
-          this.allRecordings.reverse();
-        }
-      } else if (sort === 'raag') {
-        this.allRecordings.sort(this.raagSorter);
-        if (!fromTop) {
-          this.allRecordings.reverse();
-        }
-      } else if (sort === 'pSec') {
-        this.allRecordings.sort(this.pSecSorter);
-        if (!fromTop) {
-          this.allRecordings.reverse();
-        }
-      } else if (sort === 'duration') {
-        this.allRecordings.sort(this.durSorter);
-        if (!fromTop) {
-          this.allRecordings.reverse();
-        }
-      } else if (sort === 'audioEvent') {
-        this.allRecordings.sort(this.trackNumSorter)
-        this.allRecordings.sort(this.eventSorter)
-        if (!fromTop) {
-          this.allRecordings.reverse();
-        }
-      } else if (sort === 'trackNum') {
-        this.allRecordings.sort(this.trackNumSorter)
-      }
-      if (this.activeRecording !== undefined) {
-        const idx = this.allRecordings.findIndex(rec => {
-          return rec._id === this.activeRecording!._id;
-        });
-        const elem = document.getElementById(`recRow${idx}`);
-        if (elem) {
-          elem.classList.add('playing');
-        }
-      }
-
-    },
-
     sendAudioSource(target: HTMLElement, recording: RecType) {
       const audioFileId = recording._id; 
       if (target.tagName === 'SPAN') {
@@ -1419,95 +931,9 @@ export default defineComponent({
   background-image: linear-gradient(black, #1e241e);
   color: white;
 }
-.fileContainer {
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 140px - 40px);
-  width: 100%;
-  user-select: none;
-  overflow-y: scroll;
-  overflow-x: hidden;
-  border-top: 1px solid grey;
-}
-
-.recordingRow {
-  display: flex;
-  flex-direction: row;
-  justify-content: left;
-  align-items: center;
-  min-height: 40px;
-  width: 100%;
-  border-bottom: 1px solid grey;
-}
-
-.recordingRow.disabled {
-  color: grey;
-}
-
-.recordingRow:hover {
-  background-color: #2b332c;
-}
 
 ::v-deep .playingRec {
   background-color: #3e4a40;
-}
-
-.labelRow { 
-  display: flex;
-  flex-direction: row;
-  justify-content: left;
-  align-items: center;
-  min-height: v-bind(labelRowHeight + 'px');
-  background-color: #1e241e;
-  border-top: 1px solid grey;
-}
-
-.metadataLabels {
-  text-align: center;
-  border-right: 1px solid grey;
-  height: 40px;
-  position: relative;
-  white-space: nowrap;
-  box-sizing: border-box;
-}
-
-span.field {
-  display: flex;
-  align-items: center;
-  justify-content: left;
-  white-space: nowrap;
-  overflow-x: auto;
-  height: 30px;
-  margin-left: 5px;
-  margin-right: 5px;
-  user-select: none;
-}
-
-.draggableBorder {
-  position: absolute;
-  right: -5px;
-  top: 0;
-  width: 10px;
-  height: 100%;
-  background-color: none;
-  z-index: 1;
-  opacity: 0;
-  cursor: col-resize;
-  
-  user-select: none;
-  background-color: pink
-}
-
-.draggableBorder:hover {
-  cursor: col-resize
-}
-
-.sortTriangle.down {
-  transform: rotate(90deg);
-}
-
-.sortTriangle.up {
-  transform: rotate(-90deg);
 }
 
 .blackBackground {
