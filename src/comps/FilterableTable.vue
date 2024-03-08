@@ -585,7 +585,8 @@ input.search {
   user-select: none;
 }
 
-::v-deep .highlight {
+
+:deep(.highlight) {
   background-color: #6dfc89;
   color: black;
 }

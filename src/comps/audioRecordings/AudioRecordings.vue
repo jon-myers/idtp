@@ -932,8 +932,11 @@ export default defineComponent({
   color: white;
 }
 
-::v-deep .playingRec {
+
+
+:deep(.playingRec) {
   background-color: #3e4a40;
+
 }
 
 .blackBackground {

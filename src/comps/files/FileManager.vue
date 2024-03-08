@@ -1034,11 +1034,11 @@ button {
   cursor: pointer;
 }
 
-::v-deep .selected {
+:deep(.selected) {
   background-color: #3e4a40;
 }
 
-::v-deep .selected:hover {
+:deep(.selected:hover) {
   background-color: #3e4a40;
 }
 
