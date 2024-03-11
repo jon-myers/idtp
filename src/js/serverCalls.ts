@@ -1609,6 +1609,8 @@ const cloneTranscription = async ({
     view: [],
     publicView: false
   },
+  soloist = undefined,
+  soloInstrument = undefined,
 }: {
   id?: string,
   title?: string,
@@ -1621,7 +1623,9 @@ const cloneTranscription = async ({
     edit: string[],
     view: string[]
     publicView: boolean
-  }
+  },
+  soloist?: string,
+  soloInstrument?: string
 } = {}) => {
   let out;
   const request = {
@@ -1637,7 +1641,9 @@ const cloneTranscription = async ({
       name: name,
       family_name: family_name,
       given_name: given_name,
-      explicitPermissions: explicitPermissions
+      explicitPermissions: explicitPermissions,
+      soloist: soloist,
+      soloInstrument: soloInstrument
     })
   };
   try {

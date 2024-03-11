@@ -645,6 +645,9 @@ export default defineComponent({
             family_name: family_name, 
             given_name: given_name,
             explicitPermissions: expPerm,
+            soloist: newPieceInfo.soloist,
+            soloInstrument: newPieceInfo.soloInstrument,
+
           });
           this.$router.push({
             name: 'EditorComponent',
@@ -798,6 +801,8 @@ export default defineComponent({
           audioEvent: audioEvent ? audioEvent.name : undefined,
           audioRecording: audioRecording ? audioRecording : undefined,
           origID: piece._id!,
+          soloist: piece.soloist,
+          soloInstrument: piece.soloInstrument,
           family_name: this.$store.state.lastName,
           given_name: this.$store.state.firstName,
           name: this.$store.state.name,
