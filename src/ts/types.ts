@@ -77,7 +77,9 @@ type TransMetadataType = {
     publicView: boolean,
     edit: string[],
     view: string[]
-  }
+  },
+  soloist?: string,
+  soloInstrument?: string,
 }
 
 
@@ -334,6 +336,13 @@ type MusicianType = {
   gharana?: string
 }
 
+type MusicianNameType = { 
+  'First Name'?: string,
+  'Last Name'?: string,
+  'Initial Name': string,
+  'Middle Name'?: string,
+}
+
 type RecObjType = {
   musicians: {
     [key: string]: {
@@ -512,6 +521,8 @@ type NewPieceInfoType = {
   family_name?: string;
   given_name?: string;
   name?: string;
+  soloist?: string;
+  soloInstrument?: string;
 }
 
 type RagaNewPieceInfoType = {
@@ -551,6 +562,8 @@ type PassedDataType = {
   name?: string;
   instrumentation?: string[];
   transcriber?: string;
+  soloist?: string;
+  soloInstrument?: string;
 }
 
 type AudioEventMetadataType = {
@@ -725,4 +738,5 @@ export type {
   SortFuncType,
   GetDisplayType,
   UserCheckType,
+  MusicianNameType,
 };

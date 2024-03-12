@@ -2181,7 +2181,9 @@ class Piece {
     edit: string[],
     view: string[],
     publicView: boolean
-  }
+  };
+  soloist?: string;
+  soloInstrument?: string;
 
 
   constructor({
@@ -2206,6 +2208,8 @@ class Piece {
     meters = [],
     sectionCategorization = undefined,
     explicitPermissions = undefined,
+    soloist = undefined,
+    soloInstrument = undefined,
   }: {
     phrases?: Phrase[],
     durTot?: number,
@@ -2231,7 +2235,9 @@ class Piece {
       edit: string[],
       view: string[],
       publicView: boolean
-    }
+    },
+    soloist?: string,
+    soloInstrument?: string,
   } = {}) {
     this.meters = meters;
     this.phrases = phrases;
@@ -2282,6 +2288,8 @@ class Piece {
     this.name = name;
     this.family_name = family_name;
     this.given_name = given_name;
+    this.soloist = soloist;
+    this.soloInstrument = soloInstrument;
     if (sectionStarts === undefined) {
       this.sectionStarts = [0];
     } else {
@@ -2655,7 +2663,9 @@ class Piece {
       instrumentation: this.instrumentation,
       meters: this.meters,
       sectionCategorization: this.sectionCategorization,
-      explicitPermissions: this.explicitPermissions
+      explicitPermissions: this.explicitPermissions,
+      soloist: this.soloist,
+      soloInstrument: this.soloInstrument
     }
   }
 }

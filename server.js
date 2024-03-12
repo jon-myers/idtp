@@ -242,7 +242,9 @@ const runServer = async () => {
           given_name: 1,
           audioID: 1,
           instrumentation: 1,
-          explicitPermissions: 1
+          explicitPermissions: 1,
+          soloist: 1,
+          soloInstrument: 1
         }
         let query;
         if (!newPermissions) {

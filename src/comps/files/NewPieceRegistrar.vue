@@ -445,14 +445,12 @@ export default defineComponent({
         await this.$nextTick();
         this.recording = this.looseRecs.find(rec => rec._id === id)!;
         this.raga = Object.keys(this.recording.raags)[0];
-        console.log(this.recording)
         this.instrumentation = this.getInstrumentation();
       }
       this.instruments = await getInstruments();
     } catch (err) {
       console.log(err)
-    }
-    
+    } 
   },
   
   watch: {
@@ -558,7 +556,6 @@ export default defineComponent({
 
     async clonePiece() {
       this.cloning = true;
-      
       try {
         this.passedInData = JSON.parse(this.dataObj)!;
         if (this.passedInData === undefined) {
@@ -585,12 +582,10 @@ export default defineComponent({
         this.title = this.passedInData.title;
         this.instrumentation = this.passedInData.instrumentation!;
         if (this.passedInData.audioEvent && this.passedInData.audioRecording) {
-
           this.aeIdx = this.allEvents.findIndex(ae => {
             return ae.name === this.passedInData!.audioEvent
           });
           const recs = this.allEvents[this.aeIdx].recordings;
-          console.log(recs)
           const allRecNames = await Object.keys(recs).map(key => {
             const rec = recs[Number(key)];
             return this.getShorthand(rec)
@@ -608,8 +603,7 @@ export default defineComponent({
         rElem.disabled = true;
       } catch (err) {
         console.log(err)
-      }
-      
+      }  
     },
     
     async save() {
@@ -644,8 +638,10 @@ export default defineComponent({
             explicitPermissions: this.explicitPermissions,
             clone: true,
             origID: this.passedInData.origID,
+            soloist: this.passedInData.soloist,
+            soloInstrument: this.passedInData.soloInstrument,
             instrumentation: this.instrumentation,
-            audioID: (this.recording as RecType)._id
+            audioID: (this.recording as RecType)._id,
           };
           
         } else {
@@ -659,7 +655,9 @@ export default defineComponent({
             audioID: ae.recordings[(this.recording as number)!].audioFileId,
             clone: true,
             origID: this.passedInData.origID,
-            instrumentation: this.instrumentation
+            instrumentation: this.instrumentation,
+            soloist: this.passedInData.soloist,
+            soloInstrument: this.passedInData.soloInstrument,
           };
         }
         
@@ -679,7 +677,9 @@ export default defineComponent({
             }
             clone: boolean,
             audioID?: string,
-            instrumentation: string[]
+            instrumentation: string[],
+            soloist?: string,
+            soloInstrument?: string,
           };
         if (this.noAE) {
           if (this.noRec) {
@@ -691,9 +691,14 @@ export default defineComponent({
               explicitPermissions: this.explicitPermissions,
               clone: false,
               instrumentation: this.instrumentation,
+              soloist: undefined,
+              soloInstrument: undefined
             }
-
           } else {
+            const soloist = this.getSoloist(this.recording as RecType);
+            const soloInstrument = soloist ? 
+              (this.recording as RecType).musicians[soloist].instrument : 
+              undefined;
             newPieceInfo = {
               title: this.title,
               transcriber: this.transcriber,
@@ -702,12 +707,17 @@ export default defineComponent({
               explicitPermissions: this.explicitPermissions,
               clone: false,
               instrumentation: this.instrumentation,
-              audioID: (this.recording as RecType)._id
+              audioID: (this.recording as RecType)._id,
+              soloist: soloist,
+              soloInstrument: soloInstrument
             }
           }
-          
-
         } else {
+          const rec = this.allEvents[this.aeIdx!].recordings[this.recording as number];
+          const soloist = this.getSoloist(rec as RecType);
+          const soloInstrument = soloist ? 
+            (rec as RecType).musicians[soloist].instrument : 
+            undefined;
           newPieceInfo = {
             title: this.title,
             transcriber: this.transcriber,
@@ -715,7 +725,9 @@ export default defineComponent({
             permissions: this.permissions,
             explicitPermissions: this.explicitPermissions,
             clone: false,
-            instrumentation: this.instrumentation
+            instrumentation: this.instrumentation,
+            soloist: soloist,
+            soloInstrument: soloInstrument
           };
           if (this.aeIdx !== undefined && this.recording !== undefined) {
             const ae = this.allEvents[this.aeIdx];
@@ -725,7 +737,6 @@ export default defineComponent({
         }
         this.$emit('newPieceInfoEmit', newPieceInfo)
       }
-      
     },
 
     getInstrumentation() {
@@ -736,7 +747,6 @@ export default defineComponent({
       } else {
         rec = this.recording as RecType;
       }
-      
       const musicians = Object.keys(rec.musicians);
       const instrumentation: string[] = [];
       musicians.forEach(m => {
@@ -746,7 +756,18 @@ export default defineComponent({
       })
       return instrumentation
     },
-  
+
+    getSoloist(rec: RecType): string | undefined {
+      const musicians = Object.keys(rec.musicians);
+      let out = undefined;
+      for (let i = 0; i < musicians.length; i++) {
+        if (rec.musicians[musicians[i]].role === 'Soloist') {
+          out = musicians[i];
+          break;
+        }
+      }
+      return out
+    },
     
     getShorthand(rec: RecType) {
       const out: string[] = [];
