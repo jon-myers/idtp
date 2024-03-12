@@ -1039,7 +1039,8 @@ export default defineComponent({
       const newRatio = newFreq / this.raga!.fundamental;
       this.raga!.ratios[sIdx] = newRatio;
       oscNode.frequency.linearRampToValueAtTime(newFreq, endTime);
-      this.$emit('updateSargamLinesEmit')
+      this.$emit('updateSargamLinesEmit');
+      this.$emit('unsavedChangesEmit', true);
     },
 
     instantiateTuning() {
