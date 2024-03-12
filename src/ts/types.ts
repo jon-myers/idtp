@@ -336,6 +336,13 @@ type MusicianType = {
   gharana?: string
 }
 
+type MusicianNameType = { 
+  'First Name'?: string,
+  'Last Name'?: string,
+  'Initial Name': string,
+  'Middle Name'?: string,
+}
+
 type RecObjType = {
   musicians: {
     [key: string]: {
@@ -731,4 +738,5 @@ export type {
   SortFuncType,
   GetDisplayType,
   UserCheckType,
+  MusicianNameType,
 };

@@ -396,13 +396,8 @@ const getAllMusicians = async (): Promise<MusicianDBType[]> => {
   return allMusicians
 }
 
-const getSortedMusicians = async (verbose=false): Promise<(string | {
-  'First Name'?: string,
-  'Last Name'?: string,
-  'Initial Name': string,
-  'Middle Name'?: string,
-})[]> => {
-  let allMusicians: string[] = [];
+const getSortedMusicians = async (verbose=false): Promise<MusicianNameType[]> => {
+  let allMusicians: MusicianNameType[] = [];
   let request = {
     method: 'GET',
     headers: {
@@ -1426,7 +1421,8 @@ import {
   IPAConsonantType,
   LocationType,
   NewPieceDataType,
-  OnProgressType
+  OnProgressType,
+  MusicianNameType
 } from '@/ts/types.ts'
 
 const userLoginGoogle = async (userData: UserDataType) => {

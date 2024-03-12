@@ -94,6 +94,7 @@ import {
   SortFuncType,
   GetDisplayType,
   UserCheckType,
+  MusicianNameType
 } from '@/ts/types.ts';
 import { SortState } from '@/ts/enums.ts';
 import PermissionsModal from '@/comps/PermissionsModal.vue';
@@ -104,12 +105,7 @@ type AudioRecordingsDataType = {
   audioRecId: string | undefined,
   allRecordings: RecType[],
   initialMouseX?: number,
-  allMusicians?: { 
-    'First Name'?: string,
-    'Last Name'?: string,
-    'Initial Name': string,
-    'Middle Name'?: string,
-  }[],
+  allMusicians?: MusicianNameType[],
   selectedSortIdx: number,
   activeRecording: RecType | undefined,
   contextMenuClosed: boolean,

@@ -109,6 +109,7 @@ import {
   updateTranscriptionOwner,
   getAllUsers,
   getEditableCollections,
+  getSortedMusicians,
 } from '@/js/serverCalls.ts';
 import NewPieceRegistrar from '@/comps/files/NewPieceRegistrar.vue';
 import AddToCollection from '@/comps/AddToCollection.vue';
@@ -130,6 +131,7 @@ import {
   SortFuncType,
   GetDisplayType,
   UserCheckType,
+  MusicianNameType,
 } from '@/ts/types.ts';
 import { SortState } from '@/ts/enums.ts';
 
@@ -151,7 +153,6 @@ type FileManagerDataType = {
   permissionsModalHeight: number;
   ownerModalWidth: number;
   ownerModalHeight: number;
-
   editTitleModal: boolean;
   editPermissionsModal: boolean;
   passedInDataObj: string,
@@ -171,6 +172,7 @@ type FileManagerDataType = {
   fileContainerHeight: number,
   userID?: string,
   ftLabels: FilterableTableType[],
+  allMusicians?: MusicianNameType[],
 }
 
 type PieceInfoType = [string?, string?, string?, string?, string?, string?];
@@ -214,6 +216,7 @@ export default defineComponent({
       permissionsModalOpen: false,
       fileContainerHeight: 800,
       userID: undefined,
+      allMusicians: undefined,
       ftLabels: [
         {
           label: 'Title',
@@ -225,9 +228,27 @@ export default defineComponent({
           getDisplay: this.getTitleDisplay as GetDisplayType
         },
         {
+          label: 'Soloist',
+          minWidth: 95,
+          prioritization: 1,
+          sortFunction: this.soloistSorter as SortFuncType,
+          growable: true,
+          initSortState: SortState.down,
+          getDisplay: this.getSoloistDisplay as GetDisplayType
+        },
+        {
+          label: 'Instrument',
+          minWidth: 120,
+          prioritization: 2,
+          sortFunction: this.soloInstSorter as SortFuncType,
+          growable: true,
+          initSortState: SortState.down,
+          getDisplay: this.getSoloInstDisplay as GetDisplayType
+        },
+        {
         label: 'Transcriber',
         minWidth: 125,
-        prioritization: 1,
+        prioritization: 3,
         sortFunction: this.transcriberSorter as SortFuncType,
           growable: true,
           initSortState: SortState.down,
@@ -236,7 +257,7 @@ export default defineComponent({
         {
           label: 'Raga',
           minWidth: 75,
-          prioritization: 2,
+          prioritization: 4,
           sortFunction: this.ragaSorter as SortFuncType,
           growable: true,
           initSortState: SortState.down,
@@ -245,7 +266,7 @@ export default defineComponent({
         {
           label: 'Created',
           minWidth: 105,
-          prioritization: 3,
+          prioritization: 5,
           sortFunction: this.createdSorter as SortFuncType,
           growable: true,
           initSortState: SortState.down,
@@ -254,7 +275,7 @@ export default defineComponent({
         {
           label: 'Modified',
           minWidth: 110,
-          prioritization: 4,
+          prioritization: 6,
           sortFunction: this.modifiedSorter as SortFuncType,
           growable: true,
           initSortState: SortState.down,
@@ -263,7 +284,7 @@ export default defineComponent({
         {
           label: 'Editable',
           minWidth: 105,
-          prioritization: 5,
+          prioritization: 7,
           sortFunction: this.editableSorter as SortFuncType,
           growable: true,
           initSortState: SortState.down,
@@ -329,6 +350,7 @@ export default defineComponent({
       }
       const userID = this.$store.state.userID!;
       this.editableCols = await getEditableCollections(userID);
+      this.allMusicians = await getSortedMusicians(true);
       
     } catch (err) {
       console.log(err)
@@ -518,6 +540,70 @@ export default defineComponent({
       return 0;
     },
 
+    soloistSorter(a: TransMetadataType, b: TransMetadataType) {
+      const aObj = this.allMusicians!.find(m => {
+        return m['Initial Name'] === a.soloist;
+      });
+      const bObj = this.allMusicians!.find(m => {
+        return m['Initial Name'] === b.soloist;
+      });
+      const aLastName = aObj ? aObj['Last Name'] : '';
+      const bLastName = bObj ? bObj['Last Name'] : '';
+      const aFirstName = aObj ? aObj['First Name'] : '';
+      const bFirstName = bObj ? bObj['First Name'] : '';
+      const aMidName = aObj ? aObj['Middle Name'] : '';
+      const bMidName = bObj ? bObj['Middle Name'] : '';
+
+      if (aLastName === undefined && bLastName === undefined) {
+        return 0;
+      } else if (aLastName === undefined) {
+        return -1;
+      } else if (bLastName === undefined) {
+        return 1;
+      } else if (aLastName < bLastName) {
+        return -1;
+      } else if (aLastName > bLastName) {
+        return 1;
+      } else if (aFirstName === undefined && bFirstName === undefined) {
+        return 0;
+      } else if (aFirstName === undefined) {
+        return -1;
+      } else if (bFirstName === undefined) {
+        return 1;
+      } else if (aFirstName < bFirstName) {
+        return -1;
+      } else if (aFirstName > bFirstName) {
+        return 1;
+      } else if (aMidName === undefined && bMidName === undefined) {
+        return 0;
+      } else if (aMidName === undefined) {
+        return -1;
+      } else if (bMidName === undefined) {
+        return 1;
+      } else if (aMidName < bMidName) {
+        return -1;
+      } else if (aMidName > bMidName) {
+        return 1;
+      }
+    },
+
+    soloInstSorter(a: TransMetadataType, b: TransMetadataType) {
+      const aInst = a.soloInstrument;
+      const bInst = b.soloInstrument;
+      if (aInst === undefined && bInst === undefined) {
+        return 0;
+      } else if (aInst === undefined) {
+        return -1;
+      } else if (bInst === undefined) {
+        return 1;
+      } else if (aInst < bInst) {
+        return -1;
+      } else if (aInst > bInst) {
+        return 1;
+      }
+      return 0;
+    },
+
     transcriberSorter(a: TransMetadataType, b: TransMetadataType) {
       const familyNameA = a.family_name.toLowerCase();
       const familyNameB = b.family_name.toLowerCase();
@@ -593,6 +679,14 @@ export default defineComponent({
 
     getTranscriberDisplay(item: TransMetadataType) {
       return item.given_name + ' ' + item.family_name;
+    },
+
+    getSoloistDisplay(item: TransMetadataType) {
+      return item.soloist;
+    },
+
+    getSoloInstDisplay(item: TransMetadataType) {
+      return item.soloInstrument;
     },
 
     getRagaDisplay(item: TransMetadataType) {
