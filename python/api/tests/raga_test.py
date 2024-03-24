@@ -70,7 +70,6 @@ def test_default_raga():
 	assert r.rule_set == yaman_rule_set
 	assert r.tuning == base_tuning
 	assert r.ratios == base_ratios
-	# below here not implemented
 	assert r.sargam_letters == ['S', 'R', 'G', 'M', 'P', 'D', 'N']
 	assert r.rule_set_num_pitches == 7
 	pitch_nums = list(range(12))
@@ -106,17 +105,21 @@ def test_default_raga():
 	throw_pns = [
 		-11, -9, -7, -4, -2, 
 		1, 3, 5, 8, 10,
-		13, 15, 17, 20, 22
+		13, 15, 17, 20, 22 
 	]
+
 	for idx, pn in enumerate(pns):
 		assert r.pitch_number_to_scale_number(pn) == sns[idx]
+
 	for idx, pn in enumerate(throw_pns):
 		with pytest.raises(ValueError):
 			r.pitch_number_to_scale_number(pn)
 	for idx, sn in enumerate(sns):
 		assert r.scale_number_to_pitch_number(sn) == pns[idx]
+#works until here
 	s_letters = ['S', 'R', 'G', 'M', 'P', 'D', 'N']
 	s_letters = s_letters + s_letters + s_letters
+
 	for idx, sn in enumerate(sns):
 		assert r.scale_number_to_sargam_letter(sn) == s_letters[idx]
 	p_swaras = [
