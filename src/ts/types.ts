@@ -587,7 +587,8 @@ type IpaVowelType = {
   ipa: string,
   iso_15919: string,
   type: string
-  urdu: { initial: string, final: string, medial?: string }
+  urdu: { initial: string, final: string, medial?: string },
+  null: boolean
 }
 
 type IPAConsonantType = {
