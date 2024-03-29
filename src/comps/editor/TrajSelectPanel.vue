@@ -598,6 +598,14 @@ export default defineComponent({
       }
     },
 
+    effectivelyFixed(traj: Trajectory) {
+      const c1 = traj.pitches.length === 2;
+      const c2 = new Set(traj.pitches.map(p => p.numberedPitch)).size === 1;
+      const c3 = traj.pitches.map(p => p.logOffset === 0).every(b => b);
+      return c1 && c2 && c3;
+
+    },
+
     selectIcon(e: MouseEvent | number) {
       let idx;
       if (e instanceof PointerEvent) {
@@ -619,21 +627,31 @@ export default defineComponent({
         const fixed = [0, 13];
         const twos = [1, 2, 3];
         const threes = [4, 5, 6];
-        const trId = this.trajIdxs[this.selectedIdx!];
-        if (twos.includes(trId)) {
-          if (realIdx !== trId && twos.includes(realIdx)) {
-            this.selectedIdx = idx;
-            let outIdx = this.trajIdxs[this.selectedIdx];
-            if (outIdx >= 12) outIdx += 1;
-            this.$emit('mutateTraj', outIdx)
-            document.querySelectorAll('.thumb').forEach(t => {
-              t.classList.remove('selected')
-            })
-            document.querySelector(selectId)!.classList.add('selected')
+        if (twos.includes(realSelectedIdx)) {
+          if (realIdx !== realSelectedIdx) {
+            if (twos.includes(realIdx)) {
+              this.selectedIdx = idx;
+              let outIdx = this.trajIdxs[this.selectedIdx];
+              if (outIdx >= 12) outIdx += 1;
+              this.$emit('mutateTraj', outIdx)
+              document.querySelectorAll('.thumb').forEach(t => {
+                t.classList.remove('selected')
+              })
+              document.querySelector(selectId)!.classList.add('selected')
+            } else if (fixed.includes(realIdx) && this.effectivelyFixed(this.selectedTraj!)) {
+              this.selectedIdx = idx;
+              let outIdx = this.trajIdxs[this.selectedIdx];
+              if (outIdx >= 12) outIdx += 1;
+              this.$emit('mutateTraj', outIdx)
+              document.querySelectorAll('.thumb').forEach(t => {
+                t.classList.remove('selected')
+              })
+              document.querySelector(selectId)!.classList.add('selected')
+            }
           }
-        } else if (threes.includes(trId)) {
-          if (realIdx !== trId && threes.includes(realIdx)) {
-            if (trId === 6) {
+        } else if (threes.includes(realSelectedIdx)) {
+          if (realIdx !== realSelectedIdx && threes.includes(realIdx)) {
+            if (realSelectedIdx === 6) {
               if (this.selectedTraj!.durArray!.length === 2) {
                 this.selectedIdx = idx;
                 let outIdx = this.trajIdxs[this.selectedIdx];
@@ -656,7 +674,9 @@ export default defineComponent({
             }
           }
         } else if (fixed.includes(realSelectedIdx)) {
-          if (realIdx !== trId && fixed.includes(realIdx)) {
+          if (realIdx !== realSelectedIdx && 
+            (fixed.includes(realIdx) || twos.includes(realIdx))
+          ) {
             this.selectedIdx = idx;
             let outIdx = this.trajIdxs[this.selectedIdx];
             if (outIdx >= 12) outIdx += 1;
