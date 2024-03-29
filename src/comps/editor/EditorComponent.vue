@@ -5653,7 +5653,6 @@ export default defineComponent({
             let fixedTime = time;
             const startTime = phrase.startTime! + traj.startTime!;
             if (time - startTime < this.minTrajDur) {
-              console.log('fixing this way')
               fixedTime = startTime
             } else if (startTime + traj.durTot - time < this.minTrajDur) {
               fixedTime = startTime + traj.durTot
