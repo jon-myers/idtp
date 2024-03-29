@@ -474,7 +474,6 @@ export default defineComponent({
 
   async mounted() {
     let result = await getIpaVowels();
-    result = result.filter(v => v.null === false)
     this.ipaVowels = result.map(v => v.ipa);
     this.iso_15919 = result.map(v => v.iso_15919);
     this.englishWords = result.map(v => v.english);
