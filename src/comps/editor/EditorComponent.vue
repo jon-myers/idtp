@@ -4119,6 +4119,8 @@ export default defineComponent({
           ntObj.vowelEngTrans = 'a';
           ntObj.vowelHindi = "अ";
           ntObj.vowelIPA = 'ə';
+        } else if (ntObj.instrumentation === 'Sarangi') {
+          ntObj.articulations = {};
         }
       }
       const newTraj = new Trajectory(ntObj);
