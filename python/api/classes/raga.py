@@ -1,5 +1,7 @@
 from typing import Optional, TypedDict
 import humps
+import math
+from .pitch import Pitch
 
 
 BoolObj = dict[str, bool]   
@@ -226,31 +228,102 @@ class Raga():
 		pitch_number = self.scale_number_to_pitch_number(scale_number)
 		return self.pitch_number_to_sargam_letters(pitch_number)
 
-def get_pitches(self, low=100, high=800):
-    sargam = list(self.rule_set.keys())
-    pitches = []
-    for s in sargam:
-        if isinstance(self.rule_set[s], bool):
-            if self.rule_set[s]:
-                freq = self.tuning[s] * self.fundamental
-                octs_below = ceil(log2(low / freq))
-                octs_above = floor(log2(high / freq))
-                for i in range(octs_below, octs_above + 1):
-                    pitches.append(Pitch(s, i, False, self.fundamental, self.stratified_ratios))
-        else:
-            if self.rule_set[s]['lowered']:
-                freq = self.tuning[s]['lowered'] * self.fundamental
-                octs_below = ceil(log2(low / freq))
-                octs_above = floor(log2(high / freq))
-                for i in range(octs_below, octs_above + 1):
-                    pitches.append(Pitch(s, i, False, self.fundamental, self.stratified_ratios))
-            if self.rule_set[s]['raised']:
-                freq = self.tuning[s]['raised'] * self.fundamental
-                octs_below = ceil(log2(low / freq))
-                octs_above = floor(log2(high / freq))
-                for i in range(octs_below, octs_above + 1):
-                    pitches.append(Pitch(s, i, True, self.fundamental, self.stratified_ratios))
-    pitches.sort(key=lambda x: x.frequency)
-    return pitches
+	def get_pitches(self, low=100, high=800):
+		sargam = list(self.rule_set.keys())
+		pitches = []
+		for s in sargam:
+			if isinstance(self.rule_set[s], bool):
+				if self.rule_set[s]:
+					freq = self.tuning[s] * self.fundamental
+					octs_below = math.ceil(math.log2(low / freq))
+					octs_above = math.floor(math.log2(high / freq))
+					for i in range(octs_below, octs_above + 1):
+						pitches.append(Pitch(options={'swara': s, 'oct': i, 'raised': False, 
+							'fundamental': self.fundamental, 'ratios': self.stratified_ratios}))
+			else:
+				if self.rule_set[s]['lowered']:
+					freq = self.tuning[s]['lowered'] * self.fundamental
+					octs_below = math.ceil(math.log2(low / freq))
+					octs_above = math.floor(math.log2(high / freq))
+					for i in range(octs_below, octs_above + 1):
+						pitches.append(Pitch(options={'swara': s, 'oct': i, 'raised': False, 
+							'fundamental': self.fundamental, 'ratios': self.stratified_ratios}))
+					octs_below = math.ceil(math.log2(low / freq))
+					octs_above = math.floor(math.log2(high / freq))
+					for i in range(octs_below, octs_above + 1):
+						pitches.append(Pitch(options={'swara': s, 'oct': i, 'raised': True,  
+							'fundamental': self.fundamental, 'ratios': self.stratified_ratios}))
+		pitches.sort(key=lambda x: x.frequency)
+		return pitches
 
+	@property
+	def stratified_ratios(self):
+		sargam = ['sa', 're', 'ga', 'ma', 'pa', 'dha', 'ni']
+		ratios = []
+		ct = 0
+		for sIdx, s in enumerate(sargam):
+			if isinstance(self.rule_set.get(s), bool):
+				if self.rule_set.get(s):
+					ratios.append(self.ratios[ct])
+					ct += 1
+				else:
+					ratios.append(self.tuning[s])
+			else:
+				ratios.append([])
+				if self.rule_set[s]['lowered']:
+					ratios[sIdx].append(self.ratios[ct])
+					ct += 1
+				else:
+					ratios[sIdx].append(self.tuning[s]['lowered'])
+				if self.rule_set[s]['raised']:
+					ratios[sIdx].append(self.ratios[ct])
+					ct += 1
+				else:
+					ratios[sIdx].append(self.tuning[s]['raised'])
+		return ratios
+
+	@property
+	def chikari_pitches(self):
+		return [
+        Pitch(options={'swara': 's', 'oct': 2, 'fundamental': self.fundamental}),
+        Pitch(options={'swara': 's', 'oct': 1, 'fundamental': self.fundamental})
+    	]
+
+	def get_frequencies(self, low=100, high=800):
+		base_freqs = [r * self.fundamental for r in self.ratios]
+		freqs = []
+
+		for f in base_freqs:
+			low_exp = math.ceil(math.log2(low / f))
+			high_exp = math.floor(math.log2(high / f))
+			exps = list(range(low_exp, high_exp + 1))
+			additional_freqs = [f * (2.0 ** exp) for exp in exps]
+			freqs.extend(additional_freqs)
+
+		freqs.sort()
+		return freqs
+
+	@property
+	def sargam_names(self):
+		names = []
+		sargam = self.rule_set.keys()
+
+		for s in sargam:
+			if isinstance(self.rule_set[s], dict):  # Check if value is a dictionary
+				obj = self.rule_set[s]
+				if obj.get('raised', False):
+					names.append(s.capitalize())
+				if obj.get('lowered', False):
+					names.append(s.lower())
+			else:
+				if self.rule_set[s]:
+					names.append(s.capitalize())
+		return names
+
+	def to_json(self):
+		return {
+        'name': self.name,
+        'fundamental': self.fundamental,
+        'ratios': self.ratios
+    	}
 r = Raga()
