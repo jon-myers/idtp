@@ -232,14 +232,13 @@ class Raga():
 		sargam = list(self.rule_set.keys())
 		pitches = []
 		for s in sargam:
-			if isinstance(self.rule_set[s], bool):
-				if self.rule_set[s]:
-					freq = self.tuning[s] * self.fundamental
-					octs_below = math.ceil(math.log2(low / freq))
-					octs_above = math.floor(math.log2(high / freq))
-					for i in range(octs_below, octs_above + 1):
-						pitches.append(Pitch(options={'swara': s, 'oct': i, 'raised': False, 
-							'fundamental': self.fundamental, 'ratios': self.stratified_ratios}))
+			if isinstance(self.rule_set[s], bool) and self.rule_set[s]:
+				freq = self.tuning[s] * self.fundamental
+				octs_below = math.ceil(math.log2(low / freq))
+				octs_above = math.floor(math.log2(high / freq))
+				for i in range(octs_below, octs_above + 1):
+					pitches.append(Pitch(options={'swara': s, 'oct': i, 
+						'fundamental': self.fundamental, 'ratios': self.stratified_ratios}))
 			else:
 				if self.rule_set[s]['lowered']:
 					freq = self.tuning[s]['lowered'] * self.fundamental
@@ -248,6 +247,8 @@ class Raga():
 					for i in range(octs_below, octs_above + 1):
 						pitches.append(Pitch(options={'swara': s, 'oct': i, 'raised': False, 
 							'fundamental': self.fundamental, 'ratios': self.stratified_ratios}))
+				elif self.rule_set[s]['raised']:
+					freq = self.tuning[s]['raised'] * self.fundamental
 					octs_below = math.ceil(math.log2(low / freq))
 					octs_above = math.floor(math.log2(high / freq))
 					for i in range(octs_below, octs_above + 1):

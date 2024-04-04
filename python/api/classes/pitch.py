@@ -42,6 +42,15 @@ class Pitch:
             [2 ** (10 / 12), 2 ** (11 / 12)]
         ])
         self.log_offset = options.get('log_offset', 0.0)
+    
+    def __eq__(self, other):
+      if not isinstance(other, Pitch):
+        return False
+      else:
+        return (self.swara == other.swara and
+                self.raised == other.raised and
+                self.oct == other.oct
+                )
 
     @property
     def frequency(self):
