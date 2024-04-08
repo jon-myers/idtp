@@ -3434,7 +3434,10 @@ export default defineComponent({
           this.resetZoom();
           this.pulseDragEnabled = false;
           this.pulseDragInitX = undefined
-          this.selectMeter(pulse.uniqueId)
+          this.selectMeter(pulse.uniqueId);
+          const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+          const meterControls = ap.$refs.meterControls as typeof MeterControls;
+          meterControls.updateVisibility();
         }
       }
     },
