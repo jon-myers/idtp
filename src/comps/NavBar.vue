@@ -90,7 +90,7 @@ export default defineComponent({
       navChoices: [
         { name: 'Transcriptions', path: '/transcriptions' },
         { name: 'Editor', path: '/editor' },
-        { name: 'Audio Events', path: '/audioEvents' },
+        // { name: 'Audio Events', path: '/audioEvents' },
         { name: 'Recordings', path: '/audioRecordings'},
         { name: 'Raag Editor', path: '/raagEditor' },
         { name: 'Analyzer', path: '/analyzer' },
