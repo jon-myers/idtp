@@ -48,6 +48,14 @@
         <input type='number' v-model='maxDur' :min='minDur' step='1' />
       </div>
       <div class='controlsRow'>
+        <label>Proportional Vertical Display: </label>
+        <input 
+          type='checkbox' 
+          v-model='proportionalVertical' 
+          @change='updateProportionalVertical'
+          />
+      </div>
+      <div class='controlsRow'>
         <button @click='runQuery'>Search</button>
       </div>
     </div>
@@ -335,6 +343,7 @@ type QueryControlsDataType = {
   vocalArtTypes: (keyof PhraseCatType["Vocal Articulation"])[],
   instArtTypes: (keyof PhraseCatType["Instrumental Articulation"])[],
   incidentals: (keyof PhraseCatType["Incidental"])[],
+  proportionalVertical: boolean,
 }
 
 const sectionData = categoryData['Section'];
@@ -406,6 +415,7 @@ export default defineComponent({
       vocalArtTypes: ['Non-Tom'],
       instArtTypes: ['Bol'],
       incidentals: ['Tuning'],
+      proportionalVertical: false,
     }
   },
 
@@ -686,6 +696,10 @@ export default defineComponent({
   },
 
   methods: {
+
+    updateProportionalVertical() {
+      this.$emit('updateProportionalVertical', this.proportionalVertical)
+    },
 
     possibleDesignators(category: CategoryType) {
       const out: { value: DesignatorType, text: string }[] = [

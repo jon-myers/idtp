@@ -295,6 +295,7 @@
         class='controls' 
         v-if='piece && selectedATIdx === 2' 
         @runQuery='handleRunQuery'
+        @updateProportionalVertical='verticalProportionalDisplay = $event'
         :vocal='vocal'
         :raga='piece.raga'
         :trajIdxs='piece.trajIdxs'
