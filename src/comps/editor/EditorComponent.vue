@@ -3649,10 +3649,8 @@ export default defineComponent({
       
       const tsp = this.$refs.trajSelectPanel as typeof TrajSelectPanel;
       return (e: D3DragEvent<HTMLDivElement, any, MouseEvent>) => {
-        console.log('phrase div drag end')
         e.sourceEvent.preventDefault();
         e.sourceEvent.stopPropagation();
-        console.log(this.selectedPhraseDivIdx)
         if (this.selectedPhraseDivIdx !== undefined) {
           this.justEnded = true;
           d3Select(`#transparentPhraseLine${i}`).remove();

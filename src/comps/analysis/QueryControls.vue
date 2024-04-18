@@ -747,6 +747,7 @@ export default defineComponent({
     },
 
     runQuery() {
+      console.log(this.queries, this.options)
       this.$emit('runQuery', this.queries, this.options)
     },
 
