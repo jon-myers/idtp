@@ -19,7 +19,7 @@
 
 import { defineComponent, PropType } from 'vue';
 import { Trajectory, Piece, Phrase, Pitch, linSpace } from '@/js/classes.ts';
-import { QueryAnswerType } from '@/ts/types.ts';
+import { QueryAnswerType, ContextMenuOptionType } from '@/ts/types.ts';
 
 import * as d3 from 'd3';
 
@@ -52,7 +52,7 @@ type SegmentDisplayDataType = {
   contextMenuX: number,
   contextMenuY: number,
   contextMenuClosed: boolean,
-  contextMenuChoices: { text: string, action: (e) => void }[],
+  contextMenuChoices: ContextMenuOptionType[],
 };
 
 import ContextMenu from '@/comps/ContextMenu.vue';
@@ -403,7 +403,8 @@ export default defineComponent({
               regionEnd: this.queryAnswer.endTime
             }
           })
-        }
+        },
+        enabled: true
       });
       this.contextMenuChoices.push({
         text: 'Open in new tab',
@@ -419,7 +420,8 @@ export default defineComponent({
             }
           });
           window.open(routeData.href, '_blank');
-        }
+        },
+        enabled: true
       })
     },
 
