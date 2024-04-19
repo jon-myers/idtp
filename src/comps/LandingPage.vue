@@ -53,6 +53,10 @@
                 Jon Myers
               </a>
             </div>
+            <div class='projectTeamTitle'>Project Intern</div>
+            <div class='projectTeamRow'>
+              Shreyas Anand
+            </div>
           </div>
         </div>
       </div>
