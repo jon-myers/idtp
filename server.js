@@ -384,10 +384,12 @@ const runServer = async () => {
         const result = await users.updateOne(query, { $push: { 
           multiQueries: multiQueryObj 
         } });
+        res.json(result)
       } catch (err) {
         console.error(err);
         res.status(500).send(err);
       }
+
     });
 
     app.post('/createCollection', async (req, res) => {
