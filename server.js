@@ -373,6 +373,23 @@ const runServer = async () => {
       }
     });
 
+    app.post('/saveMultiQuery', async (req, res) => {
+      const userID = req.body.userID;
+      const query = { _id: ObjectId(userID) };
+      const multiQueryObj = {};
+      multiQueryObj['queries'] = req.body.queries;
+      multiQueryObj['dateCreated'] = new Date();
+      multiQueryObj['options'] = req.body.options;
+      try {
+        const result = await users.updateOne(query, { $push: { 
+          multiQueries: multiQueryObj 
+        } });
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
+
     app.post('/createCollection', async (req, res) => {
       // create a new collection
       try {

@@ -4,16 +4,15 @@ import { AxiosProgressEvent } from 'axios';
 import fetch from 'cross-fetch';
 import { Piece } from './classes.ts';
 import { 
-  CollectionType 
-} from '@/ts/types.ts';
-
-import { 
   MusicianDBType, 
   GharanaType,
   TransMetadataType,
   RecUpdateType,
   UserType,
-  RecType
+  RecType,
+  CollectionType,
+  QueryType,
+  MultipleOptionType 
 } from '@/ts/types.ts';
 const getPiece = async (id: string): Promise<Piece> => {
   let piece;
@@ -1557,6 +1556,30 @@ const updateTranscriptionPermissions = async (id: string, perm: string) => {
     const res = await fetch(url + 'updateTranscriptionPermissions', request);
     if (res.ok) {
       out = await res.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const saveMultiQuery = async (
+  userID: string, 
+  queries: QueryType[], 
+  options: MultipleOptionType
+) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userID, queries, options })
+  };
+  try {
+    const response = await fetch(url + 'saveMultiQuery', request);
+    if (response.ok) {
+      out = await response.json()
     }
     return out
   } catch (err) {
