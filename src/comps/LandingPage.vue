@@ -53,6 +53,12 @@
                 Jon Myers
               </a>
             </div>
+            <div class='projectTeamTitle'>Graduate Researcher</div>
+            <div class='projectTeamRow'>
+              <a href='https://music.ucsc.edu/people/balakrishnan-raghavan'>
+                Balakrishnan Raghavan
+              </a>
+            </div>
             <div class='projectTeamTitle'>Project Intern</div>
             <div class='projectTeamRow'>
               Shreyas Anand
