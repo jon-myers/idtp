@@ -1435,6 +1435,7 @@ const userLoginGoogle = async (userData: UserDataType) => {
     family_name: userData.family_name,
     collections: [],
     transcriptions: [],
+    savedQueries: [],
   });
   let out;
   let request = {
