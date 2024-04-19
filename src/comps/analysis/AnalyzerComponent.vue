@@ -299,6 +299,7 @@
         :vocal='vocal'
         :raga='piece.raga'
         :trajIdxs='piece.trajIdxs'
+        :piece='piece'
         />
     </div>
     <div 

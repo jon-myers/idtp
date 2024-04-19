@@ -1564,7 +1564,9 @@ const updateTranscriptionPermissions = async (id: string, perm: string) => {
 }
 
 const saveMultiQuery = async (
-  userID: string, 
+  title: string,
+  userID: string,
+  transcriptionID: string,
   queries: QueryType[], 
   options: MultipleOptionType
 ) => {
@@ -1574,7 +1576,7 @@ const saveMultiQuery = async (
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ userID, queries, options })
+    body: JSON.stringify({ title, userID, transcriptionID, queries, options })
   };
   try {
     const response = await fetch(url + 'saveMultiQuery', request);
@@ -1932,5 +1934,6 @@ export {
   verifySpectrogram,
   verifyMelograph,
   updateVisibility,
-  getLooseRecordings
+  getLooseRecordings,
+  saveMultiQuery,
 }

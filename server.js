@@ -375,11 +375,16 @@ const runServer = async () => {
 
     app.post('/saveMultiQuery', async (req, res) => {
       const userID = req.body.userID;
+      if (!userID || userID.length !== 24) {
+        console.log(userID)
+        return res.status(400).send('Invalid userID: ' + userID);
+      }
       const query = { _id: ObjectId(userID) };
       const multiQueryObj = {};
       multiQueryObj['queries'] = req.body.queries;
       multiQueryObj['dateCreated'] = new Date();
       multiQueryObj['options'] = req.body.options;
+      multiQueryObj['transcriptionID'] = req.body.transcriptionID;
       try {
         const result = await users.updateOne(query, { $push: { 
           multiQueries: multiQueryObj 

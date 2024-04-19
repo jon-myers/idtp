@@ -57,6 +57,7 @@
       </div>
       <div class='controlsRow'>
         <button @click='runQuery'>Search</button>
+        <button @click='showSaveQueryModal=true'>Save Query</button>
       </div>
     </div>
     <div class='queriesContainer'>
@@ -275,6 +276,14 @@
         </div>
       </div>
     </div>
+    <div v-if='showSaveQueryModal' class='saveQueryModal'>
+      <div class='modalRow'>
+        <label for='queryTitle'>Query Title:</label>
+        <input type='text' v-model='queryTitle' />
+        <button @click='saveQuery'>Save</button>
+        <button @click='showSaveQueryModal=false'>Cancel</button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -298,7 +307,11 @@ import {
   Pitch,
   Raga,
   Trajectory,
+  Piece
 } from '@/js/classes.ts';
+import {
+  saveMultiQuery
+} from '@/js/serverCalls.ts';
 
 type QueryControlsDataType = {
   segmentation: SegmentationType,
@@ -344,6 +357,8 @@ type QueryControlsDataType = {
   instArtTypes: (keyof PhraseCatType["Instrumental Articulation"])[],
   incidentals: (keyof PhraseCatType["Incidental"])[],
   proportionalVertical: boolean,
+  showSaveQueryModal: boolean,
+  queryTitle: string,
 }
 
 const sectionData = categoryData['Section'];
@@ -416,6 +431,8 @@ export default defineComponent({
       instArtTypes: ['Bol'],
       incidentals: ['Tuning'],
       proportionalVertical: false,
+      showSaveQueryModal: false,
+      queryTitle: '',
     }
   },
 
@@ -432,6 +449,10 @@ export default defineComponent({
 
     trajIdxs: {
       type: Array as PropType<number[]>,
+      required: true,
+    },
+    piece: {
+      type: Object as PropType<Piece>,
       required: true,
     }
     
@@ -479,6 +500,23 @@ export default defineComponent({
         })
       }
     }
+  },
+
+  mounted() {
+    // listener for esc key to close modal
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.showSaveQueryModal = false;
+      }
+    });
+  },
+
+  unmounted() {
+    window.removeEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.showSaveQueryModal = false;
+      }
+    });
   },
 
   computed: {
@@ -697,6 +735,17 @@ export default defineComponent({
 
   methods: {
 
+    async saveQuery() {
+      try {
+        const id = this.piece._id!;
+        const userID = this.$store.state.userID!;
+        await saveMultiQuery(this.queryTitle, userID, id, this.queries, this.options);
+        this.showSaveQueryModal = false;
+      } catch (err) {
+        console.error(err);
+      }
+    },
+
     updateProportionalVertical() {
       this.$emit('updateProportionalVertical', this.proportionalVertical)
     },
@@ -884,5 +933,41 @@ label {
 .seqCol {
   display: flex;
   flex-direction: column;
+}
+
+.saveQueryModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  background-color: lightgray;
+  width: 450px;
+  height: 60px;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
+
+.modalRow > label {
+  color: black;
+  margin: 0;
+}
+
+.modalRow > input {
+  width: 200px;
+}
+
+.modalRow > button:hover {
+  cursor: pointer;
+} 
+
+.modalRow {
+  width: 95%;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  align-items: center;
 }
 </style>
