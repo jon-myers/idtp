@@ -4,16 +4,15 @@ import { AxiosProgressEvent } from 'axios';
 import fetch from 'cross-fetch';
 import { Piece } from './classes.ts';
 import { 
-  CollectionType 
-} from '@/ts/types.ts';
-
-import { 
   MusicianDBType, 
   GharanaType,
   TransMetadataType,
   RecUpdateType,
   UserType,
-  RecType
+  RecType,
+  CollectionType,
+  QueryType,
+  MultipleOptionType 
 } from '@/ts/types.ts';
 const getPiece = async (id: string): Promise<Piece> => {
   let piece;
@@ -1435,6 +1434,7 @@ const userLoginGoogle = async (userData: UserDataType) => {
     family_name: userData.family_name,
     collections: [],
     transcriptions: [],
+    savedQueries: [],
   });
   let out;
   let request = {
@@ -1556,6 +1556,80 @@ const updateTranscriptionPermissions = async (id: string, perm: string) => {
     const res = await fetch(url + 'updateTranscriptionPermissions', request);
     if (res.ok) {
       out = await res.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const saveMultiQuery = async (
+  title: string,
+  userID: string,
+  transcriptionID: string,
+  queries: QueryType[], 
+  options: MultipleOptionType
+) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ title, userID, transcriptionID, queries, options })
+  };
+  try {
+    const response = await fetch(url + 'saveMultiQuery', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const loadQueries = async (userID: string, transcriptionID: string): Promise<
+  {
+    title: string,
+    queries: QueryType[],
+    options: MultipleOptionType,
+    _id: string,
+  }[]
+  > => {
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const params = new URLSearchParams({ userID, transcriptionID });
+    const response = await fetch(url + 'loadQueries?' + params, request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const deleteQuery = async (userID: string, queryID: string) => {
+  let out;
+  const request = {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userID, queryID })
+  };
+  try {
+    const response = await fetch(url + 'deleteQuery', request);
+    if (response.ok) {
+      out = await response.json()
     }
     return out
   } catch (err) {
@@ -1908,5 +1982,8 @@ export {
   verifySpectrogram,
   verifyMelograph,
   updateVisibility,
-  getLooseRecordings
+  getLooseRecordings,
+  saveMultiQuery,
+  loadQueries,
+  deleteQuery,
 }

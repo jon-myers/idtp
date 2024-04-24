@@ -57,6 +57,8 @@
       </div>
       <div class='controlsRow'>
         <button @click='runQuery'>Search</button>
+        <button @click='showSaveQueryModal=true'>Save Query</button>
+        <button @click='showLoadQueryModal=true'>Load Query</button>
       </div>
     </div>
     <div class='queriesContainer'>
@@ -275,6 +277,21 @@
         </div>
       </div>
     </div>
+    <div v-if='showSaveQueryModal' class='saveQueryModal'>
+      <div class='modalRow'>
+        <label for='queryTitle'>Query Title:</label>
+        <input type='text' v-model='queryTitle' />
+        <button @click='saveQuery'>Save</button>
+        <button @click='showSaveQueryModal=false'>Cancel</button>
+      </div>
+    </div>
+    <LoadQueryModal 
+      v-if='showLoadQueryModal'
+      :navHeight='navHeight'
+      :transcriptionID='piece._id!'
+      @close='showLoadQueryModal=false'
+      @loadQuery='loadQuery'
+    />
   </div>
 </template>
 
@@ -298,8 +315,12 @@ import {
   Pitch,
   Raga,
   Trajectory,
+  Piece
 } from '@/js/classes.ts';
-
+import {
+  saveMultiQuery
+} from '@/js/serverCalls.ts';
+import LoadQueryModal from '@/comps/analysis/LoadQueryModal.vue';
 type QueryControlsDataType = {
   segmentation: SegmentationType,
   numQueries: number,
@@ -344,6 +365,9 @@ type QueryControlsDataType = {
   instArtTypes: (keyof PhraseCatType["Instrumental Articulation"])[],
   incidentals: (keyof PhraseCatType["Incidental"])[],
   proportionalVertical: boolean,
+  showSaveQueryModal: boolean,
+  showLoadQueryModal: boolean,
+  queryTitle: string,
 }
 
 const sectionData = categoryData['Section'];
@@ -416,7 +440,14 @@ export default defineComponent({
       instArtTypes: ['Bol'],
       incidentals: ['Tuning'],
       proportionalVertical: false,
+      showSaveQueryModal: false,
+      showLoadQueryModal: false,
+      queryTitle: '',
     }
+  },
+
+  components: {
+    LoadQueryModal
   },
 
   props: {
@@ -433,13 +464,20 @@ export default defineComponent({
     trajIdxs: {
       type: Array as PropType<number[]>,
       required: true,
+    },
+    piece: {
+      type: Object as PropType<Piece>,
+      required: true,
+    },
+    navHeight: {
+      type: Number,
+      required: true,
     }
     
   },
 
   watch: {
     numQueries(newVal, oldVal) {
-      console.log('numQueries changed from', oldVal, 'to', newVal);
       const params: { param: ParamType[], init: ParamType }[]  = [
         { param: this.categories, init: { value: 'pitch', text: 'Pitch' } },
         { param: this.pitchNames, init: 'Sa' },
@@ -479,6 +517,25 @@ export default defineComponent({
         })
       }
     }
+  },
+
+  mounted() {
+    // listener for esc key to close modal
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.showSaveQueryModal = false;
+        this.showLoadQueryModal = false;
+      }
+    });
+  },
+
+  unmounted() {
+    window.removeEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.showSaveQueryModal = false;
+        this.showLoadQueryModal = false;
+      }
+    });
   },
 
   computed: {
@@ -697,6 +754,76 @@ export default defineComponent({
 
   methods: {
 
+    async saveQuery() {
+      try {
+        const id = this.piece._id!;
+        const userID = this.$store.state.userID!;
+        await saveMultiQuery(this.queryTitle, userID, id, this.queries, this.options);
+        this.showSaveQueryModal = false;
+      } catch (err) {
+        console.error(err);
+      }
+    },
+
+    async loadQuery(queries: QueryType[], options: MultipleOptionType) {
+      const pitchNames: PitchNameType[] = [
+        'Sa', 're', 'Re', 'ga', 'Ga', 'ma', 'Ma', 'Pa', 'dha', 'Dha', 'ni', 'Ni'
+      ]
+      this.numQueries = queries.length;
+      await this.$nextTick();
+      queries.forEach((q, qIdx) => {
+        this.categories[qIdx] = { value: q.category, text: q.category }
+        this.designators[qIdx] = { value: q.designator, text: q.designator }
+        if (q.consonant) {
+          this.consonants[qIdx] = q.consonant
+        } else if (q.pitch) {
+          const pitch = new Pitch(q.pitch);
+          const chroma = pitch.chroma;
+          this.pitchNames[qIdx] = pitchNames[chroma];
+          this.octs[qIdx] = pitch.oct;
+        } else if (q.trajectoryID) {
+          this.trajectoryIDs[qIdx] = q.trajectoryID
+        } else if (q.pitchSequence) {
+          this.numPitches[qIdx] = q.pitchSequence.length
+          this.pitchSeqObjs[qIdx] = q.pitchSequence.map(p => {
+            const pitch = new Pitch(p);
+            const chroma = pitch.chroma;
+            return { swara: pitchNames[chroma], oct: p.oct }
+          })
+        } else if (q.trajIdSequence) {
+          this.numTrajs[qIdx] = q.trajIdSequence.length
+          this.trajIdSeqs[qIdx] = q.trajIdSequence
+        } else if (q.sectionTopLevel) {
+          this.sectionTopLevels[qIdx] = q.sectionTopLevel
+        } else if (q.alapSection) {
+          this.alapSections[qIdx] = q.alapSection
+        } else if (q.compType) {
+          this.compTypes[qIdx] = q.compType
+        } else if (q.compSecTempo) {
+          this.compSecTempos[qIdx] = q.compSecTempo
+        } else if (q.tala) {
+          this.talas[qIdx] = q.tala
+        } else if (q.phraseType) {
+          this.phraseTypes[qIdx] = q.phraseType
+        } else if (q.elaborationType) {
+          this.elaborationTypes[qIdx] = q.elaborationType
+        } else if (q.vocalArtType) {
+          this.vocalArtTypes[qIdx] = q.vocalArtType
+        } else if (q.instArtType) {
+          this.instArtTypes[qIdx] = q.instArtType
+        } else if (q.incidental) {
+          this.incidentals[qIdx] = q.incidental
+        }
+      })
+      this.segmentation = options.segmentation!;
+      this.sequenceLength = options.sequenceLength!;
+      this.minDur = options.minDur!;
+      this.maxDur = options.maxDur!;
+      this.all = options.every!;
+      this.runQuery();
+      this.showLoadQueryModal = false;
+    },
+
     updateProportionalVertical() {
       this.$emit('updateProportionalVertical', this.proportionalVertical)
     },
@@ -884,5 +1011,42 @@ label {
 .seqCol {
   display: flex;
   flex-direction: column;
+}
+
+.saveQueryModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  background-color: lightgray;
+  width: 450px;
+  height: 60px;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid black;
+}
+
+.modalRow > label {
+  color: black;
+  margin: 0;
+}
+
+.modalRow > input {
+  width: 200px;
+}
+
+.modalRow > button:hover {
+  cursor: pointer;
+} 
+
+.modalRow {
+  width: 95%;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  align-items: center;
 }
 </style>

@@ -373,6 +373,48 @@ const runServer = async () => {
       }
     });
 
+    app.post('/saveMultiQuery', async (req, res) => {
+      const userID = req.body.userID;
+      if (!userID || userID.length !== 24) {
+        console.log(userID)
+        return res.status(400).send('Invalid userID: ' + userID);
+      }
+      const query = { _id: ObjectId(userID) };
+      const multiQueryObj = {};
+      multiQueryObj['queries'] = req.body.queries;
+      multiQueryObj['dateCreated'] = new Date();
+      multiQueryObj['options'] = req.body.options;
+      multiQueryObj['transcriptionID'] = req.body.transcriptionID;
+      multiQueryObj['title'] = req.body.title;
+      const uniqueID = new ObjectId();
+      multiQueryObj['_id'] = uniqueID;
+      try {
+        const result = await users.updateOne(query, { $push: { 
+          multiQueries: multiQueryObj 
+        } });
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+
+    });
+
+    app.delete('/deleteQuery', async (req, res) => {
+      const query = { _id: ObjectId(req.body.userID) };
+      const mQueryID = ObjectId(req.body.queryID);
+
+      try {
+        const result = await users.updateOne(query, {
+          $pull: { multiQueries: { _id: mQueryID } }
+        });
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
+
     app.post('/createCollection', async (req, res) => {
       // create a new collection
       try {
@@ -1175,6 +1217,24 @@ const runServer = async () => {
           transcriptions: tID
         } });
         res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
+    app.get('/loadQueries', async (req, res) => {
+      try {
+        const userID = req.query.userID;
+        const transcriptionID = req.query.transcriptionID;
+        const query = { _id: ObjectId(userID) };
+        const projection = { projection: { multiQueries: 1, _id: 0 } };
+        let user = await users.findOne(query, projection);
+        let multiQueries = user.multiQueries;
+        multiQueries = multiQueries.filter(q => {
+          return q.transcriptionID === transcriptionID
+        });
+        res.json(multiQueries)
       } catch (err) {
         console.error(err);
         res.status(500).send(err);

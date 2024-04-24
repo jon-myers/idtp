@@ -3031,12 +3031,12 @@ class Raga {
     sargam.forEach(s => {
       if (typeof(this.ruleSet[s]) === 'object') {
         const obj = this.ruleSet[s] as BoolObj;
-        if (obj.raised) {
-          const str = s.charAt(0).toUpperCase() + s.slice(1);
-          names.push(str)
-        }
         if (obj.lowered) {
           const str = s.charAt(0).toLowerCase() + s.slice(1);
+          names.push(str)
+        }
+        if (obj.raised) {
+          const str = s.charAt(0).toUpperCase() + s.slice(1);
           names.push(str)
         }
       } else {
