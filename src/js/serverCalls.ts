@@ -1589,6 +1589,54 @@ const saveMultiQuery = async (
   }
 }
 
+const loadQueries = async (userID: string, transcriptionID: string): Promise<
+  {
+    title: string,
+    queries: QueryType[],
+    options: MultipleOptionType,
+    _id: string,
+  }[]
+  > => {
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const params = new URLSearchParams({ userID, transcriptionID });
+    const response = await fetch(url + 'loadQueries?' + params, request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const deleteQuery = async (userID: string, queryID: string) => {
+  let out;
+  const request = {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userID, queryID })
+  };
+  try {
+    const response = await fetch(url + 'deleteQuery', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
 const updateTranscriptionOwner = async (
     id: string, ownerObj: UserType, originalOwnerID: string
     ) => {
@@ -1936,4 +1984,6 @@ export {
   updateVisibility,
   getLooseRecordings,
   saveMultiQuery,
+  loadQueries,
+  deleteQuery,
 }

@@ -300,6 +300,7 @@
         :raga='piece.raga'
         :trajIdxs='piece.trajIdxs'
         :piece='piece'
+        :navHeight='navHeight'
         />
     </div>
     <div 
