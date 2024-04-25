@@ -33,11 +33,16 @@ export default defineComponent({
     }
   },
   
-  methods: {
-  }
 })
 </script>
 
 <style>
 
+body {
+  overscroll-behavior: none;
+}
+
+body, html {
+  overscroll-behavior-x: none;
+}
 </style>

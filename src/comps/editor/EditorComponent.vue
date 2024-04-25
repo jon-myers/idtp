@@ -501,7 +501,8 @@ type EditorDataType = {
   autoTrajs: Trajectory[],
   autoWindowWidth: number,
   sarangi: boolean,
-  sitar: boolean
+  sitar: boolean,
+  d3ZoomEvent?: D3ZoomEvent<Element, unknown>,
 }
 
 export { findClosestStartTime }
@@ -656,7 +657,8 @@ export default defineComponent({
       autoTrajs: [],
       autoWindowWidth: 300,
       sarangi: false,
-      sitar: false
+      sitar: false,
+      d3ZoomEvent: undefined
       
     }
   },
@@ -5153,9 +5155,19 @@ export default defineComponent({
         this.zoom = d3Zoom()
         .filter(z_ => {
           if (z_.type === 'dblclick') this.handleDblClick(z_);
-          return z_.type !== 'mousedown' && z_.type !== 'dblclick' ? z_ : null
+          if (z_.type === 'touchmove') console.log('touchmove: ', z_)
+          if (!z_.cancelable) {
+            this.nonD3EnactZoom(z_);
+            return true
+          }
+          if (z_.type === 'wheel') return true;
+
+          
+          
+          return z_.type !== 'mousedown' && z_.type !== 'dblclick'
         })
-        .on('zoom', this.enactZoom);
+        .on('zoom', this.enactZoom)
+        // .on('pointermove', () => console.log('wheel'))
       } catch (err) {
         console.error(err)
       }
@@ -9095,7 +9107,20 @@ export default defineComponent({
       return [rect.width / 2, rect.height / 2]
     },
 
+    nonD3EnactZoom(e: WheelEvent) {
+      let deltaX = 0.5 * e.wheelDeltaX / this.tx!().k;
+      let deltaY = 0.5 * e.wheelDeltaY / this.ty!().k;
+      this.gx!.call(this.zoomX!.translateBy, deltaX, 0);
+      this.gy!.call(this.zoomY!.translateBy, 0, deltaY);
+      this.redraw();
+      this.transformScrollYDragger();
+      this.transformScrollXDragger();
+      this.leftTime = this.xr().invert(this.yAxWidth);
+    },
+
     enactZoom(e: D3ZoomEvent<Element, unknown>) {
+      e.sourceEvent?.preventDefault();
+      this.d3ZoomEvent = e;
       const t = e.transform;
       const k = t.k / this.z!.k;
       const point = this.center(e);
@@ -9103,6 +9128,8 @@ export default defineComponent({
       const doY = point[1] > this.y!.range()[0];
       if (doX && doY) {
         if (e.sourceEvent) {
+          // console.log('wheel: ', e.sourceEvent.wheelDeltaX, e.sourceEvent.wheelDeltaY)
+          // console.log('normal: ', e.sourceEvent.deltaX, e.sourceEvent.deltaY)
           let deltaX = 0.5 * e.sourceEvent.wheelDeltaX / this.tx!().k;
           let deltaY = 0.5 * e.sourceEvent.wheelDeltaY / this.ty!().k;
           this.gx!.call(this.zoomX!.translateBy, deltaX, 0);
@@ -9938,5 +9965,12 @@ input[type='checkbox'] {
 
 
 }
+
+
+svg {
+  touch-action: pan-y pan-x pinch-zoom;
+}
+
+
 
 </style>
