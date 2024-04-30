@@ -478,6 +478,10 @@ span.field {
   overflow-y: hidden;
 }
 
+span.field::-webkit-scrollbar {
+  display: none;
+}
+
 .draggableBorder {
   position: absolute;
   right: -5px;
