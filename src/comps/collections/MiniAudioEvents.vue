@@ -980,6 +980,11 @@ span.field {
   user-select: none;
 }
 
+span.field::-webkit-scrollbar {
+  display: none;
+
+}
+
 .sortTriangle.down {
   transform: rotate(90deg);
 }
@@ -1016,6 +1021,10 @@ span.field {
   overflow-y: scroll;
   overflow-x: hidden;
   /* border-bottom: 1px solid grey; */
+}
+
+.fileContainer::-webkit-scrollbar {
+  display: none;
 }
 
 .aeRow {
