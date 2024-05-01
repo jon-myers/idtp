@@ -241,7 +241,7 @@ export default defineComponent({
           minWidth: 120,
           prioritization: 2,
           sortFunction: this.soloInstSorter as SortFuncType,
-          growable: true,
+          growable: false,
           initSortState: SortState.down,
           getDisplay: this.getSoloInstDisplay as GetDisplayType
         },
@@ -268,7 +268,7 @@ export default defineComponent({
           minWidth: 105,
           prioritization: 5,
           sortFunction: this.createdSorter as SortFuncType,
-          growable: true,
+          growable: false,
           initSortState: SortState.down,
           getDisplay: this.getCreatedDisplay as GetDisplayType
         },
@@ -277,7 +277,7 @@ export default defineComponent({
           minWidth: 110,
           prioritization: 6,
           sortFunction: this.modifiedSorter as SortFuncType,
-          growable: true,
+          growable: false,
           initSortState: SortState.down,
           getDisplay: this.getModifiedDisplay as GetDisplayType
         },
@@ -286,7 +286,7 @@ export default defineComponent({
           minWidth: 105,
           prioritization: 7,
           sortFunction: this.editableSorter as SortFuncType,
-          growable: true,
+          growable: false,
           initSortState: SortState.down,
           getDisplay: this.getEditableDisplay as GetDisplayType
         }
