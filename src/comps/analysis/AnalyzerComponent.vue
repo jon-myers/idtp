@@ -1728,12 +1728,20 @@ export default defineComponent({
     overflow-y: scroll;
   }
 
+  .main_::-webkit-scrollbar {
+    display: none
+  }
+
   .graph {
     overflow-x: scroll;
     overflow-y: scroll;
     width: 90vw;
     height: v-bind(graphRowHeight + 'px');
     display: relative;
+  }
+
+  .graph::-webkit-scrollbar {
+    display: none
   }
 
   .graphContainer {
@@ -1744,6 +1752,10 @@ export default defineComponent({
     align-items: center;
     justify-content: center;
     overflow-y: scroll;
+  }
+
+  .graphContainer::-webkit-scrollbar {
+    display: none
   }
 
   .analysisControls {
@@ -1825,6 +1837,10 @@ export default defineComponent({
     height: v-bind(controlsHeight - 20 + 'px');
     padding: 10px;
     overflow-x: scroll;
+  }
+
+  .scrollingCBHolder::-webkit-scrollbar {
+    display: none
   }
 
   .scrolling > div {
@@ -1960,6 +1976,10 @@ export default defineComponent({
     overflow-x: scroll;
   }
 
+  .segmentDisplayHolder::-webkit-scrollbar {
+    display: none
+  }
+
   .title {
     font-size: 16px;
     font-weight: bold;
@@ -1976,6 +1996,10 @@ export default defineComponent({
     flex-direction: column;
     justify-content: top;
     align-items: center;
+  }
+
+  .scrolling::-webkit-scrollbar {
+    display: none
   }
 
   .spaceBelow {
