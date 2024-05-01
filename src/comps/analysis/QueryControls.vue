@@ -992,6 +992,10 @@ label {
   /* background-color: red; */
 }
 
+.queriesContainer::-webkit-scrollbar {
+  display: none;
+}
+
 .pitchOct {
   display: flex;
   flex-direction: column;

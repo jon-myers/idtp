@@ -661,4 +661,8 @@ h2 {
   padding: 10px;
 
 }
+
+.contentContainer::-webkit-scrollbar {
+  display: none
+}
 </style>
