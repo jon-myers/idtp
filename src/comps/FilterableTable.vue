@@ -526,6 +526,10 @@ span.field::-webkit-scrollbar {
   border-top: 1px solid grey;
 }
 
+.fileContainer::-webkit-scrollbar {
+  display: none;
+}
+
 .searchBar {
   height: v-bind(searchBarHeight + 'px');
   min-height: v-bind(searchBarHeight + 'px');
