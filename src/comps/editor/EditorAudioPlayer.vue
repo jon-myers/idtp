@@ -2999,9 +2999,8 @@ export default defineComponent({
 .sliderCol > input {
   width: 12px;
   height: v-bind(controlsHeight - srgmLtrHeight - tuningLblHeight - 10 + 'px');
-  -webkit-appearance: slider-vertical;
-  appearance: slider-vertical;
-  -moz-appearance: slider-vertical;
+  writing-mode: vertical-lr;
+  direction: rtl;
   margin-top: 5px;
   margin-bottom: 5px;
 }
@@ -3068,9 +3067,9 @@ button {
 .cbBoxSmall > input {
   width: 30px;
   height: 150px;
-  -webkit-appearance: slider-vertical;
-  appearance: slider-vertical;
-  -moz-appearance: slider-vertical;
+  writing-mode: vertical-lr;
+  direction: rtl;
+
 }
 
 .cbBoxSmall > input[type=checkbox] {
