@@ -106,7 +106,6 @@ export default defineComponent({
     }
   },
   async mounted() {
-    console.log(this.$route.query.id)
     this.userID = this.$cookies.get('userID');
     if (this.userID === 'undefined') this.userID = undefined;
     this.usrImgUrl = this.$cookies.get('usrImgUrl');
