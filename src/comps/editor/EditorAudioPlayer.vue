@@ -723,7 +723,7 @@ export default defineComponent({
     },
     audioDBDoc: {
       type: Object as PropType< RecType | undefined>,
-      required: true
+      required: false
     },
     regionEndTime: {
       type: Number
