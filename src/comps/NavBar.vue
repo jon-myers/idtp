@@ -106,6 +106,7 @@ export default defineComponent({
     }
   },
   async mounted() {
+    console.log(this.$route.query.id)
     this.userID = this.$cookies.get('userID');
     if (this.userID === 'undefined') this.userID = undefined;
     this.usrImgUrl = this.$cookies.get('usrImgUrl');
@@ -122,7 +123,10 @@ export default defineComponent({
       this.$store.commit('update_firstName', this.firstName);
       this.$store.commit('update_lastName', this.lastName);
       this.$store.commit('update_name', this.name);
-      const pieceId = this.$cookies.get('currentPieceId');
+      let pieceId = this.$cookies.get('currentPieceId');
+      if (this.$route.query.id !== undefined) {
+        pieceId = this.$route.query.id as string
+      };
       if (pieceId !== null) this.$store.commit('update_id', pieceId); 
         //just for now
     } else {
