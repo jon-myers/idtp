@@ -175,6 +175,7 @@
   @assignPrevMeterEmit='assignPrevMeter'
   @goToPhraseEmit='moveToPhrase'
   @goToSectionEmit='moveToSection'
+  @maxLayerEmit='updateMaxLayer'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -503,6 +504,7 @@ type EditorDataType = {
   sarangi: boolean,
   sitar: boolean,
   d3ZoomEvent?: D3ZoomEvent<Element, unknown>,
+  maxLayer: number,
 }
 
 export { findClosestStartTime }
@@ -658,7 +660,8 @@ export default defineComponent({
       autoWindowWidth: 300,
       sarangi: false,
       sitar: false,
-      d3ZoomEvent: undefined
+      d3ZoomEvent: undefined,
+      maxLayer: 3,
       
     }
   },
@@ -931,6 +934,10 @@ export default defineComponent({
 
 
   methods: {
+
+    updateMaxLayer(e: number) {
+      this.maxLayer = e
+    },
 
     permissionToEdit(piece: Piece) {
       const id = this.$store.state.userID!;
@@ -3182,7 +3189,6 @@ export default defineComponent({
         allPulses.push(...meter.allCorporealPulses)
       });
       const layerWidth = [1.5, 1, 0.5, 0.25]
-      
       allPulses.forEach(pulse => {
         const x = codified ? 
             this.codifiedXR!(pulse.realTime) : 
@@ -3200,6 +3206,8 @@ export default defineComponent({
             .on('drag', this.pulseDragging(pulse))
             .on('end', this.pulseDragEnd(pulse))
         }
+
+        const opacity = this.maxLayer >= pulse.lowestLayer ? '1' : '0';
         this.phraseG
           .append('path')
           .classed('metricGrid', true)
@@ -3209,6 +3217,7 @@ export default defineComponent({
           .attr('stroke', this.meterColor)
           .attr('stroke-width', `${strokeWidth}px`)
           .attr('d', this.playheadLine(codified))
+          .style('opacity', opacity)
           .attr('transform', `translate(${x},0)`)
 
         this.phraseG

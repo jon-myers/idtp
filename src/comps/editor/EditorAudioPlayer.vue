@@ -267,6 +267,7 @@
         @passthroughRemoveMeterEmit='passthroughRemoveMeter'
         @passthroughUnsavedChangesEmit='passthroughUnsavedChanges'
         @passthroughAssignPrevMeterEmit='passthroughAssignPrevMeter'
+        @maxLayerEmit='$emit("maxLayerEmit", $event)'
         />
       <LabelEditor
         v-if='showLabelControls'
@@ -445,7 +446,6 @@ type EditorAudioPlayerData = {
   tuningMasterGainNode?: GainNode;
   tuningGainNodes: GainNode[];
   tuningSines: OscillatorNode[];
-  testSarangi: boolean;
   sarangiSynth?: SarangiSynthType;
   klattMiddleGain?: GainNode;
 }

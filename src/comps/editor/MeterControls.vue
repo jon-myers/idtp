@@ -217,6 +217,10 @@ export default defineComponent({
       required: true,
     },
   },
+
+  mounted() {
+    this.$emit('maxLayerEmit', this.maxLayer);
+  },
   
   methods: {
     increaseCompounds(i: number) {
@@ -338,6 +342,7 @@ export default defineComponent({
         })
           .style('opacity', this.maxLayer >= i ? 1 : 0)
       }
+      this.$emit('maxLayerEmit', this.maxLayer);
     },
 
     assignData() {
