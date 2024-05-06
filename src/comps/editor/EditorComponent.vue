@@ -26,14 +26,18 @@
     </div>
     <div class='controlBox'>
       <div class='scrollingControlBox'>
-        <div class='cbRow'>
+        <div class='cbRow visibilityToggle' @click='toggleVisibility'>
+          <span :style='{ transform: `rotate(${rotation}deg)` }'>▼</span>
+          <label>Visibility</label>
+        </div>
+        <div class='cbRow' v-if='visibilityTab'>
           <label>Spectrogram</label>
           <input 
             type='checkbox' 
             @change='toggleSpectrogram'
             @click='preventSpaceToggle'>
         </div>
-        <div class='cbRow'>
+        <div class='cbRow' v-if='visibilityTab'>
           <label>Melograph</label>
           <input 
             type='checkbox' 
@@ -41,23 +45,44 @@
             @change='toggleMelograph'
             @click='preventSpaceToggle'>
         </div>
-        <div class='cbRow'>
-          <label>Loop</label>
-          <input type='checkbox' v-model='loop' @click='updateLoop'>
-        </div>
-        <div class='cbRow'>
+        <div class='cbRow' v-if='visibilityTab'>
           <label>Sargam</label>
           <input 
             type='checkbox' 
             v-model='showSargam' 
             @click='preventSpaceToggle'>
         </div>
-        <div v-if='!vocal' class='cbRow'>
+        <div v-if='!vocal && visibilityTab' class='cbRow' >
           <label>Bols</label>
           <input 
             type='checkbox' 
             v-model='showBols' 
             @click='preventSpaceToggle'>
+        </div>
+        <div v-if='visibilityTab' class='cbRow'>
+          <label>Transcription</label>
+          <input 
+            type='checkbox' 
+            v-model='showMelody' 
+            @click='preventSpaceToggle'
+            @change='updateTranscriptionVisibility'>
+        </div>
+        <div v-if='visibilityTab' class='cbRow'>
+          <label>Meter</label>
+          <input 
+            type='checkbox' 
+            v-model='showMeter' 
+            @click='preventSpaceToggle'
+            @change='updateMeterVisibility'
+            >
+        </div>
+        <div class='lineBreakParent' v-if='visibilityTab'>
+          <div class='lineBreak'>
+          </div>
+        </div>
+        <div class='cbRow'>
+          <label>Loop</label>
+          <input type='checkbox' v-model='loop' @click='updateLoop'>
         </div>
         <div class='cbRow'>
           <label>Playhead Return</label>
@@ -505,6 +530,10 @@ type EditorDataType = {
   sitar: boolean,
   d3ZoomEvent?: D3ZoomEvent<Element, unknown>,
   maxLayer: number,
+  visibilityTab: boolean,
+  rotation: number,
+  showMelody: boolean,
+  showMeter: boolean,
 }
 
 export { findClosestStartTime }
@@ -662,6 +691,10 @@ export default defineComponent({
       sitar: false,
       d3ZoomEvent: undefined,
       maxLayer: 3,
+      visibilityTab: false,
+      rotation: -90,
+      showMelody: true,
+      showMeter: true,
       
     }
   },
@@ -934,6 +967,40 @@ export default defineComponent({
 
 
   methods: {
+
+    updateMeterVisibility() {
+      if (!this.showMeter) {
+        d3SelectAll('.metricGrid')
+          .style('display', 'none')
+      } else {
+        d3SelectAll('.metricGrid')
+          .style('display', 'inline')
+      }
+    },
+
+    updateTranscriptionVisibility() {
+      if (!this.showMelody) {
+        d3SelectAll('.phrase')
+          .style('display', 'none')
+      } else {
+        d3SelectAll('.phrase')
+          .style('display', 'inline')
+      }
+    },
+
+    toggleVisibility(e: MouseEvent) {
+      let target = e.target as HTMLElement;
+      target = target.parentNode as HTMLElement;
+      if (this.visibilityTab) {
+        this.visibilityTab = false;
+        this.rotation = -90;
+        target.classList.remove('open');
+      } else {
+        this.visibilityTab = true;
+        this.rotation = 0;
+        target.classList.add('open');
+      }
+    },
 
     updateMaxLayer(e: number) {
       this.maxLayer = e
@@ -9682,6 +9749,9 @@ export default defineComponent({
 </script>
 
 <style scoped>
+
+
+
 .graph {
   width: calc(100% - 1px);
   height: calc(100% - v-bind(scrollXHeight + 'px'));
@@ -9895,6 +9965,12 @@ button:hover {
   padding: 0px;
 }
 
+.visibilityToggle > label {
+  width: auto;
+  margin-left: 5px;
+}
+
+
 .noSelect {
   user-select: none;
   -moz-user-select: none;
@@ -9971,15 +10047,30 @@ input[type='checkbox'] {
   font-family: sans-serif;
   font-size: 16px;
   line-height: 1.2;
-
-
 }
-
 
 svg {
   touch-action: pan-y pan-x pinch-zoom;
 }
 
+.lineBreak {
+  border-top: 1px solid black;
+  width: 120px;
+  height: 0px;
+}
+
+.lineBreakParent {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: right;
+  width: 100%;
+  height: 1px;
+  box-sizing: border-box;
+  padding-top: 4px;
+  padding-right: 10px;
+  padding-bottom: 3px;
+}
 
 
 </style>
