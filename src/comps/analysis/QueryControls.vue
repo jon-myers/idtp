@@ -60,6 +60,14 @@
         <button @click='showSaveQueryModal=true'>Save Query</button>
         <button @click='showLoadQueryModal=true'>Load Query</button>
       </div>
+      <div class='controlsRow'>
+        <button 
+          @click='downloadSegmentDisplays'
+          :disabled='!resultsSize'
+          >
+          Download Results
+        </button>
+      </div>
     </div>
     <div class='queriesContainer'>
       <div 
@@ -299,6 +307,7 @@
 import phonemes from '@/assets/json/phonemes.json';
 import { defineComponent, PropType } from 'vue';
 import categoryData from '@/assets/json/categorization.json';
+import JSZip from 'jszip';
 import { 
   SegmentationType, 
   QueryType, 
@@ -472,8 +481,11 @@ export default defineComponent({
     navHeight: {
       type: Number,
       required: true,
-    }
-    
+    },
+    resultsSize: {
+      type: Number,
+      required: false,
+    },
   },
 
   watch: {
@@ -754,6 +766,53 @@ export default defineComponent({
 
   methods: {
 
+    async downloadSegmentDisplays() {
+      const jsZip = new JSZip();
+      const svgEls = document.querySelectorAll('svg');
+      for (let i = 0; i < svgEls.length; i++) {
+        const el = svgEls[i];
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const data = (new XMLSerializer()).serializeToString(el);
+        const DOMURL = window.URL || window.webkitURL || window;
+        const img = new Image();
+        const svg = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
+        const url = DOMURL.createObjectURL(svg);
+
+        await new Promise<void>((resolve) => {
+          img.onload = () => {
+            const scaleFactor = 2;
+            const borderSize = 10;
+            canvas.width = (img.width + 2 * borderSize) * scaleFactor;
+            canvas.height = (img.height + 2 * borderSize) * scaleFactor;
+            ctx!.fillStyle = 'white';
+            ctx!.fillRect(0, 0, canvas.width, canvas.height);
+            ctx!.scale(scaleFactor, scaleFactor);
+            ctx!.drawImage(img, borderSize, borderSize);
+            DOMURL.revokeObjectURL(url);
+            canvas.toBlob((blob) => {
+              jsZip.file(`${i}.png`, blob!);
+              resolve();
+            }, 'image/png');
+          };
+          img.src = url;
+        });
+      }
+
+      const content = await jsZip.generateAsync({ type: 'blob' });
+      const fileName = 'queryResults.zip';
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(content);
+      link.download = fileName;
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+
+      
+    },
+
     async saveQuery() {
       try {
         const id = this.piece._id!;
@@ -825,6 +884,7 @@ export default defineComponent({
     },
 
     updateProportionalVertical() {
+      console.log(this.proportionalVertical)
       this.$emit('updateProportionalVertical', this.proportionalVertical)
     },
 
@@ -874,7 +934,6 @@ export default defineComponent({
     },
 
     runQuery() {
-      console.log(this.queries, this.options)
       this.$emit('runQuery', this.queries, this.options)
     },
 
