@@ -566,8 +566,12 @@ export default defineComponent({
     },
 
     trajIdxs(newVal) {
-      this.urlsFiltered = newVal.map((idx: number) => this.urls[idx]);
-      this.kNumsFiltered = newVal.map((idx: number) => this.kNums[idx]);
+      this.urlsFiltered = newVal
+        .map((idx: number) => this.urls[idx])
+        .filter((url: string) => url !== undefined);
+      this.kNumsFiltered = newVal
+        .map((idx: number) => this.kNums[idx])
+        .filter((kNum: string) => kNum !== undefined);
     }
   },
 
