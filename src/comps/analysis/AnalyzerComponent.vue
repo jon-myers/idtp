@@ -301,6 +301,7 @@
         :trajIdxs='piece.trajIdxs'
         :piece='piece'
         :navHeight='navHeight'
+        :resultsSize='displayTrajs?.length'
         />
     </div>
     <div 
@@ -316,6 +317,7 @@
           :trajectories='trajectories'
           :displayWidth='segmentDisplayWidths[idx]'
           :displayHeight='segmentDisplayHeight'
+          :horizontalProportionalDisplay='horizontalProportionalDisplay'
           :style="{ 
             width: segmentDisplayWidths[idx] + 'px', 
             minWidth: segmentDisplayWidths[idx] + 'px' 
@@ -1639,6 +1641,7 @@ export default defineComponent({
         });
       }
       if (this.verticalProportionalDisplay) {
+        console.log('true vertprop')
         const max = this.displayTrajs.map(trajs => {
           const logFreqs = trajs.map(traj => traj.logFreqs).flat();
           const testXs = linSpace(0, 1, 25);
@@ -1678,6 +1681,9 @@ export default defineComponent({
           }
         }, 1000);
         this.logFreqOverride = { low: min, high: max }
+      } else {
+        this.logFreqOverride = undefined;
+      
       }
     }
   },

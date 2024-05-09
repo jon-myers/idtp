@@ -374,6 +374,47 @@ export default defineComponent({
 
   methods: {
 
+    downloadImage() {
+      // Step 1: Convert SVG to Canvas
+      const svgElement = this.$el.querySelector('svg'); // Adjust selector as needed
+      const serializer = new XMLSerializer();
+      const svgString = serializer.serializeToString(svgElement);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const DOMURL = window.URL || window.webkitURL || window;
+      const img = new Image();
+      const svg = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
+      const url = DOMURL.createObjectURL(svg);
+
+      img.onload = () => {
+        const scaleFactor = 2;
+        const borderSize = 10;
+        canvas.width = (img.width + 2 * borderSize) * scaleFactor;
+        canvas.height = (img.height + 2 * borderSize) * scaleFactor;
+        ctx!.fillStyle = 'white';
+        ctx!.fillRect(0, 0, canvas.width, canvas.height);
+        ctx!.scale(scaleFactor, scaleFactor);
+        ctx!.drawImage(img, borderSize, borderSize);
+        DOMURL.revokeObjectURL(url);
+
+        ctx?.scale(1/scaleFactor, 1/scaleFactor)
+
+        // Step 2: Convert Canvas to Image and Download
+        const imgURI = canvas
+            .toDataURL('image/png') // or 'image/jpeg' for JPEG format
+            .replace('image/png', 'image/octet-stream'); // This prompts the user to save the file
+
+        // Create a link and trigger the download
+        const link = document.createElement('a');
+        link.download = 'segment-display.png'; // Name of the file
+        link.href = imgURI;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      img.src = url
+    },
+
     handleKeydown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         this.contextMenuClosed = true;
@@ -420,6 +461,14 @@ export default defineComponent({
             }
           });
           window.open(routeData.href, '_blank');
+        },
+        enabled: true
+      });
+      this.contextMenuChoices.push({
+        text: 'Download Image',
+        action: () => {
+          this.contextMenuClosed = true;
+          this.downloadImage();
         },
         enabled: true
       })
