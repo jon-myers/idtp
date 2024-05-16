@@ -1854,6 +1854,7 @@ const runServer = async () => {
     };
     app.use('/audio', express.static('audio', { setHeaders: setNoCache }));
     app.use('/peaks', express.static('peaks', { setHeaders: setNoCache }));
+    app.use('/test', express.static('test', { setHeaders: setNoCache }));
     app.use('/spectrograms', express.static('spectrograms', { 
       setHeaders: setNoCache 
     }))
