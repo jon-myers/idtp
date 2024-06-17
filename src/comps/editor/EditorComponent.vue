@@ -1906,7 +1906,7 @@ export default defineComponent({
       const lP = this.piece.phrases[lT.phraseIdx!];
       const lPEnd = lP.startTime! + lT.startTime! + lT.durTot;
       const dur = lPEnd - fPStart;
-      const realST = this.currentTime;
+      let realST: number = this.currentTime;
       const startPIdx = this.phraseIdxFromTime(realST)!;
       const startP = this.piece.phrases[startPIdx];
       const startTIdx = this.trajIdxFromTime(startP, realST)!;
@@ -1926,7 +1926,7 @@ export default defineComponent({
           const origPhraseStart = origPhrase.startTime!;
           const origTrajStart = origPhraseStart + traj.startTime!;
           const offsetTrajStart = origTrajStart - fPStart;
-          const realST = realST + offsetTrajStart;
+          realST = realST + offsetTrajStart;
 
           // get idx of phrase and traj in which to paste
           const targetPIdx = this.phraseIdxFromTime(realST);
@@ -4512,7 +4512,9 @@ export default defineComponent({
           meterControls.removeMeter(this.selMeter.uniqueId);
         }
       } else if (e.key === 'c' && this.editable) {
+        console.log('c down')
         if (this.metad) {
+          console.log('and also it was metad')
           this.clipboardTrajs = this.selectedTrajs
         } else {
           this.setChikari = true;
