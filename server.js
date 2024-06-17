@@ -1289,13 +1289,13 @@ const runServer = async () => {
     app.post('/addRecordingToCollection', async (req, res) => {
       try {
         // add recordingID to collections collection
-        const query = { _id: ObjectId(req.body.collectionID) };
+        const query = { _id: ObjectId(req.body.colID) };
 
         const update = { $push: { audioRecordings: req.body.recordingID } };
         const result = await collections.updateOne(query, update);
-        // add collectionId to audioRecordings collection
+        // add colID to audioRecordings collection
         const query2 = { _id: ObjectId(req.body.recordingID) };
-        const update2 = { $push: { collections: req.body.collectionID } };
+        const update2 = { $push: { collections: req.body.colID } };
         const result2 = await audioRecordings.updateOne(query2, update2);
         res.json({ result, result2 })
       } catch (err) {
@@ -1307,12 +1307,12 @@ const runServer = async () => {
     app.post('/addTranscriptionToCollection', async (req, res) => {
       try {
         // add recordingID to collections collection
-        const query = { _id: ObjectId(req.body.collectionID) };
+        const query = { _id: ObjectId(req.body.colID) };
         const update = { $push: { transcriptions: req.body.transcriptionID } };
         const result = await collections.updateOne(query, update);
-        // add collectionId to audioRecordings collection
+        // add colID to audioRecordings collection
         const query2 = { _id: ObjectId(req.body.transcriptionID) };
-        const update2 = { $push: { collections: req.body.collectionID } };
+        const update2 = { $push: { collections: req.body.colID } };
         const result2 = await transcriptions.updateOne(query2, update2);
         res.json({ result, result2 })
       } catch (err) {
@@ -1324,12 +1324,12 @@ const runServer = async () => {
     app.post('/addAudioEventToCollection', async (req, res) => {
       try {
         // add recordingID to collections collection
-        const query = { _id: ObjectId(req.body.collectionID) };
+        const query = { _id: ObjectId(req.body.colID) };
         const update = { $push: { audioEvents: req.body.audioEventID } };
         const result = await collections.updateOne(query, update);
-        // add collectionId to audioRecordings collection
+        // add colID to audioRecordings collection
         const query2 = { _id: ObjectId(req.body.audioEventID) };
-        const update2 = { $push: { collections: req.body.collectionID } };
+        const update2 = { $push: { collections: req.body.colID } };
         const result2 = await audioEvents.updateOne(query2, update2);
         res.json({ result, result2 })
       } catch (err) {
@@ -1341,12 +1341,12 @@ const runServer = async () => {
     app.post('/removeRecordingFromCollection', async (req, res) => {
       try {
         // remove recordingID from collections collection
-        const query = { _id: ObjectId(req.body.collectionID) };
+        const query = { _id: ObjectId(req.body.colID) };
         const update = { $pull: { audioRecordings: req.body.recordingID } };
         const result = await collections.updateOne(query, update);
-        // remove collectionId from audioRecordings collection
+        // remove colID from audioRecordings collection
         const query2 = { _id: ObjectId(req.body.recordingID) };
-        const update2 = { $pull: { collections: req.body.collectionID } };
+        const update2 = { $pull: { collections: req.body.colID } };
         const result2 = await audioRecordings.updateOne(query2, update2);
         res.json({ result, result2 })
       } catch (err) {
@@ -1358,12 +1358,12 @@ const runServer = async () => {
     app.post('/removeTranscriptionFromCollection', async (req, res) => {
       try { 
         console.log(req.body)
-        const query = { _id: ObjectId(req.body.collectionID) };
+        const query = { _id: ObjectId(req.body.colID) };
         const update = { $pull: { transcriptions: req.body.transcriptionID } };
         const result = await collections.updateOne(query, update);
 
         const query2 = { _id: ObjectId(req.body.transcriptionID) };
-        const update2 = { $pull: { collections: req.body.collectionID } };
+        const update2 = { $pull: { collections: req.body.colID } };
         const result2 = await transcriptions.updateOne(query2, update2);
         console.log(result, result2)
         res.json({ result, result2 })
@@ -1375,12 +1375,12 @@ const runServer = async () => {
 
     app.post('/removeAudioEventFromCollection', async (req, res) => {
       try {
-        const query = { _id: ObjectId(req.body.collectionID) };
+        const query = { _id: ObjectId(req.body.colID) };
         const update = { $pull: { audioEvents: req.body.audioEventID } };
         const result = await collections.updateOne(query, update);
 
         const query2 = { _id: ObjectId(req.body.audioEventID) };
-        const update2 = { $pull: { collections: req.body.collectionID } };
+        const update2 = { $pull: { collections: req.body.colID } };
         const result2 = await audioEvents.updateOne(query2, update2);
         res.json({ result, result2 })
       } catch (err) {
