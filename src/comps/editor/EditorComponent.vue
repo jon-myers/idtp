@@ -4170,9 +4170,10 @@ export default defineComponent({
       const pitch = this.visPitches[logSGLines.indexOf(lf)];
       const pitchJSON = pitch.toJSON();
       pitchJSON.fundamental = this.piece.raga.fundamental;
-      const endPitch = new Pitch(pitchJSON)
+      const endPitch = new Pitch(pitchJSON);
+      const firstPitch = new Pitch(pitch.toJSON());
       // const endPitch = new Pitch(pitch.)
-      const pitches = [pitch, endPitch];
+      const pitches = [firstPitch, endPitch];
       const durTot = this.trajTimePts[1].time - this.trajTimePts[0].time;
       const ntObj: {
         pitches: Pitch[],
