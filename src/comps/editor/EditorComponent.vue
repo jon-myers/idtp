@@ -5235,7 +5235,8 @@ export default defineComponent({
         .filter(z_ => {
           if (z_.type === 'dblclick') this.handleDblClick(z_);
           if (z_.type === 'touchmove') console.log('touchmove: ', z_)
-          if (!z_.cancelable) {
+          if (!z_.cancelable && this.browser.os !== 'Mac OS') {
+            console.log('alt way is happening')
             this.nonD3EnactZoom(z_);
             return true
           }
