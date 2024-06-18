@@ -982,8 +982,12 @@ export default defineComponent({
       if (!this.showMelody) {
         d3SelectAll('.phrase')
           .style('display', 'none')
+        d3SelectAll('.articulation')
+          .style('display', 'none')
       } else {
         d3SelectAll('.phrase')
+          .style('display', 'inline')
+        d3SelectAll('.articulation')
           .style('display', 'inline')
       }
     },
@@ -8911,6 +8915,8 @@ export default defineComponent({
       this.codifiedYR = this.yr();
       this.codifiedAddPhrases();
       this.phraseG.selectAll('.phraseDiv').remove();
+      this.updateMeterVisibility();
+      this.updateTranscriptionVisibility();
       this.updatePhraseDivs();
       this.codifiedAddSargamLabels();
       this.addBolLabels();
