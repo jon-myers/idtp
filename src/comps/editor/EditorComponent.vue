@@ -275,7 +275,7 @@ import LabelEditor from '@/comps/editor/LabelEditor.vue';
 import instructionsText from '@/assets/texts/editor_instructions.html?raw';
 import AutomationWindow from '@/comps/editor/AutomationWindow.vue';
 import { detect, BrowserInfo } from 'detect-browser';
-
+import { throttle } from 'lodash';
 import { defineComponent } from 'vue';
 
 import { 
@@ -535,6 +535,7 @@ type EditorDataType = {
   rotation: number,
   showMelody: boolean,
   showMeter: boolean,
+  throttledRedraw: (() => void) | undefined,
 }
 
 export { findClosestStartTime }
@@ -556,7 +557,7 @@ export default defineComponent({
       initYScale: 2,
       initXScale: 1,
       spectrogramOpacity: 0,
-      transitionTime: 40,
+      transitionTime: 1000 / 60,
       controlBoxWidth: 240,
       audioSource: undefined,
       currentTime: 0,
@@ -696,6 +697,7 @@ export default defineComponent({
       rotation: -90,
       showMelody: true,
       showMeter: true,
+      throttledRedraw: undefined,
       
     }
   },
@@ -706,6 +708,7 @@ export default defineComponent({
     AutomationWindow,
   },
   created() {
+    this.throttledRedraw = throttle(this.redraw.bind(this), this.transitionTime);
     window.addEventListener('keydown', this.handleKeydown);
     window.addEventListener('keyup', this.handleKeyup);
     let offset = this.navHeight + this.playerHeight + this.controlsHeight + 1;
@@ -6433,7 +6436,7 @@ export default defineComponent({
       this.phraseG
         .transition()
         .duration(tTime)
-        .ease(d3EaseQuadInOut)
+        .ease(d3EaseLinear)
         .attr('transform', `translate(${x},${y}) scale(${xS},${yS})`)  
       if (Math.abs(Math.log(xS)) > 0.2) this.resetZoom();
       if (Math.abs(Math.log(yS)) > 0.3) this.resetZoom();
@@ -8815,10 +8818,10 @@ export default defineComponent({
     movePlayhead(transitionTime?: number = undefined) {
       const time = transitionTime ? transitionTime : this.transitionTime;
       d3Select('.playhead')
-        .transition()
-        .duration(time) 
-        .ease(d3EaseQuadInOut)
-        .ease(d3EaseLinear)
+        // .transition()
+        // .duration(time) 
+        // .ease(d3EaseQuadInOut)
+        // .ease(d3EaseLinear)
         .attr('transform', `translate(${this.xr()(this.currentTime)})`)
     }, 
 
@@ -8836,12 +8839,12 @@ export default defineComponent({
       this.gx!
         .transition()
         .duration(instant ? 0 : this.transitionTime)
-        .ease(d3EaseQuadInOut)
+        .ease(d3EaseLinear)
         .call(this.xAxis, this.xr());
       this.gy!
         .transition()
         .duration(instant ? 0 : this.transitionTime)
-        .ease(d3EaseQuadInOut)
+        .ease(d3EaseLinear)
         .call(this.yAxis, this.yr());
 
       if (this.init) {
@@ -8856,9 +8859,6 @@ export default defineComponent({
           this.codifiedYR = this.yr();
           this.visibleSargam.forEach((s, i) => {
             d3Select(`.s${i}`)
-              .transition()
-              .duration(this.transitionTime)
-              .ease(d3EaseQuadInOut)
               .attr('d', this.sargamLine(Math.log2(s)))
           });
           this.updatePhraseDivs();
@@ -9228,7 +9228,8 @@ export default defineComponent({
         doY && this.gy!.call(this.zoomY!.scaleBy, k, point);
       }
       this.z = t;
-      this.redraw();
+      // this.redraw();
+      this.throttledRedraw!();
       this.transformScrollYDragger();
       this.transformScrollXDragger();
       this.leftTime = this.xr().invert(this.yAxWidth);
@@ -9294,6 +9295,7 @@ export default defineComponent({
         this.redraw()
       }
       this.movePlayhead();
+      // window.setTimeout(this.loopAnimationFrame, 1000 / 60)
       this.startAnimationFrame();
     },
 
