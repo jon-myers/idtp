@@ -310,6 +310,7 @@ import {
   symbolX as d3SymbolX,
   symbolDiamond as d3SymbolDiamond,
   easeQuadInOut as d3EaseQuadInOut,
+  easeLinear as d3EaseLinear,
   pointers as d3Pointers,
   mean as d3Mean,
   ZoomTransform,
@@ -5254,18 +5255,14 @@ export default defineComponent({
       
       this.makeAxes();
       this.addPhrases();
+      this.updateTranslateExtent();
+      this.svgNode = this.svg
+        .call(this.zoom)
+        .call(this.zoom.transform, d3ZoomIdentity.scale(this.initXScale))
+        .node()!;
+      const graph = this.$refs.graph as HTMLElement;
+      graph.appendChild(this.svgNode)
       
-
-      await this.updateTranslateExtent().then(() => {
-        this.svgNode = this.svg
-          .call(this.zoom)
-          .call(this.zoom.transform, d3ZoomIdentity.scale(this.initXScale))
-          .node()!;
-        const graph = this.$refs.graph as HTMLElement;
-        graph.appendChild(this.svgNode)
-        return regularMove
-        
-      });
       this.addMetricGrid(false);
     },
 
@@ -6433,7 +6430,9 @@ export default defineComponent({
     },
 
     slidePhrases(x: number, y: number, xS: number, yS: number, tTime: number) {  
-      this.phraseG.transition().duration(tTime)
+      this.phraseG
+        .transition()
+        .duration(tTime)
         .ease(d3EaseQuadInOut)
         .attr('transform', `translate(${x},${y}) scale(${xS},${yS})`)  
       if (Math.abs(Math.log(xS)) > 0.2) this.resetZoom();
@@ -8697,7 +8696,7 @@ export default defineComponent({
       })
     },
 
-    async updateTranslateExtent() {
+    updateTranslateExtent() {
       const rect = this.rect();
       const scaledWidth = this.yAxWidth * this.tx().k;
       const scaledHeight = this.xAxHeight * this.ty().k;
@@ -8817,10 +8816,11 @@ export default defineComponent({
       const time = transitionTime ? transitionTime : this.transitionTime;
       d3Select('.playhead')
         .transition()
-        .duration(time)
+        .duration(time) 
         .ease(d3EaseQuadInOut)
+        .ease(d3EaseLinear)
         .attr('transform', `translate(${this.xr()(this.currentTime)})`)
-    },
+    }, 
 
     moveShadowPlayhead() {
       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
@@ -8831,8 +8831,8 @@ export default defineComponent({
         .attr('transform', `translate(${this.xr()(shadowTime)})`)
     },
 
-    async redraw(instant = false) {
-      await this.updateTranslateExtent();
+    redraw(instant = false) {
+      this.updateTranslateExtent();
       this.gx!
         .transition()
         .duration(instant ? 0 : this.transitionTime)
@@ -8877,7 +8877,7 @@ export default defineComponent({
       }
 
       if (this.piece.audioID) {
-        await this.redrawSpectrogram(instant);
+        this.redrawSpectrogram(instant);
       }
       this.movePlayhead();
       this.moveShadowPlayhead();
