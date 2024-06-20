@@ -275,7 +275,7 @@ import LabelEditor from '@/comps/editor/LabelEditor.vue';
 import instructionsText from '@/assets/texts/editor_instructions.html?raw';
 import AutomationWindow from '@/comps/editor/AutomationWindow.vue';
 import { detect, BrowserInfo } from 'detect-browser';
-
+import { throttle } from 'lodash';
 import { defineComponent } from 'vue';
 
 import { 
@@ -310,6 +310,7 @@ import {
   symbolX as d3SymbolX,
   symbolDiamond as d3SymbolDiamond,
   easeQuadInOut as d3EaseQuadInOut,
+  easeLinear as d3EaseLinear,
   pointers as d3Pointers,
   mean as d3Mean,
   ZoomTransform,
@@ -534,6 +535,7 @@ type EditorDataType = {
   rotation: number,
   showMelody: boolean,
   showMeter: boolean,
+  throttledRedraw: (() => void) | undefined,
 }
 
 export { findClosestStartTime }
@@ -555,7 +557,7 @@ export default defineComponent({
       initYScale: 2,
       initXScale: 1,
       spectrogramOpacity: 0,
-      transitionTime: 40,
+      transitionTime: 1000 / 60,
       controlBoxWidth: 240,
       audioSource: undefined,
       currentTime: 0,
@@ -695,6 +697,7 @@ export default defineComponent({
       rotation: -90,
       showMelody: true,
       showMeter: true,
+      throttledRedraw: undefined,
       
     }
   },
@@ -705,6 +708,7 @@ export default defineComponent({
     AutomationWindow,
   },
   created() {
+    this.throttledRedraw = throttle(this.redraw.bind(this), this.transitionTime);
     window.addEventListener('keydown', this.handleKeydown);
     window.addEventListener('keyup', this.handleKeyup);
     let offset = this.navHeight + this.playerHeight + this.controlsHeight + 1;
@@ -982,8 +986,12 @@ export default defineComponent({
       if (!this.showMelody) {
         d3SelectAll('.phrase')
           .style('display', 'none')
+        d3SelectAll('.articulation')
+          .style('display', 'none')
       } else {
         d3SelectAll('.phrase')
+          .style('display', 'inline')
+        d3SelectAll('.articulation')
           .style('display', 'inline')
       }
     },
@@ -1906,7 +1914,7 @@ export default defineComponent({
       const lP = this.piece.phrases[lT.phraseIdx!];
       const lPEnd = lP.startTime! + lT.startTime! + lT.durTot;
       const dur = lPEnd - fPStart;
-      const realST = this.currentTime;
+      let realST: number = this.currentTime;
       const startPIdx = this.phraseIdxFromTime(realST)!;
       const startP = this.piece.phrases[startPIdx];
       const startTIdx = this.trajIdxFromTime(startP, realST)!;
@@ -1926,7 +1934,7 @@ export default defineComponent({
           const origPhraseStart = origPhrase.startTime!;
           const origTrajStart = origPhraseStart + traj.startTime!;
           const offsetTrajStart = origTrajStart - fPStart;
-          const realST = realST + offsetTrajStart;
+          realST = realST + offsetTrajStart;
 
           // get idx of phrase and traj in which to paste
           const targetPIdx = this.phraseIdxFromTime(realST);
@@ -2028,8 +2036,8 @@ export default defineComponent({
           d3Select(`#dampen${this.selectedTrajID}`)
             .attr('stroke', this.selTrajColor)
           d3Select(`#pluck${this.selectedTrajID}`)
-            .attr('stroke', this.selTrajColor)
-            .attr('fill', this.selTrajColor)
+            .attr('stroke', this.selArtColor)
+            .attr('fill', this.selArtColor)
           d3Select(`#overlay__${this.selectedTrajID}`)
             // .attr('cursor', 'default')
         } else {
@@ -2040,9 +2048,9 @@ export default defineComponent({
             d3Select(`#dampen${id}`)
               .attr('stroke', this.selTrajColor)
             d3Select(`#pluck${id}`)
-              .attr('fill', this.selTrajColor)
+              .attr('fill', this.selArtColor)
             d3Select(`#pluck${id}`)
-              .attr('stroke', this.selTrajColor)
+              .attr('stroke', this.selArtColor)
             d3Select('#overlay__' + id)
               // .attr('cursor', 'default')
           })
@@ -4170,9 +4178,10 @@ export default defineComponent({
       const pitch = this.visPitches[logSGLines.indexOf(lf)];
       const pitchJSON = pitch.toJSON();
       pitchJSON.fundamental = this.piece.raga.fundamental;
-      const endPitch = new Pitch(pitchJSON)
+      const endPitch = new Pitch(pitchJSON);
+      const firstPitch = new Pitch(pitch.toJSON());
       // const endPitch = new Pitch(pitch.)
-      const pitches = [pitch, endPitch];
+      const pitches = [firstPitch, endPitch];
       const durTot = this.trajTimePts[1].time - this.trajTimePts[0].time;
       const ntObj: {
         pitches: Pitch[],
@@ -4512,7 +4521,9 @@ export default defineComponent({
           meterControls.removeMeter(this.selMeter.uniqueId);
         }
       } else if (e.key === 'c' && this.editable) {
+        console.log('c down')
         if (this.metad) {
+          console.log('and also it was metad')
           this.clipboardTrajs = this.selectedTrajs
         } else {
           this.setChikari = true;
@@ -5232,7 +5243,8 @@ export default defineComponent({
         .filter(z_ => {
           if (z_.type === 'dblclick') this.handleDblClick(z_);
           if (z_.type === 'touchmove') console.log('touchmove: ', z_)
-          if (!z_.cancelable) {
+          if (!z_.cancelable && this.browser.os !== 'Mac OS') {
+            console.log('alt way is happening')
             this.nonD3EnactZoom(z_);
             return true
           }
@@ -5250,18 +5262,14 @@ export default defineComponent({
       
       this.makeAxes();
       this.addPhrases();
+      this.updateTranslateExtent();
+      this.svgNode = this.svg
+        .call(this.zoom)
+        .call(this.zoom.transform, d3ZoomIdentity.scale(this.initXScale))
+        .node()!;
+      const graph = this.$refs.graph as HTMLElement;
+      graph.appendChild(this.svgNode)
       
-
-      await this.updateTranslateExtent().then(() => {
-        this.svgNode = this.svg
-          .call(this.zoom)
-          .call(this.zoom.transform, d3ZoomIdentity.scale(this.initXScale))
-          .node()!;
-        const graph = this.$refs.graph as HTMLElement;
-        graph.appendChild(this.svgNode)
-        return regularMove
-        
-      });
       this.addMetricGrid(false);
     },
 
@@ -6429,8 +6437,10 @@ export default defineComponent({
     },
 
     slidePhrases(x: number, y: number, xS: number, yS: number, tTime: number) {  
-      this.phraseG.transition().duration(tTime)
-        .ease(d3EaseQuadInOut)
+      this.phraseG
+        .transition()
+        .duration(tTime)
+        .ease(d3EaseLinear)
         .attr('transform', `translate(${x},${y}) scale(${xS},${yS})`)  
       if (Math.abs(Math.log(xS)) > 0.2) this.resetZoom();
       if (Math.abs(Math.log(yS)) > 0.3) this.resetZoom();
@@ -8693,7 +8703,7 @@ export default defineComponent({
       })
     },
 
-    async updateTranslateExtent() {
+    updateTranslateExtent() {
       const rect = this.rect();
       const scaledWidth = this.yAxWidth * this.tx().k;
       const scaledHeight = this.xAxHeight * this.ty().k;
@@ -8812,11 +8822,8 @@ export default defineComponent({
     movePlayhead(transitionTime?: number = undefined) {
       const time = transitionTime ? transitionTime : this.transitionTime;
       d3Select('.playhead')
-        .transition()
-        .duration(time)
-        .ease(d3EaseQuadInOut)
         .attr('transform', `translate(${this.xr()(this.currentTime)})`)
-    },
+    }, 
 
     moveShadowPlayhead() {
       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
@@ -8827,17 +8834,17 @@ export default defineComponent({
         .attr('transform', `translate(${this.xr()(shadowTime)})`)
     },
 
-    async redraw(instant = false) {
-      await this.updateTranslateExtent();
+    redraw(instant = false) {
+      this.updateTranslateExtent();
       this.gx!
         .transition()
         .duration(instant ? 0 : this.transitionTime)
-        .ease(d3EaseQuadInOut)
+        .ease(d3EaseLinear)
         .call(this.xAxis, this.xr());
       this.gy!
         .transition()
         .duration(instant ? 0 : this.transitionTime)
-        .ease(d3EaseQuadInOut)
+        .ease(d3EaseLinear)
         .call(this.yAxis, this.yr());
 
       if (this.init) {
@@ -8852,9 +8859,6 @@ export default defineComponent({
           this.codifiedYR = this.yr();
           this.visibleSargam.forEach((s, i) => {
             d3Select(`.s${i}`)
-              .transition()
-              .duration(this.transitionTime)
-              .ease(d3EaseQuadInOut)
               .attr('d', this.sargamLine(Math.log2(s)))
           });
           this.updatePhraseDivs();
@@ -8873,7 +8877,7 @@ export default defineComponent({
       }
 
       if (this.piece.audioID) {
-        await this.redrawSpectrogram(instant);
+        this.redrawSpectrogram(instant);
       }
       this.movePlayhead();
       this.moveShadowPlayhead();
@@ -8907,6 +8911,8 @@ export default defineComponent({
       this.codifiedYR = this.yr();
       this.codifiedAddPhrases();
       this.phraseG.selectAll('.phraseDiv').remove();
+      this.updateMeterVisibility();
+      this.updateTranscriptionVisibility();
       this.updatePhraseDivs();
       this.codifiedAddSargamLabels();
       this.addBolLabels();
@@ -9224,7 +9230,8 @@ export default defineComponent({
         doY && this.gy!.call(this.zoomY!.scaleBy, k, point);
       }
       this.z = t;
-      this.redraw();
+      // this.redraw();
+      this.throttledRedraw!();
       this.transformScrollYDragger();
       this.transformScrollXDragger();
       this.leftTime = this.xr().invert(this.yAxWidth);
@@ -9290,6 +9297,7 @@ export default defineComponent({
         this.redraw()
       }
       this.movePlayhead();
+      // window.setTimeout(this.loopAnimationFrame, 1000 / 60)
       this.startAnimationFrame();
     },
 

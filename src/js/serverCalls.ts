@@ -218,14 +218,14 @@ const createCollection = async (collection: CollectionType) => {
   return result
 }
 
-const deleteCollection = async (collectionID: string) => {
+const deleteCollection = async (colID: string) => {
   let result: undefined | { acknowledged: boolean, deletedCount: number };
   const request = {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ _id: collectionID })
+    body: JSON.stringify({ _id: colID })
   };
   try {
     const res = await fetch(url + 'deleteCollection', request);
@@ -1353,14 +1353,14 @@ const addTransToCollection = async (transcriptionID: string, colID: string) => {
   return out
 }
 
-const removeRecFromColl = async (recordingID: string, collectionID: string) => {
+const removeRecFromColl = async (recordingID: string, colID: string) => {
   let out;
   const request = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ recordingID, collectionID })
+    body: JSON.stringify({ recordingID, colID })
   };
   try {
     const res = await fetch(url + 'removeRecordingFromCollection', request);
@@ -1373,14 +1373,14 @@ const removeRecFromColl = async (recordingID: string, collectionID: string) => {
   return out
 }
 
-const removeAEfromColl = async (audioEventID: string, collectionID: string) => {
+const removeAEfromColl = async (audioEventID: string, colID: string) => {
   let out;
   const request = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ audioEventID, collectionID })
+    body: JSON.stringify({ audioEventID, colID })
   };
   try {
     const res = await fetch(url + 'removeAudioEventFromCollection', request);
