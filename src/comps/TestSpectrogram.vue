@@ -1,7 +1,9 @@
 <template>
   <div>
     <h1>TestSpectrogram</h1>
-    <canvas ref='canvas'></canvas>
+    <div class='canvas-container'>
+      <canvas ref='canvas'></canvas>
+    </div>
   </div>
 </template>
 <script lang='ts'>
@@ -16,7 +18,8 @@ import pako from 'pako';
 type TestSpectrogramDataType = {
   imgData?: ImageData,
   ctx?: CanvasRenderingContext2D | null,
-  data: Uint8Array[]
+  data: Uint8Array[],
+  testLastTime: number
 }
 export default defineComponent({
   name: 'TestSpectrogram',
@@ -24,7 +27,8 @@ export default defineComponent({
     return {
       imgData: undefined,
       ctx: undefined,
-      data: []
+      data: [],
+      testLastTime: 0
     }
   },
 
@@ -43,8 +47,17 @@ export default defineComponent({
       max = Math.max(max, ...this.data[i]);
     }
     console.log('max', max);
+    console.log(shapeData.shape)
     this.setUpCanvas(shapeData.shape);
-    this.updateCanvas(shapeData.shape)
+    // this.updateCanvas(shapeData.shape)
+
+    const updateAllCols = async (shape: [number, number]) => {
+      const numCols = 50;
+      for (let i = 0; i < Math.ceil(shape[1] / numCols); i++) {
+        await this.updateColumns(shape, i * numCols, numCols);
+      }
+    }
+    updateAllCols(shapeData.shape);
 
     // this.drawOnCanvas(this.data, shapeData.shape);
     
@@ -92,55 +105,49 @@ export default defineComponent({
     //   updateColumn(); // Start updating columns
     // }
 
-    // updateCanvas(shape: [number, number]) {
-    //   if (!this.ctx) {
-    //     throw new Error('Could not get canvas context');
-    //   }
-    //   let idx = 0;
-    //   for (let i = 0; i < shape[0]; i++) {
-    //     for (let j = 0; j < shape[1]; j++) {
-    //       idx = (i * shape[1] + j) * 4;
-    //       const color = rgb(cMap.interpolateViridis(this.data[i][j] / 255));
-    //       this.imgData!.data[idx] = color.r
-    //       this.imgData!.data[idx + 1] = color.g;
-    //       this.imgData!.data[idx + 2] = color.b;
-    //       this.imgData!.data[idx + 3] = 255;
-    //     }
-    //   }
-    //   this.ctx.putImageData(this.imgData!, 0, 0);
-    // },
+    updateCanvas(shape: [number, number]) {
+      if (!this.ctx) {
+        throw new Error('Could not get canvas context');
+      }
+      let idx = 0;
+      for (let i = 0; i < shape[0]; i++) {
+        for (let j = 0; j < shape[1]; j++) {
+          idx = (i * shape[1] + j) * 4;
+          const color = rgb(cMap.interpolateViridis(this.data[i][j] / 255));
+          this.imgData!.data[idx] = color.r
+          this.imgData!.data[idx + 1] = color.g;
+          this.imgData!.data[idx + 2] = color.b;
+          this.imgData!.data[idx + 3] = 255;
+        }
+      }
+      this.ctx.putImageData(this.imgData!, 0, 0);
+    },
 
-    // updateColumn(shape: [number, number]) {
-    //   for (let i = 0; i < shape[0]; i++) {
-    //     idx = ()
-    //   }
-    // }
+      async updateColumns(shape: [number, number], startIdx: number, numColumns: number) {
+        if (!this.ctx) {
+          throw new Error('Could not get canvas context');
+        }
+        const update = () => { 
+          for (let x = startIdx; x < startIdx + numColumns && x < shape[1]; x++) {
+            for (let i = 0; i < shape[0]; i++) {
+              const idx = (i * shape[1] + x) * 4;
+              const color = rgb(cMap.interpolateViridis(this.data[i][x] / 255));
+              this.imgData!.data[idx] = color.r;
+              this.imgData!.data[idx + 1] = color.g;
+              this.imgData!.data[idx + 2] = color.b;
+              this.imgData!.data[idx + 3] = 255;
+            }
+          }
+          this.ctx!.putImageData(this.imgData!, 0, 0, startIdx, 0, numColumns, shape[0]);
+        };
+        return new Promise<void>(resolve => {
+          requestAnimationFrame(() => {
+            update();
+            resolve();
+          });
+        });
+      }
 
-    // drawOnCanvas(data: Uint8Array[], shape: [number, number]) {
-    //   const cMapKeys = Object.keys(cMap)
-    //     .filter((key) => typeof cMap[key] === 'function');
-    //   const randKey = cMapKeys[Math.floor(Math.random() * cMapKeys.length)];
-    //   const canvas = this.$refs.canvas as HTMLCanvasElement;
-    //   const ctx = canvas.getContext('2d');
-    //   canvas.width = shape[1];
-    //   canvas.height = shape[0];
-    //   if (!ctx) {
-    //     throw new Error('Could not get canvas context');
-    //   }
-    //   this.imgData = ctx.createImageData(shape[1], shape[0]);
-    //   let idx = 0;
-    //   for (let i = 0; i < shape[0]; i++) {
-    //     for (let j = 0; j < shape[1]; j++) {
-    //       idx = (i * shape[1] + j) * 4;
-    //       const color = rgb(cMap[randKey](data[i][j] / 255));
-    //       this.imgData.data[idx] = color.r
-    //       this.imgData.data[idx + 1] = color.g;
-    //       this.imgData.data[idx + 2] = color.b;
-    //       this.imgData.data[idx + 3] = 255;
-    //     }
-    //   }
-    //   ctx.putImageData(this.imgData, 0, 0);
-    // }
   }
 })
 </script>
@@ -156,6 +163,12 @@ img {
 .img-container {
   position: relative;
   display: inline-block;
+}
+
+.canvas-container {
+  position: relative;
+  display: inline-block;
+  overflow: scroll;
 }
 /* 
 .img-container::before {

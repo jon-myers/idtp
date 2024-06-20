@@ -20,8 +20,7 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
 
-max_seconds = 600
-max_samples = max_seconds * 44100
+
 
 file_id = sys.argv[1]
 sa = float(sys.argv[2])
@@ -33,13 +32,16 @@ octaves = 3
 offset = 0.1
 params = {
           'inputSize': audio.size,
-          'minFrequency': 2 ** (np.log2(sa) - offset),
-          'maxFrequency': 2 ** (np.log2((2 ** octaves) * sa) + offset),
+          'minFrequency': 50,
+          'maxFrequency': 800,
           'binsPerOctave': 72,
           'windowSizeFactor': 1,
           'gamma': 20
          }
 cqGen = ess.NSGConstantQ(**params)
+max_seconds = 600
+max_samples = int(max_seconds * loader.paramValue('sampleRate'))
+
 
 passes = math.ceil(len(audio) / max_samples)
 arrs = []
