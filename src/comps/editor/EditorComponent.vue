@@ -8822,10 +8822,6 @@ export default defineComponent({
     movePlayhead(transitionTime?: number = undefined) {
       const time = transitionTime ? transitionTime : this.transitionTime;
       d3Select('.playhead')
-        // .transition()
-        // .duration(time) 
-        // .ease(d3EaseQuadInOut)
-        // .ease(d3EaseLinear)
         .attr('transform', `translate(${this.xr()(this.currentTime)})`)
     }, 
 
