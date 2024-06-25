@@ -34,6 +34,8 @@
       </div>
       <div class='controls-title-row'>
         <label>Colormap</label>
+      </div>
+      <div class='controls-row'>
         <select 
           v-model='selectedCMapString'
           @change='updateSa(saFreq)'
@@ -44,6 +46,18 @@
             :value='cMap'
             >{{cMap}}</option>
         </select>
+      </div>
+      <div class='controls-title-row'>
+        <label>Intensity Power</label>
+      </div>
+      <div class='controls-row'>
+        <input 
+          type='number'
+          v-model.number='intensityPower'
+          step='0.1'
+          min='0'
+          max='5'
+          >
       </div>
     </div>
   </div>
@@ -75,7 +89,8 @@ type TestSpectrogramDataType = {
   lowOctOffset: number,
   highOctOffset: number,
   cMaps: string[],
-  selectedCMapString: string
+  selectedCMapString: string,
+  intensityPower: number
 }
 export default defineComponent({
   name: 'TestSpectrogram',
@@ -94,7 +109,8 @@ export default defineComponent({
       lowOctOffset: 1.1,
       highOctOffset: 2.1,
       cMaps: sequentialSchemes,
-      selectedCMapString: 'interpolateViridis'
+      selectedCMapString: 'interpolateViridis',
+      intensityPower: 1
     }
   },
 
@@ -131,6 +147,30 @@ export default defineComponent({
   },
 
   methods: {
+
+    adjustPower(croppedData: Uint8Array[], power: number) {
+      if (power === 1) {
+        return croppedData;
+      }
+      // find global max
+      let globalMax: number = 0;
+      croppedData.forEach(arr => {
+        const max = Math.max(...arr);
+        if (max > globalMax) {
+          globalMax = max;
+        }
+      });
+      const maxVal = Math.pow(globalMax, power);
+      // adjust intensity, scaled to global max
+      return croppedData.map(arr => {
+        const newArr = new Uint8Array(arr.length);
+        for (let i = 0; i < arr.length; i++) {
+          const adjustedVal = (Math.pow(arr[i], power) / maxVal) * 255;
+          newArr[i] = Math.min(255, Math.max(0, Math.round(adjustedVal)));
+        }
+        return newArr;
+      });
+    },
 
     updateLims() {
       if (this.highOctOffset > this.highOctMaxOffset) {
@@ -169,6 +209,7 @@ export default defineComponent({
       this.croppedData = this.data.slice(oldHeight - yMax, oldHeight - yMin);
       this.croppedShapeData.shape = [newHeight, this.shapeData.shape[1]];
       this.setUpCanvas(this.croppedShapeData.shape);
+      this.croppedData = this.adjustPower(this.croppedData, this.intensityPower);
     },
 
     setUpCanvas(shape: [number, number]) {
@@ -183,11 +224,11 @@ export default defineComponent({
     },
 
     async updateColumns(
-        shape: [number, number], 
-        startIdx: number, 
-        numColumns: number,
-        selectedCMap: (x: number) => string = cMap[this.selectedCMapString]
-      ){
+      shape: [number, number], 
+      startIdx: number, 
+      numColumns: number,
+      selectedCMap: (x: number) => string = cMap[this.selectedCMapString]
+    ){
       if (!this.ctx) {
         throw new Error('Could not get canvas context');
       }
