@@ -14,6 +14,8 @@
     "deployGenerateSpectrograms": "rsync -a ./python/visualization_tools/generate_log_spectrograms.py root@137.184.90.119:generate_log_spectrograms.py",
     "deployMakeAllSpectrograms": "rsync -a ./python/visualization_tools/make_all_spectrograms.py root@137.184.90.119:make_all_spectrograms.py",
     "deployMakeAllMelographs": "rsync -a ./python/visualization_tools/make_all_melographs.py root@137.184.90.119:make_all_melographs.py",
+    "deployMakeSpecData": "rsync -a ./python/visualization_tools/make_spec_data.py root@137.184.90.119:make_spec_data.py",
+    "deployMakeAllSpecData": "rsync -a ./python/visualization_tools/make_all_spec_data.py root@137.184.90.119:make_all_spec_data.py",
     "deployNodemonConfig": "rsync -a ./nodemon.json root@137.184.90.119:nodemon.json",
     "deployProcessAudio": "rsync -a ./python/process_audio.py root@137.184.90.119:process_audio.py",
     "deployServer": "rsync -a ./server.js root@137.184.90.119:server.js",
