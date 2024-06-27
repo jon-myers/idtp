@@ -1858,6 +1858,9 @@ const runServer = async () => {
     app.use('/spectrograms', express.static('spectrograms', { 
       setHeaders: setNoCache 
     }))
+    app.use('/spec_data', express.static('spec_data', {
+      setHeaders: setNoCache
+    }))
     app.use('/melographs', express.static('melographs', { 
       setHeaders: setNoCache 
     }));

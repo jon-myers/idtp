@@ -181,6 +181,11 @@
   :durTot='durTot'
   :uniformVowel='uniformVowel'
   :insertPulses='insertPulses'
+  :transcriptionWidth='transcriptionWidth'
+  :transcriptionHeight='transcriptionHeight'
+  :xRangeInView='xRangeInView'
+  :saEstimate='audioDBDoc?.saEstimate'
+  :id='audioDBDoc?._id'
   @resizeHeightEmit='resizeHeight'
   @movePlayheadsEmit='movePlayheads'
   @currentTimeEmit='setCurrentTime'
@@ -201,6 +206,7 @@
   @goToPhraseEmit='moveToPhrase'
   @goToSectionEmit='moveToSection'
   @maxLayerEmit='updateMaxLayer'
+  @specCanvas='handleSpecCanvas'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -536,6 +542,9 @@ type EditorDataType = {
   showMelody: boolean,
   showMeter: boolean,
   throttledRedraw: (() => void) | undefined,
+  transcriptionWidth: number,
+  transcriptionHeight: number,
+  xRangeInView: [number, number],
 }
 
 export { findClosestStartTime }
@@ -698,6 +707,9 @@ export default defineComponent({
       showMelody: true,
       showMeter: true,
       throttledRedraw: undefined,
+      transcriptionWidth: 0,
+      transcriptionHeight: 0,
+      xRangeInView: [0, 0],
       
     }
   },
@@ -971,6 +983,10 @@ export default defineComponent({
 
 
   methods: {
+
+    handleSpecCanvas(canvas: HTMLCanvasElement) {
+      console.log(canvas)
+    },
 
     updateMeterVisibility() {
       if (!this.showMeter) {
@@ -9235,6 +9251,11 @@ export default defineComponent({
       this.transformScrollYDragger();
       this.transformScrollXDragger();
       this.leftTime = this.xr().invert(this.yAxWidth);
+      this.transcriptionWidth = this.xr()(this.durTot) - this.xr()(0);
+      this.transcriptionHeight = this.yr()(Math.log2(this.freqMin)) - 
+        this.yr()(Math.log2(this.freqMax));
+      this.xRangeInView = this.xr().domain()
+        .map(t => t / this.durTot) as [number, number];
     },
 
     verticalZoomIn() {

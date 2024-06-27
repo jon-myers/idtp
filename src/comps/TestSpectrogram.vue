@@ -91,6 +91,7 @@ const isSequentialScheme = (key: string) => {
   return key.startsWith('interpolate');
 }
 const sequentialSchemes = Object.keys(cMap).filter(isSequentialScheme);
+console.log(sequentialSchemes);
 import { rgb } from 'd3-color';
 import pako from 'pako';
 // import * as tf from '@tensorflow/tfjs';

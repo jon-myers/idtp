@@ -45,6 +45,14 @@
           </div>
         </div>
         <div class="recInfo right">
+          <div class='rulerBox'>
+            <img
+              :src='icons.specControl'
+              @click='toggleSpecControls'
+              class='specImg'
+              ref='specImg'
+            />
+          </div>
           <div class="rulerBox">
             <img
               :src="icons.tags"
@@ -253,33 +261,49 @@
       </div>
     </div>
     <MeterControls 
-        v-show='showMeterControls' 
-        :height='controlsHeight'
-        :playerHeight='playerHeight'
-        :editable='editable'
-        :currentTime='parentCurrentTime'
-        :insertPulses='insertPulses'
-        ref='meterControls'
-        @passthroughResetZoomEmit='passthroughResetZoom'
-        @pSelectMeterEmit='passthroughSelectMeter'
-        @passthroughAddMeterEmit='passthroughAddMeter'
-        @passthroughAddMetricGridEmit='passthroughAddMetricGrid'
-        @passthroughRemoveMeterEmit='passthroughRemoveMeter'
-        @passthroughUnsavedChangesEmit='passthroughUnsavedChanges'
-        @passthroughAssignPrevMeterEmit='passthroughAssignPrevMeter'
-        @maxLayerEmit='$emit("maxLayerEmit", $event)'
-        />
-      <LabelEditor
-        v-if='showLabelControls'
-        :height='controlsHeight'
-        :playerHeight='playerHeight'
-        :editable='editable'
-        :piece='piece'
-        :vocal='vocal!'
-        @unsavedChanges='$emit("unsavedChangesEmit", true)'
-        @goToPhraseEmit='goToPhrase'
-        @goToSectionEmit='goToSection'
-        ref='labelControls'
+      v-show='showMeterControls' 
+      :height='controlsHeight'
+      :playerHeight='playerHeight'
+      :editable='editable'
+      :currentTime='parentCurrentTime'
+      :insertPulses='insertPulses'
+      ref='meterControls'
+      @passthroughResetZoomEmit='passthroughResetZoom'
+      @pSelectMeterEmit='passthroughSelectMeter'
+      @passthroughAddMeterEmit='passthroughAddMeter'
+      @passthroughAddMetricGridEmit='passthroughAddMetricGrid'
+      @passthroughRemoveMeterEmit='passthroughRemoveMeter'
+      @passthroughUnsavedChangesEmit='passthroughUnsavedChanges'
+      @passthroughAssignPrevMeterEmit='passthroughAssignPrevMeter'
+      @maxLayerEmit='$emit("maxLayerEmit", $event)'
+      />
+    <LabelEditor
+      v-if='showLabelControls'
+      :height='controlsHeight'
+      :playerHeight='playerHeight'
+      :editable='editable'
+      :piece='piece'
+      :vocal='vocal!'
+      @unsavedChanges='$emit("unsavedChangesEmit", true)'
+      @goToPhraseEmit='goToPhrase'
+      @goToSectionEmit='goToSection'
+      ref='labelControls'
+    />
+    <SpectrogramControls
+      v-if='
+        id !== undefined && 
+        saEstimate !== undefined && 
+        transcriptionWidth !== 0
+        '
+      v-show='showSpecControls'
+      :height='controlsHeight'
+      :playerHeight='playerHeight'
+      :audioID='id'
+      :saFreq='2*saEstimate'
+      :scaledWidth='transcriptionWidth'
+      :scaledHeight='transcriptionHeight'
+      :xRangeInView='xRangeInView'
+      @specCanvas='handleSpecCanvas'
       />
   </div>
 </template>
@@ -294,6 +318,7 @@ import playIcon from '@/assets/icons/play.svg';
 import shuffleIcon from '@/assets/icons/shuffle.svg';
 import rulerIcon from '@/assets/icons/ruler.svg';
 import tagsIcon from '@/assets/icons/tags.svg';
+import SpectrogramControls from '@/comps/editor/SpectrogramControls.vue';
 import { defineComponent } from 'vue';
 import { PropType } from 'vue';
 import { 
@@ -309,6 +334,7 @@ import { AudioWorklet } from '@/audio-worklet';
 import tuningForkIcon from '@/assets/icons/tuning_fork.png';
 import downloadIcon from '@/assets/icons/download.svg';
 import meterIcon from '@/assets/icons/meter.svg';
+import specControlIcon from '@/assets/icons/specControls.svg';
 import { excelData, jsonData } from '@/js/serverCalls.ts';
 import ksURL from '@/audioWorklets/karplusStrong.worklet.js?url';
 import ssURL from '@/audioWorklets/sarangi.worklet.js?url';
@@ -348,7 +374,8 @@ type EditorAudioPlayerData = {
     download: string;
     tuningFork: string;
     meter: string;
-    tags: string
+    tags: string;
+    specControl: string;
   };
   circleDragging: boolean;
   formattedCurrentTime: string;
@@ -376,6 +403,7 @@ type EditorAudioPlayerData = {
   showDownloads: boolean;
   showMeterControls: boolean;
   showLabelControls: boolean;
+  showSpecControls: boolean;
   sargam: string[];
   centDevs: number[];
   tuningGains: number[];
@@ -569,7 +597,8 @@ export default defineComponent({
         download: downloadIcon,
         tuningFork: tuningForkIcon,
         meter: meterIcon,
-        tags: tagsIcon
+        tags: tagsIcon,
+        specControl: specControlIcon
       },
       circleDragging: false,
       formattedCurrentTime: '00:00',
@@ -597,6 +626,7 @@ export default defineComponent({
       showDownloads: false,
       showMeterControls: false,
       showLabelControls: false,
+      showSpecControls: false,
       sargam: [],
       centDevs: [],
       tuningGains: [],
@@ -747,24 +777,24 @@ export default defineComponent({
       type: Boolean,
       required: true
     },
-    // vocal: {
-    //   type: Boolean,
-    //   required: true
-    // },
-    // sitar: {
-    //   type: Boolean,
-    //   required: true
-    // },
-    // sarangi: {
-    //   type: Boolean,
-    //   required: true
-    // },
+    transcriptionWidth: {
+      type: Number,
+      required: true
+    },
+    transcriptionHeight: {
+      type: Number,
+      required: true
+    },
+    xRangeInView: {
+      type: Array as PropType<number[]>,
+      required: true
+    },
   },
 
   components: {
     MeterControls,
     LabelEditor,
-    // SarangiSynth
+    SpectrogramControls,
   },
 
   async mounted() {
@@ -916,6 +946,11 @@ export default defineComponent({
     }
   },
   methods: {
+
+    handleSpecCanvas(specCanvas: HTMLCanvasElement) {
+      console.log('specCanvas')
+      this.$emit('specCanvas', specCanvas);
+    },
 
     goToPhrase(pIdx: number) {
       this.$emit('goToPhraseEmit', pIdx)
@@ -1368,7 +1403,8 @@ export default defineComponent({
       this.initializeBufferRecorder();
       this.preSetFirstEnvelope(256);
       this.initStretchWorker();
-      this.inited = true
+      this.inited = true;
+      console.log(this.saEstimate, this.id)
     },
     gatherInfo() {
       const obj = this.audioDBDoc;
@@ -2327,6 +2363,10 @@ export default defineComponent({
           this.showLabelControls = false;
           const tagsImg = this.$refs.tagsImg as HTMLElement;
           tagsImg.classList.remove('showLabelControls')
+        } else if (this.showSpecControls) {
+          this.showSpecControls = false;
+          const specImg = this.$refs.specImg as HTMLImageElement;
+          specImg.classList.remove('showSpecControls');
         } else {
           this.$emit('resizeHeightEmit', this.showControls);
         }
@@ -2362,6 +2402,10 @@ export default defineComponent({
           this.showLabelControls = false;
           const tagsImg = this.$refs.tagsImg as HTMLElement;
           tagsImg.classList.remove('showLabelControls')
+        } else if (this.showSpecControls) {
+          this.showSpecControls = false;
+          const specImg = this.$refs.specImg as HTMLImageElement;
+          specImg.classList.remove('showSpecControls');
         } else {
           this.$emit('resizeHeightEmit', this.showTuning)
         }
@@ -2389,6 +2433,10 @@ export default defineComponent({
           this.showLabelControls = false;
           const tagsImg = this.$refs.tagsImg as HTMLElement;
           tagsImg.classList.remove('showLabelControls')
+        } else if (this.showSpecControls) {
+          this.showSpecControls = false;
+          const specImg = this.$refs.specImg as HTMLImageElement;
+          specImg.classList.remove('showSpecControls');
         } else {
           this.$emit('resizeHeightEmit', this.showDownloads);
         }
@@ -2422,6 +2470,10 @@ export default defineComponent({
           this.showLabelControls = false;
           const tagsImg = this.$refs.tagsImg as HTMLElement;
           tagsImg.classList.remove('showLabelControls')
+        } else if (this.showSpecControls) {
+          this.showSpecControls = false;
+          const specImg = this.$refs.specImg as HTMLImageElement;
+          specImg.classList.remove('showSpecControls');
         } else {
           this.$emit('resizeHeightEmit', this.showMeterControls);
         }
@@ -2434,7 +2486,8 @@ export default defineComponent({
         if (e === undefined) {
           cl = (this.$refs.tagsImg as HTMLElement).classList;
         } else {
-          cl = (e.target as HTMLElement).classList;}
+          cl = (e.target as HTMLElement).classList
+        }
         cl.toggle('showLabelControls');
         this.showLabelControls = !this.showLabelControls;
         if (this.showControls) {
@@ -2453,8 +2506,48 @@ export default defineComponent({
           this.showMeterControls = false;
           const meterImg = this.$refs.meterImg as HTMLImageElement;
           meterImg.classList.remove('showMeterControls');
+        } else if (this.showSpecControls) {
+          this.showSpecControls = false;
+          const specImg = this.$refs.specImg as HTMLImageElement;
+          specImg.classList.remove('showSpecControls');
         } else {
           this.$emit('resizeHeightEmit', this.showLabelControls);
+        }
+      }
+    },
+
+    toggleSpecControls(e?: MouseEvent) {
+      if (!this.loading) {
+        let cl;
+        if (e === undefined) {
+          cl = (this.$refs.specImg as HTMLImageElement).classList;
+        } else {
+          cl = (e.target as HTMLImageElement).classList;
+        }
+        cl.toggle('showSpecControls');
+        this.showSpecControls = !this.showSpecControls;
+        if (this.showControls) {
+          this.showControls = false;
+          const controlsImg = this.$refs.controlsImg as HTMLImageElement;
+          controlsImg.classList.remove('showControls');
+        } else if (this.showTuning) {
+          this.showTuning = false;
+          const tuningImg = this.$refs.tuningImg as HTMLImageElement;
+          tuningImg.classList.remove('showTuning');
+        } else if (this.showDownloads) {
+          this.showDownloads = false;
+          const downloadImg = this.$refs.downloadImg as HTMLImageElement;
+          downloadImg.classList.remove('showDownloads')
+        } else if (this.showMeterControls) {
+          this.showMeterControls = false;
+          const meterImg = this.$refs.meterImg as HTMLImageElement;
+          meterImg.classList.remove('showMeterControls');
+        } else if (this.showLabelControls) {
+          this.showLabelControls = false;
+          const tagsImg = this.$refs.tagsImg as HTMLElement;
+          tagsImg.classList.remove('showLabelControls')
+        } else {
+          this.$emit('resizeHeightEmit', this.showSpecControls);
         }
       }
     },
@@ -2965,6 +3058,11 @@ export default defineComponent({
   filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg)
     brightness(94%) contrast(97%);
 }
+
+.rulerBox > .showSpecControls {
+  filter: invert(46%) sepia(42%) saturate(292%) hue-rotate(78deg)
+    brightness(94%) contrast(97%);
+}
 .tuningBox {
   display: flex;
   flex-direction: column;
@@ -3089,6 +3187,9 @@ button {
 
 .tagsImg {
   width: 40px;
+}
 
+.specImg {
+  width: 40px;
 }
 </style>
