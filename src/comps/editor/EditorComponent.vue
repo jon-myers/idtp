@@ -985,7 +985,19 @@ export default defineComponent({
   methods: {
 
     handleSpecCanvas(canvas: HTMLCanvasElement) {
-      console.log(canvas)
+
+      const graph = this.$refs.graph as HTMLElement;
+
+      // canvas.style.position = 'absolute';
+      // canvas.style.top = '30';
+      // canvas.style.left = '0';
+      // canvas.style.zIndex = '0';
+      // canvas.style.width = '100%';
+      // canvas.style.height = '100%';
+
+      graph.appendChild(canvas);
+      // graph.appendChild(this.svgNode)
+      // console.log(canvas)
     },
 
     updateMeterVisibility() {
@@ -5202,9 +5214,9 @@ export default defineComponent({
 
       this.setScrollY();
       this.setScrollX();
-      const rect = await this.rect();
+      const rect = this.rect();
       this.oldRectHeight = rect.height;
-      this.svg = await d3Create('svg')
+      this.svg = d3Create('svg')
         .classed('noSelect', true)
         .attr('viewBox', [0, 0, rect.width, rect.height])
         .on('click', this.handleClick)

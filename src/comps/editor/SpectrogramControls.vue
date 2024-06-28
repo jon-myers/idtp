@@ -223,6 +223,23 @@ export default defineComponent({
       });
     }
 
+    const convertToImage = () => {
+      
+      const start = performance.now();
+      console.log('Converting to image: ', start )
+      const dataUrl = scaledCanvas.toDataURL();
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const img = document.createElementNS(svgNS, 'image');
+      img.setAttributeNS(null, 'href', dataUrl);
+      img.setAttributeNS(null, 'x', '0');
+      img.setAttributeNS(null, 'y', '0');
+      img.setAttributeNS(null, 'width', scaledCanvas.width.toString());
+      img.setAttributeNS(null, 'height', scaledCanvas.height.toString());
+      console.log('Time to convert to image:', performance.now() - start);
+      console.log('end time:', performance.now())
+      return img;
+    }
+
     const updateAllCols = async () => {
       const tot = Math.ceil(croppedDataShape.value[1] / numCols.value);
       let startIs = Array.from({length: tot}, (_, i) => i);
@@ -255,6 +272,7 @@ export default defineComponent({
         resetCanvas();
         adjustPower();
         await updateAllCols();
+        // convertToImage();
       } catch (error) {
         console.error('Error mounting spectrogram controls:', error);
       }
