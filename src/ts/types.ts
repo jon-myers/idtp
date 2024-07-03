@@ -683,6 +683,47 @@ type FilterableTableType = {
 
 type UserCheckType = (item: RecType | TransMetadataType, userID: string) => boolean;
 
+export enum CMap {
+  Blues = 'interpolateBlues',
+  BrBG = 'interpolateBrBG',
+  BuGn = 'interpolateBuGn',
+  BuPu = 'interpolateBuPu',
+  Cividis = 'interpolateCividis',
+  Cool = 'interpolateCool',
+  CubehelixDefault = 'interpolateCubehelixDefault',
+  GnBu = 'interpolateGnBu',
+  Greens = 'interpolateGreens',
+  Greys = 'interpolateGreys',
+  Inferno = 'interpolateInferno',
+  Magma = 'interpolateMagma',
+  OrRd = 'interpolateOrRd',
+  Oranges = 'interpolateOranges',
+  PRGn = 'interpolatePRGn',
+  PiYG = 'interpolatePiYG',
+  Plasma = 'interpolatePlasma',
+  PuBu = 'interpolatePuBu',
+  PuBuGn = 'interpolatePuBuGn',
+  PuOr = 'interpolatePuOr',
+  PuRd = 'interpolatePuRd',
+  Purples = 'interpolatePurples',
+  Rainbow = 'interpolateRainbow',
+  RdBu = 'interpolateRdBu',
+  RdGy = 'interpolateRdGy',
+  RdPu = 'interpolateRdPu',
+  RdYlBu = 'interpolateRdYlBu',
+  RdYlGn = 'interpolateRdYlGn',
+  Reds = 'interpolateReds',
+  Sinebow = 'interpolateSinebow',
+  Spectral = 'interpolateSpectral',
+  Turbo = 'interpolateTurbo',
+  Viridis = 'interpolateViridis',
+  Warm = 'interpolateWarm',
+  YlGn = 'interpolateYlGn',
+  YlGnBu = 'interpolateYlGnBu',
+  YlOrBr = 'interpolateYlOrBr',
+  YlOrRd = 'interpolateYlOrRd'  
+}
+
 export type { 
   CollectionType, 
   UserType, 
@@ -741,3 +782,4 @@ export type {
   UserCheckType,
   MusicianNameType,
 };
+

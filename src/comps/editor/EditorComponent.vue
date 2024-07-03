@@ -1,7 +1,7 @@
 <template>
 <div class='mainzz'>
   <div class='upperRow'>
-    <div class='graphContainer'>
+    <div class='graphContainer' v-if='false'>
       <div class='graph' ref='graph'></div>
       <div class='scrollXContainer'>
         <div class='leftNotch'>
@@ -16,7 +16,7 @@
         v-html='instructionsText'>
       </div>
     </div>
-    <div class='scrollYContainer'>
+    <div class='scrollYContainer' v-if='false'>
       <div class='topNotch'>
         <div class='topNotchZoomer top' @click='verticalZoomIn'>+</div>
         <div class='topNotchZoomer' @click='verticalZoomOut'>-</div>
@@ -24,6 +24,14 @@
       <div class='scrollY' ref='scrollY'></div>
       <div class='bottomNotch'></div>
     </div>
+    <Renderer
+      id='renderer'
+      ref='renderer'
+      :specCanvas='specCanvas'
+      :yAxWidth='yAxWidth'
+      :xAxHeight='xAxHeight'
+      @xRangeInView='(xRange: [number, number]) => xRangeInView = xRange'
+      />
     <div class='controlBox'>
       <div class='scrollingControlBox'>
         <div class='cbRow visibilityToggle' @click='toggleVisibility'>
@@ -280,6 +288,7 @@ import ContextMenu from'@/comps/ContextMenu.vue';
 import LabelEditor from '@/comps/editor/LabelEditor.vue';
 import instructionsText from '@/assets/texts/editor_instructions.html?raw';
 import AutomationWindow from '@/comps/editor/AutomationWindow.vue';
+import Renderer from '@/comps/editor/Renderer.vue';
 import { detect, BrowserInfo } from 'detect-browser';
 import { throttle } from 'lodash';
 import { defineComponent } from 'vue';
@@ -545,6 +554,7 @@ type EditorDataType = {
   transcriptionWidth: number,
   transcriptionHeight: number,
   xRangeInView: [number, number],
+  specCanvas?: HTMLCanvasElement,
 }
 
 export { findClosestStartTime }
@@ -710,6 +720,7 @@ export default defineComponent({
       transcriptionWidth: 0,
       transcriptionHeight: 0,
       xRangeInView: [0, 0],
+      specCanvas: undefined,
       
     }
   },
@@ -718,6 +729,7 @@ export default defineComponent({
     TrajSelectPanel,
     ContextMenu,
     AutomationWindow,
+    Renderer
   },
   created() {
     this.throttledRedraw = throttle(this.redraw.bind(this), this.transitionTime);
@@ -831,12 +843,12 @@ export default defineComponent({
       tsp.sitar = this.sitar;
       tsp.sarangi = this.sarangi;
       const leftTime = this.leftTime;
-      await this.initializePiece();
+      // await this.initializePiece();
       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
       ap.parentLoaded();
       const q = this.$route.query;
       if (q.pIdx) {
-        this.moveToPhrase(Number(q.pIdx));
+        // this.moveToPhrase(Number(q.pIdx));
       } else {
         this.$router.push({ query: { id: q.id, pIdx: 0 } });
       }
@@ -877,12 +889,19 @@ export default defineComponent({
         this.piece.durArrayFromPhrases();
         this.piece.updateStartTimes();
       }
+      const rendererWidth = this.fullWidth - this.controlBoxWidth;
+      const graphWidth = rendererWidth - this.scrollYWidth;
+      this.transcriptionWidth = graphWidth * this.durTot / 20;
+      const rendererHeight = this.editorHeight;
+      const graphHeight = rendererHeight - this.scrollXHeight;
+      this.transcriptionHeight =  2 * graphHeight;
+      this.xRangeInView = this.getXRangeInView();
     } catch (err) {
       console.error(err)
     }
-    this.$nextTick(() => {
-      this.resetZoom();
-    })
+    // this.$nextTick(() => {
+    //   this.resetZoom();
+    // })
   },
 
   unmounted() {
@@ -978,26 +997,27 @@ export default defineComponent({
   computed: {
     newPulseLims() {
       this.insertPulses
-    }
+    },
   },
-
 
   methods: {
 
+    getXRangeInView(): [number, number] {
+
+      const renderer = this.$refs.renderer as typeof Renderer;
+      const el = renderer.$el as HTMLElement;
+      const width = el.clientWidth;
+      const pxlLeft = el.scrollLeft;
+      const pxlRight = pxlLeft + width;
+      const xLeft = pxlLeft / el.scrollWidth;
+      const xRight = pxlRight / el.scrollWidth;
+      return [xLeft, xRight] 
+    },
+
     handleSpecCanvas(canvas: HTMLCanvasElement) {
+      this.specCanvas = canvas;
+      console.log('specCanvas', this.specCanvas.width)
 
-      const graph = this.$refs.graph as HTMLElement;
-
-      // canvas.style.position = 'absolute';
-      // canvas.style.top = '30';
-      // canvas.style.left = '0';
-      // canvas.style.zIndex = '0';
-      // canvas.style.width = '100%';
-      // canvas.style.height = '100%';
-
-      graph.appendChild(canvas);
-      // graph.appendChild(this.svgNode)
-      // console.log(canvas)
     },
 
     updateMeterVisibility() {
@@ -2312,10 +2332,10 @@ export default defineComponent({
           HTMLElement;
         const currentHeight = backColorElem.getBoundingClientRect().height;
         const scalingParam = currentYK * currentHeight;
-        await this.initializePiece(leftTime, currentXK, scalingParam, yProp);
-        const scrollY = this.getScrollYVal(yProp);
-        this.gy.call(this.zoomY!.translateTo, 0, scrollY, [0, 0]);
-        this.transformScrollYDragger();
+        // await this.initializePiece(leftTime, currentXK, scalingParam, yProp);
+        // const scrollY = this.getScrollYVal(yProp);
+        // this.gy.call(this.zoomY!.translateTo, 0, scrollY, [0, 0]);
+        // this.transformScrollYDragger();
 
         this.resize();
 
@@ -9266,8 +9286,8 @@ export default defineComponent({
       this.transcriptionWidth = this.xr()(this.durTot) - this.xr()(0);
       this.transcriptionHeight = this.yr()(Math.log2(this.freqMin)) - 
         this.yr()(Math.log2(this.freqMax));
-      this.xRangeInView = this.xr().domain()
-        .map(t => t / this.durTot) as [number, number];
+      // this.xRangeInView = this.xr().domain()
+      //   .map(t => t / this.durTot) as [number, number];
     },
 
     verticalZoomIn() {
@@ -9805,6 +9825,13 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   position: relative
+}
+
+#renderer {
+  width: calc(100% - v-bind(controlBoxWidth + 'px'));
+  height: 100%;
+  /* overflow: auto; */
+  /* box-sizing: border-box; */
 }
 
 .scrollYContainer {
