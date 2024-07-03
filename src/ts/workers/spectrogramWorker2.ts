@@ -30,8 +30,25 @@ let scaledShape: [number, number] | undefined = undefined;
 let power = 1;
 let maxVal = 255;
 let cMapName = CMap.Viridis;
-let priorityRange: [number, number] = [0, 1];
+let processing = false;
 
+const crop = (logMin: number, logMax: number) => {
+  if (initData === undefined) {
+    throw new Error('Initial data must be provided');
+  }
+  const initHeight = initData.shape[0];
+  let yMin = (logMin - initLogMin) / (initLogMax - initLogMin) * initHeight;
+  let yMax = (logMax - initLogMin) / (initLogMax - initLogMin) * initHeight;
+  yMin = Math.floor(yMin);
+  yMax = Math.ceil(yMax);
+  const newHeight = yMax - yMin;
+  croppedData = initData
+    .lo(initHeight - yMax, logMax)
+    .hi(newHeight, initData.shape[1]);
+    // set max val
+  maxVal = ops.sup(croppedData);
+  scale();
+};
 const scale = () => {
   if (scaledShape === undefined) {
     throw new Error('Scaled shape must be provided');
@@ -63,6 +80,7 @@ const scale = () => {
   }
   const emptyImgData = new Uint8ClampedArray(newWidth * newHeight * 4);
   imgData = new ImageData(emptyImgData, newWidth, newHeight);
+  intensify();
 }
 
 const intensify = () => {
@@ -80,25 +98,8 @@ const intensify = () => {
     return (Math.pow(x, power) / maxVal) * 255;
   }
   intensifiedData.data = (intensifiedData.data as Uint8Array).map(adjust);
+  colorize();
 }
-
-
-const crop = (logMin: number, logMax: number) => {
-  if (initData === undefined) {
-    throw new Error('Initial data must be provided');
-  }
-  const initHeight = initData.shape[0];
-  let yMin = (logMin - initLogMin) / (initLogMax - initLogMin) * initHeight;
-  let yMax = (logMax - initLogMin) / (initLogMax - initLogMin) * initHeight;
-  yMin = Math.floor(yMin);
-  yMax = Math.ceil(yMax);
-  const newHeight = yMax - yMin;
-  croppedData = initData
-    .lo(initHeight - yMax, logMax)
-    .hi(newHeight, initData.shape[1]);
-    // set max val
-  maxVal = ops.sup(croppedData);
-};
 
 const setPixelData = (
   x: number, 
@@ -130,6 +131,8 @@ const colorize = () => {
       setPixelData(j, i, colorObj);
     }
   }
+  processing = false;
+  self.postMessage('done processing')
 };
 
 
@@ -149,7 +152,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
     if (extData === undefined || extDataShape === undefined) {
       throw new Error('Initial data and shape must be provided');
     }
-    initData = ndarray(extData, extDataShape);
+    
     if (logMin === undefined || logMax === undefined) {
       throw new Error('Log min and max must be provided');
     }
@@ -162,38 +165,35 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
     if (newCMap !== undefined) {
       cMapName = newCMap;
     }
+    processing = true;
+    initData = ndarray(extData, extDataShape);
     scaledShape = newScaledShape;
     crop(logMin, logMax);
-    scale();
-    intensify();
-    colorize();
   } else if (type === 'crop') {
     if (logMin === undefined || logMax === undefined) {
       throw new Error('Log min and max must be provided');
     }
+    processing = true;
     crop(logMin, logMax);
-    scale();
-    intensify();
-    colorize();
   } else if (type === 'scale') {
     if (newScaledShape === undefined) {
       throw new Error('Scaled shape must be provided');
     }
+    processing = true;
     scaledShape = newScaledShape;
     scale();
-    intensify();
-    colorize();
   } else if (type === 'power') {
     if (newPower === undefined) {
       throw new Error('Power must be provided');
     }
+    processing = true;
     power = newPower;
     intensify();
-    colorize();
   } else if (type === 'color') {
     if (newCMap === undefined) {
       throw new Error('Color map must be provided');
     }
+    processing = true;
     cMapName = newCMap;
     colorize();
   }
