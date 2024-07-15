@@ -14,7 +14,7 @@
         <div class='controls'>
           <div class='controls-row'>
             <label>Sa Freq</label>
-            <input type='number' v-model='saFreq' @change='updateLims'>
+            <input type='number' v-model='saFreq'>
             <button @click='updateSa(saFreq)'>Update sa / lims</button>
           </div>
           <div class='controls-title-row'>
@@ -41,12 +41,10 @@
           </div>
           <div class='controls-title-row'>
             <label>Colormap</label>
+            <button @click='updateColorMap'>Update Color Map</button>
           </div>
           <div class='controls-row'>
-            <select 
-              v-model='selectedCMapString'
-              @change='updateSa(saFreq)'
-              >
+            <select v-model='selectedCMapString'>
               <option 
                 v-for='(cMap, i) in cMaps'
                 :key='i'
@@ -56,6 +54,7 @@
           </div>
           <div class='controls-title-row'>
             <label>Intensity Power</label>
+            <button @click='updateIntensity'>Update Intensity</button>
           </div>
           <div class='controls-row'>
             <input 
@@ -68,6 +67,7 @@
           </div>
           <div class='controls-title-row'>
             <label>Rescale Canvas</label>
+            <button @click='updateScale'>Update Scale</button>
           </div>
           <div class='controls-row'>
             <label>Width</label>
@@ -202,7 +202,8 @@ export default defineComponent({
         const canvasIdx = e.data.canvasIdx as number;
         const sLayer = this.$refs.spectrogramLayer as typeof SpectrogramLayer;
         sLayer.ctxs[canvasIdx].putImageData(imgData, 0, 0);
-
+      } else {
+        console.log(e.data);
       }
     }
   },
@@ -361,8 +362,50 @@ export default defineComponent({
       });
       // reset observer
       const sLayer = this.$refs.spectrogramLayer as typeof SpectrogramLayer;
-      console.log(sLayer);
       sLayer.resetObserver();
+    },
+
+    updateColorMap() {
+      const processOptions = {
+        type: 'color',
+        newCMap: this.selectedCMapString
+      };
+      this.worker?.postMessage({
+        msg: 'process',
+        payload: processOptions
+      });
+      const sLayer = this.$refs.spectrogramLayer as typeof SpectrogramLayer;
+      sLayer.resetObserver();
+
+    },
+
+    updateIntensity() {
+      const processOptions = {
+        type: 'power',
+        newPower: this.intensityPower
+      };
+      this.worker?.postMessage({
+        msg: 'process',
+        payload: processOptions
+      });
+      const sLayer = this.$refs.spectrogramLayer as typeof SpectrogramLayer;
+      sLayer.resetObserver();
+
+    },
+
+    updateScale() {
+      const processOptions = {
+        type: 'scale',
+        newScaledShape: [this.scaledHeight, this.scaledWidth]
+      };
+      this.worker?.postMessage({
+        msg: 'process',
+        payload: processOptions
+      });
+      const sLayer = this.$refs.spectrogramLayer as typeof SpectrogramLayer;
+      sLayer.resetCanvases();
+
+
     },
 
     setNewLims(logMin: number, logMax: number) {

@@ -39,7 +39,6 @@ const processChunk = async (
   if (inflator.err) {
     throw new Error(`pakeo error: ${inflator.err}`);
   }
-  console.log('processing chunk')
   await processChunk(reader, inflator);
 
 }
@@ -117,20 +116,13 @@ const intensify = () => {
   if (verbose) {
     now = performance.now() as number;
   }
-  console.log(scaledData)
   intensifiedData = ndarray(new Array(scaledData.size), scaledData.shape);
-
-  // this should work, but doesn't for some reason.
-  // ops.pows(intensifiedData, scaledData, power);
-  // ops.divseq(intensifiedData, maxVal / 255);
-
-  // so, instead: 
-  const adjust = (x: number) => {
-    return (Math.pow(x, power) / maxVal) * 255;
-  }
-  const floatData = new Float32Array(scaledData.data as Uint8Array);
-  const adjustedData = floatData.map(adjust);
-  intensifiedData.data = new Uint8Array(adjustedData);
+  // const floatData = new Float32Array(scaledData.data as Uint8Array);
+  const scData = scaledData.data as Uint8Array;
+  maxVal = scData.reduce((acc, val) => Math.max(acc, val), 0);
+  maxVal = Math.pow(maxVal, power);
+  ops.pows(intensifiedData, scaledData, power);
+  ops.divseq(intensifiedData, maxVal / 255);
   if (verbose) {
     self.postMessage(`intensify time: ${performance.now() - now!}`);
   }
@@ -164,16 +156,20 @@ const colorize = () => {
     now = performance.now()
   }
   const cMapObj = d3CMap[cMapName];
-  for (let i = 0; i < imgData.height; i++) {
-    for (let j = 0; j < imgData.width; j++) {
-      const val = intensifiedData.get(i, j);
-      const colorObj = rgb(cMapObj(val / 255));
-      setPixelData(j, i, colorObj);
+  const imgDataHeight = imgData.height;
+  const imgDataWidth = imgData.width;
+  const imgDataData = imgData.data; 
+  for (let i = 0; i < imgDataHeight; i++) {
+    for (let j = 0; j < imgDataWidth; j++) {
+      const colorObj = rgb(cMapObj(intensifiedData.get(i, j) / 255));
+      const idx = (i * imgDataWidth + j) * 4;
+      imgDataData[idx] = colorObj.r;
+      imgDataData[idx + 1] = colorObj.g;
+      imgDataData[idx + 2] = colorObj.b;
+      imgDataData[idx + 3] = 255;
     }
   }
-  console.log(intensifiedData)
   processing = false;
-  console.log('getting to here')
   complete = true;
   if (verbose) {
     self.postMessage(`colorize time: ${performance.now() - now!}`);
@@ -225,14 +221,13 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
       }
       if (newVerbose !== undefined) {
         verbose = newVerbose;
-        console.log('verbose', verbose)
+        // console.log('verbose', verbose)
       }
       console.log('processing')
       processing = true;
       const dataUrl = 'https://swara.studio/spec_data/' + audioID + '/spec_data.gz';
       const shapeUrl = 'https://swara.studio/spec_data/' + audioID + '/spec_shape.json';
       const fetchArrayBuf = async () => {
-        console.log('fetching array buf')
         let now: number | undefined = undefined;
         if (verbose) {
           now = performance.now() as number;
@@ -242,23 +237,11 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
           self.postMessage(`fetch time: ${performance.now() - now!}`);
           now = performance.now() as number;
         }
-        // const reader = res.body!.getReader();
-        // const inflator = new pako.Inflate();
-        // inflator.onData = (chunk: Uint8Array) => {
-        //   // console.log('chunk', chunk.length);
-        // }
-        // await processChunk(reader, inflator);
-
-        // if (inflator.err) {
-        //   throw new Error(`pakeo error: ${inflator.err}`);
-        // }
         const arrayBuf = await res.arrayBuffer();
         const data = pako.inflate(new Uint8Array(arrayBuf))
-        // const arrayBuf = await res.arrayBuffer();
         if (verbose) {
           self.postMessage(`array buffer time: ${performance.now() - now!}`);
         }
-        // const data = pako.inflate(new Uint8Array(arrayBuf));
         return data;
       }
       const fetchShape = async () => {

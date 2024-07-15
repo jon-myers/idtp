@@ -46,6 +46,27 @@ export default defineComponent({
       threshold: 0.0
     })
 
+    const resetCanvases = () => {
+      observer.disconnect();
+      canvases.value.forEach((canvas) => {
+        container.value?.removeChild(canvas);
+      });
+      canvases.value = [];
+      ctxs.value = [];
+      canvasIdxMap.clear();
+      const numCanvases = Math.ceil(props.width / maxCanvasWidth);
+      for (let i = 0; i < numCanvases; i++) {
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.min(maxCanvasWidth, props.width - i * maxCanvasWidth);
+        canvas.height = props.height;
+        container.value?.appendChild(canvas);
+        canvases.value.push(canvas);
+        ctxs.value.push(canvas.getContext('2d') as CanvasRenderingContext2D);
+        canvasIdxMap.set(canvas, i);
+        observer.observe(canvas);
+      }
+    }
+
     const resetObserver = () => {
       observer.disconnect();
       canvases.value.forEach((canvas) => {
@@ -77,7 +98,8 @@ export default defineComponent({
       container,
       canvases,
       ctxs,
-      resetObserver
+      resetObserver,
+      resetCanvases
     }
   }
 })
