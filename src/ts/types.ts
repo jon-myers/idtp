@@ -724,6 +724,33 @@ export enum CMap {
   YlOrRd = 'interpolateYlOrRd'  
 }
 
+type RenderCall = {
+  canvasIdx: number,
+  startX: number,
+  width: number
+}
+
+type MessageType = 'initial' | 'crop' | 'scale' | 'power' | 'color';
+
+
+interface ProcessMessage {
+  type: MessageType;
+  extData?: number[];
+  extDataShape?: [number, number];
+  logMin?: number;
+  logMax?: number;
+  newScaledShape?: [number, number];
+  newPower?: number;
+  newCMap?: CMap;
+  audioID?: string;
+  newVerbose?: boolean;
+}
+
+interface WorkerMessage {
+  msg: 'process' | 'requestRenderData';
+  payload: ProcessMessage | { startX: number, width: number };
+}
+
 export type { 
   CollectionType, 
   UserType, 
@@ -781,5 +808,9 @@ export type {
   GetDisplayType,
   UserCheckType,
   MusicianNameType,
+  RenderCall,
+  MessageType,
+  ProcessMessage,
+  WorkerMessage
 };
 

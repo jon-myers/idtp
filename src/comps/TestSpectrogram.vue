@@ -2,85 +2,91 @@
   <div class='topConatiner'>
     <div class='top'>
       <h1>TestSpectrogram</h1>
-
-      <div class='scaled-canvas-container'>
-        <canvas ref='ndrScaledCanvas' class='ndrScaledCanvas'></canvas>
-      </div>
-      <div class='controls'>
-        <div class='controls-row'>
-          <label>Sa Freq</label>
-          <input type='number' v-model='saFreq' @change='updateLims'>
-          <button @click='updateSa(saFreq)'>Update</button>
-        </div>
-        <div class='controls-title-row'>
-          <label>Limits as octave offsets from Sa</label>
-        </div>
-        <div class='controls-row'>
-          <label>High oct offset</label>
-          <input 
-            type='number' 
-            v-model='highOctOffset'
-            step='0.01'
-            :max='highOctMaxOffset'
-            min='0'>
-        </div>
-        <div class='controls-row'>
-          <label>Low oct offset</label>
-          <input 
-            type='number'
-            v-model.number='lowOctOffset' 
-            step='0.01'
-            :max='lowOctMaxOffset'
-            min='0'
-            >
-        </div>
-        <div class='controls-title-row'>
-          <label>Colormap</label>
-        </div>
-        <div class='controls-row'>
-          <select 
-            v-model='selectedCMapString'
-            @change='updateSa(saFreq)'
-            >
-            <option 
-              v-for='(cMap, i) in cMaps'
-              :key='i'
-              :value='cMap'
-              >{{cMap}}</option>
-          </select>
-        </div>
-        <div class='controls-title-row'>
-          <label>Intensity Power</label>
-        </div>
-        <div class='controls-row'>
-          <input 
-            type='number'
-            v-model.number='intensityPower'
-            step='0.1'
-            min='0'
-            max='5'
-            >
-        </div>
-        <div class='controls-title-row'>
-          <label>Rescale Canvas</label>
-        </div>
-        <div class='controls-row'>
-          <label>Width</label>
-          <input 
-            type='number'
-            v-model.number='scaledWidth'
-            step='100'
-            min='100'
-            >
-        </div>
-        <div class='controls-row'>
-          <label>Height</label>
-          <input 
-            type='number'
-            v-model.number='scaledHeight'
-            step='100'
-            min='100'
-            >
+      <!-- <div class='scaled-canvas-container'>
+      </div> -->
+      <SpectrogramLayer
+        :width='scaledWidth'
+        :height='scaledHeight'
+        ref='spectrogramLayer'
+        @render='renderCanvas'
+      />
+      <div class='controls-container'>
+        <div class='controls'>
+          <div class='controls-row'>
+            <label>Sa Freq</label>
+            <input type='number' v-model='saFreq' @change='updateLims'>
+            <button @click='updateSa(saFreq)'>Update sa / lims</button>
+          </div>
+          <div class='controls-title-row'>
+            <label>Limits as octave offsets from Sa</label>
+          </div>
+          <div class='controls-row'>
+            <label>High oct offset</label>
+            <input 
+              type='number' 
+              v-model='highOctOffset'
+              step='0.01'
+              :max='highOctMaxOffset'
+              min='0'>
+          </div>
+          <div class='controls-row'>
+            <label>Low oct offset</label>
+            <input 
+              type='number'
+              v-model.number='lowOctOffset' 
+              step='0.01'
+              :max='lowOctMaxOffset'
+              min='0'
+              >
+          </div>
+          <div class='controls-title-row'>
+            <label>Colormap</label>
+          </div>
+          <div class='controls-row'>
+            <select 
+              v-model='selectedCMapString'
+              @change='updateSa(saFreq)'
+              >
+              <option 
+                v-for='(cMap, i) in cMaps'
+                :key='i'
+                :value='cMap'
+                >{{cMap}}</option>
+            </select>
+          </div>
+          <div class='controls-title-row'>
+            <label>Intensity Power</label>
+          </div>
+          <div class='controls-row'>
+            <input 
+              type='number'
+              v-model.number='intensityPower'
+              step='0.1'
+              min='0'
+              max='5'
+              >
+          </div>
+          <div class='controls-title-row'>
+            <label>Rescale Canvas</label>
+          </div>
+          <div class='controls-row'>
+            <label>Width</label>
+            <input 
+              type='number'
+              v-model.number='scaledWidth'
+              step='100'
+              min='100'
+              >
+          </div>
+          <div class='controls-row'>
+            <label>Height</label>
+            <input 
+              type='number'
+              v-model.number='scaledHeight'
+              step='100'
+              min='100'
+              >
+          </div>
         </div>
       </div>
     </div>
@@ -89,6 +95,8 @@
 <script lang='ts'>
 import { defineComponent } from 'vue';
 import * as cMap from 'd3-scale-chromatic';
+import SpectrogramLayer from '@/comps/editor/renderer/SpectrogramLayer.vue';
+import { RenderCall } from '@/ts/types.ts';
 
 (function() {
   if (typeof global === 'undefined') {
@@ -135,6 +143,7 @@ type TestSpectrogramDataType = {
   ndArrData?: NdArray,
   croppedNdrData?: NdArray,
   ndrScaledData?: NdArray,
+  worker?: Worker,
 }
 export default defineComponent({
   name: 'TestSpectrogram',
@@ -156,33 +165,46 @@ export default defineComponent({
       cMaps: sequentialSchemes,
       selectedCMapString: 'interpolateViridis',
       intensityPower: 1,
-      scaledWidth: 3000,
-      scaledHeight: 150,
+      scaledWidth: 21000,
+      scaledHeight: 600,
       canvas: undefined,
       ndArrData: undefined,
       croppedNdrData: undefined,
       ndrScaledData: undefined,
+      worker: undefined
     }
   },
 
   async mounted() {
-    const res = await fetch('https://swara.studio/test/tall_test.gz');
-    const buf = await res.arrayBuffer();
-    const shape = await fetch('https://swara.studio/test/tall_test_shape.json');
-    this.shapeData = await shape.json() as {shape: [number, number]};
-    this.oneDData = pako.inflate(new Uint8Array(buf));
-    for (let i = 0; i < this.shapeData.shape[0]; i++) {
-      const slice = this.oneDData.slice(i * this.shapeData.shape[1], (i + 1) * this.shapeData.shape[1]);
-      this.data.push(slice);
-    }
+    const workerURL = new URL('@/ts/workers/spectrogramWorker2.ts', import.meta.url);
+    this.worker = new Worker(workerURL, { type: 'module' });
     const logSa = Math.log2(this.saFreq);
     const low = logSa - this.lowOctOffset;
     const high = logSa + this.highOctOffset;
-    this.setNewLims(low, high);
-    
-    this.setUpCanvas(this.croppedShapeData.shape);
-    this.ndArrWay(this.oneDData, this.shapeData.shape);
-    // await this.updateAllCols(this.croppedShapeData.shape);
+
+    const processOptions = {
+      type: 'initial',
+      logMin: low,
+      logMax: high,
+      newScaledShape: [this.scaledHeight, this.scaledWidth],
+      audioID: "63f79ab44ffa426afde2f685",
+      newVerbose: true
+    };
+
+    this.worker.postMessage({
+      msg: 'process',
+      payload: processOptions
+    });
+
+    this.worker.onmessage = (e) => {
+      if (e.data.msg === 'render') {
+        const imgData = e.data.payload as ImageData;
+        const canvasIdx = e.data.canvasIdx as number;
+        const sLayer = this.$refs.spectrogramLayer as typeof SpectrogramLayer;
+        sLayer.ctxs[canvasIdx].putImageData(imgData, 0, 0);
+
+      }
+    }
   },
 
   computed: {
@@ -199,7 +221,25 @@ export default defineComponent({
 
   },
 
+  components: {
+    SpectrogramLayer
+  },
+
   methods: {
+
+    renderCanvas({ canvasIdx, startX, width }: RenderCall) {
+      // send a signal to the worker to request the img data associated with x 
+      // and width. If the worker is not done yet, then wait for it to finish.
+        // console.log('renderCanvas', startX, width);
+      this.worker?.postMessage({
+        msg: 'requestRenderData',
+        payload: {
+          startX,
+          width,
+          canvasIdx
+        }
+      });
+    },
 
     ndArrWay(oneDData: Uint8Array, shape: [number, number]) {
       this.ndArrData = ndarray(oneDData, shape);
@@ -309,17 +349,20 @@ export default defineComponent({
       const logSa = Math.log2(this.saFreq);
       const newLogMin = logSa - this.lowOctOffset;
       const newLogMax = logSa + this.highOctOffset;
-      this.setNewLims(newLogMin, newLogMax);
-      this.setUpCanvas(this.croppedShapeData.shape);
-      // this.ndArrWay(oneDData, this.shapeData.shape);
-      this.ndArrWay(this.oneDData, this.ndArrData!.shape);
-      // this.n
-      // this.ndrSetNewLims(newLogMin, newLogMax);
-      // this.ndrRescale();
-      // this.ndrAdjustPower();
-      // this.ndrUpdateAll();
-      // await this.updateAllCols(this.croppedShapeData.shape);
 
+      const processOptions = {
+        type: 'crop',
+        logMin: newLogMin,
+        logMax: newLogMax,
+      }
+      this.worker?.postMessage({
+        msg: 'process',
+        payload: processOptions
+      });
+      // reset observer
+      const sLayer = this.$refs.spectrogramLayer as typeof SpectrogramLayer;
+      console.log(sLayer);
+      sLayer.resetObserver();
     },
 
     setNewLims(logMin: number, logMax: number) {
@@ -605,6 +648,13 @@ img {
 
 }
 
+.controls-container {
+  position: relative;
+  display: inline-block;
+  overflow-y: scroll;
+  height: 200px;
+
+}
 .controls {
   display: flex;
   flex-direction: column;

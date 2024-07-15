@@ -16,7 +16,7 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "strict": true,
-    "lib": ["console"],
+    "lib": ["esnext", "webworker"],
     "paths": {
       "@/*": ["./src/*"]
     },
