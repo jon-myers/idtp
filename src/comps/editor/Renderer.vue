@@ -1,15 +1,23 @@
 <template>
   <div class='renderMain' ref='renderMain' :style='cssVars'>
-    <div 
-      class='scrollingContainer' 
-      ref='scrollingContainer'
-      >
-      <div class='layersContainer'>
-        <SpectrogramLayer
-          :width='scaledWidth'
-          :height='scaledHeight'
-          ref='spectrogramLayer'
-          />
+    <div class='wrapper'>
+      <div class='xAxisContainer' ref='xAxisContainer'>
+        <div class='xAxis'></div>
+      </div>
+      <div class='yAxisContainer' ref='yAxisContainer'>
+        <div class='yAxis'></div>
+      </div>
+      <div 
+        class='scrollingContainer' 
+        ref='scrollingContainer'
+        >
+        <div class='layersContainer' ref='layersContainer'>
+          <SpectrogramLayer
+            :width='scaledWidth'
+            :height='scaledHeight'
+            ref='spectrogramLayer'
+            />
+        </div>
       </div>
     </div>
   </div>
@@ -37,6 +45,10 @@ export default defineComponent({
       return {
         '--yAxWidth': `${this.yAxWidth}px`,
         '--xAxHeight': `${this.xAxHeight}px`,
+        '--scaledWidth': `${this.scaledWidth}px`,
+        '--scaledHeight': `${this.scaledHeight}px`,
+        '--scrollBarWidth': `${this.scrollBarWidth}px`,
+        '--scrollBarHeight': `${this.scrollBarHeight}px`,
       };
     }
   },
@@ -61,15 +73,50 @@ export default defineComponent({
     },
   },
   setup(props, { emit }) {
-
-    // const renderMain = ref<HTMLDivElement | null>(null);
+    const layersContainer = ref<HTMLDivElement | null>(null);
+    const xAxisContainer = ref<HTMLDivElement | null>(null);
+    const yAxisContainer = ref<HTMLDivElement | null>(null);
     const scrollingContainer = ref<HTMLDivElement | null>(null);
+    const scrollBarWidth = ref(10);
+    const scrollBarHeight = ref(10);
+    let isXScrolling = false;
+    let isYScrolling = false;
 
-    // onMounted(() => {
-    //   console.log(props.scaledWidth, props.scaledHeight)
-    // })
+    onMounted(() => {
+      scrollingContainer.value?.addEventListener('scroll', () => {
+        if (!isXScrolling && !isYScrolling) {
+          isXScrolling = true;
+          isYScrolling = true;
+          xAxisContainer.value!.scrollLeft = scrollingContainer.value!.scrollLeft
+          yAxisContainer.value!.scrollTop = scrollingContainer.value!.scrollTop
+          isXScrolling = false;
+          isYScrolling = false
+        }
+      })
+      xAxisContainer.value?.addEventListener('scroll', () => {
+        if (!isXScrolling) {
+          isXScrolling = true;
+          scrollingContainer.value!.scrollLeft = xAxisContainer.value!.scrollLeft
+          isXScrolling = false;
+        }
+      })
+
+      yAxisContainer.value?.addEventListener('scroll', () => {
+        if (!isYScrolling) {
+          isYScrolling = true;
+          scrollingContainer.value!.scrollTop = yAxisContainer.value!.scrollTop
+          isYScrolling = false;
+        }
+      })
+
+    })
     return {
       scrollingContainer,
+      layersContainer,
+      xAxisContainer,
+      yAxisContainer,
+      scrollBarWidth,
+      scrollBarHeight,
     };
 
   }
@@ -86,7 +133,7 @@ export default defineComponent({
   left: var(--yAxWidth);
   overflow-x: scroll;
   overflow-y: scroll;
-  position: relative;
+  position: absolute;
   box-sizing: border-box;
   scrollbar-width: auto;
 }
@@ -116,6 +163,53 @@ export default defineComponent({
   position: absolute;
   top: 0;
   left: 0;
+}
+
+.xAxisContainer {
+  position: sticky;
+  top: 0;
+  left: var(--yAxWidth);
+  /* background: linear-gradient(0.25turn, #e66465, #9198e5); */
+  width: calc(100% - var(--yAxWidth) - var(--scrollBarWidth));
+  height: var(--xAxHeight);
+  overflow-x: scroll;
+}
+
+.xAxis {
+  width: var(--scaledWidth);
+  height: var(--xAxHeight);
+  background: linear-gradient(0.25turn, #e66465, #9198e5);
+}
+
+.yAxisContainer {
+  position: sticky;
+  left: 0;
+  top: var(--xAxHeight);
+  width: var(--yAxWidth);
+  height: calc(100% - var(--xAxHeight) - var(--scrollBarHeight));
+  overflow-y: scroll;
+}
+
+.yAxisContainer::-webkit-scrollbar {
+  width: 0;
+}
+
+.xAxisContainer::-webkit-scrollbar {
+  height: 0;
+}
+
+.yAxis {
+  width: var(--yAxWidth);
+  height: var(--scaledHeight);
+  background: linear-gradient(#e66465, #9198e5);
+}
+
+
+
+.wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
 }
 
 </style>

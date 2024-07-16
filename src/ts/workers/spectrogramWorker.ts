@@ -81,9 +81,6 @@ const scale = () => {
   }
   const [newHeight, newWidth] = scaledShape as [number, number];
   const [oldHeight, oldWidth] = croppedData.shape;
-  console.log('scaled shape', scaledShape)
-  console.log('cropped shape', croppedData.shape)
-  console.log(newHeight, newWidth)
   scaledData = ndarray(new Array(newHeight * newWidth), scaledShape);
   const yScale = oldHeight / newHeight;
   const xScale = oldWidth / newWidth;

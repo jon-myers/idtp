@@ -57,21 +57,6 @@ export default defineComponent({
       threshold: 0.0
     });
 
-    // worker.onmessage = (e: MessageEvent<{
-    //   msg: string,
-    //   payload: ImageData,
-    //   canvasIdx: number
-    // }>) => {
-    //   console.log('received message from worker: ', e.data)
-    //   if (e.data.msg === 'render') {
-    //     const imgData = e.data.payload as ImageData;
-    //     const canvasIdx = e.data.canvasIdx as number;
-    //     const ctx = ctxs.value[canvasIdx];
-    //     console.log('should be rendering image data')
-    //     ctx.putImageData(imgData, 0, 0);
-    //   }
-    // }
-
 
     const resetCanvases = () => {
       observer.disconnect();
@@ -120,22 +105,22 @@ export default defineComponent({
       };
       worker = getWorker();
       worker.onmessage = (e: MessageEvent<{
-      msg: string,
-      payload: ImageData,
-      canvasIdx: number
-    }>) => {
-      // console.log('received message from worker: ', e.data)
-      // if e.data is string
-      if (typeof e.data === 'string') {
-        console.log(e.data)
-      } else if (e.data.msg === 'render') {
-        const imgData = e.data.payload as ImageData;
-        const canvasIdx = e.data.canvasIdx as number;
-        const ctx = ctxs.value[canvasIdx];
-        // console.log('should be rendering image data')
-        ctx.putImageData(imgData, 0, 0);
+        msg: string,
+        payload: ImageData,
+        canvasIdx: number
+      }>) => {
+        // console.log('received message from worker: ', e.data)
+        // if e.data is string
+        if (typeof e.data === 'string') {
+          console.log(e.data)
+        } else if (e.data.msg === 'render') {
+          const imgData = e.data.payload as ImageData;
+          const canvasIdx = e.data.canvasIdx as number;
+          const ctx = ctxs.value[canvasIdx];
+          // console.log('should be rendering image data')
+          ctx.putImageData(imgData, 0, 0);
+        }
       }
-    }
     });
 
     // defineExpose({ resetObserver });
