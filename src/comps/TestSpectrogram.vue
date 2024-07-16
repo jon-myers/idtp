@@ -1,15 +1,23 @@
 <template>
-  <div class='topConatiner'>
+  <div class='topContainer'>
     <div class='top'>
       <h1>TestSpectrogram</h1>
       <!-- <div class='scaled-canvas-container'>
       </div> -->
-      <SpectrogramLayer
-        :width='scaledWidth'
-        :height='scaledHeight'
-        ref='spectrogramLayer'
-        @render='renderCanvas'
-      />
+      <div 
+        class='layersContainer'
+        :style='{
+          width: `100vw`,
+          height: `${scaledHeight}px`
+        }'
+        
+        >
+        <SpectrogramLayer
+          :width='scaledWidth'
+          :height='scaledHeight'
+          ref='spectrogramLayer'
+        />
+      </div>
       <div class='controls-container'>
         <div class='controls'>
           <div class='controls-row'>
@@ -97,6 +105,8 @@ import { defineComponent } from 'vue';
 import * as cMap from 'd3-scale-chromatic';
 import SpectrogramLayer from '@/comps/editor/renderer/SpectrogramLayer.vue';
 import { RenderCall } from '@/ts/types.ts';
+import { getWorker } from '@/ts/workers/workerManager.ts';
+
 
 (function() {
   if (typeof global === 'undefined') {
@@ -176,8 +186,7 @@ export default defineComponent({
   },
 
   async mounted() {
-    const workerURL = new URL('@/ts/workers/spectrogramWorker2.ts', import.meta.url);
-    this.worker = new Worker(workerURL, { type: 'module' });
+    this.worker = getWorker();
     const logSa = Math.log2(this.saFreq);
     const low = logSa - this.lowOctOffset;
     const high = logSa + this.highOctOffset;
@@ -228,19 +237,19 @@ export default defineComponent({
 
   methods: {
 
-    renderCanvas({ canvasIdx, startX, width }: RenderCall) {
-      // send a signal to the worker to request the img data associated with x 
-      // and width. If the worker is not done yet, then wait for it to finish.
-        // console.log('renderCanvas', startX, width);
-      this.worker?.postMessage({
-        msg: 'requestRenderData',
-        payload: {
-          startX,
-          width,
-          canvasIdx
-        }
-      });
-    },
+    // renderCanvas({ canvasIdx, startX, width }: RenderCall) {
+    //   // send a signal to the worker to request the img data associated with x 
+    //   // and width. If the worker is not done yet, then wait for it to finish.
+    //     // console.log('renderCanvas', startX, width);
+    //   this.worker?.postMessage({
+    //     msg: 'requestRenderData',
+    //     payload: {
+    //       startX,
+    //       width,
+    //       canvasIdx
+    //     }
+    //   });
+    // },
 
     ndArrWay(oneDData: Uint8Array, shape: [number, number]) {
       this.ndArrData = ndarray(oneDData, shape);
@@ -716,7 +725,7 @@ img {
 
 
 .controls-row > input {
-  width: 45px;
+  width: 70px;
 } 
 
 .controls-title-row {
@@ -735,7 +744,8 @@ img {
 .top {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: top;
+  justify-content: left;
   height: 1200px;
   overflow-y: scroll
   /* overflow-y: scroll; */
@@ -749,4 +759,11 @@ img {
 
 
 }
+
+.layersContainer {
+  overflow-x: scroll;
+
+
+}
+
 </style>

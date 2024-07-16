@@ -3,9 +3,14 @@
     <div 
       class='scrollingContainer' 
       ref='scrollingContainer'
-      @scroll.native='scrollHandler'
       >
-      <canvas id='hiddenCanvas' ></canvas>
+      <div class='layersContainer'>
+        <SpectrogramLayer
+          :width='scaledWidth'
+          :height='scaledHeight'
+          ref='spectrogramLayer'
+          />
+      </div>
     </div>
   </div>
 </template>
@@ -20,8 +25,13 @@ import {
   computed,
 } from 'vue';
 
+import SpectrogramLayer from '@/comps/editor/renderer/SpectrogramLayer.vue';
+
 export default defineComponent({
   name: 'Renderer',
+  components: {
+    SpectrogramLayer,
+  },
   computed: {
     cssVars() {
       return {
@@ -31,10 +41,6 @@ export default defineComponent({
     }
   },
   props: {
-    specCanvas: {
-      type: Object as PropType<HTMLCanvasElement | undefined>,
-      required: true,
-    },
     yAxWidth: {
       type: Number,
       required: true,
@@ -43,33 +49,27 @@ export default defineComponent({
       type: Number,
       required: true,
     },
+    scaledWidth: {
+      type: Number as PropType<number>,
+      required: true,
+      validator: (value: number) => Number.isInteger(value)
+    },
+    scaledHeight: {
+      type: Number as PropType<number>,
+      required: true,
+      validator: (value: number) => Number.isInteger(value)
+    },
   },
   setup(props, { emit }) {
 
     // const renderMain = ref<HTMLDivElement | null>(null);
     const scrollingContainer = ref<HTMLDivElement | null>(null);
 
-    const scrollHandler = () => {
-      const el = scrollingContainer.value!;
-      const width = el.clientWidth;
-      const pxlLeft = el.scrollLeft;
-      const pxlRight = pxlLeft + width;
-      const xLeft = pxlLeft / el.scrollWidth;
-      const xRight = pxlRight / el.scrollWidth;
-      emit('xRangeInView', [xLeft, xRight]);
-
-    }
-
-    watch(() => props.specCanvas, (canvas) => {
-      if (canvas !== undefined) {
-        canvas.style.display = 'block';
-        scrollingContainer.value?.appendChild(canvas);
-      }
-    })
-
+    // onMounted(() => {
+    //   console.log(props.scaledWidth, props.scaledHeight)
+    // })
     return {
       scrollingContainer,
-      scrollHandler,
     };
 
   }
@@ -103,6 +103,19 @@ export default defineComponent({
 
 .scrollingContainer::-webkit-scrollbar-track {
   background-color: lightgrey;
+}
+
+.layersContainer {
+  position: absolute;
+  top: 0;
+  left: 0;;
+
+}
+
+.layersContainer > * {
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 </style>

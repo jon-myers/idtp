@@ -778,12 +778,14 @@ export default defineComponent({
       required: true
     },
     transcriptionWidth: {
-      type: Number,
-      required: true
+      type: Number as PropType<number>,
+      required: true,
+      validator: (val: number) => Number.isInteger(val)
     },
     transcriptionHeight: {
       type: Number,
-      required: true
+      required: true,
+      validator: (val: number) => Number.isInteger(val)
     },
     xRangeInView: {
       type: Array as PropType<number[]>,

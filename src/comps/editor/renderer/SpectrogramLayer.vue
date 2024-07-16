@@ -1,12 +1,20 @@
 <template>
-  <div class='container' ref='container'>
+  <div 
+    class='container' 
+    ref='container'
+    :style='{
+      width: `${width}px`,
+      height: `${height}px`
+    }'
+    >
   </div>
 </template>
 
 <script lang='ts'>
 
-import { defineComponent, ref, onMounted, defineExpose } from 'vue'
-import { RenderCall } from '@/ts/types'
+import { defineComponent, ref, onMounted, defineExpose } from 'vue';
+import { RenderCall } from '@/ts/types.ts';
+import { getWorker } from '@/ts/workers/workerManager.ts';
 
 export default defineComponent({
   name: 'SpectrogramLayer',
@@ -20,12 +28,13 @@ export default defineComponent({
       required: true
     },
   },
-  setup(props, { emit}) {
+  setup(props) {
     const maxCanvasWidth = 1000;
     const container = ref<HTMLDivElement | null>(null);
     const canvases = ref<HTMLCanvasElement[]>([]);
     const ctxs = ref<CanvasRenderingContext2D[]>([]);
     const canvasIdxMap = new Map<HTMLCanvasElement, number>();
+    let worker: Worker | undefined = undefined
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
@@ -35,16 +44,34 @@ export default defineComponent({
           const startX = maxCanvasWidth * idx;
           const width = Math.min(maxCanvasWidth, props.width - startX);
           const renderCall = { canvasIdx: idx, startX, width } as RenderCall;
-          emit('render', renderCall)
-        } else {
-          // console.log('not intersecting');
+          // emit('render', renderCall)
+          worker!.postMessage({
+            msg: 'requestRenderData',
+            payload: renderCall
+          })
         }
       });
     }, {
       root: container.value,
       rootMargin: '0px',
       threshold: 0.0
-    })
+    });
+
+    // worker.onmessage = (e: MessageEvent<{
+    //   msg: string,
+    //   payload: ImageData,
+    //   canvasIdx: number
+    // }>) => {
+    //   console.log('received message from worker: ', e.data)
+    //   if (e.data.msg === 'render') {
+    //     const imgData = e.data.payload as ImageData;
+    //     const canvasIdx = e.data.canvasIdx as number;
+    //     const ctx = ctxs.value[canvasIdx];
+    //     console.log('should be rendering image data')
+    //     ctx.putImageData(imgData, 0, 0);
+    //   }
+    // }
+
 
     const resetCanvases = () => {
       observer.disconnect();
@@ -77,6 +104,7 @@ export default defineComponent({
     onMounted(() => {
       if (container.value) {
         const numCanvases = Math.ceil(props.width / maxCanvasWidth);
+        console.log(numCanvases)
 
 
         for (let i = 0; i < numCanvases; i++) {
@@ -89,7 +117,25 @@ export default defineComponent({
           canvasIdxMap.set(canvas, i);
           observer.observe(canvas);
         }
+      };
+      worker = getWorker();
+      worker.onmessage = (e: MessageEvent<{
+      msg: string,
+      payload: ImageData,
+      canvasIdx: number
+    }>) => {
+      // console.log('received message from worker: ', e.data)
+      // if e.data is string
+      if (typeof e.data === 'string') {
+        console.log(e.data)
+      } else if (e.data.msg === 'render') {
+        const imgData = e.data.payload as ImageData;
+        const canvasIdx = e.data.canvasIdx as number;
+        const ctx = ctxs.value[canvasIdx];
+        // console.log('should be rendering image data')
+        ctx.putImageData(imgData, 0, 0);
       }
+    }
     });
 
     // defineExpose({ resetObserver });

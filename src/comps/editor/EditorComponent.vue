@@ -25,11 +25,13 @@
       <div class='bottomNotch'></div>
     </div>
     <Renderer
+      v-if='transcriptionWidth > 0 && transcriptionHeight > 0'
       id='renderer'
       ref='renderer'
-      :specCanvas='specCanvas'
       :yAxWidth='yAxWidth'
       :xAxHeight='xAxHeight'
+      :scaledWidth='transcriptionWidth'
+      :scaledHeight='transcriptionHeight'
       @xRangeInView='(xRange: [number, number]) => xRangeInView = xRange'
       />
     <div class='controlBox'>
@@ -214,7 +216,6 @@
   @goToPhraseEmit='moveToPhrase'
   @goToSectionEmit='moveToSection'
   @maxLayerEmit='updateMaxLayer'
-  @specCanvas='handleSpecCanvas'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -554,7 +555,6 @@ type EditorDataType = {
   transcriptionWidth: number,
   transcriptionHeight: number,
   xRangeInView: [number, number],
-  specCanvas?: HTMLCanvasElement,
 }
 
 export { findClosestStartTime }
@@ -720,7 +720,6 @@ export default defineComponent({
       transcriptionWidth: 0,
       transcriptionHeight: 0,
       xRangeInView: [0, 0],
-      specCanvas: undefined,
       
     }
   },
@@ -891,17 +890,13 @@ export default defineComponent({
       }
       const rendererWidth = this.fullWidth - this.controlBoxWidth;
       const graphWidth = rendererWidth - this.scrollYWidth;
-      this.transcriptionWidth = graphWidth * this.durTot / 20;
+      this.transcriptionWidth = Math.round(graphWidth * this.durTot / this.initViewDur);
       const rendererHeight = this.editorHeight;
       const graphHeight = rendererHeight - this.scrollXHeight;
-      this.transcriptionHeight =  2 * graphHeight;
-      this.xRangeInView = this.getXRangeInView();
+      this.transcriptionHeight = Math.round(2 * graphHeight);
     } catch (err) {
       console.error(err)
     }
-    // this.$nextTick(() => {
-    //   this.resetZoom();
-    // })
   },
 
   unmounted() {
@@ -1012,12 +1007,6 @@ export default defineComponent({
       const xLeft = pxlLeft / el.scrollWidth;
       const xRight = pxlRight / el.scrollWidth;
       return [xLeft, xRight] 
-    },
-
-    handleSpecCanvas(canvas: HTMLCanvasElement) {
-      this.specCanvas = canvas;
-      console.log('specCanvas', this.specCanvas.width)
-
     },
 
     updateMeterVisibility() {
@@ -9283,9 +9272,9 @@ export default defineComponent({
       this.transformScrollYDragger();
       this.transformScrollXDragger();
       this.leftTime = this.xr().invert(this.yAxWidth);
-      this.transcriptionWidth = this.xr()(this.durTot) - this.xr()(0);
-      this.transcriptionHeight = this.yr()(Math.log2(this.freqMin)) - 
-        this.yr()(Math.log2(this.freqMax));
+      this.transcriptionWidth = Math.round(this.xr()(this.durTot) - this.xr()(0));
+      this.transcriptionHeight = Math.round(this.yr()(Math.log2(this.freqMin)) - 
+        this.yr()(Math.log2(this.freqMax)));
       // this.xRangeInView = this.xr().domain()
       //   .map(t => t / this.durTot) as [number, number];
     },

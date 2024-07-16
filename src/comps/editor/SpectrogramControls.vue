@@ -17,9 +17,9 @@
         min='1' max='5' step=0.1 
         />
     </div>
-    <div class='col'>
+    <!-- <div class='col'>
       <button @click='render'>Render</button>
-    </div>
+    </div> -->
   </div>
 </template>
 
@@ -33,7 +33,7 @@ import {
   computed,
 } from 'vue';
 import * as d3CMap from 'd3-scale-chromatic';
-import pako from 'pako';
+import { getWorker } from '@/ts/workers/workerManager.ts'
 import { CMap } from '@/ts/types.ts';
 
 export default defineComponent({
@@ -56,12 +56,14 @@ export default defineComponent({
       required: true
     },
     scaledWidth: {
-      type: Number,
-      required: true
+      type: Number as PropType<number>,
+      required: true,
+      validator: (value: number) => Number.isInteger(value)
     },
     scaledHeight: {
-      type: Number,
-      required: true
+      type: Number as PropType<number>,
+      required: true,
+      validator: (value: number) => Number.isInteger(value)
     },
     xRangeInView: {
       type: Array as PropType<number[]>,
@@ -70,15 +72,10 @@ export default defineComponent({
     }
   },
   setup(props, { emit }) {
-    // defining reactive references
-    const croppedData = ref<Uint8Array[]>([]);
-    const croppedDataShape = ref<[number, number]>([0, 0]);
     const intensityPower = ref(1);
     const lowOctOffset = ref(1.1);
     const highOctOffset = ref(2.1);
-    // const power = ref(1);
     const cMapName = ref<CMap>(CMap.Viridis);
-    const numCols = ref(50)
     const cMapEnum = ref(CMap);
 
     // defining internal variables
@@ -100,128 +97,37 @@ export default defineComponent({
       cMapObj = d3CMap[newVal];
     });
 
-    const resetCanvas = () => {
-      const shape = croppedDataShape.value;      
-      hiddenCanvas.width = shape[1];
-      hiddenCanvas.height = shape[0];
-      resetScaledCanvas();
-    };
+    // const workerURL = new URL('@/ts/workers/spectrogramWorker.ts', import.meta.url)
+    const spectrogramWorker = getWorker();
+    const logSa = Math.log2(props.saFreq);
+    const low = logSa - lowOctOffset.value;
+    const high = logSa + highOctOffset.value;
 
-    const resetScaledCanvas = () => {
-      const shape = croppedDataShape.value;
-      const maxWidth = 65535;
-      const width = Math.min(props.scaledWidth, maxWidth);
-      scaledCanvas.width = width;
-      scaledCanvas.height = props.scaledHeight;
-      const xScale = props.scaledWidth / shape[1];
-      const yScale = props.scaledHeight / shape[0];
-      scaledCtx.scale(xScale, yScale);
-    };
+    // const low = Math.log2(extRange[0]);
+    // const high = Math.log2(extRange[1]);
+
+
+    const processOptions = {
+      type: 'initial',
+      logMin: low,
+      logMax: high,
+      newScaledShape: [props.scaledHeight, props.scaledWidth],
+      audioID: props.audioID,
+      newVerbose: true
+    }
+
+    spectrogramWorker.postMessage({
+      msg: 'process',
+      payload: processOptions
+    })
     
-    const cropData = (logMin: number, logMax: number) => {
-      const extLogMin = Math.log2(extRange[0]);
-      const extLogMax = Math.log2(extRange[1]);
-      const extHeight = extShape[0];
-      let yMin = (logMin - extLogMin) / (extLogMax - extLogMin) * extHeight;
-      let yMax = (logMax - extLogMin) / (extLogMax - extLogMin) * extHeight;
-      yMin = Math.round(yMin);
-      yMax = Math.round(yMax);
-      const newHeight = yMax - yMin;
-      croppedData.value = extData.slice(extHeight - yMax, extHeight - yMin);
-      croppedDataShape.value = [newHeight, extShape[1]];    
-    }
-
-    const render = () => {
-      adjustPower();
-      startWorker();
-    }
-
-    const adjustPower = () => {
-      console.log(intensityPower.value)
-      if (intensityPower.value === 1) {
-        return
-      }
-      let globalMax = 0;
-      croppedData.value.forEach(arr => {
-        const max = Math.max(...arr);
-        if (max > globalMax) {
-          globalMax = max;
-        }
-      });
-      const maxVal = Math.pow(globalMax, intensityPower.value);
-      croppedData.value = croppedData.value.map(arr => {
-        const newArr = new Uint8Array(arr.length);
-        for (let i = 0; i < arr.length; i++) {
-          const adjustedVal = (Math.pow(arr[i], intensityPower.value) / maxVal) * 255;
-          newArr[i] = Math.min(255, Math.max(0, Math.round(adjustedVal)));
-        }
-        return newArr;
-      })
-    };
-
-    const loadSpectrogramData = async () => {
-      const dirUrl = `https://swara.studio/spec_data/${props.audioID}`;
-      try {
-        const res = await fetch(dirUrl + '/spec_data.gz');
-        const buf = await res.arrayBuffer();
-        const shape = await fetch(dirUrl + '/spec_shape.json');
-        const shapeJson = await shape.json();
-        extShape = shapeJson.shape;
-        const linearData = pako.inflate(new Uint8Array(buf));
-        for (let i = 0; i < extShape[0]; i++) {
-          const width = extShape[1];
-          const slice = linearData.slice(i * width, (i + 1) * width);
-          extData.push(slice);
-        }
-      } catch (error) {
-        console.error('Error fetching spectrogram data:', error);
-      }
-    };
-    const workerURL = new URL('@/ts/workers/spectrogramWorker.ts', import.meta.url)
-    const spectrogramWorker = new Worker(workerURL, { 
-      type: 'module' 
-    });
-    
-    spectrogramWorker.onmessage = (e: MessageEvent<{ 
-      start: number,
-      imgBitmap: ImageBitmap,
-    }>) => {
-      const height = croppedDataShape.value[0];
-      const cWidth = numCols.value;
-      scaledCtx.drawImage(e.data.imgBitmap, 0, 0, cWidth, height, 
-      e.data.start, 0, cWidth, height);
-    }
-
-    const startWorker = () => {
-      console.log('starting worker: ', performance.now());
-      
-      spectrogramWorker.postMessage({
-        // offscreenCanvas: offscreenCanvas,
-        cMapName: cMapName.value,
-        croppedData: Array.from(croppedData.value),
-        croppedDataShape: Array.from(croppedDataShape.value),
-        numCols: numCols.value,
-        xRangeInView: Array.from(props.xRangeInView),
-      });
+    spectrogramWorker.onmessage = (e) => {
+      console.log(e.data)
     }
 
     onMounted(async () => {
-      // const ost = document.querySelector('.outerSpecSettings')!;
-      // ost.appendChild(hiddenCanvas);
       try {
-        // emit canvas
-        // console.log('before emit scaledCanvas: ', performance.now());
-        // console.log(scaledCanvas)
-        // console.log('after emit scaledCanvas: ', performance.now());
-        // emit('specCanvas', scaledCanvas);
-        await loadSpectrogramData();
-        const logSa = Math.log2(props.saFreq);
-        const low = logSa - lowOctOffset.value;
-        const high = logSa + highOctOffset.value;
-        cropData(low, high);
-        resetCanvas();
-        adjustPower();
-        startWorker();
+
       } catch (error) {
         console.error('Error mounting spectrogram controls:', error);
       }
@@ -232,14 +138,8 @@ export default defineComponent({
       lowOctOffset,
       highOctOffset,
       cMapName,
-      numCols,
       dynamicStyle,
-      croppedData,
-      croppedDataShape,
       cMapEnum,
-      startWorker,
-      // adjustPower
-      render,
     }
   }
 })
