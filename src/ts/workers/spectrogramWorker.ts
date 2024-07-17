@@ -235,10 +235,9 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
       newVerbose
     } = data;
 
+    
+
     if (type === 'initial') {
-      // if (extData === undefined || extDataShape === undefined) {
-      //   throw new Error('Initial data and shape must be provided');
-      // }
       if (audioID === undefined) {
         throw new Error('Audio ID must be provided');
       }
@@ -303,33 +302,36 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
       initData = ndarray(extData, extDataShape);
       scaledShape = newScaledShape;
       crop(logMin, logMax);
-    } else if (type === 'crop') {
-      if (logMin === undefined || logMax === undefined) {
-        throw new Error('Log min and max must be provided');
+    } else {
+      self.postMessage('updateObserver');
+      if (type === 'crop') {
+        if (logMin === undefined || logMax === undefined) {
+          throw new Error('Log min and max must be provided');
+        }
+        processing = true;
+        crop(logMin, logMax);
+      } else if (type === 'scale') {
+        if (newScaledShape === undefined) {
+          throw new Error('Scaled shape must be provided');
+        }
+        processing = true;
+        scaledShape = newScaledShape;
+        scale();
+      } else if (type === 'power') {
+        if (newPower === undefined) {
+          throw new Error('Power must be provided');
+        }
+        processing = true;
+        power = newPower;
+        intensify();
+      } else if (type === 'color') {
+        if (newCMap === undefined) {
+          throw new Error('Color map must be provided');
+        }
+        processing = true;
+        cMapName = newCMap;
+        colorize();
       }
-      processing = true;
-      crop(logMin, logMax);
-    } else if (type === 'scale') {
-      if (newScaledShape === undefined) {
-        throw new Error('Scaled shape must be provided');
-      }
-      processing = true;
-      scaledShape = newScaledShape;
-      scale();
-    } else if (type === 'power') {
-      if (newPower === undefined) {
-        throw new Error('Power must be provided');
-      }
-      processing = true;
-      power = newPower;
-      intensify();
-    } else if (type === 'color') {
-      if (newCMap === undefined) {
-        throw new Error('Color map must be provided');
-      }
-      processing = true;
-      cMapName = newCMap;
-      colorize();
     }
   } else if (e.data.msg === 'requestRenderData') {
     // first, wait until processing is done, how to do this like a promise?

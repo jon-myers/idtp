@@ -5,77 +5,42 @@
     ref='outerSpecSettings'
     >
     <div class='col'>
-      <label>Colormap</label>
-      <SelectComponent 
-        :svgs='swatches'
+      <div class='rowBox'>
+        <label>Colormap</label>
+        <SwatchSelect 
+          :initCMap='initCMap'
+          v-model='cMapName'
         />
-      <!-- <select v-model='cMapName'>
-        <option v-for='(val, key) in cMapEnum' :value='val' :key='key'>
-          {{ key }}
-        </option>
-      </select> -->
-      <label>Intensity Power</label>
-      <input 
-        type='number' v-model='intensityPower'
-        min='1' max='5' step=0.1 
-        />
+        <button @click='updateColorMap'>Update</button>
+      </div>
+      <div class='rowBox'>
+        <label>Intensity Power</label>
+        <input 
+          type='number' v-model='intensityPower'
+          min='1' max='5' step=0.1 
+          />
+          <button @click='updateIntensity'>Update</button>
+      </div>
         
     </div>
-    <!-- <div class='col'>
-      <button @click='render'>Render</button>
-    </div> -->
   </div>
 </template>
 
 <script lang='ts'>
 import { 
   defineComponent, 
-  ref, 
-  onMounted, 
-  watch, 
+  ref,
   PropType,
   computed,
 } from 'vue';
-import * as d3CMap from 'd3-scale-chromatic';
 import { getWorker } from '@/ts/workers/workerManager.ts'
 import { CMap } from '@/ts/types.ts';
-import * as d3 from 'd3';
-import SelectComponent from '@/comps/SelectComponent.vue';
-
-const createSwatches = (): string[] => {
-  // for every color map in the enum CMap,
-  // create a swatch with the color map applied
-  // and return an array of the swatches
-  const width = 100;
-  const height = 20;
-  const swatches: string[] = [];
-  for (const [key, value] of Object.entries(CMap)) {
-    const swatchSVG = d3.create('svg')
-      .attr('width', width)
-      .attr('height', height)
-      .attr('xmlns', 'http://www.w3.org/2000/svg');
-    const n = 100;
-    const colorScale = d3CMap[value];
-    const data = Array.from({ length: n }, (_, i) => i / (n-1));
-    swatchSVG.selectAll('rect')
-      .data(data)
-      .enter()
-      .append('rect')
-      .attr('x', (d, i) => i)
-      .attr('y', 0)
-      .attr('width', width)
-      .attr('height', height)
-      .attr('fill', d => colorScale(d));
-    const svgString = new XMLSerializer().serializeToString(swatchSVG.node()!);
-    swatches.push(svgString)    
-  }
-  return swatches;
-}
+import SwatchSelect from '@/comps/SwatchSelect.vue';
 
 export default defineComponent({
   name: 'SpectrogramControls',
   components: {
-    SelectComponent
+    SwatchSelect
   },
   props: {
     height: {
@@ -116,28 +81,12 @@ export default defineComponent({
     const highOctOffset = ref(2.1);
     const cMapName = ref<CMap>(CMap.Viridis);
     const cMapEnum = ref(CMap);
-    const swatch = ref<SVGSVGElement | null>(null);
     const swatches = ref<SVGSVGElement[]>([]);
-
-    // defining internal variables
-    let extShape = [0, 0];
-    let extData: Uint8Array[] = [];
-    let hiddenCanvas = document.createElement('canvas');
-    const scaledCanvas = document.createElement('canvas');
-    // const scaledCanvas = document.querySelector('#hiddenCanvas')! as HTMLCanvasElement;
-    const scaledCtx = scaledCanvas.getContext('2d')!;
-    const extRange = [75, 2400];
-    let cMapObj = d3CMap[cMapName.value]; 
-
+    const initCMap = ref<CMap>(CMap.Viridis);
     const dynamicStyle = computed(() => ({
       '--height': `${props.height}px`,
       '--playerHeight': `${props.playerHeight}px`
     }))
-    
-    watch(cMapName, (newVal) => {
-      cMapObj = d3CMap[newVal];
-    });
-
     const spectrogramWorker = getWorker();
     const logSa = Math.log2(props.saFreq);
     const low = logSa - lowOctOffset.value;
@@ -156,20 +105,29 @@ export default defineComponent({
       msg: 'process',
       payload: processOptions
     })
-    
-    // spectrogramWorker.onmessage = (e) => {
-    //   console.log(e.data)
-    // }
 
-    onMounted(async () => {
-      try {
-        swatches.value = createSwatches();
-        
-
-      } catch (error) {
-        console.error('Error mounting spectrogram controls:', error);
+    const updateColorMap = () => {
+      const processOptions = {
+        type: 'color',
+        newCMap: cMapName.value,
       }
-    })
+      spectrogramWorker.postMessage({
+        msg: 'process',
+        payload: processOptions
+      })
+    }
+
+    const updateIntensity = () => {
+      const processOptions = {
+        type: 'power',
+        newPower: intensityPower.value
+      }
+      spectrogramWorker.postMessage({
+        msg: 'process',
+        payload: processOptions
+      })
+    }
+    
     
     return {
       intensityPower,
@@ -179,7 +137,9 @@ export default defineComponent({
       dynamicStyle,
       cMapEnum,
       swatches,
-      swatch
+      initCMap,
+      updateColorMap,
+      updateIntensity
     }
   }
 })
@@ -206,9 +166,9 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: 10px;
-  width: 150px;
-  min-width: 150px;
+  margin: 0px;
+  width: 140px;
+  min-width: 140px;
 }
 
 .col > select {
@@ -217,5 +177,18 @@ export default defineComponent({
 
 .col > input {
   width: 40px;
+}
+
+.rowBox {
+  width: 100%;
+  max-height: 100px;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  box-sizing: border-box;
+  border-right: 1px solid white;
+  border-bottom: 1px solid white;
 }
 </style>

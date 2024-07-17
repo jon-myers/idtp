@@ -109,10 +109,13 @@ export default defineComponent({
         payload: ImageData,
         canvasIdx: number
       }>) => {
-        // console.log('received message from worker: ', e.data)
-        // if e.data is string
+        
         if (typeof e.data === 'string') {
-          console.log(e.data)
+          if (e.data === 'updateObserver') {
+            resetObserver();
+          } else {
+            console.log(e.data)
+          }
         } else if (e.data.msg === 'render') {
           const imgData = e.data.payload as ImageData;
           const canvasIdx = e.data.canvasIdx as number;
