@@ -32,6 +32,7 @@
       :xAxHeight='xAxHeight'
       :scaledWidth='transcriptionWidth'
       :scaledHeight='transcriptionHeight'
+      :piece='piece'
       @xRangeInView='(xRange: [number, number]) => xRangeInView = xRange'
       />
     <div class='controlBox'>

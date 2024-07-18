@@ -5,6 +5,9 @@
     ref='outerSpecSettings'
     >
     <div class='col'>
+      <div class='titleBox'>
+        <label>Spectrogram</label>
+      </div>
       <div class='rowBox'>
         <label>Colormap</label>
         <SwatchSelect 
@@ -22,6 +25,43 @@
           <button @click='updateIntensity'>Update</button>
       </div>
         
+    </div>
+    <div class='col'>
+      <div class='titleBox'>
+        <label>"Sa" Frequency</label>
+      </div>
+      <div class='rowBox'>
+        <div class='row'>
+          <input 
+          type='number' 
+          v-model='saFreqDisplay'
+          min='100' 
+          max='400' 
+          step='1' 
+          @change='handleSaFreqChange'
+          />
+          <input 
+            type='range' 
+            v-model='logSaFreq' 
+            :min='Math.log2(150)' 
+            :max='Math.log2(600)' 
+            step=0.001
+            @input='handleLogSaFreqChange'
+          />
+        </div>
+        <div class='row'>
+          <label>Gain</label>
+          <input
+            type='range'
+            v-model='saGain'
+            min='0'
+            max='1'
+            step='0.001'
+          />
+        </div>
+      </div>
+      <div class='rowBox'>
+      </div>
     </div>
   </div>
 </template>
@@ -83,6 +123,18 @@ export default defineComponent({
     const cMapEnum = ref(CMap);
     const swatches = ref<SVGSVGElement[]>([]);
     const initCMap = ref<CMap>(CMap.Viridis);
+    const saFreq = ref(props.saFreq);
+    const logSaFreq = ref(Math.log2(props.saFreq));
+    const saGain = ref(0);
+
+    const saFreqDisplay = computed({
+      get: () => saFreq.value.toFixed(0),
+      set: (newVal) => {
+        saFreq.value = parseFloat(newVal);
+      }
+    })
+
+
     const dynamicStyle = computed(() => ({
       '--height': `${props.height}px`,
       '--playerHeight': `${props.playerHeight}px`
@@ -126,6 +178,14 @@ export default defineComponent({
         msg: 'process',
         payload: processOptions
       })
+    };
+
+    const handleLogSaFreqChange = () => {
+      saFreq.value = Math.pow(2, logSaFreq.value);
+    }
+
+    const handleSaFreqChange = () => {
+      logSaFreq.value = Math.log2(saFreq.value);
     }
     
     
@@ -139,7 +199,13 @@ export default defineComponent({
       swatches,
       initCMap,
       updateColorMap,
-      updateIntensity
+      updateIntensity,
+      saFreq,
+      logSaFreq,
+      handleLogSaFreqChange,
+      handleSaFreqChange,
+      saFreqDisplay,
+      saGain
     }
   }
 })
@@ -167,8 +233,9 @@ export default defineComponent({
   flex-direction: column;
   align-items: center;
   margin: 0px;
-  width: 140px;
-  min-width: 140px;
+  width: 180px;
+  min-width: 180px;
+  border-right: 1px solid white;
 }
 
 .col > select {
@@ -181,14 +248,46 @@ export default defineComponent({
 
 .rowBox {
   width: 100%;
-  max-height: 100px;
-  min-height: 100px;
+  max-height: 80px;
+  min-height: 80px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-evenly;
   box-sizing: border-box;
-  border-right: 1px solid white;
-  border-bottom: 1px solid white;
+  border-top: 1px solid white;
+}
+
+.titleBox {
+  height: 40px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.2em;
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-evenly;
+  width: 100%;
+}
+
+.row > input[type='range'] {
+  width: 90px;
+  box-sizing: border-box;
+}
+
+.row > input[type='number'] {
+  width: 45px;
+  box-sizing: border-box;
+}
+
+.row > label {
+  width: 45px;
+  box-sizing: border-box
 }
 </style>

@@ -2,7 +2,13 @@
   <div class='renderMain' ref='renderMain' :style='cssVars'>
     <div class='wrapper'>
       <div class='xAxisContainer' ref='xAxisContainer'>
-        <div class='xAxis'></div>
+        <!-- <div class='xAxis'></div> -->
+        <XAxis
+          v-if='xScale !== null'
+          :scaledWidth='scaledWidth'
+          :height='xAxHeight'
+          :scale='xScale'
+          ref='xAxis'/>
       </div>
       <div class='yAxisContainer' ref='yAxisContainer'>
         <div class='yAxis'></div>
@@ -34,11 +40,16 @@ import {
 } from 'vue';
 
 import SpectrogramLayer from '@/comps/editor/renderer/SpectrogramLayer.vue';
+import XAxis from '@/comps/editor/renderer/XAxis.vue';
+import { Piece } from '@/js/classes.ts';
+import * as d3 from 'd3';
+
 
 export default defineComponent({
   name: 'Renderer',
   components: {
     SpectrogramLayer,
+    XAxis,
   },
   computed: {
     cssVars() {
@@ -71,6 +82,10 @@ export default defineComponent({
       required: true,
       validator: (value: number) => Number.isInteger(value)
     },
+    piece: {
+      type: Object as PropType<Piece>,
+      required: true
+    }
   },
   setup(props, { emit }) {
     const layersContainer = ref<HTMLDivElement | null>(null);
@@ -79,6 +94,7 @@ export default defineComponent({
     const scrollingContainer = ref<HTMLDivElement | null>(null);
     const scrollBarWidth = ref(10);
     const scrollBarHeight = ref(10);
+    const xScale = ref<d3.ScaleLinear<number, number> | null>(null);
     let isXScrolling = false;
     let isYScrolling = false;
 
@@ -92,22 +108,30 @@ export default defineComponent({
           isXScrolling = false;
           isYScrolling = false
         }
-      })
+      });
       xAxisContainer.value?.addEventListener('scroll', () => {
         if (!isXScrolling) {
           isXScrolling = true;
           scrollingContainer.value!.scrollLeft = xAxisContainer.value!.scrollLeft
           isXScrolling = false;
         }
-      })
-
+      });
       yAxisContainer.value?.addEventListener('scroll', () => {
         if (!isYScrolling) {
           isYScrolling = true;
           scrollingContainer.value!.scrollTop = yAxisContainer.value!.scrollTop
           isYScrolling = false;
         }
-      })
+      });
+      console.log(props.piece)
+      const durTot = props.piece.durTot;
+      if (durTot === undefined) {
+        throw new Error('durTot is undefined');
+      }
+      xScale.value = d3.scaleLinear()
+        .domain([0, durTot])
+        .range([0, props.scaledWidth]);
+
 
     })
     return {
@@ -117,6 +141,7 @@ export default defineComponent({
       yAxisContainer,
       scrollBarWidth,
       scrollBarHeight,
+      xScale,
     };
 
   }
@@ -175,11 +200,11 @@ export default defineComponent({
   overflow-x: scroll;
 }
 
-.xAxis {
+/* .xAxis {
   width: var(--scaledWidth);
   height: var(--xAxHeight);
   background: linear-gradient(0.25turn, #e66465, #9198e5);
-}
+} */
 
 .yAxisContainer {
   position: sticky;
