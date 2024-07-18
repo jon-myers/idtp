@@ -35,6 +35,10 @@
       :piece='piece'
       :lowOctOffset='lowOctOffset'
       :highOctOffset='highOctOffset'
+      @zoomInY='zoomInY'
+      @zoomOutY='zoomOutY'
+      @zoomInX='zoomInX'
+      @zoomOutX='zoomOutX'
       @xRangeInView='(xRange: [number, number]) => xRangeInView = xRange'
       />
     <div class='controlBox'>
@@ -999,6 +1003,22 @@ export default defineComponent({
   },
 
   methods: {
+
+    zoomInY() {
+      this.transcriptionHeight = Math.round(this.transcriptionHeight * 1.1);
+    },
+
+    zoomOutY() {
+      this.transcriptionHeight = Math.round(this.transcriptionHeight / 1.1);
+    },
+
+    zoomInX() {
+      this.transcriptionWidth = Math.round(this.transcriptionWidth * 1.1);
+    },
+
+    zoomOutX() {
+      this.transcriptionWidth = Math.round(this.transcriptionWidth / 1.1);
+    },
 
     getXRangeInView(): [number, number] {
 
@@ -9240,47 +9260,47 @@ export default defineComponent({
       this.leftTime = this.xr().invert(this.yAxWidth);
     },
 
-    enactZoom(e: D3ZoomEvent<Element, unknown>) {
-      e.sourceEvent?.preventDefault();
-      this.d3ZoomEvent = e;
-      const t = e.transform;
-      const k = t.k / this.z!.k;
-      const point = this.center(e);
-      const doX = point[0] > this.x!.range()[0];
-      const doY = point[1] > this.y!.range()[0];
-      if (doX && doY) {
-        if (e.sourceEvent) {
-          // console.log('wheel: ', e.sourceEvent.wheelDeltaX, e.sourceEvent.wheelDeltaY)
-          // console.log('normal: ', e.sourceEvent.deltaX, e.sourceEvent.deltaY)
-          let deltaX = 0.5 * e.sourceEvent.wheelDeltaX / this.tx!().k;
-          let deltaY = 0.5 * e.sourceEvent.wheelDeltaY / this.ty!().k;
-          this.gx!.call(this.zoomX!.translateBy, deltaX, 0);
-          this.gy!.call(this.zoomY!.translateBy, 0, deltaY);
-        } else {
-          // just for in initial this.zoomX setting
-          const x = (this.yAxWidth * k - this.yAxWidth) / k;
-          this.zoomX!.scaleBy(this.gx!, k, point);    
-          this.gx!.call(this.zoomX!.translateTo, x, 0, [0, 0]);
-          this.gy!.call(this.zoomY!.scaleBy, this.initYScale, point);
-          this.gy!.call(this.zoomY!.translateTo, 0, this.rect()!.height, [0, 0])
-        }
-      } else {
-        // if not, we're zooming on a fixed point
-        doX && this.gx!.call(this.zoomX!.scaleBy, k, point);
-        doY && this.gy!.call(this.zoomY!.scaleBy, k, point);
-      }
-      this.z = t;
-      // this.redraw();
-      this.throttledRedraw!();
-      this.transformScrollYDragger();
-      this.transformScrollXDragger();
-      this.leftTime = this.xr().invert(this.yAxWidth);
-      this.transcriptionWidth = Math.round(this.xr()(this.durTot) - this.xr()(0));
-      this.transcriptionHeight = Math.round(this.yr()(Math.log2(this.freqMin)) - 
-        this.yr()(Math.log2(this.freqMax)));
-      // this.xRangeInView = this.xr().domain()
-      //   .map(t => t / this.durTot) as [number, number];
-    },
+    // enactZoom(e: D3ZoomEvent<Element, unknown>) {
+    //   e.sourceEvent?.preventDefault();
+    //   this.d3ZoomEvent = e;
+    //   const t = e.transform;
+    //   const k = t.k / this.z!.k;
+    //   const point = this.center(e);
+    //   const doX = point[0] > this.x!.range()[0];
+    //   const doY = point[1] > this.y!.range()[0];
+    //   if (doX && doY) {
+    //     if (e.sourceEvent) {
+    //       // console.log('wheel: ', e.sourceEvent.wheelDeltaX, e.sourceEvent.wheelDeltaY)
+    //       // console.log('normal: ', e.sourceEvent.deltaX, e.sourceEvent.deltaY)
+    //       let deltaX = 0.5 * e.sourceEvent.wheelDeltaX / this.tx!().k;
+    //       let deltaY = 0.5 * e.sourceEvent.wheelDeltaY / this.ty!().k;
+    //       this.gx!.call(this.zoomX!.translateBy, deltaX, 0);
+    //       this.gy!.call(this.zoomY!.translateBy, 0, deltaY);
+    //     } else {
+    //       // just for in initial this.zoomX setting
+    //       const x = (this.yAxWidth * k - this.yAxWidth) / k;
+    //       this.zoomX!.scaleBy(this.gx!, k, point);    
+    //       this.gx!.call(this.zoomX!.translateTo, x, 0, [0, 0]);
+    //       this.gy!.call(this.zoomY!.scaleBy, this.initYScale, point);
+    //       this.gy!.call(this.zoomY!.translateTo, 0, this.rect()!.height, [0, 0])
+    //     }
+    //   } else {
+    //     // if not, we're zooming on a fixed point
+    //     doX && this.gx!.call(this.zoomX!.scaleBy, k, point);
+    //     doY && this.gy!.call(this.zoomY!.scaleBy, k, point);
+    //   }
+    //   this.z = t;
+    //   // this.redraw();
+    //   this.throttledRedraw!();
+    //   this.transformScrollYDragger();
+    //   this.transformScrollXDragger();
+    //   this.leftTime = this.xr().invert(this.yAxWidth);
+    //   this.transcriptionWidth = Math.round(this.xr()(this.durTot) - this.xr()(0));
+    //   this.transcriptionHeight = Math.round(this.yr()(Math.log2(this.freqMin)) - 
+    //     this.yr()(Math.log2(this.freqMax)));
+    //   // this.xRangeInView = this.xr().domain()
+    //   //   .map(t => t / this.durTot) as [number, number];
+    // },
 
     verticalZoomIn() {
       const pt = [this.yAxWidth, this.rect().height / 2]

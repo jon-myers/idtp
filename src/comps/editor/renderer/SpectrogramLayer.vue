@@ -12,7 +12,7 @@
 
 <script lang='ts'>
 
-import { defineComponent, ref, onMounted, defineExpose } from 'vue';
+import { defineComponent, ref, onMounted, watch } from 'vue';
 import { RenderCall } from '@/ts/types.ts';
 import { getWorker } from '@/ts/workers/workerManager.ts';
 
@@ -56,6 +56,18 @@ export default defineComponent({
       rootMargin: '0px',
       threshold: 0.0
     });
+
+    watch([() => props.height, () => props.width], () => {
+      resetCanvases();
+      const processOptions = {
+        type: 'scale',
+        newScaledShape: [props.height, props.width]
+      }
+      worker!.postMessage({
+        msg: 'process',
+        payload: processOptions
+      })
+    })
 
 
     const resetCanvases = () => {

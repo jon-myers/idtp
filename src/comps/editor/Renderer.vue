@@ -7,6 +7,7 @@
           :scaledWidth='scaledWidth'
           :height='xAxHeight'
           :scale='xScale'
+          :axisColor='axisColor'
           ref='xAxis'/>
       </div>
       <div class='yAxisContainer' ref='yAxisContainer'>
@@ -18,8 +19,17 @@
           :raga='piece.raga'
           :highOctOffset='highOctOffset'
           :lowOctOffset='lowOctOffset'
+          :axisColor='axisColor'
           ref='yAxis'/>
         <!-- <div class='yAxis'></div> -->
+      </div>
+      <div class='verticalZoomControls'>
+        <div @click='zoomInY' class='zoomIn'>+</div>
+        <div @click='zoomOutY' class='zoomOut'>-</div>
+      </div>
+      <div class='horizontalZoomControls'>
+        <div @click='zoomOutX' class='zoomOut'>-</div>
+        <div @click='zoomInX' class='zoomIn'>+</div>
       </div>
       <div 
         class='scrollingContainer' 
@@ -61,18 +71,6 @@ export default defineComponent({
     XAxis,
     YAxis,
   },
-  // computed: {
-  //   cssVars() {
-  //     return {
-  //       '--yAxWidth': `${this.yAxWidth}px`,
-  //       '--xAxHeight': `${this.xAxHeight}px`,
-  //       '--scaledWidth': `${this.scaledWidth}px`,
-  //       '--scaledHeight': `${this.scaledHeight}px`,
-  //       '--scrollBarWidth': `${this.scrollBarWidth}px`,
-  //       '--scrollBarHeight': `${this.scrollBarHeight}px`,
-  //     };
-  //   }
-  // },
   props: {
     yAxWidth: {
       type: Number,
@@ -110,10 +108,11 @@ export default defineComponent({
     const xAxisContainer = ref<HTMLDivElement | null>(null);
     const yAxisContainer = ref<HTMLDivElement | null>(null);
     const scrollingContainer = ref<HTMLDivElement | null>(null);
-    const scrollBarWidth = ref(10);
-    const scrollBarHeight = ref(10);
+    const scrollBarWidth = ref(15);
+    const scrollBarHeight = ref(15);
     const xScale = ref<d3.ScaleLinear<number, number> | null>(null);
     const yScale = ref<d3.ScaleLinear<number, number> | null>(null);
+    const axisColor = ref<String>('#c4b18b');
     let isXScrolling = false;
     let isYScrolling = false;
 
@@ -125,6 +124,23 @@ export default defineComponent({
       '--scrollBarWidth': `${scrollBarWidth.value}px`,
       '--scrollBarHeight': `${scrollBarHeight.value}px`,
     }));
+
+    const zoomOutY = () => emit('zoomOutY');
+    const zoomInY = () => emit('zoomInY');
+    const zoomOutX = () =>  emit('zoomOutX');
+    const zoomInX = () => emit('zoomInX');
+
+    watch(() => props.scaledHeight, () => {
+      if (yScale.value) {
+        yScale.value.range([0, props.scaledHeight]);
+      }
+    })
+
+    watch(() => props.scaledWidth, () => {
+      if (xScale.value) {
+        xScale.value.range([0, props.scaledWidth]);
+      }
+    })
 
     onMounted(() => {
       scrollingContainer.value?.addEventListener('scroll', () => {
@@ -151,7 +167,6 @@ export default defineComponent({
           isYScrolling = false;
         }
       });
-      console.log(props.piece)
       const durTot = props.piece.durTot;
       if (durTot === undefined) {
         throw new Error('durTot is undefined');
@@ -164,15 +179,9 @@ export default defineComponent({
       const logSaFreq = Math.log2(saFreq);
       const logMax = logSaFreq + props.highOctOffset;
       const logMin = logSaFreq - props.lowOctOffset;
-
-
       yScale.value = d3.scaleLinear()
         .domain([logMax, logMin])
         .range([0, props.scaledHeight]);
-
-
-
-
     })
     return {
       scrollingContainer,
@@ -184,11 +193,14 @@ export default defineComponent({
       xScale,
       yScale,
       cssVars,
+      axisColor,
+      zoomOutY,
+      zoomInY,
+      zoomOutX,
+      zoomInX,
     };
-
   }
 });
-
 </script>
 
 <style scoped>
@@ -206,13 +218,13 @@ export default defineComponent({
 }
 
 .scrollingContainer::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: var(--scrollBarWidth);
+  height: var(--scrollBarHeight);
 }
 
 .scrollingContainer::-webkit-scrollbar-thumb {
   background-color: #888;
-  border-radius: 10px;
+  border-radius: var(--scrollBarWidth);
 }
 
 .scrollingContainer::-webkit-scrollbar-track {
@@ -243,11 +255,69 @@ export default defineComponent({
   overflow-y: hidden;
 }
 
-/* .xAxis {
-  width: var(--scaledWidth);
+.verticalZoomControls {
+  position: absolute;
+  top: 0;
+  left: calc(100% - var(--scrollBarWidth));
+  width: var(--scrollBarWidth);
   height: var(--xAxHeight);
-  background: linear-gradient(0.25turn, #e66465, #9198e5);
-} */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  background-color:lightgray;
+  color: black;
+  box-sizing: border-box;
+}
+
+.verticalZoomControls > * {
+  width: 100%;
+  height: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.verticalZoomControls > *:hover {
+  background-color: darkgray;
+}
+
+.verticalZoomControls > .zoomOut {
+  border-top: 1px solid black;
+  border-bottom: 1px solid black;
+}
+
+.horizontalZoomControls {
+  position: absolute;
+  top: calc(100% - var(--scrollBarHeight));
+  left: 0;
+  width: var(--yAxWidth);
+  height: var(--scrollBarHeight);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-evenly;
+  background-color:lightgray;
+  color: black;
+  box-sizing: border-box;
+}
+
+.horizontalZoomControls > * {
+  width: 50%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-sizing: border-box;
+  border-right: 1px solid black;
+}
+
+.horizontalZoomControls > *:hover {
+  background-color: darkgray;
+}
 
 .yAxisContainer {
   position: sticky;
@@ -265,10 +335,6 @@ export default defineComponent({
 .xAxisContainer::-webkit-scrollbar {
   height: 0;
 }
-
-
-
-
 
 .wrapper {
   position: relative;

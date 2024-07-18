@@ -6,7 +6,14 @@
 </template>
 
 <script lang='ts'>
-import { defineComponent, ref, computed, PropType, onMounted } from 'vue';
+import { 
+  defineComponent, 
+  ref, 
+  computed, 
+  PropType, 
+  onMounted,
+  watch
+} from 'vue';
 import * as d3 from 'd3';
 
 export default defineComponent({
@@ -23,7 +30,11 @@ export default defineComponent({
     scale: {
       type: Function as PropType<d3.ScaleLinear<number, number>>,
       required: true
-    }
+    },
+    axisColor: {
+      type: String,
+      required: true
+    },
   },
   setup(props) {
     const xAxisContainer = ref<HTMLDivElement | null>(null);
@@ -54,7 +65,7 @@ export default defineComponent({
     const durTotPxls = props.scale(durTot);
     const interval = durTotPxls / minInterTickPxls;
     const durInterval = Math.ceil(durTot / interval);
-    const integerTicks: number[] = [];
+    let integerTicks: number[] = [];
     for (let i = durInterval; i < maxVal; i += durInterval) {
       integerTicks.push(i);
     }
@@ -62,13 +73,49 @@ export default defineComponent({
     const axis = ref(d3.axisTop(props.scale)
       .tickValues(integerTicks)
       .tickFormat(d => structuredTime(d as number))
-      // .tickSize(0)
       .tickPadding(5)
     );
 
+    const resetAxis = () => {
+      const scaleDomain = props.scale.domain();
+      const maxVal = scaleDomain[1];
+      const minInterTickPxls = 40;
+      const durTot = props.scale.domain()[1];
+      const durTotPxls = props.scale(durTot);
+      const interval = durTotPxls / minInterTickPxls;
+      const durInterval = Math.ceil(durTot / interval);
+      integerTicks = [];
+      for (let i = durInterval; i < maxVal; i += durInterval) {
+        integerTicks.push(i);
+      }
+      axis.value = d3.axisTop(props.scale)
+        .tickValues(integerTicks)
+        .tickFormat(d => structuredTime(d as number))
+        .tickPadding(5)
 
+      const svg = d3.select(axSvg.value)
+      svg.selectAll('*').remove();
+      svg
+        .attr('width', props.scaledWidth)
+        .attr('height', props.height)
+      svg.append('rect')
+        .attr('width', props.scaledWidth)
+        .attr('height', props.height)
+        .attr('fill', props.axisColor)
+      svg.append('g')
+        .attr('transform', `translate(0, ${props.height})`)
+        .call(axis.value)
+        .selectAll('text')
+        .style('fill', 'black')
+    }
 
-
+    watch(() => props.scaledWidth, () => {
+      if (axSvg.value) {
+        d3.select(axSvg.value)
+          .attr('width', props.scaledWidth)
+        resetAxis();
+      }
+    })
 
     const dynamicStyle = computed(() => {
       return {
@@ -83,6 +130,11 @@ export default defineComponent({
         const svg = d3.select(axSvg.value)
           .attr('width', props.scaledWidth)
           .attr('height', props.height)
+        svg.append('rect')
+          .attr('width', props.scaledWidth)
+          .attr('height', props.height)
+          .attr('fill', props.axisColor)
+          
         svg.append('g')
           .attr('transform', `translate(0, ${props.height})`)
           .call(axis.value)
@@ -107,6 +159,7 @@ export default defineComponent({
       xAxisContainer,
       dynamicStyle,
       axSvg,
+      integerTicks
     }
   }
 })
