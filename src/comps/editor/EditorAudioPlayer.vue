@@ -303,6 +303,8 @@
       :scaledWidth='transcriptionWidth'
       :scaledHeight='transcriptionHeight'
       :xRangeInView='xRangeInView'
+      :extLowOctOffset='lowOctOffset'
+      :extHighOctOffset='highOctOffset'
       @specCanvas='handleSpecCanvas'
       />
   </div>
@@ -789,6 +791,14 @@ export default defineComponent({
     },
     xRangeInView: {
       type: Array as PropType<number[]>,
+      required: true
+    },
+    lowOctOffset: {
+      type: Number,
+      required: true
+    },
+    highOctOffset: {
+      type: Number,
       required: true
     },
   },

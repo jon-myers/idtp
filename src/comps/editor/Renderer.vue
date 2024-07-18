@@ -2,7 +2,6 @@
   <div class='renderMain' ref='renderMain' :style='cssVars'>
     <div class='wrapper'>
       <div class='xAxisContainer' ref='xAxisContainer'>
-        <!-- <div class='xAxis'></div> -->
         <XAxis
           v-if='xScale !== null'
           :scaledWidth='scaledWidth'
@@ -11,7 +10,16 @@
           ref='xAxis'/>
       </div>
       <div class='yAxisContainer' ref='yAxisContainer'>
-        <div class='yAxis'></div>
+        <YAxis
+          v-if='yScale !== null'
+          :scaledHeight='scaledHeight'
+          :width='yAxWidth'
+          :scale='yScale'
+          :raga='piece.raga'
+          :highOctOffset='highOctOffset'
+          :lowOctOffset='lowOctOffset'
+          ref='yAxis'/>
+        <!-- <div class='yAxis'></div> -->
       </div>
       <div 
         class='scrollingContainer' 
@@ -41,6 +49,7 @@ import {
 
 import SpectrogramLayer from '@/comps/editor/renderer/SpectrogramLayer.vue';
 import XAxis from '@/comps/editor/renderer/XAxis.vue';
+import YAxis from '@/comps/editor/renderer/YAxis.vue';
 import { Piece } from '@/js/classes.ts';
 import * as d3 from 'd3';
 
@@ -50,19 +59,20 @@ export default defineComponent({
   components: {
     SpectrogramLayer,
     XAxis,
+    YAxis,
   },
-  computed: {
-    cssVars() {
-      return {
-        '--yAxWidth': `${this.yAxWidth}px`,
-        '--xAxHeight': `${this.xAxHeight}px`,
-        '--scaledWidth': `${this.scaledWidth}px`,
-        '--scaledHeight': `${this.scaledHeight}px`,
-        '--scrollBarWidth': `${this.scrollBarWidth}px`,
-        '--scrollBarHeight': `${this.scrollBarHeight}px`,
-      };
-    }
-  },
+  // computed: {
+  //   cssVars() {
+  //     return {
+  //       '--yAxWidth': `${this.yAxWidth}px`,
+  //       '--xAxHeight': `${this.xAxHeight}px`,
+  //       '--scaledWidth': `${this.scaledWidth}px`,
+  //       '--scaledHeight': `${this.scaledHeight}px`,
+  //       '--scrollBarWidth': `${this.scrollBarWidth}px`,
+  //       '--scrollBarHeight': `${this.scrollBarHeight}px`,
+  //     };
+  //   }
+  // },
   props: {
     yAxWidth: {
       type: Number,
@@ -85,6 +95,14 @@ export default defineComponent({
     piece: {
       type: Object as PropType<Piece>,
       required: true
+    },
+    lowOctOffset: {
+      type: Number,
+      required: true
+    },
+    highOctOffset: {
+      type: Number,
+      required: true
     }
   },
   setup(props, { emit }) {
@@ -95,8 +113,18 @@ export default defineComponent({
     const scrollBarWidth = ref(10);
     const scrollBarHeight = ref(10);
     const xScale = ref<d3.ScaleLinear<number, number> | null>(null);
+    const yScale = ref<d3.ScaleLinear<number, number> | null>(null);
     let isXScrolling = false;
     let isYScrolling = false;
+
+    const cssVars = computed(() => ({
+      '--yAxWidth': `${props.yAxWidth}px`,
+      '--xAxHeight': `${props.xAxHeight}px`,
+      '--scaledWidth': `${props.scaledWidth}px`,
+      '--scaledHeight': `${props.scaledHeight}px`,
+      '--scrollBarWidth': `${scrollBarWidth.value}px`,
+      '--scrollBarHeight': `${scrollBarHeight.value}px`,
+    }));
 
     onMounted(() => {
       scrollingContainer.value?.addEventListener('scroll', () => {
@@ -131,6 +159,18 @@ export default defineComponent({
       xScale.value = d3.scaleLinear()
         .domain([0, durTot])
         .range([0, props.scaledWidth]);
+      const raga = props.piece.raga;
+      const saFreq = raga.fundamental;
+      const logSaFreq = Math.log2(saFreq);
+      const logMax = logSaFreq + props.highOctOffset;
+      const logMin = logSaFreq - props.lowOctOffset;
+
+
+      yScale.value = d3.scaleLinear()
+        .domain([logMax, logMin])
+        .range([0, props.scaledHeight]);
+
+
 
 
     })
@@ -142,6 +182,8 @@ export default defineComponent({
       scrollBarWidth,
       scrollBarHeight,
       xScale,
+      yScale,
+      cssVars,
     };
 
   }
@@ -198,6 +240,7 @@ export default defineComponent({
   width: calc(100% - var(--yAxWidth) - var(--scrollBarWidth));
   height: var(--xAxHeight);
   overflow-x: scroll;
+  overflow-y: hidden;
 }
 
 /* .xAxis {
@@ -223,11 +266,7 @@ export default defineComponent({
   height: 0;
 }
 
-.yAxis {
-  width: var(--yAxWidth);
-  height: var(--scaledHeight);
-  background: linear-gradient(#e66465, #9198e5);
-}
+
 
 
 

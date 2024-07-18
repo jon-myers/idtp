@@ -33,6 +33,8 @@
       :scaledWidth='transcriptionWidth'
       :scaledHeight='transcriptionHeight'
       :piece='piece'
+      :lowOctOffset='lowOctOffset'
+      :highOctOffset='highOctOffset'
       @xRangeInView='(xRange: [number, number]) => xRangeInView = xRange'
       />
     <div class='controlBox'>
@@ -197,6 +199,8 @@
   :xRangeInView='xRangeInView'
   :saEstimate='audioDBDoc?.saEstimate'
   :id='audioDBDoc?._id'
+  :lowOctOffset='lowOctOffset'
+  :highOctOffset='highOctOffset'
   @resizeHeightEmit='resizeHeight'
   @movePlayheadsEmit='movePlayheads'
   @currentTimeEmit='setCurrentTime'
@@ -250,7 +254,6 @@ const structuredTime = (dur: number) => {
   }
 };
 const cumsum = (sum: number = 0) => (sum = 0, (n: number) => sum += n);
-
 
 const leadingZeros = (int: number) => {
   if (int < 10) {
@@ -353,14 +356,12 @@ const  findClosestStartTime = (startTimes: number[], timepoint: number) => {
       closestIndex = i;
     }
   }
-
   return closestIndex;
 }
 
 function findClosestStartTimeAfter(startTimes: number[], timepoint: number) {
   let closestIndex = -1;
   let closestDiff = Infinity;
-
   for (let i = 0; i < startTimes.length; i++) {
     if (startTimes[i] <= timepoint) continue; // Skip start times <= timepoint
 
@@ -370,12 +371,8 @@ function findClosestStartTimeAfter(startTimes: number[], timepoint: number) {
       closestIndex = i;
     }
   }
-
   return closestIndex;
 }
-
-
-
 
 type EditorDataType = {
   piece: Piece,
@@ -556,6 +553,8 @@ type EditorDataType = {
   transcriptionWidth: number,
   transcriptionHeight: number,
   xRangeInView: [number, number],
+  lowOctOffset: number,
+  highOctOffset: number,
 }
 
 export { findClosestStartTime }
@@ -721,6 +720,8 @@ export default defineComponent({
       transcriptionWidth: 0,
       transcriptionHeight: 0,
       xRangeInView: [0, 0],
+      lowOctOffset: 1.1,
+      highOctOffset: 2.1,
       
     }
   },
@@ -729,7 +730,8 @@ export default defineComponent({
     TrajSelectPanel,
     ContextMenu,
     AutomationWindow,
-    Renderer
+    Renderer,
+
   },
   created() {
     this.throttledRedraw = throttle(this.redraw.bind(this), this.transitionTime);

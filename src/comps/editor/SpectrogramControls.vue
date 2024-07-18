@@ -113,12 +113,20 @@ export default defineComponent({
       type: Array as PropType<number[]>,
       required: true,
       validator: (value: any): value is [number, number] => value.length === 2,
+    },
+    extLowOctOffset: {
+      type: Number,
+      required: true
+    },
+    extHighOctOffset: {
+      type: Number,
+      required: true
     }
   },
   setup(props, { emit }) {
     const intensityPower = ref(1);
-    const lowOctOffset = ref(1.1);
-    const highOctOffset = ref(2.1);
+    const lowOctOffset = ref(props.extLowOctOffset);
+    const highOctOffset = ref(props.extHighOctOffset);
     const cMapName = ref<CMap>(CMap.Viridis);
     const cMapEnum = ref(CMap);
     const swatches = ref<SVGSVGElement[]>([]);

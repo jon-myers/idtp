@@ -29,16 +29,40 @@ export default defineComponent({
     const xAxisContainer = ref<HTMLDivElement | null>(null);
     const axSvg = ref<SVGSVGElement | null>(null);
 
-    // select axSvg and set its width and height
-    
+    const leadingZeros = (int: number) => {
+      if (int < 10) {
+        return '0' + int
+      } else {
+        return String(int)
+      }
+    }
+    const structuredTime = (dur: number) => {
+      const hours = String(Math.floor(dur / 3600));
+      let minutes = Math.floor((dur % 3600) / 60);
+      const seconds = leadingZeros(dur % 60);
+      if (Number(hours) > 0) {
+        return `${hours}:${leadingZeros(minutes)}:${seconds}`
+      } else {
+        return `${String(minutes)}:${seconds}`
+      }
+    };
     
     const scaleDomain = props.scale.domain();
     const maxVal = scaleDomain[1];
-    const integerTicks = Array.from({ length: maxVal }, (_, i) => i);
+    const minInterTickPxls = 40;
+    const durTot = props.scale.domain()[1];
+    const durTotPxls = props.scale(durTot);
+    const interval = durTotPxls / minInterTickPxls;
+    const durInterval = Math.ceil(durTot / interval);
+    const integerTicks: number[] = [];
+    for (let i = durInterval; i < maxVal; i += durInterval) {
+      integerTicks.push(i);
+    }
 
     const axis = ref(d3.axisTop(props.scale)
       .tickValues(integerTicks)
-      .tickSize(0)
+      .tickFormat(d => structuredTime(d as number))
+      // .tickSize(0)
       .tickPadding(5)
     );
 
