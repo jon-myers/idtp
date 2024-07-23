@@ -50,7 +50,7 @@
           />
         </div>
         <div class='row'>
-          <label>Gain</label>
+          <label class='gain'>Gain</label>
           <input
             type='range'
             v-model='saGain'
@@ -59,9 +59,56 @@
             step='0.001'
           />
         </div>
+        <div class='row'>
+          <button @click='updateSaFreq'>Update</button>
+        </div>
       </div>
       <div class='rowBox'>
+        <div class='row'>
+          <label>Max Pitch</label>
+          <select v-model='maxPitchIdx'>
+            <option v-for='(pitch, idx) in maxPitchOptions' :value='idx'>
+              {{  pitch.octavedSargamLetter }}
+            </option>
+          </select>
+        </div>
+        <div class='row'>
+          <label>Min Pitch</label>
+          <select v-model='minPitchIdx'>
+            <option v-for='(pitch, idx) in minPitchOptions' :value='idx'>
+              {{  pitch.octavedSargamLetter }}
+            </option>
+          </select>
+        </div>
       </div>
+    </div>
+    <div class='col'>
+      <div class='titleBox'>
+        <label>Colors</label>
+      </div>
+      <div class='rowBox tall'>
+        <div class='row'>
+          <label>Background</label>
+          <input type='color' v-model='bgColor'/>
+        </div>
+        <div class='row'>
+          <label>Axes</label>
+          <input type='color' v-model='axColor'/>
+        </div>
+        <div class='row'>
+          <label>Trajs</label>
+          <input type='color' v-model='tranColor'/>
+        </div>
+        <div class='row'>
+          <label>Selected Trajs</label>
+          <input type='color' v-model='selTranColor'/>
+        </div>
+        <div class='row'>
+          <label>Melograph</label>
+          <input type='color' v-model='melColor'/>
+        </div>
+      </div>
+      
     </div>
   </div>
 </template>
@@ -72,10 +119,16 @@ import {
   ref,
   PropType,
   computed,
+  watch,
+  onMounted
 } from 'vue';
 import { getWorker } from '@/ts/workers/workerManager.ts'
 import { CMap } from '@/ts/types.ts';
 import SwatchSelect from '@/comps/SwatchSelect.vue';
+import {
+  Pitch, 
+  Raga
+} from '@/js/classes.ts';
 
 export default defineComponent({
   name: 'SpectrogramControls',
@@ -109,17 +162,48 @@ export default defineComponent({
       required: true,
       validator: (value: number) => Number.isInteger(value)
     },
-    xRangeInView: {
-      type: Array as PropType<number[]>,
-      required: true,
-      validator: (value: any): value is [number, number] => value.length === 2,
-    },
     extLowOctOffset: {
       type: Number,
       required: true
     },
     extHighOctOffset: {
       type: Number,
+      required: true
+    },
+    backgroundColor: {
+      type: String,
+      required: true
+    },
+    axisColor: {
+      type: String,
+      required: true
+    },
+    trajectoryColor: {
+      type: String,
+      required: true
+    },
+    selTrajectoryColor: {
+      type: String,
+      required: true
+    },
+    melographColor: {
+      type: String,
+      required: true
+    },
+    ac: {
+      type: AudioContext,
+      required: true
+    },
+    maxPitch: {
+      type: Object as PropType<Pitch>,
+      required: true
+    },
+    minPitch: {
+      type: Object as PropType<Pitch>,
+      required: true
+    },
+    raga: {
+      type: Object as PropType<Raga>,
       required: true
     }
   },
@@ -134,6 +218,62 @@ export default defineComponent({
     const saFreq = ref(props.saFreq);
     const logSaFreq = ref(Math.log2(props.saFreq));
     const saGain = ref(0);
+    const bgColor = ref(props.backgroundColor);
+    const axColor = ref(props.axisColor);
+    const tranColor = ref(props.trajectoryColor);
+    const selTranColor = ref(props.selTrajectoryColor);
+    const melColor = ref(props.melographColor);
+    const gainNode = ref<GainNode | undefined>(undefined);
+    const oscNode = ref<OscillatorNode | undefined>(undefined);
+    const maxPitchObj = ref(props.maxPitch);
+    const minPitchObj = ref(props.minPitch);
+
+    const isEqual = (p1: Pitch, p2: Pitch) => {
+      const swara = p1.swara === p2.swara;
+      const oct = p1.oct === p2.oct;
+      const raised = p1.raised === p2.raised;
+      return swara && oct && raised;
+    }
+
+    const maxPitchIdx = computed({
+      get() {
+        return maxPitchOptions.value.findIndex(pitch => {
+          return isEqual(pitch, maxPitchObj.value);
+        })
+      },
+      set(idx) {
+        maxPitchObj.value = new Pitch(maxPitchOptions.value[idx]);
+        emit('update:maxPitch', maxPitchObj.value);
+      }
+    })
+
+    const maxPitchOptions = computed(() => {
+      const pitches = props.raga.getPitches({
+        low: saFreq.value,
+        high: 2400 // in the spec data generation, this is the max freq
+      }).reverse();
+      return pitches;
+    })
+
+    const minPitchIdx = computed({
+      get() {
+        return minPitchOptions.value.findIndex(pitch => {
+          return isEqual(pitch, minPitchObj.value);
+        })
+      },
+      set(idx) {
+        minPitchObj.value = new Pitch(minPitchOptions.value[idx]);
+        emit('update:minPitch', minPitchObj.value);
+      }
+    })
+
+    const minPitchOptions = computed(() => {
+      const pitches = props.raga.getPitches({
+        low: 75, // in the spec data generation, this is the min freq
+        high: saFreq.value
+      }).reverse();
+      return pitches;
+    })
 
     const saFreqDisplay = computed({
       get: () => saFreq.value.toFixed(0),
@@ -141,12 +281,29 @@ export default defineComponent({
         saFreq.value = parseFloat(newVal);
       }
     })
-
-
     const dynamicStyle = computed(() => ({
       '--height': `${props.height}px`,
       '--playerHeight': `${props.playerHeight}px`
     }))
+
+    watch(bgColor, newVal => {
+      emit('update:backgroundColor', newVal);
+    });
+    watch(axColor, newVal => {
+      emit('update:axisColor', newVal);
+    });
+    watch(tranColor, newVal => {
+      emit('update:trajectoryColor', newVal);
+    });
+    watch(selTranColor, newVal => {
+      emit('update:selTrajectoryColor', newVal);
+    });
+    watch(melColor, newVal => {
+      emit('update:melographColor', newVal);
+    });
+
+
+
     const spectrogramWorker = getWorker();
     const logSa = Math.log2(props.saFreq);
     const low = logSa - lowOctOffset.value;
@@ -158,7 +315,7 @@ export default defineComponent({
       logMax: high,
       newScaledShape: [props.scaledHeight, props.scaledWidth],
       audioID: props.audioID,
-      newVerbose: true
+      newVerbose: false
     }
 
     spectrogramWorker.postMessage({
@@ -188,6 +345,10 @@ export default defineComponent({
       })
     };
 
+    const updateSaFreq = () => {
+      emit('update:saFreq', saFreq.value);
+    };
+
     const handleLogSaFreqChange = () => {
       saFreq.value = Math.pow(2, logSaFreq.value);
     }
@@ -195,6 +356,37 @@ export default defineComponent({
     const handleSaFreqChange = () => {
       logSaFreq.value = Math.log2(saFreq.value);
     }
+
+    const lag = 0.01;
+
+    // watch for changes in saGain, update gain node
+    watch(saGain, newVal => {
+      if (gainNode.value) {
+        const curVal = gainNode.value.gain.value;
+        const now = props.ac.currentTime;
+        gainNode.value.gain.setValueAtTime(curVal, now);
+        gainNode.value.gain.linearRampToValueAtTime(newVal, now + lag);
+      }
+    });
+    watch(saFreq, newVal => {
+      if (oscNode.value) {
+        const curVal = oscNode.value.frequency.value;
+        const now = props.ac.currentTime;
+        oscNode.value.frequency.setValueAtTime(curVal, now);
+        oscNode.value.frequency.exponentialRampToValueAtTime(newVal, now + lag);
+      }
+    });
+
+    onMounted(() => {
+      gainNode.value = props.ac.createGain();
+      gainNode.value.gain.value = saGain.value;
+      gainNode.value.connect(props.ac.destination);
+      oscNode.value = props.ac.createOscillator();
+      oscNode.value.frequency.value = saFreq.value;
+      oscNode.value.connect(gainNode.value);
+      oscNode.value.start();
+
+    })
     
     
     return {
@@ -208,12 +400,24 @@ export default defineComponent({
       initCMap,
       updateColorMap,
       updateIntensity,
+      updateSaFreq,
       saFreq,
       logSaFreq,
       handleLogSaFreqChange,
       handleSaFreqChange,
       saFreqDisplay,
-      saGain
+      saGain,
+      bgColor,
+      axColor,
+      tranColor,
+      selTranColor,
+      melColor,
+      maxPitchOptions,
+      maxPitchObj,
+      maxPitchIdx,
+      minPitchOptions,
+      minPitchObj,
+      minPitchIdx
     }
   }
 })
@@ -266,6 +470,12 @@ export default defineComponent({
   border-top: 1px solid white;
 }
 
+.rowBox.tall {
+  max-height: 160px;
+  min-height: 160px;
+}
+
+
 .titleBox {
   height: 40px;
   box-sizing: border-box;
@@ -295,7 +505,16 @@ export default defineComponent({
 }
 
 .row > label {
+  width: 100px;
+  box-sizing: border-box;
+  text-align: right;
+}
+.row > label.gain {
   width: 45px;
-  box-sizing: border-box
+}
+
+.row > input[type='color'] {
+  width: 45px;
+  box-sizing: border-box;
 }
 </style>

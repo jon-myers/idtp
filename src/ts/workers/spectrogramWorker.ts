@@ -81,7 +81,6 @@ const scale = () => {
   }
   const [newHeight, newWidth] = scaledShape as [number, number];
   const [oldHeight, oldWidth] = croppedData.shape;
-  console.log(scaledShape)
   scaledData = ndarray(new Array(newHeight * newWidth), scaledShape);
   const yScale = oldHeight / newHeight;
   const xScale = oldWidth / newWidth;
@@ -211,7 +210,9 @@ const colorize = () => {
     const dur = performance.now() - now!;
     self.postMessage(`colorize time: ${(dur / 1000).toFixed()}`);
   }
-  self.postMessage('done processing')
+  if (verbose) {
+    console.log('done processing');
+  }
 };
 
 
@@ -257,9 +258,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
       }
       if (newVerbose !== undefined) {
         verbose = newVerbose;
-        // console.log('verbose', verbose)
       }
-      console.log('processing')
       processing = true;
       const dataUrl = 'https://swara.studio/spec_data/' + audioID + '/spec_data.gz';
       const shapeUrl = 'https://swara.studio/spec_data/' + audioID + '/spec_shape.json';
@@ -337,9 +336,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
   } else if (e.data.msg === 'requestRenderData') {
     // first, wait until processing is done, how to do this like a promise?
     if (!complete) {
-      console.log('waiting until complete')
       await waitUntilComplete();
-      console.log('done waiting')
     }
 
     // grab the slice of image data and send it back

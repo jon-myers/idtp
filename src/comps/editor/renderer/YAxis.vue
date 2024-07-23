@@ -11,7 +11,8 @@ import {
   computed, 
   PropType, 
   onMounted,
-  watch 
+  watch,
+  nextTick 
 } from 'vue';
 import * as d3 from 'd3';
 import { Raga } from '@/js/classes.ts';
@@ -52,10 +53,7 @@ export default defineComponent({
     const yAxisContainer = ref<HTMLDivElement | null>(null);
     const aySvg = ref<SVGSVGElement | null>(null);
 
-    // const saFreq = props.raga.fundamental;
-    // const logSaFreq = Math.log2(saFreq);
-
-    watch(() => props.scaledHeight, (newHeight) => {
+    watch(() => props.scaledHeight, newHeight => {
       if (aySvg.value) {
         d3.select(aySvg.value)
           .attr('height', newHeight)
@@ -63,6 +61,13 @@ export default defineComponent({
       }
     })
 
+    watch(() => props.axisColor, newColor => {
+      if (aySvg.value) {
+        d3.select(aySvg.value)
+          .selectAll('rect')
+          .attr('fill', newColor)
+      }
+    })
 
     const dynamicStyle = computed(() => {
       return {
@@ -71,45 +76,52 @@ export default defineComponent({
       }
     });
 
-    const saFreq = props.raga.fundamental;
-    const logSaFreq = Math.log2(saFreq);
-    const logMax = logSaFreq + props.highOctOffset;
-    const logMin = logSaFreq - props.lowOctOffset;
-    const sargamFreqs = props.raga.getFrequencies({
-      low: 2 ** logMin,
-      high: 2 ** logMax
+    const logMin = computed(() => {
+      return Math.log2(props.raga.fundamental) - props.lowOctOffset;
     });
-    const ticks = sargamFreqs.map(freq => Math.log2(freq));
-    const tickLabels = props.raga.getPitches({
-      low: 2 ** logMin,
-      high: 2 ** logMax
-    }).map(p => p.octavedSargamLetter);
+    const logMax = computed(() => {
+      return Math.log2(props.raga.fundamental) + props.highOctOffset;
+    });
+    const ticks = computed(() => {
+      return props.raga.getFrequencies({
+        low: 2 ** logMin.value,
+        high: 2 ** logMax.value
+      }).map(freq => Math.log2(freq));
+    });
+    const tickLabels = computed(() => {
+      return props.raga.getPitches({
+        low: 2 ** logMin.value,
+        high: 2 ** logMax.value
+      }).map(p => p.octavedSargamLetter);
+    });
 
     const axis = ref(d3.axisLeft(props.scale)
-      .tickValues(ticks)
-      .tickFormat((d, i) => tickLabels[i])
+      .tickValues(ticks.value)
+      .tickFormat((d, i) => tickLabels.value[i])
       .tickPadding(5))
 
     const resetAxis = () => {
-      axis.value = d3.axisLeft(props.scale)
-        .tickValues(ticks)
-        .tickFormat((d, i) => tickLabels[i])
-        .tickPadding(5)
-
-      const svg = d3.select(aySvg.value);
-      svg.selectAll('*').remove();
-      svg
-        .attr('width', props.width)
-        .attr('height', props.scaledHeight)
-      svg.append('rect')
-        .attr('width', props.width)
-        .attr('height', props.scaledHeight)
-        .attr('fill', props.axisColor)
-      svg.append('g')
-        .attr('transform', `translate(${props.width}, 0)`)
-        .call(axis.value)
-        .selectAll('text')
-        .style('fill', 'black')
+      nextTick(() => {
+        axis.value = d3.axisLeft(props.scale)
+          .tickValues(ticks.value)
+          .tickFormat((d, i) => tickLabels.value[i])
+          .tickPadding(5)
+  
+        const svg = d3.select(aySvg.value);
+        svg.selectAll('*').remove();
+        svg
+          .attr('width', props.width)
+          .attr('height', props.scaledHeight)
+        svg.append('rect')
+          .attr('width', props.width)
+          .attr('height', props.scaledHeight)
+          .attr('fill', props.axisColor)
+        svg.append('g')
+          .attr('transform', `translate(${props.width}, 0)`)
+          .call(axis.value)
+          .selectAll('text')
+          .style('fill', 'black')
+      })
     };
 
     onMounted(() => {
@@ -131,7 +143,13 @@ export default defineComponent({
     return {
       dynamicStyle,
       aySvg,
-      yAxisContainer
+      yAxisContainer,
+      axis,
+      tickLabels,
+      ticks,
+      logMin,
+      logMax,
+      resetAxis
     }
   }
 })

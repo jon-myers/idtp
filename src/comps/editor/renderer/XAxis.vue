@@ -39,6 +39,14 @@ export default defineComponent({
   setup(props) {
     const xAxisContainer = ref<HTMLDivElement | null>(null);
     const axSvg = ref<SVGSVGElement | null>(null);
+    
+    watch(() => props.axisColor, newColor => {
+      if (axSvg.value) {
+        d3.select(axSvg.value)
+          .selectAll('rect')
+          .attr('fill', newColor)
+      }
+    })
 
     const leadingZeros = (int: number) => {
       if (int < 10) {

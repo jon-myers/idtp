@@ -36,9 +36,11 @@
         ref='scrollingContainer'
         >
         <div class='layersContainer' ref='layersContainer'>
+          <div class='backgroundLayer'></div>
           <SpectrogramLayer
             :width='scaledWidth'
             :height='scaledHeight'
+            :showSpectrogram='showSpectrogram'
             ref='spectrogramLayer'
             />
         </div>
@@ -101,6 +103,18 @@ export default defineComponent({
     highOctOffset: {
       type: Number,
       required: true
+    },
+    showSpectrogram: {
+      type: Boolean,
+      required: true
+    },
+    backgroundColor: {
+      type: String,
+      required: true
+    },
+    axisColor: {
+      type: String,
+      required: true
     }
   },
   setup(props, { emit }) {
@@ -112,7 +126,8 @@ export default defineComponent({
     const scrollBarHeight = ref(15);
     const xScale = ref<d3.ScaleLinear<number, number> | null>(null);
     const yScale = ref<d3.ScaleLinear<number, number> | null>(null);
-    const axisColor = ref<String>('#c4b18b');
+    const yAxis = ref<HTMLDivElement | null>(null);
+    const xAxis = ref<HTMLDivElement | null>(null);
     let isXScrolling = false;
     let isYScrolling = false;
 
@@ -123,6 +138,7 @@ export default defineComponent({
       '--scaledHeight': `${props.scaledHeight}px`,
       '--scrollBarWidth': `${scrollBarWidth.value}px`,
       '--scrollBarHeight': `${scrollBarHeight.value}px`,
+      '--backgroundColor': props.backgroundColor,
     }));
 
     const zoomOutY = () => emit('zoomOutY');
@@ -139,6 +155,17 @@ export default defineComponent({
     watch(() => props.scaledWidth, () => {
       if (xScale.value) {
         xScale.value.range([0, props.scaledWidth]);
+      }
+    })
+
+    watch([() => props.lowOctOffset, () => props.highOctOffset], () => {
+      if (yScale.value) {
+        const raga = props.piece.raga;
+        const saFreq = raga.fundamental;
+        const logSaFreq = Math.log2(saFreq);
+        const logMax = logSaFreq + props.highOctOffset;
+        const logMin = logSaFreq - props.lowOctOffset;
+        yScale.value.domain([logMax, logMin]);
       }
     })
 
@@ -193,11 +220,12 @@ export default defineComponent({
       xScale,
       yScale,
       cssVars,
-      axisColor,
       zoomOutY,
       zoomInY,
       zoomOutX,
       zoomInX,
+      yAxis,
+      xAxis,
     };
   }
 });
@@ -340,6 +368,13 @@ export default defineComponent({
   position: relative;
   width: 100%;
   height: 100%;
+}
+
+.backgroundLayer {
+  width: var(--scaledWidth);
+  height: var(--scaledHeight);
+  background-color: var(--backgroundColor);
+  position: absolute;
 }
 
 </style>

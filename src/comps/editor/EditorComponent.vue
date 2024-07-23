@@ -35,6 +35,9 @@
       :piece='piece'
       :lowOctOffset='lowOctOffset'
       :highOctOffset='highOctOffset'
+      :showSpectrogram='showSpectrogram'
+      :backgroundColor='backColor'
+      :axisColor='axisColor'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
@@ -50,8 +53,8 @@
         <div class='cbRow' v-if='visibilityTab'>
           <label>Spectrogram</label>
           <input 
-            type='checkbox' 
-            @change='toggleSpectrogram'
+            type='checkbox'
+            v-model='showSpectrogram'
             @click='preventSpaceToggle'>
         </div>
         <div class='cbRow' v-if='visibilityTab'>
@@ -205,6 +208,13 @@
   :id='audioDBDoc?._id'
   :lowOctOffset='lowOctOffset'
   :highOctOffset='highOctOffset'
+  :backgroundColor='backColor'
+  :axisColor='axisColor'
+  :trajectoryColor='trajColor'
+  :selTrajectoryColor='selTrajColor'
+  :melographColor='melographColor'
+  :maxPitch='maxPitch'
+  :minPitch='minPitch'
   @resizeHeightEmit='resizeHeight'
   @movePlayheadsEmit='movePlayheads'
   @currentTimeEmit='setCurrentTime'
@@ -225,6 +235,14 @@
   @goToPhraseEmit='moveToPhrase'
   @goToSectionEmit='moveToSection'
   @maxLayerEmit='updateMaxLayer'
+  @update:backgroundColor='backColor = $event'
+  @update:axisColor='axisColor = $event'
+  @update:melographColor='melographColor = $event'
+  @update:selTrajectoryColor='selTrajColor = $event'
+  @update:trajectoryColor='trajColor = $event'
+  @update:saFreq='piece.raga.fundamental = $event'
+  @update:minPitch='updateMinPitch'
+  @update:maxPitch='updateMaxPitch'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -298,6 +316,8 @@ import LabelEditor from '@/comps/editor/LabelEditor.vue';
 import instructionsText from '@/assets/texts/editor_instructions.html?raw';
 import AutomationWindow from '@/comps/editor/AutomationWindow.vue';
 import Renderer from '@/comps/editor/Renderer.vue';
+import XAxis from '@/comps/editor/renderer/XAxis.vue';
+import YAxis from '@/comps/editor/renderer/YAxis.vue';
 import { detect, BrowserInfo } from 'detect-browser';
 import { throttle } from 'lodash';
 import { defineComponent } from 'vue';
@@ -391,7 +411,6 @@ type EditorDataType = {
   initViewDur: number,
   initYScale: number,
   initXScale: number,
-  spectrogramOpacity: number,
   transitionTime: number,
   controlBoxWidth: number,
   audioSource?: string,
@@ -559,6 +578,10 @@ type EditorDataType = {
   xRangeInView: [number, number],
   lowOctOffset: number,
   highOctOffset: number,
+  showSpectrogram: boolean,
+  melographColor: string,
+  maxPitch: Pitch,
+  minPitch: Pitch,
 }
 
 export { findClosestStartTime }
@@ -571,15 +594,14 @@ export default defineComponent({
       durTot: 600,
       freqMin: 100,
       freqMax: 800,
-      backColor: 'aliceblue',
-      axisColor: '#c4b18b',
+      backColor: '#f0f8ff', // aliceblue
+      axisColor: '#c4b18b', // tan
       yAxWidth: 30,
       xAxHeight: 30,
       minDrawDur: 0.01, //this could be smaller, potentially
       initViewDur: 20,
       initYScale: 2,
       initXScale: 1,
-      spectrogramOpacity: 0,
       transitionTime: 1000 / 60,
       controlBoxWidth: 240,
       audioSource: undefined,
@@ -589,9 +611,9 @@ export default defineComponent({
       selectedChikariColor: 'red',
       dateModified: undefined,
       setChikari: false,
-      selTrajColor: 'red',
+      selTrajColor: '#FF0000',
       selArtColor: '#9C2208',
-      trajColor: 'midnightblue',
+      trajColor: '#191970',
       selectedTraj: undefined,
       selectedTrajs: [],
       viewPhrases: true,
@@ -726,6 +748,10 @@ export default defineComponent({
       xRangeInView: [0, 0],
       lowOctOffset: 1.1,
       highOctOffset: 2.1,
+      showSpectrogram: false,
+      melographColor: '#006400', // darkgreen
+      maxPitch: new Pitch({ swara: 'Sa', oct: 2 }),
+      minPitch: new Pitch({ swara: 'Sa', oct: -1 })
       
     }
   },
@@ -1004,6 +1030,26 @@ export default defineComponent({
 
   methods: {
 
+    updateMinPitch(p: Pitch) {
+      this.minPitch = p;
+      const saFreq = this.piece.raga.fundamental;
+      const minPitchFreq = this.minPitch.frequency;
+      this.lowOctOffset = Math.log2(saFreq / minPitchFreq) + 0.1;
+      const renderer = this.$refs.renderer as typeof Renderer;
+      const yAxis = renderer.yAxis as typeof YAxis;
+      yAxis.resetAxis();
+    },
+
+    updateMaxPitch(p: Pitch) {
+      this.maxPitch = p;
+      const saFreq = this.piece.raga.fundamental;
+      const maxPitchFreq = this.maxPitch.frequency;
+      this.highOctOffset = Math.log2(maxPitchFreq / saFreq) + 0.1;
+      const renderer = this.$refs.renderer as typeof Renderer;
+      const yAxis = renderer.yAxis as typeof YAxis;
+      yAxis.resetAxis();
+    },
+
     zoomInY() {
       this.transcriptionHeight = Math.round(this.transcriptionHeight * 1.1);
     },
@@ -1104,7 +1150,7 @@ export default defineComponent({
         this.phraseG.append('path')
           .datum(data)
           .classed('melograph', true)
-          .attr('stroke', 'darkgreen')
+          .attr('stroke', melographColor)
           .attr('stroke-width', '2px')
           .attr('fill', 'none')
           .attr('opacity', this.melographVisible ? 1 : 0)
@@ -1732,13 +1778,14 @@ export default defineComponent({
         this.moveShadowPlayhead();
     },
 
-    toggleSpectrogram() {
-      if (this.spectrogramOpacity === 0) {
-        this.spectrogramOpacity = 1;
-      } else {
-        this.spectrogramOpacity = 0;
-      }
-    },
+    // toggleSpectrogram() {
+    //   // this.showSpectrogram = !this.showSpectrogram;
+    //   // if (this.spectrogramOpacity === 0) {
+    //   //   this.spectrogramOpacity = 1;
+    //   // } else {
+    //   //   this.spectrogramOpacity = 0;
+    //   // }
+    // },
 
     toggleMelograph() {
       const melographLines = d3SelectAll('.melograph');

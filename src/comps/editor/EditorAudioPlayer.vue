@@ -305,7 +305,25 @@
       :xRangeInView='xRangeInView'
       :extLowOctOffset='lowOctOffset'
       :extHighOctOffset='highOctOffset'
+      :backgroundColor='backgroundColor'
+      :axisColor='axisColor'
+      :trajectoryColor='trajectoryColor'
+      :selTrajectoryColor='selTrajectoryColor'
+      :melographColor='melographColor'
+      :ac='ac'
+      :maxPitch='maxPitch'
+      :minPitch='minPitch'
+      :raga='raga'
+
       @specCanvas='handleSpecCanvas'
+      @update:backgroundColor='$emit("update:backgroundColor", $event)'
+      @update:axisColor='$emit("update:axisColor", $event)'
+      @update:trajectoryColor='$emit("update:trajectoryColor", $event)'
+      @update:selTrajectoryColor='$emit("update:selTrajectoryColor", $event)'
+      @update:melographColor='$emit("update:melographColor", $event)'
+      @update:saFreq='$emit("update:saFreq", $event)'
+      @update:maxPitch='$emit("update:maxPitch", $event)'
+      @update:minPitch='$emit("update:minPitch", $event)'
       />
   </div>
 </template>
@@ -330,7 +348,8 @@ import {
   Trajectory, 
   Raga, 
   RuleSetType,
-  Piece 
+  Piece,
+  Pitch
 } from '@/js/classes.ts';
 import { AudioWorklet } from '@/audio-worklet';
 import tuningForkIcon from '@/assets/icons/tuning_fork.png';
@@ -801,6 +820,34 @@ export default defineComponent({
       type: Number,
       required: true
     },
+    backgroundColor: {
+      type: String,
+      required: true
+    },
+    axisColor: {
+      type: String,
+      required: true
+    },
+    trajectoryColor: {
+      type: String,
+      required: true
+    },
+    selTrajectoryColor: {
+      type: String,
+      required: true
+    },
+    melographColor: {
+      type: String,
+      required: true
+    },
+    maxPitch: {
+      type: Object as PropType<Pitch>,
+      required: true
+    },
+    minPitch: {
+      type: Object as PropType<Pitch>,
+      required: true
+    },
   },
 
   components: {
@@ -960,7 +1007,6 @@ export default defineComponent({
   methods: {
 
     handleSpecCanvas(specCanvas: HTMLCanvasElement) {
-      console.log('specCanvas')
       this.$emit('specCanvas', specCanvas);
     },
 
@@ -1416,7 +1462,6 @@ export default defineComponent({
       this.preSetFirstEnvelope(256);
       this.initStretchWorker();
       this.inited = true;
-      console.log(this.saEstimate, this.id)
     },
     gatherInfo() {
       const obj = this.audioDBDoc;

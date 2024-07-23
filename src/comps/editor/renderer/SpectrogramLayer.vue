@@ -12,7 +12,7 @@
 
 <script lang='ts'>
 
-import { defineComponent, ref, onMounted, watch } from 'vue';
+import { defineComponent, ref, onMounted, watch, computed } from 'vue';
 import { RenderCall } from '@/ts/types.ts';
 import { getWorker } from '@/ts/workers/workerManager.ts';
 
@@ -27,6 +27,10 @@ export default defineComponent({
       type: Number,
       required: true
     },
+    showSpectrogram: {
+      type: Boolean,
+      required: true
+    }
   },
   setup(props) {
     const maxCanvasWidth = 1000;
@@ -36,6 +40,8 @@ export default defineComponent({
     const canvasIdxMap = new Map<HTMLCanvasElement, number>();
     let worker: Worker | undefined = undefined
 
+    const opacity = computed(() => props.showSpectrogram ? 1 : 0);
+    
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         const canvas = entry.target as HTMLCanvasElement;
@@ -67,7 +73,12 @@ export default defineComponent({
         msg: 'process',
         payload: processOptions
       })
-    })
+    });
+    watch(() => props.showSpectrogram, () => {
+      canvases.value.forEach((canvas) => {
+        canvas.style.opacity = opacity.value.toString();
+      });
+    });
 
 
     const resetCanvases = () => {
@@ -83,6 +94,7 @@ export default defineComponent({
         const canvas = document.createElement('canvas');
         canvas.width = Math.min(maxCanvasWidth, props.width - i * maxCanvasWidth);
         canvas.height = props.height;
+        canvas.style.opacity = opacity.value.toString();
         container.value?.appendChild(canvas);
         canvases.value.push(canvas);
         ctxs.value.push(canvas.getContext('2d') as CanvasRenderingContext2D);
@@ -101,13 +113,11 @@ export default defineComponent({
     onMounted(() => {
       if (container.value) {
         const numCanvases = Math.ceil(props.width / maxCanvasWidth);
-        console.log(numCanvases)
-
-
         for (let i = 0; i < numCanvases; i++) {
           const canvas = document.createElement('canvas');
           canvas.width = Math.min(maxCanvasWidth, props.width - i * maxCanvasWidth);
           canvas.height = props.height;
+          canvas.style.opacity = opacity.value.toString();
           container.value.appendChild(canvas);
           canvases.value.push(canvas);
           ctxs.value.push(canvas.getContext('2d') as CanvasRenderingContext2D);
