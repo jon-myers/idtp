@@ -240,7 +240,7 @@
   @update:melographColor='melographColor = $event'
   @update:selTrajectoryColor='selTrajColor = $event'
   @update:trajectoryColor='trajColor = $event'
-  @update:saFreq='piece.raga.fundamental = $event'
+  @update:saFreq='updateSaFreq'
   @update:minPitch='updateMinPitch'
   @update:maxPitch='updateMaxPitch'
   />
@@ -1029,6 +1029,22 @@ export default defineComponent({
   },
 
   methods: {
+
+    updateSaFreq(f: number) {
+      this.piece.raga.fundamental = f;
+      this.minPitch.fundamental = f;
+      this.maxPitch.fundamental = f;
+      const minPitchFreq = this.minPitch.frequency;
+      const maxPitchFreq = this.maxPitch.frequency;
+      this.lowOctOffset = Math.log2(f / minPitchFreq) + 0.1;
+      this.highOctOffset = Math.log2(maxPitchFreq / f) + 0.1;
+      const renderer = this.$refs.renderer as typeof Renderer;
+      renderer.reScaleY();
+      const yAxis = renderer.yAxis as typeof YAxis;
+      yAxis.resetAxis();
+      // this.updateMinPitch(this.minPitch);
+      // this.updateMaxPitch(this.maxPitch);
+    },
 
     updateMinPitch(p: Pitch) {
       this.minPitch = p;

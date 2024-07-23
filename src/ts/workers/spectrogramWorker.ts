@@ -305,6 +305,8 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
     } else {
       self.postMessage('updateObserver');
       if (type === 'crop') {
+        
+
         if (logMin === undefined || logMax === undefined) {
           throw new Error('Log min and max must be provided');
         }

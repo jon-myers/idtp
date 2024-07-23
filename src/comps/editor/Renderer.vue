@@ -158,7 +158,7 @@ export default defineComponent({
       }
     })
 
-    watch([() => props.lowOctOffset, () => props.highOctOffset], () => {
+    const reScaleY = () => {
       if (yScale.value) {
         const raga = props.piece.raga;
         const saFreq = raga.fundamental;
@@ -167,6 +167,10 @@ export default defineComponent({
         const logMin = logSaFreq - props.lowOctOffset;
         yScale.value.domain([logMax, logMin]);
       }
+    }
+
+    watch([() => props.lowOctOffset, () => props.highOctOffset], () => {
+      reScaleY();
     })
 
     onMounted(() => {
@@ -226,6 +230,7 @@ export default defineComponent({
       zoomInX,
       yAxis,
       xAxis,
+      reScaleY
     };
   }
 });

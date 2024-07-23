@@ -120,7 +120,8 @@ import {
   PropType,
   computed,
   watch,
-  onMounted
+  onMounted,
+  nextTick
 } from 'vue';
 import { getWorker } from '@/ts/workers/workerManager.ts'
 import { CMap } from '@/ts/types.ts';
@@ -243,7 +244,21 @@ export default defineComponent({
       },
       set(idx) {
         maxPitchObj.value = new Pitch(maxPitchOptions.value[idx]);
+        maxPitchObj.value.fundamental = saFreq.value;
         emit('update:maxPitch', maxPitchObj.value);
+        nextTick(() => {
+          console.log('maxPitchIdx set');
+          const processOptions = {
+            type: 'crop',
+            logMin: logSaFreq.value - lowOctOffset.value,
+            logMax: logSaFreq.value + highOctOffset.value,
+            newVerbose: true
+          };
+          spectrogramWorker.postMessage({
+            msg: 'process',
+            payload: processOptions
+          })
+        })
       }
     })
 
@@ -263,7 +278,19 @@ export default defineComponent({
       },
       set(idx) {
         minPitchObj.value = new Pitch(minPitchOptions.value[idx]);
+        minPitchObj.value.fundamental = saFreq.value;
         emit('update:minPitch', minPitchObj.value);
+        nextTick(() => {
+          const processOptions = {
+            type: 'crop',
+            logMin: logSaFreq.value - lowOctOffset.value,
+            logMax: logSaFreq.value + highOctOffset.value
+          };
+          spectrogramWorker.postMessage({
+            msg: 'process',
+            payload: processOptions
+          })
+        })
       }
     })
 
@@ -300,6 +327,12 @@ export default defineComponent({
     });
     watch(melColor, newVal => {
       emit('update:melographColor', newVal);
+    });
+    watch(() => props.extHighOctOffset, newVal => {
+      highOctOffset.value = newVal;
+    });
+    watch(() => props.extLowOctOffset, newVal => {
+      lowOctOffset.value = newVal;
     });
 
 
@@ -346,7 +379,19 @@ export default defineComponent({
     };
 
     const updateSaFreq = () => {
+      logSaFreq.value = Math.log2(saFreq.value);
       emit('update:saFreq', saFreq.value);
+      nextTick(() => {
+        const processOptions = {
+          type: 'crop',
+          logMin: logSaFreq.value - lowOctOffset.value,
+          logMax: logSaFreq.value + highOctOffset.value
+        };
+        spectrogramWorker.postMessage({
+          msg: 'process',
+          payload: processOptions
+        })
+      })
     };
 
     const handleLogSaFreqChange = () => {
