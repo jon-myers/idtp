@@ -91,7 +91,7 @@ const scale = () => {
       const y1 = Math.floor(y);
       const y2 = Math.min(Math.ceil(y), oldHeight - 1);
       const x1 = Math.floor(x);
-      const x2 = Math.min(Math.floor(x), oldWidth - 1);
+      const x2 = Math.min(Math.ceil(x), oldWidth - 1);
       const a = y - y1;
       const b = x - x1;
       let val = (1 - a) * (1 - b) * croppedData.get(y1, x1) +
@@ -296,6 +296,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
       } catch (err) {
         console.error(err);
       }
+      console.log(extDataShape);
       if (extData === undefined || extDataShape === undefined) {
         throw new Error('Data and shape must be provided');
       }
@@ -354,6 +355,9 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
     for (let y = 0; y < imgData.height; y++) {
       for (let x = 0; x < width; x++) {
         const srcIdx = (y * imgData.width + x + startX) * 4;
+        if (x == 0 && y == 0) {
+          console.log(srcIdx);
+        }
         const destIdx = (y * width + x) * 4;
         [0, 1, 2, 3].forEach(i => {
           slice[destIdx + i] = imgData!.data[srcIdx + i];

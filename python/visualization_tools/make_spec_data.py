@@ -1,6 +1,7 @@
 import json, math, gzip
 import essentia.standard as ess
 import numpy as np
+from matplotlib import pyplot as plt
 
 def replaceZeros(data):
     min_nonzero = np.min(data[np.nonzero(data)])
@@ -48,6 +49,11 @@ def make_spec_data(file_path, output_dir):
     # flip vertically
     arr = np.flipud(arr)
     shape = np.shape(arr)
+    offset = 10
+    # Take the last 10 columns of the spectrogram
+    # and put them at the beginning
+    arr = np.hstack((arr[:, -offset:], arr[:, :-offset]))
+    
     arr_bytes = arr.tobytes()
 
     compressed_data = gzip.compress(arr_bytes)
@@ -56,9 +62,11 @@ def make_spec_data(file_path, output_dir):
 
     with open(output_dir + '/spec_shape.json', 'w') as f:
         json.dump({'shape': shape}, f)
+        
+    plt.imsave(f'{output_dir}/test_fewer_per_oct.png', arr, cmap='magma')
 
 # if main
 if __name__ == '__main__':
-  file_path = 'python/visualization_tools/test_audio.mp3'
+  file_path = 'python/visualization_tools/test_audio.wav'
   out_dir = 'python/visualization_tools/test_out'
   make_spec_data(file_path, out_dir)
