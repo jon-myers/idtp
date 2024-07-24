@@ -751,6 +751,12 @@ interface WorkerMessage {
   payload: ProcessMessage | { startX: number, width: number };
 }
 
+type MelographData = {
+  data_chunks: number[][],
+  time_chunk_starts: number[],
+  time_increment: number,
+}
+
 export type { 
   CollectionType, 
   UserType, 
@@ -811,6 +817,7 @@ export type {
   RenderCall,
   MessageType,
   ProcessMessage,
-  WorkerMessage
+  WorkerMessage,
+  MelographData,
 };
 

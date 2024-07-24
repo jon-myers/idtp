@@ -43,6 +43,18 @@
             :showSpectrogram='showSpectrogram'
             ref='spectrogramLayer'
             />
+          <MelographLayer
+            v-if='yScale !== null && xScale !== null'
+            :width='scaledWidth'
+            :height='scaledHeight'
+            :showMelograph='showMelograph'
+            :color='melographColor'
+            :audioID='piece.audioID'
+            :xScale='xScale'
+            :yScale='yScale'
+            ref='melographLayer'
+            />
+          />
         </div>
       </div>
     </div>
@@ -62,6 +74,7 @@ import {
 import SpectrogramLayer from '@/comps/editor/renderer/SpectrogramLayer.vue';
 import XAxis from '@/comps/editor/renderer/XAxis.vue';
 import YAxis from '@/comps/editor/renderer/YAxis.vue';
+import MelographLayer from '@/comps/editor/renderer/MelographLayer.vue';
 import { Piece } from '@/js/classes.ts';
 import * as d3 from 'd3';
 
@@ -70,6 +83,7 @@ export default defineComponent({
   name: 'Renderer',
   components: {
     SpectrogramLayer,
+    MelographLayer,
     XAxis,
     YAxis,
   },
@@ -113,6 +127,14 @@ export default defineComponent({
       required: true
     },
     axisColor: {
+      type: String,
+      required: true
+    },
+    showMelograph: {
+      type: Boolean,
+      required: true
+    },
+    melographColor: {
       type: String,
       required: true
     }

@@ -12,7 +12,8 @@ import {
   RecType,
   CollectionType,
   QueryType,
-  MultipleOptionType 
+  MultipleOptionType,
+  MelographData
 } from '@/ts/types.ts';
 const getPiece = async (id: string): Promise<Piece> => {
   let piece;
@@ -1805,7 +1806,7 @@ const getAllUsers = async () => {
   }
 }
 
-const getMelographJSON = async (recID: string) => {
+const getMelographJSON = async (recID: string): Promise<MelographData> => {
   let out;
   try {
     const url = `https://swara.studio/melographs/${recID}/melograph.json`;
@@ -1813,10 +1814,11 @@ const getMelographJSON = async (recID: string) => {
     if (response.ok) {
       out = await response.json()
     }
-    return out
+    
   } catch (err) {
     console.error(err)
   }
+  return out
 }
 
 const getRecsFromIds = async (recIDs: string[]) => {
