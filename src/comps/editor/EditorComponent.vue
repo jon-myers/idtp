@@ -40,6 +40,8 @@
       :backgroundColor='backColor'
       :axisColor='axisColor'
       :melographColor='melographColor'
+      :showTranscription='showMelody'
+      :sargamLineColor='sargamLineColor'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
@@ -217,6 +219,7 @@
   :melographColor='melographColor'
   :maxPitch='maxPitch'
   :minPitch='minPitch'
+  :sargamLineColor='sargamLineColor'
   @resizeHeightEmit='resizeHeight'
   @movePlayheadsEmit='movePlayheads'
   @currentTimeEmit='setCurrentTime'
@@ -245,6 +248,7 @@
   @update:saFreq='updateSaFreq'
   @update:minPitch='updateMinPitch'
   @update:maxPitch='updateMaxPitch'
+  @update:sargamLineColor='sargamLineColor = $event'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -584,6 +588,7 @@ type EditorDataType = {
   melographColor: string,
   maxPitch: Pitch,
   minPitch: Pitch,
+  sargamLineColor: string,
 }
 
 export { findClosestStartTime }
@@ -753,7 +758,8 @@ export default defineComponent({
       showSpectrogram: false,
       melographColor: '#006400', // darkgreen
       maxPitch: new Pitch({ swara: 'Sa', oct: 2 }),
-      minPitch: new Pitch({ swara: 'Sa', oct: -1 })
+      minPitch: new Pitch({ swara: 'Sa', oct: -1 }),
+      sargamLineColor: '#808080', // grey
       
     }
   },

@@ -314,6 +314,7 @@
       :maxPitch='maxPitch'
       :minPitch='minPitch'
       :raga='raga'
+      :sargamLineColor='sargamLineColor'
 
       @specCanvas='handleSpecCanvas'
       @update:backgroundColor='$emit("update:backgroundColor", $event)'
@@ -324,6 +325,7 @@
       @update:saFreq='$emit("update:saFreq", $event)'
       @update:maxPitch='$emit("update:maxPitch", $event)'
       @update:minPitch='$emit("update:minPitch", $event)'
+      @update:sargamLineColor='$emit("update:sargamLineColor", $event)'
       />
   </div>
 </template>
@@ -846,6 +848,10 @@ export default defineComponent({
     },
     minPitch: {
       type: Object as PropType<Pitch>,
+      required: true
+    },
+    sargamLineColor: {
+      type: String,
       required: true
     },
   },

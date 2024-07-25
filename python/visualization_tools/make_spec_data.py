@@ -52,8 +52,7 @@ def make_spec_data(file_path, output_dir):
     offset = 10
     # Take the last 10 columns of the spectrogram
     # and put them at the beginning
-    arr = np.hstack((arr[:, -offset:], arr[:, :-offset]))
-    
+    arr = np.hstack((arr[:, -offset:], arr[:, :-offset]))    
     arr_bytes = arr.tobytes()
 
     compressed_data = gzip.compress(arr_bytes)
@@ -63,8 +62,6 @@ def make_spec_data(file_path, output_dir):
     with open(output_dir + '/spec_shape.json', 'w') as f:
         json.dump({'shape': shape}, f)
         
-    plt.imsave(f'{output_dir}/test_fewer_per_oct.png', arr, cmap='magma')
-
 # if main
 if __name__ == '__main__':
   file_path = 'python/visualization_tools/test_audio.wav'

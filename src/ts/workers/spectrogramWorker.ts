@@ -355,9 +355,6 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
     for (let y = 0; y < imgData.height; y++) {
       for (let x = 0; x < width; x++) {
         const srcIdx = (y * imgData.width + x + startX) * 4;
-        if (x == 0 && y == 0) {
-          console.log(srcIdx);
-        }
         const destIdx = (y * width + x) * 4;
         [0, 1, 2, 3].forEach(i => {
           slice[destIdx + i] = imgData!.data[srcIdx + i];

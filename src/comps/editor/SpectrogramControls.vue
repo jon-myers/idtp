@@ -107,6 +107,10 @@
           <label>Melograph</label>
           <input type='color' v-model='melColor'/>
         </div>
+        <div class='row'>
+          <label>Sargam Lines</label>
+          <input type='color' v-model='sLineColor'/>
+        </div>
       </div>
       
     </div>
@@ -206,6 +210,10 @@ export default defineComponent({
     raga: {
       type: Object as PropType<Raga>,
       required: true
+    },
+    sargamLineColor: {
+      type: String,
+      required: true
     }
   },
   setup(props, { emit }) {
@@ -224,6 +232,7 @@ export default defineComponent({
     const tranColor = ref(props.trajectoryColor);
     const selTranColor = ref(props.selTrajectoryColor);
     const melColor = ref(props.melographColor);
+    const sLineColor = ref(props.sargamLineColor);
     const gainNode = ref<GainNode | undefined>(undefined);
     const oscNode = ref<OscillatorNode | undefined>(undefined);
     const maxPitchObj = ref(props.maxPitch);
@@ -327,6 +336,9 @@ export default defineComponent({
     });
     watch(melColor, newVal => {
       emit('update:melographColor', newVal);
+    });
+    watch(sLineColor, newVal => {
+      emit('update:sargamLineColor', newVal);
     });
     watch(() => props.extHighOctOffset, newVal => {
       highOctOffset.value = newVal;
@@ -457,6 +469,7 @@ export default defineComponent({
       tranColor,
       selTranColor,
       melColor,
+      sLineColor,
       maxPitchOptions,
       maxPitchObj,
       maxPitchIdx,
@@ -518,6 +531,8 @@ export default defineComponent({
 .rowBox.tall {
   max-height: 160px;
   min-height: 160px;
+  overflow-y: scroll;
+  overflow-x: hidden;
 }
 
 
@@ -537,6 +552,9 @@ export default defineComponent({
   align-items: center;
   justify-content: space-evenly;
   width: 100%;
+  min-height: 20px;
+  max-height: 20px;
+  box-sizing: border-box;
 }
 
 .row > input[type='range'] {
@@ -560,6 +578,11 @@ export default defineComponent({
 
 .row > input[type='color'] {
   width: 45px;
+  height: 20px;
   box-sizing: border-box;
+}
+
+select {
+  font-family: Arial, sans-serif;
 }
 </style>

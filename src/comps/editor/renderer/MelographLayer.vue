@@ -68,7 +68,7 @@ export default defineComponent({
     });
 
     watch(() => props.color, () => {
-      resetMelograph();
+      updateMelographColor();
     });
 
     watch(() => props.height, () => {
@@ -86,6 +86,11 @@ export default defineComponent({
       }
       resetMelograph();
     });
+
+    const updateMelographColor = () => {
+      d3.selectAll('.melograph')
+        .attr('stroke', props.color)
+    }
 
     const resetMelograph = () => {
       d3.selectAll('.melograph').remove();

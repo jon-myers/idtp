@@ -21,7 +21,6 @@
           :lowOctOffset='lowOctOffset'
           :axisColor='axisColor'
           ref='yAxis'/>
-        <!-- <div class='yAxis'></div> -->
       </div>
       <div class='verticalZoomControls'>
         <div @click='zoomInY' class='zoomIn'>+</div>
@@ -43,7 +42,6 @@
             :showSpectrogram='showSpectrogram'
             ref='spectrogramLayer'
             />
-          <div class='oldImgLayer'></div>
           <MelographLayer
             v-if='yScale !== null && xScale !== null'
             :width='scaledWidth'
@@ -54,6 +52,18 @@
             :xScale='xScale'
             :yScale='yScale'
             ref='melographLayer'
+            />
+            <TranscriptionLayer
+              v-if='yScale !== null && xScale !== null'
+              :width='scaledWidth'
+              :height='scaledHeight'
+              :showTranscription='showTranscription'
+              :xScale='xScale'
+              :yScale='yScale'
+              :lowOctOffset='lowOctOffset'
+              :highOctOffset='highOctOffset'
+              :piece='piece'
+              :sargamLineColor='sargamLineColor'
             />
           />
         </div>
@@ -76,8 +86,8 @@ import SpectrogramLayer from '@/comps/editor/renderer/SpectrogramLayer.vue';
 import XAxis from '@/comps/editor/renderer/XAxis.vue';
 import YAxis from '@/comps/editor/renderer/YAxis.vue';
 import MelographLayer from '@/comps/editor/renderer/MelographLayer.vue';
+import TranscriptionLayer from '@/comps/editor/renderer/TranscriptionLayer.vue';
 import { Piece } from '@/js/classes.ts';
-import { getNumberOfSpectrograms } from '@/js/serverCalls.ts';
 import * as d3 from 'd3';
 
 
@@ -88,6 +98,7 @@ export default defineComponent({
     MelographLayer,
     XAxis,
     YAxis,
+    TranscriptionLayer
   },
   props: {
     yAxWidth: {
@@ -139,6 +150,14 @@ export default defineComponent({
     melographColor: {
       type: String,
       required: true
+    },
+    showTranscription: {
+      type: Boolean,
+      required: true
+    },
+    sargamLineColor: {
+      type: String,
+      required: true
     }
   },
   setup(props, { emit }) {
@@ -153,9 +172,6 @@ export default defineComponent({
     const yAxis = ref<HTMLDivElement | null>(null);
     const xAxis = ref<HTMLDivElement | null>(null);
 
-    const oldSpecImgs = ref<HTMLImageElement[]>([]);
-    const oldImgOpacity = ref(0.5);
-
     let isXScrolling = false;
     let isYScrolling = false;
 
@@ -166,8 +182,7 @@ export default defineComponent({
       '--scaledHeight': `${props.scaledHeight}px`,
       '--scrollBarWidth': `${scrollBarWidth.value}px`,
       '--scrollBarHeight': `${scrollBarHeight.value}px`,
-      '--backgroundColor': props.backgroundColor,
-      '--oldImgOpacity': oldImgOpacity.value
+      '--backgroundColor': props.backgroundColor
     }));
 
     const zoomOutY = () => emit('zoomOutY');
@@ -202,22 +217,6 @@ export default defineComponent({
       reScaleY();
     })
 
-    const resetTestSpec = () => {
-      const oldImgLayer = layersContainer.value!.querySelector('.oldImgLayer') as HTMLDivElement;
-      // clear oldImgLayer of any children
-      while (oldImgLayer.firstChild) {
-        oldImgLayer.removeChild(oldImgLayer.firstChild);
-      }
-      const imgElem = document.createElement('img');
-      imgElem.src = oldSpecImgs.value[0].src;
-      imgElem.width = props.scaledWidth;
-      imgElem.height = props.scaledHeight;
-      imgElem.style.width = props.scaledWidth + 'px';
-      imgElem.style.height = props.scaledHeight + 'px';
-      // imgElem.style.objectFit = 'cover';
-      oldImgLayer.appendChild(imgElem);
-    }
-
     onMounted(async () => {
       scrollingContainer.value?.addEventListener('scroll', () => {
         if (!isXScrolling && !isYScrolling) {
@@ -227,7 +226,8 @@ export default defineComponent({
           yAxisContainer.value!.scrollTop = scrollingContainer.value!.scrollTop
           isXScrolling = false;
           isYScrolling = false
-        }
+        };
+        
       });
       xAxisContainer.value?.addEventListener('scroll', () => {
         if (!isXScrolling) {
@@ -258,30 +258,6 @@ export default defineComponent({
       yScale.value = d3.scaleLinear()
         .domain([logMax, logMin])
         .range([0, props.scaledHeight]);
-      
-      // this is all just for testing
-      const numSpecs = await getNumberOfSpectrograms(props.piece.audioID!);
-      for (let i = 0; i < numSpecs; i++) {
-        const dir = 'https://swara.studio/spectrograms/';
-        const url = dir + props.piece.audioID! + '/0/' + i + '.webp';
-        const img = new Image();
-        img.src = url + '?version=1';
-        oldSpecImgs.value.push(img);
-      }
-      if (oldSpecImgs.value.length === 1) {
-        oldSpecImgs.value[0].onload = () => {
-          const oldImgLayer = layersContainer.value!.querySelector('.oldImgLayer') as HTMLDivElement;
-          const imgElem = document.createElement('img');
-          imgElem.src = oldSpecImgs.value[0].src;
-          imgElem.width = props.scaledWidth;
-          imgElem.height = props.scaledHeight;
-          imgElem.style.width = props.scaledWidth + 'px';
-          imgElem.style.height = props.scaledHeight + 'px';
-          // imgElem.style.objectFit = 'cover';
-          oldImgLayer.appendChild(imgElem);
-        }
-      }
-      // end of testing
     })
     return {
       scrollingContainer,
@@ -299,9 +275,7 @@ export default defineComponent({
       zoomInX,
       yAxis,
       xAxis,
-      reScaleY,
-      oldImgOpacity,
-      resetTestSpec
+      reScaleY
     };
   }
 });
@@ -451,14 +425,6 @@ export default defineComponent({
   height: var(--scaledHeight);
   background-color: var(--backgroundColor);
   position: absolute;
-}
-
-.oldImgLayer {
-  width: var(--scaledWidth);
-  height: var(--scaledHeight);
-  position: absolute;
-  background-color: red;
-  opacity: var(--oldImgOpacity);
 }
 
 </style>
