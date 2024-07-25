@@ -30,6 +30,15 @@ const displayTime = (dur: number) => {
 
 const closeTo = (a: number, b: number) => Math.abs(a - b) < 0.000001;
 
+const linSpace = (startVal: number, stopVal: number, cardinality: number) => {
+  var arr = [];
+  var step = (stopVal - startVal) / (cardinality - 1);
+  for (var i = 0; i < cardinality; i++) {
+    arr.push(startVal + (step * i));
+  }
+  return arr;
+};
 
 
-export { getContrastingTextColor, displayTime, closeTo }
+
+export { getContrastingTextColor, displayTime, closeTo, linSpace }

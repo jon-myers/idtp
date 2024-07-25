@@ -42,6 +42,8 @@
       :melographColor='melographColor'
       :showTranscription='showMelody'
       :sargamLineColor='sargamLineColor'
+      :trajColor='trajColor'
+      :selTrajColor='selTrajColor'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
@@ -808,7 +810,6 @@ export default defineComponent({
   },
 
   async mounted() {
-    window.addEventListener('resize', this.resize);
     window.addEventListener('beforeunload', this.beforeUnload);
     this.fullWidth = window.innerWidth;
 

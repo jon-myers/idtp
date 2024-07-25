@@ -15,8 +15,9 @@ import {
   PropType
 } from 'vue';
 import * as d3 from 'd3';
+import { linSpace } from '@/ts/utils.ts';
 
-import { Piece } from '@/js/classes.ts';
+import { Piece, Trajectory } from '@/js/classes.ts';
 
 export default defineComponent({
   name: 'TranscriptionLayer',
@@ -34,11 +35,11 @@ export default defineComponent({
       required: true
     }, 
     xScale: {
-      type: Function,
+      type: Function as PropType<d3.ScaleLinear<number, number>>,
       required: true
     },
     yScale: {
-      type: Function,
+      type: Function as PropType<d3.ScaleLinear<number, number>>,
       required: true
     },
     piece: {
@@ -56,11 +57,82 @@ export default defineComponent({
     sargamLineColor: {
       type: String,
       required: true
+    },
+    minDrawDur: {
+      type: Number,
+      required: true
+    },
+    trajColor: {
+      type: String,
+      required: true
+    },
+    selTrajColor: {
+      type: String,
+      required: true
+    },
+    scrollX: {
+      type: Number,
+      required: true
+    },
+    clientWidth: {
+      type: Number,
+      required: true
     }
   },
   setup(props) {
     const tranContainer = ref<HTMLDivElement | null>(null);
     const tranSvg = ref<SVGSVGElement | null>(null);
+    const tracks: d3.Selection<SVGGElement, unknown, null, undefined>[] = [];
+    const xRangeInView = ref<[number, number]>([0, 0]);
+
+    const resetTrajRenderStatus = () => {
+      for (let i = 0; i < props.piece.instrumentation.length; i++) {
+        if (trajRenderStatus[i] === undefined) {
+          trajRenderStatus.push([])
+        }
+        trajRenderStatus[i] = props.piece.allTrajectories(i).map(t => {
+          return { 
+            uniqueId: t.uniqueId!, 
+            renderStatus: false,
+            selectedStatus: false
+          }
+        })
+      }
+    }
+
+    const trajRenderStatus: { 
+      uniqueId: string, 
+      renderStatus: boolean,
+      selectedStatus: boolean 
+    }[][] = [];
+    resetTrajRenderStatus();
+
+    const trajStartTimes = computed(() => {
+      const gridStartTimes = [];
+      for (let i = 0; i < props.piece.instrumentation.length; i++) {
+        const trajs = props.piece.allTrajectories(i);
+        const durs = trajs.map(t => t.durTot);
+        const startTimes = durs.reduce((acc, dur) => {
+          acc.push(acc[acc.length - 1] + dur);
+          return acc;
+        }, [0]);
+        gridStartTimes.push(startTimes);
+      };
+      return gridStartTimes;
+    });
+
+    const trajEndTimes = computed(() => {
+      const gridEndTimes = [];
+      for (let i = 0; i < props.piece.instrumentation.length; i++) {
+        const trajs = props.piece.allTrajectories(i);
+        const durs = trajs.map(t => t.durTot);
+        const endTimes = trajStartTimes.value[i].map((startTime, idx) => {
+          return startTime + durs[idx];
+        });
+        gridEndTimes.push(endTimes);
+      };
+      return gridEndTimes;
+    });
 
     const dynamicStyle = computed(() => {
       return {
@@ -87,6 +159,7 @@ export default defineComponent({
         high: 2 ** logMax.value
       })
     });
+
     watch(() => props.sargamLineColor, () => {
       updateSargamLineColor();
     });
@@ -104,6 +177,68 @@ export default defineComponent({
         updateSargamLineWidth();
       }
     });
+    watch(() => props.scrollX, () => {
+      setXRangeInView()
+    });
+    watch(() => props.clientWidth, () => {
+      setXRangeInView()
+    })
+
+    const setXRangeInView = () => {
+      const viewTimeRange = props.xScale.invert(props.clientWidth);
+      const leftTimeMax = props.piece.durTot! - viewTimeRange;
+      const leftTime = props.scrollX * leftTimeMax;
+      const rightTime = leftTime + viewTimeRange;
+      xRangeInView.value = [leftTime, rightTime];
+    }
+
+    const initializeTracks = () => {
+      // for the number of instrumental tracks, have a different <g> element
+      // for each track. I'd like to store these g's in an array.
+
+      if (tranSvg.value) {
+        const svg = d3.select(tranSvg.value);
+        for (let i = 0; i < props.piece.instrumentation.length; i++) {
+          const g = svg.append('g')
+            .attr('class', `track${i}`)
+          tracks.push(g);
+        }
+      }
+    }
+
+    const makeTrajData = (traj: Trajectory, realStartTime: number) => {
+      const endTime = realStartTime + traj.durTot;
+      const timePts = Math.round((endTime - realStartTime) / props.minDrawDur);
+      const drawTimes = linSpace(realStartTime, endTime, timePts);
+      const drawXs = drawTimes.map(t => {
+        return (t - realStartTime) / (endTime - realStartTime)
+      });
+      const drawYs = drawXs.map(x => traj.compute(x, true));
+      return drawYs.map((y, idx) => {
+        return { x: drawTimes[idx], y }
+      });
+    };
+
+    const trajCurve = d3.line<{ x: number, y: number }>()
+      .x(d => props.xScale(d.x))
+      .y(d => props.yScale(d.y))
+      .curve(d3.curveMonotoneX);
+
+    const renderTraj = (traj: Trajectory, track: number = 0) => {
+      const trajIdx = props.piece.allTrajectories(track).indexOf(traj);
+      const trajStart = trajStartTimes.value[track][trajIdx];
+      const g = tracks[track];
+      const trajData = makeTrajData(traj, trajStart);
+      g.append('path')
+        .datum(trajData)
+        .attr('d', trajCurve)
+        .attr('fill', 'none')
+        .attr('stroke', props.trajColor)
+        .attr('stroke-width', '2px')
+        .attr('stroke-linejoin', 'round')
+        .attr('stroke-linecap', 'round')
+        .attr('class', `traj ${traj.uniqueId}`)
+    };
 
     const updateSargamLineSpacing = () => {
       if (tranSvg.value) {
@@ -161,14 +296,23 @@ export default defineComponent({
           .attr('width', props.width)
           .attr('height', props.height)
         addSargamLines(svg);
-      }
+        initializeTracks();
+        props.piece.chunkedTrajs()[0].forEach(traj => {
+          if (traj.id !== 12) renderTraj(traj);
+        });
+      };
+      setXRangeInView();
     })
 
 
     return { 
       dynamicStyle,
       tranContainer,
-      tranSvg, 
+      tranSvg,
+      trajRenderStatus,
+      trajStartTimes,
+      trajEndTimes,
+      xRangeInView
     }
   }
 })

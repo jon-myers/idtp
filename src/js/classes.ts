@@ -833,6 +833,7 @@ class Trajectory {
   phraseIdx: number | undefined;
   names: string[];
   automation: Automation | undefined;
+  uniqueId: string | undefined;
 
   get freqs() {
     return this.pitches.map(p => p.frequency)
@@ -868,6 +869,7 @@ class Trajectory {
     endConsonantEngTrans = undefined,
     groupId = undefined,
     automation = undefined,
+    uniqueId = undefined
   }: {
     id?: number,
     pitches?: Pitch[],
@@ -893,7 +895,8 @@ class Trajectory {
     endConsonantIpa?: string,
     endConsonantEngTrans?: string,
     groupId?: string,
-    automation?: Automation
+    automation?: Automation,
+    uniqueId?: string
   } = {}) {
     this.names = [
       'Fixed',
@@ -1146,6 +1149,10 @@ class Trajectory {
     this.vIsos = ['a', 'ā', 'i', 'ī', 'u', 'ū', 'ē', 'ai', 'ō', 'au', '_'];
     this.vHindis = ['अ', 'आ', 'इ', 'ई', 'उ', 'ऊ', 'ए', 'ऐ', 'ओ', 'औ', '_'];
     this.vEngTrans = ['a', 'ā', 'i', 'ī', 'u', 'ū', 'ē', 'ai', 'ō', 'au', '_'];
+    this.uniqueId = uniqueId;
+    if (this.uniqueId === undefined) {
+      this.uniqueId = uuidv4();
+    }
 
     this.convertCIsoToHindiAndIpa()
 
@@ -1627,6 +1634,7 @@ class Trajectory {
       endConsonantEngTrans: this.endConsonantEngTrans,
       groupId: this.groupId,
       automation: this.automation,
+      uniqueId: this.uniqueId,
     }
   }
 
@@ -2535,6 +2543,35 @@ class Piece {
     const allTrajectories: Trajectory[] = [];
     this.phrases.forEach(p => allTrajectories.push(...p.trajectoryGrid[inst]));
     return allTrajectories
+  }
+
+  chunkedTrajs(inst = 0, duration = 30) {
+    // for all trajs in the piece, return an array of arrays of trajs, each
+    // containing trajs that overlap with a chunk of the given duration
+    const trajs = this.allTrajectories(inst);
+    const durs = trajs.map(t => t.durTot);
+    const starts = getStarts(durs);
+    const endTimes = getEnds(durs);
+    const chunks: Trajectory[][] = [];
+    for (let i = 0; i < this.durTot! - duration; i += duration) {
+      const f1 = (startTime: number) => {
+        return startTime >= i && startTime < i + duration
+      };
+      const f2 = (endTime: number) => {
+        return endTime > i && endTime <= i + duration
+      };
+      const f3 = (startTime: number, endTime: number) => {
+        return startTime < i && endTime > i + duration
+      };
+      const chunk = trajs.filter((_, j) => {
+        return f1(starts[j]) || f2(endTimes[j]) || f3(starts[j], endTimes[j])
+      });
+      chunks.push(chunk)
+
+
+    }
+    return chunks
+
   }
 
   mostRecentTraj(time: number) {

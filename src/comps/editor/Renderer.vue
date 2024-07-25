@@ -54,7 +54,11 @@
             ref='melographLayer'
             />
             <TranscriptionLayer
-              v-if='yScale !== null && xScale !== null'
+              v-if='
+                yScale !== null && 
+                xScale !== null && 
+                scrollingContainer !== null
+                '
               :width='scaledWidth'
               :height='scaledHeight'
               :showTranscription='showTranscription'
@@ -64,6 +68,11 @@
               :highOctOffset='highOctOffset'
               :piece='piece'
               :sargamLineColor='sargamLineColor'
+              :minDrawDur='minDrawDur'
+              :trajColor='trajColor'
+              :selTrajColor='selTrajColor'
+              :scrollX='scrollX'
+              :clientWidth='clientWidth'
             />
           />
         </div>
@@ -76,7 +85,8 @@
 import { 
   defineComponent, 
   ref, 
-  onMounted, 
+  onMounted,
+  onBeforeUnmount, 
   watch, 
   PropType,
   computed,
@@ -158,7 +168,15 @@ export default defineComponent({
     sargamLineColor: {
       type: String,
       required: true
-    }
+    },
+    trajColor: {
+      type: String,
+      required: true
+    },
+    selTrajColor: {
+      type: String,
+      required: true
+    },
   },
   setup(props, { emit }) {
     const layersContainer = ref<HTMLDivElement | null>(null);
@@ -171,6 +189,9 @@ export default defineComponent({
     const yScale = ref<d3.ScaleLinear<number, number> | null>(null);
     const yAxis = ref<HTMLDivElement | null>(null);
     const xAxis = ref<HTMLDivElement | null>(null);
+    const minDrawDur = ref(0.01);
+    const scrollX = ref(0); // between 0 and 1
+    const clientWidth = ref(0);
 
     let isXScrolling = false;
     let isYScrolling = false;
@@ -211,6 +232,12 @@ export default defineComponent({
         const logMin = logSaFreq - props.lowOctOffset;
         yScale.value.domain([logMax, logMin]);
       }
+    };
+
+    const updateClientWidth = () => {
+      if (scrollingContainer.value) {
+        clientWidth.value = scrollingContainer.value.clientWidth;
+      }
     }
 
     watch([() => props.lowOctOffset, () => props.highOctOffset], () => {
@@ -218,16 +245,20 @@ export default defineComponent({
     })
 
     onMounted(async () => {
+      updateClientWidth();
       scrollingContainer.value?.addEventListener('scroll', () => {
         if (!isXScrolling && !isYScrolling) {
           isXScrolling = true;
           isYScrolling = true;
-          xAxisContainer.value!.scrollLeft = scrollingContainer.value!.scrollLeft
-          yAxisContainer.value!.scrollTop = scrollingContainer.value!.scrollTop
+          xAxisContainer.value!.scrollLeft = scrollingContainer.value!.scrollLeft;
+          yAxisContainer.value!.scrollTop = scrollingContainer.value!.scrollTop;
           isXScrolling = false;
           isYScrolling = false
         };
-        
+        const scrollWidth = scrollingContainer.value!.scrollWidth;
+        const scrollLeft = scrollingContainer.value!.scrollLeft;
+        scrollX.value = scrollLeft / (scrollWidth - clientWidth.value);
+
       });
       xAxisContainer.value?.addEventListener('scroll', () => {
         if (!isXScrolling) {
@@ -243,6 +274,7 @@ export default defineComponent({
           isYScrolling = false;
         }
       });
+      window.addEventListener('resize', updateClientWidth);
       const durTot = props.piece.durTot;
       if (durTot === undefined) {
         throw new Error('durTot is undefined');
@@ -258,7 +290,11 @@ export default defineComponent({
       yScale.value = d3.scaleLinear()
         .domain([logMax, logMin])
         .range([0, props.scaledHeight]);
-    })
+    });
+
+    onBeforeUnmount(() => {
+      window.removeEventListener('resize', updateClientWidth);
+    });
     return {
       scrollingContainer,
       layersContainer,
@@ -275,9 +311,13 @@ export default defineComponent({
       zoomInX,
       yAxis,
       xAxis,
-      reScaleY
-    };
+      reScaleY,
+      minDrawDur,
+      scrollX,
+      clientWidth
+    }
   }
+  
 });
 </script>
 
