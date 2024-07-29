@@ -91,6 +91,7 @@ import {
   PropType,
   computed,
 } from 'vue';
+import { debounce } from 'lodash';
 
 import SpectrogramLayer from '@/comps/editor/renderer/SpectrogramLayer.vue';
 import XAxis from '@/comps/editor/renderer/XAxis.vue';
@@ -190,11 +191,19 @@ export default defineComponent({
     const yAxis = ref<HTMLDivElement | null>(null);
     const xAxis = ref<HTMLDivElement | null>(null);
     const minDrawDur = ref(0.01);
-    const scrollX = ref(0); // between 0 and 1
+    // const scrollX = ref(0); // between 0 and 1
+    const scrollX = computed(() => {
+      if (!scrollingContainer.value) return 0;
+      const scrollWidth = scrollingContainer.value.scrollWidth;
+      const scrollLeft = scrollingContainer.value.scrollLeft;
+      return scrollLeft / (scrollWidth - scrollingContainer.value.clientWidth);
+      
+    })
     const clientWidth = ref(0);
 
     let isXScrolling = false;
     let isYScrolling = false;
+    let rafId: number | null = null;
 
     const cssVars = computed(() => ({
       '--yAxWidth': `${props.yAxWidth}px`,
@@ -237,12 +246,16 @@ export default defineComponent({
     const updateClientWidth = () => {
       if (scrollingContainer.value) {
         clientWidth.value = scrollingContainer.value.clientWidth;
+        // scrollX.value = scrollingContainer.value.scrollLeft / 
+        //   (scrollingContainer.value.scrollWidth - scrollingContainer.value.clientWidth);
       }
+      yAxisContainer.value!.scrollTop = scrollingContainer.value!.scrollTop;
+      xAxisContainer.value!.scrollLeft = scrollingContainer.value!.scrollLeft;
     }
 
     watch([() => props.lowOctOffset, () => props.highOctOffset], () => {
       reScaleY();
-    })
+    });
 
     onMounted(async () => {
       updateClientWidth();
@@ -257,7 +270,8 @@ export default defineComponent({
         };
         const scrollWidth = scrollingContainer.value!.scrollWidth;
         const scrollLeft = scrollingContainer.value!.scrollLeft;
-        scrollX.value = scrollLeft / (scrollWidth - clientWidth.value);
+        // scrollX.value = scrollLeft / 
+        //   (scrollWidth - scrollingContainer.value!.clientWidth);
 
       });
       xAxisContainer.value?.addEventListener('scroll', () => {

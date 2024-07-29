@@ -50,7 +50,6 @@ export default defineComponent({
           const startX = maxCanvasWidth * idx;
           const width = Math.min(maxCanvasWidth, props.width - startX);
           const renderCall = { canvasIdx: idx, startX, width } as RenderCall;
-          // emit('render', renderCall)
           worker!.postMessage({
             msg: 'requestRenderData',
             payload: renderCall

@@ -296,7 +296,6 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
       } catch (err) {
         console.error(err);
       }
-      console.log(extDataShape);
       if (extData === undefined || extDataShape === undefined) {
         throw new Error('Data and shape must be provided');
       }

@@ -39,6 +39,9 @@ const linSpace = (startVal: number, stopVal: number, cardinality: number) => {
   return arr;
 };
 
+const escCssClass = (str: string) => {
+  return str.replace(/([!"#$%&'()*+,.\/:;<=>?@[\\\]^`{|}~])/g, '\\$1');
+}
 
 
-export { getContrastingTextColor, displayTime, closeTo, linSpace }
+export { getContrastingTextColor, displayTime, closeTo, linSpace, escCssClass };

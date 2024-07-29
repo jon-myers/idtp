@@ -1,6 +1,7 @@
 <template>
   <div class='tranContainer' ref='tranContainer' :style='dynamicStyle'>
-    <svg ref='tranSvg'></svg>
+    <svg ref='tranSvg' class='tranSvg'></svg>
+    <div class='emptyOverlay' ref='emptyOverlay'></div>
   </div>
 </template>
 
@@ -12,10 +13,11 @@ import {
   onMounted, 
   watch, 
   computed,
-  PropType
+  PropType,
+  nextTick
 } from 'vue';
 import * as d3 from 'd3';
-import { linSpace } from '@/ts/utils.ts';
+import { linSpace, escCssClass } from '@/ts/utils.ts';
 
 import { Piece, Trajectory } from '@/js/classes.ts';
 
@@ -83,7 +85,35 @@ export default defineComponent({
     const tranContainer = ref<HTMLDivElement | null>(null);
     const tranSvg = ref<SVGSVGElement | null>(null);
     const tracks: d3.Selection<SVGGElement, unknown, null, undefined>[] = [];
-    const xRangeInView = ref<[number, number]>([0, 0]);
+    const emptyOverlay = ref<HTMLDivElement | null>(null);
+    const emptyDivs = ref<HTMLDivElement[]>([]);
+    const emptyDivIdxMap = new Map<HTMLDivElement, number>();
+    const maxEmptyDivWidth = props.clientWidth;
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+
+        const idx = emptyDivIdxMap.get(entry.target as HTMLDivElement)!;
+        if (entry.isIntersecting) {
+          const inst = 0;
+          props.piece.chunkedTrajs(inst, chunkDur.value)[idx].forEach(traj => {
+            if (traj.id !== 12) renderTraj(traj);
+          });
+          observer.unobserve(entry.target);
+        }
+      })
+    }, {
+      root: emptyOverlay.value,
+      rootMargin: '0px',
+      threshold: 0.0
+    });
+
+    const trajChunks = computed(() => {
+      const out = [];
+      for (let i = 0; i < props.piece.instrumentation.length; i++) {
+        out.push(props.piece.chunkedTrajs(i, chunkDur.value));
+      }
+      return out;
+    })
 
     const resetTrajRenderStatus = () => {
       for (let i = 0; i < props.piece.instrumentation.length; i++) {
@@ -168,6 +198,7 @@ export default defineComponent({
         d3.select(tranSvg.value)
           .attr('height', props.height)
         updateSargamLineSpacing();
+        resetTranscription();
       }
     });
     watch(() => props.width, () => {
@@ -175,21 +206,24 @@ export default defineComponent({
         d3.select(tranSvg.value)
           .attr('width', props.width)
         updateSargamLineWidth();
+        resetTranscription();
       }
     });
-    watch(() => props.scrollX, () => {
-      setXRangeInView()
-    });
-    watch(() => props.clientWidth, () => {
-      setXRangeInView()
+    watch(() => props.trajColor, () => {
+      d3.selectAll('.traj')
+        .attr('stroke', props.trajColor)
     })
 
-    const setXRangeInView = () => {
-      const viewTimeRange = props.xScale.invert(props.clientWidth);
-      const leftTimeMax = props.piece.durTot! - viewTimeRange;
-      const leftTime = props.scrollX * leftTimeMax;
-      const rightTime = leftTime + viewTimeRange;
-      xRangeInView.value = [leftTime, rightTime];
+    const clearTranscription = () => {
+      d3.selectAll('.traj').remove();
+    };
+
+    const resetTranscription = () => {
+      console.log('resetting transcription');
+      clearTranscription();
+      resetTrajRenderStatus();
+      resetEmptyObserverDivs();
+      resetObserver();
     }
 
     const initializeTracks = () => {
@@ -225,20 +259,162 @@ export default defineComponent({
       .curve(d3.curveMonotoneX);
 
     const renderTraj = (traj: Trajectory, track: number = 0) => {
+      const renderObj = trajRenderStatus[track].find(obj => { 
+        return obj.uniqueId === traj.uniqueId
+      });
+      if (renderObj === undefined) {
+        throw new Error('Trajectory not found in render status array');
+      }
+      if (renderObj.renderStatus === true) return;
+      if (traj.id !== 12) {
+        renderMelodicCurve(traj, track);
+        const inst = props.piece.instrumentation[track];
+        if (inst === 'Sitar') {
+          renderPlucks(traj, track);
+          renderDampener(traj, track);
+        }
+      };
+      renderObj.renderStatus = true;
+    };
+
+    const renderMelodicCurve = (traj: Trajectory, track: number = 0) => {
       const trajIdx = props.piece.allTrajectories(track).indexOf(traj);
       const trajStart = trajStartTimes.value[track][trajIdx];
       const g = tracks[track];
       const trajData = makeTrajData(traj, trajStart);
       g.append('path')
-        .datum(trajData)
-        .attr('d', trajCurve)
-        .attr('fill', 'none')
-        .attr('stroke', props.trajColor)
-        .attr('stroke-width', '2px')
-        .attr('stroke-linejoin', 'round')
-        .attr('stroke-linecap', 'round')
-        .attr('class', `traj ${traj.uniqueId}`)
+          .datum(trajData)
+          .attr('d', trajCurve)
+          .attr('fill', 'none')
+          .attr('stroke', props.trajColor)
+          .attr('stroke-width', '3px')
+          .attr('stroke-linejoin', 'round')
+          .attr('stroke-linecap', 'round')
+          .attr('class', `traj track${track} uId${traj.uniqueId!}`)
+        g.append('path')
+          .datum(trajData)
+          .attr('d', trajCurve)
+          .attr('fill', 'none')
+          .attr('stroke', 'black')
+          .attr('stroke-width', '10px')
+          .attr('stroke-linejoin', 'round')
+          .attr('stroke-linecap', 'round')
+          .attr('class', `trajshadow track${track} uId${traj.uniqueId!}`)
+          .style('opacity', '0')
+          .on('mouseover', () => handleTrajMouseOver(traj))
+          .on('mouseout', () => handleTrajMouseOut(traj, track))
+    }
+
+    const renderPlucks = (traj: Trajectory, track: number) => {
+      const trajIdx = props.piece.allTrajectories(track).indexOf(traj);
+      const trajStart = trajStartTimes.value[track][trajIdx];
+      const g = tracks[track];
+      const size = 20;
+      const offset = (size ** 0.5) / 2;
+      const keys = Object.keys(traj.articulations)
+        .filter(key => traj.articulations[key].name === 'pluck')
+      if (keys.length > 0) {
+        const pluckData = keys.map(p => {
+          const logY = traj.compute(Number(p), true);
+          const y = props.yScale(logY);
+          const x = props.xScale(trajStart + Number(p));
+          return { x, y }
+        });
+        const sym = d3.symbol()
+          .size(size)
+          .type(d3.symbolTriangle);
+        g.append('path')
+          .data(pluckData)
+          .attr('d', sym)
+          .attr('stroke-width', 1.5)
+          .attr('stroke', props.trajColor)
+          .attr('fill', props.trajColor)
+          .attr('transform', d => `translate(${d.x + offset}, ${d.y}) rotate(90)`)
+          .classed(`traj pluck track${track} uId${traj.uniqueId!}`, true)
+        
+        g.append('path')
+          .data(pluckData)
+          .attr('d', sym)
+          .attr('stroke-width', 3.5)
+          .attr('stroke', 'black')
+          .attr('transform', d => `translate(${d.x + offset}, ${d.y}) rotate(90)`)
+          .style('opacity', '0')
+          .classed(`pluckshadow track${track} uId${traj.uniqueId!}`, true)
+          .on('mouseover', () => handleTrajMouseOver(traj))
+          .on('mouseout', () => handleTrajMouseOut(traj, track))
+      }
     };
+
+    const renderDampener = (traj: Trajectory, track: number) => {
+      const trajIdx = props.piece.allTrajectories(track).indexOf(traj);
+      const trajStart = trajStartTimes.value[track][trajIdx];
+      const keys = Object.keys(traj.articulations)
+        .filter(key => traj.articulations[key].name === 'dampen')
+      keys.forEach(() => {
+        const obj = {
+          x: trajStart + traj.durTot,
+          y: traj.compute(1, true)
+        }
+        const g = tracks[track];
+        g.append('path')
+          .data([obj])
+          .attr('d', d3.line()([[-2, -8], [0, -8], [0, 8], [-2, 8]]))
+          .attr('stroke', props.trajColor)
+          .attr('stroke-width', '3px')
+          .attr('stroke-linejoin', 'round')
+          .attr('stroke-linecap', 'round')
+          .attr('fill', 'none')
+          .attr('transform', d => {
+            return `translate(${props.xScale(d.x)}, ${props.yScale(d.y)})`
+          })
+          .classed(`traj dampen track${track} uId${traj.uniqueId!}`, true)
+        g.append('path')
+          .data([obj])
+          .attr('d', d3.line()([[-2, -8], [0, -8], [0, 8], [-2, 8]]))
+          .attr('stroke', 'black')
+          .attr('stroke-width', '5px')
+          .attr('stroke-linejoin', 'round')
+          .attr('stroke-linecap', 'round')
+          .attr('fill', 'none')
+          .attr('transform', d => {
+            return `translate(${props.xScale(d.x)}, ${props.yScale(d.y)})`
+          })
+          .style('opacity', '0')
+          .classed(`dampenshadow track${track} uId${traj.uniqueId!}`, true)
+          .on('mouseover', () => handleTrajMouseOver(traj))
+          .on('mouseout', () => handleTrajMouseOut(traj, track))
+      })
+
+    };
+
+    const handleTrajMouseOver = (traj: Trajectory) => {
+      const selector = `.traj.uId${traj.uniqueId!}`
+      d3.selectAll(selector)
+        .attr('stroke', props.selTrajColor)
+      d3.selectAll(selector + '.pluck')
+        .attr('fill', props.selTrajColor)
+    }
+
+    const handleTrajMouseOut = (traj: Trajectory, track: number) => {
+      const selector = `.traj.uId${traj.uniqueId!}`
+      const renderObj = trajRenderStatus[track].find(obj => {
+        return obj.uniqueId === traj.uniqueId
+      });
+      if (renderObj!.selectedStatus === false) {
+        d3.selectAll(selector)
+          .attr('stroke', props.trajColor)
+        d3.selectAll(selector + '.pluck')
+          .attr('fill', props.trajColor)
+      }
+    }
+
+    const renderChunk = (inst: number, idx: number) => {
+      const trackChunks = trajChunks.value[inst];
+      const chunk = trackChunks[idx];
+      chunk.forEach(traj => {
+        renderTraj(traj, inst);
+      })
+    }
 
     const updateSargamLineSpacing = () => {
       if (tranSvg.value) {
@@ -289,6 +465,38 @@ export default defineComponent({
         .attr('stroke-width', (d, i) => strokeWidth(d, i))
     }
 
+    const resetEmptyObserverDivs = () => {
+      observer.disconnect();
+      emptyDivs.value.forEach(div => {
+        emptyOverlay.value?.removeChild(div);
+      });
+      emptyDivs.value = [];
+      emptyDivIdxMap.clear();
+      const numDivs = Math.ceil(props.width / maxEmptyDivWidth);
+      for (let i = 0; i < numDivs; i++) {
+        const div = document.createElement('div');
+        const width = Math.min(maxEmptyDivWidth, 
+          props.width - i * maxEmptyDivWidth);
+        div.style.width = `${width}px`;
+        div.style.height = `${props.height}px`;
+        emptyOverlay.value?.appendChild(div);
+        emptyDivs.value.push(div);
+        emptyDivIdxMap.set(div, i);
+        observer.observe(div);
+      }
+    };
+
+    const resetObserver = () => {
+      observer.disconnect();
+      emptyDivs.value.forEach(div => {
+        observer.observe(div);
+      });
+    }
+
+    const chunkDur = computed(() => {
+      return props.xScale.invert(props.clientWidth)
+    })
+
     onMounted(() => {
       if (tranSvg.value) {
         const svg = d3.select(tranSvg.value);
@@ -297,11 +505,8 @@ export default defineComponent({
           .attr('height', props.height)
         addSargamLines(svg);
         initializeTracks();
-        props.piece.chunkedTrajs()[0].forEach(traj => {
-          if (traj.id !== 12) renderTraj(traj);
-        });
+        resetEmptyObserverDivs();
       };
-      setXRangeInView();
     })
 
 
@@ -312,7 +517,11 @@ export default defineComponent({
       trajRenderStatus,
       trajStartTimes,
       trajEndTimes,
-      xRangeInView
+      chunkDur,
+      resetTranscription,
+      emptyOverlay,
+      emptyDivs,
+      emptyDivIdxMap
     }
   }
 })
@@ -320,6 +529,7 @@ export default defineComponent({
 
 <style scopred>
 .tranContainer {
+  position: relative;
   opacity: var(--opacity);
   display: flex;
   flex-direction: row;
@@ -327,4 +537,18 @@ export default defineComponent({
   width: var(--width);
   height: var(--height);
 }
+
+.emptyOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  width: var(--width);
+  height: var(--height);
+  display: flex;
+  flex-direction: row;
+}
+
 </style>
