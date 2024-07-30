@@ -85,6 +85,10 @@ export default defineComponent({
       type: Boolean,
       required: true
     },
+    showSargamLines: {
+      type: Boolean,
+      required: true
+    },
   },
   setup(props) {
     const tranContainer = ref<HTMLDivElement | null>(null);
@@ -226,6 +230,14 @@ export default defineComponent({
       d3.selectAll('.sargamG')
         .style('opacity', Number(props.showSargam))
     });
+    watch(() => props.showTranscription, () => {
+      d3.selectAll('.traj')
+        .style('opacity', Number(props.showTranscription))
+    });
+    watch(() => props.showSargamLines, () => {
+      d3.selectAll('.sargamLines')
+        .style('opacity', Number(props.showSargamLines))
+    })
 
     const addSargamG = () => {
       if (tranSvg.value) {
@@ -538,16 +550,31 @@ export default defineComponent({
       const strokeWidth = (s: number, idx: number) => {
         return saFilter(s) || paFilter(idx) ? 2 : 1
       }
-      svg.selectAll('line')
-        .data(sargamVals.value)
-        .enter()
-        .append('line')
-        .attr('x1', 0)
-        .attr('x2', props.width)
-        .attr('y1', d => props.yScale(d))
-        .attr('y2', d => props.yScale(d))
-        .attr('stroke', 'grey')
-        .attr('stroke-width', (d, i) => strokeWidth(d, i))
+      const sargamLinesG = svg.append('g')
+        .attr('class', 'sargamLines')
+        .style('opacity', Number(props.showSargamLines))
+
+      sargamVals.value.forEach((s, idx) => {
+        sargamLinesG.append('line')
+          .attr('x1', 0)
+          .attr('x2', props.width)
+          .attr('y1', props.yScale(s))
+          .attr('y2', props.yScale(s))
+          .attr('stroke', props.sargamLineColor)
+          .attr('stroke-width', strokeWidth(s, idx))
+      })
+
+      
+      // svg.selectAll('line')
+      //   .data(sargamVals.value)
+      //   .enter()
+      //   .append('line')
+      //   .attr('x1', 0)
+      //   .attr('x2', props.width)
+      //   .attr('y1', d => props.yScale(d))
+      //   .attr('y2', d => props.yScale(d))
+      //   .attr('stroke', 'grey')
+      //   .attr('stroke-width', (d, i) => strokeWidth(d, i))
     }
 
     const resetEmptyObserverDivs = () => {
@@ -616,7 +643,7 @@ export default defineComponent({
 <style scopred>
 .tranContainer {
   position: relative;
-  opacity: var(--opacity);
+  /* opacity: var(--opacity); */
   display: flex;
   flex-direction: row;
   overflow-x: auto;

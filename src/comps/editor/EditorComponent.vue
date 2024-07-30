@@ -45,6 +45,7 @@
       :trajColor='trajColor'
       :selTrajColor='selTrajColor'
       :showSargam='showSargam'
+      :showSargamLines='showSargamLines'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
@@ -77,6 +78,13 @@
           <input 
             type='checkbox' 
             v-model='showSargam' 
+            @click='preventSpaceToggle'>
+        </div>
+        <div class='cbRow' v-if='visibilityTab'>
+          <label>Sargam Lines</label>
+          <input 
+            type='checkbox' 
+            v-model='showSargamLines' 
             @click='preventSpaceToggle'>
         </div>
         <div v-if='!vocal && visibilityTab' class='cbRow' >
@@ -592,6 +600,7 @@ type EditorDataType = {
   maxPitch: Pitch,
   minPitch: Pitch,
   sargamLineColor: string,
+  showSargamLines: boolean,
 }
 
 export { findClosestStartTime }
@@ -763,7 +772,7 @@ export default defineComponent({
       maxPitch: new Pitch({ swara: 'Sa', oct: 2 }),
       minPitch: new Pitch({ swara: 'Sa', oct: -1 }),
       sargamLineColor: '#808080', // grey
-      
+      showSargamLines: true,
     }
   },
   components: {

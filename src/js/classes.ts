@@ -2564,7 +2564,7 @@ class Piece {
     const starts = getStarts(durs);
     const endTimes = getEnds(durs);
     const chunks: Trajectory[][] = [];
-    for (let i = 0; i < this.durTot! - duration; i += duration) {
+    for (let i = 0; i < this.durTot!; i += duration) {
       const f1 = (startTime: number) => {
         return startTime >= i && startTime < i + duration
       };
@@ -2579,6 +2579,9 @@ class Piece {
       });
       chunks.push(chunk)
     }
+    const lastChunk = trajs.filter((_, j) => {
+      return starts[j] >= this.durTot! - duration
+    });
     return chunks
   }
 
@@ -2657,7 +2660,7 @@ class Piece {
   chunkedDisplaySargam(inst = 0, duration = 30) {
     const displaySargam = this.allDisplaySargam(inst);
     const chunks: SargamDisplayType[][] = [];
-    for (let i = 0; i < this.durTot! - duration; i += duration) {
+    for (let i = 0; i < this.durTot!; i += duration) {
       const chunk = displaySargam.filter(s => {
         return s.time >= i && s.time < i + duration
       });

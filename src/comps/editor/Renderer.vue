@@ -74,6 +74,7 @@
               :scrollX='scrollX'
               :clientWidth='clientWidth'
               :showSargam='showSargam'
+              :showSargamLines='showSargamLines'
             />
           />
         </div>
@@ -180,6 +181,10 @@ export default defineComponent({
       required: true
     },
     showSargam: {
+      type: Boolean,
+      required: true
+    },
+    showSargamLines: {
       type: Boolean,
       required: true
     }
