@@ -20,6 +20,7 @@ import * as d3 from 'd3';
 import { linSpace, escCssClass } from '@/ts/utils.ts';
 
 import { Piece, Trajectory } from '@/js/classes.ts';
+import { SargamDisplayType } from '@/ts/types.ts';
 
 export default defineComponent({
   name: 'TranscriptionLayer',
@@ -79,7 +80,11 @@ export default defineComponent({
     clientWidth: {
       type: Number,
       required: true
-    }
+    },
+    showSargam: {
+      type: Boolean,
+      required: true
+    },
   },
   setup(props) {
     const tranContainer = ref<HTMLDivElement | null>(null);
@@ -95,8 +100,12 @@ export default defineComponent({
         const idx = emptyDivIdxMap.get(entry.target as HTMLDivElement)!;
         if (entry.isIntersecting) {
           const inst = 0;
-          props.piece.chunkedTrajs(inst, chunkDur.value)[idx].forEach(traj => {
+          const dur = chunkDur.value;
+          props.piece.chunkedTrajs(inst, dur)[idx].forEach(traj => {
             if (traj.id !== 12) renderTraj(traj);
+          });
+          props.piece.chunkedDisplaySargam(inst, dur)[idx].forEach(s => {
+            renderSargam(s);
           });
           observer.unobserve(entry.target);
         }
@@ -212,10 +221,26 @@ export default defineComponent({
     watch(() => props.trajColor, () => {
       d3.selectAll('.traj')
         .attr('stroke', props.trajColor)
-    })
+    });
+    watch(() => props.showSargam, () => {
+      d3.selectAll('.sargamG')
+        .style('opacity', Number(props.showSargam))
+    });
+
+    const addSargamG = () => {
+      if (tranSvg.value) {
+        const svg = d3.select(tranSvg.value);
+        const g = svg.append('g')
+          .attr('class', 'sargamG')
+          .style('opacity', Number(props.showSargam))
+        return g;
+      }
+    }
 
     const clearTranscription = () => {
       d3.selectAll('.traj').remove();
+      d3.selectAll('.trajShadow').remove();
+      d3.selectAll('.sargamG').remove();
     };
 
     const resetTranscription = () => {
@@ -224,6 +249,7 @@ export default defineComponent({
       resetTrajRenderStatus();
       resetEmptyObserverDivs();
       resetObserver();
+      addSargamG();
     }
 
     const initializeTracks = () => {
@@ -299,10 +325,11 @@ export default defineComponent({
           .attr('stroke-width', '10px')
           .attr('stroke-linejoin', 'round')
           .attr('stroke-linecap', 'round')
-          .attr('class', `trajshadow track${track} uId${traj.uniqueId!}`)
+          .attr('class', `trajShadow track${track} uId${traj.uniqueId!}`)
           .style('opacity', '0')
           .on('mouseover', () => handleTrajMouseOver(traj))
           .on('mouseout', () => handleTrajMouseOut(traj, track))
+          .on('click', () => handleClickTraj(traj, track))
     }
 
     const renderPlucks = (traj: Trajectory, track: number) => {
@@ -342,6 +369,7 @@ export default defineComponent({
           .classed(`pluckshadow track${track} uId${traj.uniqueId!}`, true)
           .on('mouseover', () => handleTrajMouseOver(traj))
           .on('mouseout', () => handleTrajMouseOut(traj, track))
+          .on('click', () => handleClickTraj(traj, track))
       }
     };
 
@@ -383,9 +411,66 @@ export default defineComponent({
           .classed(`dampenshadow track${track} uId${traj.uniqueId!}`, true)
           .on('mouseover', () => handleTrajMouseOver(traj))
           .on('mouseout', () => handleTrajMouseOut(traj, track))
+          .on('click', () => handleClickTraj(traj, track))
       })
-
     };
+
+    const renderSargam = (s: SargamDisplayType) => {
+      const svg = d3.select(tranSvg.value);
+      const y = props.yScale(s.logFreq);
+      const x = props.xScale(s.time);
+      const positions = [
+          { x: 0, y: 15 },
+          { x: 0, y: -15 },
+          { x: -5, y: -15 },
+          { x: -5, y: 15 },
+          { x: 5, y: -15 },
+          { x: 5, y: 15 }
+        ]
+      const g = svg.select('.sargamG');
+      g.append('text')
+        .text(s.sargam)
+        .attr('x', x + positions[s.pos!].x)
+        .attr('y', y + positions[s.pos!].y)
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'middle')
+        .attr('font-size', 14)
+        .attr('fill', 'black')
+        .attr('class', 'sargamLabel')
+    }
+
+    const handleClickTraj = (traj: Trajectory, track: number) => {
+      console.log('clicked traj');
+      const selector = `.traj.uId${traj.uniqueId!}`;
+      const renderObj = trajRenderStatus[track].find(obj => {
+        return obj.uniqueId === traj.uniqueId
+      });
+      if (renderObj!.selectedStatus === false) {
+        d3.selectAll(selector)
+          .attr('stroke', props.selTrajColor)
+        d3.selectAll(selector + '.pluck')
+          .attr('fill', props.selTrajColor)
+        
+        const currentlySelected = trajRenderStatus[track].filter(obj => {
+          return obj.selectedStatus === true
+        });
+        currentlySelected.forEach(obj => {
+          const selSelector = `.traj.uId${obj.uniqueId}`;
+          d3.selectAll(selSelector)
+            .attr('stroke', props.trajColor)
+          d3.selectAll(selSelector + '.pluck')
+            .attr('fill', props.trajColor)
+          obj.selectedStatus = false;
+        });
+        renderObj!.selectedStatus = true;
+      } else {
+        d3.selectAll(selector)
+          .attr('stroke', props.trajColor)
+        d3.selectAll(selector + '.pluck')
+          .attr('fill', props.trajColor)
+        renderObj!.selectedStatus = false;
+      }
+    }
 
     const handleTrajMouseOver = (traj: Trajectory) => {
       const selector = `.traj.uId${traj.uniqueId!}`
@@ -506,6 +591,7 @@ export default defineComponent({
         addSargamLines(svg);
         initializeTracks();
         resetEmptyObserverDivs();
+        addSargamG();
       };
     })
 

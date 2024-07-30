@@ -44,6 +44,7 @@
       :sargamLineColor='sargamLineColor'
       :trajColor='trajColor'
       :selTrajColor='selTrajColor'
+      :showSargam='showSargam'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'

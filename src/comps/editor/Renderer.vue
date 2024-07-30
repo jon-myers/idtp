@@ -73,6 +73,7 @@
               :selTrajColor='selTrajColor'
               :scrollX='scrollX'
               :clientWidth='clientWidth'
+              :showSargam='showSargam'
             />
           />
         </div>
@@ -178,6 +179,10 @@ export default defineComponent({
       type: String,
       required: true
     },
+    showSargam: {
+      type: Boolean,
+      required: true
+    }
   },
   setup(props, { emit }) {
     const layersContainer = ref<HTMLDivElement | null>(null);

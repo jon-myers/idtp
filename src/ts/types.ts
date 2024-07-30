@@ -757,6 +757,15 @@ type MelographData = {
   time_increment: number,
 }
 
+type SargamDisplayType = { 
+  sargam: string, 
+  time: number, 
+  logFreq: number,
+  uId: string,
+  track: number,
+  pos?: number,
+};
+
 export type { 
   CollectionType, 
   UserType, 
@@ -819,5 +828,6 @@ export type {
   ProcessMessage,
   WorkerMessage,
   MelographData,
+  SargamDisplayType,
 };
 

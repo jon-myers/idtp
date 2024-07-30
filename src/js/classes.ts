@@ -10,6 +10,7 @@ import {
   OutputType,
   StrokeNicknameType,
   ArtNameType,
+  SargamDisplayType
 } from '@/ts/types.ts';
 import { closeTo } from '@/ts/utils.ts';
 
@@ -2545,6 +2546,16 @@ class Piece {
     return allTrajectories
   }
 
+  trajStartTimes(inst = 0) {
+    const trajs = this.allTrajectories(inst);
+    const durs = trajs.map(t => t.durTot);
+    return durs.reduce((acc, dur) => {
+      acc.push(acc[acc.length - 1] + dur);
+      return acc
+    }, [0]);
+  }
+
+
   chunkedTrajs(inst = 0, duration = 30) {
     // for all trajs in the piece, return an array of arrays of trajs, each
     // containing trajs that overlap with a chunk of the given duration
@@ -2567,11 +2578,92 @@ class Piece {
         return f1(starts[j]) || f2(endTimes[j]) || f3(starts[j], endTimes[j])
       });
       chunks.push(chunk)
-
-
     }
     return chunks
+  }
 
+  allDisplaySargam(inst = 0){
+    const trajs = this.allTrajectories(inst);
+    const starts = this.trajStartTimes(inst);
+    const sargams: SargamDisplayType[] = [];
+    let lastPitch: { logFreq?: number, time?: number } = {
+      logFreq: undefined,
+      time: undefined
+    };
+    trajs.forEach((t, i) => {
+      if (t.id !== 12) {
+        const subDurs = t.durArray!.map(d => d * t.durTot);
+        let timePts = getStarts(subDurs);
+        timePts.push(t.durTot);
+        timePts = timePts.map(d => d + starts[i]);
+        timePts.forEach((tp, tpIdx) => {
+          const logFreq = t.logFreqs[tpIdx] ? 
+            t.logFreqs[tpIdx] : 
+            t.logFreqs[tpIdx - 1];
+          const cLF = lastPitch.logFreq === logFreq;
+          const cT = lastPitch.time === tp;
+          if (!(cLF || (cLF && cT))) {
+            sargams.push({
+              logFreq: logFreq!,
+              sargam: t.pitches[tpIdx].sargamLetter,
+              time: tp,
+              uId: t.uniqueId!,
+              track: inst
+            })
+          };
+          lastPitch = {
+            logFreq: logFreq,
+            time: tp
+          }
+        })
+      }
+    });
+    const phraseDivs = (this.phrases.map(p => p.startTime! + p.durTot!));
+    const pwr = 10 ** 5;
+    const roundedPDS = phraseDivs.map(pd => Math.round(pd * pwr) / pwr);
+    
+    sargams.forEach((s, sIdx) => {
+      let pos: number = 1;
+      let lastHigher = true;
+      let nextHigher = true;
+      if (sIdx !== 0 && sIdx !== sargams.length - 1) {
+        const lastS = sargams[sIdx - 1];
+        const nextS = sargams[sIdx + 1];
+        lastHigher = lastS.logFreq! > s.logFreq!;
+        nextHigher = nextS.logFreq! > s.logFreq!;
+      }
+      if (lastHigher && nextHigher) {
+        pos = 0
+      } else if (!lastHigher && !nextHigher) {
+        pos = 1
+      } else if (lastHigher && !nextHigher) {
+        pos = 3
+      } else if (!lastHigher && nextHigher) {
+        pos = 2
+      }
+      if (roundedPDS.includes(Math.round(s.time * pwr) / pwr)) {
+        if (nextHigher) {
+          pos = 5
+        } else {
+          pos = 4
+        }
+      }
+      s.pos = pos
+    })
+
+    return sargams
+  }
+
+  chunkedDisplaySargam(inst = 0, duration = 30) {
+    const displaySargam = this.allDisplaySargam(inst);
+    const chunks: SargamDisplayType[][] = [];
+    for (let i = 0; i < this.durTot! - duration; i += duration) {
+      const chunk = displaySargam.filter(s => {
+        return s.time >= i && s.time < i + duration
+      });
+      chunks.push(chunk)
+    }
+    return chunks
   }
 
   mostRecentTraj(time: number) {
