@@ -20,7 +20,7 @@ import * as d3 from 'd3';
 import { linSpace, escCssClass } from '@/ts/utils.ts';
 
 import { Piece, Trajectory } from '@/js/classes.ts';
-import { SargamDisplayType } from '@/ts/types.ts';
+import { SargamDisplayType, VowelDisplayType } from '@/ts/types.ts';
 
 export default defineComponent({
   name: 'TranscriptionLayer',
@@ -89,6 +89,14 @@ export default defineComponent({
       type: Boolean,
       required: true
     },
+    showPhonemes: {
+      type: Boolean,
+      required: true
+    },
+    phonemeRepresentation: {
+      type: String,
+      required: true
+    },
   },
   setup(props) {
     const tranContainer = ref<HTMLDivElement | null>(null);
@@ -100,7 +108,6 @@ export default defineComponent({
     const maxEmptyDivWidth = props.clientWidth;
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-
         const idx = emptyDivIdxMap.get(entry.target as HTMLDivElement)!;
         if (entry.isIntersecting) {
           const inst = 0;
@@ -111,6 +118,12 @@ export default defineComponent({
           props.piece.chunkedDisplaySargam(inst, dur)[idx].forEach(s => {
             renderSargam(s);
           });
+          const insts = ['Vocal (M)', 'Vocal (F)'];
+          if (insts.includes(props.piece.instrumentation[inst])) {
+            props.piece.chunkedDisplayVowels(inst, dur)[idx].forEach(v => {
+              renderVowel(v);
+            })
+          }
           observer.unobserve(entry.target);
         }
       })
@@ -237,6 +250,22 @@ export default defineComponent({
     watch(() => props.showSargamLines, () => {
       d3.selectAll('.sargamLines')
         .style('opacity', Number(props.showSargamLines))
+    });
+    watch(() => props.showPhonemes, () => {
+      d3.selectAll('.enunciationG')
+        .style('opacity', Number(props.showPhonemes))
+    });
+    watch(() => props.phonemeRepresentation, () => {
+      const opacities = ['IPA', 'Devanagari', 'English'].map(c => {
+        return c === props.phonemeRepresentation ? 1 : 0;
+      });
+      console.log(opacities);
+      d3.selectAll('.IPA')
+        .attr('opacity', opacities[0])
+      d3.selectAll('.Devanagari')
+        .attr('opacity', opacities[1])
+      d3.selectAll('.Latin')
+        .attr('opacity', opacities[2])
     })
 
     const addSargamG = () => {
@@ -249,25 +278,35 @@ export default defineComponent({
       }
     }
 
+    const addPhonemeG = () => {
+      if (tranSvg.value) {
+        const svg = d3.select(tranSvg.value);
+        const g = svg.append('g')
+          .attr('class', 'enunciationG')
+          .style('opacity', Number(props.showPhonemes))
+        return g;
+      }
+    }
+
     const clearTranscription = () => {
       d3.selectAll('.traj').remove();
       d3.selectAll('.trajShadow').remove();
       d3.selectAll('.sargamG').remove();
+      d3.selectAll('.enunciationG').remove();
     };
 
     const resetTranscription = () => {
-      console.log('resetting transcription');
       clearTranscription();
       resetTrajRenderStatus();
       resetEmptyObserverDivs();
       resetObserver();
       addSargamG();
+      addPhonemeG();
     }
 
     const initializeTracks = () => {
       // for the number of instrumental tracks, have a different <g> element
       // for each track. I'd like to store these g's in an array.
-
       if (tranSvg.value) {
         const svg = d3.select(tranSvg.value);
         for (let i = 0; i < props.piece.instrumentation.length; i++) {
@@ -448,8 +487,55 @@ export default defineComponent({
         .attr('dominant-baseline', 'middle')
         .attr('font-size', 14)
         .attr('fill', 'black')
-        .attr('class', 'sargamLabel')
-    }
+        .attr('class', `sargamLabel uId${s.uId}`)
+    };
+
+    const renderVowel = (v: VowelDisplayType) => {
+      const svg = d3.select(tranSvg.value);
+      const verticalOffset = 14;
+      const y = props.yScale(v.logFreq) - verticalOffset;
+      const x = props.xScale(v.time);
+      const g = svg.select('.enunciationG');
+      let text = '';
+      const choices = ['IPA', 'Devanagari', 'English'];
+      const opacities = choices.map(c => {
+        return c === props.phonemeRepresentation ? 1 : 0;
+      });
+      
+      g.append('text')
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'middle')
+        .attr('font-size', 15)
+        .attr('stroke', 'black')
+        .attr('class', `vowelLabel IPA uId${v.uId}`)
+        .attr('opacity', opacities[0])
+        .attr('transform', d => `translate(${x}, ${y})` )
+        .text(v.ipaText)
+      
+      g.append('text')
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'middle')
+        .attr('font-size', 15)
+        .attr('stroke', 'black')
+        .attr('class', `vowelLabel Devanagari uId${v.uId}`)
+        .attr('opacity', opacities[1])
+        .attr('transform', d => `translate(${x}, ${y})` )
+        .text(v.devanagariText)
+
+      g.append('text')
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'middle')
+        .attr('font-size', 15)
+        .attr('stroke', 'black')
+        .attr('class', `vowelLabel Latin uId${v.uId}`)
+        .attr('opacity', opacities[2])
+        .attr('transform', d => `translate(${x}, ${y})` )
+        .text(v.englishText)
+      
+      
+    };
+
+
 
     const handleClickTraj = (traj: Trajectory, track: number) => {
       console.log('clicked traj');
@@ -563,18 +649,6 @@ export default defineComponent({
           .attr('stroke', props.sargamLineColor)
           .attr('stroke-width', strokeWidth(s, idx))
       })
-
-      
-      // svg.selectAll('line')
-      //   .data(sargamVals.value)
-      //   .enter()
-      //   .append('line')
-      //   .attr('x1', 0)
-      //   .attr('x2', props.width)
-      //   .attr('y1', d => props.yScale(d))
-      //   .attr('y2', d => props.yScale(d))
-      //   .attr('stroke', 'grey')
-      //   .attr('stroke-width', (d, i) => strokeWidth(d, i))
     }
 
     const resetEmptyObserverDivs = () => {
@@ -617,8 +691,7 @@ export default defineComponent({
           .attr('height', props.height)
         addSargamLines(svg);
         initializeTracks();
-        resetEmptyObserverDivs();
-        addSargamG();
+        resetTranscription();
       };
     })
 

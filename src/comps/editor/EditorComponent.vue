@@ -46,6 +46,8 @@
       :selTrajColor='selTrajColor'
       :showSargam='showSargam'
       :showSargamLines='showSargamLines'
+      :showPhonemes='showPhonemes'
+      :phonemeRepresentation='phonemeRepresentation'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
@@ -111,6 +113,13 @@
             @change='updateMeterVisibility'
             >
         </div>
+        <div class='cbRow' v-if='visibilityTab && vocal'>
+          <label>Phonemes</label>
+          <input 
+            type='checkbox' 
+            v-model='showPhonemes' 
+            @click='preventSpaceToggle'>
+        </div>
         <div class='lineBreakParent' v-if='visibilityTab'>
           <div class='lineBreak'>
           </div>
@@ -154,10 +163,9 @@
           </span>
         </div>
         <div class='cbRow' v-if='vocal'>
-          <label>Phonemes</label>
+          <label>Phoneme Script</label>
           <select 
             v-model='phonemeRepresentation'
-            @change='updatePhonemeRepresentation'
             >
             <option value='Devanagari'>Devanagari</option>
             <option value='IPA'>IPA</option>
@@ -601,6 +609,7 @@ type EditorDataType = {
   minPitch: Pitch,
   sargamLineColor: string,
   showSargamLines: boolean,
+  showPhonemes: boolean,
 }
 
 export { findClosestStartTime }
@@ -773,6 +782,7 @@ export default defineComponent({
       minPitch: new Pitch({ swara: 'Sa', oct: -1 }),
       sargamLineColor: '#808080', // grey
       showSargamLines: true,
+      showPhonemes: true,
     }
   },
   components: {
@@ -1061,8 +1071,6 @@ export default defineComponent({
       renderer.reScaleY();
       const yAxis = renderer.yAxis as typeof YAxis;
       yAxis.resetAxis();
-      // this.updateMinPitch(this.minPitch);
-      // this.updateMaxPitch(this.maxPitch);
     },
 
     updateMinPitch(p: Pitch) {
@@ -1744,27 +1752,27 @@ export default defineComponent({
       }
     },
 
-    updatePhonemeRepresentation() {
-      const nodes = d3SelectAll('.consonant');
-      nodes.remove();
-      const vNodes = d3SelectAll('.vowel');
-      vNodes.remove();
-      this.piece.phrases.forEach(phrase => {
-        const vowelIdxs = phrase.firstTrajIdxs();
-        phrase.trajectories.forEach(traj => {
-          const pIdx = phrase.pieceIdx;
-          const tIdx = traj.num;
-          const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
-            Selection<SVGGElement, any, any, any>;
-          if (traj.id !== 12) {
-            this.addEndingConsonant(traj, phrase.startTime!, g, true);
-            if (vowelIdxs.includes(traj.num!)) {
-              this.addVowel(traj, phrase.startTime!, g, true);
-            }
-          }
-        })
-      })
-    },
+    // updatePhonemeRepresentation() {
+    //   const nodes = d3SelectAll('.consonant');
+    //   nodes.remove();
+    //   const vNodes = d3SelectAll('.vowel');
+    //   vNodes.remove();
+    //   this.piece.phrases.forEach(phrase => {
+    //     const vowelIdxs = phrase.firstTrajIdxs();
+    //     phrase.trajectories.forEach(traj => {
+    //       const pIdx = phrase.pieceIdx;
+    //       const tIdx = traj.num;
+    //       const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
+    //         Selection<SVGGElement, any, any, any>;
+    //       if (traj.id !== 12) {
+    //         this.addEndingConsonant(traj, phrase.startTime!, g, true);
+    //         if (vowelIdxs.includes(traj.num!)) {
+    //           this.addVowel(traj, phrase.startTime!, g, true);
+    //         }
+    //       }
+    //     })
+    //   })
+    // },
 
     setRegionToPhrase(pIdx: number) {
       const phrase = this.piece.phrases[pIdx];
@@ -7460,9 +7468,9 @@ export default defineComponent({
           x = (d: DrawDataType) => this.codifiedXR!(d.x);
           y = (d: DrawDataType) => this.codifiedYR!(d.y);
         }
-        const pxlOffset = 12;
-        const timeOffset = this.xr().invert(pxlOffset) - this.xr().invert(0);
-        const leftTime = phraseStart + traj.startTime! - timeOffset;
+        // const pxlOffset = 12;
+        // const timeOffset = this.xr().invert(pxlOffset) - this.xr().invert(0);
+        // const leftTime = phraseStart + traj.startTime! - timeOffset;
         let ctrCompute = traj.compute(0, true);
         ctrCompute = y({ y: ctrCompute, x: 0 });
         let yVal = ctrCompute;

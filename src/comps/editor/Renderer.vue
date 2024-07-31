@@ -75,6 +75,8 @@
               :clientWidth='clientWidth'
               :showSargam='showSargam'
               :showSargamLines='showSargamLines'
+              :showPhonemes='showPhonemes'
+              :phonemeRepresentation='phonemeRepresentation'
             />
           />
         </div>
@@ -187,6 +189,14 @@ export default defineComponent({
     showSargamLines: {
       type: Boolean,
       required: true
+    },
+    showPhonemes: {
+      type: Boolean,
+      required: true
+    },
+    phonemeRepresentation: {
+      type: String,
+      required: true
     }
   },
   setup(props, { emit }) {
@@ -238,7 +248,9 @@ export default defineComponent({
 
     watch(() => props.scaledWidth, () => {
       if (xScale.value) {
-        xScale.value.range([0, props.scaledWidth]);
+        xScale.value = d3.scaleLinear()
+          .domain([0, props.piece.durTot!])
+          .range([0, props.scaledWidth]);
       }
     })
 

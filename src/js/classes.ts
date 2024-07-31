@@ -10,7 +10,8 @@ import {
   OutputType,
   StrokeNicknameType,
   ArtNameType,
-  SargamDisplayType
+  SargamDisplayType,
+  VowelDisplayType
 } from '@/ts/types.ts';
 import { closeTo } from '@/ts/utils.ts';
 
@@ -2655,6 +2656,56 @@ class Piece {
     })
 
     return sargams
+  }
+
+  allDisplayVowels(inst = 0) {
+    const vocalInsts = ['Vocal (M)', 'Vocal (F)'];
+    const displayVowels: VowelDisplayType[] = []
+    if (vocalInsts.includes(this.instrumentation[inst])) {
+      this.phrases.forEach(phrase => {
+        const firstTrajIdxs = phrase.firstTrajIdxs();
+        const phraseStart = phrase.startTime!;
+        firstTrajIdxs.forEach(tIdx => {
+          const traj = phrase.trajectories[tIdx];
+          const time = phraseStart + traj.startTime!;
+          const logFreq = traj.logFreqs[0];
+          const withC = traj.startConsonant !== undefined;
+          const art = withC ? traj.articulations['0.00'] : undefined;
+          let text: string = '';
+          const ipaText = withC ? art!.ipa + traj.vowelIpa! : traj.vowelIpa!;
+          const devanagariText = withC ? 
+            art!.hindi + traj.vowelHindi! :
+            traj.vowelHindi!;
+          const englishText = withC ?
+            art!.engTrans + traj.vowelEngTrans! :
+            traj.vowelEngTrans!;
+          const uId = traj.uniqueId!;
+          displayVowels.push({
+            time, 
+            logFreq, 
+            ipaText, 
+            devanagariText, 
+            englishText,
+            uId
+          })
+        })
+      })
+    } else {
+      throw new Error('instrumentation is not vocal')
+    }
+    return displayVowels
+  }
+
+  chunkedDisplayVowels(inst = 0, duration = 30) {
+    const displayVowels = this.allDisplayVowels(inst);
+    const chunks: VowelDisplayType[][] = [];
+    for (let i = 0; i < this.durTot!; i += duration) {
+      const chunk = displayVowels.filter(v => {
+        return v.time >= i && v.time < i + duration
+      });
+      chunks.push(chunk)
+    }
+    return chunks
   }
 
   chunkedDisplaySargam(inst = 0, duration = 30) {
