@@ -11,7 +11,8 @@ import {
   StrokeNicknameType,
   ArtNameType,
   SargamDisplayType,
-  VowelDisplayType
+  VowelDisplayType,
+  ConsonantDisplayType,
 } from '@/ts/types.ts';
 import { closeTo } from '@/ts/utils.ts';
 
@@ -2694,6 +2695,46 @@ class Piece {
       throw new Error('instrumentation is not vocal')
     }
     return displayVowels
+  }
+
+  allDisplayEndingConsonants(inst = 0) {
+    const vocalInsts = ['Vocal (M)', 'Vocal (F)'];
+    const displayEndingConsonants: ConsonantDisplayType[] = [];
+    const trajs = this.allTrajectories(inst);
+    trajs.forEach((t, i) => {
+      if (t.endConsonant !== undefined) {
+        const phrase = this.phrases.find(p => p.trajectories.includes(t));
+        const phraseStart = phrase?.startTime;
+        const time = phraseStart! + t.startTime! + t.durTot!;
+        const logFreq = t.logFreqs[t.logFreqs.length - 1];
+        const art = t.articulations['1.00'];
+        const ipaText = art!.ipa!;
+        const devanagariText = art!.hindi!;
+        const englishText = art!.engTrans!;
+        const uId = t.uniqueId!;
+        displayEndingConsonants.push({
+          time,
+          logFreq,
+          ipaText,
+          devanagariText,
+          englishText,
+          uId
+        })
+      }
+    });
+    return displayEndingConsonants
+  }
+
+  chunkedDisplayConsonants(inst = 0, duration = 30) {
+    const displayEndingConsonants = this.allDisplayEndingConsonants(inst);
+    const chunks: ConsonantDisplayType[][] = [];
+    for (let i = 0; i < this.durTot!; i += duration) {
+      const chunk = displayEndingConsonants.filter(c => {
+        return c.time >= i && c.time < i + duration
+      });
+      chunks.push(chunk)
+    }
+    return chunks
   }
 
   chunkedDisplayVowels(inst = 0, duration = 30) {

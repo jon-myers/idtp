@@ -775,6 +775,15 @@ type VowelDisplayType = {
   uId: string,
 }
 
+type ConsonantDisplayType = {
+  time: number,
+  logFreq: number,
+  ipaText: string,
+  devanagariText: string,
+  englishText: string,
+  uId: string
+}
+
 export type { 
   CollectionType, 
   UserType, 
@@ -838,6 +847,7 @@ export type {
   WorkerMessage,
   MelographData,
   SargamDisplayType,
-  VowelDisplayType
+  VowelDisplayType,
+  ConsonantDisplayType,
 };
 

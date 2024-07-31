@@ -20,7 +20,11 @@ import * as d3 from 'd3';
 import { linSpace, escCssClass } from '@/ts/utils.ts';
 
 import { Piece, Trajectory } from '@/js/classes.ts';
-import { SargamDisplayType, VowelDisplayType } from '@/ts/types.ts';
+import { 
+  SargamDisplayType, 
+  VowelDisplayType, 
+  ConsonantDisplayType 
+} from '@/ts/types.ts';
 
 export default defineComponent({
   name: 'TranscriptionLayer',
@@ -122,6 +126,9 @@ export default defineComponent({
           if (insts.includes(props.piece.instrumentation[inst])) {
             props.piece.chunkedDisplayVowels(inst, dur)[idx].forEach(v => {
               renderVowel(v);
+            })
+            props.piece.chunkedDisplayConsonants(inst, dur)[idx].forEach(c => {
+              renderEndingConsonant(c);
             })
           }
           observer.unobserve(entry.target);
@@ -531,9 +538,48 @@ export default defineComponent({
         .attr('opacity', opacities[2])
         .attr('transform', d => `translate(${x}, ${y})` )
         .text(v.englishText)
-      
-      
     };
+
+    const renderEndingConsonant = (c: ConsonantDisplayType) => {
+      const svg = d3.select(tranSvg.value);
+      const verticalOffset = 14;
+      const y = props.yScale(c.logFreq) - verticalOffset;
+      const x = props.xScale(c.time);
+      const g = svg.select('.enunciationG');
+      const choices = ['IPA', 'Devanagari', 'English'];
+      const opacities = choices.map(c => {
+        return c === props.phonemeRepresentation ? 1 : 0;
+      });
+      g.append('text')
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'middle')
+        .attr('font-size', 15)
+        .attr('stroke', 'black')
+        .attr('class', `consonantLabel IPA uId${c.uId}`)
+        .attr('opacity', opacities[0])
+        .attr('transform', d => `translate(${x}, ${y})` )
+        .text(c.ipaText)
+
+      g.append('text')
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'middle')
+        .attr('font-size', 15)
+        .attr('stroke', 'black')
+        .attr('class', `consonantLabel Devanagari uId${c.uId}`)
+        .attr('opacity', opacities[1])
+        .attr('transform', d => `translate(${x}, ${y})` )
+        .text(c.devanagariText)
+
+      g.append('text')
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'middle')
+        .attr('font-size', 15)
+        .attr('stroke', 'black')
+        .attr('class', `consonantLabel Latin uId${c.uId}`)
+        .attr('opacity', opacities[2])
+        .attr('transform', d => `translate(${x}, ${y})` )
+        .text(c.englishText)
+    }
 
 
 
