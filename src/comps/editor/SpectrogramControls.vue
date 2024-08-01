@@ -110,19 +110,21 @@
       <div class='titleBox'>
         <label>Tracks</label>
       </div>
-      <div class='rowBox' v-for='track in instTracks'>
-        <label class='bold'>{{ track.inst }}</label>
-        <div class='row tracks'>
-          <label>Display</label>
-          <input type='checkbox' v-model='tempTracks[track.idx].displaying'/>
-          <label>Traj</label>
-          <input type='color' v-model='tempTracks[track.idx].color'/>
-        </div>
-        <div class='row tracks'>
-          <label>Sonify</label>
-          <input type='checkbox' v-model='tempTracks[track.idx].sounding'/>
-          <label>Sel Traj</label>
-          <input type='color' v-model='tempTracks[track.idx].selColor'/>
+      <div class='scrollableContainer'>
+        <div class='rowBox' v-for='track in instTracks'>
+          <label class='bold'>{{ track.inst }}</label>
+          <div class='row tracks'>
+            <label>Display</label>
+            <input type='checkbox' v-model='tempTracks[track.idx].displaying'/>
+            <label>Traj</label>
+            <input type='color' v-model='tempTracks[track.idx].color'/>
+          </div>
+          <div class='row tracks'>
+            <label>Sonify</label>
+            <input type='checkbox' v-model='tempTracks[track.idx].sounding'/>
+            <label>Sel Traj</label>
+            <input type='color' v-model='tempTracks[track.idx].selColor'/>
+          </div>
         </div>
       </div>
     </div>
@@ -506,8 +508,8 @@ export default defineComponent({
   flex-direction: column;
   align-items: center;
   margin: 0px;
-  width: 180px;
-  min-width: 180px;
+  width: 190px;
+  min-width: 190px;
   border-right: 1px solid white;
 }
 
@@ -518,6 +520,7 @@ export default defineComponent({
 .col > input {
   width: 40px;
 }
+
 
 .rowBox {
   width: 100%;
@@ -596,5 +599,13 @@ select {
 .tracks > label {
   width: 60px;
   margin-right: 5px;
+}
+
+.scrollableContainer {
+  width: 100%;
+  max-height: 160px;
+  min-height: 160px;
+  overflow-y: scroll;
+  overflow-x: hidden;
 }
 </style>
