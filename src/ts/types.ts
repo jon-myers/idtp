@@ -784,6 +784,15 @@ type ConsonantDisplayType = {
   uId: string
 }
 
+type InstrumentTrackType = {
+  inst: string,
+  idx: number,
+  displaying: boolean,
+  sounding: boolean,
+  color: string,
+  selColor: string,
+}
+
 export type { 
   CollectionType, 
   UserType, 
@@ -849,5 +858,6 @@ export type {
   SargamDisplayType,
   VowelDisplayType,
   ConsonantDisplayType,
+  InstrumentTrackType,
 };
 

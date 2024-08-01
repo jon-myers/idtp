@@ -96,14 +96,6 @@
           <input type='color' v-model='axColor'/>
         </div>
         <div class='row'>
-          <label>Trajs</label>
-          <input type='color' v-model='tranColor'/>
-        </div>
-        <div class='row'>
-          <label>Selected Trajs</label>
-          <input type='color' v-model='selTranColor'/>
-        </div>
-        <div class='row'>
           <label>Melograph</label>
           <input type='color' v-model='melColor'/>
         </div>
@@ -113,6 +105,26 @@
         </div>
       </div>
       
+    </div>
+    <div class='col'>
+      <div class='titleBox'>
+        <label>Tracks</label>
+      </div>
+      <div class='rowBox' v-for='track in instTracks'>
+        <label class='bold'>{{ track.inst }}</label>
+        <div class='row tracks'>
+          <label>Display</label>
+          <input type='checkbox' v-model='tempTracks[track.idx].displaying'/>
+          <label>Traj</label>
+          <input type='color' v-model='tempTracks[track.idx].color'/>
+        </div>
+        <div class='row tracks'>
+          <label>Sonify</label>
+          <input type='checkbox' v-model='tempTracks[track.idx].sounding'/>
+          <label>Sel Traj</label>
+          <input type='color' v-model='tempTracks[track.idx].selColor'/>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -128,7 +140,7 @@ import {
   nextTick
 } from 'vue';
 import { getWorker } from '@/ts/workers/workerManager.ts'
-import { CMap } from '@/ts/types.ts';
+import { CMap, InstrumentTrackType } from '@/ts/types.ts';
 import SwatchSelect from '@/comps/SwatchSelect.vue';
 import {
   Pitch, 
@@ -183,14 +195,6 @@ export default defineComponent({
       type: String,
       required: true
     },
-    trajectoryColor: {
-      type: String,
-      required: true
-    },
-    selTrajectoryColor: {
-      type: String,
-      required: true
-    },
     melographColor: {
       type: String,
       required: true
@@ -214,6 +218,10 @@ export default defineComponent({
     sargamLineColor: {
       type: String,
       required: true
+    },
+    instTracks: {
+      type: Array as PropType<InstrumentTrackType[]>,
+      required: true
     }
   },
   setup(props, { emit }) {
@@ -229,14 +237,13 @@ export default defineComponent({
     const saGain = ref(0);
     const bgColor = ref(props.backgroundColor);
     const axColor = ref(props.axisColor);
-    const tranColor = ref(props.trajectoryColor);
-    const selTranColor = ref(props.selTrajectoryColor);
     const melColor = ref(props.melographColor);
     const sLineColor = ref(props.sargamLineColor);
     const gainNode = ref<GainNode | undefined>(undefined);
     const oscNode = ref<OscillatorNode | undefined>(undefined);
     const maxPitchObj = ref(props.maxPitch);
     const minPitchObj = ref(props.minPitch);
+    const tempTracks = ref(props.instTracks);
 
     const isEqual = (p1: Pitch, p2: Pitch) => {
       const swara = p1.swara === p2.swara;
@@ -328,12 +335,6 @@ export default defineComponent({
     watch(axColor, newVal => {
       emit('update:axisColor', newVal);
     });
-    watch(tranColor, newVal => {
-      emit('update:trajectoryColor', newVal);
-    });
-    watch(selTranColor, newVal => {
-      emit('update:selTrajectoryColor', newVal);
-    });
     watch(melColor, newVal => {
       emit('update:melographColor', newVal);
     });
@@ -346,6 +347,9 @@ export default defineComponent({
     watch(() => props.extLowOctOffset, newVal => {
       lowOctOffset.value = newVal;
     });
+    watch(tempTracks, newVal => {
+      emit('update:instTracks', newVal);
+    }, { deep: true });
 
 
 
@@ -466,8 +470,6 @@ export default defineComponent({
       saGain,
       bgColor,
       axColor,
-      tranColor,
-      selTranColor,
       melColor,
       sLineColor,
       maxPitchOptions,
@@ -475,7 +477,8 @@ export default defineComponent({
       maxPitchIdx,
       minPitchOptions,
       minPitchObj,
-      minPitchIdx
+      minPitchIdx,
+      tempTracks
     }
   }
 })
@@ -584,5 +587,14 @@ export default defineComponent({
 
 select {
   font-family: Arial, sans-serif;
+}
+
+.bold {
+  font-weight: bold;
+}
+
+.tracks > label {
+  width: 60px;
+  margin-right: 5px;
 }
 </style>

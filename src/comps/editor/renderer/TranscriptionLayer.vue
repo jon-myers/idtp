@@ -25,7 +25,8 @@ import { Piece, Trajectory } from '@/js/classes.ts';
 import { 
   SargamDisplayType, 
   VowelDisplayType, 
-  ConsonantDisplayType 
+  ConsonantDisplayType,
+  InstrumentTrackType 
 } from '@/ts/types.ts';
 
 export default defineComponent({
@@ -71,14 +72,6 @@ export default defineComponent({
       type: Number,
       required: true
     },
-    trajColor: {
-      type: String,
-      required: true
-    },
-    selTrajColor: {
-      type: String,
-      required: true
-    },
     scrollX: {
       type: Number,
       required: true
@@ -103,8 +96,16 @@ export default defineComponent({
       type: String,
       required: true
     },
+    instTracks: {
+      type: Array as PropType<InstrumentTrackType[]>,
+      required: true
+    },
+    selectedMode: {
+      type: String as PropType<EditorMode>,
+      required: true
+    }
   },
-  setup(props) {
+  setup(props, { emit }) {
     const tranContainer = ref<HTMLDivElement | null>(null);
     const tranSvg = ref<SVGSVGElement | null>(null);
     const tracks: d3.Selection<SVGGElement, unknown, null, undefined>[] = [];
@@ -115,16 +116,9 @@ export default defineComponent({
     const trajRenderStatus = ref<{ 
       uniqueId: string, 
       renderStatus: boolean,
-      selectedStatus: boolean 
+      selectedStatus: boolean,
+      track: number 
     }[][]>([]);
-    const instTracks = ref<{
-      inst: string,
-      idx: number,
-      displaying: boolean,
-      sounding: boolean
-    }[]>([]);
-    
-
 
     const emptyDivIdxMap = new Map<HTMLDivElement, number>();
     const maxEmptyDivWidth = props.clientWidth;
@@ -167,7 +161,8 @@ export default defineComponent({
           return { 
             uniqueId: t.uniqueId!, 
             renderStatus: false,
-            selectedStatus: false
+            selectedStatus: false,
+            track: i
           }
         })
       }
@@ -248,10 +243,6 @@ export default defineComponent({
         resetTranscription();
       }
     });
-    watch(() => props.trajColor, () => {
-      d3.selectAll('.traj')
-        .attr('stroke', props.trajColor)
-    });
     watch(() => props.showSargam, () => {
       d3.selectAll('.sargamG')
         .style('opacity', Number(props.showSargam))
@@ -292,37 +283,55 @@ export default defineComponent({
       return out
     })
 
-    watch(() => props.selTrajColor, () => {
-      selectedTrajs.value.forEach(traj => {
-        const selector = `.traj.uId${traj.uniqueId!}`;
-        d3.selectAll(selector)
-          .attr('stroke', props.selTrajColor)
-        d3.selectAll(selector + '.pluck')
-          .attr('fill', props.selTrajColor)
-      })
-    });
-
     watch(selectedTrajs, (newVal, oldVal) => {
       oldVal.forEach(traj => {
         if (!newVal.includes(traj)) {
+          const renderObj = trajRenderStatus.value.flat().find(obj => {
+            return obj.uniqueId === traj.uniqueId
+          });
+          const track = renderObj!.track;
           const selector = `.traj.uId${traj.uniqueId!}`;
           d3.selectAll(selector)
-            .attr('stroke', props.trajColor)
+            .attr('stroke', props.instTracks[track].color)
           d3.selectAll(selector + '.pluck')
-            .attr('fill', props.trajColor)
+            .attr('fill', props.instTracks[track].color)
         }
       });
       newVal.forEach(traj => {
+        const renderObj = trajRenderStatus.value.flat().find(obj => {
+          return obj.uniqueId === traj.uniqueId
+        });
+        const track = renderObj!.track;
         if (!oldVal.includes(traj)) {
           const selector = `.traj.uId${traj.uniqueId!}`;
           d3.selectAll(selector)
-            .attr('stroke', props.selTrajColor)
+            .attr('stroke', props.instTracks[track].selColor)
           d3.selectAll(selector + '.pluck')
-            .attr('fill', props.selTrajColor)
+            .attr('fill', props.instTracks[track].selColor)
         }
       });
-      
     })
+    watch(() => props.instTracks, (newVal) => {
+      newVal.forEach((track, tIdx) => {
+        d3.selectAll(`.track${track.idx}`)
+          .style('opacity', Number(track.displaying))
+        d3.selectAll(`.track${track.idx} .traj`)
+          .attr('stroke', track.color)
+        d3.selectAll(`.track${track.idx} .pluck`)
+          .attr('stroke', track.color)
+      })
+      selectedTrajs.value.forEach(traj => {
+        const renderObj = trajRenderStatus.value.flat().find(obj => {
+          return obj.uniqueId === traj.uniqueId
+        });
+        const track = renderObj!.track;
+        const selector = `.traj.uId${traj.uniqueId!}`;
+        d3.selectAll(selector)
+          .attr('stroke', props.instTracks[track].selColor)
+        d3.selectAll(selector + '.pluck')
+          .attr('fill', props.instTracks[track].selColor)
+      })
+    }, { deep: true });
 
     const addSargamG = () => {
       if (tranSvg.value) {
@@ -330,7 +339,7 @@ export default defineComponent({
         for (let i = 0; i < props.piece.instrumentation.length; i++) {
           const trackG = tracks[i];
           const sargamG = trackG.append('g')
-            .attr('class', `sargamG track${i}`)
+            .attr('class', `sargamG`)
             .style('opacity', Number(props.showSargam))
         }
       }
@@ -342,7 +351,7 @@ export default defineComponent({
         for (let i = 0; i < props.piece.instrumentation.length; i++) {
           const trackG = tracks[i];
           trackG.append('g')
-            .attr('class', `enunciationG track${i}`)
+            .attr('class', `enunciationG`)
             .style('opacity', Number(props.showPhonemes))
         }
       }
@@ -354,7 +363,7 @@ export default defineComponent({
         for (let i = 0; i < props.piece.instrumentation.length; i++) {
           const trackG = tracks[i];
           trackG.append('g')
-            .attr('class', `trajG track${i}`)
+            .attr('class', `trajG`)
         }
       }
     }
@@ -438,11 +447,11 @@ export default defineComponent({
           .datum(trajData)
           .attr('d', trajCurve)
           .attr('fill', 'none')
-          .attr('stroke', props.trajColor)
+          .attr('stroke', props.instTracks[track].color)
           .attr('stroke-width', '3px')
           .attr('stroke-linejoin', 'round')
           .attr('stroke-linecap', 'round')
-          .attr('class', `traj track${track} uId${traj.uniqueId!}`)
+          .attr('class', `traj uId${traj.uniqueId!}`)
         g.append('path')
           .datum(trajData)
           .attr('d', trajCurve)
@@ -451,10 +460,10 @@ export default defineComponent({
           .attr('stroke-width', '10px')
           .attr('stroke-linejoin', 'round')
           .attr('stroke-linecap', 'round')
-          .attr('class', `trajShadow track${track} uId${traj.uniqueId!}`)
+          .attr('class', `trajShadow uId${traj.uniqueId!}`)
           .style('opacity', '0')
           .style('cursor', 'pointer')
-          .on('mouseover', () => handleTrajMouseOver(traj))
+          .on('mouseover', () => handleTrajMouseOver(traj, track))
           .on('mouseout', () => handleTrajMouseOut(traj, track))
           .on('click', () => handleClickTraj(traj, track))
     }
@@ -484,10 +493,10 @@ export default defineComponent({
           .data(pluckData)
           .attr('d', sym)
           .attr('stroke-width', 1.5)
-          .attr('stroke', props.trajColor)
-          .attr('fill', props.trajColor)
+          .attr('stroke', props.instTracks[track].color)
+          .attr('fill', props.instTracks[track].color)
           .attr('transform', d => `translate(${d.x + offset}, ${d.y}) rotate(90)`)
-          .classed(`traj pluck track${track} uId${traj.uniqueId!}`, true)
+          .classed(`traj pluck uId${traj.uniqueId!}`, true)
         
         g.append('path')
           .data(pluckData)
@@ -496,8 +505,8 @@ export default defineComponent({
           .attr('stroke', 'black')
           .attr('transform', d => `translate(${d.x + offset}, ${d.y}) rotate(90)`)
           .style('opacity', '0')
-          .classed(`pluckshadow track${track} uId${traj.uniqueId!}`, true)
-          .on('mouseover', () => handleTrajMouseOver(traj))
+          .classed(`pluckshadow uId${traj.uniqueId!}`, true)
+          .on('mouseover', () => handleTrajMouseOver(traj, track))
           .on('mouseout', () => handleTrajMouseOut(traj, track))
           .on('click', () => handleClickTraj(traj, track))
       }
@@ -518,7 +527,7 @@ export default defineComponent({
         g.append('path')
           .data([obj])
           .attr('d', d3.line()([[-2, -8], [0, -8], [0, 8], [-2, 8]]))
-          .attr('stroke', props.trajColor)
+          .attr('stroke', props.instTracks[track].color)
           .attr('stroke-width', '3px')
           .attr('stroke-linejoin', 'round')
           .attr('stroke-linecap', 'round')
@@ -526,7 +535,7 @@ export default defineComponent({
           .attr('transform', d => {
             return `translate(${props.xScale(d.x)}, ${props.yScale(d.y)})`
           })
-          .classed(`traj dampen track${track} uId${traj.uniqueId!}`, true)
+          .classed(`traj dampen uId${traj.uniqueId!}`, true)
         g.append('path')
           .data([obj])
           .attr('d', d3.line()([[-2, -8], [0, -8], [0, 8], [-2, 8]]))
@@ -539,8 +548,8 @@ export default defineComponent({
             return `translate(${props.xScale(d.x)}, ${props.yScale(d.y)})`
           })
           .style('opacity', '0')
-          .classed(`dampenshadow track${track} uId${traj.uniqueId!}`, true)
-          .on('mouseover', () => handleTrajMouseOver(traj))
+          .classed(`dampenshadow uId${traj.uniqueId!}`, true)
+          .on('mouseover', () => handleTrajMouseOver(traj, track))
           .on('mouseout', () => handleTrajMouseOut(traj, track))
           .on('click', () => handleClickTraj(traj, track))
       })
@@ -669,12 +678,13 @@ export default defineComponent({
       }
     }
 
-    const handleTrajMouseOver = (traj: Trajectory) => {
+    const handleTrajMouseOver = (traj: Trajectory, track: number) => {
       const selector = `.traj.uId${traj.uniqueId!}`
+
       d3.selectAll(selector)
-        .attr('stroke', props.selTrajColor)
+        .attr('stroke', props.instTracks[track].selColor)
       d3.selectAll(selector + '.pluck')
-        .attr('fill', props.selTrajColor)
+        .attr('fill', props.instTracks[track].selColor)
     }
 
     const handleTrajMouseOut = (traj: Trajectory, track: number) => {
@@ -684,9 +694,9 @@ export default defineComponent({
       });
       if (renderObj!.selectedStatus === false) {
         d3.selectAll(selector)
-          .attr('stroke', props.trajColor)
+          .attr('stroke', props.instTracks[track].color)
         d3.selectAll(selector + '.pluck')
-          .attr('fill', props.trajColor)
+          .attr('fill', props.instTracks[track].color)
       }
     }
 
@@ -777,16 +787,18 @@ export default defineComponent({
     })
 
     const handleEscape = () => {
-      editorMode.value = EditorMode.None;
+      emit('update:selectedMode', EditorMode.None);
       selectedTrajs.value.forEach(traj => {
-        const selector = `.traj.uId${traj.uniqueId!}`;
-        d3.selectAll(selector)
-          .attr('stroke', props.trajColor)
-        d3.selectAll(selector + '.pluck')
-          .attr('fill', props.trajColor)
         const renderObj = trajRenderStatus.value[0].find(obj => {
           return obj.uniqueId === traj.uniqueId
         });
+        const track = renderObj!.track;
+        const selector = `.traj.uId${traj.uniqueId!}`;
+        d3.selectAll(selector)
+          .attr('stroke', props.instTracks[track].color)
+        d3.selectAll(selector + '.pluck')
+          .attr('fill', props.instTracks[track].color)
+        
         renderObj!.selectedStatus = false;
       })
     }
@@ -795,13 +807,15 @@ export default defineComponent({
       if (e.key === 'Escape') {
         handleEscape();
       } else if (e.key === 's') {
-        editorMode.value = EditorMode.Series;
+        emit('update:selectedMode', EditorMode.Series);
       } else if (e.key === 't') {
-        editorMode.value = EditorMode.Trajectory;
+        emit('update:selectedMode', EditorMode.Trajectory);
       } else if (e.key === 'c') {
-        editorMode.value = EditorMode.Chikari;
+        emit('update:selectedMode', EditorMode.Chikari);
       } else if (e.key === 'm') {
-        editorMode.value = EditorMode.Meter;
+        emit('update:selectedMode', EditorMode.Meter);
+      } else if (e.key === 'p') {
+        emit('update:selectedMode', EditorMode.PhraseDiv);
       } else if (e.key === 'Shift') {
         shifted.value = true;
       }
@@ -988,7 +1002,7 @@ export default defineComponent({
       const endTime = options.endTime;
       const minLogFreq = options.minLogFreq;
       const maxLogFreq = options.maxLogFreq;
-      const instIdxs = instTracks.value
+      const instIdxs = props.instTracks
         .filter(t => t.displaying)
         .map(t => t.idx);
       const trajs = instIdxs
@@ -1019,14 +1033,14 @@ export default defineComponent({
         addSargamLines();
         initializeTracks();
         resetTranscription();
-        props.piece.instrumentation.forEach((inst, idx) => {
-          instTracks.value.push({
-            inst: inst,
-            idx: idx,
-            displaying: idx === 0,
-            sounding: idx === 0
-          })
-        })
+        // props.piece.instrumentation.forEach((inst, idx) => {
+        //   instTracks.value.push({
+        //     inst: inst,
+        //     idx: idx,
+        //     displaying: idx === 0,
+        //     sounding: idx === 0
+        //   })
+        // })
         window.addEventListener('keydown', handleKeydown);
         window.addEventListener('keyup', handleKeyup);
       };

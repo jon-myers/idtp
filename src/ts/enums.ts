@@ -4,11 +4,11 @@ enum SortState {
 }
 
 enum EditorMode {
-  Chikari = 'Chikari',
   Trajectory = 'Trajectory',
   Series = 'Series',
   PhraseDiv = 'PhraseDiv',
   Meter = 'Meter',
+  Chikari = 'Chikari',
   None = 'None',
 }
 

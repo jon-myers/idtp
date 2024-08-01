@@ -1811,8 +1811,14 @@ class Phrase {
     this.raga = raga;
     if (trajectoryGrid !== undefined) {
       this.trajectoryGrid = trajectoryGrid;
+      for (let i = 1; i < instrumentation.length; i++) {
+        this.trajectoryGrid.push([])
+      }
     } else {
       this.trajectoryGrid = [trajectories];
+      for (let i = 1; i < instrumentation.length; i++) {
+        this.trajectoryGrid.push([])
+      }
     }
     if (this.trajectories.length === 0) {
       if (durTot === undefined) {

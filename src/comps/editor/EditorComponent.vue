@@ -1,29 +1,6 @@
 <template>
 <div class='mainzz'>
   <div class='upperRow'>
-    <div class='graphContainer' v-if='false'>
-      <div class='graph' ref='graph'></div>
-      <div class='scrollXContainer'>
-        <div class='leftNotch'>
-          <div class='leftNotchZoomer left' @click='horizontalZoomOut'>-</div>
-          <div class='leftNotchZoomer' @click='horizontalZoomIn'>+</div>
-        </div>
-        <div class='scrollX' ref='scrollX'></div>
-      </div>
-      <div 
-        class='instructions' 
-        v-show='showInstructions' 
-        v-html='instructionsText'>
-      </div>
-    </div>
-    <div class='scrollYContainer' v-if='false'>
-      <div class='topNotch'>
-        <div class='topNotchZoomer top' @click='verticalZoomIn'>+</div>
-        <div class='topNotchZoomer' @click='verticalZoomOut'>-</div>
-      </div>
-      <div class='scrollY' ref='scrollY'></div>
-      <div class='bottomNotch'></div>
-    </div>
     <Renderer
       v-if='transcriptionWidth > 0 && transcriptionHeight > 0'
       id='renderer'
@@ -42,17 +19,18 @@
       :melographColor='melographColor'
       :showTranscription='showMelody'
       :sargamLineColor='sargamLineColor'
-      :trajColor='trajColor'
-      :selTrajColor='selTrajColor'
       :showSargam='showSargam'
       :showSargamLines='showSargamLines'
       :showPhonemes='showPhonemes'
       :phonemeRepresentation='phonemeRepresentation'
+      :instTracks='instTracks'
+      :selectedMode='selectedMode'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
       @zoomOutX='zoomOutX'
       @xRangeInView='(xRange: [number, number]) => xRangeInView = xRange'
+      @update:selectedMode='(mode: EditorMode) => selectedMode = mode'
       />
     <div class='controlBox'>
       <div class='scrollingControlBox'>
@@ -233,12 +211,11 @@
   :highOctOffset='highOctOffset'
   :backgroundColor='backColor'
   :axisColor='axisColor'
-  :trajectoryColor='trajColor'
-  :selTrajectoryColor='selTrajColor'
   :melographColor='melographColor'
   :maxPitch='maxPitch'
   :minPitch='minPitch'
   :sargamLineColor='sargamLineColor'
+  :instTracks='instTracks'
   @resizeHeightEmit='resizeHeight'
   @movePlayheadsEmit='movePlayheads'
   @currentTimeEmit='setCurrentTime'
@@ -262,12 +239,11 @@
   @update:backgroundColor='backColor = $event'
   @update:axisColor='axisColor = $event'
   @update:melographColor='melographColor = $event'
-  @update:selTrajectoryColor='selTrajColor = $event'
-  @update:trajectoryColor='trajColor = $event'
   @update:saFreq='updateSaFreq'
   @update:minPitch='updateMinPitch'
   @update:maxPitch='updateMaxPitch'
   @update:sargamLineColor='sargamLineColor = $event'
+  @update:instTracks='updateInstTracks'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -352,9 +328,10 @@ import {
   RecType, 
   TFuncType,
   DrawDataType,
-  StrokeNicknameType
+  StrokeNicknameType,
+  InstrumentTrackType,
 } from '@/ts/types';
-
+import { EditorMode } from '@/ts/enums';
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
 
 const getStarts = (durArray: number[]) => {
@@ -445,9 +422,6 @@ type EditorDataType = {
   selectedChikariColor: string,
   dateModified?: Date,
   setChikari: boolean,
-  selTrajColor: string,
-  selArtColor: string,
-  trajColor: string,
   selectedTraj?: Trajectory,
   selectedTrajs: Trajectory[],
   viewPhrases: boolean,
@@ -610,6 +584,8 @@ type EditorDataType = {
   sargamLineColor: string,
   showSargamLines: boolean,
   showPhonemes: boolean,
+  instTracks: InstrumentTrackType[],
+  selectedMode: EditorMode,
 }
 
 export { findClosestStartTime }
@@ -639,9 +615,6 @@ export default defineComponent({
       selectedChikariColor: 'red',
       dateModified: undefined,
       setChikari: false,
-      selTrajColor: '#FF0000',
-      selArtColor: '#9C2208',
-      trajColor: '#191970',
       selectedTraj: undefined,
       selectedTrajs: [],
       viewPhrases: true,
@@ -783,6 +756,8 @@ export default defineComponent({
       sargamLineColor: '#808080', // grey
       showSargamLines: true,
       showPhonemes: true,
+      instTracks: [],
+      selectedMode: EditorMode.None,
     }
   },
   components: {
@@ -907,6 +882,22 @@ export default defineComponent({
       // await this.initializePiece();
       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
       ap.parentLoaded();
+      const colors = ['#204580', '#532080', '#802030', '#428020'];
+      const selColors = ['#4089ff', '#a640ff', '#ff4060', '#83ff40']
+      this.piece.instrumentation.forEach((inst, idx) => {
+        if (idx > 3) {
+          throw 'IDTP logger: Too many instruments in instrumentation array.'
+        }
+        this.instTracks.push({
+          inst,
+          idx,
+          displaying: idx === 0,
+          sounding: idx === 0,
+          color: colors[idx],
+          selColor: selColors[idx]
+        })
+      });
+
       const q = this.$route.query;
       if (q.pIdx) {
         // this.moveToPhrase(Number(q.pIdx));
@@ -1058,6 +1049,10 @@ export default defineComponent({
   },
 
   methods: {
+
+    updateInstTracks(tracks: InstrumentTrackType[]) {
+      this.instTracks = tracks;
+    },
 
     updateSaFreq(f: number) {
       this.piece.raga.fundamental = f;
@@ -9932,8 +9927,7 @@ export default defineComponent({
 #renderer {
   width: calc(100% - v-bind(controlBoxWidth + 'px'));
   height: 100%;
-  /* overflow: auto; */
-  /* box-sizing: border-box; */
+  position: relative;
 }
 
 .scrollYContainer {

@@ -307,25 +307,22 @@
       :extHighOctOffset='highOctOffset'
       :backgroundColor='backgroundColor'
       :axisColor='axisColor'
-      :trajectoryColor='trajectoryColor'
-      :selTrajectoryColor='selTrajectoryColor'
       :melographColor='melographColor'
       :ac='ac'
       :maxPitch='maxPitch'
       :minPitch='minPitch'
       :raga='raga'
       :sargamLineColor='sargamLineColor'
-
+      :instTracks='instTracks'
       @specCanvas='handleSpecCanvas'
       @update:backgroundColor='$emit("update:backgroundColor", $event)'
       @update:axisColor='$emit("update:axisColor", $event)'
-      @update:trajectoryColor='$emit("update:trajectoryColor", $event)'
-      @update:selTrajectoryColor='$emit("update:selTrajectoryColor", $event)'
       @update:melographColor='$emit("update:melographColor", $event)'
       @update:saFreq='$emit("update:saFreq", $event)'
       @update:maxPitch='$emit("update:maxPitch", $event)'
       @update:minPitch='$emit("update:minPitch", $event)'
       @update:sargamLineColor='$emit("update:sargamLineColor", $event)'
+      @update:instTracks='$emit("update:instTracks", $event)'
       />
   </div>
 </template>
@@ -372,7 +369,7 @@ import stretcherURL from '@/js/bundledStretcherWorker.js?url';
 import MeterControls from '@/comps/editor/MeterControls.vue';
 import LabelEditor from '@/comps/editor/LabelEditor.vue';
 import { Meter } from '@/js/meter.ts'
-import { PhraseCatType, RecType, MusicianType } from '@/ts/types.ts';
+import { RecType, MusicianType, InstrumentTrackType } from '@/ts/types.ts';
 
 
 type EditorAudioPlayerData = {
@@ -830,14 +827,6 @@ export default defineComponent({
       type: String,
       required: true
     },
-    trajectoryColor: {
-      type: String,
-      required: true
-    },
-    selTrajectoryColor: {
-      type: String,
-      required: true
-    },
     melographColor: {
       type: String,
       required: true
@@ -852,6 +841,10 @@ export default defineComponent({
     },
     sargamLineColor: {
       type: String,
+      required: true
+    },
+    instTracks: {
+      type: Array as PropType<InstrumentTrackType[]>,
       required: true
     },
   },

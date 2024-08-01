@@ -1,5 +1,11 @@
 <template>
   <div class='renderMain' ref='renderMain' :style='cssVars'>
+    <ModeSelector 
+      class='modeSelector'
+      :height='modeSelectorHeight'
+      :selectedMode='selectedMode'
+      @update:selectedMode='$emit("update:selectedMode", $event)'
+      />
     <div class='wrapper'>
       <div class='xAxisContainer' ref='xAxisContainer'>
         <XAxis
@@ -69,14 +75,15 @@
               :piece='piece'
               :sargamLineColor='sargamLineColor'
               :minDrawDur='minDrawDur'
-              :trajColor='trajColor'
-              :selTrajColor='selTrajColor'
               :scrollX='scrollX'
               :clientWidth='clientWidth'
               :showSargam='showSargam'
               :showSargamLines='showSargamLines'
               :showPhonemes='showPhonemes'
               :phonemeRepresentation='phonemeRepresentation'
+              :instTracks='instTracks'
+              :selectedMode='selectedMode'
+              @update:selectedMode='$emit("update:selectedMode", $event)'
             />
           />
         </div>
@@ -102,8 +109,11 @@ import XAxis from '@/comps/editor/renderer/XAxis.vue';
 import YAxis from '@/comps/editor/renderer/YAxis.vue';
 import MelographLayer from '@/comps/editor/renderer/MelographLayer.vue';
 import TranscriptionLayer from '@/comps/editor/renderer/TranscriptionLayer.vue';
+import ModeSelector from '@/comps/editor/renderer/ModeSelector.vue';
 import { Piece } from '@/js/classes.ts';
 import * as d3 from 'd3';
+import { InstrumentTrackType } from '@/ts/types.ts';
+import { EditorMode } from '@/ts/enums.ts';
 
 
 export default defineComponent({
@@ -113,7 +123,8 @@ export default defineComponent({
     MelographLayer,
     XAxis,
     YAxis,
-    TranscriptionLayer
+    TranscriptionLayer,
+    ModeSelector
   },
   props: {
     yAxWidth: {
@@ -174,14 +185,6 @@ export default defineComponent({
       type: String,
       required: true
     },
-    trajColor: {
-      type: String,
-      required: true
-    },
-    selTrajColor: {
-      type: String,
-      required: true
-    },
     showSargam: {
       type: Boolean,
       required: true
@@ -197,6 +200,14 @@ export default defineComponent({
     phonemeRepresentation: {
       type: String,
       required: true
+    },
+    instTracks: {
+      type: Array as PropType<InstrumentTrackType[]>,
+      required: true
+    },
+    selectedMode: {
+      type: String as PropType<EditorMode>,
+      required: true
     }
   },
   setup(props, { emit }) {
@@ -211,7 +222,6 @@ export default defineComponent({
     const yAxis = ref<HTMLDivElement | null>(null);
     const xAxis = ref<HTMLDivElement | null>(null);
     const minDrawDur = ref(0.01);
-    // const scrollX = ref(0); // between 0 and 1
     const scrollX = computed(() => {
       if (!scrollingContainer.value) return 0;
       const scrollWidth = scrollingContainer.value.scrollWidth;
@@ -220,6 +230,7 @@ export default defineComponent({
       
     })
     const clientWidth = ref(0);
+    const modeSelectorHeight = 30;
 
     let isXScrolling = false;
     let isYScrolling = false;
@@ -232,7 +243,8 @@ export default defineComponent({
       '--scaledHeight': `${props.scaledHeight}px`,
       '--scrollBarWidth': `${scrollBarWidth.value}px`,
       '--scrollBarHeight': `${scrollBarHeight.value}px`,
-      '--backgroundColor': props.backgroundColor
+      '--backgroundColor': props.backgroundColor,
+      '--modeSelectorHeight': `${modeSelectorHeight}px`
     }));
 
     const zoomOutY = () => emit('zoomOutY');
@@ -268,8 +280,6 @@ export default defineComponent({
     const updateClientWidth = () => {
       if (scrollingContainer.value) {
         clientWidth.value = scrollingContainer.value.clientWidth;
-        // scrollX.value = scrollingContainer.value.scrollLeft / 
-        //   (scrollingContainer.value.scrollWidth - scrollingContainer.value.clientWidth);
       }
       yAxisContainer.value!.scrollTop = scrollingContainer.value!.scrollTop;
       xAxisContainer.value!.scrollLeft = scrollingContainer.value!.scrollLeft;
@@ -289,12 +299,7 @@ export default defineComponent({
           yAxisContainer.value!.scrollTop = scrollingContainer.value!.scrollTop;
           isXScrolling = false;
           isYScrolling = false
-        };
-        const scrollWidth = scrollingContainer.value!.scrollWidth;
-        const scrollLeft = scrollingContainer.value!.scrollLeft;
-        // scrollX.value = scrollLeft / 
-        //   (scrollWidth - scrollingContainer.value!.clientWidth);
-
+        }
       });
       xAxisContainer.value?.addEventListener('scroll', () => {
         if (!isXScrolling) {
@@ -350,7 +355,8 @@ export default defineComponent({
       reScaleY,
       minDrawDur,
       scrollX,
-      clientWidth
+      clientWidth,
+      modeSelectorHeight
     }
   }
   
@@ -402,7 +408,6 @@ export default defineComponent({
   position: sticky;
   top: 0;
   left: var(--yAxWidth);
-  /* background: linear-gradient(0.25turn, #e66465, #9198e5); */
   width: calc(100% - var(--yAxWidth) - var(--scrollBarWidth));
   height: var(--xAxHeight);
   overflow-x: scroll;
@@ -493,7 +498,7 @@ export default defineComponent({
 .wrapper {
   position: relative;
   width: 100%;
-  height: 100%;
+  height: calc(100% - var(--modeSelectorHeight));
 }
 
 .backgroundLayer {
@@ -501,6 +506,11 @@ export default defineComponent({
   height: var(--scaledHeight);
   background-color: var(--backgroundColor);
   position: absolute;
+}
+
+.modeSelector {
+  width: 100%;
+  height: var(--modeSelectorHeight);
 }
 
 </style>
