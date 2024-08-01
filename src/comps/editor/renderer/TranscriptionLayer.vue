@@ -10,7 +10,8 @@
 import { 
   defineComponent, 
   ref, 
-  onMounted, 
+  onMounted,
+  onBeforeUnmount, 
   watch, 
   computed,
   PropType,
@@ -18,6 +19,7 @@ import {
 } from 'vue';
 import * as d3 from 'd3';
 import { linSpace, escCssClass } from '@/ts/utils.ts';
+import { EditorMode } from '@/ts/enums.ts';
 
 import { Piece, Trajectory } from '@/js/classes.ts';
 import { 
@@ -108,6 +110,22 @@ export default defineComponent({
     const tracks: d3.Selection<SVGGElement, unknown, null, undefined>[] = [];
     const emptyOverlay = ref<HTMLDivElement | null>(null);
     const emptyDivs = ref<HTMLDivElement[]>([]);
+    const editorMode = ref<EditorMode>(EditorMode.None);
+    const shifted = ref<boolean>(false);
+    const trajRenderStatus = ref<{ 
+      uniqueId: string, 
+      renderStatus: boolean,
+      selectedStatus: boolean 
+    }[][]>([]);
+    const instTracks = ref<{
+      inst: string,
+      idx: number,
+      displaying: boolean,
+      sounding: boolean
+    }[]>([]);
+    
+
+
     const emptyDivIdxMap = new Map<HTMLDivElement, number>();
     const maxEmptyDivWidth = props.clientWidth;
     const observer = new IntersectionObserver((entries) => {
@@ -116,9 +134,6 @@ export default defineComponent({
         if (entry.isIntersecting) {
           const inst = 0;
           const dur = chunkDur.value;
-          props.piece.chunkedTrajs(inst, dur)[idx].forEach(traj => {
-            if (traj.id !== 12) renderTraj(traj);
-          });
           props.piece.chunkedDisplaySargam(inst, dur)[idx].forEach(s => {
             renderSargam(s);
           });
@@ -131,6 +146,9 @@ export default defineComponent({
               renderEndingConsonant(c);
             })
           }
+          props.piece.chunkedTrajs(inst, dur)[idx].forEach(traj => {
+            if (traj.id !== 12) renderTraj(traj);
+          });
           observer.unobserve(entry.target);
         }
       })
@@ -140,20 +158,12 @@ export default defineComponent({
       threshold: 0.0
     });
 
-    const trajChunks = computed(() => {
-      const out = [];
-      for (let i = 0; i < props.piece.instrumentation.length; i++) {
-        out.push(props.piece.chunkedTrajs(i, chunkDur.value));
-      }
-      return out;
-    })
-
     const resetTrajRenderStatus = () => {
       for (let i = 0; i < props.piece.instrumentation.length; i++) {
-        if (trajRenderStatus[i] === undefined) {
-          trajRenderStatus.push([])
+        if (trajRenderStatus.value[i] === undefined) {
+          trajRenderStatus.value.push([])
         }
-        trajRenderStatus[i] = props.piece.allTrajectories(i).map(t => {
+        trajRenderStatus.value[i] = props.piece.allTrajectories(i).map(t => {
           return { 
             uniqueId: t.uniqueId!, 
             renderStatus: false,
@@ -163,11 +173,7 @@ export default defineComponent({
       }
     }
 
-    const trajRenderStatus: { 
-      uniqueId: string, 
-      renderStatus: boolean,
-      selectedStatus: boolean 
-    }[][] = [];
+    
     resetTrajRenderStatus();
 
     const trajStartTimes = computed(() => {
@@ -251,8 +257,10 @@ export default defineComponent({
         .style('opacity', Number(props.showSargam))
     });
     watch(() => props.showTranscription, () => {
-      d3.selectAll('.traj')
+      d3.selectAll('.transcriptionG')
         .style('opacity', Number(props.showTranscription))
+      // d3.selectAll('.traj')
+      //   .style('opacity', Number(props.showTranscription))
     });
     watch(() => props.showSargamLines, () => {
       d3.selectAll('.sargamLines')
@@ -266,32 +274,88 @@ export default defineComponent({
       const opacities = ['IPA', 'Devanagari', 'English'].map(c => {
         return c === props.phonemeRepresentation ? 1 : 0;
       });
-      console.log(opacities);
       d3.selectAll('.IPA')
         .attr('opacity', opacities[0])
       d3.selectAll('.Devanagari')
         .attr('opacity', opacities[1])
       d3.selectAll('.Latin')
         .attr('opacity', opacities[2])
+    });
+
+    const selectedTrajs = computed(() => {
+      const uIds = trajRenderStatus.value.flat().filter(obj => {
+        return obj.selectedStatus === true
+      }).map(obj => obj.uniqueId);
+      const out = props.piece.allTrajectories().filter(traj => {
+        return uIds.includes(traj.uniqueId!)
+      });
+      return out
+    })
+
+    watch(() => props.selTrajColor, () => {
+      selectedTrajs.value.forEach(traj => {
+        const selector = `.traj.uId${traj.uniqueId!}`;
+        d3.selectAll(selector)
+          .attr('stroke', props.selTrajColor)
+        d3.selectAll(selector + '.pluck')
+          .attr('fill', props.selTrajColor)
+      })
+    });
+
+    watch(selectedTrajs, (newVal, oldVal) => {
+      oldVal.forEach(traj => {
+        if (!newVal.includes(traj)) {
+          const selector = `.traj.uId${traj.uniqueId!}`;
+          d3.selectAll(selector)
+            .attr('stroke', props.trajColor)
+          d3.selectAll(selector + '.pluck')
+            .attr('fill', props.trajColor)
+        }
+      });
+      newVal.forEach(traj => {
+        if (!oldVal.includes(traj)) {
+          const selector = `.traj.uId${traj.uniqueId!}`;
+          d3.selectAll(selector)
+            .attr('stroke', props.selTrajColor)
+          d3.selectAll(selector + '.pluck')
+            .attr('fill', props.selTrajColor)
+        }
+      });
+      
     })
 
     const addSargamG = () => {
       if (tranSvg.value) {
         const svg = d3.select(tranSvg.value);
-        const g = svg.append('g')
-          .attr('class', 'sargamG')
-          .style('opacity', Number(props.showSargam))
-        return g;
+        for (let i = 0; i < props.piece.instrumentation.length; i++) {
+          const trackG = tracks[i];
+          const sargamG = trackG.append('g')
+            .attr('class', `sargamG track${i}`)
+            .style('opacity', Number(props.showSargam))
+        }
       }
     }
 
     const addPhonemeG = () => {
       if (tranSvg.value) {
         const svg = d3.select(tranSvg.value);
-        const g = svg.append('g')
-          .attr('class', 'enunciationG')
-          .style('opacity', Number(props.showPhonemes))
-        return g;
+        for (let i = 0; i < props.piece.instrumentation.length; i++) {
+          const trackG = tracks[i];
+          trackG.append('g')
+            .attr('class', `enunciationG track${i}`)
+            .style('opacity', Number(props.showPhonemes))
+        }
+      }
+    }
+
+    const addTrajG = () => {
+      if (tranSvg.value) {
+        const svg = d3.select(tranSvg.value);
+        for (let i = 0; i < props.piece.instrumentation.length; i++) {
+          const trackG = tracks[i];
+          trackG.append('g')
+            .attr('class', `trajG track${i}`)
+        }
       }
     }
 
@@ -309,6 +373,7 @@ export default defineComponent({
       resetObserver();
       addSargamG();
       addPhonemeG();
+      addTrajG();
     }
 
     const initializeTracks = () => {
@@ -316,8 +381,10 @@ export default defineComponent({
       // for each track. I'd like to store these g's in an array.
       if (tranSvg.value) {
         const svg = d3.select(tranSvg.value);
+        const transcriptionG = svg.append('g')
+          .attr('class', 'transcriptionG')
         for (let i = 0; i < props.piece.instrumentation.length; i++) {
-          const g = svg.append('g')
+          const g = transcriptionG.append('g')
             .attr('class', `track${i}`)
           tracks.push(g);
         }
@@ -343,7 +410,7 @@ export default defineComponent({
       .curve(d3.curveMonotoneX);
 
     const renderTraj = (traj: Trajectory, track: number = 0) => {
-      const renderObj = trajRenderStatus[track].find(obj => { 
+      const renderObj = trajRenderStatus.value[track].find(obj => { 
         return obj.uniqueId === traj.uniqueId
       });
       if (renderObj === undefined) {
@@ -364,7 +431,8 @@ export default defineComponent({
     const renderMelodicCurve = (traj: Trajectory, track: number = 0) => {
       const trajIdx = props.piece.allTrajectories(track).indexOf(traj);
       const trajStart = trajStartTimes.value[track][trajIdx];
-      const g = tracks[track];
+      const trackG = tracks[track];
+      const g = trackG.select('.trajG');
       const trajData = makeTrajData(traj, trajStart);
       g.append('path')
           .datum(trajData)
@@ -385,15 +453,19 @@ export default defineComponent({
           .attr('stroke-linecap', 'round')
           .attr('class', `trajShadow track${track} uId${traj.uniqueId!}`)
           .style('opacity', '0')
+          .style('cursor', 'pointer')
           .on('mouseover', () => handleTrajMouseOver(traj))
           .on('mouseout', () => handleTrajMouseOut(traj, track))
           .on('click', () => handleClickTraj(traj, track))
     }
 
+    
+
     const renderPlucks = (traj: Trajectory, track: number) => {
       const trajIdx = props.piece.allTrajectories(track).indexOf(traj);
       const trajStart = trajStartTimes.value[track][trajIdx];
-      const g = tracks[track];
+      const trackG = tracks[track];
+      const g = trackG.select('.trajG');
       const size = 20;
       const offset = (size ** 0.5) / 2;
       const keys = Object.keys(traj.articulations)
@@ -441,7 +513,8 @@ export default defineComponent({
           x: trajStart + traj.durTot,
           y: traj.compute(1, true)
         }
-        const g = tracks[track];
+        const trackG = tracks[track];
+        const g = trackG.select('.trajG');
         g.append('path')
           .data([obj])
           .attr('d', d3.line()([[-2, -8], [0, -8], [0, 8], [-2, 8]]))
@@ -508,7 +581,6 @@ export default defineComponent({
       const opacities = choices.map(c => {
         return c === props.phonemeRepresentation ? 1 : 0;
       });
-      
       g.append('text')
         .attr('text-anchor', 'middle')
         .attr('dominant-baseline', 'middle')
@@ -518,7 +590,6 @@ export default defineComponent({
         .attr('opacity', opacities[0])
         .attr('transform', d => `translate(${x}, ${y})` )
         .text(v.ipaText)
-      
       g.append('text')
         .attr('text-anchor', 'middle')
         .attr('dominant-baseline', 'middle')
@@ -528,7 +599,6 @@ export default defineComponent({
         .attr('opacity', opacities[1])
         .attr('transform', d => `translate(${x}, ${y})` )
         .text(v.devanagariText)
-
       g.append('text')
         .attr('text-anchor', 'middle')
         .attr('dominant-baseline', 'middle')
@@ -559,7 +629,6 @@ export default defineComponent({
         .attr('opacity', opacities[0])
         .attr('transform', d => `translate(${x}, ${y})` )
         .text(c.ipaText)
-
       g.append('text')
         .attr('text-anchor', 'middle')
         .attr('dominant-baseline', 'middle')
@@ -569,7 +638,6 @@ export default defineComponent({
         .attr('opacity', opacities[1])
         .attr('transform', d => `translate(${x}, ${y})` )
         .text(c.devanagariText)
-
       g.append('text')
         .attr('text-anchor', 'middle')
         .attr('dominant-baseline', 'middle')
@@ -581,38 +649,23 @@ export default defineComponent({
         .text(c.englishText)
     }
 
-
-
     const handleClickTraj = (traj: Trajectory, track: number) => {
-      console.log('clicked traj');
-      const selector = `.traj.uId${traj.uniqueId!}`;
-      const renderObj = trajRenderStatus[track].find(obj => {
-        return obj.uniqueId === traj.uniqueId
-      });
-      if (renderObj!.selectedStatus === false) {
-        d3.selectAll(selector)
-          .attr('stroke', props.selTrajColor)
-        d3.selectAll(selector + '.pluck')
-          .attr('fill', props.selTrajColor)
-        
-        const currentlySelected = trajRenderStatus[track].filter(obj => {
-          return obj.selectedStatus === true
-        });
-        currentlySelected.forEach(obj => {
-          const selSelector = `.traj.uId${obj.uniqueId}`;
-          d3.selectAll(selSelector)
-            .attr('stroke', props.trajColor)
-          d3.selectAll(selSelector + '.pluck')
-            .attr('fill', props.trajColor)
-          obj.selectedStatus = false;
+      if (!shifted.value) {
+        selectedTrajs.value.forEach(traj => {
+          const rObj = trajRenderStatus.value.flat().find(obj => {
+            return obj.uniqueId === traj.uniqueId
+          });
+          rObj!.selectedStatus = false;
+        })
+        const renderObj = trajRenderStatus.value[track].find(obj => {
+          return obj.uniqueId === traj.uniqueId
         });
         renderObj!.selectedStatus = true;
       } else {
-        d3.selectAll(selector)
-          .attr('stroke', props.trajColor)
-        d3.selectAll(selector + '.pluck')
-          .attr('fill', props.trajColor)
-        renderObj!.selectedStatus = false;
+        const renderObj = trajRenderStatus.value[track].find(obj => {
+          return obj.uniqueId === traj.uniqueId
+        });
+        renderObj!.selectedStatus = true;
       }
     }
 
@@ -626,7 +679,7 @@ export default defineComponent({
 
     const handleTrajMouseOut = (traj: Trajectory, track: number) => {
       const selector = `.traj.uId${traj.uniqueId!}`
-      const renderObj = trajRenderStatus[track].find(obj => {
+      const renderObj = trajRenderStatus.value[track].find(obj => {
         return obj.uniqueId === traj.uniqueId
       });
       if (renderObj!.selectedStatus === false) {
@@ -635,14 +688,6 @@ export default defineComponent({
         d3.selectAll(selector + '.pluck')
           .attr('fill', props.trajColor)
       }
-    }
-
-    const renderChunk = (inst: number, idx: number) => {
-      const trackChunks = trajChunks.value[inst];
-      const chunk = trackChunks[idx];
-      chunk.forEach(traj => {
-        renderTraj(traj, inst);
-      })
     }
 
     const updateSargamLineSpacing = () => {
@@ -671,7 +716,8 @@ export default defineComponent({
       }
     }
 
-    const addSargamLines = (svg: d3.Selection<SVGSVGElement, unknown, null, undefined>) => {
+    const addSargamLines = () => {
+      const svg = d3.select(tranSvg.value);
       const saFilter = (logFreq: number) => {
         const logSa = Math.log2(props.piece.raga.fundamental);
         return (logFreq - logSa) % 1 === 0
@@ -688,6 +734,7 @@ export default defineComponent({
 
       sargamVals.value.forEach((s, idx) => {
         sargamLinesG.append('line')
+          .classed('sargamLine', true)
           .attr('x1', 0)
           .attr('x2', props.width)
           .attr('y1', props.yScale(s))
@@ -729,18 +776,267 @@ export default defineComponent({
       return props.xScale.invert(props.clientWidth)
     })
 
+    const handleEscape = () => {
+      editorMode.value = EditorMode.None;
+      selectedTrajs.value.forEach(traj => {
+        const selector = `.traj.uId${traj.uniqueId!}`;
+        d3.selectAll(selector)
+          .attr('stroke', props.trajColor)
+        d3.selectAll(selector + '.pluck')
+          .attr('fill', props.trajColor)
+        const renderObj = trajRenderStatus.value[0].find(obj => {
+          return obj.uniqueId === traj.uniqueId
+        });
+        renderObj!.selectedStatus = false;
+      })
+    }
+
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleEscape();
+      } else if (e.key === 's') {
+        editorMode.value = EditorMode.Series;
+      } else if (e.key === 't') {
+        editorMode.value = EditorMode.Trajectory;
+      } else if (e.key === 'c') {
+        editorMode.value = EditorMode.Chikari;
+      } else if (e.key === 'm') {
+        editorMode.value = EditorMode.Meter;
+      } else if (e.key === 'Shift') {
+        shifted.value = true;
+      }
+    }
+
+    const handleKeyup = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') {
+        shifted.value = false;
+      }
+    }
+
+    let selBoxStartX: number | undefined = undefined;
+    let selBoxStartY: number | undefined = undefined;
+    let selBox: d3.Selection<SVGRectElement, unknown, null, undefined> | null = 
+      null;
+
+    const selBoxDragStart = (e: MouseEvent) => {
+      if (shifted.value) {
+        selBoxStartX = e.x;
+        selBoxStartY = e.y;
+        selBox = d3.select(tranSvg.value)
+          .append('rect')
+          .attr('id', 'selBox')
+      }
+    }
+
+    const selBoxDragMove = (e: MouseEvent) => {
+      if (selBoxStartX !== undefined && selBoxStartY !== undefined) {
+        if (shifted.value) {
+          const x = Math.min(selBoxStartX, e.x);
+          const y = Math.min(selBoxStartY, e.y);
+          const width = Math.abs(selBoxStartX - e.x);
+          const height = Math.abs(selBoxStartY - e.y);
+          selBox?.attr('x', x)
+            .attr('y', y)
+            .attr('width', width)
+            .attr('height', height)
+            .attr('fill', 'none')
+            .attr('stroke', 'black')
+            .attr('stroke-width', 1)
+            .attr('stroke-dasharray', '5, 5')
+        } else {
+          selBoxDragEnd(e);
+        }
+      }
+    }
+
+    const selBoxDragEnd = (e: MouseEvent) => {
+      if (shifted.value) {
+        const c = selBoxStartX === e.x && selBoxStartY === e.y;
+        if (selBoxStartX !== undefined && selBoxStartY !== undefined && !c) {
+          const x = Math.min(selBoxStartX, e.x);
+          const y = Math.min(selBoxStartY, e.y);
+          const width = Math.abs(selBoxStartX - e.x);
+          const height = Math.abs(selBoxStartY - e.y);
+          d3.select('#selBox').remove();
+          const startTime = props.xScale.invert(x);
+          const endTime = props.xScale.invert(x + width);
+          const lowLogFreq = props.yScale.invert(y + height);
+          const highLogFreq = props.yScale.invert(y);
+          selBoxSelectTrajs({
+            startTime,
+            endTime,
+            minLogFreq: lowLogFreq,
+            maxLogFreq: highLogFreq
+          });
+        } 
+      }
+    }
+
+    const setUpSvg = () => {
+      const svg = d3.select(tranSvg.value);
+      const selBoxDrag = d3.drag()
+        .on('start', selBoxDragStart)
+        .on('drag', selBoxDragMove)
+        .on('end', selBoxDragEnd);
+      svg
+        .attr('width', props.width)
+        .attr('height', props.height)
+        .call(selBoxDrag)
+        .on('click', handleClick)
+    };
+
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target! as HTMLElement;
+      const classes = [
+        'tranSvg', 
+        'sargamLine', 
+        'sargamLabel', 
+        'vowelLabel',
+        'consonantLabel'
+      ];
+      const f = classes.some(c => target.classList.contains(c));
+      if (f) {
+        handleEscape();
+      }
+    }
+
+    const collectTrajs = (
+        timelyTrajs: Trajectory[], 
+        options: { 
+          startTime?: number, 
+          endTime?: number, 
+          minLogFreq?: number, 
+          maxLogFreq?: number
+        } = {
+      startTime: undefined,
+      endTime: undefined,
+      minLogFreq: undefined,
+      maxLogFreq: undefined
+    }
+    ) => {
+      if (options.startTime === undefined || options.endTime === undefined ||
+          options.minLogFreq === undefined || options.maxLogFreq === undefined) {
+        throw new Error('Missing selection box parameters');
+      }
+      const startTime = options.startTime;
+      const endTime = options.endTime;
+      const lowFreq = options.minLogFreq;
+      const highFreq = options.maxLogFreq;
+      const collectedTrajs: Trajectory[] = [];
+      const sampleDur = 0.01;
+      timelyTrajs.forEach(async (traj, tIdx) => {
+        const phrase = props.piece.phrases[traj.phraseIdx!];
+        const trajStart = phrase.startTime! + traj.startTime!;
+        const trajEnd = trajStart + traj.durTot;
+        let sampleTimes;
+        if (tIdx === 0) {
+          if (timelyTrajs.length === 1) {
+            const div = Math.floor((endTime - startTime) / sampleDur);
+            sampleTimes = linSpace(0, 1, div);
+          } else {
+            const div = Math.floor((trajEnd - startTime) / sampleDur);
+            sampleTimes = linSpace(0, 1, div)
+          }
+        } else if (tIdx === timelyTrajs.length - 1) {
+          const div = Math.floor((endTime - trajStart) / sampleDur);
+          sampleTimes = linSpace(0, 1, div)
+        } else {
+          const div = Math.floor((trajEnd - trajStart) / sampleDur);
+          sampleTimes = linSpace(0, 1, div)
+        }
+        let trigger = false;
+        let override = false;
+        let ct = 0;
+        while ((!trigger) && (!override)) {
+          const logFreq = traj.compute(sampleTimes[ct], true);
+          if (logFreq >= lowFreq && logFreq <= highFreq) {
+            trigger = true;
+          } else if (ct === sampleTimes.length - 1) {
+            override = true;
+          } else {
+            ct++;
+          }
+        }
+        if (trigger) {
+          collectedTrajs.push(traj);
+        }
+        if (ct > 1000) {
+          throw new Error('ct > 1000')
+        }
+        return
+      });
+      return collectedTrajs
+    };
+
+    const selBoxSelectTrajs = (options: { 
+      startTime?: number, 
+      endTime?: number, 
+      minLogFreq?: number, 
+      maxLogFreq?: number
+    } = {
+      startTime: undefined,
+      endTime: undefined,
+      minLogFreq: undefined,
+      maxLogFreq: undefined
+    }) => {
+      
+      if (options.startTime === undefined || options.endTime === undefined ||
+          options.minLogFreq === undefined || options.maxLogFreq === undefined) {
+        throw new Error('Missing selection box parameters');
+      }
+      const startTime = options.startTime;
+      const endTime = options.endTime;
+      const minLogFreq = options.minLogFreq;
+      const maxLogFreq = options.maxLogFreq;
+      const instIdxs = instTracks.value
+        .filter(t => t.displaying)
+        .map(t => t.idx);
+      const trajs = instIdxs
+        .map(i => props.piece.allTrajectories(i))
+        .flat()
+        .filter(traj => {
+          const phraseStart = props.piece.phrases[traj.phraseIdx!].startTime!;
+          const trajStart = phraseStart + traj.startTime!;
+          const trajEnd = trajStart + traj.durTot;
+          const c1 = trajStart >= startTime && trajStart <= endTime;
+          const c2 = trajEnd >= startTime && trajEnd <= endTime;
+          const c3 = trajStart <= startTime && trajEnd >= endTime;
+          const c4 = traj.id !== 12;
+          return (c1 || c2 || c3) && c4;
+        })
+      const overlappingTrajs = collectTrajs(trajs, options);
+      overlappingTrajs.forEach(traj => {
+        const rObj = trajRenderStatus.value.flat().find(obj => {
+          return obj.uniqueId === traj.uniqueId
+        });
+        rObj!.selectedStatus = true;
+      })
+    }
+
     onMounted(() => {
       if (tranSvg.value) {
-        const svg = d3.select(tranSvg.value);
-        svg
-          .attr('width', props.width)
-          .attr('height', props.height)
-        addSargamLines(svg);
+        setUpSvg();
+        addSargamLines();
         initializeTracks();
         resetTranscription();
+        props.piece.instrumentation.forEach((inst, idx) => {
+          instTracks.value.push({
+            inst: inst,
+            idx: idx,
+            displaying: idx === 0,
+            sounding: idx === 0
+          })
+        })
+        window.addEventListener('keydown', handleKeydown);
+        window.addEventListener('keyup', handleKeyup);
       };
-    })
 
+    });
+
+    onBeforeUnmount(() => {
+      window.removeEventListener('keydown', handleKeydown);
+      window.removeEventListener('keyup', handleKeyup);
+    });
 
     return { 
       dynamicStyle,
@@ -753,7 +1049,11 @@ export default defineComponent({
       resetTranscription,
       emptyOverlay,
       emptyDivs,
-      emptyDivIdxMap
+      emptyDivIdxMap,
+      selectedTrajs,
+      editorMode,
+      shifted,
+      tracks
     }
   }
 })
@@ -762,7 +1062,6 @@ export default defineComponent({
 <style scopred>
 .tranContainer {
   position: relative;
-  /* opacity: var(--opacity); */
   display: flex;
   flex-direction: row;
   overflow-x: auto;
