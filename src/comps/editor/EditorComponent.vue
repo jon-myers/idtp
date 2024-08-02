@@ -25,6 +25,7 @@
       :phonemeRepresentation='phonemeRepresentation'
       :instTracks='instTracks'
       :selectedMode='selectedMode'
+      :showPhraseDivs='viewPhrases'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
@@ -96,6 +97,13 @@
           <input 
             type='checkbox' 
             v-model='showPhonemes' 
+            @click='preventSpaceToggle'>
+        </div>
+        <div class='cbRow' v-if='visibilityTab'>
+          <label>Phrase Divs</label>
+          <input 
+            type='checkbox' 
+            v-model='viewPhrases' 
             @click='preventSpaceToggle'>
         </div>
         <div class='lineBreakParent' v-if='visibilityTab'>

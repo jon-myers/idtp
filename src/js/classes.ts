@@ -13,6 +13,7 @@ import {
   SargamDisplayType,
   VowelDisplayType,
   ConsonantDisplayType,
+  PhraseDivDisplayType
 } from '@/ts/types.ts';
 import { closeTo } from '@/ts/utils.ts';
 
@@ -2665,6 +2666,20 @@ class Piece {
     return sargams
   }
 
+  allPhraseDivs() {
+    const phraseDivObjs: PhraseDivDisplayType[] = [];
+    this.phrases.forEach((p, pIdx) => {
+      if (pIdx !== 0) {
+        phraseDivObjs.push({
+          time: p.startTime!,
+          type: this.sectionStarts!.includes(pIdx) ? 'section' : 'phrase',
+          idx: pIdx
+        })
+      }
+    })
+    return phraseDivObjs
+  }
+
   allDisplayVowels(inst = 0) {
     const vocalInsts = ['Vocal (M)', 'Vocal (F)'];
     const displayVowels: VowelDisplayType[] = []
@@ -2761,6 +2776,18 @@ class Piece {
     for (let i = 0; i < this.durTot!; i += duration) {
       const chunk = displaySargam.filter(s => {
         return s.time >= i && s.time < i + duration
+      });
+      chunks.push(chunk)
+    }
+    return chunks
+  }
+
+  chunkedPhraseDivs(duration = 30) {
+    const phraseDivs = this.allPhraseDivs();
+    const chunks: PhraseDivDisplayType[][] = [];
+    for (let i = 0; i < this.durTot!; i += duration) {
+      const chunk = phraseDivs.filter(pd => {
+        return pd.time >= i && pd.time < i + duration
       });
       chunks.push(chunk)
     }

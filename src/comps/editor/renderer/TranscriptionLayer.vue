@@ -26,7 +26,8 @@ import {
   SargamDisplayType, 
   VowelDisplayType, 
   ConsonantDisplayType,
-  InstrumentTrackType 
+  InstrumentTrackType,
+  PhraseDivDisplayType
 } from '@/ts/types.ts';
 
 export default defineComponent({
@@ -103,6 +104,10 @@ export default defineComponent({
     selectedMode: {
       type: String as PropType<EditorMode>,
       required: true
+    },
+    showPhraseDivs: {
+      type: Boolean,
+      required: true
     }
   },
   setup(props, { emit }) {
@@ -119,6 +124,8 @@ export default defineComponent({
       selectedStatus: boolean,
       track: number 
     }[][]>([]);
+    const selectedPhraseDivIdx = ref<number | undefined>(undefined);
+    const selPhraseDivColor = 'red';
 
     const emptyDivIdxMap = new Map<HTMLDivElement, number>();
     const maxEmptyDivWidth = props.clientWidth;
@@ -126,22 +133,26 @@ export default defineComponent({
       entries.forEach(entry => {
         const idx = emptyDivIdxMap.get(entry.target as HTMLDivElement)!;
         if (entry.isIntersecting) {
-          const inst = 0;
           const dur = chunkDur.value;
-          props.piece.chunkedDisplaySargam(inst, dur)[idx].forEach(s => {
-            renderSargam(s);
-          });
-          const insts = ['Vocal (M)', 'Vocal (F)'];
-          if (insts.includes(props.piece.instrumentation[inst])) {
-            props.piece.chunkedDisplayVowels(inst, dur)[idx].forEach(v => {
-              renderVowel(v);
-            })
-            props.piece.chunkedDisplayConsonants(inst, dur)[idx].forEach(c => {
-              renderEndingConsonant(c);
-            })
+          for (let inst = 0; inst < props.piece.instrumentation.length; inst++) {
+            props.piece.chunkedDisplaySargam(inst, dur)[idx].forEach(s => {
+              renderSargam(s);
+            });
+            const insts = ['Vocal (M)', 'Vocal (F)'];
+            if (insts.includes(props.piece.instrumentation[inst])) {
+              props.piece.chunkedDisplayVowels(inst, dur)[idx].forEach(v => {
+                renderVowel(v);
+              })
+              props.piece.chunkedDisplayConsonants(inst, dur)[idx].forEach(c => {
+                renderEndingConsonant(c);
+              })
+            }
+            props.piece.chunkedTrajs(inst, dur)[idx].forEach(traj => {
+              if (traj.id !== 12) renderTraj(traj);
+            });
           }
-          props.piece.chunkedTrajs(inst, dur)[idx].forEach(traj => {
-            if (traj.id !== 12) renderTraj(traj);
+          props.piece.chunkedPhraseDivs(dur)[idx].forEach(pd => {
+            renderPhraseDiv(pd);
           });
           observer.unobserve(entry.target);
         }
@@ -258,7 +269,7 @@ export default defineComponent({
         .style('opacity', Number(props.showSargamLines))
     });
     watch(() => props.showPhonemes, () => {
-      d3.selectAll('.enunciationG')
+      d3.selectAll('.phonemeG')
         .style('opacity', Number(props.showPhonemes))
     });
     watch(() => props.phonemeRepresentation, () => {
@@ -332,6 +343,21 @@ export default defineComponent({
           .attr('fill', props.instTracks[track].selColor)
       })
     }, { deep: true });
+    watch(() => props.showPhraseDivs, () => {
+      d3.selectAll('.phraseDivG')
+        .style('opacity', Number(props.showPhraseDivs))
+    });
+    watch(selectedPhraseDivIdx, (newVal) => {
+      if (newVal !== undefined) {
+        const selector = `.phraseDiv.pIdx${newVal}`;
+        console.log(selector)
+        d3.select(selector)
+          .attr('stroke', selPhraseDivColor)
+      } else {
+        d3.selectAll('.phraseDiv')
+          .attr('stroke', 'black')
+      }
+    });
 
     const addSargamG = () => {
       if (tranSvg.value) {
@@ -351,7 +377,7 @@ export default defineComponent({
         for (let i = 0; i < props.piece.instrumentation.length; i++) {
           const trackG = tracks[i];
           trackG.append('g')
-            .attr('class', `enunciationG`)
+            .attr('class', `phonemeG`)
             .style('opacity', Number(props.showPhonemes))
         }
       }
@@ -359,7 +385,6 @@ export default defineComponent({
 
     const addTrajG = () => {
       if (tranSvg.value) {
-        const svg = d3.select(tranSvg.value);
         for (let i = 0; i < props.piece.instrumentation.length; i++) {
           const trackG = tracks[i];
           trackG.append('g')
@@ -368,11 +393,20 @@ export default defineComponent({
       }
     }
 
+    const addPhraseDivG = () => {
+      if (tranSvg.value) {
+        const svg = d3.select(tranSvg.value);
+        svg.append('g')
+          .attr('class', 'phraseDivG')
+          .style('opacity', Number(props.showPhraseDivs))
+      }
+    }
+
     const clearTranscription = () => {
-      d3.selectAll('.traj').remove();
-      d3.selectAll('.trajShadow').remove();
+      d3.selectAll('.trajG').remove();
       d3.selectAll('.sargamG').remove();
-      d3.selectAll('.enunciationG').remove();
+      d3.selectAll('.phonemeG').remove();
+      d3.selectAll('.phraseDivG').remove();
     };
 
     const resetTranscription = () => {
@@ -380,6 +414,7 @@ export default defineComponent({
       resetTrajRenderStatus();
       resetEmptyObserverDivs();
       resetObserver();
+      addPhraseDivG();
       addSargamG();
       addPhonemeG();
       addTrajG();
@@ -505,7 +540,8 @@ export default defineComponent({
           .attr('stroke', 'black')
           .attr('transform', d => `translate(${d.x + offset}, ${d.y}) rotate(90)`)
           .style('opacity', '0')
-          .classed(`pluckshadow uId${traj.uniqueId!}`, true)
+          .style('cursor', 'pointer')
+          .classed(`pluckShadow uId${traj.uniqueId!}`, true)
           .on('mouseover', () => handleTrajMouseOver(traj, track))
           .on('mouseout', () => handleTrajMouseOut(traj, track))
           .on('click', () => handleClickTraj(traj, track))
@@ -548,7 +584,8 @@ export default defineComponent({
             return `translate(${props.xScale(d.x)}, ${props.yScale(d.y)})`
           })
           .style('opacity', '0')
-          .classed(`dampenshadow uId${traj.uniqueId!}`, true)
+          .style('cursor', 'pointer')
+          .classed(`dampenShadow uId${traj.uniqueId!}`, true)
           .on('mouseover', () => handleTrajMouseOver(traj, track))
           .on('mouseout', () => handleTrajMouseOut(traj, track))
           .on('click', () => handleClickTraj(traj, track))
@@ -584,7 +621,7 @@ export default defineComponent({
       const verticalOffset = 14;
       const y = props.yScale(v.logFreq) - verticalOffset;
       const x = props.xScale(v.time);
-      const g = svg.select('.enunciationG');
+      const g = svg.select('.phonemeG');
       let text = '';
       const choices = ['IPA', 'Devanagari', 'English'];
       const opacities = choices.map(c => {
@@ -624,7 +661,7 @@ export default defineComponent({
       const verticalOffset = 14;
       const y = props.yScale(c.logFreq) - verticalOffset;
       const x = props.xScale(c.time);
-      const g = svg.select('.enunciationG');
+      const g = svg.select('.phonemeG');
       const choices = ['IPA', 'Devanagari', 'English'];
       const opacities = choices.map(c => {
         return c === props.phonemeRepresentation ? 1 : 0;
@@ -657,6 +694,37 @@ export default defineComponent({
         .attr('transform', d => `translate(${x}, ${y})` )
         .text(c.englishText)
     }
+
+    const renderPhraseDiv = (pd: PhraseDivDisplayType) => {
+      const svg = d3.select(tranSvg.value);
+      const x = props.xScale(pd.time);
+      const thickness = pd.type === 'section' ? 4 : 2;
+      const y1 = props.yScale.range()[0];
+      const y2 = props.yScale.range()[1];
+      const g = svg.select('.phraseDivG');
+      g.append('line')
+        .attr('x1', x)
+        .attr('x2', x)
+        .attr('y1', y1)
+        .attr('y2', y2)
+        .attr('stroke', 'black')
+        .attr('stroke-width', thickness)
+        .attr('class', `phraseDiv pIdx${pd.idx}`)
+      
+      g.append('line')
+        .attr('x1', x)
+        .attr('x2', x)
+        .attr('y1', y1)
+        .attr('y2', y2)
+        .attr('stroke', 'white')
+        .attr('stroke-width', 8)
+        .style('opacity', 0)
+        .style('cursor', 'pointer')
+        .on('click', () => {
+          selectedPhraseDivIdx.value = pd.idx;
+        })
+        .attr('class', `phraseDivShadow pIdx${pd.idx}`)
+    } 
 
     const handleClickTraj = (traj: Trajectory, track: number) => {
       if (!shifted.value) {
@@ -798,9 +866,9 @@ export default defineComponent({
           .attr('stroke', props.instTracks[track].color)
         d3.selectAll(selector + '.pluck')
           .attr('fill', props.instTracks[track].color)
-        
         renderObj!.selectedStatus = false;
       })
+      selectedPhraseDivIdx.value = undefined;
     }
 
     const handleKeydown = (e: KeyboardEvent) => {

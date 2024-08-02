@@ -793,6 +793,12 @@ type InstrumentTrackType = {
   selColor: string,
 }
 
+type PhraseDivDisplayType = {
+  time: number,
+  type: 'phrase' | 'section',
+  idx: number,
+}
+
 export type { 
   CollectionType, 
   UserType, 
@@ -859,5 +865,6 @@ export type {
   VowelDisplayType,
   ConsonantDisplayType,
   InstrumentTrackType,
+  PhraseDivDisplayType
 };
 

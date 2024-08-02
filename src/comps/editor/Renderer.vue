@@ -83,6 +83,7 @@
               :phonemeRepresentation='phonemeRepresentation'
               :instTracks='instTracks'
               :selectedMode='selectedMode'
+              :showPhraseDivs='showPhraseDivs'
               @update:selectedMode='$emit("update:selectedMode", $event)'
             />
           />
@@ -207,6 +208,10 @@ export default defineComponent({
     },
     selectedMode: {
       type: String as PropType<EditorMode>,
+      required: true
+    },
+    showPhraseDivs: {
+      type: Boolean,
       required: true
     }
   },
