@@ -26,6 +26,8 @@
       :instTracks='instTracks'
       :selectedMode='selectedMode'
       :showPhraseDivs='viewPhrases'
+      :editable='editable'
+      :sargamMagnetMode='true'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
@@ -870,7 +872,7 @@ export default defineComponent({
       await this.getPieceFromJson(piece, fund);
       useTitle(this.piece.title);
 
-      this.editable = this.permissionToEdit(this.piece);
+      this.editable = this.permissionToEdit(this.piece); // necessary
       if (!this.permissionToView(this.piece)) {
         await this.$router.push({ name: 'Files' });
           throw 'IDTP logger: Piece does not exist, or you do not have \
@@ -2664,7 +2666,7 @@ export default defineComponent({
             .attr('cy', y)
         }
       }
-      // special case of moving inner dots, doesn't effect other trajs
+      // special case of moving inner dots, doesn't affect other trajs
       if (idx > 0 && idx < traj.durArray!.length) {
         const newDurArray = this.calculateNewDurArray(phrase, traj, idx, time);
         traj.durArray = newDurArray;

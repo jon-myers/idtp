@@ -15,7 +15,7 @@ import {
   ConsonantDisplayType,
   PhraseDivDisplayType
 } from '@/ts/types.ts';
-import { closeTo } from '@/ts/utils.ts';
+import { closeTo, getClosest } from '@/ts/utils.ts';
 
 
 const initSecCategorization = (): SecCatType => {
@@ -2509,6 +2509,21 @@ class Piece {
     return sections
   }
 
+  trackFromTraj(traj: Trajectory) {
+    let track: number | undefined = undefined;
+    for (let i = 0; i < this.instrumentation.length; i++) {
+      const trajs = this.allTrajectories(i);
+      if (trajs.includes(traj)) {
+        track = i;
+        break
+      }
+    }
+    if (track === undefined) {
+      throw new Error('Trajectory not found')
+    }
+    return track
+  }
+
   allPitches({ repetition=true, pitchNumber=false } = {}) {
     let allPitches: Pitch[] = [];
     this.phrases.forEach(p => allPitches.push(...p.allPitches()));
@@ -3306,6 +3321,25 @@ class Raga {
       }
     });
     return names
+  }
+
+  pitchFromLogFreq(logFreq: number) {
+    const options = this.getFrequencies({ low: 75, high: 2400 })
+      .map(f => Math.log2(f));
+    const quantizedLogFreq = getClosest(options, logFreq);
+    const logOffset = logFreq - quantizedLogFreq;
+    let logDiff = quantizedLogFreq - Math.log2(this.fundamental);
+    const octOffset = Math.floor(logDiff);
+    logDiff -= octOffset;
+    const rIdx = this.ratios.findIndex(r => closeTo(r, 2 ** logDiff));
+    const swara = this.sargamLetters[rIdx];
+    return new Pitch({ 
+      swara: swara, 
+      oct: octOffset, 
+      fundamental: this.fundamental,
+      ratios: this.stratifiedRatios,
+      logOffset: logOffset
+    })
   }
 
   toJSON() {

@@ -18,10 +18,11 @@ import {
   nextTick
 } from 'vue';
 import * as d3 from 'd3';
-import { linSpace, escCssClass } from '@/ts/utils.ts';
+import { linSpace, cumsum, getClosest } from '@/ts/utils.ts';
 import { EditorMode } from '@/ts/enums.ts';
 
-import { Piece, Trajectory } from '@/js/classes.ts';
+import { Piece, Trajectory, Phrase, Pitch } from '@/js/classes.ts';
+import { throttle } from 'lodash';
 import { 
   SargamDisplayType, 
   VowelDisplayType, 
@@ -108,6 +109,14 @@ export default defineComponent({
     showPhraseDivs: {
       type: Boolean,
       required: true
+    },
+    editable: {
+      type: Boolean,
+      required: true
+    },
+    sargamMagnetMode: {
+      type: Boolean,
+      required: true
     }
   },
   setup(props, { emit }) {
@@ -126,6 +135,10 @@ export default defineComponent({
     }[][]>([]);
     const selectedPhraseDivIdx = ref<number | undefined>(undefined);
     const selPhraseDivColor = 'red';
+    const dragDotColor = 'purple';
+    let dragDotIdx: number | undefined = undefined;
+    let dragShadowTraj: Trajectory | undefined = undefined;
+    const minTrajDur = 0.05;
 
     const emptyDivIdxMap = new Map<HTMLDivElement, number>();
     const maxEmptyDivWidth = props.clientWidth;
@@ -222,7 +235,7 @@ export default defineComponent({
     const logMax = computed(() => {
       return Math.log2(props.piece.raga.fundamental) + props.highOctOffset;
     })
-    const sargamVals = computed(() => {
+    const logSargamVals = computed(() => {
       return props.piece.raga.getFrequencies({
         low: 2 ** logMin.value,
         high: 2 ** logMax.value
@@ -321,6 +334,11 @@ export default defineComponent({
             .attr('fill', props.instTracks[track].selColor)
         }
       });
+      if (selectedTrajs.value.length === 1) {
+        const traj = selectedTrajs.value[0];
+        const track = props.piece.trackFromTraj(traj);
+        addDragDots(track);
+      }
     })
     watch(() => props.instTracks, (newVal) => {
       newVal.forEach((track, tIdx) => {
@@ -470,6 +488,19 @@ export default defineComponent({
         }
       };
       renderObj.renderStatus = true;
+    };
+
+    const removeTraj = (traj: Trajectory, track: number) => {
+      const renderObj = trajRenderStatus.value[track].find(obj => {
+        return obj.uniqueId === traj.uniqueId
+      });
+      if (renderObj === undefined) {
+        throw new Error('Trajectory not found in render status array');
+      }
+      if (renderObj.renderStatus === false) return;
+      const trajG = tracks[track].select('.trajG');
+      trajG.selectAll(`.uId${traj.uniqueId}`).remove();
+      renderObj.renderStatus = false;
     };
 
     const renderMelodicCurve = (traj: Trajectory, track: number = 0) => {
@@ -721,12 +752,26 @@ export default defineComponent({
         .style('opacity', 0)
         .style('cursor', 'pointer')
         .on('click', () => {
+          clearDragDots();
           selectedPhraseDivIdx.value = pd.idx;
+          selectedTrajs.value.forEach(traj => {
+            const rObj = trajRenderStatus.value.flat().find(obj => {
+              return obj.uniqueId === traj.uniqueId
+            });
+            rObj!.selectedStatus = false;
+          })
         })
         .attr('class', `phraseDivShadow pIdx${pd.idx}`)
-    } 
+    }
+
+    const removePhraseDiv = (pdIdx: number) => {
+      console.log(pdIdx)
+      const g = d3.select('.phraseDivG');
+      g.selectAll(`.pIdx${pdIdx}`).remove();
+    }
 
     const handleClickTraj = (traj: Trajectory, track: number) => {
+      selectedPhraseDivIdx.value = undefined;
       if (!shifted.value) {
         selectedTrajs.value.forEach(traj => {
           const rObj = trajRenderStatus.value.flat().find(obj => {
@@ -739,10 +784,414 @@ export default defineComponent({
         });
         renderObj!.selectedStatus = true;
       } else {
+        clearDragDots();
         const renderObj = trajRenderStatus.value[track].find(obj => {
           return obj.uniqueId === traj.uniqueId
         });
         renderObj!.selectedStatus = true;
+      }
+    };
+
+    interface Datum {
+      x: number,
+      y: number
+    }
+
+    const constrainTime = (e: MouseEvent | 
+        d3.D3DragEvent<SVGCircleElement, Datum, MouseEvent>,
+        idx: number) => {
+      let time = props.xScale.invert(e.x);
+      const traj = selectedTrajs.value[0];
+      const tIdx = traj.num!;
+      const phrase = props.piece.phrases[traj.phraseIdx!];
+      let times = [0, ...traj.durArray!.map(cumsum())];
+      const startTime = phrase.startTime! + traj.startTime!;
+      times = times.map(t => t * traj.durTot + startTime);
+      if (idx === 0) {
+        let start: number = 0;
+        let prevTraj: Trajectory;
+        if (tIdx > 0){
+          prevTraj = phrase.trajectories[tIdx - 1];
+          if (prevTraj.durArray && prevTraj.durArray.length > 1) {
+            let prevTrajTimes = [0, ...prevTraj.durArray!.map(cumsum())];
+            prevTrajTimes = prevTrajTimes.map(t => {
+              const pst = phrase.startTime! + prevTraj.startTime!;
+              return t * prevTraj.durTot + pst;
+            })
+            start = prevTrajTimes[prevTrajTimes.length - 2];
+          } else {
+            start = phrase.startTime! + phrase.trajectories[tIdx - 1].startTime!;
+          }
+        } else if (traj.phraseIdx! > 0) {
+          const prevPhrase = props.piece.phrases[traj.phraseIdx! - 1];
+          const pTrajs = prevPhrase.trajectories;
+          prevTraj = pTrajs[pTrajs.length - 1];
+          if (prevTraj.durArray && prevTraj.durArray.length > 1) {
+            let prevTrajTimes = [0, ...prevTraj.durArray!.map(cumsum())];
+            prevTrajTimes = prevTrajTimes.map(t => {
+              const pst = prevPhrase.startTime! + prevTraj.startTime!;
+              return t * prevTraj.durTot + pst;
+            })
+            start = prevTrajTimes[prevTrajTimes.length - 2];
+          } else {
+            start = prevPhrase.startTime! + prevTraj.startTime!;
+          }
+        };
+        if (prevTraj!.id === 12) {
+          if (time < start) time = start
+        } else {
+          if (time < start + minTrajDur) {
+            time = start + minTrajDur;
+          }
+        }
+        if (time > times[1] - minTrajDur) {
+          time = times[1] - minTrajDur;
+        }
+      } else if (idx < times.length - 1) {
+        if (time < times[idx - 1] + minTrajDur) {
+          time = times[idx - 1] + minTrajDur;
+        }
+        if (time > times[idx + 1] - minTrajDur) {
+          time = times[idx + 1] - minTrajDur;
+        }
+      } else {
+        let nextEnd: number = 0;
+        let nextTraj: Trajectory;
+        if (time < times[idx - 1] + minTrajDur) {
+          time = times[idx - 1] + minTrajDur;
+        }
+        if (phrase.trajectories[tIdx + 1]) {
+          nextTraj = phrase.trajectories[tIdx + 1];
+          if (nextTraj.durArray && nextTraj.durArray.length > 1) {
+            let nextTrajTimes = [0, ...nextTraj.durArray!.map(cumsum())];
+            nextTrajTimes = nextTrajTimes.map(t => {
+              const pst = phrase.startTime! + nextTraj.startTime!;
+              return t * nextTraj.durTot + pst;
+            })
+            nextEnd = nextTrajTimes[1];
+          } else {
+            nextEnd = phrase.startTime! + nextTraj.startTime! + nextTraj.durTot;
+          }
+        } else if (props.piece.phrases[traj.phraseIdx! + 1]) {
+          const nextPhrase = props.piece.phrases[traj.phraseIdx! + 1];
+          nextTraj = nextPhrase.trajectories[0];
+          if (nextTraj.durArray && nextTraj.durArray.length > 1) {
+            let nextTrajTimes = [0, ...nextTraj.durArray!.map(cumsum())];
+            nextTrajTimes = nextTrajTimes.map(t => {
+              const pst = nextPhrase.startTime! + nextTraj.startTime!;
+              return t * nextTraj.durTot + pst;
+            })
+            nextEnd = nextTrajTimes[1];
+          } else {
+            const start = nextPhrase.startTime! + nextTraj.startTime!;
+            nextEnd = start + nextTraj.durTot;
+          }
+        }
+        if (nextTraj!.id === 12) {
+          if (time > nextEnd) time = nextEnd;
+        } else {
+          if (time > nextEnd - minTrajDur) {
+            time = nextEnd - minTrajDur;
+          }
+        }
+      }
+      return time;
+    };
+    
+    const calculateNewDurArray = (
+        phrase: Phrase,
+        traj: Trajectory,
+        idx: number,
+        time: number
+        ) => {
+      let times = [0, ...traj.durArray!.map(cumsum())];
+      const startTime = phrase.startTime! + traj.startTime!;
+      times = times.map(t => t * traj.durTot + startTime);
+      const newTimes = times.slice();
+      newTimes[idx] = time;
+      let durArray = newTimes.slice(1).map((v, i) => v - newTimes[i]);
+      const daSum = durArray.reduce((a, b) => a + b, 0);
+      durArray = durArray.map(d => d / daSum);
+      return durArray;
+    };
+
+    const newDurArrayA = (traj: Trajectory, delta: number) => {
+      const initPortionA = traj.durArray![0] * traj.durTot;
+      const newDur = traj.durTot - delta;
+      const newPropA = (initPortionA - delta) / newDur;
+      let newDurArray = traj.durArray!.map((i => i * traj.durTot / newDur));
+      newDurArray[0] = newPropA;
+      return newDurArray
+    };
+
+    const newDurArrayZ = (traj: Trajectory, delta: number) => {
+      const initPartZ = traj.durArray![traj.durArray!.length-1] * traj.durTot;
+      const newDur = traj.durTot + delta;
+      const newPropZ = (initPartZ + delta) / newDur;
+      let newDurArray = traj.durArray!.map((i => i * traj.durTot / newDur));
+      newDurArray[newDurArray.length - 1] = newPropZ;
+      return newDurArray;
+    };
+
+    const dragDotStart = (e: d3.D3DragEvent<
+      SVGCircleElement, Datum, MouseEvent
+    >) => {
+      const traj = selectedTrajs.value[0];
+      const phrase = props.piece.phrases[traj.phraseIdx!];
+      const startTime = phrase.startTime! + traj.startTime!;
+      dragDotIdx = Number(e.sourceEvent.target.id.split('dragDot')[1]);
+      const trajData = makeTrajData(traj, startTime);
+      const trajG = d3.select(tranSvg.value)
+        .select('.trajG')
+      trajG.append('path')
+        .datum(trajData)
+        .attr('d', trajCurve)
+        .classed('dragShadowTraj', true)
+        .attr('fill', 'none')
+        .attr('stroke', props.instTracks[0].color)
+        .attr('stroke-width', '3px')
+        .attr('stroke-linejoin', 'round')
+        .attr('stroke-linecap', 'round')
+        .style('opacity', '0.35')
+    };
+
+    const updateTrajCurve = throttle((
+        traj: Trajectory, 
+        startTime: number) => {
+      const data = makeTrajData(traj, startTime);
+      d3.select('.dragShadowTraj')
+        .datum(data)
+        .attr('d', trajCurve)
+    }, 33)
+
+    const updateDurArray = (traj: any, delta: number) => {
+      if (traj.durArray && traj.durArray.length > 1) {
+        const initPortionA = traj.durArray[0] * traj.durTot;
+        const newDur = traj.durTot - delta;
+        const newPropA = (initPortionA - delta) / newDur;
+        const newDurArr = traj.durArray.map((i: number) => i * traj.durTot / newDur);
+        newDurArr[0] = newPropA;
+        traj.durArray = newDurArr;
+      }
+    };
+
+    const updatePrevTraj = (prevTraj: any, delta: number) => {
+      if (prevTraj.durArray && prevTraj.durArray.length > 1) {
+        prevTraj.durArray = newDurArrayZ(prevTraj, delta);
+      }
+      prevTraj.durTot += delta;
+    };
+
+    const updateNextTraj = (nextTraj: any, delta: number) => {
+      if (nextTraj.durArray && nextTraj.durArray.length > 1) {
+        nextTraj.durArray = newDurArrayA(nextTraj, delta);
+      }
+      nextTraj.durTot -= delta;
+      nextTraj.startTime! += delta;
+    };
+
+    const updatePhraseChikaris = (phrase: any, delta: number) => {
+      Object.keys(phrase.chikaris).forEach(key => {
+        const nk = (Math.round(100 * (Number(key) - delta)) / 100).toString();
+        if (nk !== key) {
+          phrase.chikaris[nk] = phrase.chikaris[key];
+          delete phrase.chikaris[key];
+        }
+      });
+    };
+
+    const dragDotMove = (e: d3.D3DragEvent<SVGCircleElement, Datum, MouseEvent>) => {
+      const time = constrainTime(e, dragDotIdx!);
+      const x = props.xScale(time);
+      d3.select(`#dragDot${dragDotIdx}`)
+        .attr('cx', x)
+        .attr('cy', e.y);
+      const traj = selectedTrajs.value[0];
+      const idx = dragDotIdx!;
+      const tIdx = traj.num!;
+      const pIdx = traj.phraseIdx!;
+      const phrase = props.piece.phrases[pIdx];
+      const logFreq = props.yScale.invert(e.y);
+      if (traj.logFreqs[idx]) {
+        const basePitch = new Pitch(traj.pitches[idx]);
+        basePitch.logOffset = 0;
+        const logOffset = logFreq - basePitch.logFreq;
+        traj.pitches[idx].logOffset = logOffset;
+      }
+      if (idx > 0 && idx < traj.durArray!.length) {
+        const newDurArray = calculateNewDurArray(phrase, traj, idx, time);
+        traj.durArray = newDurArray;
+      } else if (idx === 0) {
+        const delta = time - (phrase.startTime! + traj.startTime!);
+        if (tIdx === 0) {
+          const prevPhrase = props.piece.phrases[pIdx - 1];
+          const prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
+          updatePrevTraj(prevTraj, delta);
+          updateDurArray(traj, delta);
+          traj.durTot -= delta;
+          phrase.startTime! += delta;
+          updatePhraseChikaris(phrase, delta);
+        } else {
+          const prevTraj = phrase.trajectories[tIdx - 1];
+          updatePrevTraj(prevTraj, delta);
+          updateDurArray(traj, delta);
+          traj.durTot -= delta;
+          phrase.startTime! += delta;
+        }
+      } else if (idx === traj.durArray!.length) {
+        const delta = time - (phrase.startTime! + traj.startTime! + traj.durTot);
+        if (tIdx < phrase.trajectories.length - 1) {
+          const nextTraj = phrase.trajectories[tIdx + 1];
+          updateNextTraj(nextTraj, delta);
+          if (traj.durArray!.length > 1) {
+            traj.durArray = newDurArrayZ(traj, delta);
+          }
+          traj.durTot += delta;
+          phrase.durArrayFromTrajectories();
+        } else if (props.piece.phrases[pIdx + 1]) {
+          const nextPhrase = props.piece.phrases[pIdx + 1];
+          const nextTraj = nextPhrase.trajectories[0];
+          updateNextTraj(nextTraj, delta);
+          nextPhrase.startTime! += delta;
+          nextPhrase.durTotFromTrajectories();
+          nextPhrase.durArrayFromTrajectories();
+          nextPhrase.assignStartTimes();
+          const tda = traj.durArray!;
+          if (tda.length > 1) {
+            const initPartZ = tda[tda.length - 1] * traj.durTot;
+            const newDur = traj.durTot + delta;
+            const newPropZ = (initPartZ + delta) / newDur;
+            const newDurArray = tda.map((i => i * traj.durTot / newDur));
+            newDurArray[tda.length - 1] = newPropZ;
+            traj.durArray = newDurArray;
+          }
+          traj.durTot += delta;
+          phrase.durTotFromTrajectories();
+          phrase.durArrayFromTrajectories();
+          phrase.assignStartTimes();
+          updatePhraseChikaris(nextPhrase, delta);
+        }
+      }
+      updateTrajCurve(traj, phrase.startTime! + traj.startTime!);
+    };
+
+    const dragDotEnd = (e: d3.D3DragEvent<
+      SVGCircleElement, Datum, MouseEvent
+    >) => {
+      d3.selectAll('.dragShadowTraj').remove();
+      emit('unsavedChanges', true); // TODO
+      let deletedSilentTraj = false;
+      let resetRequired = false;
+      const idx = dragDotIdx!;
+      const traj = selectedTrajs.value[0];
+      const phrase = props.piece.phrases[traj.phraseIdx!];
+      const pIdx = traj.phraseIdx!;
+      const tIdx = traj.num!;
+      const time = constrainTime(e, idx);
+      let logFreq = props.yScale.invert(e.y);
+      if (props.sargamMagnetMode) {
+        logFreq = getClosest(logSargamVals.value, logFreq);
+      }
+      const y = props.yScale(logFreq);
+      const selectedDragDot = d3.select(`#dragDot${idx}`);
+      selectedDragDot.attr('cy', y);
+      const node = selectedDragDot.node()! as SVGCircleElement;
+      const track = Number(node.classList[0].split('track')[1]);
+      console.log(track)
+      const newPitch = () => {
+        return props.piece.raga.pitchFromLogFreq(logFreq)
+      };
+      if (traj.logFreqs[idx]) {
+        traj.pitches[idx] = newPitch();
+        if (idx === 0 && traj.id === 0) { // if first dot of fixed traj
+          traj.pitches[1] = newPitch();
+          d3.select(`#dragDot1`)
+            .attr('cy', y);
+        } else if (idx === 1 && traj.id === 0) { // if second dot of fixed traj
+          traj.pitches[0] = newPitch();
+          d3.select(`#dragDot0`)
+            .attr('cy', y);
+        }
+      }
+      const affectedTrajs = [traj];
+      let affectedPhraseDivIdx = undefined;
+      if (idx === 0) {
+        if (tIdx === 0) {
+          if (pIdx > 0) {
+            const prevPhrase = props.piece.phrases[pIdx - 1];
+            const prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
+            affectedTrajs.push(prevTraj);
+            affectedPhraseDivIdx = phrase.pieceIdx;
+          }
+        } else {
+          const prevTraj = phrase.trajectories[tIdx - 1];
+          affectedTrajs.push(prevTraj);
+        }
+      } else if (idx === traj.durArray!.length) {
+        if (tIdx < phrase.trajectories.length - 1) {
+          const nextTraj = phrase.trajectories[tIdx + 1];
+          affectedTrajs.push(nextTraj);
+        } else if (props.piece.phrases[pIdx + 1]) {
+          const nextPhrase = props.piece.phrases[pIdx + 1];
+          const nextTraj = nextPhrase.trajectories[0];
+          affectedTrajs.push(nextTraj);
+          affectedPhraseDivIdx = nextPhrase.pieceIdx;
+        }
+      }
+      // also need to worry about divs;
+      affectedTrajs.forEach(traj => {
+        removeTraj(traj, track);
+        renderTraj(traj, track);
+      })
+      if (affectedPhraseDivIdx !== undefined) {
+        console.log('removing phrase div' + affectedPhraseDivIdx)
+        removePhraseDiv(affectedPhraseDivIdx);
+        const pdObj = props.piece.allPhraseDivs()[affectedPhraseDivIdx - 1];
+        renderPhraseDiv(pdObj);
+      }
+
+      
+      
+
+    };
+
+    const addDragDots = (track: number) => {
+      console.log('adding drag dots')
+      if (selectedTrajs.value.length === 1) {
+        const traj = selectedTrajs.value[0];
+        const phrase = props.piece.phrases[traj.phraseIdx!];
+        d3.selectAll('.dragDots').remove();
+        const drag = () => {
+          return d3.drag<SVGCircleElement, Datum>()
+          .on('start', dragDotStart)
+          .on('drag', dragDotMove)
+          .on('end', dragDotEnd)
+        };
+        const dragDotsG = d3.select(tranSvg.value)
+        .append('g')
+        .attr('class', `dragDots track${track}` )
+        let times = [0, ...traj.durArray!.map(cumsum())];
+        const startTime = phrase.startTime! + traj.startTime!;
+        times = times.map(t => t * traj.durTot + startTime);
+        const logFreqs = times.map((_, i) => {
+          return traj.logFreqs[i] || traj.logFreqs[i - 1]
+        });
+        times.forEach((t, i) => {
+          dragDotsG.append('circle')
+            .attr('id', `dragDot${i}`)
+            .attr('class', `track${track}`)
+            .attr('cx', props.xScale(t))
+            .attr('cy', props.yScale(logFreqs[i]))
+            .attr('r', 4)
+            .style('fill', dragDotColor)
+            .style('cursor', 'pointer')
+        })
+        if (props.editable) {
+          (dragDotsG.selectAll('circle') as d3.Selection<
+              SVGCircleElement, Datum, SVGGElement, undefined
+            >)
+            .call(drag())
+        }
       }
     }
 
@@ -772,7 +1221,7 @@ export default defineComponent({
       if (tranSvg.value) {
         d3.select(tranSvg.value)
           .selectAll('line')
-          .data(sargamVals.value)
+          .data(logSargamVals.value)
           .attr('y1', d => props.yScale(d))
           .attr('y2', d => props.yScale(d))
       }
@@ -810,7 +1259,7 @@ export default defineComponent({
         .attr('class', 'sargamLines')
         .style('opacity', Number(props.showSargamLines))
 
-      sargamVals.value.forEach((s, idx) => {
+      logSargamVals.value.forEach((s, idx) => {
         sargamLinesG.append('line')
           .classed('sargamLine', true)
           .attr('x1', 0)
@@ -867,8 +1316,13 @@ export default defineComponent({
         d3.selectAll(selector + '.pluck')
           .attr('fill', props.instTracks[track].color)
         renderObj!.selectedStatus = false;
-      })
+      });
+      clearDragDots();
       selectedPhraseDivIdx.value = undefined;
+    }
+
+    const clearDragDots = () => {
+      d3.selectAll('.dragDots').remove();
     }
 
     const handleKeydown = (e: KeyboardEvent) => {
@@ -932,31 +1386,32 @@ export default defineComponent({
     }
 
     const selBoxDragEnd = (e: MouseEvent) => {
-      if (shifted.value) {
-        const c = selBoxStartX === e.x && selBoxStartY === e.y;
-        if (selBoxStartX !== undefined && selBoxStartY !== undefined && !c) {
-          const x = Math.min(selBoxStartX, e.x);
-          const y = Math.min(selBoxStartY, e.y);
-          const width = Math.abs(selBoxStartX - e.x);
-          const height = Math.abs(selBoxStartY - e.y);
-          d3.select('#selBox').remove();
-          const startTime = props.xScale.invert(x);
-          const endTime = props.xScale.invert(x + width);
-          const lowLogFreq = props.yScale.invert(y + height);
-          const highLogFreq = props.yScale.invert(y);
-          selBoxSelectTrajs({
-            startTime,
-            endTime,
-            minLogFreq: lowLogFreq,
-            maxLogFreq: highLogFreq
-          });
-        } 
-      }
+     
+      const c = selBoxStartX === e.x && selBoxStartY === e.y;
+      if (selBoxStartX !== undefined && selBoxStartY !== undefined && !c) {
+        const x = Math.min(selBoxStartX, e.x);
+        const y = Math.min(selBoxStartY, e.y);
+        const width = Math.abs(selBoxStartX - e.x);
+        const height = Math.abs(selBoxStartY - e.y);
+        d3.select('#selBox').remove();
+        const startTime = props.xScale.invert(x);
+        const endTime = props.xScale.invert(x + width);
+        const lowLogFreq = props.yScale.invert(y + height);
+        const highLogFreq = props.yScale.invert(y);
+        selBoxSelectTrajs({
+          startTime,
+          endTime,
+          minLogFreq: lowLogFreq,
+          maxLogFreq: highLogFreq
+        });
+      } 
+      
     }
 
     const setUpSvg = () => {
-      const svg = d3.select(tranSvg.value);
-      const selBoxDrag = d3.drag()
+      const svg = (d3.select(tranSvg.value) as 
+        d3.Selection<SVGSVGElement, Datum, null, undefined>);
+      const selBoxDrag = d3.drag<SVGSVGElement, Datum>()
         .on('start', selBoxDragStart)
         .on('drag', selBoxDragMove)
         .on('end', selBoxDragEnd);
@@ -1087,6 +1542,7 @@ export default defineComponent({
           return (c1 || c2 || c3) && c4;
         })
       const overlappingTrajs = collectTrajs(trajs, options);
+      
       overlappingTrajs.forEach(traj => {
         const rObj = trajRenderStatus.value.flat().find(obj => {
           return obj.uniqueId === traj.uniqueId
@@ -1101,14 +1557,6 @@ export default defineComponent({
         addSargamLines();
         initializeTracks();
         resetTranscription();
-        // props.piece.instrumentation.forEach((inst, idx) => {
-        //   instTracks.value.push({
-        //     inst: inst,
-        //     idx: idx,
-        //     displaying: idx === 0,
-        //     sounding: idx === 0
-        //   })
-        // })
         window.addEventListener('keydown', handleKeydown);
         window.addEventListener('keyup', handleKeyup);
       };

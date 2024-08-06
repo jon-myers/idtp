@@ -43,5 +43,21 @@ const escCssClass = (str: string) => {
   return str.replace(/([!"#$%&'()*+,.\/:;<=>?@[\\\]^`{|}~])/g, '\\$1');
 }
 
+const cumsum = (sum: number = 0) => (sum = 0, (n: number) => sum += n);
 
-export { getContrastingTextColor, displayTime, closeTo, linSpace, escCssClass };
+const getClosest = (counts: number[], goal: number) => {
+  return counts.reduce((prev, curr) => {
+    return Math.abs(curr - goal) < Math.abs(prev - goal) ? curr : prev
+  })
+};
+
+
+export { 
+  getContrastingTextColor, 
+  displayTime, 
+  closeTo, 
+  linSpace, 
+  escCssClass,
+  cumsum,
+  getClosest
+};

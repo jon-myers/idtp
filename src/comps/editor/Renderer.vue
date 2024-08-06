@@ -84,6 +84,8 @@
               :instTracks='instTracks'
               :selectedMode='selectedMode'
               :showPhraseDivs='showPhraseDivs'
+              :editable='editable'
+              :sargamMagnetMode='sargamMagnetMode'
               @update:selectedMode='$emit("update:selectedMode", $event)'
             />
           />
@@ -211,6 +213,14 @@ export default defineComponent({
       required: true
     },
     showPhraseDivs: {
+      type: Boolean,
+      required: true
+    },
+    editable: {
+      type: Boolean,
+      required: true
+    },
+    sargamMagnetMode: {
       type: Boolean,
       required: true
     }
