@@ -324,6 +324,8 @@ import { select as d3Select } from 'd3';
 import { getIpaVowels, getConsonants } from '@/js/serverCalls.ts';
 import { PropType, defineComponent } from 'vue';
 import { initSecCategorization, Piece, Trajectory } from '@/js/classes.ts';
+import { TrajSelectionStatus } from '@/ts/types.ts';
+import { Instrument } from '@/ts/enums.ts';
 
 type TrajSelectPanelDataType = {
   urls: string[],
@@ -347,7 +349,7 @@ type TrajSelectPanelDataType = {
   trajIdxs: number[],
   urlsFiltered: string[],
   kNumsFiltered: string[],
-  vocal: boolean,
+  // vocal: boolean,
   vowel: string,
   ipaVowels: string[],
   englishWords: string[],
@@ -369,8 +371,11 @@ type TrajSelectPanelDataType = {
   canShiftDown: boolean,
   vowelList: string[],
   cEngTrans: string[],
-  sitar: boolean,
-  sarangi: boolean,
+  // sitar: boolean,
+  // sarangi: boolean,
+  selectedTrajs: Trajectory[],
+  selectedTraj: Trajectory | undefined,
+  instrument: Instrument | undefined
 }
 
 export default defineComponent({
@@ -399,7 +404,7 @@ export default defineComponent({
       trajIdxs: [],
       urlsFiltered: [],
       kNumsFiltered: [],
-      vocal: false,
+      // vocal: false,
       vowel: 'a',
       ipaVowels: ['a', 'b', 'c'],
       englishWords: [],
@@ -421,8 +426,11 @@ export default defineComponent({
       englishTrans: [],
       vowelList: [],
       cEngTrans: [],
-      sitar: false,
-      sarangi: false,
+      // sitar: false,
+      // sarangi: false,
+      selectedTrajs: [],
+      selectedTraj: undefined,
+      instrument: undefined
     }
   },
   
@@ -445,14 +453,7 @@ export default defineComponent({
     },
     piece: {
       type: Object as PropType<Piece>,
-    },
-    selectedTrajs: {
-      type: Array as PropType<Trajectory[]>,
-      required: true
-    },
-    selectedTraj: {
-      type: Object as PropType<Trajectory>,
-      required: false
+      required: true,
     },
     freqMin: {
       type: Number,
@@ -469,34 +470,56 @@ export default defineComponent({
     trajTimePts: {
       type: Array as PropType<{time: number, logFreq: number}[]>,
       required: false
+    },
+    trajSelStatus: {
+      type: Object as PropType<TrajSelectionStatus>,
+      required: false
     }
   },
 
   async mounted() {
-    let result = await getIpaVowels();
-    this.ipaVowels = result.map(v => v.ipa);
-    this.iso_15919 = result.map(v => v.iso_15919);
-    this.englishWords = result.map(v => v.english);
-    this.englishTrans = result.map(v => v.eng_trans);
-    this.hindiVowels = result.map(v => v.hindi.initial);
-    this.vowelList = result.map(v => {
-      return `${v.hindi.initial} - ${v.iso_15919} (${v.english})`
-    })
-    const consonantResults = await getConsonants();
-    this.cIpa = consonantResults.map(v => v.ipa);
-    this.cIso_15919 = consonantResults.map(v => v.iso_15919);
-    this.cEngTrans = consonantResults.map(v => v.eng_trans);
-    this.cExample = consonantResults.map(v => v.example);
-    this.hindiConsonants = consonantResults.map(v => v.hindi);
-    this.consonantList = this.cIso_15919.map((iso, idx) => {
-      return `${this.hindiConsonants[idx]} - ${iso} (${this.cExample[idx]})`
-    })
-    this.consonantList.push('none');
-    this.cIso_15919.push(undefined);
+    if (this.piece.instrumentation.length > 0) {
+      this.instrument = this.piece.instrumentation[0] as Instrument;
+    }
+    try {
+      let result = await getIpaVowels();
+      const consonantResults = await getConsonants();
+      this.ipaVowels = result.map(v => v.ipa);
+      this.iso_15919 = result.map(v => v.iso_15919);
+      this.englishWords = result.map(v => v.english);
+      this.englishTrans = result.map(v => v.eng_trans);
+      this.hindiVowels = result.map(v => v.hindi.initial);
+      this.vowelList = result.map(v => {
+        return `${v.hindi.initial} - ${v.iso_15919} (${v.english})`
+      })
+      this.cIpa = consonantResults.map(v => v.ipa);
+      this.cIso_15919 = consonantResults.map(v => v.iso_15919);
+      this.cEngTrans = consonantResults.map(v => v.eng_trans);
+      this.cExample = consonantResults.map(v => v.example);
+      this.hindiConsonants = consonantResults.map(v => v.hindi);
+      this.consonantList = this.cIso_15919.map((iso, idx) => {
+        return `${this.hindiConsonants[idx]} - ${iso} (${this.cExample[idx]})`
+      })
+      this.consonantList.push('none');
+      this.cIso_15919.push(undefined);
+    } catch (e) {
+      console.error(e);
+    }
     if (this.vocal) this.octShiftTop = 75;
     if (this.vocal && this.showSlope) this.octShiftTop = 97
   },
-  
+  computed: {
+    vocal() {
+      const vox = [Instrument.Vocal_M, Instrument.Vocal_F];
+      return this.instrument && vox.includes(this.instrument);
+    },
+    sitar() {
+      return this.instrument === Instrument.Sitar;
+    },
+    sarangi() {
+      return this.instrument === Instrument.Sarangi;
+    },
+  },
   watch: {
     selectedIdx(newVal) {
       document.querySelectorAll('.thumb').forEach(t => {
@@ -572,6 +595,51 @@ export default defineComponent({
       this.kNumsFiltered = newVal
         .map((idx: number) => this.kNums[idx])
         .filter((kNum: string) => kNum !== undefined);
+    },
+
+    trajSelStatus(newVal) {
+      if (newVal !== undefined) {
+        this.selectedTrajs = newVal.trajs;
+        if (newVal.trajs.length === 1) {
+          this.selectedTraj = newVal.trajs[0];
+        } else {
+          this.selectedTraj = undefined;
+        }
+        this.instrument = newVal.instrument;
+      } else {
+        this.selectedTrajs = [];
+        this.selectedTraj = undefined;
+        this.instrument = undefined;
+      }
+    },
+
+    instrument(newVal) {
+      if (newVal) {
+        this.trajIdxs = this.piece!.possibleTrajs[newVal];
+      }
+    },
+
+    selectedTraj(newVal: Trajectory | undefined) {
+      if (newVal !== undefined) {
+        const altId = newVal.id >= 12 ? newVal.id - 1 : newVal.id;
+        this.selectedIdx = this.trajIdxs.indexOf(altId);
+        this.parentSelected = true;
+        this.slope = Math.log2(newVal.slope);
+        if (newVal.vibObj) {
+          this.extent = newVal.vibObj.extent;
+          this.initUp = newVal.vibObj.initUp;
+          this.offset = newVal.vibObj.vertOffset;
+          this.periods = newVal.vibObj.periods;
+        }
+      } else {
+        this.selectedIdx = undefined;
+        this.parentSelected = false;
+        this.slope = 1;
+        this.extent = 0.05;
+        this.initUp = true;
+        this.offset = 0;
+        this.periods = 8;
+      }
     }
   },
 

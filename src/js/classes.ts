@@ -15,6 +15,7 @@ import {
   ConsonantDisplayType,
   PhraseDivDisplayType
 } from '@/ts/types.ts';
+import { Instrument } from '@/ts/enums.ts';
 import { closeTo, getClosest } from '@/ts/utils.ts';
 
 
@@ -2319,22 +2320,22 @@ class Piece {
     // this is really confusing becuase id12 is silent. The current solution 
     // is to just skip that number; so 12 listed below is really id13
     this.possibleTrajs = {
-      'Sitar': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 
-      'Vocal (M)': [0, 1, 2, 3, 4, 5, 6, 12, 13],
-      'Vocal (F)': [0, 1, 2, 3, 4, 5, 6, 12, 13],
-      'Bansuri': [0, 1, 2, 3, 4, 5, 6, 12, 13],
-      'Esraj': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      'Sarangi': [0, 1, 2, 3, 4, 5, 6, 12, 13],
-      'Rabab': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      'Santoor': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      'Sarod': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      'Shehnai': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      'Surbahar': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      'Veena (Saraswati)': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      'Veena (Vichitra)': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      'Veena, Rudra (Bin)': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      'Violin': [0, 1, 2, 3, 4, 5, 6, 12, 13],
-      'Harmonium': [0, 12, 13],
+      [Instrument.Sitar]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 
+      [Instrument.Vocal_M]: [0, 1, 2, 3, 4, 5, 6, 12, 13],
+      [Instrument.Vocal_F]: [0, 1, 2, 3, 4, 5, 6, 12, 13],
+      [Instrument.Bansuri]: [0, 1, 2, 3, 4, 5, 6, 12, 13],
+      [Instrument.Esraj]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      [Instrument.Sarangi]: [0, 1, 2, 3, 4, 5, 6, 12, 13],
+      [Instrument.Rabab]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      [Instrument.Santoor]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      [Instrument.Sarod]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      [Instrument.Shehnai]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      [Instrument.Surbahar]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      [Instrument.Veena_Saraswati]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      [Instrument.Veena_Vichitra]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      [Instrument.Veena_Rudra_Bin]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      [Instrument.Violin]: [0, 1, 2, 3, 4, 5, 6, 12, 13],
+      [Instrument.Harmonium]: [0, 12, 13],
     }
     if (sectionCategorization !== undefined) {
       this.sectionCategorization = sectionCategorization;

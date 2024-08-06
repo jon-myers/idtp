@@ -87,6 +87,8 @@
               :editable='editable'
               :sargamMagnetMode='sargamMagnetMode'
               @update:selectedMode='$emit("update:selectedMode", $event)'
+              @unsavedChanges='$emit("unsavedChanges", $event)'
+              @update:TrajSelStatus='$emit("update:TrajSelStatus", $event)'
             />
           />
         </div>

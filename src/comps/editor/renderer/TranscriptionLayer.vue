@@ -19,7 +19,7 @@ import {
 } from 'vue';
 import * as d3 from 'd3';
 import { linSpace, cumsum, getClosest } from '@/ts/utils.ts';
-import { EditorMode } from '@/ts/enums.ts';
+import { EditorMode, Instrument } from '@/ts/enums.ts';
 
 import { Piece, Trajectory, Phrase, Pitch } from '@/js/classes.ts';
 import { throttle } from 'lodash';
@@ -28,7 +28,8 @@ import {
   VowelDisplayType, 
   ConsonantDisplayType,
   InstrumentTrackType,
-  PhraseDivDisplayType
+  PhraseDivDisplayType,
+  TrajSelectionStatus
 } from '@/ts/types.ts';
 
 export default defineComponent({
@@ -334,11 +335,17 @@ export default defineComponent({
             .attr('fill', props.instTracks[track].selColor)
         }
       });
-      if (selectedTrajs.value.length === 1) {
+      let status: TrajSelectionStatus = undefined;
+      if (selectedTrajs.value.length > 0) {
         const traj = selectedTrajs.value[0];
         const track = props.piece.trackFromTraj(traj);
-        addDragDots(track);
+        const inst = props.piece.instrumentation[track] as Instrument;
+        if (selectedTrajs.value.length === 1) {
+          addDragDots(track);
+        }
+        status = { trajs: selectedTrajs.value, instrument: inst }
       }
+      emit('update:TrajSelStatus', status);
     })
     watch(() => props.instTracks, (newVal) => {
       newVal.forEach((track, tIdx) => {
@@ -509,11 +516,13 @@ export default defineComponent({
       const trackG = tracks[track];
       const g = trackG.select('.trajG');
       const trajData = makeTrajData(traj, trajStart);
+      const color = selectedTrajs.value.includes(traj) ? 
+        props.instTracks[track].selColor : props.instTracks[track].color;
       g.append('path')
           .datum(trajData)
           .attr('d', trajCurve)
           .attr('fill', 'none')
-          .attr('stroke', props.instTracks[track].color)
+          .attr('stroke', color)
           .attr('stroke-width', '3px')
           .attr('stroke-linejoin', 'round')
           .attr('stroke-linecap', 'round')
@@ -543,6 +552,8 @@ export default defineComponent({
       const g = trackG.select('.trajG');
       const size = 20;
       const offset = (size ** 0.5) / 2;
+      const color = selectedTrajs.value.includes(traj) ? 
+        props.instTracks[track].selColor : props.instTracks[track].color;
       const keys = Object.keys(traj.articulations)
         .filter(key => traj.articulations[key].name === 'pluck')
       if (keys.length > 0) {
@@ -559,8 +570,8 @@ export default defineComponent({
           .data(pluckData)
           .attr('d', sym)
           .attr('stroke-width', 1.5)
-          .attr('stroke', props.instTracks[track].color)
-          .attr('fill', props.instTracks[track].color)
+          .attr('stroke', color)
+          .attr('fill', color)
           .attr('transform', d => `translate(${d.x + offset}, ${d.y}) rotate(90)`)
           .classed(`traj pluck uId${traj.uniqueId!}`, true)
         
@@ -582,6 +593,8 @@ export default defineComponent({
     const renderDampener = (traj: Trajectory, track: number) => {
       const trajIdx = props.piece.allTrajectories(track).indexOf(traj);
       const trajStart = trajStartTimes.value[track][trajIdx];
+      const color = selectedTrajs.value.includes(traj) ? 
+        props.instTracks[track].selColor : props.instTracks[track].color;
       const keys = Object.keys(traj.articulations)
         .filter(key => traj.articulations[key].name === 'dampen')
       keys.forEach(() => {
@@ -594,7 +607,7 @@ export default defineComponent({
         g.append('path')
           .data([obj])
           .attr('d', d3.line()([[-2, -8], [0, -8], [0, 8], [-2, 8]]))
-          .attr('stroke', props.instTracks[track].color)
+          .attr('stroke', color)
           .attr('stroke-width', '3px')
           .attr('stroke-linejoin', 'round')
           .attr('stroke-linecap', 'round')
@@ -1079,7 +1092,7 @@ export default defineComponent({
       SVGCircleElement, Datum, MouseEvent
     >) => {
       d3.selectAll('.dragShadowTraj').remove();
-      emit('unsavedChanges', true); // TODO
+      emit('unsavedChanges', true);
       let deletedSilentTraj = false;
       let resetRequired = false;
       const idx = dragDotIdx!;
@@ -1097,7 +1110,6 @@ export default defineComponent({
       selectedDragDot.attr('cy', y);
       const node = selectedDragDot.node()! as SVGCircleElement;
       const track = Number(node.classList[0].split('track')[1]);
-      console.log(track)
       const newPitch = () => {
         return props.piece.raga.pitchFromLogFreq(logFreq)
       };
@@ -1156,7 +1168,6 @@ export default defineComponent({
     };
 
     const addDragDots = (track: number) => {
-      console.log('adding drag dots')
       if (selectedTrajs.value.length === 1) {
         const traj = selectedTrajs.value[0];
         const phrase = props.piece.phrases[traj.phraseIdx!];

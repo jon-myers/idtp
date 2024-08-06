@@ -34,6 +34,8 @@
       @zoomOutX='zoomOutX'
       @xRangeInView='(xRange: [number, number]) => xRangeInView = xRange'
       @update:selectedMode='(mode: EditorMode) => selectedMode = mode'
+      @unsavedChanges='unsavedChanges = $event'
+      @update:TrajSelStatus='trajSelStatus = $event'
       />
     <div class='controlBox'>
       <div class='scrollingControlBox'>
@@ -175,6 +177,7 @@
         :setNewTraj='setNewTraj'
         :trajTimePts='trajTimePts'
         :groupable='groupable'
+        :trajSelStatus='trajSelStatus'
         @groupSelectedTrajs='groupSelectedTrajs'
         @ungroupSelectedTrajs='ungroupSelectedTrajs'
         @mutateTraj='mutateTrajEmit'
@@ -340,6 +343,7 @@ import {
   DrawDataType,
   StrokeNicknameType,
   InstrumentTrackType,
+  TrajSelectionStatus,
 } from '@/ts/types';
 import { EditorMode } from '@/ts/enums';
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
@@ -596,6 +600,7 @@ type EditorDataType = {
   showPhonemes: boolean,
   instTracks: InstrumentTrackType[],
   selectedMode: EditorMode,
+  trajSelStatus: TrajSelectionStatus,
 }
 
 export { findClosestStartTime }
@@ -768,6 +773,7 @@ export default defineComponent({
       showPhonemes: true,
       instTracks: [],
       selectedMode: EditorMode.None,
+      trajSelStatus: undefined,
     }
   },
   components: {
@@ -879,15 +885,15 @@ export default defineComponent({
           permission to view.'
       }
       this.oldHeight = window.innerHeight;
-      const tsp = this.$refs.trajSelectPanel as typeof TrajSelectPanel;
-      tsp.trajIdxs = this.piece.trajIdxs;
+      // const tsp = this.$refs.trajSelectPanel as typeof TrajSelectPanel;
+      // tsp.trajIdxs = this.piece.trajIdxs;
       const vox = ['Vocal (M)', 'Vocal (F)'];
-      tsp.vocal = vox.includes(this.piece.instrumentation[0]);
-      this.vocal = tsp.vocal;
+      // tsp.vocal = vox.includes(this.piece.instrumentation[0]);
+      // this.vocal = tsp.vocal;
       this.sitar = this.piece.instrumentation[0] === 'Sitar';
       this.sarangi = this.piece.instrumentation[0] === 'Sarangi';
-      tsp.sitar = this.sitar;
-      tsp.sarangi = this.sarangi;
+      // tsp.sitar = this.sitar;
+      // tsp.sarangi = this.sarangi;
       const leftTime = this.leftTime;
       // await this.initializePiece();
       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;

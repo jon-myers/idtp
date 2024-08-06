@@ -10,6 +10,8 @@ import {
   ValueFn
 } from 'd3';
 
+import { Instrument } from '@/ts/enums';
+
 type CollectionType = {
   _id?: string;
   title: string;
@@ -799,6 +801,11 @@ type PhraseDivDisplayType = {
   idx: number,
 }
 
+type TrajSelectionStatus = {
+  trajs: Trajectory[],
+  instrument: Instrument,
+} | undefined;
+
 export type { 
   CollectionType, 
   UserType, 
@@ -865,6 +872,7 @@ export type {
   VowelDisplayType,
   ConsonantDisplayType,
   InstrumentTrackType,
-  PhraseDivDisplayType
+  PhraseDivDisplayType,
+  TrajSelectionStatus,
 };
 
