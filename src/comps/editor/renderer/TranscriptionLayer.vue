@@ -16,7 +16,8 @@ import {
   computed,
   PropType,
   nextTick,
-  reactive
+  reactive,
+  toRef
 } from 'vue';
 import * as d3 from 'd3';
 import { linSpace, cumsum, getClosest } from '@/ts/utils.ts';
@@ -136,6 +137,9 @@ export default defineComponent({
       track: number 
     }[][]>([]);
     const selectedPhraseDivIdx = ref<number | undefined>(undefined);
+    const lowOctOffsetRef = toRef(props, 'lowOctOffset');
+    const highOctOffsetRef = toRef(props, 'highOctOffset');
+
     const selPhraseDivColor = 'red';
     const dragDotColor = 'purple';
     let dragDotIdx: number | undefined = undefined;
@@ -233,12 +237,14 @@ export default defineComponent({
       }
     })
     const logMin = computed(() => {
-      return Math.log2(props.piece.raga.fundamental) - props.lowOctOffset;
+      console.log('recomputing logmin')
+      return Math.log2(props.piece.raga.fundamental) - lowOctOffsetRef.value;
     })
     const logMax = computed(() => {
-      return Math.log2(props.piece.raga.fundamental) + props.highOctOffset;
+      return Math.log2(props.piece.raga.fundamental) + highOctOffsetRef.value;
     })
     const logSargamVals = computed(() => {
+      console.log('recomputing sargam values')
       return props.piece.raga.getFrequencies({
         low: 2 ** logMin.value,
         high: 2 ** logMax.value
@@ -417,6 +423,16 @@ export default defineComponent({
       }
     }
 
+    const addSargamLineG = () => {
+      console.log('adding sargam line g')
+      if (tranSvg.value) {
+        const svg = d3.select(tranSvg.value);
+        svg.append('g')
+          .attr('class', 'sargamLines')
+          .style('opacity', Number(props.showSargamLines))
+      }
+    }
+
     const addPhonemeG = () => {
       if (tranSvg.value) {
         const svg = d3.select(tranSvg.value);
@@ -430,6 +446,7 @@ export default defineComponent({
     }
 
     const addTrajG = () => {
+      console.log('adding traj g')
       if (tranSvg.value) {
         for (let i = 0; i < props.piece.instrumentation.length; i++) {
           const trackG = tracks[i];
@@ -453,20 +470,27 @@ export default defineComponent({
       d3.selectAll('.sargamG').remove();
       d3.selectAll('.phonemeG').remove();
       d3.selectAll('.phraseDivG').remove();
+      d3.selectAll('.sargamLines').remove();
+
     };
 
     const resetTranscription = () => {
+      
       clearTranscription();
       const selectedTrajUIds = selectedTrajs.value.map(t => t.uniqueId!);
       resetTrajRenderStatus(selectedTrajUIds);
       resetEmptyObserverDivs();
       resetObserver();
+      addSargamLineG();
+      refreshSargamLines();
+      initializeTracks();
       addPhraseDivG();
       addSargamG();
       addPhonemeG();
       addTrajG();
       clearDragDots();
       refreshDragDots();
+      
     }
 
     const initializeTracks = () => {
@@ -474,6 +498,8 @@ export default defineComponent({
       // for each track. I'd like to store these g's in an array.
       if (tranSvg.value) {
         const svg = d3.select(tranSvg.value);
+        svg.selectAll('.transcriptionG').remove();
+        tracks.length = 0;
         const transcriptionG = svg.append('g')
           .attr('class', 'transcriptionG')
         for (let i = 0; i < props.piece.instrumentation.length; i++) {
@@ -1242,7 +1268,6 @@ export default defineComponent({
         const logFreqs = times.map((_, i) => {
           return traj.logFreqs[i] || traj.logFreqs[i - 1]
         });
-        console.log(props.yScale.domain())
         times.forEach((t, i) => {
           dragDotsG.append('circle')
             .attr('id', `dragDot${i}`)
@@ -1309,7 +1334,8 @@ export default defineComponent({
       }
     }
 
-    const addSargamLines = () => {
+    const refreshSargamLines = () => {
+      console.log('refreshign sargam lines')
       const svg = d3.select(tranSvg.value);
       const saFilter = (logFreq: number) => {
         const logSa = Math.log2(props.piece.raga.fundamental);
@@ -1321,10 +1347,7 @@ export default defineComponent({
       const strokeWidth = (s: number, idx: number) => {
         return saFilter(s) || paFilter(idx) ? 2 : 1
       }
-      const sargamLinesG = svg.append('g')
-        .attr('class', 'sargamLines')
-        .style('opacity', Number(props.showSargamLines))
-
+      const sargamLinesG = svg.select('.sargamLines');
       logSargamVals.value.forEach((s, idx) => {
         sargamLinesG.append('line')
           .classed('sargamLine', true)
@@ -1688,8 +1711,8 @@ export default defineComponent({
     onMounted(() => {
       if (tranSvg.value) {
         setUpSvg();
-        addSargamLines();
-        initializeTracks();
+        // refreshSargamLines();
+        // initializeTracks();
         resetTranscription();
         window.addEventListener('keydown', handleKeydown);
         window.addEventListener('keyup', handleKeyup);
@@ -1724,6 +1747,10 @@ export default defineComponent({
       refreshVowel,
       refreshEndingConsonant,
       refreshTraj,
+      lowOctOffsetRef,
+      highOctOffsetRef,
+      logMin,
+      logMax
     }
   }
 })

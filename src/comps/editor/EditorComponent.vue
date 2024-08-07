@@ -1118,9 +1118,12 @@ export default defineComponent({
       const saFreq = this.piece.raga.fundamental;
       const minPitchFreq = this.minPitch.frequency;
       this.lowOctOffset = Math.log2(saFreq / minPitchFreq) + 0.1;
-      const renderer = this.$refs.renderer as typeof Renderer;
-      const yAxis = renderer.yAxis as typeof YAxis;
+      const r = this.$refs.renderer as typeof Renderer;
+      const yAxis = r.yAxis as typeof YAxis;
       yAxis.resetAxis();
+      const tLayer = r.$refs.transcriptionLayer as typeof TranscriptionLayer;
+      this.$nextTick(() => tLayer.resetTranscription());
+      // tLayer.resetTranscription();
     },
 
     updateMaxPitch(p: Pitch) {
@@ -1128,9 +1131,12 @@ export default defineComponent({
       const saFreq = this.piece.raga.fundamental;
       const maxPitchFreq = this.maxPitch.frequency;
       this.highOctOffset = Math.log2(maxPitchFreq / saFreq) + 0.1;
-      const renderer = this.$refs.renderer as typeof Renderer;
-      const yAxis = renderer.yAxis as typeof YAxis;
+      const r = this.$refs.renderer as typeof Renderer;
+      const yAxis = r.yAxis as typeof YAxis;
       yAxis.resetAxis();
+      const tLayer = r.$refs.transcriptionLayer as typeof TranscriptionLayer;
+      this.$nextTick(() => tLayer.resetTranscription());
+      // tLayer.resetTranscription();
     },
 
     zoomInY() {
