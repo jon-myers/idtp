@@ -342,8 +342,8 @@ type TrajSelectPanelDataType = {
   initUp: boolean,
   extent: number,
   dampen: boolean,
-  showTrajChecks: boolean,
-  showVowelTrajCheck: boolean,
+  // showTrajChecks: boolean,
+  // showVowelTrajCheck: boolean,
   showPhraseRadio: boolean,
   phraseDivType?: 'phrase' | 'section',
   trajIdxs: number[],
@@ -397,8 +397,8 @@ export default defineComponent({
       initUp: true,
       extent: 0.05,
       dampen: false,
-      showTrajChecks: false,
-      showVowelTrajCheck: false,
+      // showTrajChecks: false,
+      // showVowelTrajCheck: false,
       showPhraseRadio: false,
       phraseDivType: undefined,
       trajIdxs: [],
@@ -519,6 +519,14 @@ export default defineComponent({
     sarangi() {
       return this.instrument === Instrument.Sarangi;
     },
+    showVowelTrajCheck() {
+      const vox = [Instrument.Vocal_M, Instrument.Vocal_F];
+      const voxCheck = this.instrument && vox.includes(this.instrument);
+      return voxCheck && this.selectedTrajs.length === 1;
+    },
+    showTrajChecks() {
+      return this.selectedTraj !== undefined
+    },
   },
   watch: {
     selectedIdx(newVal) {
@@ -534,6 +542,9 @@ export default defineComponent({
         if (this.vocal && this.vowel === undefined) {
           this.vowel = 'a'
         }
+      } else {
+        this.showSlope = false;
+        this.showVibObj = false;
       }
     },
 
@@ -631,6 +642,9 @@ export default defineComponent({
           this.offset = newVal.vibObj.vertOffset;
           this.periods = newVal.vibObj.periods;
         }
+        this.vowel = newVal.vowel!;
+        this.startConsonant = newVal.startConsonant;
+        this.endConsonant = newVal.endConsonant;
       } else {
         this.selectedIdx = undefined;
         this.parentSelected = false;
@@ -639,6 +653,7 @@ export default defineComponent({
         this.initUp = true;
         this.offset = 0;
         this.periods = 8;
+        this.vowel = 'a';
       }
     }
   },

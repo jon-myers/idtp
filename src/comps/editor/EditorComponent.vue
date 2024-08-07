@@ -352,7 +352,7 @@ import {
   InstrumentTrackType,
   TrajSelectionStatus,
 } from '@/ts/types';
-import { EditorMode } from '@/ts/enums';
+import { EditorMode, Instrument } from '@/ts/enums';
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
 
 const getStarts = (durArray: number[]) => {
@@ -483,7 +483,7 @@ type EditorDataType = {
   oldHeight?: number,
   leftTime: number,
   phonemeRepresentation: string,
-  vocal: boolean,
+  // vocal: boolean,
   controlsHeight: number,
   unsavedChanges: boolean,
   selMeterColor: string,
@@ -677,7 +677,7 @@ export default defineComponent({
       oldHeight: undefined,
       leftTime: 0,
       phonemeRepresentation: 'English',
-      vocal: false,
+      // vocal: false,
       controlsHeight: 200,
       unsavedChanges: false,
       selMeterColor: '#3dcc63',
@@ -1082,6 +1082,16 @@ export default defineComponent({
       const logMax: number = logSaFreq + this.highOctOffset;
       return 2 ** logMax;
     },
+
+    vocal() {
+      const vox = [Instrument.Vocal_M, Instrument.Vocal_F];
+      for (const inst of this.piece.instrumentation) {
+        if (vox.includes(inst as Instrument)) {
+          return true;
+        }
+      }
+      return false;
+    }
   },
 
   methods: {
@@ -1319,53 +1329,49 @@ export default defineComponent({
     },
 
     endConsonantEmit(endConsonant: string) {
-      const selT = this.selectedTraj!;
+      const r = this.$refs.renderer as typeof Renderer;
+      const tLayer = r.$refs.transcriptionLayer as typeof TranscriptionLayer;
+      const selT = tLayer.selectedTraj;
       this.unsavedChanges = true;
       const pIdx = selT.phraseIdx!;
       const tIdx = selT.num!;
-      const id = `p${pIdx}t${tIdx}`;
       const phrase = this.piece.phrases[pIdx];
-      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
-        Selection<SVGGElement, any, any, any>;
       if (endConsonant === undefined) {
         // false indicates that this is the end consonant
         selT.removeConsonant(false);
-        this.removeConsonantSymbol(id, false);
       } else if (selT.endConsonant === undefined) {
         selT.addConsonant(endConsonant, false);
-        this.addConsonantSymbols(selT, phrase.startTime!, g, true, false, true)
       } else {
         selT.changeConsonant(endConsonant, false)
       }
-      const selected = d3Select(`#endConsonantp${pIdx}t${tIdx}`);
-      selected.remove();
-      this.addEndingConsonant(selT, phrase.startTime!, g, true)
+      tLayer.refreshEndingConsonant(selT.uniqueId);
+      if (phrase.trajectories.length > tIdx + 1) {
+        const nextTraj = phrase.trajectories[tIdx + 1];
+        tLayer.refreshVowel(nextTraj.uniqueId);
+      }
     },
 
     startConsonantEmit(startConsonant: string) {
-      const selT = this.selectedTraj!;
-      this.unsavedChanges = true;
+      const r = this.$refs.renderer as typeof Renderer;
+      const tLayer = r.$refs.transcriptionLayer as typeof TranscriptionLayer;
+      const selT = tLayer.selectedTraj;
       const pIdx = selT.phraseIdx!;
-      const tIdx = selT.num!;
-      const id = `p${pIdx}t${tIdx}`;
-      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
-        Selection<SVGGElement, any, any, any>;
       const phrase = this.piece.phrases[pIdx];
+      const tIdx = selT.num!;
+      this.unsavedChanges = true;
       if (startConsonant === undefined) {
         selT.removeConsonant();   
-        this.removeConsonantSymbol(id, true);
       } else if (selT.startConsonant === undefined) {
         selT.addConsonant(startConsonant);
-        this.addConsonantSymbols(selT, phrase.startTime!, g, true, true, false)
       } else {
         selT.changeConsonant(startConsonant)
-      } 
-      const selected = d3Select(`#vowelp${pIdx}t${tIdx}`);
-      selected.remove();
-      const vowelIdxs = phrase.firstTrajIdxs();
-      if (vowelIdxs.includes(selT.num!)) {
-        this.addVowel(selT, phrase.startTime!, g, true)
-      } 
+      }
+      tLayer.refreshVowel(selT.uniqueId);
+      if (phrase.trajectories.length > tIdx + 1) {
+        const nextTraj = phrase.trajectories[tIdx + 1];
+        tLayer.refreshVowel(nextTraj.uniqueId);
+      }
+
     },
 
     multiVowelEmit(vowel: string) {
@@ -1421,47 +1427,19 @@ export default defineComponent({
     },
 
     vowelEmit(vowel: string) {
-      const selT = this.selectedTraj!;
+      const r = this.$refs.renderer as typeof Renderer;
+      const tLayer = r.transcriptionLayer;
+      const selT = tLayer.selectedTraj;
       this.unsavedChanges = true;
       selT.updateVowel(vowel)
       const pIdx = selT.phraseIdx!;
       const tIdx = selT.num!;
       const phrase = this.piece.phrases[pIdx];
-      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
-        Selection<SVGGElement, any, any, any>;
-      const selected = d3Select(`#vowelp${pIdx}t${tIdx}`);
-      let dontReplace = false;
-      let prevTraj: Trajectory | undefined;
-      if (tIdx > 0) {
-        prevTraj = phrase.trajectories[tIdx - 1];
-      } else if (pIdx > 0) {
-        const prevPhrase = this.piece.phrases[pIdx - 1];
-        prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
-      }
-      if (prevTraj) {
-        if (prevTraj.vowel === vowel) {
-          dontReplace = true;
-        }
-      }
-      if (selected.node() === null) {
-        if (!dontReplace) {
-          this.addVowel(selT, phrase.startTime!, g, true)
-        }
-      } else {
-        selected.remove();
-        if (!dontReplace) {
-          this.addVowel(selT, phrase.startTime!, g, true)
-        }
-      }
+      tLayer.refreshVowel(selT.uniqueId);
       // if there is a next traj, check its vowel, and change it if necessary
-      const nextTraj = phrase.trajectories[tIdx + 1];
-      if (nextTraj) {
-        const sel = d3Select(`#vowelp${pIdx}t${tIdx + 1}`);
-        sel.remove();
-        const vowelIdxs = phrase.firstTrajIdxs();
-        if (vowelIdxs.includes(nextTraj.num!)) {
-          this.addVowel(nextTraj, phrase.startTime!, g, true)
-        }
+      if (phrase.trajectories.length > tIdx + 1) {
+        const nextTraj = phrase.trajectories[tIdx + 1];
+        tLayer.refreshVowel(nextTraj.uniqueId);
       }
     },
 

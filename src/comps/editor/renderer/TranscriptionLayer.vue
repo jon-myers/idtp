@@ -328,7 +328,13 @@ export default defineComponent({
           d3.selectAll(selector)
             .attr('stroke', props.instTracks[track].color)
           d3.selectAll(selector + '.pluck')
-            .attr('fill', props.instTracks[track].color)
+            .attr('fill', props.instTracks[track].color);
+          const vowelSelector = `.vowelLabel.uId${traj.uniqueId}`;
+          d3.selectAll(vowelSelector)
+            .attr('stroke', 'black')
+          const consonantSelector = `.consonantLabel.uId${traj.uniqueId}`;
+          d3.selectAll(consonantSelector)
+            .attr('stroke', 'black')
         }
       });
       newVal.forEach(traj => {
@@ -342,6 +348,12 @@ export default defineComponent({
             .attr('stroke', props.instTracks[track].selColor)
           d3.selectAll(selector + '.pluck')
             .attr('fill', props.instTracks[track].selColor)
+          const vowelSelector = `.vowelLabel.uId${traj.uniqueId}`;
+          d3.selectAll(vowelSelector)
+            .attr('stroke', props.instTracks[track].selColor)
+          const consonantSelector = `.consonantLabel.uId${traj.uniqueId}`;
+          d3.selectAll(consonantSelector)
+            .attr('stroke', props.instTracks[track].selColor)
         }
       });
       let status: TrajSelectionStatus = undefined;
@@ -687,22 +699,31 @@ export default defineComponent({
       g.selectAll(`.vowelLabel.uId${uId}`).remove();
     };
 
+    const clearEndingConsonant = (uId: string) => {
+      const g = d3.select('.phonemeG');
+      g.selectAll(`.consonantLabel.uId${uId}`).remove();
+    };
+
     const renderVowel = (v: VowelDisplayType) => {
       const svg = d3.select(tranSvg.value);
       const verticalOffset = 14;
       const y = props.yScale(v.logFreq) - verticalOffset;
       const x = props.xScale(v.time);
       const g = svg.select('.phonemeG');
-      let text = '';
       const choices = ['IPA', 'Devanagari', 'English'];
       const opacities = choices.map(c => {
         return c === props.phonemeRepresentation ? 1 : 0;
       });
+      const track = props.piece.trackFromTrajUId(v.uId);
+      const selT = selectedTraj.value;
+      const color = (selT && selT.uniqueId === v.uId) ? 
+        props.instTracks[track].selColor : 
+        'black';
       g.append('text')
         .attr('text-anchor', 'middle')
         .attr('dominant-baseline', 'middle')
         .attr('font-size', 15)
-        .attr('stroke', 'black')
+        .attr('stroke', color)
         .attr('class', `vowelLabel IPA uId${v.uId}`)
         .attr('opacity', opacities[0])
         .attr('transform', d => `translate(${x}, ${y})` )
@@ -711,7 +732,7 @@ export default defineComponent({
         .attr('text-anchor', 'middle')
         .attr('dominant-baseline', 'middle')
         .attr('font-size', 15)
-        .attr('stroke', 'black')
+        .attr('stroke', color)
         .attr('class', `vowelLabel Devanagari uId${v.uId}`)
         .attr('opacity', opacities[1])
         .attr('transform', d => `translate(${x}, ${y})` )
@@ -720,7 +741,7 @@ export default defineComponent({
         .attr('text-anchor', 'middle')
         .attr('dominant-baseline', 'middle')
         .attr('font-size', 15)
-        .attr('stroke', 'black')
+        .attr('stroke', color)
         .attr('class', `vowelLabel Latin uId${v.uId}`)
         .attr('opacity', opacities[2])
         .attr('transform', d => `translate(${x}, ${y})` )
@@ -737,11 +758,16 @@ export default defineComponent({
       const opacities = choices.map(c => {
         return c === props.phonemeRepresentation ? 1 : 0;
       });
+      const track = props.piece.trackFromTrajUId(c.uId);
+      const selT = selectedTraj.value;
+      const color = (selT && selT.uniqueId === c.uId) ? 
+        props.instTracks[track].selColor : 
+        'black';
       g.append('text')
         .attr('text-anchor', 'middle')
         .attr('dominant-baseline', 'middle')
         .attr('font-size', 15)
-        .attr('stroke', 'black')
+        .attr('stroke', color)
         .attr('class', `consonantLabel IPA uId${c.uId}`)
         .attr('opacity', opacities[0])
         .attr('transform', d => `translate(${x}, ${y})` )
@@ -750,7 +776,7 @@ export default defineComponent({
         .attr('text-anchor', 'middle')
         .attr('dominant-baseline', 'middle')
         .attr('font-size', 15)
-        .attr('stroke', 'black')
+        .attr('stroke', color)
         .attr('class', `consonantLabel Devanagari uId${c.uId}`)
         .attr('opacity', opacities[1])
         .attr('transform', d => `translate(${x}, ${y})` )
@@ -759,7 +785,7 @@ export default defineComponent({
         .attr('text-anchor', 'middle')
         .attr('dominant-baseline', 'middle')
         .attr('font-size', 15)
-        .attr('stroke', 'black')
+        .attr('stroke', color)
         .attr('class', `consonantLabel Latin uId${c.uId}`)
         .attr('opacity', opacities[2])
         .attr('transform', d => `translate(${x}, ${y})` )
@@ -1114,7 +1140,8 @@ export default defineComponent({
           updatePhraseChikaris(nextPhrase, delta);
         }
       }
-      updateTrajCurve(traj, phrase.startTime! + traj.startTime!);
+      // this looks good, but it maybe is causing visual discomfort ...
+      // updateTrajCurve(traj, phrase.startTime! + traj.startTime!);
     };
 
     const dragDotEnd = (e: d3.D3DragEvent<
@@ -1608,11 +1635,21 @@ export default defineComponent({
       const track = props.piece.trackFromTrajUId(trajUId);
       const vowelDisplayObjs = props.piece.allDisplayVowels(track)
         .filter(obj => obj.uId === trajUId);
+      clearVowel(trajUId);
       if (vowelDisplayObjs.length > 0) {
-        clearVowel(trajUId);
         vowelDisplayObjs.forEach(obj => {
           renderVowel(obj);
         })
+      }
+    };
+
+    const refreshEndingConsonant = (trajUId: string) => {
+      const track = props.piece.trackFromTrajUId(trajUId);
+      const consonantDisplayObjs = props.piece.allDisplayEndingConsonants(track)
+        .filter(obj => obj.uId === trajUId);
+      clearEndingConsonant(trajUId);
+      if (consonantDisplayObjs.length === 1) {
+        renderEndingConsonant(consonantDisplayObjs[0]);
       }
     }
 
@@ -1675,7 +1712,9 @@ export default defineComponent({
       shifted,
       tracks,
       mutateTraj,
-      addDragDots
+      addDragDots,
+      refreshVowel,
+      refreshEndingConsonant
     }
   }
 })
