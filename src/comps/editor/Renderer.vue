@@ -60,6 +60,7 @@
             ref='melographLayer'
             />
             <TranscriptionLayer
+              ref='transcriptionLayer'
               v-if='
                 yScale !== null && 
                 xScale !== null && 
@@ -239,6 +240,8 @@ export default defineComponent({
     const yAxis = ref<HTMLDivElement | null>(null);
     const xAxis = ref<HTMLDivElement | null>(null);
     const minDrawDur = ref(0.01);
+    const transcriptionLayer = ref<typeof TranscriptionLayer | null>(null);
+
     const scrollX = computed(() => {
       if (!scrollingContainer.value) return 0;
       const scrollWidth = scrollingContainer.value.scrollWidth;
@@ -273,15 +276,17 @@ export default defineComponent({
       if (yScale.value) {
         yScale.value.range([0, props.scaledHeight]);
       }
-    })
-
+    });
     watch(() => props.scaledWidth, () => {
       if (xScale.value) {
         xScale.value = d3.scaleLinear()
           .domain([0, props.piece.durTot!])
           .range([0, props.scaledWidth]);
       }
-    })
+    });
+    watch([() => props.lowOctOffset, () => props.highOctOffset], () => {
+      reScaleY();
+    });
 
     const reScaleY = () => {
       if (yScale.value) {
@@ -300,11 +305,9 @@ export default defineComponent({
       }
       yAxisContainer.value!.scrollTop = scrollingContainer.value!.scrollTop;
       xAxisContainer.value!.scrollLeft = scrollingContainer.value!.scrollLeft;
-    }
+    };
 
-    watch([() => props.lowOctOffset, () => props.highOctOffset], () => {
-      reScaleY();
-    });
+    
 
     onMounted(async () => {
       updateClientWidth();
@@ -373,7 +376,8 @@ export default defineComponent({
       minDrawDur,
       scrollX,
       clientWidth,
-      modeSelectorHeight
+      modeSelectorHeight,
+      transcriptionLayer
     }
   }
   

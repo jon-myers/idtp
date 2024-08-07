@@ -27,7 +27,7 @@
       :selectedMode='selectedMode'
       :showPhraseDivs='viewPhrases'
       :editable='editable'
-      :sargamMagnetMode='true'
+      :sargamMagnetMode='sargamMagnetMode'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
@@ -126,10 +126,17 @@
             @click='preventSpaceToggle'>
         </div>
         <div class='cbRow'>
-          <label>Magnet Mode</label>
+          <label>Meter Magnet</label>
           <input
             type='checkbox'
             v-model='magnetMode'
+            @click='preventSpaceToggle'>
+        </div>
+        <div class='cbRow'>
+          <label>Sargam Magnet</label>
+          <input
+            type='checkbox'
+            v-model='sargamMagnetMode'
             @click='preventSpaceToggle'>
         </div>
         <div class='cbRow' v-if='vocal'>
@@ -330,7 +337,7 @@ import LabelEditor from '@/comps/editor/LabelEditor.vue';
 import instructionsText from '@/assets/texts/editor_instructions.html?raw';
 import AutomationWindow from '@/comps/editor/AutomationWindow.vue';
 import Renderer from '@/comps/editor/Renderer.vue';
-import XAxis from '@/comps/editor/renderer/XAxis.vue';
+import TranscriptionLayer from '@/comps/editor/renderer/TranscriptionLayer.vue';
 import YAxis from '@/comps/editor/renderer/YAxis.vue';
 import { detect, BrowserInfo } from 'detect-browser';
 import { throttle } from 'lodash';
@@ -417,8 +424,8 @@ function findClosestStartTimeAfter(startTimes: number[], timepoint: number) {
 type EditorDataType = {
   piece: Piece,
   durTot: number,
-  freqMin: number,
-  freqMax: number,
+  // freqMin: number,
+  // freqMax: number,
   backColor: string,
   axisColor: string,
   yAxWidth: number,
@@ -452,7 +459,6 @@ type EditorDataType = {
   synthDamping: number,
   showSargam: boolean,
   showBols: boolean,
-  rangeOffset: number,
   scrollYWidth: number,
   scrollXHeight: number,
   yScaleLims: [number, number],
@@ -601,6 +607,7 @@ type EditorDataType = {
   instTracks: InstrumentTrackType[],
   selectedMode: EditorMode,
   trajSelStatus: TrajSelectionStatus,
+  sargamMagnetMode: boolean,
 }
 
 export { findClosestStartTime }
@@ -611,8 +618,8 @@ export default defineComponent({
     return {
       piece: new Piece(),
       durTot: 600,
-      freqMin: 100,
-      freqMax: 800,
+      // freqMin: 100,
+      // freqMax: 800,
       backColor: '#f0f8ff', // aliceblue
       axisColor: '#c4b18b', // tan
       yAxWidth: 30,
@@ -646,7 +653,6 @@ export default defineComponent({
       synthDamping: 0.5,
       showSargam: false,
       showBols: false,
-      rangeOffset: 0.1,
       scrollYWidth: 20,
       scrollXHeight: 20,
       yScaleLims: [1, 5],
@@ -774,6 +780,7 @@ export default defineComponent({
       instTracks: [],
       selectedMode: EditorMode.None,
       trajSelStatus: undefined,
+      sargamMagnetMode: true
     }
   },
   components: {
@@ -873,10 +880,9 @@ export default defineComponent({
       if (this.audioDBDoc && this.audioDBDoc.saEstimate) {
         fund = 2 * this.audioDBDoc.saEstimate * 2 ** this.audioDBDoc.octOffset;
       }
-      this.freqMin = 2 ** (Math.log2(fund / 2) - this.rangeOffset);
-      this.freqMax = 2 ** (Math.log2(fund * 4) + this.rangeOffset);
       await this.getPieceFromJson(piece, fund);
       useTitle(this.piece.title);
+
 
       this.editable = this.permissionToEdit(this.piece); // necessary
       if (!this.permissionToView(this.piece)) {
@@ -1061,6 +1067,20 @@ export default defineComponent({
   computed: {
     newPulseLims() {
       this.insertPulses
+    },
+
+    freqMin() {
+      const saFreq = this.piece.raga.fundamental;
+      const logSaFreq = Math.log2(saFreq);
+      const logMin: number = logSaFreq - this.lowOctOffset;
+      return 2 ** logMin;
+    },
+
+    freqMax() {
+      const saFreq = this.piece.raga.fundamental;
+      const logSaFreq = Math.log2(saFreq);
+      const logMax: number = logSaFreq + this.highOctOffset;
+      return 2 ** logMax;
     },
   },
 
@@ -1700,33 +1720,23 @@ export default defineComponent({
     },
 
     mutateTrajEmit(newIdx: number) {
-      if (!this.selectedTraj) {
-        console.log('no selected traj')
-      } else {
-        this.unsavedChanges = true;
-        const trajObj = this.selectedTraj.toJSON();
-        trajObj.id = newIdx;
-        const newTraj = new Trajectory(trajObj);
-        const pIdx = this.selectedTraj.phraseIdx!;
-        const phrase = this.piece.phrases[pIdx];
-
-        const tIdx = this.selectedTraj.num!;
-        phrase.trajectories[tIdx] = newTraj;
-        phrase.assignStartTimes();
-        phrase.assignPhraseIdx();
-        phrase.assignTrajNums();
-        this.selectedTraj = newTraj;
-        this.selectedTrajs = [this.selectedTraj];
-        const data = this.makeTrajData(this.selectedTraj, phrase.startTime!);
-        d3Select(`#p${pIdx}t${tIdx}`)
-          .datum(data)
-          .attr('d', this.codifiedPhraseLine())
-        d3Select(`#overlay__p${pIdx}t${tIdx}`)
-          .datum(data)
-          .attr('d', this.codifiedPhraseLine())
-      }
-      d3SelectAll('.dragDots').remove();
-      this.addAllDragDots();
+      const renderer = this.$refs.renderer as typeof Renderer;
+      const tLayer = renderer.transcriptionLayer as typeof TranscriptionLayer;
+      tLayer.mutateTraj(newIdx);
+      
+        // this.unsavedChanges = true;
+        // const trajObj = this.selectedTraj.toJSON();
+        // trajObj.id = newIdx;
+        // const newTraj = new Trajectory(trajObj);
+        // const pIdx = this.selectedTraj.phraseIdx!;
+        // const phrase = this.piece.phrases[pIdx];
+        // const tIdx = this.selectedTraj.num!;
+        // phrase.trajectories[tIdx] = newTraj;
+        // phrase.assignStartTimes();
+        // phrase.assignPhraseIdx();
+        // phrase.assignTrajNums();
+        
+      
     },
 
     setAnimationStart(time: number) {
@@ -2361,42 +2371,42 @@ export default defineComponent({
       this.addBolLabels();
     },
 
-    addAllDragDots() {
-      const sTraj = this.selectedTraj!
-      d3SelectAll('.dragDots').remove();
-      const pIdx = sTraj.phraseIdx!;
-      // const tIdx = sTraj.num;
-      const phrase = this.piece.phrases[pIdx];
-      const drag = () => {
-        return d3Drag()
-          .on('start', this.dragDotStart)
-          .on('drag', this.dragDotDragging)
-          .on('end', this.dragDotEnd)
-      };
-      const dragDotsG = this.phraseG.append('g').classed('dragDots', true);
-      let times = [0, ...sTraj.durArray!.map(cumsum())];
-      const phraseStart = phrase.startTime!;
-      const ts = sTraj.startTime!;
-      times = times.map(a => a * sTraj.durTot + phraseStart + ts);
-      for (let i = 0; i < times.length; i++) {
-        const lf = sTraj.logFreqs[i] ?
-          sTraj.logFreqs[i] :
-          sTraj.logFreqs[i - 1];
-        dragDotsG
-          .append('circle')
-          .attr('id', `dragDot${i}`)
-          .attr('cx', this.codifiedXR!(times[i]))
-          .attr('cy', this.codifiedYR!(lf))
-          .attr('r', 4)
-          .style('fill', 'purple')
-          .style('cursor', 'pointer')
-          .on('contextmenu', this.dragDotContextMenuClick)
-        if (this.editable) {
-          d3Select(`#dragDot${i}`)
-            .call(drag())  
-        }          
-      }
-    },
+    // addAllDragDots() {
+    //   const sTraj = this.selectedTraj!
+    //   d3SelectAll('.dragDots').remove();
+    //   const pIdx = sTraj.phraseIdx!;
+    //   // const tIdx = sTraj.num;
+    //   const phrase = this.piece.phrases[pIdx];
+    //   const drag = () => {
+    //     return d3Drag()
+    //       .on('start', this.dragDotStart)
+    //       .on('drag', this.dragDotDragging)
+    //       .on('end', this.dragDotEnd)
+    //   };
+    //   const dragDotsG = this.phraseG.append('g').classed('dragDots', true);
+    //   let times = [0, ...sTraj.durArray!.map(cumsum())];
+    //   const phraseStart = phrase.startTime!;
+    //   const ts = sTraj.startTime!;
+    //   times = times.map(a => a * sTraj.durTot + phraseStart + ts);
+    //   for (let i = 0; i < times.length; i++) {
+    //     const lf = sTraj.logFreqs[i] ?
+    //       sTraj.logFreqs[i] :
+    //       sTraj.logFreqs[i - 1];
+    //     dragDotsG
+    //       .append('circle')
+    //       .attr('id', `dragDot${i}`)
+    //       .attr('cx', this.codifiedXR!(times[i]))
+    //       .attr('cy', this.codifiedYR!(lf))
+    //       .attr('r', 4)
+    //       .style('fill', 'purple')
+    //       .style('cursor', 'pointer')
+    //       .on('contextmenu', this.dragDotContextMenuClick)
+    //     if (this.editable) {
+    //       d3Select(`#dragDot${i}`)
+    //         .call(drag())  
+    //     }          
+    //   }
+    // },
 
     dragDotContextMenuClick(e: MouseEvent) {
       const target = e.target as HTMLElement;
@@ -2472,507 +2482,6 @@ export default defineComponent({
       const octOffset = Number(this.audioDBDoc!.octOffset);
       const result = await makeSpectrograms(recId, saEst * 2 ** octOffset);
       console.log(result)
-    },
-    
-    dragDotStart(e: D3DragEvent<HTMLDivElement, any, MouseEvent>) {
-      const phrase = this.piece.phrases[this.selectedTraj!.phraseIdx!]; 
-      const phraseStart = phrase.startTime!;
-      const trajStart = this.selectedTraj!.startTime!;
-      const idx = e.sourceEvent.target.id.split('dragDot')[1];
-      this.dragIdx = idx;
-      const logFreq = this.codifiedYR!.invert(e.y);
-      this.selectedTraj!.logFreqs[idx] = logFreq;
-      const st = phraseStart + trajStart;
-      const endTime = st + this.selectedTraj!.durTot;
-      const timePts = Math.round((endTime - st) / this.minDrawDur);
-      const drawTimes = linSpace(st, endTime, timePts);
-      const mp = (t: number) => (t - st) / (endTime - st);
-      const trajDrawXs = drawTimes.map(mp);
-      const trajDrawYs = trajDrawXs.map(x => this.selectedTraj!.compute(x))
-      const data = trajDrawYs.map((y, i) => {
-        return {
-          x: drawTimes[i],
-          y: y
-        }
-      });
-      this.phraseG.append('path')
-        .datum(data)
-        .attr('id', 'transparentPhrase')
-        .attr('stroke', this.trajColor)
-        .attr('fill', 'none')
-        .attr('stroke-width', '3px')
-        .attr('stroke-linejoin', 'round')
-        .attr('stroke-linecap', 'round')
-        .attr('d', this.codifiedPhraseLine())
-        .style('opacity', '0.35')
-    },
-    
-    dragDotDragging(e: D3DragEvent<HTMLDivElement, any, MouseEvent>) {
-      const idx = Number(this.dragIdx);
-      const time = this.constrainTime(e, idx);
-      const x = this.codifiedXR!(time);
-      d3Select(`#dragDot${idx}`)
-        .attr('cx', x)
-        .attr('cy', e.y)
-      const traj = this.selectedTraj!;
-      const tIdx = traj.num!;
-      const pIdx = traj.phraseIdx!;
-      const phrase = this.piece.phrases[traj.phraseIdx!];
-      const logFreq = this.codifiedYR!.invert(e.y);
-      if (traj.logFreqs[idx]) {
-        traj.logFreqs[idx] = logFreq;
-      }
-      // special case of moving inner dots, doesn't effect other trajs
-      if (idx > 0 && idx < traj.durArray!.length) {
-        const newDurArray = this.calculateNewDurArray(phrase, traj, idx, time);
-        traj.durArray = newDurArray;
-      } else if (idx === 0) {
-        if (tIdx === 0) {
-          const prevPhrase = this.piece.phrases[pIdx - 1];
-          const prevTrajs = prevPhrase.trajectories;
-          const prevTraj = prevTrajs[prevTrajs.length - 1];
-          const initTime = phrase.startTime! + traj.startTime!;
-          const delta = time - initTime;
-          if (prevTraj.durArray && prevTraj.durArray.length > 1) {
-            prevTraj.durArray = this.newDurArrayZ(prevTraj, delta)
-          }
-          prevTraj.durTot += delta;
-          if (traj.durArray!.length > 1) {
-            const initPortionA = traj.durArray![0] * traj.durTot;
-            const newDur = traj.durTot - delta;
-            const newPropA = (initPortionA - delta) / newDur;
-            let newDurArr = traj.durArray!.map(i => i * traj.durTot / newDur);
-            newDurArr[0] = newPropA;
-            traj.durArray = newDurArr;
-          }
-          traj.durTot -= delta;
-          phrase.startTime! += delta;
-          // update the chikari times
-          Object.keys(phrase.chikaris).forEach(key => {
-            let nK = (Math.round(100 * (Number(key) - delta)) / 100).toString();
-            if (nK !== key) {
-              phrase.chikaris[nK] = phrase.chikaris[key];
-              delete phrase.chikaris[key];
-            }
-          })
-        } else {
-          const prevTraj = phrase.trajectories[tIdx - 1];
-          const initTime = phrase.startTime! + traj.startTime!;
-          const delta = time - initTime;
-          if (prevTraj.durArray && prevTraj.durArray.length > 1) {
-            prevTraj.durArray = this.newDurArrayZ(prevTraj, delta)
-          }
-          prevTraj.durTot += delta;
-          if (traj.durArray!.length > 1) {
-            const initPortionA = traj.durArray![0] * traj.durTot;
-            const newDur = traj.durTot - delta;
-            const newPropA = (initPortionA - delta) / newDur;
-            let newDurArr = traj.durArray!.map(i => i * traj.durTot / newDur);
-            newDurArr[0] = newPropA;
-            traj.durArray = newDurArr;
-          }
-          traj.durTot -= delta;
-          traj.startTime! += delta;
-        }
-        // if previous traj of this phrase
-      } else if (idx === traj.durArray!.length) {
-        if (tIdx < phrase.trajectories.length - 1) {
-          const nextTraj = phrase.trajectories[tIdx + 1];
-          const initTime = phrase.startTime! + traj.startTime! + traj.durTot;
-          const delta = time - initTime;
-          if (nextTraj.durArray && nextTraj.durArray.length > 1) {
-            nextTraj.durArray = this.newDurArrayA(nextTraj, delta);
-          }
-          nextTraj.durTot -= delta;
-          nextTraj.startTime! += delta;
-          
-          if (traj.durArray!.length > 1) {
-            traj.durArray = this.newDurArrayZ(traj, delta)
-          }
-          traj.durTot += delta;
-          phrase.durArrayFromTrajectories();
-        } else {
-          if (this.piece.phrases[pIdx + 1]) {
-            const nextPhrase = this.piece.phrases[pIdx + 1];
-            const nextTraj = nextPhrase.trajectories[0];
-            const initTime = phrase.startTime! + traj.startTime! + traj.durTot;
-            const delta = time - initTime;
-            if (nextTraj.durArray && nextTraj.durArray.length > 1) {
-              nextTraj.durArray = this.newDurArrayA(nextTraj, delta)
-            }
-            nextTraj.durTot -= delta;
-            nextPhrase.startTime! += delta;
-            nextPhrase.durTotFromTrajectories();
-            nextPhrase.durArrayFromTrajectories();
-            nextPhrase.assignStartTimes();
-            const tda = traj.durArray!;
-            if (tda.length > 1) {
-              const initPartZ = tda[tda.length - 1] * traj.durTot;
-              const newDur = traj.durTot + delta;
-              const newPropZ = (initPartZ + delta) / newDur;
-              let newDurArray = tda.map((i => i * traj.durTot / newDur));
-              newDurArray[newDurArray.length - 1] = newPropZ;
-              traj.durArray = newDurArray;
-            }
-            traj.durTot += delta;
-            phrase.durTotFromTrajectories();
-            phrase.durArrayFromTrajectories();
-            phrase.assignStartTimes();
-            // move chikaris in next phrase
-            Object.keys(nextPhrase.chikaris).forEach(k => {
-              let nK = (Math.round(100 * (Number(k) - delta)) / 100).toString();
-              if (nK !== k) {
-                nextPhrase.chikaris[nK] = nextPhrase.chikaris[k];
-                delete nextPhrase.chikaris[k];
-              }
-            })
-          }
-        }
-      }
-      const data = this.makeTrajData(traj, phrase.startTime!)
-      d3Select(`#transparentPhrase`)
-        .datum(data)
-        .attr('d', this.codifiedPhraseLine())
-    },
-    
-    dragDotEnd(e: D3DragEvent<HTMLDivElement, any, MouseEvent>) {
-      this.unsavedChanges = true;
-      let deletedSilentTraj = false;
-      let resetRequired = false;
-      const idx = Number(this.dragIdx);
-      const time = this.constrainTime(e, idx);
-      const x = this.codifiedXR!(time);
-      const traj = this.selectedTraj!;
-      const phrase = this.piece.phrases[traj.phraseIdx!];
-      const pIdx = traj.phraseIdx!;
-      const tIdx = traj.num!;
-      let logFreq = this.codifiedYR!.invert(e.y);
-      const logSGLines = this.visibleSargam.map(s => Math.log2(s));
-      logFreq = getClosest(logSGLines, logFreq)
-      const y = this.codifiedYR!(logFreq)
-      d3Select(`#dragDot${idx}`)
-        .attr('cx', x)
-        .attr('cy', y)
-      const pitchMold = this.visPitches[logSGLines.indexOf(logFreq)];
-      const newPitch = new Pitch(pitchMold);
-      if (traj.logFreqs[idx]) {
-        traj.logFreqs[idx] = logFreq;
-        traj.pitches[idx] = newPitch;
-        if (idx === 0 && traj.id === 0) { // moves both dots of a fixed traj
-          traj.logFreqs[1] = logFreq;
-          const secondPitch = new Pitch(pitchMold);
-          traj.pitches[1] = secondPitch;
-          d3Select(`#dragDot${1}`)
-            .attr('cy', y)
-        } else if (idx === 1 && traj.id === 0) {
-          traj.logFreqs[0] = logFreq;
-          const secondPitch = new Pitch(pitchMold);
-          traj.pitches[0] = secondPitch;
-          d3Select(`#dragDot${0}`)
-            .attr('cy', y)
-        }
-      }
-      // special case of moving inner dots, doesn't affect other trajs
-      if (idx > 0 && idx < traj.durArray!.length) {
-        const newDurArray = this.calculateNewDurArray(phrase, traj, idx, time);
-        traj.durArray = newDurArray;
-      } else if (idx === 0) { // if first drag dot
-        if (tIdx === 0) { 
-          resetRequired = true;
-          const prevPhrase = this.piece.phrases[pIdx - 1];
-          const pTrajs = prevPhrase.trajectories;
-          const prevTraj = pTrajs[pTrajs.length - 1];
-          const initTime = phrase.startTime! + traj.startTime!;
-          const delta = time - initTime;
-          prevTraj.durTot += delta;
-          prevPhrase.durTotFromTrajectories();
-          prevPhrase.durArrayFromTrajectories();
-          if (prevTraj.durTot === 0) {
-            prevPhrase.durArrayFromTrajectories();
-          }
-          if (traj.durArray!.length > 1) {
-            const initPortionA = traj.durArray![0] * traj.durTot;
-            const durTot = traj.durTot - delta;
-            const newPropA = (initPortionA - delta) / durTot;
-            let newDurArray = traj.durArray!.map(i => i * traj.durTot / durTot);
-            newDurArray[0] = newPropA;
-            traj.durArray = newDurArray;
-          }
-          traj.durTot -= delta;
-          phrase.startTime! += delta;
-          phrase.durTotFromTrajectories();
-          phrase.durArrayFromTrajectories();
-          // update the chikari times
-          Object.keys(phrase.chikaris).forEach(key => {
-            let newKeyNum = (Math.round(100 * (Number(key) - delta)) / 100);
-            let newKey = newKeyNum.toString();
-            if (newKey !== key) {
-              phrase.chikaris[newKey] = phrase.chikaris[key];
-              delete phrase.chikaris[key];
-            }
-            if (Number(newKey) < 0) {
-              let prevPhraseNewKeyNum = (prevPhrase.durTot! + Number(newKey))
-              let prevPhraseNewKey = prevPhraseNewKeyNum.toFixed(2);
-              prevPhrase.chikaris[prevPhraseNewKey] = phrase.chikaris[newKey];
-              delete phrase.chikaris[newKey];
-            }
-          })
-          // for each chikari in prevPhrase, if it is now in the next phrase, 
-          // move it
-          Object.keys(prevPhrase.chikaris).forEach(key => {
-            if (Number(key) > prevPhrase.durTot!) {
-              const newKey = (Number(key) - prevPhrase.durTot!).toFixed(2);
-              phrase.chikaris[newKey] = prevPhrase.chikaris[key];
-              delete prevPhrase.chikaris[key]
-            }
-          })
-        } else {
-          const prevTraj = phrase.trajectories[tIdx - 1];
-          const initTime = phrase.startTime! + traj.startTime!;
-          const delta = time - initTime;
-          prevTraj.durTot += delta;
-          if (prevTraj.durTot === 0) {
-            phrase.durArrayFromTrajectories();
-            phrase.assignStartTimes();
-            phrase.assignTrajNums();
-          }
-          phrase.durArrayFromTrajectories();
-          if (traj.durArray!.length > 1) {
-            const initPortionA = traj.durArray![0] * traj.durTot;
-            const durTot = traj.durTot - delta;
-            const newPropA = (initPortionA - delta) / durTot;
-            let newDurArray = traj.durArray!.map(i => i * traj.durTot / durTot);
-            newDurArray[0] = newPropA;
-            traj.durArray = newDurArray;
-          }
-          traj.durTot -= delta;
-        }
-        let prevTraj: Trajectory | undefined;
-        if (tIdx > 0) {
-          prevTraj = phrase.trajectories[tIdx - 1];
-        } else if (traj.phraseIdx! > 0) {
-          const prevPhrase = this.piece.phrases[pIdx - 1];
-          const pTrajs = prevPhrase.trajectories;
-          prevTraj = pTrajs[pTrajs.length - 1];
-        }
-        if (prevTraj && prevTraj.id !== 12 && prevTraj.endConsonant) {
-          this.moveEConsonant(prevTraj, phrase.startTime!, true)
-          this.moveConsonantSymbols(prevTraj, phrase.startTime!, true)
-        }
-      } else if (idx === traj.durArray!.length) {
-        if (tIdx < phrase.trajectories.length - 1) {
-          const nextTraj = phrase.trajectories[tIdx + 1];
-          const initTime = phrase.startTime! + traj.startTime! + traj.durTot;
-          const delta = time - initTime;
-          nextTraj.durTot -= delta;
-          traj.durTot += delta;
-          if (traj.durArray!.length > 1) {
-            const tda = traj.durArray!;
-            const initPartZ = tda[tda.length - 1] * traj.durTot;
-            const durTot = traj.durTot + delta;
-            const newPropZ = (initPartZ + delta) / durTot;
-            let newDurArray = tda.map((i => i * traj.durTot / durTot));
-            newDurArray[newDurArray.length - 1] = newPropZ;
-            traj.durArray = newDurArray;
-          }
-          phrase.trajectories[tIdx + 1] = nextTraj;
-          if (nextTraj.durTot === 0) {
-            phrase.durArrayFromTrajectories();
-            phrase.assignStartTimes();
-            phrase.assignTrajNums();
-            deletedSilentTraj = true
-          }
-          phrase.durArrayFromTrajectories();
-        } else {
-          
-          if (this.piece.phrases[pIdx + 1]) {
-            resetRequired = true;
-            const nextPhrase = this.piece.phrases[pIdx + 1];
-            const nextTraj = nextPhrase.trajectories[0];
-            const initTime = phrase.startTime! + traj.startTime! + traj.durTot;
-            const delta = time - initTime;
-            nextTraj.durTot -= delta;
-            nextPhrase.startTime! += delta;
-            nextPhrase.durTotFromTrajectories();
-            nextPhrase.durArrayFromTrajectories();
-            nextPhrase.assignStartTimes();
-            if (nextTraj.durTot === 0) {
-              nextPhrase.assignTrajNums();
-              nextPhrase.durArrayFromTrajectories();
-            }
-            traj.durTot += delta;
-            Object.keys(nextPhrase.chikaris).forEach(key => {
-              let newKeyNum = (Math.round(100 * (Number(key) - delta)) / 100);
-              let newKey = newKeyNum.toString();
-              if (newKey !== key) {
-                nextPhrase.chikaris[newKey] = nextPhrase.chikaris[key];
-                delete nextPhrase.chikaris[key];
-              }
-              if (Number(newKey) < 0) {
-                let phraseNewKey = (phrase.durTot! + Number(newKey)).toFixed(2);
-                phrase.chikaris[phraseNewKey] = nextPhrase.chikaris[newKey];
-                delete nextPhrase.chikaris[newKey];
-              }
-            })
-            // for each chikari in prevPhrase, if it is now in the next phrase, 
-            // move it
-            Object.keys(phrase.chikaris).forEach(key => {
-              if (Number(key) > phrase.durTot!) {
-                const newKey = (Number(key) - phrase.durTot!).toFixed(2);
-                nextPhrase.chikaris[newKey] = phrase.chikaris[key];
-                delete phrase.chikaris[key]
-              }
-            })
-          }
-        }
-      }
-      const data = this.makeTrajData(traj, phrase.startTime!);
-      d3Select(`#transparentPhrase`).remove()
-      d3Select(`#p${pIdx}t${tIdx}`)
-        .datum(data)
-        .attr('d', this.codifiedPhraseLine())
-      d3Select(`#overlay__p${pIdx}t${tIdx}`)
-        .datum(data)
-        .attr('d', this.codifiedPhraseLine())
-      if (idx === 0) {
-        if (tIdx === 0) {
-          const prevPhrase = this.piece.phrases[pIdx - 1];
-          const pTrajs = prevPhrase.trajectories;
-          const prevTraj = pTrajs[pTrajs.length - 1];
-          const newPrevTraj = this.fixTrajectory(prevTraj);
-          prevPhrase.trajectories[pTrajs.length - 1] = newPrevTraj;
-          prevPhrase.assignStartTimes();
-          prevPhrase.assignTrajNums();
-          prevPhrase.assignPhraseIdx();
-          const data = this.makeTrajData(newPrevTraj, prevPhrase.startTime!);
-          d3Select(`#p${pIdx-1}t${prevPhrase.trajectories.length-1}`)
-            .datum(data)
-            .attr('d', this.codifiedPhraseLine())
-          d3Select(`#overlay__p${pIdx-1}t${prevPhrase.trajectories.length-1}`)
-            .datum(data)
-            .attr('d', this.codifiedPhraseLine())
-          this.moveKrintin(newPrevTraj, phrase.startTime!);
-          this.moveSlides(newPrevTraj, phrase.startTime!);
-          this.movePhraseDivs();
-        } else {
-          const prevTraj = phrase.trajectories[tIdx - 1];
-          const newPrevTraj = this.fixTrajectory(prevTraj);
-          phrase.trajectories[tIdx - 1] = newPrevTraj;
-          phrase.assignStartTimes();
-          phrase.assignTrajNums();
-          phrase.assignPhraseIdx();
-          const data = this.makeTrajData(newPrevTraj, phrase.startTime!);
-          d3Select(`#p${pIdx}t${tIdx-1}`)
-            .datum(data)
-            .attr('d', this.codifiedPhraseLine())
-          d3Select(`#overlay__p${pIdx}t${tIdx-1}`)
-            .datum(data)
-            .attr('d', this.codifiedPhraseLine())
-          this.moveKrintin(newPrevTraj, phrase.startTime!);
-          this.moveSlides(newPrevTraj, phrase.startTime!)
-        }
-      } else if (idx === traj.durArray!.length) {
-        if (tIdx < phrase.trajectories.length - 1) {
-          if (deletedSilentTraj) {
-            resetRequired = true
-          } else {
-            const nextTraj = phrase.trajectories[tIdx + 1];
-            const newNextTraj = this.fixTrajectory(nextTraj);
-            phrase.trajectories[tIdx + 1] = newNextTraj;
-            phrase.assignStartTimes();
-            phrase.assignTrajNums();
-            phrase.assignPhraseIdx();
-            const data = this.makeTrajData(nextTraj, phrase.startTime!);
-            d3Select(`#p${pIdx}t${tIdx+1}`)
-              .datum(data)
-              .attr('d', this.codifiedPhraseLine())
-            d3Select(`#overlay__p${pIdx}t${tIdx+1}`)
-              .datum(data)
-              .attr('d', this.codifiedPhraseLine())
-            this.moveKrintin(newNextTraj, phrase.startTime!);
-            this.moveSlides(newNextTraj, phrase.startTime!);
-            this.codifiedRedrawDampener(newNextTraj, phrase.startTime!);
-            if (this.vocal) {
-              this.moveSConsonant(newNextTraj, phrase.startTime!, true);
-              this.moveEConsonant(newNextTraj, phrase.startTime!, true);
-              this.moveVowel(newNextTraj, phrase.startTime!, true);
-              this.moveConsonantSymbols(newNextTraj, phrase.startTime!, true);
-            }
-            
-            this.removePlucks(newNextTraj);
-            const g = d3Select(`#articulations__p${pIdx}t${tIdx+1}`) as 
-              Selection<SVGGElement, any, any, any>;
-            this.codifiedAddPlucks(newNextTraj, phrase.startTime!, g);
-          }
-          
-
-
-        } else {
-          if (this.piece.phrases[pIdx + 1]) {
-            const nextPhrase = this.piece.phrases[pIdx + 1];
-            const nextTraj = nextPhrase.trajectories[0];
-            const newNextTraj = this.fixTrajectory(nextTraj);
-            nextPhrase.trajectories[0] = newNextTraj;
-            nextPhrase.assignStartTimes();
-            nextPhrase.assignTrajNums();
-            nextPhrase.assignPhraseIdx();
-            const data = this.makeTrajData(newNextTraj, nextPhrase.startTime!);
-            d3Select(`#p${pIdx+1}t${0}`)
-              .datum(data)
-              .attr('d', this.codifiedPhraseLine())
-            d3Select(`#overlay__p${pIdx+1}t${0}`)
-              .datum(data)
-              .attr('d', this.codifiedPhraseLine())
-            this.moveKrintin(newNextTraj, nextPhrase.startTime!)
-            this.moveSlides(newNextTraj, nextPhrase.startTime!)
-            this.codifiedRedrawDampener(newNextTraj, nextPhrase.startTime!)
-            if (this.vocal) {
-              this.moveSConsonant(newNextTraj, nextPhrase.startTime!, true);
-              this.moveEConsonant(newNextTraj, nextPhrase.startTime!, true);
-              this.moveVowel(newNextTraj, nextPhrase.startTime!, true);
-            }
-            this.removePlucks(newNextTraj);
-            const g = d3Select(`#articulations__p${pIdx+1}t${0}`) as 
-              Selection<SVGGElement, any, any, any>;
-            this.codifiedAddPlucks(newNextTraj, nextPhrase.startTime!, g);
-            this.movePhraseDivs()
-          }
-        }
-      }
-      this.removePlucks(traj);
-      const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
-        Selection<SVGGElement, any, any, any>;
-      this.codifiedAddPlucks(traj, phrase.startTime!, g);
-      const newTraj = this.fixTrajectory(traj)
-      this.piece.phrases[pIdx].trajectories[tIdx] = newTraj
-      phrase.assignStartTimes();
-      phrase.assignTrajNums();
-      phrase.assignPhraseIdx();
-      this.selectedTraj = newTraj;
-      this.selectedTrajs = [this.selectedTraj];
-      this.moveKrintin(this.selectedTraj, phrase.startTime!);
-      this.moveSlides(this.selectedTraj, phrase.startTime!);
-      
-      this.codifiedRedrawDampener(this.selectedTraj, phrase.startTime!);
-      if (this.vocal) {
-        this.moveSConsonant(this.selectedTraj, phrase.startTime!, true);
-        this.moveEConsonant(this.selectedTraj, phrase.startTime!, true);
-        this.moveVowel(this.selectedTraj, phrase.startTime!, true);
-        this.moveConsonantSymbols(this.selectedTraj, phrase.startTime!, true);
-      }
-      this.cleanEmptyTrajs(phrase);
-      this.moveChikaris(phrase);
-      if (resetRequired) this.resetZoom();
-      this.resetSargam();
-      this.resetBols()
-      const stIdx = this.selectedTraj.num;
-      if (phrase.trajectories[tIdx+1]) {
-        const followingTraj = phrase.trajectories[tIdx+1];
-        this.moveVowel(followingTraj, phrase.startTime!, true);
-      } else if (phrase.trajectories[tIdx+2]) {
-        const followingTraj = phrase.trajectories[tIdx+2];
-        this.moveVowel(followingTraj, phrase.startTime!, true);
-      }
     },
 
     verticalDragDotStart(e: D3DragEvent<HTMLDivElement, any, MouseEvent>) {

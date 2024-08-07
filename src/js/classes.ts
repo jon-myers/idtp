@@ -16,7 +16,7 @@ import {
   PhraseDivDisplayType
 } from '@/ts/types.ts';
 import { Instrument } from '@/ts/enums.ts';
-import { closeTo, getClosest } from '@/ts/utils.ts';
+import { closeTo, getClosest, isUpperCase } from '@/ts/utils.ts';
 
 
 const initSecCategorization = (): SecCatType => {
@@ -2514,7 +2514,24 @@ class Piece {
     let track: number | undefined = undefined;
     for (let i = 0; i < this.instrumentation.length; i++) {
       const trajs = this.allTrajectories(i);
-      if (trajs.includes(traj)) {
+      const trajUIds = trajs.map(t => t.uniqueId);
+      if (trajUIds.includes(traj.uniqueId)) {
+        track = i;
+        break
+      }
+    }
+    if (track === undefined) {
+      throw new Error('Trajectory not found')
+    }
+    return track
+  }
+
+  trackFromTrajUId(trajUId: string) {
+    let track: number | undefined = undefined;
+    for (let i = 0; i < this.instrumentation.length; i++) {
+      const trajs = this.allTrajectories(i);
+      const trajUIds = trajs.map(t => t.uniqueId);
+      if (trajUIds.includes(trajUId)) {
         track = i;
         break
       }
@@ -3334,12 +3351,14 @@ class Raga {
     logDiff -= octOffset;
     const rIdx = this.ratios.findIndex(r => closeTo(r, 2 ** logDiff));
     const swara = this.sargamLetters[rIdx];
+    const raised = isUpperCase(swara);
     return new Pitch({ 
       swara: swara, 
       oct: octOffset, 
       fundamental: this.fundamental,
       ratios: this.stratifiedRatios,
-      logOffset: logOffset
+      logOffset: logOffset,
+      raised
     })
   }
 

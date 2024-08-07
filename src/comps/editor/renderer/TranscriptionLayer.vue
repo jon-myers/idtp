@@ -15,7 +15,8 @@ import {
   watch, 
   computed,
   PropType,
-  nextTick
+  nextTick,
+  reactive
 } from 'vue';
 import * as d3 from 'd3';
 import { linSpace, cumsum, getClosest } from '@/ts/utils.ts';
@@ -177,7 +178,7 @@ export default defineComponent({
       threshold: 0.0
     });
 
-    const resetTrajRenderStatus = () => {
+    const resetTrajRenderStatus = (persistingTrajUIds: string[] = []) => {
       for (let i = 0; i < props.piece.instrumentation.length; i++) {
         if (trajRenderStatus.value[i] === undefined) {
           trajRenderStatus.value.push([])
@@ -186,22 +187,25 @@ export default defineComponent({
           return { 
             uniqueId: t.uniqueId!, 
             renderStatus: false,
-            selectedStatus: false,
+            selectedStatus: persistingTrajUIds.includes(t.uniqueId!),
             track: i
           }
         })
       }
     }
 
-    
     resetTrajRenderStatus();
 
+    // computed values
     const trajStartTimes = computed(() => {
       const gridStartTimes = [];
       for (let i = 0; i < props.piece.instrumentation.length; i++) {
         const trajs = props.piece.allTrajectories(i);
         const durs = trajs.map(t => t.durTot);
         const startTimes = durs.reduce((acc, dur) => {
+          if (typeof dur !== 'number') {
+            throw new Error('Duration is not a number');
+          }
           acc.push(acc[acc.length - 1] + dur);
           return acc;
         }, [0]);
@@ -209,7 +213,6 @@ export default defineComponent({
       };
       return gridStartTimes;
     });
-
     const trajEndTimes = computed(() => {
       const gridEndTimes = [];
       for (let i = 0; i < props.piece.instrumentation.length; i++) {
@@ -222,7 +225,6 @@ export default defineComponent({
       };
       return gridEndTimes;
     });
-
     const dynamicStyle = computed(() => {
       return {
         '--opacity': props.showTranscription ? 1 : 0,
@@ -248,7 +250,25 @@ export default defineComponent({
         high: 2 ** logMax.value
       })
     });
+    const selectedTrajs = computed(() => {
+      const uIds = trajRenderStatus.value.flat().filter(obj => {
+        return obj.selectedStatus === true
+      }).map(obj => obj.uniqueId);
+      const out = props.piece.allTrajectories().filter(traj => {
+        return uIds.includes(traj.uniqueId!)
+      });
+      return out
+    });
+    const chunkDur = computed(() => {
+      return props.xScale.invert(props.clientWidth)
+    });
+    const selectedTraj = computed(() => {
+      return selectedTrajs.value.length === 1 ? 
+        selectedTrajs.value[0] : 
+        undefined;
+    })
 
+    // watched values
     watch(() => props.sargamLineColor, () => {
       updateSargamLineColor();
     });
@@ -297,17 +317,6 @@ export default defineComponent({
       d3.selectAll('.Latin')
         .attr('opacity', opacities[2])
     });
-
-    const selectedTrajs = computed(() => {
-      const uIds = trajRenderStatus.value.flat().filter(obj => {
-        return obj.selectedStatus === true
-      }).map(obj => obj.uniqueId);
-      const out = props.piece.allTrajectories().filter(traj => {
-        return uIds.includes(traj.uniqueId!)
-      });
-      return out
-    })
-
     watch(selectedTrajs, (newVal, oldVal) => {
       oldVal.forEach(traj => {
         if (!newVal.includes(traj)) {
@@ -341,7 +350,7 @@ export default defineComponent({
         const track = props.piece.trackFromTraj(traj);
         const inst = props.piece.instrumentation[track] as Instrument;
         if (selectedTrajs.value.length === 1) {
-          addDragDots(track);
+          addDragDots();
         }
         status = { trajs: selectedTrajs.value, instrument: inst }
       }
@@ -436,13 +445,16 @@ export default defineComponent({
 
     const resetTranscription = () => {
       clearTranscription();
-      resetTrajRenderStatus();
+      const selectedTrajUIds = selectedTrajs.value.map(t => t.uniqueId!);
+      resetTrajRenderStatus(selectedTrajUIds);
       resetEmptyObserverDivs();
       resetObserver();
       addPhraseDivG();
       addSargamG();
       addPhonemeG();
       addTrajG();
+      clearDragDots();
+      addDragDots();
     }
 
     const initializeTracks = () => {
@@ -478,7 +490,8 @@ export default defineComponent({
       .y(d => props.yScale(d.y))
       .curve(d3.curveMonotoneX);
 
-    const renderTraj = (traj: Trajectory, track: number = 0) => {
+    const renderTraj = (traj: Trajectory) => {
+      const track = props.piece.trackFromTraj(traj);
       const renderObj = trajRenderStatus.value[track].find(obj => { 
         return obj.uniqueId === traj.uniqueId
       });
@@ -497,7 +510,8 @@ export default defineComponent({
       renderObj.renderStatus = true;
     };
 
-    const removeTraj = (traj: Trajectory, track: number) => {
+    const removeTraj = (traj: Trajectory) => {
+      const track = props.piece.trackFromTraj(traj);
       const renderObj = trajRenderStatus.value[track].find(obj => {
         return obj.uniqueId === traj.uniqueId
       });
@@ -511,7 +525,8 @@ export default defineComponent({
     };
 
     const renderMelodicCurve = (traj: Trajectory, track: number = 0) => {
-      const trajIdx = props.piece.allTrajectories(track).indexOf(traj);
+      const trajUIds = props.piece.allTrajectories(track).map(t => t.uniqueId);
+      const trajIdx = trajUIds.indexOf(traj.uniqueId);
       const trajStart = trajStartTimes.value[track][trajIdx];
       const trackG = tracks[track];
       const g = trackG.select('.trajG');
@@ -546,7 +561,8 @@ export default defineComponent({
     
 
     const renderPlucks = (traj: Trajectory, track: number) => {
-      const trajIdx = props.piece.allTrajectories(track).indexOf(traj);
+      const trajUIds = props.piece.allTrajectories(track).map(t => t.uniqueId);
+      const trajIdx = trajUIds.indexOf(traj.uniqueId);
       const trajStart = trajStartTimes.value[track][trajIdx];
       const trackG = tracks[track];
       const g = trackG.select('.trajG');
@@ -591,7 +607,8 @@ export default defineComponent({
     };
 
     const renderDampener = (traj: Trajectory, track: number) => {
-      const trajIdx = props.piece.allTrajectories(track).indexOf(traj);
+      const trajUIds = props.piece.allTrajectories(track).map(t => t.uniqueId);
+      const trajIdx = trajUIds.indexOf(traj.uniqueId);
       const trajStart = trajStartTimes.value[track][trajIdx];
       const color = selectedTrajs.value.includes(traj) ? 
         props.instTracks[track].selColor : props.instTracks[track].color;
@@ -658,6 +675,16 @@ export default defineComponent({
         .attr('font-size', 14)
         .attr('fill', 'black')
         .attr('class', `sargamLabel uId${s.uId}`)
+    };
+
+    const clearSargam = (uId: string) => {
+      const g = d3.select('.sargamG');
+      g.selectAll(`.uId${uId}`).remove();
+    };
+
+    const clearVowel = (uId: string) => {
+      const g = d3.select('.phonemeG');
+      g.selectAll(`.vowelLabel.uId${uId}`).remove();
     };
 
     const renderVowel = (v: VowelDisplayType) => {
@@ -833,7 +860,7 @@ export default defineComponent({
             })
             start = prevTrajTimes[prevTrajTimes.length - 2];
           } else {
-            start = phrase.startTime! + phrase.trajectories[tIdx - 1].startTime!;
+            start = phrase.startTime! + prevTraj.startTime!;
           }
         } else if (traj.phraseIdx! > 0) {
           const prevPhrase = props.piece.phrases[traj.phraseIdx! - 1];
@@ -975,7 +1002,7 @@ export default defineComponent({
       d3.select('.dragShadowTraj')
         .datum(data)
         .attr('d', trajCurve)
-    }, 33)
+    }, 50)
 
     const updateDurArray = (traj: any, delta: number) => {
       if (traj.durArray && traj.durArray.length > 1) {
@@ -1049,7 +1076,9 @@ export default defineComponent({
           updatePrevTraj(prevTraj, delta);
           updateDurArray(traj, delta);
           traj.durTot -= delta;
-          phrase.startTime! += delta;
+          phrase.durTotFromTrajectories();
+          phrase.durArrayFromTrajectories();
+          phrase.assignStartTimes();
         }
       } else if (idx === traj.durArray!.length) {
         const delta = time - (phrase.startTime! + traj.startTime! + traj.durTot);
@@ -1093,8 +1122,6 @@ export default defineComponent({
     >) => {
       d3.selectAll('.dragShadowTraj').remove();
       emit('unsavedChanges', true);
-      let deletedSilentTraj = false;
-      let resetRequired = false;
       const idx = dragDotIdx!;
       const traj = selectedTrajs.value[0];
       const phrase = props.piece.phrases[traj.phraseIdx!];
@@ -1108,8 +1135,6 @@ export default defineComponent({
       const y = props.yScale(logFreq);
       const selectedDragDot = d3.select(`#dragDot${idx}`);
       selectedDragDot.attr('cy', y);
-      const node = selectedDragDot.node()! as SVGCircleElement;
-      const track = Number(node.classList[0].split('track')[1]);
       const newPitch = () => {
         return props.piece.raga.pitchFromLogFreq(logFreq)
       };
@@ -1150,10 +1175,11 @@ export default defineComponent({
           affectedPhraseDivIdx = nextPhrase.pieceIdx;
         }
       }
-      // also need to worry about divs;
       affectedTrajs.forEach(traj => {
-        removeTraj(traj, track);
-        renderTraj(traj, track);
+        removeTraj(traj);
+        renderTraj(traj);
+        refreshSargam(traj.uniqueId!);
+        refreshVowel(traj.uniqueId!);
       })
       if (affectedPhraseDivIdx !== undefined) {
         console.log('removing phrase div' + affectedPhraseDivIdx)
@@ -1161,15 +1187,12 @@ export default defineComponent({
         const pdObj = props.piece.allPhraseDivs()[affectedPhraseDivIdx - 1];
         renderPhraseDiv(pdObj);
       }
-
-      
-      
-
     };
 
-    const addDragDots = (track: number) => {
+    const addDragDots = () => {
       if (selectedTrajs.value.length === 1) {
         const traj = selectedTrajs.value[0];
+        const track = props.piece.trackFromTrajUId(traj.uniqueId!);
         const phrase = props.piece.phrases[traj.phraseIdx!];
         d3.selectAll('.dragDots').remove();
         const drag = () => {
@@ -1208,7 +1231,6 @@ export default defineComponent({
 
     const handleTrajMouseOver = (traj: Trajectory, track: number) => {
       const selector = `.traj.uId${traj.uniqueId!}`
-
       d3.selectAll(selector)
         .attr('stroke', props.instTracks[track].selColor)
       d3.selectAll(selector + '.pluck')
@@ -1308,11 +1330,7 @@ export default defineComponent({
       emptyDivs.value.forEach(div => {
         observer.observe(div);
       });
-    }
-
-    const chunkDur = computed(() => {
-      return props.xScale.invert(props.clientWidth)
-    })
+    };
 
     const handleEscape = () => {
       emit('update:selectedMode', EditorMode.None);
@@ -1553,6 +1571,18 @@ export default defineComponent({
           return (c1 || c2 || c3) && c4;
         })
       const overlappingTrajs = collectTrajs(trajs, options);
+      if (selectedTraj.value) {
+        if (overlappingTrajs.length > 0) {
+          if (overlappingTrajs.length === 1) {
+            if (selectedTraj.value.uniqueId !== overlappingTrajs[0].uniqueId) {
+              clearDragDots();
+            }
+          } else {
+            clearDragDots();
+          }
+        }
+      }
+      
       
       overlappingTrajs.forEach(traj => {
         const rObj = trajRenderStatus.value.flat().find(obj => {
@@ -1560,7 +1590,55 @@ export default defineComponent({
         });
         rObj!.selectedStatus = true;
       })
+    };
+
+    const refreshSargam = (trajUId: string) => {
+      const track = props.piece.trackFromTrajUId(trajUId);
+      const sargamDisplayObjs = props.piece.allDisplaySargam(track)
+        .filter(obj => obj.uId === trajUId);
+      if (sargamDisplayObjs.length > 0) {
+        clearSargam(trajUId);
+        sargamDisplayObjs.forEach(obj => {
+          renderSargam(obj);
+        })
+      }
+    };
+
+    const refreshVowel = (trajUId: string) => {
+      const track = props.piece.trackFromTrajUId(trajUId);
+      const vowelDisplayObjs = props.piece.allDisplayVowels(track)
+        .filter(obj => obj.uId === trajUId);
+      if (vowelDisplayObjs.length > 0) {
+        clearVowel(trajUId);
+        vowelDisplayObjs.forEach(obj => {
+          renderVowel(obj);
+        })
+      }
     }
+
+
+
+
+    const mutateTraj = (newIdx: number) => {
+      if (selectedTraj.value === undefined) {
+        throw new Error('No selected trajectory');
+      };
+      const trajObj = selectedTraj.value.toJSON();
+      trajObj.id = newIdx;
+      const newTraj = new Trajectory(trajObj);
+      const pIdx = selectedTraj.value.phraseIdx!;
+      const phrase = props.piece.phrases[pIdx];
+      const tIdx = selectedTraj.value.num!;
+      const track = props.piece.trackFromTraj(selectedTraj.value);
+      phrase.trajectoryGrid[track][tIdx] = newTraj;
+      phrase.assignStartTimes();
+      phrase.assignPhraseIdx();
+      phrase.assignTrajNums();
+      removeTraj(selectedTraj.value);
+      renderTraj(newTraj);
+      refreshSargam(newTraj.uniqueId!);
+      emit('unsavedChanges', true);
+    };
 
     onMounted(() => {
       if (tranSvg.value) {
@@ -1592,9 +1670,12 @@ export default defineComponent({
       emptyDivs,
       emptyDivIdxMap,
       selectedTrajs,
+      selectedTraj,
       editorMode,
       shifted,
-      tracks
+      tracks,
+      mutateTraj,
+      addDragDots
     }
   }
 })

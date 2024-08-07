@@ -51,6 +51,8 @@ const getClosest = (counts: number[], goal: number) => {
   })
 };
 
+const isUpperCase = (str: string) => str === str.toUpperCase();
+
 
 export { 
   getContrastingTextColor, 
@@ -59,5 +61,6 @@ export {
   linSpace, 
   escCssClass,
   cumsum,
-  getClosest
+  getClosest,
+  isUpperCase,
 };
