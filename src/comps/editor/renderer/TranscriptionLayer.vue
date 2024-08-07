@@ -362,7 +362,7 @@ export default defineComponent({
         const track = props.piece.trackFromTraj(traj);
         const inst = props.piece.instrumentation[track] as Instrument;
         if (selectedTrajs.value.length === 1) {
-          addDragDots();
+          refreshDragDots();
         }
         status = { trajs: selectedTrajs.value, instrument: inst }
       }
@@ -466,7 +466,7 @@ export default defineComponent({
       addPhonemeG();
       addTrajG();
       clearDragDots();
-      addDragDots();
+      refreshDragDots();
     }
 
     const initializeTracks = () => {
@@ -1202,12 +1202,7 @@ export default defineComponent({
           affectedPhraseDivIdx = nextPhrase.pieceIdx;
         }
       }
-      affectedTrajs.forEach(traj => {
-        removeTraj(traj);
-        renderTraj(traj);
-        refreshSargam(traj.uniqueId!);
-        refreshVowel(traj.uniqueId!);
-      })
+      affectedTrajs.forEach(traj => refreshTraj(traj));
       if (affectedPhraseDivIdx !== undefined) {
         console.log('removing phrase div' + affectedPhraseDivIdx)
         removePhraseDiv(affectedPhraseDivIdx);
@@ -1216,7 +1211,17 @@ export default defineComponent({
       }
     };
 
-    const addDragDots = () => {
+    const refreshTraj = (traj: Trajectory) => {
+      removeTraj(traj);
+      renderTraj(traj);
+      refreshSargam(traj.uniqueId!);
+      refreshVowel(traj.uniqueId!);
+      refreshEndingConsonant(traj.uniqueId!);
+      refreshDragDots();
+
+    };
+
+    const refreshDragDots = () => {
       if (selectedTrajs.value.length === 1) {
         const traj = selectedTrajs.value[0];
         const track = props.piece.trackFromTrajUId(traj.uniqueId!);
@@ -1237,6 +1242,7 @@ export default defineComponent({
         const logFreqs = times.map((_, i) => {
           return traj.logFreqs[i] || traj.logFreqs[i - 1]
         });
+        console.log(props.yScale.domain())
         times.forEach((t, i) => {
           dragDotsG.append('circle')
             .attr('id', `dragDot${i}`)
@@ -1674,6 +1680,8 @@ export default defineComponent({
       removeTraj(selectedTraj.value);
       renderTraj(newTraj);
       refreshSargam(newTraj.uniqueId!);
+      refreshVowel(newTraj.uniqueId!);
+      refreshEndingConsonant(newTraj.uniqueId!);
       emit('unsavedChanges', true);
     };
 
@@ -1712,9 +1720,10 @@ export default defineComponent({
       shifted,
       tracks,
       mutateTraj,
-      addDragDots,
+      refreshDragDots,
       refreshVowel,
-      refreshEndingConsonant
+      refreshEndingConsonant,
+      refreshTraj,
     }
   }
 })

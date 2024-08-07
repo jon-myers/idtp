@@ -84,6 +84,7 @@ const scale = () => {
   scaledData = ndarray(new Array(newHeight * newWidth), scaledShape);
   const yScale = oldHeight / newHeight;
   const xScale = oldWidth / newWidth;
+  let trigger = false;
   for (let i = 0; i < newHeight; i++) {
     for (let j = 0; j < newWidth; j++) {
       const y = i * yScale;
@@ -100,10 +101,12 @@ const scale = () => {
         a * b * croppedData.get(y2, x2);
       // round val
       val = Math.round(val);
+      
       if (Number.isNaN(val)) {
-        
-        console.log('nan', i, j);
-        console.log(Math.ceil(x), oldWidth - 1)
+        // breakpoint
+        trigger = true;
+        // console.log('nan', i, j);
+        // console.log(Math.ceil(x), oldWidth - 1)
       }
       try {
         scaledData.set(i, j, val);
@@ -114,6 +117,9 @@ const scale = () => {
         throw err;
       }
     }
+  }
+  if (trigger) {
+    throw new Error('NaN value found');
   }
   const emptyImgData = new Uint8ClampedArray(newWidth * newHeight * 4);
   imgData = new ImageData(emptyImgData, newWidth, newHeight);

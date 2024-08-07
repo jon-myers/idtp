@@ -342,14 +342,11 @@ type TrajSelectPanelDataType = {
   initUp: boolean,
   extent: number,
   dampen: boolean,
-  // showTrajChecks: boolean,
-  // showVowelTrajCheck: boolean,
   showPhraseRadio: boolean,
   phraseDivType?: 'phrase' | 'section',
   trajIdxs: number[],
   urlsFiltered: string[],
   kNumsFiltered: string[],
-  // vocal: boolean,
   vowel: string,
   ipaVowels: string[],
   englishWords: string[],
@@ -367,12 +364,8 @@ type TrajSelectPanelDataType = {
   panelHeight: number,
   vib: boolean,
   octShiftTop: number,
-  canShiftUp: boolean,
-  canShiftDown: boolean,
   vowelList: string[],
   cEngTrans: string[],
-  // sitar: boolean,
-  // sarangi: boolean,
   selectedTrajs: Trajectory[],
   selectedTraj: Trajectory | undefined,
   instrument: Instrument | undefined
@@ -397,14 +390,11 @@ export default defineComponent({
       initUp: true,
       extent: 0.05,
       dampen: false,
-      // showTrajChecks: false,
-      // showVowelTrajCheck: false,
       showPhraseRadio: false,
       phraseDivType: undefined,
       trajIdxs: [],
       urlsFiltered: [],
       kNumsFiltered: [],
-      // vocal: false,
       vowel: 'a',
       ipaVowels: ['a', 'b', 'c'],
       englishWords: [],
@@ -421,13 +411,9 @@ export default defineComponent({
       panelHeight: 80,
       vib: false,
       octShiftTop: 4,
-      canShiftUp: true,
-      canShiftDown: true,
       englishTrans: [],
       vowelList: [],
       cEngTrans: [],
-      // sitar: false,
-      // sarangi: false,
       selectedTrajs: [],
       selectedTraj: undefined,
       instrument: undefined
@@ -526,6 +512,18 @@ export default defineComponent({
     },
     showTrajChecks() {
       return this.selectedTraj !== undefined
+    },
+    selectedFreqMin() {
+      return Math.min(...this.selectedTrajs.map(traj => traj.minFreq));
+    },
+    selectedFreqMax() {
+      return Math.max(...this.selectedTrajs.map(traj => traj.maxFreq));
+    },
+    canShiftDown() {
+      return this.selectedFreqMin / 2 > this.freqMin;
+    },
+    canShiftUp() {
+      return this.selectedFreqMax * 2 < this.freqMax;
     },
   },
   watch: {
@@ -663,18 +661,6 @@ export default defineComponent({
     shiftOct(offset = 1) {
       const sts = this.selectedTrajs;
       sts.forEach(traj => this.$emit('shiftOct', traj, offset))
-      const minFreq = Math.min(...sts.map(traj => traj.minFreq));
-      const maxFreq = Math.max(...sts.map(traj => traj.maxFreq));
-      if ((minFreq / 2) < this.freqMin) {
-        this.canShiftDown = false;
-      } else {
-        this.canShiftDown = true;
-      }
-      if ((maxFreq * 2) > this.freqMax) {
-        this.canShiftUp = false;
-      } else {
-        this.canShiftUp = true;
-      }
     },
 
     toggleGroup() {

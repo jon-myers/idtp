@@ -246,7 +246,6 @@
   @setAnimationStartEmit='setAnimationStart'
   @setStretchedAnimationStartEmit='setStretchedAnimationStart'
   @updateSargamLinesEmit='updateSargamLines'
-  @resetZoomEmit='resetZoom'
   @selectMeterEmit='selectMeter'
   @addMeterEmit='addMeter'
   @addMetricGridEmit='addMetricGrid'
@@ -8544,87 +8543,14 @@ export default defineComponent({
       eap.shiftOn = false;
       eap.transposition = 0
       }
-      
-      
-    },
-
-    resetZoom() {
-      // clear everything
-      const selects = this.phraseG.selectAll('*');
-      this.codifiedXScale = this.tx!().k;
-      this.codifiedYScale = this.ty!().k;
-      this.codifiedYOffset = this.yr().invert(0);
-      this.codifiedXOffset = this.xr().invert(0);
-      this.codifiedXR = this.xr();
-      this.codifiedYR = this.yr();
-      this.codifiedAddPhrases();
-      this.phraseG.selectAll('.phraseDiv').remove();
-      this.updateMeterVisibility();
-      this.updateTranscriptionVisibility();
-      this.updatePhraseDivs();
-      this.codifiedAddSargamLabels();
-      this.addBolLabels();
-      selects.remove();
-      this.slidePhrases(
-        this.xr()(this.codifiedXOffset),
-        this.yr()(this.codifiedYOffset),
-        this.tx!().k / this.codifiedXScale,
-        this.ty!().k / this.codifiedYScale,
-        0
-      );
-      if (this.selectedTraj && this.selectedTrajID) {
-        d3Select(`#${this.selectedTrajID}`)
-          .attr('stroke', this.selTrajColor)
-        d3Select(`#dampen${this.selectedTrajID}`)
-          .attr('stroke', this.selTrajColor)
-        d3Select(`#pluck${this.selectedTrajID}`)
-          .attr('stroke', this.selArtColor)
-          .attr('fill', this.selArtColor)
-        this.updateArtColors(this.selectedTraj, true);
-        this.addAllDragDots();
-      }
-      if (this.selectedTrajs.length > 1) {
-        this.selectedTrajs.forEach((t, i) => {
-          const id = `p${t.phraseIdx}t${t.num}`;
-          d3Select(`#${id}`)
-            .attr('stroke', this.selTrajColor)
-          d3Select(`#dampen${id}`)
-            .attr('stroke', this.selTrajColor)
-          d3Select(`#pluck${id}`)
-            .attr('stroke', this.selArtColor)
-            .attr('fill', this.selArtColor)
-          this.updateArtColors(t, true);
-        })
-      }
-      if (this.audioDBDoc) {
-        this.addMelograph()
-      }
     },
 
     shiftTrajByOctave(traj: Trajectory, offset = 1) {
       // then remove the old trajectory and add the new one;
       traj.pitches.forEach(pitch => pitch.setOct(pitch.oct + offset));
-      const trajID = `p${traj.phraseIdx}t${traj.num}`;
-      d3Select(`#${trajID}`).remove();
-      d3Select(`#overlay__${trajID}`).remove();
-      d3Select(`#articulations__${trajID}`).remove();
-      const phrase = this.piece.phrases[traj.phraseIdx!];
-      const vowelIdxs = phrase.firstTrajIdxs();
-      const startTime = this.piece.phraseStarts[traj.phraseIdx!]!;
-      this.codifiedAddTraj(traj, startTime, vowelIdxs);
-      this.updateArtColors(traj, true);
-      if (traj === this.selectedTraj) this.addAllDragDots();
-      if (this.selectedTrajs.includes(traj)) {
-        d3Select(`#${trajID}`)
-          .attr('stroke', this.selTrajColor)
-        d3Select(`#dampen${trajID}`)
-          .attr('stroke', this.selTrajColor)
-        d3Select(`#pluck${trajID}`)
-          .attr('stroke', this.selArtColor)
-          .attr('fill', this.selArtColor)
-      }
-      this.unsavedChanges = true;
-      this.moveChikaris(phrase);
+      const r = this.$refs.renderer as typeof Renderer;
+      const tLayer = r.transcriptionLayer as typeof TranscriptionLayer;
+      tLayer.refreshTraj(traj);
     },
 
     codifiedAddTraj(traj: Trajectory, pStart: number, vowelIdxs: number[]) {
