@@ -1552,14 +1552,25 @@ export default defineComponent({
         if (selectedChikari.value !== undefined) {
           e.preventDefault();
           nudgeChikari(-.02);
+        } else if (selectedPhraseDivIdx.value !== undefined) {
+          e.preventDefault();
+          nudgePhraseDiv(-1);
         }
       } else if (e.key === 'ArrowRight') {
         if (selectedChikari.value !== undefined) {
           e.preventDefault();
           nudgeChikari(.02);
+        } else if (selectedPhraseDivIdx.value !== undefined) {
+          e.preventDefault();
+          nudgePhraseDiv(1);
         }
       }
     }
+
+    const nudgePhraseDiv = (amt: 1 | -1) => {
+      console.log('need to implement nudgePhraseDiv; conceptual issue needs ' +
+        'to be resolved');
+    };
 
     const nudgeChikari = (amt: number) => {
       const cd = selectedChikari.value!;
@@ -1837,9 +1848,6 @@ export default defineComponent({
         renderEndingConsonant(consonantDisplayObjs[0]);
       }
     }
-
-
-
 
     const mutateTraj = (newIdx: number) => {
       if (selectedTraj.value === undefined) {
