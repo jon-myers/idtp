@@ -741,8 +741,12 @@ export default defineComponent({
         return c === props.phonemeRepresentation ? 1 : 0;
       });
       const track = props.piece.trackFromTrajUId(v.uId);
-      const selT = selectedTraj.value;
-      const color = (selT && selT.uniqueId === v.uId) ? 
+      // const selT = selectedTraj.value;
+      // const color = (selT && selT.uniqueId === v.uId) ? 
+      //   props.instTracks[track].selColor : 
+      //   'black';
+      const selTs = selectedTrajs.value.map(t => t.uniqueId);
+      const color = selTs.includes(v.uId) ? 
         props.instTracks[track].selColor : 
         'black';
       g.append('text')
@@ -785,9 +789,13 @@ export default defineComponent({
         return c === props.phonemeRepresentation ? 1 : 0;
       });
       const track = props.piece.trackFromTrajUId(c.uId);
-      const selT = selectedTraj.value;
-      const color = (selT && selT.uniqueId === c.uId) ? 
+      // const selT = selectedTraj.value;
+      // const color = (selT && selT.uniqueId === c.uId) ? 
+      //   props.instTracks[track].selColor : 
+      const selTs = selectedTrajs.value.map(t => t.uniqueId);
+      const color = selTs.includes(c.uId) ? 
         props.instTracks[track].selColor : 
+        'black';
         'black';
       g.append('text')
         .attr('text-anchor', 'middle')
