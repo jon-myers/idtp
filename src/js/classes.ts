@@ -1777,11 +1777,12 @@ class Phrase {
   startTime?: number;
   raga?: Raga;
   trajectoryGrid: Trajectory[][];
+  chikariGrid: { [key: string]: Chikari }[];
   instrumentation: string[];
   groupsGrid: Group[][];
   durTot?: number;
   durArray?: number[];
-  chikaris: { [key: string]: Chikari };
+  // chikaris: { [key: string]: Chikari };
   pieceIdx?: number;
   categorizationGrid: PhraseCatType[];
   
@@ -1793,6 +1794,7 @@ class Phrase {
     raga = undefined,
     startTime = undefined,
     trajectoryGrid = undefined,
+    chikariGrid = undefined,
     instrumentation = ['Sitar'],
     groupsGrid = undefined,
     categorizationGrid = undefined,
@@ -1804,6 +1806,7 @@ class Phrase {
     raga?: Raga,
     startTime?: number,
     trajectoryGrid?: Trajectory[][],
+    chikariGrid?: { [key: string]: Chikari }[],
     instrumentation?: string[],
     groupsGrid?: Group[][],
     categorizationGrid?: PhraseCatType[],
@@ -1813,13 +1816,26 @@ class Phrase {
     this.raga = raga;
     if (trajectoryGrid !== undefined) {
       this.trajectoryGrid = trajectoryGrid;
-      for (let i = 1; i < instrumentation.length; i++) {
+      for (let i = trajectoryGrid.length; i < instrumentation.length; i++) {
         this.trajectoryGrid.push([])
       }
+      this.trajectoryGrid.length = instrumentation.length;
     } else {
       this.trajectoryGrid = [trajectories];
       for (let i = 1; i < instrumentation.length; i++) {
         this.trajectoryGrid.push([])
+      }
+    }
+    if (chikariGrid !== undefined) {
+      this.chikariGrid = chikariGrid;
+      for (let i = chikariGrid.length; i < instrumentation.length; i++) {
+        this.chikariGrid.push({})
+      }
+      this.chikariGrid.length = instrumentation.length;
+    } else {
+      this.chikariGrid = [chikaris];
+      for (let i = 1; i < instrumentation.length; i++) {
+        this.chikariGrid.push({})
       }
     }
     if (this.trajectories.length === 0) {
@@ -1847,7 +1863,6 @@ class Phrase {
         this.durTotFromTrajectories()
       }
     }
-    this.chikaris = chikaris;
     this.assignStartTimes();
     this.assignTrajNums();
     this.instrumentation = instrumentation;
@@ -2023,6 +2038,10 @@ class Phrase {
 
   get trajectories() {
     return this.trajectoryGrid[0]
+  }
+
+  get chikaris() {
+    return this.chikariGrid[0]
   }
 
   get swara() {
@@ -2595,6 +2614,10 @@ class Piece {
       acc.push(acc[acc.length - 1] + dur);
       return acc
     }, [0]);
+  }
+
+  allChikaris(inst = 0) {
+
   }
 
 
