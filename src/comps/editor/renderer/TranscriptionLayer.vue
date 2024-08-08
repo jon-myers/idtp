@@ -135,12 +135,12 @@ export default defineComponent({
       uniqueId: string, 
       renderStatus: boolean,
       selectedStatus: boolean,
-      track: number 
+      track: number
     }[][]>([]);
     const selectedPhraseDivIdx = ref<number | undefined>(undefined);
     const lowOctOffsetRef = toRef(props, 'lowOctOffset');
     const highOctOffsetRef = toRef(props, 'highOctOffset');
-    const selectedChikari = ref<{ uId: string, track: number } | undefined>(undefined);
+    const selectedChikari = ref<ChikariDisplayType | undefined>(undefined);
 
     const selPhraseDivColor = 'red';
     const dragDotColor = 'purple';
@@ -512,6 +512,9 @@ export default defineComponent({
         }
       };
       renderObj.renderStatus = true;
+      if (props.piece.instrumentation[track] as Instrument === Instrument.Sitar) {
+        refreshTrajChikaris(traj);
+      }
     };
     const renderMelodicCurve = (traj: Trajectory, track: number = 0) => {
       const trajUIds = props.piece.allTrajectories(track).map(t => t.uniqueId);
@@ -654,7 +657,9 @@ export default defineComponent({
       const x = props.xScale(cd.time);
       const trackG = tracks[cd.track];
       const g = trackG.select('.chikariG');
-      const color = props.instTracks[cd.track].color;
+      const color = (selectedChikari.value && selectedChikari.value.uId === cd.uId) ? 
+        props.instTracks[cd.track].selColor : 
+        props.instTracks[cd.track].color;  
       g.append('path')
         .attr('d', sym)
         .attr('stroke', color)
@@ -809,16 +814,7 @@ export default defineComponent({
         .attr('stroke-width', 8)
         .style('opacity', 0)
         .style('cursor', 'pointer')
-        .on('click', () => {
-          clearDragDots();
-          selectedPhraseDivIdx.value = pd.idx;
-          selectedTrajs.value.forEach(traj => {
-            const rObj = trajRenderStatus.value.flat().find(obj => {
-              return obj.uniqueId === traj.uniqueId
-            });
-            rObj!.selectedStatus = false;
-          })
-        })
+        .on('click', () => handleClickPhraseDiv(pd))
         .attr('class', `phraseDivShadow pIdx${pd.idx}`)
     }
 
@@ -859,6 +855,10 @@ export default defineComponent({
       console.log(pdIdx)
       const g = d3.select('.phraseDivG');
       g.selectAll(`.pIdx${pdIdx}`).remove();
+    };
+    const clearChikari = (cd: ChikariDisplayType) => {
+      const g = d3.select('.chikariG');
+      g.selectAll(`.uId${cd.uId}`).remove();
     };
 
 
@@ -937,11 +937,24 @@ export default defineComponent({
         });
         renderObj!.selectedStatus = true;
       }
-      selectedChikari.value = undefined
+      selectedChikari.value = undefined;
     };
 
+    const handleClickPhraseDiv = (pd: PhraseDivDisplayType) => {
+      clearDragDots();
+      selectedPhraseDivIdx.value = pd.idx;
+      selectedTrajs.value.forEach(traj => {
+        const rObj = trajRenderStatus.value.flat().find(obj => {
+          return obj.uniqueId === traj.uniqueId
+        });
+        rObj!.selectedStatus = false;
+      })
+      selectedChikari.value = undefined;
+    }
+      
+
     const handleClickChikari = (cd: ChikariDisplayType) => {
-      selectedChikari.value = { uId: cd.uId, track: cd.track };
+      selectedChikari.value = cd;
       selectedPhraseDivIdx.value = undefined;
       selectedTrajs.value.forEach(traj => {
         const rObj = trajRenderStatus.value.flat().find(obj => {
@@ -1322,7 +1335,17 @@ export default defineComponent({
         refreshEndingConsonant(traj.uniqueId!);
       }
       refreshDragDots();
+    };
 
+    const refreshTrajChikaris = (traj: Trajectory) => {
+      const track = props.piece.trackFromTraj(traj);
+      if (props.piece.instrumentation[track] as Instrument === Instrument.Sitar) {
+        const phrase = props.piece.phrases[traj.phraseIdx!];
+        phrase.chikarisDuringTraj(traj, track).forEach(cd => {
+          clearChikari(cd);
+          renderChikari(cd);
+        })
+      }
     };
 
     const refreshDragDots = () => {
@@ -1386,7 +1409,6 @@ export default defineComponent({
     }
 
     const handleChikariMouseOver = (cd: ChikariDisplayType) => {
-      console.log('over')
       const selector = `.chikari.uId${cd.uId}`
       d3.selectAll(selector)
         .attr('stroke', props.instTracks[cd.track].selColor)
@@ -1517,7 +1539,49 @@ export default defineComponent({
         emit('update:selectedMode', EditorMode.PhraseDiv);
       } else if (e.key === 'Shift') {
         shifted.value = true;
+      } else if (e.key === 'Backspace') {
+        if (selectedChikari.value !== undefined) {
+          const cd = selectedChikari.value;
+          const phrase = props.piece.phrases[cd.phraseIdx];
+          delete phrase.chikaris[cd.phraseTimeKey];
+          clearChikari(cd);
+          emit('unsavedChanges', true);
+          selectedChikari.value = undefined;
+        }
+      } else if (e.key === 'ArrowLeft') {
+        if (selectedChikari.value !== undefined) {
+          e.preventDefault();
+          nudgeChikari(-.02);
+        }
+      } else if (e.key === 'ArrowRight') {
+        if (selectedChikari.value !== undefined) {
+          e.preventDefault();
+          nudgeChikari(.02);
+        }
       }
+    }
+
+    const nudgeChikari = (amt: number) => {
+      const cd = selectedChikari.value!;
+      const phrase = props.piece.phrases[cd.phraseIdx];
+      const newPhraseTime = String(Math.round(100 * (Number(cd.phraseTimeKey) + amt)) / 100);
+      const newTime = cd.time + amt;
+      phrase.chikaris[newPhraseTime] = cd.chikari;
+      delete phrase.chikaris[cd.phraseTimeKey];
+      const newCd: ChikariDisplayType = {
+        uId: cd.uId,
+        phraseIdx: cd.phraseIdx,
+        phraseTimeKey: newPhraseTime,
+        time: newTime,
+        chikari: cd.chikari,
+        track: cd.track
+      };
+      selectedChikari.value = newCd;
+      clearChikari(cd);
+      nextTick(() => {
+        renderChikari(newCd);
+      });
+      
     }
 
     const handleKeyup = (e: KeyboardEvent) => {
@@ -1795,16 +1859,17 @@ export default defineComponent({
       removeTraj(selectedTraj.value);
       renderTraj(newTraj);
       refreshSargam(newTraj.uniqueId!);
-      refreshVowel(newTraj.uniqueId!);
-      refreshEndingConsonant(newTraj.uniqueId!);
+      const inst = props.piece.instrumentation[track] as Instrument;
+      if (inst === Instrument.Vocal_M || inst === Instrument.Vocal_F) {
+        refreshVowel(newTraj.uniqueId!);
+        refreshEndingConsonant(newTraj.uniqueId!);
+      }
       emit('unsavedChanges', true);
     };
 
     onMounted(() => {
       if (tranSvg.value) {
         setUpSvg();
-        // refreshSargamLines();
-        // initializeTracks();
         resetTranscription();
         window.addEventListener('keydown', handleKeydown);
         window.addEventListener('keyup', handleKeyup);

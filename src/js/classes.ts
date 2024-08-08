@@ -2052,6 +2052,30 @@ class Phrase {
     this.assignTrajNums();
   }
 
+  chikarisDuringTraj(traj: Trajectory, track: number) {
+    const start = traj.startTime!;
+    const dur = traj.durTot;
+    const end = start + dur;
+    const chikaris = this.chikariGrid[track];
+    const chikarisDuring = Object.keys(chikaris).filter(k => {
+      const chikari = chikaris[k];
+      const time = Number(k);
+      return time >= start && time <= end
+    }).map(k => {
+      const realTime = Number(k) + this.startTime!;
+      const cd: ChikariDisplayType = {
+        time: realTime,
+        phraseTimeKey: k,
+        phraseIdx: this.pieceIdx!,
+        track: track,
+        chikari: chikaris[k],
+        uId: chikaris[k].uniqueId
+      }
+      return cd
+  });
+    return chikarisDuring
+  }
+
   get trajectories() {
     return this.trajectoryGrid[0]
   }
@@ -2621,6 +2645,23 @@ class Piece {
     const allTrajectories: Trajectory[] = [];
     this.phrases.forEach(p => allTrajectories.push(...p.trajectoryGrid[inst]));
     return allTrajectories
+  }
+
+  trajFromTime(time: number, track: number) {
+    const trajs = this.allTrajectories(track);
+    const starts = this.trajStartTimes(track);
+    const endTimes = starts.map((s, i) => s + trajs[i].durTot);
+    const idx = findLastIndex(starts, s => time >= s);
+    if (idx === -1) {
+      return trajs[0]
+    } else {
+      const eT = endTimes[idx];
+      if (time < eT) {
+        return trajs[idx]
+      } else {
+        return trajs[idx + 1]
+      }
+    }
   }
 
   trajStartTimes(inst = 0) {
