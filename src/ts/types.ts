@@ -3,7 +3,8 @@ import {
   Trajectory, 
   Piece,
   Pitch,
-  Phrase
+  Phrase,
+  Chikari,
 } from '@/js/classes.ts';
 
 import {
@@ -806,6 +807,16 @@ type TrajSelectionStatus = {
   instrument: Instrument,
 } | undefined;
 
+type ChikariDisplayType = {
+  time: number,
+  phraseTimeKey: string,
+  phraseIdx: number,
+  track: number,
+  chikari: Chikari,
+  uId: string,
+
+}
+
 export type { 
   CollectionType, 
   UserType, 
@@ -874,5 +885,6 @@ export type {
   InstrumentTrackType,
   PhraseDivDisplayType,
   TrajSelectionStatus,
+  ChikariDisplayType
 };
 

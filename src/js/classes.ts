@@ -13,7 +13,8 @@ import {
   SargamDisplayType,
   VowelDisplayType,
   ConsonantDisplayType,
-  PhraseDivDisplayType
+  PhraseDivDisplayType,
+  ChikariDisplayType,
 } from '@/ts/types.ts';
 import { Instrument } from '@/ts/enums.ts';
 import { closeTo, getClosest, isUpperCase } from '@/ts/utils.ts';
@@ -596,6 +597,7 @@ class Articulation {
 class Chikari {
   fundamental: number;
   pitches: Pitch[];
+  uniqueId: string;
   constructor({
     pitches = [
       new Pitch({
@@ -615,14 +617,28 @@ class Chikari {
         'oct': 0
       })
     ],
-    fundamental = new Pitch().fundamental
+    fundamental = new Pitch().fundamental,
+    uniqueId = undefined
 
   } = {}) {
+    if (uniqueId === undefined) {
+      this.uniqueId = uuidv4()
+    } else {
+      this.uniqueId = uniqueId
+    }
     this.fundamental = fundamental;
     this.pitches = pitches.map(pitch => {
       pitch.fundamental = this.fundamental;
       return pitch
     })
+  }
+
+  toJSON() {
+    return {
+      fundamental: this.fundamental,
+      pitches: this.pitches.map(p => p.toJSON()),
+      uniqueId: this.uniqueId
+    }
   }
 }
 
@@ -2800,6 +2816,38 @@ class Piece {
       }
     });
     return displayEndingConsonants
+  }
+
+  allDisplayChikaris(inst = 0) {
+    const chikaris: ChikariDisplayType[] = [];
+    this.phrases.forEach(p => {
+      const keys = Object.keys(p.chikaris);
+      keys.forEach(k => {
+        const chikari = p.chikaris[k];
+        const time = p.startTime! + Number(k);
+        chikaris.push({
+          time,
+          phraseTimeKey: k,
+          phraseIdx: p.pieceIdx!,
+          track: inst,
+          chikari: chikari,
+          uId: chikari.uniqueId
+        })
+      })
+    })
+    return chikaris
+  }
+
+  chunkedDisplayChikaris(inst = 0, duration = 30) {
+    const displayChikaris = this.allDisplayChikaris(inst);
+    const chunks: ChikariDisplayType[][] = [];
+    for (let i = 0; i < this.durTot!; i += duration) {
+      const chunk = displayChikaris.filter(c => {
+        return c.time >= i && c.time < i + duration
+      });
+      chunks.push(chunk)
+    }
+    return chunks
   }
 
   chunkedDisplayConsonants(inst = 0, duration = 30) {

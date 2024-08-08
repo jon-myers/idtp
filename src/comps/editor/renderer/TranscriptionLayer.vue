@@ -31,7 +31,8 @@ import {
   ConsonantDisplayType,
   InstrumentTrackType,
   PhraseDivDisplayType,
-  TrajSelectionStatus
+  TrajSelectionStatus,
+  ChikariDisplayType
 } from '@/ts/types.ts';
 
 export default defineComponent({
@@ -157,8 +158,8 @@ export default defineComponent({
             props.piece.chunkedDisplaySargam(inst, dur)[idx].forEach(s => {
               renderSargam(s);
             });
-            const insts = ['Vocal (M)', 'Vocal (F)'];
-            if (insts.includes(props.piece.instrumentation[inst])) {
+            const insts = [Instrument.Vocal_M, Instrument.Vocal_F];
+            if (insts.includes(props.piece.instrumentation[inst] as Instrument)) {
               props.piece.chunkedDisplayVowels(inst, dur)[idx].forEach(v => {
                 renderVowel(v);
               })
@@ -168,6 +169,9 @@ export default defineComponent({
             }
             props.piece.chunkedTrajs(inst, dur)[idx].forEach(traj => {
               if (traj.id !== 12) renderTraj(traj);
+            });
+            props.piece.chunkedDisplayChikaris(inst, dur)[idx].forEach(cd => {
+              renderChikari(cd);
             });
           }
           props.piece.chunkedPhraseDivs(dur)[idx].forEach(pd => {
@@ -423,6 +427,18 @@ export default defineComponent({
       }
     }
 
+    const addChikariG = () => {
+      if (tranSvg.value) {
+        const svg = d3.select(tranSvg.value);
+        for (let i = 0; i < props.piece.instrumentation.length; i++) {
+          const trackG = tracks[i];
+          trackG.append('g')
+            .attr('class', `chikariG`)
+            .style('opacity', Number(props.showSargamLines))
+        }
+      }
+    }
+
     const addSargamLineG = () => {
       console.log('adding sargam line g')
       if (tranSvg.value) {
@@ -488,6 +504,7 @@ export default defineComponent({
       addSargamG();
       addPhonemeG();
       addTrajG();
+      addChikariG();
       clearDragDots();
       refreshDragDots();
       
@@ -690,6 +707,34 @@ export default defineComponent({
           .on('click', () => handleClickTraj(traj, track))
       })
     };
+
+    const renderChikari = (cd: ChikariDisplayType) => {
+      const sym = d3.symbol().type(d3.symbolX).size(80);
+      const trajIdxAtTime = props.piece.trajStartTimes(cd.track).reduceRight((lastIndex, t, index) => {
+        return t <= cd.time && lastIndex === -1 ? index : lastIndex;
+      }, -1);
+      const traj = props.piece.allTrajectories(cd.track)[trajIdxAtTime];
+      const trajStart = props.piece.trajStartTimes(cd.track)[trajIdxAtTime];
+      const durTot = traj.durTot;
+      const xTime = (cd.time - trajStart) / durTot;
+      let logFreq = Math.log2(props.piece.raga.fundamental);
+      if (traj.id !== 12) {
+        logFreq = traj.compute(xTime, true);
+      }
+      const y = props.yScale(logFreq);
+      const x = props.xScale(cd.time);
+      const trackG = tracks[cd.track];
+      const g = trackG.select('.chikariG');
+      const color = props.instTracks[cd.track].color;
+      g.append('path')
+        .attr('d', sym)
+        .attr('stroke', color)
+        .attr('stroke-width', 3)
+        .attr('stroke-linecap', 'round')
+        .attr('transform', d => `translate(${x}, ${y})`)
+        .attr('class', `chikari uId${cd.uId}`)
+
+    }
 
     const renderSargam = (s: SargamDisplayType) => {
       const svg = d3.select(tranSvg.value);
