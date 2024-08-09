@@ -2084,6 +2084,10 @@ class Phrase {
     return this.chikariGrid[0]
   }
 
+  set chikaris(chikaris: { [key: string]: Chikari }) {
+    this.chikariGrid[0] = chikaris
+  }
+
   get swara() {
     const swara: object[] = [];
     if (this.startTime === undefined) {
@@ -2236,9 +2240,9 @@ class NoteViewPhrase {
 }
 
 class Piece {
-  phrases: Phrase[];
+  // phrases: Phrase[];
   durTot?: number;
-  durArray?: number[];
+  // durArray?: number[];
   raga: Raga;
   title: string;
   dateCreated: Date;
@@ -2252,11 +2256,10 @@ class Piece {
   family_name?: string;
   given_name?: string;
   permissions?: string;
-  sectionStarts?: number[];
   instrumentation: string[];
   possibleTrajs: { [key: string]: number[] };
   meters: Meter[];
-  sectionCategorization: SecCatType[];
+  // sectionCategorization: SecCatType[];
   explicitPermissions: {
     edit: string[],
     view: string[],
@@ -2264,6 +2267,10 @@ class Piece {
   };
   soloist?: string;
   soloInstrument?: string;
+  phraseGrid: Phrase[][];
+  durArrayGrid: number[][];
+  sectionStartsGrid: number[][];
+  sectionCatGrid: SecCatType[][];
 
 
   constructor({
@@ -2290,6 +2297,11 @@ class Piece {
     explicitPermissions = undefined,
     soloist = undefined,
     soloInstrument = undefined,
+    phraseGrid = undefined,
+    durArrayGrid = undefined,
+    sectionStartsGrid = undefined,
+    sectionCatGrid = undefined,
+
   }: {
     phrases?: Phrase[],
     durTot?: number,
@@ -2318,9 +2330,78 @@ class Piece {
     },
     soloist?: string,
     soloInstrument?: string,
+    phraseGrid?: Phrase[][],
+    durArrayGrid?: number[][],
+    sectionStartsGrid?: number[][],
+    sectionCatGrid?: SecCatType[][],
   } = {}) {
     this.meters = meters;
-    this.phrases = phrases;
+
+    // setting up grids so they can transform from non-grid specs
+    if (phraseGrid !== undefined) {
+      this.phraseGrid = phraseGrid;
+    } else {
+      this.phraseGrid = [phrases];
+    }
+    for (let i = 1; i < instrumentation.length; i++) {
+      this.phraseGrid.push([])
+    }
+    this.phraseGrid.length = instrumentation.length;
+    if (durArrayGrid !== undefined) {
+      this.durArrayGrid = durArrayGrid;
+    } else {
+      this.durArrayGrid = durArray === undefined ? [[]] : [durArray];
+    }
+    for (let i = 1; i < instrumentation.length; i++) {
+      this.durArrayGrid.push([])
+    }
+    this.durArrayGrid.length = instrumentation.length;
+    if (sectionStartsGrid !== undefined) {
+      this.sectionStartsGrid = sectionStartsGrid;
+    } else {
+      this.sectionStartsGrid = sectionStarts === undefined ? 
+        [[0]] : 
+        [sectionStarts];
+    }
+    for (let i = 1; i < instrumentation.length; i++) {
+      this.sectionStartsGrid.push([0])
+    }
+    this.sectionStartsGrid.length = instrumentation.length;
+    this.sectionStartsGrid.forEach((ss, i) => {
+      ss.sort((a, b) => a - b);
+    })
+    // if (sectionCategorization !== undefined) {
+    //   this.sectionCategorization = sectionCategorization;
+    //   this.sectionCategorization.forEach(this.cleanUpSectionCategorization)
+    // } else {
+    //   this.sectionCategorization = this.sectionStarts.map(() => {
+    //     return initSecCategorization()
+    //   })
+    // }
+    if (sectionCatGrid !== undefined) {
+      this.sectionCatGrid = sectionCatGrid;
+      for (let i = 1; i < instrumentation.length; i++) {
+        const ss = this.sectionStartsGrid[i];
+        this.sectionCatGrid.push(ss.map(() => initSecCategorization()))
+        this.sectionCatGrid.length = instrumentation.length;
+      }
+    } else {
+      this.sectionCatGrid = this.sectionStartsGrid.map((ss, ssIdx) => {
+        if (ssIdx === 0) {
+          if (sectionCategorization !== undefined) {
+            const sc = sectionCategorization;
+            sc.forEach(this.cleanUpSectionCategorization);
+            return sc;
+          } else {
+            return ss.map(() => initSecCategorization())
+          }
+        }
+        return ss.map(() => initSecCategorization())
+      })
+    }
+
+
+
     this.raga = raga;
     if (this.phrases.length === 0) {
       if (durTot === undefined) {
@@ -2333,25 +2414,30 @@ class Piece {
     } else {
       this.durTotFromPhrases();
       this.durArrayFromPhrases();
-      if (durTot !== undefined && this.durTot !== durTot) {
-        this.phrases.forEach(p => {
-          if (p.durTot === undefined) {
-            throw new Error('p.durTot is undefined')
-          }
-          p.durTot = p.durTot * durTot / this.durTot!
-        });
-        this.durTot = durTot;
-      }
-      if (durArray !== undefined && this.durArray !== durArray) {
-        this.phrases.forEach((p, i) => {
-          if (p.durTot === undefined) {
-            throw new Error('p.durTot is undefined')
-          }
-          p.durTot = p.durTot * durArray[i] / this.durArray![i]
-        })
-        this.durArray = durArray;
-        this.durTotFromPhrases();
-      }
+
+      // Quite confident this can be removed, but just in case, 
+      // leaving it here for posterity
+
+      // if (durTot !== undefined && this.durTot !== durTot) {
+      //   this.phrases.forEach(p => {
+      //     if (p.durTot === undefined) {
+      //       throw new Error('p.durTot is undefined')
+      //     }
+      //     p.durTot = p.durTot * durTot / this.durTot!
+      //   });
+      //   this.durTot = durTot;
+      // }
+
+      // if (durArray !== undefined && this.durArray !== durArray) {
+      //   this.phrases.forEach((p, i) => {
+      //     if (p.durTot === undefined) {
+      //       throw new Error('p.durTot is undefined')
+      //     }
+      //     p.durTot = p.durTot * durArray[i] / this.durArray![i]
+      //   })
+      //   this.durArray = durArray;
+      //   this.durTotFromPhrases();
+      // }
 
       this.updateStartTimes()
     }
@@ -2370,11 +2456,6 @@ class Piece {
     this.given_name = given_name;
     this.soloist = soloist;
     this.soloInstrument = soloInstrument;
-    if (sectionStarts === undefined) {
-      this.sectionStarts = [0];
-    } else {
-      this.sectionStarts = sectionStarts.sort((a, b) => a - b);
-    }
     this.instrumentation = instrumentation;
     // this is really confusing becuase id12 is silent. The current solution 
     // is to just skip that number; so 12 listed below is really id13
@@ -2396,58 +2477,23 @@ class Piece {
       [Instrument.Violin]: [0, 1, 2, 3, 4, 5, 6, 12, 13],
       [Instrument.Harmonium]: [0, 12, 13],
     }
-    if (sectionCategorization !== undefined) {
-      this.sectionCategorization = sectionCategorization;
-      this.sectionCategorization.forEach(c => {
-        if (c['Improvisation'] === undefined) {
-          c['Improvisation'] = { "Improvisation": false }
+    // if (sectionCategorization !== undefined) {
+    //   this.sectionCategorization = sectionCategorization;
+    //   this.sectionCategorization.forEach(this.cleanUpSectionCategorization)
+    // } else {
+    //   this.sectionCategorization = this.sectionStarts.map(() => {
+    //     return initSecCategorization()
+    //   })
+    // }
+
+    this.sectionStartsGrid.forEach((ss, ssIdx) => {
+      if (ss.length > this.sectionCatGrid[ssIdx].length) {
+        const dif = ss.length - this.sectionCatGrid[ssIdx].length;
+        for (let i = 0; i < dif; i++) {
+          this.sectionCatGrid[ssIdx].push(initSecCategorization())
         }
-        if (c['Other'] === undefined) {
-          c['Other'] = { "Other": false }
-        }
-        if (c['Top Level'] === undefined) {
-          const com = c['Composition Type'];
-          let comSecTemp = c['Comp.-section/Tempo'];
-          if (comSecTemp === undefined) {
-            // tslint:disable-next-line
-            comSecTemp = c['Composition-section/Tempo']
-          }
-          const tala = c['Tala'];
-          const improv = c['Improvisation'];
-          const other = c['Other'];
-          const someTrue = (obj: object) => {
-            return Object.values(obj).some(v => v)
-          };
-          if (c['Pre-Chiz Alap']['Pre-Chiz Alap']) {
-            c['Top Level'] = 'Pre-Chiz Alap'
-          } else if (someTrue(c['Alap'])) {
-            c['Top Level'] = 'Alap'
-          } else if (someTrue(com) || someTrue(comSecTemp) || someTrue(tala)) {
-            c['Top Level'] = 'Composition'
-          } else if (improv['Improvisation']) {
-            c['Top Level'] = 'Improvisation'
-          } else if (other['Other']) {
-            c['Top Level'] = 'Other'
-          } else {
-            c['Top Level'] = 'None'
-          }
-        }
-        if (c['Comp.-section/Tempo'] === undefined) {
-          c['Comp.-section/Tempo'] = c['Composition-section/Tempo'];
-          delete c['Composition-section/Tempo']
-        }
-      })
-    } else {
-      this.sectionCategorization = this.sectionStarts.map(() => {
-        return initSecCategorization()
-      })
-    }
-    if (this.sectionStarts.length > this.sectionCategorization.length) {
-      const dif = this.sectionStarts.length - this.sectionCategorization.length;
-      for (let i = 0; i < dif; i++) {
-        this.sectionCategorization.push(initSecCategorization())
       }
-    }
+    })
     if (explicitPermissions === undefined) {
       this.explicitPermissions = {
         edit: [],
@@ -2459,8 +2505,81 @@ class Piece {
     }
   }
 
+  get phrases() {
+    return this.phraseGrid[0]
+  }
+
+  set phrases(arr) {
+    this.phraseGrid[0] = arr
+  }
+
+  get durArray() {
+    return this.durArrayGrid[0]
+  }
+
+  set durArray(arr) {
+    this.durArrayGrid[0] = arr
+  }
+
+  get sectionStarts() {
+    return this.sectionStartsGrid[0]
+  }
+
+  set sectionStarts(arr) {
+    this.sectionStartsGrid[0] = arr
+  }
+
+  get sectionCategorization() {
+    return this.sectionCatGrid[0]
+  }
+
+  set sectionCategorization(arr) { 
+    this.sectionCatGrid[0] = arr
+  }
+
+  cleanUpSectionCategorization(c: SecCatType) {
+    if (c['Improvisation'] === undefined) {
+      c['Improvisation'] = { "Improvisation": false }
+    }
+    if (c['Other'] === undefined) {
+      c['Other'] = { "Other": false }
+    }
+    if (c['Top Level'] === undefined) {
+      const com = c['Composition Type'];
+      let comSecTemp = c['Comp.-section/Tempo'];
+      if (comSecTemp === undefined) {
+        // tslint:disable-next-line
+        comSecTemp = c['Composition-section/Tempo']
+      }
+      const tala = c['Tala'];
+      const improv = c['Improvisation'];
+      const other = c['Other'];
+      const someTrue = (obj: object) => {
+        return Object.values(obj).some(v => v)
+      };
+      if (c['Pre-Chiz Alap']['Pre-Chiz Alap']) {
+        c['Top Level'] = 'Pre-Chiz Alap'
+      } else if (someTrue(c['Alap'])) {
+        c['Top Level'] = 'Alap'
+      } else if (someTrue(com) || someTrue(comSecTemp) || someTrue(tala)) {
+        c['Top Level'] = 'Composition'
+      } else if (improv['Improvisation']) {
+        c['Top Level'] = 'Improvisation'
+      } else if (other['Other']) {
+        c['Top Level'] = 'Other'
+      } else {
+        c['Top Level'] = 'None'
+      }
+    }
+    if (c['Comp.-section/Tempo'] === undefined) {
+      c['Comp.-section/Tempo'] = c['Composition-section/Tempo'];
+      delete c['Composition-section/Tempo']
+    }
+  }
+  
+
   putRagaInPhrase() {
-    this.phrases.forEach(p => p.raga = this.raga)
+    this.phraseGrid.forEach(ps => ps.forEach(p => p.raga = this.raga))
   }
 
   addMeter(meter: Meter) {
@@ -2486,14 +2605,15 @@ class Piece {
     this.meters.splice(idx, 1);
   }
 
-  get durStarts() {
+  durStarts(track=0) {
     if (this.durArray === undefined) {
       throw new Error('durArray is undefined')
     }
     if (this.durTot === undefined) {
       throw new Error('durTot is undefined')
     }
-    const starts = getStarts(this.durArray.map(d => d * this.durTot!));
+    const starts = getStarts(this.durArrayGrid[track]
+        .map(d => d * this.durTot!));
     return starts
   }
 
@@ -2511,40 +2631,59 @@ class Piece {
   }
 
   updateStartTimes() {
-    this.phrases.forEach((p, i) => {
-      p.startTime = this.durStarts[i];
-      p.pieceIdx = i;
-      p.assignPhraseIdx();
+    this.phraseGrid.forEach((phrases, idx) => {
+      phrases.forEach((p, i) => {
+        p.startTime = this.durStarts(idx)[i];
+        p.pieceIdx = i;
+        p.assignPhraseIdx();
+      })
     })
   }
 
   durTotFromPhrases() {
-    this.durTot = this.phrases.map(p => p.durTot as number).reduce((a, b) => {
-      if (a === undefined || b === undefined) {
-        throw new Error('a or b is undefined')
+    const durTots = this.phraseGrid.map(ps => {
+      return ps
+        .map(p => p.durTot as number)
+        .reduce((a, b) => a + b, 0)
+    });
+    const maxDurTot = Math.max(...durTots);
+    this.durTot = maxDurTot;
+    durTots.forEach((d, t) => {
+      if (d !== maxDurTot) {
+        const extra = maxDurTot - d;
+        const phrases = this.phraseGrid[t];
+        const lastPhrase = phrases[phrases.length - 1];
+        const extraSilent = new Trajectory({
+          id: 12,
+          durTot: extra,
+          fundID12: this.raga!.fundamental,
+        });
+        lastPhrase.trajectories.push(extraSilent);
+        lastPhrase.reset();
       }
-      return a + b
-    }, 0)
+    })
   }
 
   durArrayFromPhrases() {
     this.durTotFromPhrases();
-    this.durArray = this.phrases.map(p => {
-      if (p.durTot === undefined) {
-        throw new Error('p.durTot is undefined')
-      } else if (isNaN(p.durTot)) {
-        const removes = p.trajectories.filter(t => isNaN(t.durTot))
-        removes.forEach(r => {
-          const idx = p.trajectories.indexOf(r);
-          p.trajectories.splice(idx, 1)
-        })
-        p.durTot = p.trajectories.map(t => {
-          return t.durTot
-        }).reduce((a, b) => a + b, 0)
-      }
-      return p.durTot / this.durTot!
-    });
-    this.updateStartTimes();
+    this.phraseGrid.forEach((phrases, idx) => {
+      this.durArrayGrid[idx] = phrases.map(p => {
+        if (p.durTot === undefined) {
+          throw new Error('p.durTot is undefined')
+        } else if (isNaN(p.durTot)) {
+          const removes = p.trajectories.filter(t => isNaN(t.durTot))
+          removes.forEach(r => {
+            const rIdx = p.trajectories.indexOf(r);
+            p.trajectories.splice(rIdx, 1)
+          })
+          p.durTot = p.trajectories.map(t => {
+            return t.durTot
+          }).reduce((a, b) => a + b, 0)
+        }
+        return p.durTot / this.durTot!
+      })
+      this.updateStartTimes();
+    })
   }
 
   realignPitches() {
@@ -3048,7 +3187,7 @@ class Piece {
 
   toJSON() {
     return {
-      phrases: this.phrases,
+      // phrases: this.phrases,
       raga: this.raga,
       durTot: this.durTot,
       durArray: this.durArray,
@@ -3069,7 +3208,11 @@ class Piece {
       sectionCategorization: this.sectionCategorization,
       explicitPermissions: this.explicitPermissions,
       soloist: this.soloist,
-      soloInstrument: this.soloInstrument
+      soloInstrument: this.soloInstrument,
+      phraseGrid: this.phraseGrid,
+      durArrayGrid: this.durArrayGrid,
+      sectionStartsGrid: this.sectionStartsGrid,
+      sectionCatGrid: this.sectionCatGrid,
     }
   }
 }
