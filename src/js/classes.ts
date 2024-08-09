@@ -2477,14 +2477,6 @@ class Piece {
       [Instrument.Violin]: [0, 1, 2, 3, 4, 5, 6, 12, 13],
       [Instrument.Harmonium]: [0, 12, 13],
     }
-    // if (sectionCategorization !== undefined) {
-    //   this.sectionCategorization = sectionCategorization;
-    //   this.sectionCategorization.forEach(this.cleanUpSectionCategorization)
-    // } else {
-    //   this.sectionCategorization = this.sectionStarts.map(() => {
-    //     return initSecCategorization()
-    //   })
-    // }
 
     this.sectionStartsGrid.forEach((ss, ssIdx) => {
       if (ss.length > this.sectionCatGrid[ssIdx].length) {
