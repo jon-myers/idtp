@@ -2613,6 +2613,10 @@ class Piece {
     return this.possibleTrajs[this.instrumentation[0]]
   }
 
+  get trajIdxsGrid() {
+    return this.instrumentation.map(i => this.possibleTrajs[i])
+  }
+
   allGroups({ instrumentIdx = 0 }: { instrumentIdx?: number } = {}) {
     const allGroups: Group[] = [];
     this.phrases.forEach(p => {
