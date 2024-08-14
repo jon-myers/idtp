@@ -5320,313 +5320,313 @@ export default defineComponent({
       return outTime
     },
 
-    handleClick(e: MouseEvent, dragbox=false) {
-      const eventX = dragbox ? e.x : e.clientX;
-      const eventY = dragbox ? e.y : e.clientY;
-      let time = this.xr().invert(eventX);
-      const pIdx = this.phraseIdxFromTime(time)!;
-      // need to figure out how to handle when click is over a non phrase
-      if (this.setChikari) {
-        this.unsavedChanges = true;
-        const sym = d3Symbol().type(d3SymbolX).size(80);
-        const phrase = this.piece.phrases[pIdx];
-        const fixedTime = Number((time - phrase.startTime!).toFixed(2));
-        phrase.chikaris[fixedTime] = new Chikari({
-          'fundamental': this.piece.raga.fundamental,
-          'pitches': this.piece.raga.chikariPitches
-        });
-        const scaledX = fixedTime / phrase.durTot!;
-        const dataObj: DrawDataType = {
-          x: fixedTime + phrase.startTime!,
-          y: phrase.compute(scaledX, true)
-        };
-        const num = (fixedTime % 1).toFixed(2).toString().slice(2);
-        const id = `p${phrase.pieceIdx}_${Math.floor(fixedTime)}_${num}`;
-        const x = (d: DrawDataType) => this.codifiedXR!(d.x);
-        const y = (d: DrawDataType) => this.codifiedYR!(d.y);
-        const tFunc: TFuncType = (datum) => {
-          const d = datum as DrawDataType;
-          return `translate(${x(d)},${y(d)})`
-        } 
-        this.phraseG.append('g')
-          .classed('chikari', true)
-          .append('path')
-          .attr('id', id)
-          .attr('d', sym)
-          .attr('stroke', this.chikariColor)
-          .attr('stroke-width', 3)
-          .attr('stroke-linecap', 'round')
-          .data([dataObj])
-          .attr('transform', tFunc)
-        this.phraseG.append('g')
-          .classed('chikari', true)
-          .append('circle')
-          .attr('id', 'circle__' + id)
-          .classed('chikariCircle', true)
-          .style('opacity', '0')
-          .data([dataObj])
-          .attr('cx', x)
-          .attr('cy', y)
-          .attr('r', 6)
-          .on('mouseover', this.handleMouseOver)
-          .on('mouseout', this.handleMouseOut)
-          .on('click', this.handleClickChikari)
-        this.setChikari = false;
-        this.svg.style('cursor', 'auto');
-      } else if (this.setNewTraj) {
-        if (this.magnetMode) {
-          time = this.magnetize(time);
-        }
-        const logSGLines = this.visibleSargam.map(s => Math.log2(s));
-        let logFreq = this.yr().invert(eventY - this.navHeight);
-        logFreq = getClosest(logSGLines, logFreq);
-        const phrase = this.piece.phrases[pIdx];
-        const tIdx = this.trajIdxFromTime(phrase, time)!;
-        const traj = phrase.trajectories[tIdx];
-        if (traj.id === 12) {
-          let setIt = true;
-          if (this.trajTimePts.length > 0) {
-            const c1 = this.trajTimePts[0].tIdx === tIdx;
-            const c2 = this.trajTimePts[0].pIdx === pIdx;
-            if (!(c1 && c2)) {
-              setIt = false;
-            }
-          }
+    // handleClick(e: MouseEvent, dragbox=false) {
+    //   const eventX = dragbox ? e.x : e.clientX;
+    //   const eventY = dragbox ? e.y : e.clientY;
+    //   let time = this.xr().invert(eventX);
+    //   const pIdx = this.phraseIdxFromTime(time)!;
+    //   // need to figure out how to handle when click is over a non phrase
+    //   if (this.setChikari) {
+    //     this.unsavedChanges = true;
+    //     const sym = d3Symbol().type(d3SymbolX).size(80);
+    //     const phrase = this.piece.phrases[pIdx];
+    //     const fixedTime = Number((time - phrase.startTime!).toFixed(2));
+    //     phrase.chikaris[fixedTime] = new Chikari({
+    //       'fundamental': this.piece.raga.fundamental,
+    //       'pitches': this.piece.raga.chikariPitches
+    //     });
+    //     const scaledX = fixedTime / phrase.durTot!;
+    //     const dataObj: DrawDataType = {
+    //       x: fixedTime + phrase.startTime!,
+    //       y: phrase.compute(scaledX, true)
+    //     };
+    //     const num = (fixedTime % 1).toFixed(2).toString().slice(2);
+    //     const id = `p${phrase.pieceIdx}_${Math.floor(fixedTime)}_${num}`;
+    //     const x = (d: DrawDataType) => this.codifiedXR!(d.x);
+    //     const y = (d: DrawDataType) => this.codifiedYR!(d.y);
+    //     const tFunc: TFuncType = (datum) => {
+    //       const d = datum as DrawDataType;
+    //       return `translate(${x(d)},${y(d)})`
+    //     } 
+    //     this.phraseG.append('g')
+    //       .classed('chikari', true)
+    //       .append('path')
+    //       .attr('id', id)
+    //       .attr('d', sym)
+    //       .attr('stroke', this.chikariColor)
+    //       .attr('stroke-width', 3)
+    //       .attr('stroke-linecap', 'round')
+    //       .data([dataObj])
+    //       .attr('transform', tFunc)
+    //     this.phraseG.append('g')
+    //       .classed('chikari', true)
+    //       .append('circle')
+    //       .attr('id', 'circle__' + id)
+    //       .classed('chikariCircle', true)
+    //       .style('opacity', '0')
+    //       .data([dataObj])
+    //       .attr('cx', x)
+    //       .attr('cy', y)
+    //       .attr('r', 6)
+    //       .on('mouseover', this.handleMouseOver)
+    //       .on('mouseout', this.handleMouseOut)
+    //       .on('click', this.handleClickChikari)
+    //     this.setChikari = false;
+    //     this.svg.style('cursor', 'auto');
+    //   } else if (this.setNewTraj) {
+    //     if (this.magnetMode) {
+    //       time = this.magnetize(time);
+    //     }
+    //     const logSGLines = this.visibleSargam.map(s => Math.log2(s));
+    //     let logFreq = this.yr().invert(eventY - this.navHeight);
+    //     logFreq = getClosest(logSGLines, logFreq);
+    //     const phrase = this.piece.phrases[pIdx];
+    //     const tIdx = this.trajIdxFromTime(phrase, time)!;
+    //     const traj = phrase.trajectories[tIdx];
+    //     if (traj.id === 12) {
+    //       let setIt = true;
+    //       if (this.trajTimePts.length > 0) {
+    //         const c1 = this.trajTimePts[0].tIdx === tIdx;
+    //         const c2 = this.trajTimePts[0].pIdx === pIdx;
+    //         if (!(c1 && c2)) {
+    //           setIt = false;
+    //         }
+    //       }
           
-          // if point is too close in time to other trajTimePts, seit should be
-          // false. Less than 0.05 to be exact.
-          const diffs = this.trajTimePts.map(ttp => {
-            return Math.abs(ttp.time - time)
-          })
-          const minDiff = Math.min(...diffs);
-          setIt = minDiff > 0.05 ? true : false;
+    //       // if point is too close in time to other trajTimePts, seit should be
+    //       // false. Less than 0.05 to be exact.
+    //       const diffs = this.trajTimePts.map(ttp => {
+    //         return Math.abs(ttp.time - time)
+    //       })
+    //       const minDiff = Math.min(...diffs);
+    //       setIt = minDiff > 0.05 ? true : false;
 
-          if (setIt) {
-            let fixedTime = time;
-            const startTime = phrase.startTime! + traj.startTime!;
-            if (time - startTime < this.minTrajDur) {
-              fixedTime = startTime
-            } else if (startTime + traj.durTot - time < this.minTrajDur) {
-              fixedTime = startTime + traj.durTot
-            }
-            this.phraseG
-              .append('circle')
-              .classed('newTrajDot', true)
-              .attr('cx', this.codifiedXR!(fixedTime))
-              .attr('cy', this.codifiedYR!(logFreq))
-              .attr('r', 4)
-              .style('fill', 'forestgreen')
-            this.trajTimePts.push({
-              time: fixedTime,
-              logFreq: logFreq,
-              pIdx: pIdx,
-              tIdx: tIdx
-            })
-            // if a new traj dot's time is within some small threshold of a
-            // previous traj, then set the trajselect penel's vowel attribute
-            // to be the same as the previous traj's vowel attribute.
-            if (this.vocal) {
-              const prevTraj = this.piece.mostRecentTraj(fixedTime);
-              if (prevTraj && prevTraj.id !== 12) {
-                const phrase = this.piece.phrases[prevTraj.phraseIdx!];
-                const startTime = phrase.startTime! + prevTraj.startTime!; 
-                const endTime = startTime + prevTraj.durTot;
-                const diff = fixedTime - endTime;
-                if (diff < this.minTrajDur) {
-                  const tsp = this.$refs.trajSelectPanel as 
-                    typeof TrajSelectPanel;
-                  tsp.vowel = prevTraj.vowel;
-                }
-              }
-            }
-          }
-        }
-      } else if (this.setNewSeries) {
-        if (this.magnetMode) {
-          time = this.magnetize(time);
-        }
-        const logSGLines = this.visibleSargam.map(s => Math.log2(s));
-        let logFreq = this.yr().invert(eventY - this.navHeight);
-        logFreq = getClosest(logSGLines, logFreq);
-        const phrase = this.piece.phrases[pIdx];
-        const tIdx = this.trajIdxFromTime(phrase, time)!;
-        const traj = phrase.trajectories[tIdx];
-        let snappedTime = time;
-        const st = phrase.startTime! + traj.startTime!;
-        const et = st + traj.durTot;
-        if (time - st < this.minTrajDur) {
-          snappedTime = st
-        } else if (et - time < this.minTrajDur) {
-          snappedTime = et
-        }
-        const ttp  = this.trajTimePts;
-        if (traj.id === 12 && (ttp.length === 0 || ttp[0].tIdx === tIdx)) {
-          this.phraseG  
-            .append('circle')
-            .classed('newSeriesDot', true)
-            .attr('cx', this.codifiedXR!(time))
-            .attr('cy', this.codifiedYR!(logFreq))
-            .attr('r', 4)
-            .style('fill', '#7300e6')
-          this.trajTimePts.push({
-            time: snappedTime,
-            logFreq: logFreq,
-            pIdx: pIdx,
-            tIdx: tIdx
-          })
-          if (this.trajTimePts.length > 1) {
-            this.addFixedTraj();
+    //       if (setIt) {
+    //         let fixedTime = time;
+    //         const startTime = phrase.startTime! + traj.startTime!;
+    //         if (time - startTime < this.minTrajDur) {
+    //           fixedTime = startTime
+    //         } else if (startTime + traj.durTot - time < this.minTrajDur) {
+    //           fixedTime = startTime + traj.durTot
+    //         }
+    //         this.phraseG
+    //           .append('circle')
+    //           .classed('newTrajDot', true)
+    //           .attr('cx', this.codifiedXR!(fixedTime))
+    //           .attr('cy', this.codifiedYR!(logFreq))
+    //           .attr('r', 4)
+    //           .style('fill', 'forestgreen')
+    //         this.trajTimePts.push({
+    //           time: fixedTime,
+    //           logFreq: logFreq,
+    //           pIdx: pIdx,
+    //           tIdx: tIdx
+    //         })
+    //         // if a new traj dot's time is within some small threshold of a
+    //         // previous traj, then set the trajselect penel's vowel attribute
+    //         // to be the same as the previous traj's vowel attribute.
+    //         if (this.vocal) {
+    //           const prevTraj = this.piece.mostRecentTraj(fixedTime);
+    //           if (prevTraj && prevTraj.id !== 12) {
+    //             const phrase = this.piece.phrases[prevTraj.phraseIdx!];
+    //             const startTime = phrase.startTime! + prevTraj.startTime!; 
+    //             const endTime = startTime + prevTraj.durTot;
+    //             const diff = fixedTime - endTime;
+    //             if (diff < this.minTrajDur) {
+    //               const tsp = this.$refs.trajSelectPanel as 
+    //                 typeof TrajSelectPanel;
+    //               tsp.vowel = prevTraj.vowel;
+    //             }
+    //           }
+    //         }
+    //       }
+    //     }
+    //   } else if (this.setNewSeries) {
+    //     if (this.magnetMode) {
+    //       time = this.magnetize(time);
+    //     }
+    //     const logSGLines = this.visibleSargam.map(s => Math.log2(s));
+    //     let logFreq = this.yr().invert(eventY - this.navHeight);
+    //     logFreq = getClosest(logSGLines, logFreq);
+    //     const phrase = this.piece.phrases[pIdx];
+    //     const tIdx = this.trajIdxFromTime(phrase, time)!;
+    //     const traj = phrase.trajectories[tIdx];
+    //     let snappedTime = time;
+    //     const st = phrase.startTime! + traj.startTime!;
+    //     const et = st + traj.durTot;
+    //     if (time - st < this.minTrajDur) {
+    //       snappedTime = st
+    //     } else if (et - time < this.minTrajDur) {
+    //       snappedTime = et
+    //     }
+    //     const ttp  = this.trajTimePts;
+    //     if (traj.id === 12 && (ttp.length === 0 || ttp[0].tIdx === tIdx)) {
+    //       this.phraseG  
+    //         .append('circle')
+    //         .classed('newSeriesDot', true)
+    //         .attr('cx', this.codifiedXR!(time))
+    //         .attr('cy', this.codifiedYR!(logFreq))
+    //         .attr('r', 4)
+    //         .style('fill', '#7300e6')
+    //       this.trajTimePts.push({
+    //         time: snappedTime,
+    //         logFreq: logFreq,
+    //         pIdx: pIdx,
+    //         tIdx: tIdx
+    //       })
+    //       if (this.trajTimePts.length > 1) {
+    //         this.addFixedTraj();
 
-          }
-        }
-      } else if (this.setNewPhraseDiv) {
-        this.unsavedChanges = true;
-        const phrase = this.piece.phrases[pIdx];
-        const tIdx = this.trajIdxFromTime(phrase, time)!;
-        const traj = phrase.trajectories[tIdx];
+    //       }
+    //     }
+    //   } else if (this.setNewPhraseDiv) {
+    //     this.unsavedChanges = true;
+    //     const phrase = this.piece.phrases[pIdx];
+    //     const tIdx = this.trajIdxFromTime(phrase, time)!;
+    //     const traj = phrase.trajectories[tIdx];
 
-        // override time so that if it falls within a group of trajectories, 
-        // time is set to either the start of the first traj in the group, or 
-        // the end of the last traj in the group. This is so that the phrase div 
-        // does not fall within a group of trajectories.
+    //     // override time so that if it falls within a group of trajectories, 
+    //     // time is set to either the start of the first traj in the group, or 
+    //     // the end of the last traj in the group. This is so that the phrase div 
+    //     // does not fall within a group of trajectories.
 
-        if (traj.groupId !== undefined) {
-          console.log('Phrase div would fall within a group of trajectories, ' + 
-            'so overriding time to be either the start or end of the group.');
-          const group = phrase.getGroupFromId(traj.groupId)!;
-          const firstTraj = group.trajectories[0];
-          const lastTraj = group.trajectories[group.trajectories.length - 1];
-          const startTime = phrase.startTime! + firstTraj.startTime!;
-          let endTime = lastTraj.startTime! + lastTraj.durTot;
-          endTime = endTime + phrase.startTime!;
-          if (endTime - time <= time - startTime) {
-            time = endTime;
-          } else {
-            time = startTime;
-          }
-        }
-        if (traj.id === 12) {
-          // make current traj durTot such that it ends at current time, and 
-          // make new traj start at current time, update the phrase to reflect
-          // and reset zoom ? Or ... do I have to manually rename all the 
-          // following trajs if there are any?
-          const firstTrajDur = time - (phrase.startTime! + traj.startTime!);
-          const secondTrajDur = traj.durTot - firstTrajDur;
-          traj.durTot = firstTrajDur;
-          const ntObj: {
-            id: number,
-            durTot: number,
-            pitches: Pitch[],
-            fundID12: number,
-            instrumentation?: string
-          } = {
-            id: 12,
-            durTot: secondTrajDur,
-            pitches: [],
-            fundID12: this.piece.raga.fundamental,
-          };
-          if (this.piece.instrumentation) {
-            ntObj.instrumentation = this.piece.instrumentation[0];
-          }
-          const newTraj = new Trajectory(ntObj);
-          phrase.trajectories.splice(tIdx + 1, 0, newTraj);
-          phrase.reset();
-          // right here, I need to reid all the following trajectories
-          for (let i = phrase.trajectories.length-1; i >= tIdx+2; i--) {
-            const thisTraj = phrase.trajectories[i];
-            const oldId = `p${phrase.pieceIdx}t${thisTraj.num!-1}`;
-            const newId = `p${phrase.pieceIdx}t${thisTraj.num}`;
-            this.reIdAllReps(oldId, newId);
-          }
-        }
-        const possibleTimes = this.possibleTrajDivs();
-        const finalTime = getClosest(possibleTimes, time);
-        const ftIdx = possibleTimes.indexOf(finalTime);
-        const ptPerP = this.piece.phrases.map(p => p.trajectories.length - 1);
-        // look into this cumsum issue ...
-        const lims = [0, ...ptPerP.map(cumsum()).slice(0, ptPerP.length - 1)];
-        const pIdx_ = lims.findLastIndex(lim => ftIdx >= lim);
-        const start = lims[pIdx_];
-        const trajIdx = ftIdx - start;
-        const phrase_ = this.piece.phrases[pIdx_];
-        const end = phrase_.trajectories.length - (trajIdx + 1);
-        const newTrajs = phrase_.trajectories.splice(trajIdx+1, end);
-        phrase_.durTotFromTrajectories();
-        phrase_.durArrayFromTrajectories();
-        const newPhraseObj: {
-          trajectories: Trajectory[],
-          raga: Raga,
-          instrumentation?: string[]
-        } = {
-          trajectories: newTrajs,
-          raga: phrase_.raga!
-        };
-        if (this.piece.instrumentation) {
-          newPhraseObj.instrumentation = this.piece.instrumentation;
-        }
-        const newPhrase = new Phrase(newPhraseObj)
-        this.piece.phrases.splice(phrase_.pieceIdx! + 1, 0, newPhrase);
-        this.piece.durTotFromPhrases();
-        this.piece.durArrayFromPhrases();
-        this.piece.updateStartTimes();
-        //move over names of old phrase_ divs, from the back forward
-        for (let i=this.piece.phrases.length-2; i >= phrase_.pieceIdx!; i--) {
-          const drag = () => {
-            return d3Drag()
-            .on('start', this.phraseDivDragStart(i+1))
-            .on('drag', this.phraseDivDragDragging(i+1))
-            .on('end', this.phraseDivDragEnd(i+1))
-          };        
-          d3Select(`#overlay__phraseLine${i}`)
-            .attr('id', `overlay__phraseLine${i+1}`)
-          if (this.editable) {
-            d3Select(`#overlay__phraseLine${i}`)
-            .on('.drag', null)
-            .call(drag())
-          }
-          d3Select(`#phraseLine${i}`)
-            .attr('id', `phraseLine${i+1}`)          
-        }
-        this.addNewPhraseDiv(phrase_.pieceIdx!);
-        this.setNewPhraseDiv = false;
-        this.svg.style('cursor', 'auto');        
-      } else if (this.insertPulseMode) {
-        let continue_ = false;
-        if (!this.timeWithinMeter(time)) {
-          if (this.insertPulses.length > 0) {
-            if (time >= this.IPLims[0] && time < this.IPLims[1]) {
-              this.insertPulses.push(time);
-              continue_ = true
-            }
-          } else {
-            this.insertPulses.push(time);
-            this.updateIPLims();
-            continue_ = true
-          }
-          if (continue_) {
-            this.phraseG
-            .append('path')
-            .classed('insertPulse', true)
-            .attr('id', `insertPulse${this.insertPulses.length - 1}`)
-            .attr('stroke', this.selMeterColor)
-            .attr('stroke-width', 2)
-            .attr('d', this.playheadLine(true))
-            .attr('transform', `translate(${this.codifiedXR!(time)}, 0)`)
-          }
-        }   
-      } else if (this.setNewRegion) {
-        this.setRegionToPhrase(pIdx);
-        this.setNewRegion = false;
-      } else if (this.shifted) {
-      } else {
-        if (this.justEnded) {
-          this.justEnded = false // this just prevents phrase div drag end from 
-          // clearing all
-        } else {
-          this.clearAll(false)
-        }
-      }
-    },
+    //     if (traj.groupId !== undefined) {
+    //       console.log('Phrase div would fall within a group of trajectories, ' + 
+    //         'so overriding time to be either the start or end of the group.');
+    //       const group = phrase.getGroupFromId(traj.groupId)!;
+    //       const firstTraj = group.trajectories[0];
+    //       const lastTraj = group.trajectories[group.trajectories.length - 1];
+    //       const startTime = phrase.startTime! + firstTraj.startTime!;
+    //       let endTime = lastTraj.startTime! + lastTraj.durTot;
+    //       endTime = endTime + phrase.startTime!;
+    //       if (endTime - time <= time - startTime) {
+    //         time = endTime;
+    //       } else {
+    //         time = startTime;
+    //       }
+    //     }
+    //     if (traj.id === 12) {
+    //       // make current traj durTot such that it ends at current time, and 
+    //       // make new traj start at current time, update the phrase to reflect
+    //       // and reset zoom ? Or ... do I have to manually rename all the 
+    //       // following trajs if there are any?
+    //       const firstTrajDur = time - (phrase.startTime! + traj.startTime!);
+    //       const secondTrajDur = traj.durTot - firstTrajDur;
+    //       traj.durTot = firstTrajDur;
+    //       const ntObj: {
+    //         id: number,
+    //         durTot: number,
+    //         pitches: Pitch[],
+    //         fundID12: number,
+    //         instrumentation?: string
+    //       } = {
+    //         id: 12,
+    //         durTot: secondTrajDur,
+    //         pitches: [],
+    //         fundID12: this.piece.raga.fundamental,
+    //       };
+    //       if (this.piece.instrumentation) {
+    //         ntObj.instrumentation = this.piece.instrumentation[0];
+    //       }
+    //       const newTraj = new Trajectory(ntObj);
+    //       phrase.trajectories.splice(tIdx + 1, 0, newTraj);
+    //       phrase.reset();
+    //       // right here, I need to reid all the following trajectories
+    //       for (let i = phrase.trajectories.length-1; i >= tIdx+2; i--) {
+    //         const thisTraj = phrase.trajectories[i];
+    //         const oldId = `p${phrase.pieceIdx}t${thisTraj.num!-1}`;
+    //         const newId = `p${phrase.pieceIdx}t${thisTraj.num}`;
+    //         this.reIdAllReps(oldId, newId);
+    //       }
+    //     }
+    //     const possibleTimes = this.possibleTrajDivs();
+    //     const finalTime = getClosest(possibleTimes, time);
+    //     const ftIdx = possibleTimes.indexOf(finalTime);
+    //     const ptPerP = this.piece.phrases.map(p => p.trajectories.length - 1);
+    //     // look into this cumsum issue ...
+    //     const lims = [0, ...ptPerP.map(cumsum()).slice(0, ptPerP.length - 1)];
+    //     const pIdx_ = lims.findLastIndex(lim => ftIdx >= lim);
+    //     const start = lims[pIdx_];
+    //     const trajIdx = ftIdx - start;
+    //     const phrase_ = this.piece.phrases[pIdx_];
+    //     const end = phrase_.trajectories.length - (trajIdx + 1);
+    //     const newTrajs = phrase_.trajectories.splice(trajIdx+1, end);
+    //     phrase_.durTotFromTrajectories();
+    //     phrase_.durArrayFromTrajectories();
+    //     const newPhraseObj: {
+    //       trajectories: Trajectory[],
+    //       raga: Raga,
+    //       instrumentation?: string[]
+    //     } = {
+    //       trajectories: newTrajs,
+    //       raga: phrase_.raga!
+    //     };
+    //     if (this.piece.instrumentation) {
+    //       newPhraseObj.instrumentation = this.piece.instrumentation;
+    //     }
+    //     const newPhrase = new Phrase(newPhraseObj)
+    //     this.piece.phrases.splice(phrase_.pieceIdx! + 1, 0, newPhrase);
+    //     this.piece.durTotFromPhrases();
+    //     this.piece.durArrayFromPhrases();
+    //     this.piece.updateStartTimes();
+    //     //move over names of old phrase_ divs, from the back forward
+    //     for (let i=this.piece.phrases.length-2; i >= phrase_.pieceIdx!; i--) {
+    //       const drag = () => {
+    //         return d3Drag()
+    //         .on('start', this.phraseDivDragStart(i+1))
+    //         .on('drag', this.phraseDivDragDragging(i+1))
+    //         .on('end', this.phraseDivDragEnd(i+1))
+    //       };        
+    //       d3Select(`#overlay__phraseLine${i}`)
+    //         .attr('id', `overlay__phraseLine${i+1}`)
+    //       if (this.editable) {
+    //         d3Select(`#overlay__phraseLine${i}`)
+    //         .on('.drag', null)
+    //         .call(drag())
+    //       }
+    //       d3Select(`#phraseLine${i}`)
+    //         .attr('id', `phraseLine${i+1}`)          
+    //     }
+    //     this.addNewPhraseDiv(phrase_.pieceIdx!);
+    //     this.setNewPhraseDiv = false;
+    //     this.svg.style('cursor', 'auto');        
+    //   } else if (this.insertPulseMode) {
+    //     let continue_ = false;
+    //     if (!this.timeWithinMeter(time)) {
+    //       if (this.insertPulses.length > 0) {
+    //         if (time >= this.IPLims[0] && time < this.IPLims[1]) {
+    //           this.insertPulses.push(time);
+    //           continue_ = true
+    //         }
+    //       } else {
+    //         this.insertPulses.push(time);
+    //         this.updateIPLims();
+    //         continue_ = true
+    //       }
+    //       if (continue_) {
+    //         this.phraseG
+    //         .append('path')
+    //         .classed('insertPulse', true)
+    //         .attr('id', `insertPulse${this.insertPulses.length - 1}`)
+    //         .attr('stroke', this.selMeterColor)
+    //         .attr('stroke-width', 2)
+    //         .attr('d', this.playheadLine(true))
+    //         .attr('transform', `translate(${this.codifiedXR!(time)}, 0)`)
+    //       }
+    //     }   
+    //   } else if (this.setNewRegion) {
+    //     this.setRegionToPhrase(pIdx);
+    //     this.setNewRegion = false;
+    //   } else if (this.shifted) {
+    //   } else {
+    //     if (this.justEnded) {
+    //       this.justEnded = false // this just prevents phrase div drag end from 
+    //       // clearing all
+    //     } else {
+    //       this.clearAll(false)
+    //     }
+    //   }
+    // },
 
     insertSilentTrajRight(traj: Trajectory, dur=0.1) {
       // if traj is not silent and next traj is not silent (and there is a next 

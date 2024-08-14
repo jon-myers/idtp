@@ -975,8 +975,9 @@ export default defineComponent({
         idx: number) => {
       let time = props.xScale.invert(e.x);
       const traj = selectedTrajs.value[0];
+      const track = props.piece.trackFromTraj(traj);
       const tIdx = traj.num!;
-      const phrase = props.piece.phrases[traj.phraseIdx!];
+      const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
       let times = [0, ...traj.durArray!.map(cumsum())];
       const startTime = phrase.startTime! + traj.startTime!;
       times = times.map(t => t * traj.durTot + startTime);
@@ -996,7 +997,7 @@ export default defineComponent({
             start = phrase.startTime! + prevTraj.startTime!;
           }
         } else if (traj.phraseIdx! > 0) {
-          const prevPhrase = props.piece.phrases[traj.phraseIdx! - 1];
+          const prevPhrase = props.piece.phraseGrid[track][traj.phraseIdx! - 1];
           const pTrajs = prevPhrase.trajectories;
           prevTraj = pTrajs[pTrajs.length - 1];
           if (prevTraj.durArray && prevTraj.durArray.length > 1) {
@@ -1045,8 +1046,8 @@ export default defineComponent({
           } else {
             nextEnd = phrase.startTime! + nextTraj.startTime! + nextTraj.durTot;
           }
-        } else if (props.piece.phrases[traj.phraseIdx! + 1]) {
-          const nextPhrase = props.piece.phrases[traj.phraseIdx! + 1];
+        } else if (props.piece.phraseGrid[track][traj.phraseIdx! + 1]) {
+          const nextPhrase = props.piece.phraseGrid[track][traj.phraseIdx! + 1];
           nextTraj = nextPhrase.trajectories[0];
           if (nextTraj.durArray && nextTraj.durArray.length > 1) {
             let nextTrajTimes = [0, ...nextTraj.durArray!.map(cumsum())];
@@ -1110,7 +1111,8 @@ export default defineComponent({
       SVGCircleElement, Datum, MouseEvent
     >) => {
       const traj = selectedTrajs.value[0];
-      const phrase = props.piece.phrases[traj.phraseIdx!];
+      const track = props.piece.trackFromTraj(traj);
+      const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
       const startTime = phrase.startTime! + traj.startTime!;
       dragDotIdx = Number(e.sourceEvent.target.id.split('dragDot')[1]);
       const trajData = makeTrajData(traj, startTime);
@@ -1181,10 +1183,11 @@ export default defineComponent({
         .attr('cx', x)
         .attr('cy', e.y);
       const traj = selectedTrajs.value[0];
+      const track = props.piece.trackFromTraj(traj);
       const idx = dragDotIdx!;
       const tIdx = traj.num!;
       const pIdx = traj.phraseIdx!;
-      const phrase = props.piece.phrases[pIdx];
+      const phrase = props.piece.phraseGrid[track][pIdx];
       const logFreq = props.yScale.invert(e.y);
       if (traj.logFreqs[idx]) {
         const basePitch = new Pitch(traj.pitches[idx]);
@@ -1198,7 +1201,7 @@ export default defineComponent({
       } else if (idx === 0) {
         const delta = time - (phrase.startTime! + traj.startTime!);
         if (tIdx === 0) {
-          const prevPhrase = props.piece.phrases[pIdx - 1];
+          const prevPhrase = props.piece.phraseGrid[track][pIdx - 1];
           const prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
           updatePrevTraj(prevTraj, delta);
           updateDurArray(traj, delta);
@@ -1224,8 +1227,8 @@ export default defineComponent({
           }
           traj.durTot += delta;
           phrase.durArrayFromTrajectories();
-        } else if (props.piece.phrases[pIdx + 1]) {
-          const nextPhrase = props.piece.phrases[pIdx + 1];
+        } else if (props.piece.phraseGrid[track][pIdx + 1]) {
+          const nextPhrase = props.piece.phraseGrid[track][pIdx + 1];
           const nextTraj = nextPhrase.trajectories[0];
           updateNextTraj(nextTraj, delta);
           nextPhrase.startTime! += delta;
@@ -1264,7 +1267,8 @@ export default defineComponent({
       emit('unsavedChanges', true);
       const idx = dragDotIdx!;
       const traj = selectedTrajs.value[0];
-      const phrase = props.piece.phrases[traj.phraseIdx!];
+      const track = props.piece.trackFromTraj(traj);
+      const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
       const pIdx = traj.phraseIdx!;
       const tIdx = traj.num!;
       const time = constrainTime(e, idx);
@@ -1295,7 +1299,7 @@ export default defineComponent({
       if (idx === 0) {
         if (tIdx === 0) {
           if (pIdx > 0) {
-            const prevPhrase = props.piece.phrases[pIdx - 1];
+            const prevPhrase = props.piece.phraseGrid[track][pIdx - 1];
             const prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
             affectedTrajs.push(prevTraj);
             affectedPhraseDivIdx = phrase.pieceIdx;
@@ -1308,8 +1312,8 @@ export default defineComponent({
         if (tIdx < phrase.trajectories.length - 1) {
           const nextTraj = phrase.trajectories[tIdx + 1];
           affectedTrajs.push(nextTraj);
-        } else if (props.piece.phrases[pIdx + 1]) {
-          const nextPhrase = props.piece.phrases[pIdx + 1];
+        } else if (props.piece.phraseGrid[track][pIdx + 1]) {
+          const nextPhrase = props.piece.phraseGrid[track][pIdx + 1];
           const nextTraj = nextPhrase.trajectories[0];
           affectedTrajs.push(nextTraj);
           affectedPhraseDivIdx = nextPhrase.pieceIdx;
@@ -1340,7 +1344,7 @@ export default defineComponent({
     const refreshTrajChikaris = (traj: Trajectory) => {
       const track = props.piece.trackFromTraj(traj);
       if (props.piece.instrumentation[track] as Instrument === Instrument.Sitar) {
-        const phrase = props.piece.phrases[traj.phraseIdx!];
+        const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
         phrase.chikarisDuringTraj(traj, track).forEach(cd => {
           clearChikari(cd);
           renderChikari(cd);
@@ -1352,7 +1356,7 @@ export default defineComponent({
       if (selectedTrajs.value.length === 1) {
         const traj = selectedTrajs.value[0];
         const track = props.piece.trackFromTrajUId(traj.uniqueId!);
-        const phrase = props.piece.phrases[traj.phraseIdx!];
+        const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
         d3.selectAll('.dragDots').remove();
         const drag = () => {
           return d3.drag<SVGCircleElement, Datum>()
@@ -1542,7 +1546,7 @@ export default defineComponent({
       } else if (e.key === 'Backspace') {
         if (selectedChikari.value !== undefined) {
           const cd = selectedChikari.value;
-          const phrase = props.piece.phrases[cd.phraseIdx];
+          const phrase = props.piece.phraseGrid[cd.track][cd.phraseIdx];
           delete phrase.chikaris[cd.phraseTimeKey];
           clearChikari(cd);
           emit('unsavedChanges', true);
@@ -1574,7 +1578,7 @@ export default defineComponent({
 
     const nudgeChikari = (amt: number) => {
       const cd = selectedChikari.value!;
-      const phrase = props.piece.phrases[cd.phraseIdx];
+      const phrase = props.piece.phraseGrid[cd.track][cd.phraseIdx];
       const newPhraseTime = String(Math.round(100 * (Number(cd.phraseTimeKey) + amt)) / 100);
       const newTime = cd.time + amt;
       phrase.chikaris[newPhraseTime] = cd.chikari;
@@ -1714,7 +1718,8 @@ export default defineComponent({
       const collectedTrajs: Trajectory[] = [];
       const sampleDur = 0.01;
       timelyTrajs.forEach(async (traj, tIdx) => {
-        const phrase = props.piece.phrases[traj.phraseIdx!];
+        const track = props.piece.trackFromTraj(traj);
+        const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
         const trajStart = phrase.startTime! + traj.startTime!;
         const trajEnd = trajStart + traj.durTot;
         let sampleTimes;
@@ -1784,7 +1789,8 @@ export default defineComponent({
         .map(i => props.piece.allTrajectories(i))
         .flat()
         .filter(traj => {
-          const phraseStart = props.piece.phrases[traj.phraseIdx!].startTime!;
+          const track = props.piece.trackFromTraj(traj);
+          const phraseStart = props.piece.phraseGrid[track][traj.phraseIdx!].startTime!;
           const trajStart = phraseStart + traj.startTime!;
           const trajEnd = trajStart + traj.durTot;
           const c1 = trajStart >= startTime && trajStart <= endTime;
@@ -1857,10 +1863,10 @@ export default defineComponent({
       trajObj.id = newIdx;
       const newTraj = new Trajectory(trajObj);
       const pIdx = selectedTraj.value.phraseIdx!;
-      const phrase = props.piece.phrases[pIdx];
-      const tIdx = selectedTraj.value.num!;
       const track = props.piece.trackFromTraj(selectedTraj.value);
-      phrase.trajectoryGrid[track][tIdx] = newTraj;
+      const phrase = props.piece.phraseGrid[track][pIdx];
+      const tIdx = selectedTraj.value.num!;
+      phrase.trajectories[tIdx] = newTraj;
       phrase.assignStartTimes();
       phrase.assignPhraseIdx();
       phrase.assignTrajNums();
