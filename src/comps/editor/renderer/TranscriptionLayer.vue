@@ -405,7 +405,6 @@ export default defineComponent({
     watch(selectedPhraseDivIdx, (newVal) => {
       if (newVal !== undefined) {
         const selector = `.phraseDiv.pIdx${newVal}`;
-        console.log(selector)
         d3.select(selector)
           .attr('stroke', selPhraseDivColor)
       } else {
@@ -417,18 +416,18 @@ export default defineComponent({
       if (newVal !== undefined) {
         const selector = `.chikari.uId${newVal.uId}`;
         const color = props.instTracks[newVal.track].selColor;
-        d3.select(selector)
+        d3.selectAll(selector)
           .attr('stroke', color)
         if (oldVal !== undefined) {
           const oldSelector = `.chikari.uId${oldVal.uId}`;
           const oldColor = props.instTracks[oldVal.track].color;
-          d3.select(oldSelector)
+          d3.selectAll(oldSelector)
             .attr('stroke', oldColor)
         }
       } else if (oldVal !== undefined) {
         const selector = `.chikari.uId${oldVal.uId}`;
         const color = props.instTracks[oldVal.track].color;
-        d3.select(selector)
+        d3.selectAll(selector)
           .attr('stroke', color)
       }
     })
@@ -487,9 +486,15 @@ export default defineComponent({
     const addPhraseDivG = () => {
       if (tranSvg.value) {
         const svg = d3.select(tranSvg.value);
-        svg.append('g')
-          .attr('class', 'phraseDivG')
-          .style('opacity', Number(props.showPhraseDivs))
+        for (let i = 0; i < props.piece.instrumentation.length; i++) {
+          const trackG = tracks[i];
+          trackG.append('g')
+            .attr('class', `phraseDivG`)
+            .style('opacity', Number(props.showPhraseDivs))
+        }
+        // svg.append('g')
+        //   .attr('class', 'phraseDivG')
+        //   .style('opacity', Number(props.showPhraseDivs))
       }
     };
 
@@ -692,7 +697,9 @@ export default defineComponent({
           { x: 5, y: -15 },
           { x: 5, y: 15 }
         ]
-      const g = svg.select('.sargamG');
+      const track = props.piece.trackFromTrajUId(s.uId);
+      const trackG = tracks[track];
+      const g = trackG.select('.sargamG');
       g.append('text')
         .text(s.sargam)
         .attr('x', x + positions[s.pos!].x)
@@ -708,12 +715,13 @@ export default defineComponent({
       const verticalOffset = 14;
       const y = props.yScale(v.logFreq) - verticalOffset;
       const x = props.xScale(v.time);
-      const g = svg.select('.phonemeG');
+      const track = props.piece.trackFromTrajUId(v.uId);
+      const trackG = tracks[track];
+      const g = trackG.select('.phonemeG');
       const choices = ['IPA', 'Devanagari', 'English'];
       const opacities = choices.map(c => {
         return c === props.phonemeRepresentation ? 1 : 0;
       });
-      const track = props.piece.trackFromTrajUId(v.uId);
       const selTs = selectedTrajs.value.map(t => t.uniqueId);
       const color = selTs.includes(v.uId) ? 
         props.instTracks[track].selColor : 
@@ -751,12 +759,13 @@ export default defineComponent({
       const verticalOffset = 14;
       const y = props.yScale(c.logFreq) - verticalOffset;
       const x = props.xScale(c.time);
-      const g = svg.select('.phonemeG');
+      const track = props.piece.trackFromTrajUId(c.uId);
+      const trackG = tracks[track];
+      const g = trackG.select('.phonemeG');
       const choices = ['IPA', 'Devanagari', 'English'];
       const opacities = choices.map(c => {
         return c === props.phonemeRepresentation ? 1 : 0;
       });
-      const track = props.piece.trackFromTrajUId(c.uId);
       const selTs = selectedTrajs.value.map(t => t.uniqueId);
       const color = selTs.includes(c.uId) ? 
         props.instTracks[track].selColor : 
@@ -796,7 +805,8 @@ export default defineComponent({
       const thickness = pd.type === 'section' ? 4 : 2;
       const y1 = props.yScale.range()[0];
       const y2 = props.yScale.range()[1];
-      const g = svg.select('.phraseDivG');
+      const trackG = tracks[pd.track];
+      const g = trackG.select('.phraseDivG');
       g.append('line')
         .attr('x1', x)
         .attr('x2', x)

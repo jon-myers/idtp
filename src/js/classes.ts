@@ -2792,10 +2792,6 @@ class Piece {
     }, [0]);
   }
 
-  allChikaris(inst = 0) {
-
-  }
-
 
   chunkedTrajs(inst = 0, duration = 30) {
     // for all trajs in the piece, return an array of arrays of trajs, each
@@ -2907,7 +2903,8 @@ class Piece {
           type: this.sectionStartsGrid[inst].includes(pIdx) ? 
             'section' : 
             'phrase',
-          idx: pIdx
+          idx: pIdx,
+          track: inst
         })
       }
     });
