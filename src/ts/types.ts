@@ -800,7 +800,8 @@ type PhraseDivDisplayType = {
   time: number,
   type: 'phrase' | 'section',
   idx: number,
-  track: number
+  track: number,
+  uId: string,
 }
 
 type TrajSelectionStatus = {

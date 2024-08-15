@@ -1801,6 +1801,7 @@ class Phrase {
   // chikaris: { [key: string]: Chikari };
   pieceIdx?: number;
   categorizationGrid: PhraseCatType[];
+  uniqueId: string;
   
   constructor({
     trajectories = [],
@@ -1814,6 +1815,7 @@ class Phrase {
     instrumentation = ['Sitar'],
     groupsGrid = undefined,
     categorizationGrid = undefined,
+    uniqueId = undefined,
   }: {
     trajectories?: Trajectory[],
     durTot?: number,
@@ -1826,8 +1828,13 @@ class Phrase {
     instrumentation?: string[],
     groupsGrid?: Group[][],
     categorizationGrid?: PhraseCatType[],
+    uniqueId?: string,
   } = {}) {
-
+    if (uniqueId === undefined) {
+      this.uniqueId = uuidv4();
+    } else {
+      this.uniqueId = uniqueId;
+    }
     this.startTime = startTime;
     this.raga = raga;
     if (trajectoryGrid !== undefined) {
@@ -2186,6 +2193,7 @@ class Phrase {
       instrumentation: this.instrumentation,
       groupsGrid: this.groupsGrid,
       categorizationGrid: this.categorizationGrid,
+      uniqueId: this.uniqueId,
     }
   }
 
@@ -2719,6 +2727,37 @@ class Piece {
     return track
   }
 
+  phraseFromUId(uId: string): Phrase {
+    let phrase: Phrase | undefined = undefined;
+    this.phraseGrid.forEach(ps => {
+      ps.forEach(p => {
+        if (p.uniqueId === uId) {
+          phrase = p
+        }
+      })
+    });
+    if (phrase === undefined) {
+      throw new Error('Phrase not found')
+    }
+    return phrase
+  }
+
+  trackFromPhraseUId(phraseUId: string) {
+    let track: number | undefined = undefined;
+    for (let i = 0; i < this.instrumentation.length; i++) {
+      const phrases = this.phraseGrid[i];
+      const phraseUIds = phrases.map(p => p.uniqueId);
+      if (phraseUIds.includes(phraseUId)) {
+        track = i;
+        break
+      }
+    }
+    if (track === undefined) {
+      throw new Error('Phrase not found')
+    }
+    return track
+  }
+
   allPitches({ repetition=true, pitchNumber=false } = {}, track=0) {
     let allPitches: Pitch[] = [];
     const phrases = this.phraseGrid[track];
@@ -2904,7 +2943,8 @@ class Piece {
             'section' : 
             'phrase',
           idx: pIdx,
-          track: inst
+          track: inst,
+          uId: p.uniqueId
         })
       }
     });

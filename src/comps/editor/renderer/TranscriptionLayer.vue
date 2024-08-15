@@ -137,7 +137,7 @@ export default defineComponent({
       selectedStatus: boolean,
       track: number
     }[][]>([]);
-    const selectedPhraseDivIdx = ref<number | undefined>(undefined);
+    const selectedPhraseDivUid = ref<string | undefined>(undefined);
     const lowOctOffsetRef = toRef(props, 'lowOctOffset');
     const highOctOffsetRef = toRef(props, 'highOctOffset');
     const selectedChikari = ref<ChikariDisplayType | undefined>(undefined);
@@ -402,16 +402,21 @@ export default defineComponent({
       d3.selectAll('.phraseDivG')
         .style('opacity', Number(props.showPhraseDivs))
     });
-    watch(selectedPhraseDivIdx, (newVal) => {
+    watch(selectedPhraseDivUid, (newVal, oldVal) => {
       if (newVal !== undefined) {
-        const selector = `.phraseDiv.pIdx${newVal}`;
+        const selector = `.phraseDiv.uId${newVal}`;
         d3.select(selector)
-          .attr('stroke', selPhraseDivColor)
+          .attr('stroke', selPhraseDivColor);
+        if (oldVal !== undefined) {
+          const oldSelector = `.phraseDiv.uId${oldVal}`;
+          d3.select(oldSelector)
+            .attr('stroke', 'black')
+        }
       } else {
         d3.selectAll('.phraseDiv')
           .attr('stroke', 'black')
       }
-    });
+    })
     watch(selectedChikari, (newVal, oldVal) => {
       if (newVal !== undefined) {
         const selector = `.chikari.uId${newVal.uId}`;
@@ -800,21 +805,22 @@ export default defineComponent({
         .text(c.englishText)
     };
     const renderPhraseDiv = (pd: PhraseDivDisplayType) => {
-      const svg = d3.select(tranSvg.value);
       const x = props.xScale(pd.time);
       const thickness = pd.type === 'section' ? 4 : 2;
       const y1 = props.yScale.range()[0];
       const y2 = props.yScale.range()[1];
       const trackG = tracks[pd.track];
       const g = trackG.select('.phraseDivG');
+      const color = selectedPhraseDivUid.value === pd.uId ? 
+        selPhraseDivColor : 'black';
       g.append('line')
         .attr('x1', x)
         .attr('x2', x)
         .attr('y1', y1)
         .attr('y2', y2)
-        .attr('stroke', 'black')
+        .attr('stroke', color)
         .attr('stroke-width', thickness)
-        .attr('class', `phraseDiv pIdx${pd.idx}`)
+        .attr('class', `phraseDiv pIdx${pd.idx} uId${pd.uId}`)
       g.append('line')
         .attr('x1', x)
         .attr('x2', x)
@@ -825,7 +831,7 @@ export default defineComponent({
         .style('opacity', 0)
         .style('cursor', 'pointer')
         .on('click', () => handleClickPhraseDiv(pd))
-        .attr('class', `phraseDivShadow pIdx${pd.idx}`)
+        .attr('class', `phraseDivShadow pIdx${pd.idx} uId${pd.uId}`)
     }
 
     // clearing / removing functions
@@ -861,10 +867,9 @@ export default defineComponent({
       const g = d3.select('.phonemeG');
       g.selectAll(`.consonantLabel.uId${uId}`).remove();
     };
-    const removePhraseDiv = (pdIdx: number) => {
-      console.log(pdIdx)
+    const removePhraseDiv = (uId: string) => {
       const g = d3.select('.phraseDivG');
-      g.selectAll(`.pIdx${pdIdx}`).remove();
+      g.selectAll(`.uId${uId}`).remove();
     };
     const clearChikari = (cd: ChikariDisplayType) => {
       const g = d3.select('.chikariG');
@@ -928,7 +933,7 @@ export default defineComponent({
       .curve(d3.curveMonotoneX);
 
     const handleClickTraj = (traj: Trajectory, track: number) => {
-      selectedPhraseDivIdx.value = undefined;
+      selectedPhraseDivUid.value = undefined;
       if (!shifted.value) {
         selectedTrajs.value.forEach(traj => {
           const rObj = trajRenderStatus.value.flat().find(obj => {
@@ -952,7 +957,7 @@ export default defineComponent({
 
     const handleClickPhraseDiv = (pd: PhraseDivDisplayType) => {
       clearDragDots();
-      selectedPhraseDivIdx.value = pd.idx;
+      selectedPhraseDivUid.value = pd.uId;
       selectedTrajs.value.forEach(traj => {
         const rObj = trajRenderStatus.value.flat().find(obj => {
           return obj.uniqueId === traj.uniqueId
@@ -965,7 +970,7 @@ export default defineComponent({
 
     const handleClickChikari = (cd: ChikariDisplayType) => {
       selectedChikari.value = cd;
-      selectedPhraseDivIdx.value = undefined;
+      selectedPhraseDivUid.value = undefined;
       selectedTrajs.value.forEach(traj => {
         const rObj = trajRenderStatus.value.flat().find(obj => {
           return obj.uniqueId === traj.uniqueId
@@ -1305,14 +1310,15 @@ export default defineComponent({
         }
       }
       const affectedTrajs = [traj];
-      let affectedPhraseDivIdx = undefined;
+      let affectedPhraseDivUid = undefined;
       if (idx === 0) {
         if (tIdx === 0) {
           if (pIdx > 0) {
             const prevPhrase = props.piece.phraseGrid[track][pIdx - 1];
             const prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
             affectedTrajs.push(prevTraj);
-            affectedPhraseDivIdx = phrase.pieceIdx;
+            affectedPhraseDivUid = phrase.uniqueId;
+            
           }
         } else {
           const prevTraj = phrase.trajectories[tIdx - 1];
@@ -1326,14 +1332,18 @@ export default defineComponent({
           const nextPhrase = props.piece.phraseGrid[track][pIdx + 1];
           const nextTraj = nextPhrase.trajectories[0];
           affectedTrajs.push(nextTraj);
-          affectedPhraseDivIdx = nextPhrase.pieceIdx;
+          affectedPhraseDivUid = nextPhrase.uniqueId;
         }
       }
       affectedTrajs.forEach(traj => refreshTraj(traj));
-      if (affectedPhraseDivIdx !== undefined) {
-        console.log('removing phrase div' + affectedPhraseDivIdx)
-        removePhraseDiv(affectedPhraseDivIdx);
-        const pdObj = props.piece.allPhraseDivs()[affectedPhraseDivIdx - 1];
+      if (affectedPhraseDivUid !== undefined) {
+        removePhraseDiv(affectedPhraseDivUid);
+        const pdObj = props.piece.allPhraseDivs(track).find(pd => {
+          return pd.uId === affectedPhraseDivUid
+        });
+        if (pdObj === undefined) {
+          throw new Error('PhraseDiv not found in allPhraseDivs array');
+        }
         renderPhraseDiv(pdObj);
       }
     };
@@ -1531,7 +1541,7 @@ export default defineComponent({
       });
       clearDragDots();
       selectedChikari.value = undefined;
-      selectedPhraseDivIdx.value = undefined;
+      selectedPhraseDivUid.value = undefined;
     }
 
     const clearDragDots = () => {
@@ -1566,7 +1576,7 @@ export default defineComponent({
         if (selectedChikari.value !== undefined) {
           e.preventDefault();
           nudgeChikari(-.02);
-        } else if (selectedPhraseDivIdx.value !== undefined) {
+        } else if (selectedPhraseDivUid.value !== undefined) {
           e.preventDefault();
           nudgePhraseDiv(-1);
         }
@@ -1574,7 +1584,7 @@ export default defineComponent({
         if (selectedChikari.value !== undefined) {
           e.preventDefault();
           nudgeChikari(.02);
-        } else if (selectedPhraseDivIdx.value !== undefined) {
+        } else if (selectedPhraseDivUid.value !== undefined) {
           e.preventDefault();
           nudgePhraseDiv(1);
         }
@@ -1582,8 +1592,70 @@ export default defineComponent({
     }
 
     const nudgePhraseDiv = (amt: 1 | -1) => {
-      console.log('need to implement nudgePhraseDiv; conceptual issue needs ' +
-        'to be resolved');
+      if (selectedPhraseDivUid.value === undefined) {
+        throw new Error('No phrase div selected');
+      }
+      const phrase = props.piece.phraseFromUId(selectedPhraseDivUid.value);
+      const track = props.piece.trackFromPhraseUId(selectedPhraseDivUid.value);
+      const pIdx = phrase.pieceIdx!;
+      const phrases = props.piece.phraseGrid[track];
+      if (amt === 1) {
+        if (phrase.trajectories.length < 2) {
+          return;
+        }
+        const prevPhrase = phrases[pIdx - 1];
+        const firstTraj = phrase.trajectories[0];
+        prevPhrase.trajectories.push(firstTraj);
+        phrase.trajectories.shift();
+        prevPhrase.durTotFromTrajectories();
+        prevPhrase.durArrayFromTrajectories();
+        prevPhrase.assignStartTimes();
+        phrase.durTotFromTrajectories();
+        phrase.durArrayFromTrajectories();
+        phrase.assignStartTimes();
+        props.piece.durArrayFromPhrases();
+        const divType = props.piece.sectionStartsGrid[track].includes(pIdx) ? 
+          'section' : 'phrase';
+        const pd: PhraseDivDisplayType = {
+          time: phrase.startTime!,
+          type: divType,
+          idx: pIdx,
+          track,
+          uId: phrase.uniqueId
+        };
+        removePhraseDiv(selectedPhraseDivUid.value);
+        renderPhraseDiv(pd);
+      } else {
+        if (pIdx === 0) {
+          return;
+        }
+        const prevPhrase = phrases[pIdx - 1];
+        if (prevPhrase.trajectories.length < 2) {
+          console.log('thiss hould stop things')
+          return;
+        }
+        const lastTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
+        prevPhrase.trajectories.pop();
+        phrase.trajectories.unshift(lastTraj);
+        prevPhrase.durTotFromTrajectories();
+        prevPhrase.durArrayFromTrajectories();
+        prevPhrase.assignStartTimes();
+        phrase.durTotFromTrajectories();
+        phrase.durArrayFromTrajectories();
+        phrase.assignStartTimes();
+        props.piece.durArrayFromPhrases();
+        const divType = props.piece.sectionStartsGrid[track].includes(pIdx) ? 
+          'section' : 'phrase';
+        const pd: PhraseDivDisplayType = {
+          time: phrase.startTime!,
+          type: divType,
+          idx: pIdx,
+          track,
+          uId: phrase.uniqueId
+        };
+        removePhraseDiv(selectedPhraseDivUid.value);
+        renderPhraseDiv(pd);
+      }
     };
 
     const nudgeChikari = (amt: number) => {
