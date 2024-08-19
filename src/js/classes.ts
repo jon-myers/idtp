@@ -3618,6 +3618,31 @@ class Raga {
     return names
   }
 
+  get swaraObjects() {
+    const swaraObjs: { swara: number, raised: boolean }[] = [];
+    const sargam = Object.keys(this.ruleSet);
+    let idx = 0;
+    sargam.forEach(s => {
+      if (typeof(this.ruleSet[s]) === 'object') {
+        const obj = this.ruleSet[s] as BoolObj;
+        if (obj.lowered) {
+          swaraObjs.push({ swara: idx, raised: false });
+        }
+        if (obj.raised) {
+          swaraObjs.push({ swara: idx, raised: true });
+        }
+        idx++;
+      } else {
+        if (this.ruleSet[s]) {
+          swaraObjs.push({ swara: idx, raised: true });
+        }
+        idx++;
+      }
+    });
+    return swaraObjs
+  }
+
+
   pitchFromLogFreq(logFreq: number) {
     const options = this.getFrequencies({ low: 75, high: 2400 })
       .map(f => Math.log2(f));

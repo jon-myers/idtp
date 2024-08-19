@@ -135,6 +135,7 @@ export default defineComponent({
     const emptyDivs = ref<HTMLDivElement[]>([]);
     const editorMode = ref<EditorMode>(EditorMode.None);
     const shifted = ref<boolean>(false);
+    const alted = ref<boolean>(false);
     const trajRenderStatus = ref<{ 
       uniqueId: string, 
       renderStatus: boolean,
@@ -146,10 +147,12 @@ export default defineComponent({
     const highOctOffsetRef = toRef(props, 'highOctOffset');
     const selectedChikari = ref<ChikariDisplayType | undefined>(undefined);
     const currentTrack = ref<number>(0);
+    const selectedDragDotIdx = ref<number | undefined>(undefined);
 
     let justDeletedPhraseDiv = false;
     const selPhraseDivColor = 'red';
     const dragDotColor = 'purple';
+    const selectedDragDotColor = '#d602d6';
     let dragDotIdx: number | undefined = undefined;
     let dragShadowTraj: Trajectory | undefined = undefined;
     const minTrajDur = 0.05;
@@ -961,7 +964,6 @@ export default defineComponent({
         });
         phrase.trajectories.splice(traj.num!, 1, silentTraj);
         if (phrase.trajectories.length > traj.num! + 1) {
-          console.log('getting here')
           const nextTraj = phrase.trajectories[traj.num! + 1];
           if (nextTraj.id !== 12) {
             refreshVowel(nextTraj.uniqueId!)
@@ -1106,10 +1108,8 @@ export default defineComponent({
       y: number
     }
 
-    const constrainTime = (e: MouseEvent | 
-        d3.D3DragEvent<SVGCircleElement, Datum, MouseEvent>,
-        idx: number) => {
-      let time = props.xScale.invert(e.x);
+    const constrainTime = (initTime: number, idx: number) => {
+      let time = initTime;
       const traj = selectedTrajs.value[0];
       const track = props.piece.trackFromTraj(traj);
       const tIdx = traj.num!;
@@ -1246,6 +1246,7 @@ export default defineComponent({
     const dragDotStart = (e: d3.D3DragEvent<
       SVGCircleElement, Datum, MouseEvent
     >) => {
+      if (alted.value) return;
       const traj = selectedTrajs.value[0];
       const track = props.piece.trackFromTraj(traj);
       const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
@@ -1313,7 +1314,9 @@ export default defineComponent({
 
 
     const dragDotMove = (e: d3.D3DragEvent<SVGCircleElement, Datum, MouseEvent>) => {
-      const time = constrainTime(e, dragDotIdx!);
+      if (alted.value) return;
+      const initTime = props.xScale.invert(e.x);
+      const time = constrainTime(initTime, dragDotIdx!);
       const x = props.xScale(time);
       d3.select(`#dragDot${dragDotIdx}`)
         .attr('cx', x)
@@ -1395,6 +1398,7 @@ export default defineComponent({
     const dragDotEnd = (e: d3.D3DragEvent<
       SVGCircleElement, Datum, MouseEvent
     >) => {
+      if (alted.value) return;
       dragDotMove(e);
       d3.selectAll('.dragShadowTraj').remove();
       emit('unsavedChanges', true);
@@ -1404,7 +1408,8 @@ export default defineComponent({
       const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
       const pIdx = traj.phraseIdx!;
       const tIdx = traj.num!;
-      const time = constrainTime(e, idx);
+      const initTime = props.xScale.invert(e.x);
+      const time = constrainTime(initTime, idx);
       let logFreq = props.yScale.invert(e.y);
       if (props.sargamMagnetMode) {
         logFreq = getClosest(logSargamVals.value, logFreq);
@@ -1503,8 +1508,8 @@ export default defineComponent({
           .on('end', dragDotEnd)
         };
         const dragDotsG = d3.select(tranSvg.value)
-        .append('g')
-        .attr('class', `dragDots track${track}` )
+          .append('g')
+          .attr('class', `dragDots track${track}` )
         let times = [0, ...traj.durArray!.map(cumsum())];
         const startTime = phrase.startTime! + traj.startTime!;
         times = times.map(t => t * traj.durTot + startTime);
@@ -1512,14 +1517,17 @@ export default defineComponent({
           return traj.logFreqs[i] || traj.logFreqs[i - 1]
         });
         times.forEach((t, i) => {
+          const color = selectedDragDotIdx.value === i ? 
+            selectedDragDotColor : dragDotColor;
           dragDotsG.append('circle')
             .attr('id', `dragDot${i}`)
             .attr('class', `track${track}`)
             .attr('cx', props.xScale(t))
             .attr('cy', props.yScale(logFreqs[i]))
             .attr('r', 4)
-            .style('fill', dragDotColor)
+            .style('fill', color)
             .style('cursor', 'pointer')
+            .on('click', handleClickDragDot)
         })
         if (props.editable) {
           (dragDotsG.selectAll('circle') as d3.Selection<
@@ -1529,6 +1537,18 @@ export default defineComponent({
         }
       } else {
         d3.selectAll('.dragDots').remove();
+      }
+    }
+
+    const handleClickDragDot = (e: MouseEvent) => {
+      if (alted.value) {
+        e.preventDefault();
+        const target = e.target as SVGCircleElement;
+        const idx = Number(target.id.split('dragDot')[1]);
+        const traj = selectedTrajs.value[0];
+        d3.select(`#dragDot${idx}`)
+          .style('fill', selectedDragDotColor);
+        selectedDragDotIdx.value = idx;
       }
     }
 
@@ -1704,6 +1724,9 @@ export default defineComponent({
         } else if (selectedPhraseDivUid.value !== undefined) {
           e.preventDefault();
           nudgePhraseDiv(-1);
+        } else if (selectedDragDotIdx.value !== undefined) {
+          e.preventDefault();
+          nudgeDragDot('left')
         }
       } else if (e.key === 'ArrowRight') {
         if (selectedChikari.value !== undefined) {
@@ -1712,6 +1735,19 @@ export default defineComponent({
         } else if (selectedPhraseDivUid.value !== undefined) {
           e.preventDefault();
           nudgePhraseDiv(1);
+        } else if (selectedDragDotIdx.value !== undefined) {
+          e.preventDefault();
+          nudgeDragDot('right')
+        }
+      } else if (e.key === 'ArrowDown') {
+        if (selectedDragDotIdx.value !== undefined) {
+          e.preventDefault();
+          nudgeDragDot('down')
+        }
+      } else if (e.key === 'ArrowUp') {
+        if (selectedDragDotIdx.value !== undefined) {
+          e.preventDefault();
+          nudgeDragDot('up')
         }
       } else if (e.key === 'Tab') {
         e.preventDefault();
@@ -1720,6 +1756,8 @@ export default defineComponent({
         } else {
           moveToNextPhrase();
         }
+      } else if (e.key === 'Alt') {
+        alted.value = true;
       }
     }
 
@@ -1810,12 +1848,208 @@ export default defineComponent({
       nextTick(() => {
         renderChikari(newCd);
       });
-      
+    };
+
+    const nudgeDragDot = (dir: 'left' | 'right' | 'up' | 'down') => {
+      const traj = selectedTraj.value!;
+      const track = props.piece.trackFromTraj(traj);
+      const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
+      const trajStart = phrase.startTime! + traj.startTime!;
+      const idx = selectedDragDotIdx.value!;
+      const summedDurArr = [0, ...traj.durArray!].map(cumsum())[idx];
+      const curTime = trajStart + summedDurArr * traj.durTot;
+      const amt = 0.01;
+      const logAmt = 0.0025;
+      let newTime = curTime;
+      let newLogFreq = traj.logFreqs.length > idx ? traj.logFreqs[idx] : 
+        traj.logFreqs[idx - 1];
+      if (dir === 'left') {
+        newTime = constrainTime(curTime - amt, idx);
+        const x = props.xScale(newTime);
+        d3.select(`#dragDot${idx}`)
+          .attr('cx', x);
+      } else if (dir === 'right') {
+        newTime = constrainTime(curTime + amt, idx);
+        const x = props.xScale(newTime);
+        d3.select(`#dragDot${idx}`)
+          .attr('cx', x);
+        
+      } else if (dir === 'up') {
+        if (props.sargamMagnetMode) {
+          const curPitch = traj.pitches[idx];
+          const swaraObjs = props.piece.raga.swaraObjects;
+          const swaraIdx = swaraObjs.findIndex(sObj => {
+            const c1 = sObj.swara === curPitch.swara;
+            const c2 = sObj.raised === curPitch.raised;
+            return c1 && c2;
+          })
+          const newSwaraIdx = (swaraIdx + 1) % swaraObjs.length;
+          let oct = curPitch.oct;
+          if (newSwaraIdx === 0) {
+            oct += 1;
+          }
+          const newPitch = new Pitch({
+            swara: swaraObjs[newSwaraIdx].swara,
+            raised: swaraObjs[newSwaraIdx].raised,
+            oct,
+            fundamental: props.piece.raga.fundamental,
+            ratios: curPitch.ratios
+          });
+          newLogFreq = newPitch.logFreq;
+        } else {
+          newLogFreq = newLogFreq + logAmt;
+        }
+      } else if (dir === 'down') {
+        if (props.sargamMagnetMode) {
+          const curPitch = traj.pitches[idx];
+          const swaraObjs = props.piece.raga.swaraObjects;
+          const swaraIdx = swaraObjs.findIndex(sObj => {
+            const c1 = sObj.swara === curPitch.swara;
+            const c2 = sObj.raised === curPitch.raised;
+            return c1 && c2;
+          })
+          if (swaraIdx === -1) {
+            throw new Error('Swara not found in swaraObjects');
+          }
+          let newSwaraIdx = (swaraIdx - 1) % swaraObjs.length;
+          while (newSwaraIdx < 0) {
+            newSwaraIdx += swaraObjs.length;
+          }
+          let oct = curPitch.oct;
+          if (newSwaraIdx === swaraObjs.length - 1) {
+            oct -= 1;
+          }
+          const newPitch = new Pitch({
+            swara: swaraObjs[newSwaraIdx].swara,
+            raised: swaraObjs[newSwaraIdx].raised,
+            oct: oct,
+            fundamental: props.piece.raga.fundamental,
+            ratios: curPitch.ratios
+          });
+          newLogFreq = newPitch.logFreq;
+        } else {
+          newLogFreq = newLogFreq - logAmt;
+        }
+      }
+      const newPitch = () => {
+        return props.piece.raga.pitchFromLogFreq(newLogFreq)
+      }
+      const y = props.yScale(newLogFreq);
+      if (traj.logFreqs[idx]) {
+        traj.pitches[idx] = newPitch();
+        if (idx === 0 && traj.id === 0) {
+          traj.pitches[1] = newPitch();
+          d3.select(`#dragDot1`)
+            .attr('cy', y);
+        } else if (idx === 1 && traj.id === 0) {
+          traj.pitches[0] = newPitch();
+          d3.select(`#dragDot0`)
+            .attr('cy', y);
+        }
+      }
+
+      if (idx > 0 && idx < traj.durArray!.length) {
+        const newDurArray = calculateNewDurArray(phrase, traj, idx, newTime);
+        traj.durArray = newDurArray;
+      } else if (idx === 0) {
+        const delta = newTime - (phrase.startTime! + traj.startTime!);
+        if (traj.num === 0) {
+          const prevPhrase = props.piece.phraseGrid[track][traj.phraseIdx! - 1];
+          const prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
+          updatePrevTraj(prevTraj, delta);
+          updateDurArray(traj, delta);
+          traj.durTot -= delta;
+          phrase.startTime! += delta;
+          updatePhraseChikaris(phrase, delta);
+        } else {
+          const prevTraj = phrase.trajectories[traj.num! - 1];
+          updatePrevTraj(prevTraj, delta);
+          updateDurArray(traj, delta);
+          traj.durTot -= delta;
+          phrase.durArrayFromTrajectories();
+          phrase.assignStartTimes();
+        }
+      } else if (idx === traj.durArray!.length) {
+        const delta = newTime - (phrase.startTime! + traj.startTime! + traj.durTot);
+        if (traj.num! < phrase.trajectories.length - 1) {
+          const nextTraj = phrase.trajectories[traj.num! + 1];
+          updateNextTraj(nextTraj, delta);
+          if (traj.durArray!.length > 1) {
+            traj.durArray = newDurArrayZ(traj, delta);
+          }
+          traj.durTot += delta;
+          phrase.durArrayFromTrajectories();
+        } else if (props.piece.phraseGrid[track][traj.phraseIdx! + 1]) {
+          const nextPhrase = props.piece.phraseGrid[track][traj.phraseIdx! + 1];
+          const nextTraj = nextPhrase.trajectories[0];
+          updateNextTraj(nextTraj, delta);
+          nextPhrase.startTime! += delta;
+          nextPhrase.durArrayFromTrajectories();
+          nextPhrase.assignStartTimes();
+          const tda = traj.durArray!;
+          if (tda.length > 1) {
+            const initPartZ = tda[tda.length - 1] * traj.durTot;
+            const newDur = traj.durTot + delta;
+            const newPropZ = (initPartZ + delta) / newDur;
+            const newDurArray = tda.map((i => i * traj.durTot / newDur));
+            newDurArray[tda.length - 1] = newPropZ;
+            traj.durArray = newDurArray;
+          }
+          traj.durTot += delta;
+          phrase.durArrayFromTrajectories();
+          phrase.assignStartTimes();
+          updatePhraseChikaris(nextPhrase, delta);
+        }
+        
+      }
+      const affectedTrajs = [traj];
+      let affectedPhraseDivUid = undefined;
+      const tIdx = traj.num!;
+      const pIdx = traj.phraseIdx!;
+      if (idx === 0) {
+        if (tIdx === 0) {
+          if (pIdx > 0) {
+            const prevPhrase = props.piece.phraseGrid[track][pIdx - 1];
+            const prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
+            affectedTrajs.push(prevTraj);
+            affectedPhraseDivUid = phrase.uniqueId;
+            
+          }
+        } else {
+          const prevTraj = phrase.trajectories[tIdx - 1];
+          affectedTrajs.push(prevTraj);
+        }
+      } else if (idx === traj.durArray!.length) {
+        if (tIdx < phrase.trajectories.length - 1) {
+          const nextTraj = phrase.trajectories[tIdx + 1];
+          affectedTrajs.push(nextTraj);
+        } else if (props.piece.phraseGrid[track][pIdx + 1]) {
+          const nextPhrase = props.piece.phraseGrid[track][pIdx + 1];
+          const nextTraj = nextPhrase.trajectories[0];
+          affectedTrajs.push(nextTraj);
+          affectedPhraseDivUid = nextPhrase.uniqueId;
+        }
+      }
+      affectedTrajs.forEach(traj => refreshTraj(traj));
+
+      if (affectedPhraseDivUid !== undefined) {
+        removePhraseDiv(affectedPhraseDivUid);
+        const pdObj = props.piece.allPhraseDivs(track).find(pd => {
+          return pd.uId === affectedPhraseDivUid
+        });
+        if (pdObj === undefined) {
+          throw new Error('PhraseDiv not found in allPhraseDivs array');
+        }
+        renderPhraseDiv(pdObj);
+      }
+      emit('unsavedChanges', true);
     }
 
     const handleKeyup = (e: KeyboardEvent) => {
       if (e.key === 'Shift') {
         shifted.value = false;
+      } else if (e.key === 'Alt') {
+        alted.value = false;
       }
     }
 
@@ -2048,7 +2282,6 @@ export default defineComponent({
     };
 
     const refreshVowel = (trajUId: string) => {
-      console.log('refreshing vowel')
       const track = props.piece.trackFromTrajUId(trajUId);
       const vowelDisplayObjs = props.piece.allDisplayVowels(track)
         .filter(obj => obj.uId === trajUId);

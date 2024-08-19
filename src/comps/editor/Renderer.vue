@@ -111,7 +111,7 @@ import {
   PropType,
   computed,
 } from 'vue';
-import { debounce } from 'lodash';
+import { throttle } from 'lodash';
 
 import SpectrogramLayer from '@/comps/editor/renderer/SpectrogramLayer.vue';
 import XAxis from '@/comps/editor/renderer/XAxis.vue';
@@ -351,34 +351,40 @@ export default defineComponent({
       scrollingContainer.value!.scrollLeft = x;
       resetYScroll();
     }
+
+    const updateAxesScroll = throttle(() => {
+      xAxisContainer.value!.scrollLeft = scrollingContainer.value!.scrollLeft;
+      yAxisContainer.value!.scrollTop = scrollingContainer.value!.scrollTop;
+    }, 16);
     
 
     onMounted(async () => {
       updateClientWidth();
-      // scrollingContainer.value?.addEventListener('scroll', () => {
-      //   if (!isXScrolling && !isYScrolling) {
+      scrollingContainer.value?.addEventListener('scroll', () => {
+        updateAxesScroll();
+        // if (!isXScrolling && !isYScrolling) {
+        //   isXScrolling = true;
+        //   isYScrolling = true;
+        //   xAxisContainer.value!.scrollLeft = scrollingContainer.value!.scrollLeft;
+        //   yAxisContainer.value!.scrollTop = scrollingContainer.value!.scrollTop;
+        //   isXScrolling = false;
+        //   isYScrolling = false
+        // }
+      });
+      // xAxisContainer.value?.addEventListener('scroll', () => {
+      //   if (!isXScrolling) {
       //     isXScrolling = true;
-      //     isYScrolling = true;
-      //     xAxisContainer.value!.scrollLeft = scrollingContainer.value!.scrollLeft;
-      //     yAxisContainer.value!.scrollTop = scrollingContainer.value!.scrollTop;
+      //     scrollingContainer.value!.scrollLeft = xAxisContainer.value!.scrollLeft
       //     isXScrolling = false;
-      //     isYScrolling = false
       //   }
       // });
-      xAxisContainer.value?.addEventListener('scroll', () => {
-        if (!isXScrolling) {
-          isXScrolling = true;
-          scrollingContainer.value!.scrollLeft = xAxisContainer.value!.scrollLeft
-          isXScrolling = false;
-        }
-      });
-      yAxisContainer.value?.addEventListener('scroll', () => {
-        if (!isYScrolling) {
-          isYScrolling = true;
-          scrollingContainer.value!.scrollTop = yAxisContainer.value!.scrollTop
-          isYScrolling = false;
-        }
-      });
+      // yAxisContainer.value?.addEventListener('scroll', () => {
+      //   if (!isYScrolling) {
+      //     isYScrolling = true;
+      //     scrollingContainer.value!.scrollTop = yAxisContainer.value!.scrollTop
+      //     isYScrolling = false;
+      //   }
+      // });
       window.addEventListener('resize', updateClientWidth);
       const durTot = props.piece.durTot;
       if (durTot === undefined) {
