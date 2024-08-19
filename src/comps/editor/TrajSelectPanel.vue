@@ -159,6 +159,7 @@
         name='phraseDiv' 
         v-model='phraseDivType' 
         value='phrase'
+        @change='updatePhraseDivType'
         >
       </div>
       <div class='selectionRow'>
@@ -166,7 +167,8 @@
         <input 
         type='radio' 
         name='phraseDiv' 
-        v-model='phraseDivType' 
+        v-model='phraseDivType'
+        @change='updatePhraseDivType'
         value='section'
         >
       </div>
@@ -324,7 +326,7 @@ import { select as d3Select } from 'd3';
 import { getIpaVowels, getConsonants } from '@/js/serverCalls.ts';
 import { PropType, defineComponent } from 'vue';
 import { initSecCategorization, Piece, Trajectory } from '@/js/classes.ts';
-import { TrajSelectionStatus } from '@/ts/types.ts';
+import { TrajSelectionStatus, PhraseDivDisplayType } from '@/ts/types.ts';
 import { Instrument } from '@/ts/enums.ts';
 
 type TrajSelectPanelDataType = {
@@ -342,7 +344,7 @@ type TrajSelectPanelDataType = {
   initUp: boolean,
   extent: number,
   dampen: boolean,
-  showPhraseRadio: boolean,
+  // showPhraseRadio: boolean,
   phraseDivType?: 'phrase' | 'section',
   trajIdxs: number[],
   urlsFiltered: string[],
@@ -390,7 +392,7 @@ export default defineComponent({
       initUp: true,
       extent: 0.05,
       dampen: false,
-      showPhraseRadio: false,
+      // showPhraseRadio: false,
       phraseDivType: undefined,
       trajIdxs: [],
       urlsFiltered: [],
@@ -433,10 +435,10 @@ export default defineComponent({
       type: Number,
       required: true
     },
-    selectedPhraseDivIdx: {
-      type: Number,
-      required: false
-    },
+    // selectedPhraseDivIdx: {
+    //   type: Number,
+    //   required: false
+    // },
     piece: {
       type: Object as PropType<Piece>,
       required: true,
@@ -459,6 +461,10 @@ export default defineComponent({
     },
     trajSelStatus: {
       type: Object as PropType<TrajSelectionStatus>,
+      required: false
+    },
+    selectedPhraseDivUid: {
+      type: String,
       required: false
     }
   },
@@ -525,6 +531,9 @@ export default defineComponent({
     canShiftUp() {
       return this.selectedFreqMax * 2 < this.freqMax;
     },
+    showPhraseRadio() {
+      return this.selectedPhraseDivUid !== undefined;
+    }
   },
   watch: {
     selectedIdx(newVal) {
@@ -559,41 +568,6 @@ export default defineComponent({
         this.octShiftTop = this.showSlope ? 97 : 75;
       } else {
         this.octShiftTop = 4;
-      }
-    },
-
-    phraseDivType(newVal, oldVal) {
-      if (oldVal !== undefined && newVal !== undefined) {
-        const realPhraseStart = this.selectedPhraseDivIdx! + 1;
-        if (newVal === 'phrase' && oldVal == 'section') {
-          const piece = this.piece!;
-          const starts = piece.sectionStarts;
-          if (starts === undefined) {
-            throw new Error('starts is undefined')
-          }
-          piece.sectionStarts = starts.filter((s, sIdx) => {
-            const bool = s !== realPhraseStart;
-            if (!bool) {
-              piece.sectionCategorization.splice(sIdx, 1);
-            }
-            return bool
-          });
-          d3Select(`#phraseLine${realPhraseStart-1}`)
-            .attr('stroke-width', '2px')
-        } else if (newVal === 'section' && oldVal == 'phrase') {
-          const piece = this.piece!;
-          const starts = piece.sectionStarts;
-          if (starts === undefined) {
-            throw new Error('starts is undefined')
-          }
-          piece.sectionStarts = [...starts, realPhraseStart];
-          piece.sectionStarts.sort((a, b) => a - b);
-          const newIdx = piece.sectionStarts.indexOf(realPhraseStart);
-          piece.sectionCategorization
-            .splice(newIdx, 0, initSecCategorization());
-          d3Select(`#phraseLine${realPhraseStart-1}`)
-            .attr('stroke-width', '4px')
-        }
       }
     },
 
@@ -653,10 +627,37 @@ export default defineComponent({
         this.periods = 8;
         this.vowel = 'a';
       }
+    },
+
+    selectedPhraseDivUid(newVal) {
+      if (newVal !== undefined) {
+        const phrase = this.piece!.phraseFromUId(newVal);
+        const pIdx = phrase.pieceIdx!;
+        const track = this.piece!.trackFromPhraseUId(newVal);
+        const isSectionDiv = this.piece.sectionStartsGrid[track].includes(pIdx);
+        this.phraseDivType = isSectionDiv ? 'section' : 'phrase';
+      }
     }
   },
 
   methods: {
+
+    updatePhraseDivType() {
+      const phrase = this.piece!.phraseFromUId(this.selectedPhraseDivUid!);
+      const track = this.piece!.trackFromPhraseUId(this.selectedPhraseDivUid!);
+      const pIdx = phrase.pieceIdx!;
+      const ss = this.piece.sectionStartsGrid[track];
+      if (this.phraseDivType === 'section') {
+        ss.push(pIdx);
+        ss.sort((a, b) => a - b);
+      } else {
+        this.piece.sectionStartsGrid[track] = ss.filter(idx => idx !== pIdx); 
+      }
+      const pdObj: PhraseDivDisplayType = this.piece.allPhraseDivs(track)
+          .find(pd => pd.uId === this.selectedPhraseDivUid)!;
+      this.$emit('update:phraseDivRendering', pdObj);
+      this.$emit('unsavedChanges', true);
+    },
 
     shiftOct(offset = 1) {
       const sts = this.selectedTrajs;

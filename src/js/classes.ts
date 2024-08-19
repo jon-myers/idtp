@@ -1194,6 +1194,14 @@ class Trajectory {
     return Math.max(...this.freqs)
   }
 
+  get minLogFreq() {
+    return Math.min(...this.logFreqs)
+  }
+
+  get maxLogFreq() {
+    return Math.max(...this.logFreqs)
+  }
+
   get endTime() {
     if (this.startTime === undefined) return undefined
     return this.startTime + this.durTot
@@ -2048,6 +2056,7 @@ class Phrase {
     });
     const newTs = this.trajectories.filter(traj => {
       if (traj.num === undefined) {
+        console.log(traj)
         throw new Error('traj.num is undefined')
       }
       return !delIdxs.includes(traj.num)

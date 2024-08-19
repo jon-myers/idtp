@@ -121,7 +121,11 @@ export default defineComponent({
     sargamMagnetMode: {
       type: Boolean,
       required: true
-    }
+    },
+    scrollingContainer: {
+      type: Object as PropType<HTMLElement>,
+      required: true
+    },
   },
   setup(props, { emit }) {
     const tranContainer = ref<HTMLDivElement | null>(null);
@@ -141,7 +145,9 @@ export default defineComponent({
     const lowOctOffsetRef = toRef(props, 'lowOctOffset');
     const highOctOffsetRef = toRef(props, 'highOctOffset');
     const selectedChikari = ref<ChikariDisplayType | undefined>(undefined);
+    const currentTrack = ref<number>(0);
 
+    let justDeletedPhraseDiv = false;
     const selPhraseDivColor = 'red';
     const dragDotColor = 'purple';
     let dragDotIdx: number | undefined = undefined;
@@ -332,6 +338,7 @@ export default defineComponent({
           const renderObj = trajRenderStatus.value.flat().find(obj => {
             return obj.uniqueId === traj.uniqueId
           });
+          if (renderObj === undefined) return;
           const track = renderObj!.track;
           const selector = `.traj.uId${traj.uniqueId!}`;
           d3.selectAll(selector)
@@ -404,17 +411,30 @@ export default defineComponent({
     });
     watch(selectedPhraseDivUid, (newVal, oldVal) => {
       if (newVal !== undefined) {
+        const track = props.piece.trackFromPhraseUId(newVal);
+        const selColor = props.instTracks[track].selColor;
+        const normColor = props.instTracks[track].color;
         const selector = `.phraseDiv.uId${newVal}`;
         d3.select(selector)
-          .attr('stroke', selPhraseDivColor);
+          .attr('stroke', selColor);
         if (oldVal !== undefined) {
           const oldSelector = `.phraseDiv.uId${oldVal}`;
           d3.select(oldSelector)
-            .attr('stroke', 'black')
+            .attr('stroke', normColor)
         }
+        emit('update:selPhraseDivUid', newVal);
       } else {
-        d3.selectAll('.phraseDiv')
-          .attr('stroke', 'black')
+        if (justDeletedPhraseDiv) {
+          justDeletedPhraseDiv = false;
+          return;
+        } else {
+          const track = props.piece.trackFromPhraseUId(oldVal!);
+          const normColor = props.instTracks[track].color;
+          const selector = `.phraseDiv.uId${oldVal}`;
+          d3.select(selector)
+            .attr('stroke', normColor)
+          emit('update:selPhraseDivUid', undefined);
+        }      
       }
     })
     watch(selectedChikari, (newVal, oldVal) => {
@@ -812,7 +832,7 @@ export default defineComponent({
       const trackG = tracks[pd.track];
       const g = trackG.select('.phraseDivG');
       const color = selectedPhraseDivUid.value === pd.uId ? 
-        selPhraseDivColor : 'black';
+        props.instTracks[pd.track].selColor : props.instTracks[pd.track].color;
       g.append('line')
         .attr('x1', x)
         .attr('x2', x)
@@ -876,8 +896,6 @@ export default defineComponent({
       g.selectAll(`.uId${cd.uId}`).remove();
     };
 
-
-
     const resetTranscription = () => {
       clearTranscription();
       const selectedTrajUIds = selectedTrajs.value.map(t => t.uniqueId!);
@@ -894,7 +912,74 @@ export default defineComponent({
       addChikariG();
       clearDragDots();
       refreshDragDots();
-      
+    };
+
+    const deletePhraseDiv = (uId: string) => {
+      const phrase = props.piece.phraseFromUId(uId);
+      const track = props.piece.trackFromPhraseUId(uId);
+      const prevPhrase = props.piece.phraseGrid[track][phrase.pieceIdx! - 1];
+      prevPhrase.trajectories.push(...phrase.trajectories);
+      prevPhrase.consolidateSilentTrajs();
+      // I believe the next three lines are included in consolidateSilentTrajs
+      // prevPhrase.durTotFromTrajectories();
+      // prevPhrase.durArrayFromTrajectories();
+      // prevPhrase.assignStartTimes();
+      props.piece.phraseGrid[track].splice(phrase.pieceIdx!, 1);
+      props.piece.durArrayFromPhrases();
+      removePhraseDiv(uId);
+      justDeletedPhraseDiv = true;
+      selectedPhraseDivUid.value = undefined;
+      emit('unsavedChanges', true);
+    }
+
+    const deleteTrajs = (trajs: Trajectory[]) => {
+      const affectedPhrases: Phrase[] = [];
+      trajs.forEach(traj => {
+        removeTraj(traj);
+        clearSargam(traj.uniqueId!)
+
+        const track = props.piece.trackFromTraj(traj);
+        const inst = props.piece.instrumentation[track] as Instrument;
+        if (inst === Instrument.Vocal_M || inst === Instrument.Vocal_F) {
+          clearVowel(traj.uniqueId!);
+          clearEndingConsonant(traj.uniqueId!);
+        }
+        trajRenderStatus.value[track] = trajRenderStatus.value[track]
+          .filter(obj => {
+            return obj.uniqueId !== traj.uniqueId
+          });
+        const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
+        if (affectedPhrases.indexOf(phrase) === -1) {
+          affectedPhrases.push(phrase);
+        }
+        const silentTraj = new Trajectory({
+          id: 12,
+          durTot: traj.durTot,
+          fundID12: traj.fundID12,
+          instrumentation: props.piece.instrumentation[track],
+          num: traj.num,
+        });
+        phrase.trajectories.splice(traj.num!, 1, silentTraj);
+        if (phrase.trajectories.length > traj.num! + 1) {
+          console.log('getting here')
+          const nextTraj = phrase.trajectories[traj.num! + 1];
+          if (nextTraj.id !== 12) {
+            refreshVowel(nextTraj.uniqueId!)
+          }
+          for (let add = 1; add + traj!.num! < phrase.trajectories.length; add++) {
+            const laterTraj = phrase.trajectories[traj.num! + add];
+            if (laterTraj.id !== 12) {
+              refreshSargam(laterTraj.uniqueId!);
+            }
+          }
+        }
+        refreshDragDots();
+      })
+      affectedPhrases.forEach(p => {
+        p.consolidateSilentTrajs();
+      })
+      props.piece.durArrayFromPhrases();
+      emit('unsavedChanges', true);
     }
 
     const initializeTracks = () => {
@@ -925,6 +1010,42 @@ export default defineComponent({
       return drawYs.map((y, idx) => {
         return { x: drawTimes[idx], y }
       });
+    };
+
+    const moveToPhraseUid = (uId: string) => {
+      const phrase = props.piece.phraseFromUId(uId);
+      const time = phrase.startTime!;
+      const x = props.xScale(time);
+      emit('moveToX', x);
+    }
+
+    const currentPhrase = () => {
+      const tolerance = 0.1;
+      const time = props.xScale.invert(props.scrollingContainer.scrollLeft);
+      const starts = props.piece.phraseGrid[currentTrack.value]
+        .map(p => p.startTime!);
+      const idx = starts.reduceRight((lastIndex, t, index) => {
+        return t <= time + tolerance && lastIndex === -1 ? index : lastIndex;
+      }, -1);
+      return [currentTrack.value, idx];
+    }
+
+    const moveToPhrase = (track: number, phraseIdx: number) => {
+      const phrase = props.piece.phraseGrid[track][phraseIdx];
+      moveToPhraseUid(phrase.uniqueId);
+    };
+    const moveToNextPhrase = () => {
+      const [track, idx] = currentPhrase();
+      if (idx < props.piece.phraseGrid[track].length - 1) {
+        moveToPhrase(track, idx + 1);
+      }
+    };
+
+    const moveToPrevPhrase = () => {
+      const [track, idx] = currentPhrase();
+      if (idx > 0) {
+        moveToPhrase(track, idx - 1);
+      }
     };
 
     const trajCurve = d3.line<{ x: number, y: number }>()
@@ -1228,7 +1349,6 @@ export default defineComponent({
           updatePrevTraj(prevTraj, delta);
           updateDurArray(traj, delta);
           traj.durTot -= delta;
-          phrase.durTotFromTrajectories();
           phrase.durArrayFromTrajectories();
           phrase.assignStartTimes();
         }
@@ -1247,7 +1367,6 @@ export default defineComponent({
           const nextTraj = nextPhrase.trajectories[0];
           updateNextTraj(nextTraj, delta);
           nextPhrase.startTime! += delta;
-          nextPhrase.durTotFromTrajectories();
           nextPhrase.durArrayFromTrajectories();
           nextPhrase.assignStartTimes();
           const tda = traj.durArray!;
@@ -1260,7 +1379,6 @@ export default defineComponent({
             traj.durArray = newDurArray;
           }
           traj.durTot += delta;
-          phrase.durTotFromTrajectories();
           phrase.durArrayFromTrajectories();
           phrase.assignStartTimes();
           updatePhraseChikaris(nextPhrase, delta);
@@ -1409,6 +1527,8 @@ export default defineComponent({
             >)
             .call(drag())
         }
+      } else {
+        d3.selectAll('.dragDots').remove();
       }
     }
 
@@ -1467,7 +1587,7 @@ export default defineComponent({
     const updateSargamLineColor = () => {
       if (tranSvg.value) {
         d3.select(tranSvg.value)
-          .selectAll('line')
+          .selectAll('.sargamLine')
           .attr('stroke', props.sargamLineColor)
       }
     }
@@ -1571,6 +1691,11 @@ export default defineComponent({
           clearChikari(cd);
           emit('unsavedChanges', true);
           selectedChikari.value = undefined;
+        } else if (selectedPhraseDivUid.value !== undefined) {
+          deletePhraseDiv(selectedPhraseDivUid.value);
+        } else if (selectedTrajs.value.length > 0) {
+          deleteTrajs(selectedTrajs.value);
+
         }
       } else if (e.key === 'ArrowLeft') {
         if (selectedChikari.value !== undefined) {
@@ -1587,6 +1712,13 @@ export default defineComponent({
         } else if (selectedPhraseDivUid.value !== undefined) {
           e.preventDefault();
           nudgePhraseDiv(1);
+        }
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        if (shifted.value) {
+          moveToPrevPhrase();
+        } else {
+          moveToNextPhrase();
         }
       }
     }
@@ -1607,12 +1739,12 @@ export default defineComponent({
         const firstTraj = phrase.trajectories[0];
         prevPhrase.trajectories.push(firstTraj);
         phrase.trajectories.shift();
-        prevPhrase.durTotFromTrajectories();
         prevPhrase.durArrayFromTrajectories();
         prevPhrase.assignStartTimes();
-        phrase.durTotFromTrajectories();
+        prevPhrase.assignTrajNums()
         phrase.durArrayFromTrajectories();
         phrase.assignStartTimes();
+        phrase.assignTrajNums();
         props.piece.durArrayFromPhrases();
         const divType = props.piece.sectionStartsGrid[track].includes(pIdx) ? 
           'section' : 'phrase';
@@ -1637,12 +1769,12 @@ export default defineComponent({
         const lastTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
         prevPhrase.trajectories.pop();
         phrase.trajectories.unshift(lastTraj);
-        prevPhrase.durTotFromTrajectories();
         prevPhrase.durArrayFromTrajectories();
         prevPhrase.assignStartTimes();
-        phrase.durTotFromTrajectories();
+        prevPhrase.assignTrajNums();
         phrase.durArrayFromTrajectories();
         phrase.assignStartTimes();
+        phrase.assignTrajNums();
         props.piece.durArrayFromPhrases();
         const divType = props.piece.sectionStartsGrid[track].includes(pIdx) ? 
           'section' : 'phrase';
@@ -1916,6 +2048,7 @@ export default defineComponent({
     };
 
     const refreshVowel = (trajUId: string) => {
+      console.log('refreshing vowel')
       const track = props.piece.trackFromTrajUId(trajUId);
       const vowelDisplayObjs = props.piece.allDisplayVowels(track)
         .filter(obj => obj.uId === trajUId);
@@ -2003,7 +2136,11 @@ export default defineComponent({
       lowOctOffsetRef,
       highOctOffsetRef,
       logMin,
-      logMax
+      logMax,
+      removePhraseDiv,
+      renderPhraseDiv,
+      moveToPhraseUid,
+      currentPhrase
     }
   }
 })

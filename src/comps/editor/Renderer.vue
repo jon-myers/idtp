@@ -87,9 +87,12 @@
               :showPhraseDivs='showPhraseDivs'
               :editable='editable'
               :sargamMagnetMode='sargamMagnetMode'
+              :scrollingContainer='scrollingContainer'
               @update:selectedMode='$emit("update:selectedMode", $event)'
               @unsavedChanges='$emit("unsavedChanges", $event)'
               @update:TrajSelStatus='$emit("update:TrajSelStatus", $event)'
+              @update:selPhraseDivUid='$emit("update:selPhraseDivUid", $event)'
+              @moveToX='moveToX'
             />
           />
         </div>
@@ -116,7 +119,7 @@ import YAxis from '@/comps/editor/renderer/YAxis.vue';
 import MelographLayer from '@/comps/editor/renderer/MelographLayer.vue';
 import TranscriptionLayer from '@/comps/editor/renderer/TranscriptionLayer.vue';
 import ModeSelector from '@/comps/editor/renderer/ModeSelector.vue';
-import { Piece } from '@/js/classes.ts';
+import { Piece, Trajectory } from '@/js/classes.ts';
 import * as d3 from 'd3';
 import { InstrumentTrackType } from '@/ts/types.ts';
 import { EditorMode } from '@/ts/enums.ts';
@@ -226,6 +229,10 @@ export default defineComponent({
     sargamMagnetMode: {
       type: Boolean,
       required: true
+    },
+    initViewDur: {
+      type: Number,
+      required: true
     }
   },
   setup(props, { emit }) {
@@ -307,20 +314,57 @@ export default defineComponent({
       xAxisContainer.value!.scrollLeft = scrollingContainer.value!.scrollLeft;
     };
 
+    const resetYScroll = () => {
+      const displayRange = getDisplayRange();
+      let allTrajs: Trajectory[] = [];
+      props.piece.instrumentation.forEach((_, i) => {
+        const trajs = props.piece.allTrajectories(i);
+        const starts = props.piece.trajStartTimes(i);
+        trajs.map((traj, idx) => {
+          if (starts[idx] >= displayRange[0] && starts[idx] <= displayRange[1]) {
+            allTrajs.push(traj);
+          }
+        })
+      });
+      let minLogFreq = Infinity;
+      let maxLogFreq = -Infinity;
+      allTrajs.forEach(traj => {
+        minLogFreq = Math.min(minLogFreq, traj.minLogFreq);
+        maxLogFreq = Math.max(maxLogFreq, traj.maxLogFreq);
+      })
+      const avg = (minLogFreq + maxLogFreq) / 2;
+      const avgYCoord = yScale.value!(avg);
+      const containerHeight = scrollingContainer.value!.clientHeight;
+      const scrollTop = avgYCoord - containerHeight / 2;
+      scrollingContainer.value!.scrollTop = scrollTop;   
+    }
+
+    const getDisplayRange = () => {
+      const scrollLeft = scrollingContainer.value!.scrollLeft;
+      const clientWidth = scrollingContainer.value!.clientWidth;
+      const start = xScale.value!.invert(scrollLeft);
+      const end = xScale.value!.invert(scrollLeft + clientWidth);
+      return [start, end];
+    };
+
+    const moveToX = (x: number) => {
+      scrollingContainer.value!.scrollLeft = x;
+      resetYScroll();
+    }
     
 
     onMounted(async () => {
       updateClientWidth();
-      scrollingContainer.value?.addEventListener('scroll', () => {
-        if (!isXScrolling && !isYScrolling) {
-          isXScrolling = true;
-          isYScrolling = true;
-          xAxisContainer.value!.scrollLeft = scrollingContainer.value!.scrollLeft;
-          yAxisContainer.value!.scrollTop = scrollingContainer.value!.scrollTop;
-          isXScrolling = false;
-          isYScrolling = false
-        }
-      });
+      // scrollingContainer.value?.addEventListener('scroll', () => {
+      //   if (!isXScrolling && !isYScrolling) {
+      //     isXScrolling = true;
+      //     isYScrolling = true;
+      //     xAxisContainer.value!.scrollLeft = scrollingContainer.value!.scrollLeft;
+      //     yAxisContainer.value!.scrollTop = scrollingContainer.value!.scrollTop;
+      //     isXScrolling = false;
+      //     isYScrolling = false
+      //   }
+      // });
       xAxisContainer.value?.addEventListener('scroll', () => {
         if (!isXScrolling) {
           isXScrolling = true;
@@ -351,6 +395,7 @@ export default defineComponent({
       yScale.value = d3.scaleLinear()
         .domain([logMax, logMin])
         .range([0, props.scaledHeight]);
+      resetYScroll();
     });
 
     onBeforeUnmount(() => {
@@ -377,7 +422,9 @@ export default defineComponent({
       scrollX,
       clientWidth,
       modeSelectorHeight,
-      transcriptionLayer
+      transcriptionLayer,
+      resetYScroll,
+      moveToX
     }
   }
   
