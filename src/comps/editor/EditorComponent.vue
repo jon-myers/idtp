@@ -199,7 +199,7 @@
         @startConsonant='startConsonantEmit'
         @endConsonant='endConsonantEmit'
         @shiftOct='shiftTrajByOctave'
-        @alterSlope='alterSlope'
+        @alterSlope='throttledAlterSlope'
         @update:phraseDivRendering='updatePhraseDivRendering'
         @unsavedChanges='updateUnsavedChanges'
         />
@@ -613,6 +613,7 @@ type EditorDataType = {
   trajSelStatus: TrajSelectionStatus,
   sargamMagnetMode: boolean,
   selectedPhraseDivUid?: string,
+  throttledAlterSlope: (() => void) | undefined,
 }
 
 export { findClosestStartTime }
@@ -787,6 +788,7 @@ export default defineComponent({
       trajSelStatus: undefined,
       sargamMagnetMode: true,
       selectedPhraseDivUid: undefined,
+      throttledAlterSlope: undefined,
     }
   },
   components: {
@@ -836,6 +838,7 @@ export default defineComponent({
   async mounted() {
     window.addEventListener('beforeunload', this.beforeUnload);
     this.fullWidth = window.innerWidth;
+    this.throttledAlterSlope = throttle(this.alterSlope, 16);
 
     try {
       // if there's a query id, 1. check if exists, 2. if so, load it, else:
@@ -7665,39 +7668,10 @@ export default defineComponent({
 
     alterSlope(newSlope: number) {
       this.unsavedChanges = true;
-      const trajObj = this.selectedTraj!.toJSON();
-      trajObj.slope = Number(newSlope);
-      const newTraj = new Trajectory(trajObj);
-      const pIdx = this.selectedTraj!.phraseIdx;
-      const tIdx = this.selectedTraj!.num;
-      const phrase = this.piece.phrases[Number(pIdx)];
-      phrase.trajectories[Number(tIdx)] = newTraj;
-      phrase.assignStartTimes();
-      phrase.assignPhraseIdx();
-      phrase.assignTrajNums();
-      this.selectedTraj = newTraj;
-      this.selectedTrajs = [this.selectedTraj];
-      const data = this.makeTrajData(this.selectedTraj, phrase.startTime!);
-      d3Select(`#p${pIdx}t${tIdx}`)
-        .datum(data)
-        .attr('d', this.codifiedPhraseLine())
-      d3Select(`#overlay__p${pIdx}t${tIdx}`)
-        .datum(data)
-        .attr('d', this.codifiedPhraseLine())
-      if (this.vocal) {
-        const pIdx = this.selectedTraj.phraseIdx;
-        const tIdx = this.selectedTraj.num;
-        const phrase = this.piece.phrases[Number(pIdx)];
-        type GType = Selection<SVGGElement, unknown, any, any>;
-        const g: GType = d3Select(`#articulations__p${pIdx}t${tIdx}`);
-        const selected = d3Select(`#vowelp${pIdx}t${tIdx}`);
-        if (selected.node() === null) {
-          this.addVowel(this.selectedTraj, phrase.startTime!, g, true)
-        } else {
-          selected.remove();
-          this.addVowel(this.selectedTraj, phrase.startTime!, g, true)
-        }
-      }
+      const r = this.$refs.renderer as typeof Renderer;
+      const tLayer = r.transcriptionLayer as typeof TranscriptionLayer;
+      tLayer.selectedTraj!.slope = newSlope;
+      tLayer.refreshTraj(tLayer.selectedTraj!);
     },
 
     handleMouseOut(e: MouseEvent) {
