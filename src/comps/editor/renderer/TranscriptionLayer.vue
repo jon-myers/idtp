@@ -1686,9 +1686,11 @@ export default defineComponent({
       clearDragDots();
       selectedChikari.value = undefined;
       selectedPhraseDivUid.value = undefined;
+      selectedDragDotIdx.value = undefined;
     }
 
     const clearDragDots = () => {
+      selectedDragDotIdx.value = undefined;
       d3.selectAll('.dragDots').remove();
     }
 

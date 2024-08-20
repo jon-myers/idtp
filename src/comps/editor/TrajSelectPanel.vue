@@ -37,15 +37,17 @@
       />
     </div>
     <div class='selectionRow checks' v-if='sitar && showTrajChecks'>
-      <label>Pluck</label>
+      <label for='pluckCheckboxes'>Pluck</label>
       <input 
-        v-if='editable' 
+        v-if='editable'
+        id='pluckCheckboxes'
         type='checkbox' 
         v-model='pluckBool' 
         @change='updateBool'
       />
       <input 
-        v-if='!editable' 
+        v-if='!editable'
+        id='pluckCheckboxes'
         type='checkbox' 
         v-model='pluckBool' 
         @change='updateBool'
@@ -53,14 +55,16 @@
       />
     </div>
     <div class='selectionRow checks' v-if='sitar && showTrajChecks'>
-      <label class='spaceLeft'>Dampen</label>
-      <input 
+      <label for='dampenCheckbox' class='spaceLeft'>Dampen</label>
+      <input
+        id='dampenCheckbox'
         v-if='editable' 
         type='checkbox' 
         v-model='dampen' 
         @change='updateDampen'
       />
-      <input 
+      <input
+        id='dampenCheckbox'
         v-if='!editable' 
         type='checkbox' 
         v-model='dampen' 
@@ -332,7 +336,7 @@ import { Instrument } from '@/ts/enums.ts';
 type TrajSelectPanelDataType = {
   urls: string[],
   kNums: string[],
-  pluckBool: boolean,
+  // pluckBool: boolean,
   intraTrajDursBool: boolean,
   selectedIdx?: number,
   parentSelected: boolean,
@@ -380,7 +384,7 @@ export default defineComponent({
     return {
       urls: [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13],
       kNums: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'e'],
-      pluckBool: true,
+      // pluckBool: true,
       intraTrajDursBool: false,
       selectedIdx: undefined,
       parentSelected: false,
@@ -501,6 +505,28 @@ export default defineComponent({
     if (this.vocal && this.showSlope) this.octShiftTop = 97
   },
   computed: {
+    pluckBool: {
+
+      get() {
+        if (this.selectedTraj !== undefined) {
+          const st = this.selectedTraj;
+          const c1 = st.articulations[0];
+          const c2 = st.articulations['1.00'];
+          const c3 = st.articulations['0.00'];
+          const c4 = c1 && st.articulations[0].name === 'pluck';
+          const c5 = c3 && st.articulations['0.00'].name === 'pluck';
+          return c4 || c5;
+        } else {
+          return false;
+        }
+      },
+
+      set(newVal: boolean) {
+        if (this.parentSelected) {
+          this.$emit('pluckBool', newVal)
+        }
+      }
+    },
     vocal() {
       const vox = [Instrument.Vocal_M, Instrument.Vocal_F];
       return this.instrument && vox.includes(this.instrument);

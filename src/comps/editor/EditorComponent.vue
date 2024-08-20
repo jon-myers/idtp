@@ -1458,6 +1458,7 @@ export default defineComponent({
     },
 
     vowelEmit(vowel: string) {
+      // legit 
       const r = this.$refs.renderer as typeof Renderer;
       const tLayer = r.transcriptionLayer;
       const selT = tLayer.selectedTraj;
@@ -1475,27 +1476,21 @@ export default defineComponent({
     },
 
     dampenEmit(dampen: boolean) {
-      const selT = this.selectedTraj!;
+      // legit
       this.unsavedChanges = true;
-      const pIdx = selT.phraseIdx!;
-      const tIdx = selT.num!;
+      const r = this.$refs.renderer as typeof Renderer;
+      const tLayer = r.transcriptionLayer;
+      const selT = tLayer.selectedTraj!;
       if (dampen) {
         selT.articulations['1.00'] = new Articulation({
           name: 'dampen',
         });
-        const phrase = this.piece!.phrases[pIdx];
-        const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
-          Selection<SVGGElement, any, any, any> ;
-        this.codifiedAddDampener(selT, phrase.startTime!, g);
-        d3Select(`#dampen${this.selectedTrajID}`)
-          .attr('stroke', this.selTrajColor)
-
       } else {
         if (selT.articulations['1.00']) {
           delete selT.articulations['1.00'];
         }
-        d3Select(`#dampenp${pIdx}t${tIdx}`).remove();
-      }
+      };
+      tLayer.refreshTraj(selT);
     },
 
     alterVibObj(vibObj: VibObjType) {
