@@ -1695,7 +1695,9 @@ export default defineComponent({
 
     pluckBoolEmit(pluckBool: boolean) {
       this.unsavedChanges = true;
-      const selT = this.selectedTraj!;
+      const r = this.$refs.renderer as typeof Renderer;
+      const tLayer = r.transcriptionLayer;
+      const selT = tLayer.selectedTraj!;
       const c1 = selT.articulations[0] || selT.articulations['0.00'];
       if (pluckBool) {
         if (!c1) {
@@ -1704,21 +1706,22 @@ export default defineComponent({
             stroke: 'd',
             strokeNickname: 'da'
           });
-          const pIdx = selT.phraseIdx!;
-          const tIdx = selT.num!;
-          const phrase = this.piece!.phrases[pIdx];
-          const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
-            Selection<SVGGElement, any, any, any>
-          this.codifiedAddPlucks(selT, phrase.startTime!, g)
+          // const pIdx = selT.phraseIdx!;
+          // const tIdx = selT.num!;
+          // const phrase = this.piece!.phrases[pIdx];
+          // const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
+          //   Selection<SVGGElement, any, any, any>
+          // this.codifiedAddPlucks(selT, phrase.startTime!, g)
         }
       } else {
         if (c1) {
           delete selT.articulations[0];
           delete selT.articulations['0.00']
-          this.removePlucks(selT)
+          // this.removePlucks(selT)
         }
       }
-      this.resetBols();
+      tLayer.refreshTraj(selT);
+      // this.resetBols();
     },
 
     mutateTrajEmit(newIdx: number) {
@@ -4458,70 +4461,87 @@ export default defineComponent({
       const rsRes = await getRaagRule(piece.raga.name);
       piece.raga.ruleSet = rsRes.rules;
       piece.raga = new Raga(piece.raga);
-      piece.phrases.forEach(phrase => {
-        let pt = phrase.trajectoryGrid ?
-                 phrase.trajectoryGrid[0] : 
-                 phrase.trajectories;
-        pt.forEach(traj => {
-          traj.pitches = traj.pitches.map(pitch => {
-            pitch.fundamental = piece.raga.fundamental;
-            // convert to pitch ratio format
-            pitch.ratios = piece.raga.stratifiedRatios;
-            return new Pitch(pitch)
-          });
-          const artKeys = Object.keys(traj.articulations);
-          const artEntries = artKeys.map(key => traj.articulations[key]);
-          const artObj: { [key: string]: Articulation } = {};
-          artKeys.forEach((key, i) => {
-            artObj[key] = new Articulation(artEntries[i]);
-          });
-          traj.articulations = artObj;
-          if (traj.id === 12 && traj.fundID12 !== piece.raga.fundamental) {
-            traj.fundID12 = piece.raga.fundamental
-          }
-          if (traj.id === 12 && Object.keys(traj.articulations).length > 0) {
-            traj.articulations = {};
-          }
-          if (piece.instrumentation) {
-            traj.instrumentation = piece.instrumentation[0];
-          }
-          const vox = ['Vocal (M)', 'Vocal (F)'];
-          if (vox.includes(traj.instrumentation)) {
-            if (traj.vowel === undefined && traj.id !== 12) {
-              traj.vowel = 'a';
+      if (piece.phraseGrid === undefined) {
+        piece.phraseGrid = [piece.phrases];
+        while (piece.phraseGrid.length < piece.instrumentation.length) {
+          piece.phraseGrid.push([]);
+        }
+      }
+      piece.phraseGrid.forEach((phrases, instIdx) => {
+        phrases.forEach(phrase => {
+          let pt = phrase.trajectoryGrid ?
+                  phrase.trajectoryGrid[0] : 
+                  phrase.trajectories;
+          pt.forEach(traj => {
+            traj.pitches = traj.pitches.map(pitch => {
+              pitch.fundamental = piece.raga.fundamental;
+              // convert to pitch ratio format
+              pitch.ratios = piece.raga.stratifiedRatios;
+              return new Pitch(pitch)
+            });
+            const artKeys = Object.keys(traj.articulations);
+            const artEntries = artKeys.map(key => traj.articulations[key]);
+            const artObj: { [key: string]: Articulation } = {};
+            artKeys.forEach((key, i) => {
+              artObj[key] = new Articulation(artEntries[i]);
+            });
+            traj.articulations = artObj;
+            if (traj.id === 12 && traj.fundID12 !== piece.raga.fundamental) {
+              traj.fundID12 = piece.raga.fundamental
             }
+            if (traj.id === 12 && Object.keys(traj.articulations).length > 0) {
+              traj.articulations = {};
+            }
+            if (piece.instrumentation) {
+              traj.instrumentation = piece.instrumentation[instIdx];
+            }
+            const vox = ['Vocal (M)', 'Vocal (F)'];
+            if (vox.includes(traj.instrumentation)) {
+              if (traj.vowel === undefined && traj.id !== 12) {
+                traj.vowel = 'a';
+              }
+            }
+          });
+          if (phrase.trajectoryGrid === undefined) {
+            phrase.trajectoryGrid = [];
+          }
+          phrase.trajectoryGrid[0] = pt.map(traj => {
+            return new Trajectory(traj)
+          });
+          if (phrase.groupsGrid !== undefined) {
+            phrase.groupsGrid.forEach((groups, ggIdx) => {
+              groups.forEach((group, gIdx) => {
+                group.trajectories.forEach((traj, idx) => {
+                  const tIdx = traj.num!;
+                  const realTraj = phrase.trajectoryGrid[0][tIdx];
+                  group.trajectories[idx] = realTraj;
+                })
+                groups[gIdx] = new Group(group)
+              })
+            })
+          }
+          const chikariKeys = Object.keys(phrase.chikaris);
+          const chikariEntries = chikariKeys.map(key => phrase.chikaris[key]);
+          const chikariObj: { [key: string]: Chikari } = {};
+          chikariKeys.forEach((key, i) => {
+            chikariObj[key] = new Chikari(chikariEntries[i])
+          })
+          phrase.chikaris = chikariObj;
+          if (piece.instrumentation) {
+            phrase.instrumentation = piece.instrumentation;
           }
         });
-        if (phrase.trajectoryGrid === undefined) {
-          phrase.trajectoryGrid = [];
-        }
-        phrase.trajectoryGrid[0] = pt.map(traj => {
-          return new Trajectory(traj)
-        });
-        if (phrase.groupsGrid !== undefined) {
-          phrase.groupsGrid.forEach((groups, ggIdx) => {
-            groups.forEach((group, gIdx) => {
-              group.trajectories.forEach((traj, idx) => {
-                const tIdx = traj.num!;
-                const realTraj = phrase.trajectoryGrid[0][tIdx];
-                group.trajectories[idx] = realTraj;
-              })
-              groups[gIdx] = new Group(group)
-            })
-          })
-        }
-        const chikariKeys = Object.keys(phrase.chikaris);
-        const chikariEntries = chikariKeys.map(key => phrase.chikaris[key]);
-        const chikariObj: { [key: string]: Chikari } = {};
-        chikariKeys.forEach((key, i) => {
-          chikariObj[key] = new Chikari(chikariEntries[i])
-        })
-        phrase.chikaris = chikariObj;
-        if (piece.instrumentation) {
-          phrase.instrumentation = piece.instrumentation;
-        }
       });
-      piece.phrases = piece.phrases.map(phrase => new Phrase(phrase));
+      if (piece.phraseGrid !== undefined) {
+        // piece.phraseGrid.forEach((phrases) => {
+        //   phrases = phrases.map(phrase => new Phrase(phrase));
+        // })
+        piece.phraseGrid = piece.phraseGrid.map(phrases => {
+          return phrases.map(phrase => new Phrase(phrase))
+        })
+      } else {
+        piece.phrases = piece.phrases.map(phrase => new Phrase(phrase));
+      }
       if (piece.meters) {
         piece.meters = piece.meters.map(meter => new Meter(meter))
       }

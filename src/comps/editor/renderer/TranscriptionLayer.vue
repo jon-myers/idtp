@@ -1837,7 +1837,8 @@ export default defineComponent({
         };
         removePhraseDiv(selectedPhraseDivUid.value);
         renderPhraseDiv(pd);
-      }
+      };
+      emit('unsavedChanges', true);
     };
 
     const nudgeChikari = (amt: number) => {
@@ -1860,6 +1861,7 @@ export default defineComponent({
       nextTick(() => {
         renderChikari(newCd);
       });
+      emit('unsavedChanges', true);
     };
 
     const nudgeDragDot = (dir: 'left' | 'right' | 'up' | 'down') => {

@@ -620,6 +620,10 @@ class Chikari {
     fundamental = new Pitch().fundamental,
     uniqueId = undefined
 
+  }: {
+    pitches?: Pitch[],
+    fundamental?: number,
+    uniqueId?: string
   } = {}) {
     if (uniqueId === undefined) {
       this.uniqueId = uuidv4()
