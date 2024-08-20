@@ -192,7 +192,7 @@
         @mutateTraj='mutateTrajEmit'
         @pluckBool='pluckBoolEmit'
         @newTraj='newTrajEmit'
-        @vibObj='vibObjEmit'
+        @vibObj='alterVibObj'
         @dampen='dampenEmit'
         @vowel='vowelEmit'
         @multiVowel='multiVowelEmit'
@@ -613,8 +613,11 @@ type EditorDataType = {
   trajSelStatus: TrajSelectionStatus,
   sargamMagnetMode: boolean,
   selectedPhraseDivUid?: string,
-  throttledAlterSlope: (() => void) | undefined,
+  throttledAlterSlope: ReturnType<typeof throttle> | undefined,
+  throttledAlterVibObj: ReturnType<typeof throttle> | undefined,
 }
+
+// DebouncedFunc<(newSlope: number) => void>
 
 export { findClosestStartTime }
 
@@ -789,6 +792,7 @@ export default defineComponent({
       sargamMagnetMode: true,
       selectedPhraseDivUid: undefined,
       throttledAlterSlope: undefined,
+      throttledAlterVibObj: undefined,
     }
   },
   components: {
@@ -839,6 +843,7 @@ export default defineComponent({
     window.addEventListener('beforeunload', this.beforeUnload);
     this.fullWidth = window.innerWidth;
     this.throttledAlterSlope = throttle(this.alterSlope, 16);
+    this.throttledAlterVibObj = throttle(this.alterVibObj, 16);
 
     try {
       // if there's a query id, 1. check if exists, 2. if so, load it, else:
@@ -1493,20 +1498,13 @@ export default defineComponent({
       }
     },
 
-    vibObjEmit(vibObj: VibObjType) {
-      const selT = this.selectedTraj!;
+    alterVibObj(vibObj: VibObjType) {
+      // legit
       this.unsavedChanges = true;
-      selT.vibObj = vibObj;
-      const phrase = this.piece.phrases[selT.phraseIdx!];
-      const data = this.makeTrajData(selT, phrase.startTime!);
-      const pIdx = selT.phraseIdx;
-      const tIdx = selT.num;
-      d3Select(`#p${pIdx}t${tIdx}`)
-        .datum(data)
-        .attr('d', this.codifiedPhraseLine())
-      d3Select(`#overlay__p${pIdx}t${tIdx}`)
-        .datum(data)
-        .attr('d', this.codifiedPhraseLine())
+      const r = this.$refs.renderer as typeof Renderer;
+      const tLayer = r.transcriptionLayer;
+      tLayer.selectedTraj!.vibObj = vibObj;
+      tLayer.refreshTraj(tLayer.selectedTraj!);
     },
 
     newTrajEmit(idx: number) {
