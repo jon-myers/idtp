@@ -93,6 +93,7 @@
               @update:TrajSelStatus='$emit("update:TrajSelStatus", $event)'
               @update:selPhraseDivUid='$emit("update:selPhraseDivUid", $event)'
               @moveToX='moveToX'
+              @moveGraph='moveGraph'
             />
           />
         </div>
@@ -352,6 +353,23 @@ export default defineComponent({
       resetYScroll();
     }
 
+    const moveGraph = (amt: number) => {
+      const displayRange = getDisplayRange();
+      if (amt === 0.5) {
+        const mid = (displayRange[0] + displayRange[1]) / 2;
+        const x = xScale.value!(mid);
+        scrollingContainer.value!.scrollLeft = x;
+        resetYScroll();
+      } else if (amt === -0.5) {
+        const start = displayRange[0];
+        const midDur = (displayRange[1] - displayRange[0]) / 2;
+        const newStart = start - midDur;
+        const x = xScale.value!(newStart);
+        scrollingContainer.value!.scrollLeft = x;
+        resetYScroll();
+      }
+    }
+
     const updateAxesScroll = throttle(() => {
       xAxisContainer.value!.scrollLeft = scrollingContainer.value!.scrollLeft;
       yAxisContainer.value!.scrollTop = scrollingContainer.value!.scrollTop;
@@ -430,7 +448,8 @@ export default defineComponent({
       modeSelectorHeight,
       transcriptionLayer,
       resetYScroll,
-      moveToX
+      moveToX,
+      moveGraph
     }
   }
   
@@ -449,6 +468,8 @@ export default defineComponent({
   position: absolute;
   box-sizing: border-box;
   scrollbar-width: auto;
+  scroll-behavior: auto;
+  outline: none;
 }
 
 .scrollingContainer::-webkit-scrollbar {

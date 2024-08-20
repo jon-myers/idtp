@@ -799,8 +799,8 @@ export default defineComponent({
   },
   created() {
     this.throttledRedraw = throttle(this.redraw.bind(this), this.transitionTime);
-    window.addEventListener('keydown', this.handleKeydown);
-    window.addEventListener('keyup', this.handleKeyup);
+    // window.addEventListener('keydown', this.handleKeydown);
+    // window.addEventListener('keyup', this.handleKeyup);
     let offset = this.navHeight + this.playerHeight + this.controlsHeight + 1;
     if (window.innerHeight < 800) {
       offset = this.navHeight + this.playerHeight + 1;
@@ -981,9 +981,9 @@ export default defineComponent({
   },
 
   unmounted() {
-    window.removeEventListener('resize', this.resize);
-    window.removeEventListener('keydown', this.handleKeydown);
-    window.removeEventListener('keyup', this.handleKeyup);
+    // window.removeEventListener('resize', this.resize);
+    // window.removeEventListener('keydown', this.handleKeydown);
+    // window.removeEventListener('keyup', this.handleKeyup);
     window.removeEventListener('beforeunload', this.beforeUnload);
   },
 
@@ -4066,273 +4066,273 @@ export default defineComponent({
       }
     },
 
-    handleKeydown(e: KeyboardEvent) {
-      const tsp = this.$refs.trajSelectPanel as typeof TrajSelectPanel;
-      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-      if (e.key === ' ') {
-        ap.togglePlay()
-      } else if (e.key === 'Meta' && this.browser.os!.includes('Mac OS')) {
-        this.metad = true
-      } else if (e.key === 'Control' && this.browser.os!.includes('Windows')) {
-        this.metad = true
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        this.clearAll();
-        this.svg.style('cursor', 'auto');
-        // region speed settings
-        if (ap.regionSpeedOn) {
-          ap.regionSpeed = 0;
-          ap.regionSpeedOn = false;
-          ap.toggleRegionSpeed();
-        }
-      } else if (e.key === 'Backspace' && this.editable === true) {
-        if (this.selectedChikariID) {
-          this.unsavedChanges = true;
-          const splitArr = this.selectedChikariID!.split('_')!;
-          const pIdx = Number(splitArr[0]!.slice(1)!);
-          const key = splitArr[1] + '.' + splitArr[2];
-          delete this.piece.phrases[pIdx].chikaris[key];
-          d3Select(`#${this.selectedChikariID}`).remove()
-          d3Select(`#circle__${this.selectedChikariID}`).remove()
-          this.selectedChikariID = undefined;
-        } else if (this.selectedTrajID) {
-          this.unsavedChanges = true;
-          this.deleteTraj(this.selectedTrajID);
-          this.selectedTrajID = undefined;
-          this.clearTrajSelectPanel();
-          d3SelectAll('.dragDots').remove();
-          this.selectedTrajs = [];
-        } else if (this.selectedTrajs.length > 1) {
-          this.unsavedChanges = true;
-          this.selectedTrajs.forEach(traj => {
-            const trajID = `p${traj.phraseIdx}t${traj.num}`;
-            this.deleteTraj(trajID);
-            this.clearTrajSelectPanel();
-            this.selectedTrajs = [];
-          })
-        } else if (!(this.selectedPhraseDivIdx === undefined)) {
-          this.unsavedChanges = true;
-          const phraseA = this.piece.phrases[this.selectedPhraseDivIdx];
-          const initPhraseADur = phraseA.durTot!;
-          const phraseB = this.piece.phrases[this.selectedPhraseDivIdx+1];
-          const ctB = phraseB.trajectories.length;
-          const ctA = phraseA.trajectories.length;
-          phraseA.trajectories.splice(ctA, 0, ...phraseB.trajectories);
-          this.piece.phrases.splice(this.selectedPhraseDivIdx+1, 1);
-          phraseA.durTotFromTrajectories();
-          phraseA.durArrayFromTrajectories();
-          phraseA.assignStartTimes();
-          phraseA.assignTrajNums();
-          this.piece.durTotFromPhrases();
-          this.piece.durArrayFromPhrases();
-          this.piece.updateStartTimes();
-          for (let j=0; j < ctB; j++) {
-            const oldId = `p${phraseB.pieceIdx}t${j}`;
-            const newId = `p${phraseA.pieceIdx}t${j + ctA}`;
-            this.reIdAllReps(oldId, newId)
-          }
-          d3Select(`#phraseLine${this.selectedPhraseDivIdx}`).remove();
-          d3Select(`#overlay__phraseLine${this.selectedPhraseDivIdx}`)
-            .remove();
-            const idx = this.selectedPhraseDivIdx;
-          for (let j = idx + 1; j < this.piece.phrases.length; j++) {
-            d3Select(`#phraseLine${j}`).attr('id', `phraseLine${j-1}`);
-            d3Select(`#overlay__phraseLine${j}`)
-              .attr('id', `overlay__phraseLine${j-1}`);
-            d3Select(`#overlay__phraseLine${j-1}`).on('.drag', null);
-            const drag = () => {
-              return d3Drag()
-                .on('start', this.phraseDivDragStart(j-1))
-                .on('drag', this.phraseDivDragDragging(j-1))
-                .on('end', this.phraseDivDragEnd(j-1))
-            };
-            if (this.editable) {
-              d3Select(`#overlay__phraseLine${j-1}`)
-                .call(drag())
-            }  
-          }
-          // fix chikaris
-          Object.keys(phraseB.chikaris).forEach(key => {
-            const newKey = (initPhraseADur + Number(key)).toFixed(2);
-            phraseA.chikaris[newKey] = phraseB.chikaris[key];
-            delete phraseB.chikaris[key];
-            const oldSec = Math.floor(Number(key));
-            const oldDec = (Number(key) % 1).toFixed(2).toString().slice(2);
-            const oldId = `p${phraseB.pieceIdx}_${oldSec}_${oldDec}`;
-            const newSec = Math.floor(Number(newKey));
-            const newDec = (Number(newKey) % 1).toFixed(2).toString().slice(2);
-            const newId = `p${phraseA.pieceIdx}_${newSec}_${newDec}`;
-            d3Select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
-            d3Select(`#${oldId}`).attr('id', newId);          
-          })
-          // if selectedPhraseDivIdx - 1 is less than any of the items in 
-          // piece.sectionStarts, then subtract one from those items in 
-          // piece.sectionStarts
-          const sectionStart = this.selectedPhraseDivIdx + 1;
-          const ssIdx = this.piece.sectionStarts!.indexOf(sectionStart);
-          console.log(ssIdx)
-          if (ssIdx !== -1) {
-            this.piece.sectionStarts!.splice(ssIdx, 1);
-            this.piece.sectionCategorization!.splice(ssIdx, 1);
-          }
-          this.piece.sectionStarts = this.piece.sectionStarts!.map((item) => {
-            if (item > this.selectedPhraseDivIdx! + 1) {
-              return item - 1;
-            } else {
-              return item;
-            }
-          })
-          this.selectedPhraseDivIdx = undefined;
-          this.piece.phrases.forEach(phrase => {
-            phrase.consolidateSilentTrajs()
-          });
-          this.cleanPhrases();
-        } else if (this.meterMode && this.selMeter) {
-          const meterControls = ap.$refs.meterControls;
-          meterControls.removeMeter(this.selMeter.uniqueId);
-        }
-      } else if (e.key === 'c' && this.editable) {
-        console.log('c down')
-        if (this.metad) {
-          console.log('and also it was metad')
-          this.clipboardTrajs = this.selectedTrajs
-        } else {
-          this.setChikari = true;
-          this.svg.style('cursor', 'cell')
-          if (this.setNewTraj) {
-            d3SelectAll('.newTrajDot').remove();
-            this.setNewTraj = false;
-          }
-          if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
-          if (this.setNewSeries) {
-            this.setNewSeries = false;
-            d3SelectAll('.newSeriesDot').remove();
-          }
-        }
-      } else if (e.key === 't' && this.setNewTraj === false && this.editable) {
-        this.clearSelectedTraj();
-        this.clearTrajSelectPanel();
-        this.setNewTraj = true;
-        this.svg.style('cursor', 'crosshair');
-        this.trajTimePts = [];
-        if (this.setChikari) this.setChikari = false;
-        if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
-        if (this.setNewSeries) {
-          this.setNewSeries = false;
-          d3SelectAll('.newSeriesDot').remove();
-        }
-        tsp.showTrajChecks = true;
-        tsp.showVowelTrajCheck = true;
-      } else if ( e.key === 'p' && 
-                  this.setNewPhraseDiv === false && 
-                  this.editable && 
-                  !this.selectedTraj) {
-        this.clearSelectedTraj();
-        this.clearTrajSelectPanel();
-        this.clearSelectedPhraseDiv();
-        if (this.setChikari) this.setChikari = false;
-        if (this.setNewTraj) {
-          d3SelectAll('.newTrajDot').remove();
-          this.setNewTraj = false;
-        }
-        if (this.setNewSeries) {
-          this.setNewSeries = false;
-          d3SelectAll('.newSeriesDot').remove();
-        }
-        this.setNewPhraseDiv = true;
-        this.svg.style('cursor', 's-resize');
-      } else if (e.key === 's' && (!this.setNewSeries) && this.editable) {
-        this.setNewSeries = true;
-        this.clearSelectedTraj();
-        this.clearTrajSelectPanel();
-        this.clearSelectedPhraseDiv();
-        if (this.setChikari) this.setChikari = false;
-        if (this.setNewTraj) {
-          d3SelectAll('.newTrajDot').remove();
-          this.setNewTraj = false;
-        }
-        if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
-        this.svg.style('cursor', 'crosshair');
-        this.trajTimePts = [];
-      } 
-      //   else if (e.key === 'Tab') {
-      //   e.preventDefault();
-      //   this.shifted ? this.moveToPrevPhrase() : this.moveToNextPhrase();
-      // }
-       else if (e.key === 'Shift') {
-        this.shifted = true;
-      } else if (e.key === '[') {
-        this.moveToPrevPhrase()
-      } else if (e.key === ']') {
-        this.moveToNextPhrase()
-      } else if (e.key === 'r') {
-        this.clearAll();
-        this.setNewRegion = true;
+    // handleKeydown(e: KeyboardEvent) {
+    //   const tsp = this.$refs.trajSelectPanel as typeof TrajSelectPanel;
+    //   const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+    //   if (e.key === ' ') {
+    //     ap.togglePlay()
+    //   } else if (e.key === 'Meta' && this.browser.os!.includes('Mac OS')) {
+    //     this.metad = true
+    //   } else if (e.key === 'Control' && this.browser.os!.includes('Windows')) {
+    //     this.metad = true
+    //   } else if (e.key === 'Escape') {
+    //     e.preventDefault();
+    //     this.clearAll();
+    //     this.svg.style('cursor', 'auto');
+    //     // region speed settings
+    //     if (ap.regionSpeedOn) {
+    //       ap.regionSpeed = 0;
+    //       ap.regionSpeedOn = false;
+    //       ap.toggleRegionSpeed();
+    //     }
+    //   } else if (e.key === 'Backspace' && this.editable === true) {
+    //     if (this.selectedChikariID) {
+    //       this.unsavedChanges = true;
+    //       const splitArr = this.selectedChikariID!.split('_')!;
+    //       const pIdx = Number(splitArr[0]!.slice(1)!);
+    //       const key = splitArr[1] + '.' + splitArr[2];
+    //       delete this.piece.phrases[pIdx].chikaris[key];
+    //       d3Select(`#${this.selectedChikariID}`).remove()
+    //       d3Select(`#circle__${this.selectedChikariID}`).remove()
+    //       this.selectedChikariID = undefined;
+    //     } else if (this.selectedTrajID) {
+    //       this.unsavedChanges = true;
+    //       this.deleteTraj(this.selectedTrajID);
+    //       this.selectedTrajID = undefined;
+    //       this.clearTrajSelectPanel();
+    //       d3SelectAll('.dragDots').remove();
+    //       this.selectedTrajs = [];
+    //     } else if (this.selectedTrajs.length > 1) {
+    //       this.unsavedChanges = true;
+    //       this.selectedTrajs.forEach(traj => {
+    //         const trajID = `p${traj.phraseIdx}t${traj.num}`;
+    //         this.deleteTraj(trajID);
+    //         this.clearTrajSelectPanel();
+    //         this.selectedTrajs = [];
+    //       })
+    //     } else if (!(this.selectedPhraseDivIdx === undefined)) {
+    //       this.unsavedChanges = true;
+    //       const phraseA = this.piece.phrases[this.selectedPhraseDivIdx];
+    //       const initPhraseADur = phraseA.durTot!;
+    //       const phraseB = this.piece.phrases[this.selectedPhraseDivIdx+1];
+    //       const ctB = phraseB.trajectories.length;
+    //       const ctA = phraseA.trajectories.length;
+    //       phraseA.trajectories.splice(ctA, 0, ...phraseB.trajectories);
+    //       this.piece.phrases.splice(this.selectedPhraseDivIdx+1, 1);
+    //       phraseA.durTotFromTrajectories();
+    //       phraseA.durArrayFromTrajectories();
+    //       phraseA.assignStartTimes();
+    //       phraseA.assignTrajNums();
+    //       this.piece.durTotFromPhrases();
+    //       this.piece.durArrayFromPhrases();
+    //       this.piece.updateStartTimes();
+    //       for (let j=0; j < ctB; j++) {
+    //         const oldId = `p${phraseB.pieceIdx}t${j}`;
+    //         const newId = `p${phraseA.pieceIdx}t${j + ctA}`;
+    //         this.reIdAllReps(oldId, newId)
+    //       }
+    //       d3Select(`#phraseLine${this.selectedPhraseDivIdx}`).remove();
+    //       d3Select(`#overlay__phraseLine${this.selectedPhraseDivIdx}`)
+    //         .remove();
+    //         const idx = this.selectedPhraseDivIdx;
+    //       for (let j = idx + 1; j < this.piece.phrases.length; j++) {
+    //         d3Select(`#phraseLine${j}`).attr('id', `phraseLine${j-1}`);
+    //         d3Select(`#overlay__phraseLine${j}`)
+    //           .attr('id', `overlay__phraseLine${j-1}`);
+    //         d3Select(`#overlay__phraseLine${j-1}`).on('.drag', null);
+    //         const drag = () => {
+    //           return d3Drag()
+    //             .on('start', this.phraseDivDragStart(j-1))
+    //             .on('drag', this.phraseDivDragDragging(j-1))
+    //             .on('end', this.phraseDivDragEnd(j-1))
+    //         };
+    //         if (this.editable) {
+    //           d3Select(`#overlay__phraseLine${j-1}`)
+    //             .call(drag())
+    //         }  
+    //       }
+    //       // fix chikaris
+    //       Object.keys(phraseB.chikaris).forEach(key => {
+    //         const newKey = (initPhraseADur + Number(key)).toFixed(2);
+    //         phraseA.chikaris[newKey] = phraseB.chikaris[key];
+    //         delete phraseB.chikaris[key];
+    //         const oldSec = Math.floor(Number(key));
+    //         const oldDec = (Number(key) % 1).toFixed(2).toString().slice(2);
+    //         const oldId = `p${phraseB.pieceIdx}_${oldSec}_${oldDec}`;
+    //         const newSec = Math.floor(Number(newKey));
+    //         const newDec = (Number(newKey) % 1).toFixed(2).toString().slice(2);
+    //         const newId = `p${phraseA.pieceIdx}_${newSec}_${newDec}`;
+    //         d3Select(`#circle__${oldId}`).attr('id', `circle__${newId}`);
+    //         d3Select(`#${oldId}`).attr('id', newId);          
+    //       })
+    //       // if selectedPhraseDivIdx - 1 is less than any of the items in 
+    //       // piece.sectionStarts, then subtract one from those items in 
+    //       // piece.sectionStarts
+    //       const sectionStart = this.selectedPhraseDivIdx + 1;
+    //       const ssIdx = this.piece.sectionStarts!.indexOf(sectionStart);
+    //       console.log(ssIdx)
+    //       if (ssIdx !== -1) {
+    //         this.piece.sectionStarts!.splice(ssIdx, 1);
+    //         this.piece.sectionCategorization!.splice(ssIdx, 1);
+    //       }
+    //       this.piece.sectionStarts = this.piece.sectionStarts!.map((item) => {
+    //         if (item > this.selectedPhraseDivIdx! + 1) {
+    //           return item - 1;
+    //         } else {
+    //           return item;
+    //         }
+    //       })
+    //       this.selectedPhraseDivIdx = undefined;
+    //       this.piece.phrases.forEach(phrase => {
+    //         phrase.consolidateSilentTrajs()
+    //       });
+    //       this.cleanPhrases();
+    //     } else if (this.meterMode && this.selMeter) {
+    //       const meterControls = ap.$refs.meterControls;
+    //       meterControls.removeMeter(this.selMeter.uniqueId);
+    //     }
+    //   } else if (e.key === 'c' && this.editable) {
+    //     console.log('c down')
+    //     if (this.metad) {
+    //       console.log('and also it was metad')
+    //       this.clipboardTrajs = this.selectedTrajs
+    //     } else {
+    //       this.setChikari = true;
+    //       this.svg.style('cursor', 'cell')
+    //       if (this.setNewTraj) {
+    //         d3SelectAll('.newTrajDot').remove();
+    //         this.setNewTraj = false;
+    //       }
+    //       if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
+    //       if (this.setNewSeries) {
+    //         this.setNewSeries = false;
+    //         d3SelectAll('.newSeriesDot').remove();
+    //       }
+    //     }
+    //   } else if (e.key === 't' && this.setNewTraj === false && this.editable) {
+    //     this.clearSelectedTraj();
+    //     this.clearTrajSelectPanel();
+    //     this.setNewTraj = true;
+    //     this.svg.style('cursor', 'crosshair');
+    //     this.trajTimePts = [];
+    //     if (this.setChikari) this.setChikari = false;
+    //     if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
+    //     if (this.setNewSeries) {
+    //       this.setNewSeries = false;
+    //       d3SelectAll('.newSeriesDot').remove();
+    //     }
+    //     tsp.showTrajChecks = true;
+    //     tsp.showVowelTrajCheck = true;
+    //   } else if ( e.key === 'p' && 
+    //               this.setNewPhraseDiv === false && 
+    //               this.editable && 
+    //               !this.selectedTraj) {
+    //     this.clearSelectedTraj();
+    //     this.clearTrajSelectPanel();
+    //     this.clearSelectedPhraseDiv();
+    //     if (this.setChikari) this.setChikari = false;
+    //     if (this.setNewTraj) {
+    //       d3SelectAll('.newTrajDot').remove();
+    //       this.setNewTraj = false;
+    //     }
+    //     if (this.setNewSeries) {
+    //       this.setNewSeries = false;
+    //       d3SelectAll('.newSeriesDot').remove();
+    //     }
+    //     this.setNewPhraseDiv = true;
+    //     this.svg.style('cursor', 's-resize');
+    //   } else if (e.key === 's' && (!this.setNewSeries) && this.editable) {
+    //     this.setNewSeries = true;
+    //     this.clearSelectedTraj();
+    //     this.clearTrajSelectPanel();
+    //     this.clearSelectedPhraseDiv();
+    //     if (this.setChikari) this.setChikari = false;
+    //     if (this.setNewTraj) {
+    //       d3SelectAll('.newTrajDot').remove();
+    //       this.setNewTraj = false;
+    //     }
+    //     if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
+    //     this.svg.style('cursor', 'crosshair');
+    //     this.trajTimePts = [];
+    //   } 
+    //   //   else if (e.key === 'Tab') {
+    //   //   e.preventDefault();
+    //   //   this.shifted ? this.moveToPrevPhrase() : this.moveToNextPhrase();
+    //   // }
+    //    else if (e.key === 'Shift') {
+    //     this.shifted = true;
+    //   } else if (e.key === '[') {
+    //     this.moveToPrevPhrase()
+    //   } else if (e.key === ']') {
+    //     this.moveToNextPhrase()
+    //   } else if (e.key === 'r') {
+    //     this.clearAll();
+    //     this.setNewRegion = true;
 
-      } else if (e.key === 'v' && this.metad && this.editable) {
-        if (this.clipboardTrajs.length > 0) this.pasteTrajs()
-      } else if (e.key === 'm' || e.key === 'M') {
-        if (this.shifted) {
-          this.clearAll();
-          this.svg.style('cursor', 's-resize');
-          this.insertPulseMode = true;
-          const audioPlayer = this.$refs.audioPlayer;
-          const meterControls = ap.$refs.meterControls;
-          meterControls.insertPulseMode = true;
-          meterControls.prevMeter = false;
-          if (ap.showMeterControls === false) {
-            ap.toggleMeterControls();
-          }
-          d3SelectAll('.phrase')
-            .style('cursor', 's-resize');
-          d3SelectAll('.articulation')
-            .selectAll('*')
-            .style('cursor', 's-resize');
-        } else {
-          this.clearAll();
-          this.meterMode = true;
-          this.svg.style('cursor', 'crosshair');
-          d3SelectAll('.phrase')
-            .style('cursor', 'crosshair');
-          d3SelectAll('.articulation')
-            .selectAll('*')
-            .style('cursor', 'crosshair');
-        }
-      }
-      if (this.setNewTraj || this.selectedTraj) {
-        const keyNums = tsp.kNumsFiltered;
-        if (keyNums.includes(e.key)) {
-          tsp.selectIcon(keyNums.indexOf(e.key))
-        }
-      }
-      if (this.selectedTraj) {
+    //   } else if (e.key === 'v' && this.metad && this.editable) {
+    //     if (this.clipboardTrajs.length > 0) this.pasteTrajs()
+    //   } else if (e.key === 'm' || e.key === 'M') {
+    //     if (this.shifted) {
+    //       this.clearAll();
+    //       this.svg.style('cursor', 's-resize');
+    //       this.insertPulseMode = true;
+    //       const audioPlayer = this.$refs.audioPlayer;
+    //       const meterControls = ap.$refs.meterControls;
+    //       meterControls.insertPulseMode = true;
+    //       meterControls.prevMeter = false;
+    //       if (ap.showMeterControls === false) {
+    //         ap.toggleMeterControls();
+    //       }
+    //       d3SelectAll('.phrase')
+    //         .style('cursor', 's-resize');
+    //       d3SelectAll('.articulation')
+    //         .selectAll('*')
+    //         .style('cursor', 's-resize');
+    //     } else {
+    //       this.clearAll();
+    //       this.meterMode = true;
+    //       this.svg.style('cursor', 'crosshair');
+    //       d3SelectAll('.phrase')
+    //         .style('cursor', 'crosshair');
+    //       d3SelectAll('.articulation')
+    //         .selectAll('*')
+    //         .style('cursor', 'crosshair');
+    //     }
+    //   }
+    //   if (this.setNewTraj || this.selectedTraj) {
+    //     const keyNums = tsp.kNumsFiltered;
+    //     if (keyNums.includes(e.key)) {
+    //       tsp.selectIcon(keyNums.indexOf(e.key))
+    //     }
+    //   }
+    //   if (this.selectedTraj) {
         
-        const inst = this.piece.instrumentation[0];
-        const vox = ['Vocal (M)', 'Vocal (F)'];
-        if (e.key === 'p' && !vox.includes(inst)) { 
-          tsp.pluckBool = !tsp.pluckBool;
-          tsp.updateBool();
-        } else if (e.key === 'd') {
-          tsp.dampen = !tsp.dampen;
-          tsp.updateDampen();
-        }
-      }
-      if (this.selectedChikariID) {
-        if (e.key === 'ArrowLeft') {
-          if (this.editable) this.adjustChikari(true)
-        } else if (e.key === 'ArrowRight') {
-          if (this.editable) this.adjustChikari(false)
-        }
-      }
-      if (this.selMeter !== undefined) {
-        if (e.key === 'ArrowLeft') {
-          if (this.editable) this.adjustMeter(true)
-        } else if (e.key === 'ArrowRight') {
-          if (this.editable) this.adjustMeter(false)
-        }
-      }
+    //     const inst = this.piece.instrumentation[0];
+    //     const vox = ['Vocal (M)', 'Vocal (F)'];
+    //     if (e.key === 'p' && !vox.includes(inst)) { 
+    //       tsp.pluckBool = !tsp.pluckBool;
+    //       tsp.updateBool();
+    //     } else if (e.key === 'd') {
+    //       tsp.dampen = !tsp.dampen;
+    //       tsp.updateDampen();
+    //     }
+    //   }
+    //   if (this.selectedChikariID) {
+    //     if (e.key === 'ArrowLeft') {
+    //       if (this.editable) this.adjustChikari(true)
+    //     } else if (e.key === 'ArrowRight') {
+    //       if (this.editable) this.adjustChikari(false)
+    //     }
+    //   }
+    //   if (this.selMeter !== undefined) {
+    //     if (e.key === 'ArrowLeft') {
+    //       if (this.editable) this.adjustMeter(true)
+    //     } else if (e.key === 'ArrowRight') {
+    //       if (this.editable) this.adjustMeter(false)
+    //     }
+    //   }
 
-    },
+    // },
 
     shrink() {
       const x = this.yAxWidth;

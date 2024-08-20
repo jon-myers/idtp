@@ -1014,6 +1014,10 @@ export default defineComponent({
       });
     };
 
+    const moveGraph = (amt: number) => {
+      emit('moveGraph', amt);
+    };
+
     const moveToPhraseUid = (uId: string) => {
       const phrase = props.piece.phraseFromUId(uId);
       const time = phrase.startTime!;
@@ -1758,8 +1762,16 @@ export default defineComponent({
         }
       } else if (e.key === 'Alt') {
         alted.value = true;
+      } else if (e.key === '[') {
+        e.preventDefault();
+        moveGraph(-0.5);
+      } else if (e.key === ']') {
+        e.preventDefault();
+        moveGraph(0.5);
       }
     }
+
+
 
     const nudgePhraseDiv = (amt: 1 | -1) => {
       if (selectedPhraseDivUid.value === undefined) {
