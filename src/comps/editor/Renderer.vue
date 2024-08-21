@@ -1,11 +1,26 @@
 <template>
   <div class='renderMain' ref='renderMain' :style='cssVars'>
-    <ModeSelector 
-      class='modeSelector'
-      :height='modeSelectorHeight'
-      :selectedMode='selectedMode'
-      @update:selectedMode='$emit("update:selectedMode", $event)'
-      />
+    <div class='topRow'>
+      <ModeSelector 
+        class='modeSelector'
+        :height='modeSelectorHeight'
+        :selectedMode='selectedMode'
+        :enum='editorMode'
+        :noneEnumItem='editorMode.None'
+        @update:selectedMode='$emit("update:selectedMode", $event)'
+        />
+        <ModeSelector
+          class='modeSelector'
+          v-if='instTracks.length > 1' 
+          :height='modeSelectorHeight'
+          :selectedMode='editingInstIdx'
+          :enum='instTracksEnum'
+          :noneEnumItem='-1'
+          @update:selectedMode='editingInstIdx = $event'
+          
+          
+        />
+    </div>
     <div class='wrapper'>
       <div class='xAxisContainer' ref='xAxisContainer'>
         <XAxis
@@ -94,6 +109,7 @@
               @update:selPhraseDivUid='$emit("update:selPhraseDivUid", $event)'
               @moveToX='moveToX'
               @moveGraph='moveGraph'
+              @update:editingInstIdx='editingInstIdx = $event'
             />
           />
         </div>
@@ -249,12 +265,23 @@ export default defineComponent({
     const xAxis = ref<HTMLDivElement | null>(null);
     const minDrawDur = ref(0.01);
     const transcriptionLayer = ref<typeof TranscriptionLayer | null>(null);
+    const editorMode = EditorMode;
+    const editingInstIdx = ref(0);
+
 
     const scrollX = computed(() => {
       if (!scrollingContainer.value) return 0;
       const scrollWidth = scrollingContainer.value.scrollWidth;
       const scrollLeft = scrollingContainer.value.scrollLeft;
       return scrollLeft / (scrollWidth - scrollingContainer.value.clientWidth);
+    });
+    const instTracksEnum = computed(() => {
+      const enumObj: Record<string, number> = {};
+      props.instTracks.forEach((instTrack, i) => {
+        enumObj[instTrack.inst] = i;
+      });
+      enumObj['None'] = -1;
+      return enumObj;
       
     })
     const clientWidth = ref(0);
@@ -449,7 +476,10 @@ export default defineComponent({
       transcriptionLayer,
       resetYScroll,
       moveToX,
-      moveGraph
+      moveGraph,
+      editorMode,
+      instTracksEnum,
+      editingInstIdx
     }
   }
   
@@ -606,6 +636,20 @@ export default defineComponent({
 .modeSelector {
   width: 100%;
   height: var(--modeSelectorHeight);
+}
+
+.trackOption {
+  width: 30px;
+  height: 30px;
+  box-sizing: border-box;
+  border: 1px solid white
+}
+
+.topRow {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  background-color: #202621
 }
 
 </style>

@@ -1061,6 +1061,7 @@ export default defineComponent({
 
     const handleClickTraj = (traj: Trajectory, track: number) => {
       selectedPhraseDivUid.value = undefined;
+      emit('update:editingInstIdx', track);
       if (!shifted.value) {
         selectedTrajs.value.forEach(traj => {
           const rObj = trajRenderStatus.value.flat().find(obj => {
@@ -1083,6 +1084,7 @@ export default defineComponent({
     };
 
     const handleClickPhraseDiv = (pd: PhraseDivDisplayType) => {
+      emit('update:editingInstIdx', pd.track);
       clearDragDots();
       selectedPhraseDivUid.value = pd.uId;
       selectedTrajs.value.forEach(traj => {

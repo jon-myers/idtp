@@ -7,7 +7,9 @@
       :id='mode'
       @click='() => $emit("update:selectedMode", mode)'
       >
-      <div class='tileText'>{{ mode[0] }}</div>
+      <div class='tileText'>
+        {{ typeof mode === 'string' ? mode[0] : mode }}
+      </div>
     </div>
   </div>
 </template>
@@ -19,18 +21,25 @@ export default defineComponent({
   name: 'ModeSelector',
   props: {
     selectedMode: {
-      type: String as PropType<EditorMode>,
+      type: [String, Number] as PropType<EditorMode | Record<string, number>>,
     },
     height: {
       type: Number,
+      required: true
+    },
+    enum: {
+      type: Object as PropType<Record<string, string | number>>,
+      required: true
+    },
+    noneEnumItem: {
+      type: [String, Number] as PropType<string | number>,
       required: true
     }
   },
   setup(props) {
     const modeSelectorMain = ref<HTMLDivElement | null>(null);
-    const possibleModeTiles = ref<EditorMode[]>(Object.values(EditorMode));
-
-    const noneIdx = possibleModeTiles.value.indexOf(EditorMode.None);
+    const possibleModeTiles = ref<(string | number)[]>(Object.values(props.enum));
+    const noneIdx = possibleModeTiles.value.indexOf(props.noneEnumItem);
     if (noneIdx > -1) {
       possibleModeTiles.value.splice(noneIdx, 1);
     }
@@ -39,7 +48,7 @@ export default defineComponent({
       if (modeSelectorMain.value) {
         const tiles = modeSelectorMain.value.querySelectorAll('.tile');
         tiles.forEach(tile => {
-          if (tile.id === newMode) {
+          if (tile.id === String(newMode)) {
             tile.classList.add('selected');
           } else {
             tile.classList.remove('selected');
@@ -54,6 +63,12 @@ export default defineComponent({
       }
     })
     onMounted(() => {
+      const tiles = modeSelectorMain.value?.querySelectorAll('.tile');
+      tiles?.forEach(tile => {
+        if (tile.id === String(props.selectedMode)) {
+          tile.classList.add('selected');
+        }
+      });
     });
 
     return {

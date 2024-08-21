@@ -2644,14 +2644,24 @@ class Piece {
       if (d !== maxDurTot) {
         const extra = maxDurTot - d;
         const phrases = this.phraseGrid[t];
-        const lastPhrase = phrases[phrases.length - 1];
         const extraSilent = new Trajectory({
           id: 12,
           durTot: extra,
           fundID12: this.raga!.fundamental,
         });
-        lastPhrase.trajectories.push(extraSilent);
-        lastPhrase.reset();
+        if (phrases.length === 0) {
+          phrases.push(new Phrase({
+            trajectories: [extraSilent],
+            durTot: extra,
+            raga: this.raga,
+            instrumentation: this.instrumentation
+          }));
+          phrases[0].reset();
+        } else {
+          const lastPhrase = phrases[phrases.length - 1];
+          lastPhrase.trajectories.push(extraSilent);
+          lastPhrase.reset();
+        }
       }
     })
   }
