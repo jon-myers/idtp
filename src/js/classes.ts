@@ -2070,6 +2070,7 @@ class Phrase {
     this.durArrayFromTrajectories();
     this.assignStartTimes();
     this.assignTrajNums();
+    this.assignPhraseIdx();
   }
 
   chikarisDuringTraj(traj: Trajectory, track: number) {
@@ -2843,6 +2844,12 @@ class Piece {
         return trajs[idx + 1]
       }
     }
+  }
+
+  phraseFromTime(time: number, track: number) {
+    const starts = this.durStarts(track);
+    const idx = findLastIndex(starts, s => time >= s);
+    return this.phraseGrid[track][idx]
   }
 
   trajStartTimes(inst = 0) {

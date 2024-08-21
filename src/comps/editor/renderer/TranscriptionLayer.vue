@@ -23,7 +23,7 @@ import * as d3 from 'd3';
 import { linSpace, cumsum, getClosest } from '@/ts/utils.ts';
 import { EditorMode, Instrument } from '@/ts/enums.ts';
 
-import { Piece, Trajectory, Phrase, Pitch } from '@/js/classes.ts';
+import { Piece, Trajectory, Phrase, Pitch, Chikari } from '@/js/classes.ts';
 import { throttle } from 'lodash';
 import { 
   SargamDisplayType, 
@@ -124,6 +124,10 @@ export default defineComponent({
     },
     scrollingContainer: {
       type: Object as PropType<HTMLElement>,
+      required: true
+    },
+    editingInstIdx: {
+      type: Number,
       required: true
     },
   },
@@ -284,7 +288,7 @@ export default defineComponent({
       return selectedTrajs.value.length === 1 ? 
         selectedTrajs.value[0] : 
         undefined;
-    })
+    });
 
     // watched values
     watch(() => props.sargamLineColor, () => {
@@ -458,6 +462,19 @@ export default defineComponent({
         d3.selectAll(selector)
           .attr('stroke', color)
       }
+    });
+    watch(() => props.selectedMode, (mode) => {
+      handleEscape(false);
+    if (mode === EditorMode.None) {
+      const svg = d3.select(tranSvg.value);
+      svg.style('cursor', 'default');
+    
+    } else if (mode === EditorMode.Chikari) {
+        const svg = d3.select(tranSvg.value);
+        svg.style('cursor', 'crosshair');
+      }
+
+
     })
 
     // adding svg groups
@@ -962,10 +979,13 @@ export default defineComponent({
           instrumentation: props.piece.instrumentation[track],
           num: traj.num,
         });
+        
         phrase.trajectories.splice(traj.num!, 1, silentTraj);
         if (phrase.trajectories.length > traj.num! + 1) {
           const nextTraj = phrase.trajectories[traj.num! + 1];
-          if (nextTraj.id !== 12) {
+          const instName = props.piece.instrumentation[track];
+          const vox = ([Instrument.Vocal_M, Instrument.Vocal_F]).includes(instName);
+          if (nextTraj.id !== 12 && vox) {
             refreshVowel(nextTraj.uniqueId!)
           }
           for (let add = 1; add + traj!.num! < phrase.trajectories.length; add++) {
@@ -979,6 +999,7 @@ export default defineComponent({
       })
       affectedPhrases.forEach(p => {
         p.consolidateSilentTrajs();
+        refreshPhraseChikaris(p);
       })
       props.piece.durArrayFromPhrases();
       emit('unsavedChanges', true);
@@ -1060,27 +1081,30 @@ export default defineComponent({
       .curve(d3.curveMonotoneX);
 
     const handleClickTraj = (traj: Trajectory, track: number) => {
-      selectedPhraseDivUid.value = undefined;
-      emit('update:editingInstIdx', track);
-      if (!shifted.value) {
-        selectedTrajs.value.forEach(traj => {
-          const rObj = trajRenderStatus.value.flat().find(obj => {
+      emit('update:selectedMode', EditorMode.None);
+      nextTick(() => {
+        selectedPhraseDivUid.value = undefined;
+        emit('update:editingInstIdx', track);
+        if (!shifted.value) {
+          selectedTrajs.value.forEach(traj => {
+            const rObj = trajRenderStatus.value.flat().find(obj => {
+              return obj.uniqueId === traj.uniqueId
+            });
+            rObj!.selectedStatus = false;
+          })
+          const renderObj = trajRenderStatus.value[track].find(obj => {
             return obj.uniqueId === traj.uniqueId
           });
-          rObj!.selectedStatus = false;
-        })
-        const renderObj = trajRenderStatus.value[track].find(obj => {
-          return obj.uniqueId === traj.uniqueId
-        });
-        renderObj!.selectedStatus = true;
-      } else {
-        clearDragDots();
-        const renderObj = trajRenderStatus.value[track].find(obj => {
-          return obj.uniqueId === traj.uniqueId
-        });
-        renderObj!.selectedStatus = true;
-      }
-      selectedChikari.value = undefined;
+          renderObj!.selectedStatus = true;
+        } else {
+          clearDragDots();
+          const renderObj = trajRenderStatus.value[track].find(obj => {
+            return obj.uniqueId === traj.uniqueId
+          });
+          renderObj!.selectedStatus = true;
+        }
+        selectedChikari.value = undefined;
+      })
     };
 
     const handleClickPhraseDiv = (pd: PhraseDivDisplayType) => {
@@ -1501,6 +1525,12 @@ export default defineComponent({
       }
     };
 
+    const refreshPhraseChikaris = (phrase: Phrase) => {
+      phrase.trajectories.forEach(traj => {
+        refreshTrajChikaris(traj);
+      })
+    }
+
     const refreshDragDots = () => {
       if (selectedTrajs.value.length === 1) {
         const traj = selectedTrajs.value[0];
@@ -1671,8 +1701,8 @@ export default defineComponent({
       });
     };
 
-    const handleEscape = () => {
-      emit('update:selectedMode', EditorMode.None);
+    const handleEscape = (includeMode = true) => {
+      if (includeMode) emit('update:selectedMode', EditorMode.None);
       selectedTrajs.value.forEach(traj => {
         const renderObj = trajRenderStatus.value[0].find(obj => {
           return obj.uniqueId === traj.uniqueId
@@ -1704,7 +1734,9 @@ export default defineComponent({
       } else if (e.key === 't') {
         emit('update:selectedMode', EditorMode.Trajectory);
       } else if (e.key === 'c') {
-        emit('update:selectedMode', EditorMode.Chikari);
+        if (props.instTracks[props.editingInstIdx].inst === Instrument.Sitar) {
+          emit('update:selectedMode', EditorMode.Chikari);
+        }
       } else if (e.key === 'm') {
         emit('update:selectedMode', EditorMode.Meter);
       } else if (e.key === 'p') {
@@ -2145,17 +2177,41 @@ export default defineComponent({
     };
 
     const handleClick = (e: MouseEvent) => {
-      const target = e.target! as HTMLElement;
-      const classes = [
-        'tranSvg', 
-        'sargamLine', 
-        'sargamLabel', 
-        'vowelLabel',
-        'consonantLabel'
-      ];
-      const f = classes.some(c => target.classList.contains(c));
-      if (f) {
-        handleEscape();
+      if (props.selectedMode === EditorMode.Chikari) {
+        const time = props.xScale.invert(e.offsetX);
+        const logFreq = props.yScale.invert(e.y);
+        const track = props.editingInstIdx;
+        const phrase = props.piece.phraseFromTime(time, track);
+        const phraseTime = time - phrase.startTime!;
+        const c = new Chikari();
+        const strTime = String(Math.round(100 * phraseTime) / 100);
+        phrase.chikaris[strTime] = c;
+        const cd: ChikariDisplayType = {
+          time,
+          phraseTimeKey: strTime,
+          phraseIdx: phrase.pieceIdx!,
+          track: track,
+          chikari: c,
+          uId: c.uniqueId
+        };
+        renderChikari(cd);
+        emit('unsavedChanges', true);
+        emit('update:selectedMode', EditorMode.None);
+
+
+      } else {
+        const target = e.target! as HTMLElement;
+        const classes = [
+          'tranSvg', 
+          'sargamLine', 
+          'sargamLabel', 
+          'vowelLabel',
+          'consonantLabel'
+        ];
+        const f = classes.some(c => target.classList.contains(c));
+        if (f) {
+          handleEscape();
+        }
       }
     }
 
@@ -2391,7 +2447,8 @@ export default defineComponent({
       removePhraseDiv,
       renderPhraseDiv,
       moveToPhraseUid,
-      currentPhrase
+      currentPhrase,
+      selectedChikari
     }
   }
 })

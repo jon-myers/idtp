@@ -5,7 +5,7 @@
         class='modeSelector'
         :height='modeSelectorHeight'
         :selectedMode='selectedMode'
-        :enum='editorMode'
+        :enum='availableModes'
         :noneEnumItem='editorMode.None'
         @update:selectedMode='$emit("update:selectedMode", $event)'
         />
@@ -103,6 +103,7 @@
               :editable='editable'
               :sargamMagnetMode='sargamMagnetMode'
               :scrollingContainer='scrollingContainer'
+              :editingInstIdx='editingInstIdx'
               @update:selectedMode='$emit("update:selectedMode", $event)'
               @unsavedChanges='$emit("unsavedChanges", $event)'
               @update:TrajSelStatus='$emit("update:TrajSelStatus", $event)'
@@ -139,7 +140,7 @@ import ModeSelector from '@/comps/editor/renderer/ModeSelector.vue';
 import { Piece, Trajectory } from '@/js/classes.ts';
 import * as d3 from 'd3';
 import { InstrumentTrackType } from '@/ts/types.ts';
-import { EditorMode } from '@/ts/enums.ts';
+import { EditorMode, Instrument } from '@/ts/enums.ts';
 
 
 export default defineComponent({
@@ -268,7 +269,13 @@ export default defineComponent({
     const editorMode = EditorMode;
     const editingInstIdx = ref(0);
 
-
+    const availableModes = computed(() => {
+      let entries = Object.entries(EditorMode);
+      if (props.instTracks[editingInstIdx.value].inst !== Instrument.Sitar) {
+        entries = entries.filter(entry => entry[1] !== 'Chikari')
+      }
+      return Object.fromEntries(entries);
+    })
     const scrollX = computed(() => {
       if (!scrollingContainer.value) return 0;
       const scrollWidth = scrollingContainer.value.scrollWidth;
@@ -479,7 +486,8 @@ export default defineComponent({
       moveGraph,
       editorMode,
       instTracksEnum,
-      editingInstIdx
+      editingInstIdx,
+      availableModes
     }
   }
   
