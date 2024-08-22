@@ -2196,6 +2196,16 @@ class Phrase {
     return idxs
   }
 
+  trajIdxFromTime(time: number) {
+    const phraseTime = time - this.startTime!;
+    const trajs = this.trajectories.filter(traj => {
+      const a = phraseTime >= traj.startTime!;
+      const b = phraseTime < traj.startTime! + traj.durTot;
+      return a && b
+    })
+    return trajs[0].num
+  }
+
   toJSON() {
     return {
       durTot: this.durTot,
@@ -2850,6 +2860,12 @@ class Piece {
     const starts = this.durStarts(track);
     const idx = findLastIndex(starts, s => time >= s);
     return this.phraseGrid[track][idx]
+  }
+
+  phraseIdxFromTime(time: number, track: number) {
+    const starts = this.durStarts(track);
+    const idx = findLastIndex(starts, s => time >= s);
+    return idx
   }
 
   trajStartTimes(inst = 0) {

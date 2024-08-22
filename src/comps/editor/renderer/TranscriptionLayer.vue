@@ -23,7 +23,14 @@ import * as d3 from 'd3';
 import { linSpace, cumsum, getClosest } from '@/ts/utils.ts';
 import { EditorMode, Instrument } from '@/ts/enums.ts';
 
-import { Piece, Trajectory, Phrase, Pitch, Chikari } from '@/js/classes.ts';
+import { 
+  Piece, 
+  Trajectory, 
+  Phrase, 
+  Pitch, 
+  Chikari,
+  Raga 
+} from '@/js/classes.ts';
 import { throttle } from 'lodash';
 import { 
   SargamDisplayType, 
@@ -468,11 +475,14 @@ export default defineComponent({
     if (mode === EditorMode.None) {
       const svg = d3.select(tranSvg.value);
       svg.style('cursor', 'default');
-    
     } else if (mode === EditorMode.Chikari) {
-        const svg = d3.select(tranSvg.value);
-        svg.style('cursor', 'crosshair');
-      }
+      const svg = d3.select(tranSvg.value);
+      svg.style('cursor', 'crosshair');
+    } else if (mode === EditorMode.PhraseDiv) {
+      const svg = d3.select(tranSvg.value);
+      svg.style('cursor', 's-resize');
+      
+    }
 
 
     })
@@ -1017,6 +1027,7 @@ export default defineComponent({
         for (let i = 0; i < props.piece.instrumentation.length; i++) {
           const g = transcriptionG.append('g')
             .attr('class', `track${i}`)
+            .style('opacity', Number(props.instTracks[i].displaying))
           tracks.push(g);
         }
       }
@@ -2162,6 +2173,28 @@ export default defineComponent({
       
     }
 
+    const possibleTrajDivs = (track: number, pIdx?: number) => {
+      if (pIdx !== undefined) {
+        // returns times on left and right of phrase div (so, current phrase 
+        // and next phrase)
+        const phraseA = props.piece.phraseGrid[track][pIdx];
+        const phraseB = props.piece.phraseGrid[track][pIdx + 1];
+        // get all trajs except first one, and collect all start times
+        const stA = phraseA.startTime!;
+        const stB = phraseB.startTime!;
+        const divs = phraseA.trajectories.slice(1).map(t => stA + t.startTime!);
+        divs.push(...phraseB.trajectories.map(t => stB + t.startTime!));
+        return divs
+      } else {
+        const divs: number[] = [];
+        props.piece.phraseGrid[track].forEach(phrase => {
+          const st = phrase.startTime!;
+          divs.push(...phrase.trajectories.slice(1).map(t => st + t.startTime!))
+        });
+        return divs
+      }
+    };
+
     const setUpSvg = () => {
       const svg = (d3.select(tranSvg.value) as 
         d3.Selection<SVGSVGElement, Datum, null, undefined>);
@@ -2177,11 +2210,119 @@ export default defineComponent({
     };
 
     const handleClick = (e: MouseEvent) => {
+      let time = props.xScale.invert(e.offsetX);
+      const logFreq = props.yScale.invert(e.y);
+      const track = props.editingInstIdx;
+      const pIdx = props.piece.phraseIdxFromTime(time, track);
       if (props.selectedMode === EditorMode.Chikari) {
-        const time = props.xScale.invert(e.offsetX);
-        const logFreq = props.yScale.invert(e.y);
-        const track = props.editingInstIdx;
-        const phrase = props.piece.phraseFromTime(time, track);
+        insertNewChikari(time, track, pIdx);
+      } else if (props.selectedMode === EditorMode.PhraseDiv) {
+        insertNewPhraseDiv(time, track, pIdx);
+      } else {
+        const target = e.target! as HTMLElement;
+        const classes = [
+          'tranSvg', 
+          'sargamLine', 
+          'sargamLabel', 
+          'vowelLabel',
+          'consonantLabel'
+        ];
+        const f = classes.some(c => target.classList.contains(c));
+        if (f) {
+          handleEscape();
+        }
+      }
+    }
+
+    const insertNewPhraseDiv = (time: number, track: number, pIdx: number) => {
+      const phrase = props.piece.phraseGrid[track][pIdx];
+      const tIdx = phrase.trajIdxFromTime(time)!;
+      const traj = phrase.trajectories[tIdx];
+      if (traj.groupId !== undefined) {
+        const group = phrase.getGroupFromId(traj.groupId)!;
+        const firstTraj = group.trajectories[0];
+        const lastTraj = group.trajectories[group.trajectories.length - 1];
+        const startTime = phrase.startTime! + firstTraj.startTime!;
+        let endTime = lastTraj.startTime! + lastTraj.durTot;
+        endTime = endTime + phrase.startTime!;
+        if (endTime - time <= time - startTime) {
+          time = endTime;
+        } else {
+          time = startTime;
+        }
+      }
+      if (traj.id === 12) {
+        // make current traj durTot such that it ends at current time, and 
+        // make new traj start at current time, update the phrase to reflect
+        // and reset zoom ? Or ... do I have to manually rename all the 
+        // following trajs if there are any?
+        const firstTrajDur = time - (phrase.startTime! + traj.startTime!);
+        const secondTrajDur = traj.durTot - firstTrajDur;
+        traj.durTot = firstTrajDur;
+        const ntObj: {
+          id: number,
+          durTot: number,
+          pitches: Pitch[],
+          fundID12: number,
+          instrumentation?: string
+        } = {
+          id: 12,
+          durTot: secondTrajDur,
+          pitches: [],
+          fundID12: props.piece.raga.fundamental,
+        };
+        ntObj.instrumentation = props.piece.instrumentation[track];
+        const newTraj = new Trajectory(ntObj);
+        phrase.trajectories.splice(tIdx + 1, 0, newTraj);
+        phrase.reset();
+        // right here, I need to reid all the following trajectories
+        
+      }
+      const possibleTimes = possibleTrajDivs(track);
+      const finalTime = getClosest(possibleTimes, time);
+      const ftIdx = possibleTimes.indexOf(finalTime);
+      const ptPerP = props.piece.phraseGrid[track]
+        .map(p => p.trajectories.length - 1);
+      // look into this cumsum issue ...
+      const lims = [0, ...ptPerP.map(cumsum()).slice(0, ptPerP.length - 1)];
+      const pIdx_ = lims.findLastIndex(lim => ftIdx >= lim);
+      const start = lims[pIdx_];
+      const trajIdx = ftIdx - start;
+      const phrase_ = props.piece.phraseGrid[track][pIdx_];
+      const end = phrase_.trajectories.length - (trajIdx + 1);
+      const newTrajs = phrase_.trajectories.splice(trajIdx+1, end);
+      phrase_.durTotFromTrajectories();
+      phrase_.durArrayFromTrajectories();
+      const newPhraseObj: {
+        trajectories: Trajectory[],
+        raga: Raga,
+        instrumentation?: string[]
+      } = {
+        trajectories: newTrajs,
+        raga: phrase_.raga!
+      };
+      if (props.piece.instrumentation) {
+        newPhraseObj.instrumentation = props.piece.instrumentation;
+      }
+      const newPhrase = new Phrase(newPhraseObj)
+      props.piece.phraseGrid[track].splice(phrase_.pieceIdx! + 1, 0, newPhrase);
+      props.piece.durTotFromPhrases();
+      props.piece.durArrayFromPhrases();
+      props.piece.updateStartTimes();
+      const pd: PhraseDivDisplayType = {
+        time: newPhrase.startTime!,
+        type: 'phrase',
+        idx: newPhrase.pieceIdx!,
+        track: track,
+        uId: newPhrase.uniqueId
+      };
+      renderPhraseDiv(pd);
+      emit('unsavedChanges', true);
+      emit('update:selectedMode', EditorMode.None);
+    }
+
+    const insertNewChikari = (time: number, track: number, pIdx: number) => {
+      const phrase = props.piece.phraseGrid[track][pIdx];
         const phraseTime = time - phrase.startTime!;
         const c = new Chikari();
         const strTime = String(Math.round(100 * phraseTime) / 100);
@@ -2197,22 +2338,6 @@ export default defineComponent({
         renderChikari(cd);
         emit('unsavedChanges', true);
         emit('update:selectedMode', EditorMode.None);
-
-
-      } else {
-        const target = e.target! as HTMLElement;
-        const classes = [
-          'tranSvg', 
-          'sargamLine', 
-          'sargamLabel', 
-          'vowelLabel',
-          'consonantLabel'
-        ];
-        const f = classes.some(c => target.classList.contains(c));
-        if (f) {
-          handleEscape();
-        }
-      }
     }
 
     const collectTrajs = (
