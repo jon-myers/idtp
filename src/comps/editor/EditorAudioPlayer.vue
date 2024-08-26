@@ -918,7 +918,7 @@ export default defineComponent({
     this.chikariGainNode.gain.setValueAtTime(curChikariGain, this.now());
     this.chikariGainNode.gain.linearRampToValueAtTime(0, endTime);
     setTimeout(() => this.ac?.close(), this.lagTime * 1000);
-    this.$emit('stopAnimationFrameEmit')
+    // this.$emit('stopAnimationFrameEmit')
     const nodes = [
       this.gainNode,
       this.synthGainNode,
@@ -2071,7 +2071,7 @@ export default defineComponent({
         this.pauseStretched(this.playing); // this is a fancy way of saying that 
         // if the sourceNode has ended naturally (without the user pausing it),
         // then it should return to the beginning, otehrwise, stay where it is.
-        this.$emit('stopStretchedAnimationEmit')
+        // this.$emit('stopStretchedAnimationEmit')
         this.$emit('currentTimeEmit', this.getStretchedCurTime());
       })
       this.playing = true;
@@ -2317,20 +2317,20 @@ export default defineComponent({
           this.playStretched();
           const playImg = this.$refs.playImg as HTMLImageElement;
           playImg.classList.add('playing');
-          this.$emit('startStretchedAnimationEmit', this.getStretchedCurTime())
+          // this.$emit('startStretchedAnimationEmit', this.getStretchedCurTime())
         } else {
           this.pauseStretched();
           const playImg = this.$refs.playImg as HTMLImageElement;
           playImg.classList.remove('playing');
-          this.$emit('stopStretchedAnimationEmit')
+          // this.$emit('stopStretchedAnimationEmit')
         }
       } else {
         if (!this.playing) {
           this.play();
           const playImg = this.$refs.playImg as HTMLImageElement;
           playImg.classList.add('playing');
-          this.$emit('startAnimationFrameEmit')
-          this.$emit('setAnimationStartEmit', this.getCurTime())
+          // this.$emit('startAnimationFrameEmit')
+          // this.$emit('setAnimationStartEmit', this.getCurTime())
           this.startPlayCursorAnimation();
           this.playTrajs(this.getCurTime(), this.now());
           if (this.string) {
@@ -2341,7 +2341,7 @@ export default defineComponent({
           this.pause();
           const playImg = this.$refs.playImg as HTMLImageElement;
           playImg.classList.remove('playing');
-          this.$emit('stopAnimationFrameEmit')
+          // this.$emit('stopAnimationFrameEmit')
           this.stopPlayCursorAnimation();
           this.cancelPlayTrajs();
           if (this.string) {
@@ -2625,7 +2625,7 @@ export default defineComponent({
         this.updateProgress();
       }
       this.$emit('currentTimeEmit', 0)
-      this.$emit('movePlayheadsEmit')
+      // this.$emit('movePlayheadsEmit')
     },
 
     handleProgressClick(e: MouseEvent) {
@@ -2634,7 +2634,7 @@ export default defineComponent({
       if (!this.playing) {
         this.pausedAt = (this.audioBuffer!.duration * e.clientX) / bb.width;
         this.$emit('currentTimeEmit', this.pausedAt)
-        this.$emit('movePlayheadsEmit')
+        // this.$emit('movePlayheadsEmit')
         this.updateProgress();
       } else {
         this.stop();

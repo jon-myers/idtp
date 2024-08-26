@@ -244,14 +244,7 @@
   :instTracks='instTracks'
   :editingInstIdx='editingInstIdx'
   @resizeHeightEmit='resizeHeight'
-  @movePlayheadsEmit='movePlayheads'
   @currentTimeEmit='setCurrentTime'
-  @startStretchedAnimationEmit='startStretchedAnimationFrame'
-  @stopStretchedAnimationEmit='stopStretchedAnimationFrame'
-  @stopAnimationFrameEmit='stopAnimationFrame'
-  @startAnimationFrameEmit='startAnimationFrame'
-  @setAnimationStartEmit='setAnimationStart'
-  @setStretchedAnimationStartEmit='setStretchedAnimationStart'
   @updateSargamLinesEmit='updateSargamLines'
   @selectMeterEmit='selectMeter'
   @addMeterEmit='addMeter'
@@ -1737,16 +1730,16 @@ export default defineComponent({
       }
     },
 
-    movePlayheads(msg=undefined) {
-      if (msg === 'justPlayhead') {
-        this.movePlayhead();
-      } else if (msg === 'justShadowPlayhead') {
-        this.moveShadowPlayhead();
-      } else {
-        this.movePlayhead();
-        this.moveShadowPlayhead();
-      }
-    },
+    // movePlayheads(msg=undefined) {
+    //   if (msg === 'justPlayhead') {
+    //     this.movePlayhead();
+    //   } else if (msg === 'justShadowPlayhead') {
+    //     this.moveShadowPlayhead();
+    //   } else {
+    //     this.movePlayhead();
+    //     this.moveShadowPlayhead();
+    //   }
+    // },
 
     // updatePhonemeRepresentation() {
     //   const nodes = d3SelectAll('.consonant');
@@ -8285,20 +8278,20 @@ export default defineComponent({
         .attr('opacity', '0')
     },
 
-    movePlayhead(transitionTime?: number = undefined) {
-      const time = transitionTime ? transitionTime : this.transitionTime;
-      d3Select('.playhead')
-        .attr('transform', `translate(${this.xr()(this.currentTime)})`)
-    }, 
+    // movePlayhead(transitionTime?: number = undefined) {
+    //   const time = transitionTime ? transitionTime : this.transitionTime;
+    //   d3Select('.playhead')
+    //     .attr('transform', `translate(${this.xr()(this.currentTime)})`)
+    // }, 
 
-    moveShadowPlayhead() {
-      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-      const shadowTime = ap.getShadowTime();
-      d3Select('.playheadShadow')
-        .transition()
-        .duration(this.transitionTime)
-        .attr('transform', `translate(${this.xr()(shadowTime)})`)
-    },
+    // moveShadowPlayhead() {
+    //   const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+    //   const shadowTime = ap.getShadowTime();
+    //   d3Select('.playheadShadow')
+    //     .transition()
+    //     .duration(this.transitionTime)
+    //     .attr('transform', `translate(${this.xr()(shadowTime)})`)
+    // },
 
     redraw(instant = false) {
       this.updateTranslateExtent();
@@ -8673,72 +8666,72 @@ export default defineComponent({
       return yTickLabels
     },
 
-    startAnimationFrame() {
-      if (!this.requestId) {
-        this.requestId = window.requestAnimationFrame(this.loopAnimationFrame)
-      }
-    },
+    // startAnimationFrame() {
+    //   if (!this.requestId) {
+    //     this.requestId = window.requestAnimationFrame(this.loopAnimationFrame)
+    //   }
+    // },
 
-    loopAnimationFrame() {
-      this.requestId = undefined;
-      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-      const latency = ap.ac.outputLatency ? ap.ac.outputLatency : 0;
-      this.currentTime = ap.getCurTime() - latency;
-      if (this.currentTime < this.animationStart) {
-        this.currentTime = this.animationStart;
-      }
-      const currentStartTime = this.xr().invert(30);
-      const currentEndTime = currentStartTime + this.durTot / this.tx!().k;
-      if (this.currentTime > currentEndTime) {
-        const delta = (this.rect().width - this.yAxWidth) * 0.8 / this.tx!().k;
-        this.gx!.call(this.zoomX!.translateBy, -delta, 0);
-        this.redraw()
-      }
-      this.movePlayhead();
-      // window.setTimeout(this.loopAnimationFrame, 1000 / 60)
-      this.startAnimationFrame();
-    },
+    // loopAnimationFrame() {
+    //   this.requestId = undefined;
+    //   const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+    //   const latency = ap.ac.outputLatency ? ap.ac.outputLatency : 0;
+    //   this.currentTime = ap.getCurTime() - latency;
+    //   if (this.currentTime < this.animationStart) {
+    //     this.currentTime = this.animationStart;
+    //   }
+    //   const currentStartTime = this.xr().invert(30);
+    //   const currentEndTime = currentStartTime + this.durTot / this.tx!().k;
+    //   if (this.currentTime > currentEndTime) {
+    //     const delta = (this.rect().width - this.yAxWidth) * 0.8 / this.tx!().k;
+    //     this.gx!.call(this.zoomX!.translateBy, -delta, 0);
+    //     this.redraw()
+    //   }
+    //   this.movePlayhead();
+    //   // window.setTimeout(this.loopAnimationFrame, 1000 / 60)
+    //   this.startAnimationFrame();
+    // },
 
-    stopAnimationFrame() {
-      if (this.requestId) {
-        window.cancelAnimationFrame(this.requestId);
-        this.requestId = undefined;
-        const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-        this.currentTime = ap.getCurTime();
-        const latency = ap.ac.outputLatency;
-        this.movePlayhead(latency * 2.0 * 1000);
-      }
-    },
+    // stopAnimationFrame() {
+    //   if (this.requestId) {
+    //     window.cancelAnimationFrame(this.requestId);
+    //     this.requestId = undefined;
+    //     const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+    //     this.currentTime = ap.getCurTime();
+    //     const latency = ap.ac.outputLatency;
+    //     this.movePlayhead(latency * 2.0 * 1000);
+    //   }
+    // },
 
-    startStretchedAnimationFrame() {
-      if (!this.requestId) {
-        const frame = this.loopStretchedAnimationFrame;
-        this.requestId = window.requestAnimationFrame(frame)
-      }
-    },
+    // startStretchedAnimationFrame() {
+    //   if (!this.requestId) {
+    //     const frame = this.loopStretchedAnimationFrame;
+    //     this.requestId = window.requestAnimationFrame(frame)
+    //   }
+    // },
 
-    loopStretchedAnimationFrame() {
-      this.requestId = undefined;
-      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-      const latency = ap.ac.outputLatency;
-      this.currentTime = ap.getStretchedCurTime() - latency;
-      if (!ap.loop && this.currentTime < this.stretchedAnimationStart!) {
-        this.currentTime = this.stretchedAnimationStart!;
-      }
-      this.movePlayhead();
-      this.startStretchedAnimationFrame();
-    },
+    // loopStretchedAnimationFrame() {
+    //   this.requestId = undefined;
+    //   const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+    //   const latency = ap.ac.outputLatency;
+    //   this.currentTime = ap.getStretchedCurTime() - latency;
+    //   if (!ap.loop && this.currentTime < this.stretchedAnimationStart!) {
+    //     this.currentTime = this.stretchedAnimationStart!;
+    //   }
+    //   this.movePlayhead();
+    //   this.startStretchedAnimationFrame();
+    // },
 
-    stopStretchedAnimationFrame() {
-      if (this.requestId) {
-        window.cancelAnimationFrame(this.requestId);
-        this.requestId = undefined;
-        const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-        this.currentTime = ap.getStretchedCurTime();
-        const latency = ap.ac.outputLatency;
-        this.movePlayhead(latency * 2.0 * 1000);
-      }
-    },
+    // stopStretchedAnimationFrame() {
+    //   if (this.requestId) {
+    //     window.cancelAnimationFrame(this.requestId);
+    //     this.requestId = undefined;
+    //     const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+    //     this.currentTime = ap.getStretchedCurTime();
+    //     const latency = ap.ac.outputLatency;
+    //     this.movePlayhead(latency * 2.0 * 1000);
+    //   }
+    // },
 
     deleteTraj(trajID: string) {
       const split = trajID.split('t');
