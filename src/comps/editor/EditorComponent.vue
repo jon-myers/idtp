@@ -1619,7 +1619,6 @@ export default defineComponent({
       const r = this.$refs.renderer as typeof Renderer;
       const tLayer = r.transcriptionLayer as typeof TranscriptionLayer;
       tLayer.resetTrajRenderStatus([newTraj.uniqueId]);
-      console.log(tLayer.selectedTraj)
       tLayer.renderTraj(newTraj);
       tLayer.refreshSargam(newTraj.uniqueId!);
       const inst = this.piece.instrumentation[track];

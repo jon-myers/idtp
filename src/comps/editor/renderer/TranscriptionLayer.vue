@@ -383,19 +383,17 @@ export default defineComponent({
           return obj.uniqueId === traj.uniqueId
         });
         const track = renderObj!.track;
-        if (!oldVal.includes(traj)) {
-          const selector = `.traj.uId${traj.uniqueId!}`;
-          d3.selectAll(selector)
-            .attr('stroke', props.instTracks[track].selColor)
-          d3.selectAll(selector + '.pluck')
-            .attr('fill', props.instTracks[track].selColor)
-          const vowelSelector = `.vowelLabel.uId${traj.uniqueId}`;
-          d3.selectAll(vowelSelector)
-            .attr('stroke', props.instTracks[track].selColor)
-          const consonantSelector = `.consonantLabel.uId${traj.uniqueId}`;
-          d3.selectAll(consonantSelector)
-            .attr('stroke', props.instTracks[track].selColor)
-        }
+        const selector = `.traj.uId${traj.uniqueId!}`;
+        d3.selectAll(selector)
+          .attr('stroke', props.instTracks[track].selColor)
+        d3.selectAll(selector + '.pluck')
+          .attr('fill', props.instTracks[track].selColor)
+        const vowelSelector = `.vowelLabel.uId${traj.uniqueId}`;
+        d3.selectAll(vowelSelector)
+          .attr('stroke', props.instTracks[track].selColor)
+        const consonantSelector = `.consonantLabel.uId${traj.uniqueId}`;
+        d3.selectAll(consonantSelector)
+          .attr('stroke', props.instTracks[track].selColor)
       });
       let status: TrajSelectionStatus = undefined;
       if (selectedTrajs.value.length > 0) {
@@ -496,7 +494,21 @@ export default defineComponent({
         const svg = d3.select(tranSvg.value);
         svg.style('cursor', 'crosshair');
       }
-    })
+    });
+    watch(() => props.editingInstIdx, (instIdx) => {
+      if (selectedTraj.value !== undefined) {
+        const track = props.piece.trackFromTraj(selectedTraj.value);
+        if (track === instIdx) {
+          const uId = selectedTraj.value.uniqueId!;
+          handleEscape();
+          selectTraj(uId!);
+        } else {
+          handleEscape()
+        }
+      } else {
+        handleEscape()
+      }
+    });
 
     // adding svg groups
     const addSargamG = () => {
@@ -1650,6 +1662,11 @@ export default defineComponent({
           .attr('stroke', props.instTracks[track].color)
         d3.selectAll(selector + '.pluck')
           .attr('fill', props.instTracks[track].color)
+      } else {
+        d3.selectAll(selector)
+          .attr('stroke', props.instTracks[track].selColor)
+        d3.selectAll(selector + '.pluck')
+          .attr('fill', props.instTracks[track].selColor)
       }
     }
 
