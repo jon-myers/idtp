@@ -816,7 +816,13 @@ type ChikariDisplayType = {
   track: number,
   chikari: Chikari,
   uId: string,
+}
 
+type TrajRenderObj = {
+  uniqueId: string,
+  renderStatus: boolean,
+  selectedStatus: boolean,
+  track: number
 }
 
 export type { 
@@ -887,6 +893,7 @@ export type {
   InstrumentTrackType,
   PhraseDivDisplayType,
   TrajSelectionStatus,
-  ChikariDisplayType
+  ChikariDisplayType,
+  TrajRenderObj,
 };
 

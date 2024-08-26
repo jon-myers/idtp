@@ -16,7 +16,7 @@
           :selectedMode='editingInstIdx'
           :enum='instTracksEnum'
           :noneEnumItem='-1'
-          @update:selectedMode='editingInstIdx = $event'
+          @update:selectedMode='$emit("update:editingInstIdx", $event)'
           
           
         />
@@ -104,13 +104,15 @@
               :sargamMagnetMode='sargamMagnetMode'
               :scrollingContainer='scrollingContainer'
               :editingInstIdx='editingInstIdx'
+              :meterMagnetMode='meterMagnetMode'
               @update:selectedMode='$emit("update:selectedMode", $event)'
               @unsavedChanges='$emit("unsavedChanges", $event)'
               @update:TrajSelStatus='$emit("update:TrajSelStatus", $event)'
               @update:selPhraseDivUid='$emit("update:selPhraseDivUid", $event)'
               @moveToX='moveToX'
               @moveGraph='moveGraph'
-              @update:editingInstIdx='editingInstIdx = $event'
+              @update:editingInstIdx='$emit("update:editingInstIdx", $event)'
+              @update:trajTimePts='$emit("update:trajTimePts", $event)'
             />
           />
         </div>
@@ -251,6 +253,14 @@ export default defineComponent({
     initViewDur: {
       type: Number,
       required: true
+    },
+    meterMagnetMode: {
+      type: Boolean,
+      required: true
+    },
+    editingInstIdx: {
+      type: Number,
+      required: true
     }
   },
   setup(props, { emit }) {
@@ -267,11 +277,11 @@ export default defineComponent({
     const minDrawDur = ref(0.01);
     const transcriptionLayer = ref<typeof TranscriptionLayer | null>(null);
     const editorMode = EditorMode;
-    const editingInstIdx = ref(0);
+    // const editingInstIdx = ref(0);
 
     const availableModes = computed(() => {
       let entries = Object.entries(EditorMode);
-      if (props.instTracks[editingInstIdx.value].inst !== Instrument.Sitar) {
+      if (props.instTracks[props.editingInstIdx].inst !== Instrument.Sitar) {
         entries = entries.filter(entry => entry[1] !== 'Chikari')
       }
       return Object.fromEntries(entries);
@@ -486,7 +496,6 @@ export default defineComponent({
       moveGraph,
       editorMode,
       instTracksEnum,
-      editingInstIdx,
       availableModes
     }
   }

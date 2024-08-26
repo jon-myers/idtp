@@ -31,7 +31,7 @@ import {
   Chikari,
   Raga 
 } from '@/js/classes.ts';
-import { throttle } from 'lodash';
+import { throttle, debounce } from 'lodash';
 import { 
   SargamDisplayType, 
   VowelDisplayType, 
@@ -39,7 +39,8 @@ import {
   InstrumentTrackType,
   PhraseDivDisplayType,
   TrajSelectionStatus,
-  ChikariDisplayType
+  ChikariDisplayType,
+  TrajRenderObj
 } from '@/ts/types.ts';
 
 export default defineComponent({
@@ -137,6 +138,10 @@ export default defineComponent({
       type: Number,
       required: true
     },
+    meterMagnetMode: {
+      type: Boolean,
+      required: true
+    }
   },
   setup(props, { emit }) {
     const tranContainer = ref<HTMLDivElement | null>(null);
@@ -147,12 +152,7 @@ export default defineComponent({
     const editorMode = ref<EditorMode>(EditorMode.None);
     const shifted = ref<boolean>(false);
     const alted = ref<boolean>(false);
-    const trajRenderStatus = ref<{ 
-      uniqueId: string, 
-      renderStatus: boolean,
-      selectedStatus: boolean,
-      track: number
-    }[][]>([]);
+    const trajRenderStatus = ref<TrajRenderObj[][]>([]);
     const selectedPhraseDivUid = ref<string | undefined>(undefined);
     const lowOctOffsetRef = toRef(props, 'lowOctOffset');
     const highOctOffsetRef = toRef(props, 'highOctOffset');
@@ -167,6 +167,13 @@ export default defineComponent({
     let dragDotIdx: number | undefined = undefined;
     let dragShadowTraj: Trajectory | undefined = undefined;
     const minTrajDur = 0.05;
+    let trajTimePts: { 
+      time: number, 
+      logFreq: number, 
+      pIdx: number, 
+      tIdx: number, 
+      track: number 
+    }[] = [];
 
     const emptyDivIdxMap = new Map<HTMLDivElement, number>();
     const maxEmptyDivWidth = props.clientWidth;
@@ -280,10 +287,14 @@ export default defineComponent({
       })
     });
     const selectedTrajs = computed(() => {
+      let track = 0;
       const uIds = trajRenderStatus.value.flat().filter(obj => {
         return obj.selectedStatus === true
-      }).map(obj => obj.uniqueId);
-      const out = props.piece.allTrajectories().filter(traj => {
+      }).map(obj => {
+        track = obj.track;
+        return obj.uniqueId
+     });
+      const out = props.piece.allTrajectories(track).filter(traj => {
         return uIds.includes(traj.uniqueId!)
       });
       return out
@@ -472,19 +483,19 @@ export default defineComponent({
     });
     watch(() => props.selectedMode, (mode) => {
       handleEscape(false);
-    if (mode === EditorMode.None) {
-      const svg = d3.select(tranSvg.value);
-      svg.style('cursor', 'default');
-    } else if (mode === EditorMode.Chikari) {
-      const svg = d3.select(tranSvg.value);
-      svg.style('cursor', 'crosshair');
-    } else if (mode === EditorMode.PhraseDiv) {
-      const svg = d3.select(tranSvg.value);
-      svg.style('cursor', 's-resize');
-      
-    }
-
-
+      if (mode === EditorMode.None) {
+        const svg = d3.select(tranSvg.value);
+        svg.style('cursor', 'default');
+      } else if (mode === EditorMode.Chikari) {
+        const svg = d3.select(tranSvg.value);
+        svg.style('cursor', 'crosshair');
+      } else if (mode === EditorMode.PhraseDiv) {
+        const svg = d3.select(tranSvg.value);
+        svg.style('cursor', 's-resize');
+      } else if (mode === EditorMode.Trajectory) {
+        const svg = d3.select(tranSvg.value);
+        svg.style('cursor', 'crosshair');
+      }
     })
 
     // adding svg groups
@@ -1542,6 +1553,29 @@ export default defineComponent({
       })
     }
 
+    const renderTimePt = (tpObj: { 
+      time: number,
+      logFreq: number,
+      pIdx: number,
+      tIdx: number,
+      track: number
+    }) => {
+      const { time, logFreq, pIdx, tIdx, track } = tpObj;
+      const trackG = tracks[track];
+      const x = props.xScale(time);
+      const y = props.yScale(logFreq);
+      trackG.append('circle')
+        .attr('cx', x)
+        .attr('cy', y)
+        .attr('r', 4)
+        .attr('class', `timePt`)
+        .style('fill', 'green')
+    };
+
+    const clearTimePts = () => {
+      d3.selectAll('.timePt').remove();
+    };
+
     const refreshDragDots = () => {
       if (selectedTrajs.value.length === 1) {
         const traj = selectedTrajs.value[0];
@@ -1715,7 +1749,7 @@ export default defineComponent({
     const handleEscape = (includeMode = true) => {
       if (includeMode) emit('update:selectedMode', EditorMode.None);
       selectedTrajs.value.forEach(traj => {
-        const renderObj = trajRenderStatus.value[0].find(obj => {
+        const renderObj = trajRenderStatus.value.flat().find(obj => {
           return obj.uniqueId === traj.uniqueId
         });
         const track = renderObj!.track;
@@ -1727,9 +1761,11 @@ export default defineComponent({
         renderObj!.selectedStatus = false;
       });
       clearDragDots();
+      clearTimePts();
       selectedChikari.value = undefined;
       selectedPhraseDivUid.value = undefined;
       selectedDragDotIdx.value = undefined;
+      trajTimePts = [];
     }
 
     const clearDragDots = () => {
@@ -1818,7 +1854,15 @@ export default defineComponent({
       }
     }
 
-
+    const selectTraj = (uId: string) => {
+      const renderObj = trajRenderStatus.value.flat().find(obj => {
+        return obj.uniqueId === uId
+      });
+      if (renderObj === undefined) {
+        throw new Error('Traj not found in trajRenderStatus array');
+      }
+      renderObj.selectedStatus = true;
+    }
 
     const nudgePhraseDiv = (amt: 1 | -1) => {
       if (selectedPhraseDivUid.value === undefined) {
@@ -2119,7 +2163,7 @@ export default defineComponent({
     let selBox: d3.Selection<SVGRectElement, unknown, null, undefined> | null = 
       null;
 
-    const selBoxDragStart = (e: MouseEvent) => {
+    const selBoxDragStart = (e: d3.D3DragEvent<SVGSVGElement, Datum, SVGSVGElement>) => {
       if (shifted.value) {
         selBoxStartX = e.x;
         selBoxStartY = e.y;
@@ -2129,7 +2173,7 @@ export default defineComponent({
       }
     }
 
-    const selBoxDragMove = (e: MouseEvent) => {
+    const selBoxDragMove = (e: d3.D3DragEvent<SVGSVGElement, Datum, SVGSVGElement>) => {
       if (selBoxStartX !== undefined && selBoxStartY !== undefined) {
         if (shifted.value) {
           const x = Math.min(selBoxStartX, e.x);
@@ -2150,7 +2194,7 @@ export default defineComponent({
       }
     }
 
-    const selBoxDragEnd = (e: MouseEvent) => {
+    const selBoxDragEnd = (e: d3.D3DragEvent<SVGSVGElement, Datum, SVGSVGElement>) => {
      
       const c = selBoxStartX === e.x && selBoxStartY === e.y;
       if (selBoxStartX !== undefined && selBoxStartY !== undefined && !c) {
@@ -2169,7 +2213,9 @@ export default defineComponent({
           minLogFreq: lowLogFreq,
           maxLogFreq: highLogFreq
         });
-      } 
+      } else {
+        debouncedHandleClick(e.sourceEvent! as MouseEvent);
+      }
       
     }
 
@@ -2206,18 +2252,22 @@ export default defineComponent({
         .attr('width', props.width)
         .attr('height', props.height)
         .call(selBoxDrag)
-        .on('click', handleClick)
+        .on('click', debouncedHandleClick)
     };
+
+    
 
     const handleClick = (e: MouseEvent) => {
       let time = props.xScale.invert(e.offsetX);
-      const logFreq = props.yScale.invert(e.y);
+      const logFreq = props.yScale.invert(e.offsetY);
       const track = props.editingInstIdx;
       const pIdx = props.piece.phraseIdxFromTime(time, track);
       if (props.selectedMode === EditorMode.Chikari) {
         insertNewChikari(time, track, pIdx);
       } else if (props.selectedMode === EditorMode.PhraseDiv) {
         insertNewPhraseDiv(time, track, pIdx);
+      } else if (props.selectedMode === EditorMode.Trajectory) { 
+        insertNewTrajDot(time, logFreq, track, pIdx);
       } else {
         const target = e.target! as HTMLElement;
         const classes = [
@@ -2230,6 +2280,82 @@ export default defineComponent({
         const f = classes.some(c => target.classList.contains(c));
         if (f) {
           handleEscape();
+        }
+      }
+    };
+
+    const debouncedHandleClick = debounce(handleClick, 100);
+
+    const meterMagnetize = (time: number) => {
+      let outTime = undefined
+      props.piece.meters.forEach(meter => {
+        const corpTimes = meter.realCorpTimes;
+        // const corpPulses = meter.allCorporealPulses;
+        const start = corpTimes[0];
+        const end = corpTimes[corpTimes.length - 1]
+        if (time >= start && time <= end) {
+          const nearestTime = corpTimes.reduce((a, b) => {
+            const aDiff = Math.abs(a - time);
+            const bDiff = Math.abs(b - time);
+            if (aDiff < bDiff) {
+              return a
+            } else {
+              return b
+            }
+          })
+          outTime = nearestTime
+        }
+      })
+      if (outTime === undefined) {
+        outTime = time
+      }
+      return outTime
+    };
+
+    const insertNewTrajDot = (time: number, logFreq: number, track: number, pIdx: number) => {
+      if (props.meterMagnetMode) {
+        time = meterMagnetize(time)
+      }
+      if (props.sargamMagnetMode) {
+        const pitch = props.piece.raga.pitchFromLogFreq(logFreq);
+        pitch.logOffset = 0;
+        logFreq = pitch.logFreq;
+      }
+      const phrase = props.piece.phraseGrid[track][pIdx];
+      const tIdx = phrase.trajIdxFromTime(time)!;
+      const traj = phrase.trajectories[tIdx];
+      if (traj.id === 12) {
+        let setIt = true;
+        if (trajTimePts.length > 0) {
+          const c1 = trajTimePts[0].tIdx === tIdx;
+          const c2 = trajTimePts[0].pIdx === pIdx;
+          const c3 = trajTimePts[0].track === track;
+          if (!(c1 && c2 && c3)) {
+            setIt = false;
+          }
+        }
+        const diffs = trajTimePts.map(ttp => {
+          return Math.abs(ttp.time - time)
+        });
+        const minDiff = Math.min(...diffs);
+        setIt = minDiff > 0.05;
+        if (setIt) {
+          const startTime = phrase.startTime! + traj.startTime!;
+          if (time - startTime < minTrajDur) {
+            time = startTime
+          } else if (startTime + traj.durTot - time < minTrajDur) {
+            time = startTime + traj.durTot
+          }
+          const tpObj = {
+            time,
+            logFreq, 
+            pIdx,
+            tIdx,
+            track
+          };
+          trajTimePts.push(tpObj);
+          renderTimePt(tpObj);
+          emit('update:trajTimePts', trajTimePts);
         }
       }
     }
@@ -2573,7 +2699,12 @@ export default defineComponent({
       renderPhraseDiv,
       moveToPhraseUid,
       currentPhrase,
-      selectedChikari
+      selectedChikari,
+      resetTrajRenderStatus,
+      renderTraj,
+      clearDragDots,
+      refreshSargam,
+      selectTraj,
     }
   }
 })

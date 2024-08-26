@@ -224,6 +224,10 @@ export default defineComponent({
     instTracks: {
       type: Array as PropType<InstrumentTrackType[]>,
       required: true
+    },
+    editingInstIdx: {
+      type: Number,
+      required: true
     }
   },
   setup(props, { emit }) {
@@ -352,6 +356,9 @@ export default defineComponent({
     watch(tempTracks, newVal => {
       emit('update:instTracks', newVal);
     }, { deep: true });
+    watch(() => props.editingInstIdx, newVal => {
+      props.instTracks[newVal].displaying = true;
+    });
 
 
 

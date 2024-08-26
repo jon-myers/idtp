@@ -99,7 +99,7 @@
         </option>
     </select>
     </div>
-    <div class='selectionRow checks' v-if='vocal && showVowelTrajCheck'>
+    <div class='selectionRow checks' v-if='vocal && showTrajChecks'>
       <label class='spaceLeft'>Vowel</label>
       <select
         v-if='editable'
@@ -331,7 +331,7 @@ import { getIpaVowels, getConsonants } from '@/js/serverCalls.ts';
 import { PropType, defineComponent } from 'vue';
 import { initSecCategorization, Piece, Trajectory } from '@/js/classes.ts';
 import { TrajSelectionStatus, PhraseDivDisplayType } from '@/ts/types.ts';
-import { Instrument } from '@/ts/enums.ts';
+import { Instrument, EditorMode } from '@/ts/enums.ts';
 
 type TrajSelectPanelDataType = {
   urls: string[],
@@ -374,7 +374,6 @@ type TrajSelectPanelDataType = {
   cEngTrans: string[],
   selectedTrajs: Trajectory[],
   selectedTraj: Trajectory | undefined,
-  instrument: Instrument | undefined
 }
 
 export default defineComponent({
@@ -422,7 +421,6 @@ export default defineComponent({
       cEngTrans: [],
       selectedTrajs: [],
       selectedTraj: undefined,
-      instrument: undefined
     }
   },
   
@@ -439,10 +437,6 @@ export default defineComponent({
       type: Number,
       required: true
     },
-    // selectedPhraseDivIdx: {
-    //   type: Number,
-    //   required: false
-    // },
     piece: {
       type: Object as PropType<Piece>,
       required: true,
@@ -460,7 +454,13 @@ export default defineComponent({
       required: true
     },
     trajTimePts: {
-      type: Array as PropType<{time: number, logFreq: number}[]>,
+      type: Array as PropType<{
+        time: number, 
+        logFreq: number,
+        pIdx: number,
+        tIdx: number,
+        track: number
+      }[]>,
       required: false
     },
     trajSelStatus: {
@@ -470,13 +470,21 @@ export default defineComponent({
     selectedPhraseDivUid: {
       type: String,
       required: false
-    }
+    },
+    instrument: {
+      type: String as PropType<Instrument>,
+      required: true
+    },
+    selectedMode: {
+      type: String as PropType<EditorMode>,
+      required: true
+    },
   },
 
   async mounted() {
-    if (this.piece.instrumentation.length > 0) {
-      this.instrument = this.piece.instrumentation[0] as Instrument;
-    }
+    // if (this.piece.instrumentation.length > 0) {
+    //   // this.instrument = this.piece.instrumentation[0] as Instrument;
+    // }
     try {
       let result = await getIpaVowels();
       const consonantResults = await getConsonants();
@@ -537,13 +545,11 @@ export default defineComponent({
     sarangi() {
       return this.instrument === Instrument.Sarangi;
     },
-    showVowelTrajCheck() {
-      const vox = [Instrument.Vocal_M, Instrument.Vocal_F];
-      const voxCheck = this.instrument && vox.includes(this.instrument);
-      return voxCheck && this.selectedTrajs.length === 1;
-    },
     showTrajChecks() {
-      return this.selectedTraj !== undefined
+      const c1 = this.selectedTrajs.length === 1;
+      const c2 = this.selectedMode === EditorMode.Trajectory;
+      const c3 = this.selectedMode === EditorMode.Series;
+      return c1 || c2 || c3
     },
     selectedFreqMin() {
       return Math.min(...this.selectedTrajs.map(traj => traj.minFreq));
@@ -614,15 +620,15 @@ export default defineComponent({
         } else {
           this.selectedTraj = undefined;
         }
-        this.instrument = newVal.instrument;
+        // this.instrument = newVal.instrument;
       } else {
         this.selectedTrajs = [];
         this.selectedTraj = undefined;
-        this.instrument = undefined;
+        // this.instrument = undefined;
       }
     },
 
-    instrument(newVal) {
+    instrument(newVal: Instrument) {
       if (newVal) {
         this.trajIdxs = this.piece!.possibleTrajs[newVal];
       }

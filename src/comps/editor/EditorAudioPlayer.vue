@@ -314,6 +314,7 @@
       :raga='raga'
       :sargamLineColor='sargamLineColor'
       :instTracks='instTracks'
+      :editingInstIdx='editingInstIdx' 
       @specCanvas='handleSpecCanvas'
       @update:backgroundColor='$emit("update:backgroundColor", $event)'
       @update:axisColor='$emit("update:axisColor", $event)'
@@ -847,6 +848,11 @@ export default defineComponent({
       type: Array as PropType<InstrumentTrackType[]>,
       required: true
     },
+    editingInstIdx: {
+      type: Number,
+      required: true
+    },
+    
   },
 
   components: {
@@ -1001,7 +1007,7 @@ export default defineComponent({
         this.otherNode.freq0!.linearRampToValueAtTime(freqs[0] * transp, et);
         this.otherNode.freq1!.linearRampToValueAtTime(freqs[1] * transp, et);
       }
-    }
+    },
   },
   methods: {
 

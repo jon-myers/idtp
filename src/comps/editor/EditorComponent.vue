@@ -29,6 +29,8 @@
       :editable='editable'
       :sargamMagnetMode='sargamMagnetMode'
       :initViewDur='initViewDur'
+      :meterMagnetMode='meterMagnetMode'
+      :editingInstIdx='editingInstIdx'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
@@ -38,6 +40,8 @@
       @unsavedChanges='unsavedChanges = $event'
       @update:TrajSelStatus='trajSelStatus = $event'
       @update:selPhraseDivUid='updateSelPhraseDivUid($event)'
+      @update:trajTimePts='trajTimePts = $event'
+      @update:editingInstIdx='editingInstIdx = $event'
       />
     <div class='controlBox'>
       <div class='scrollingControlBox'>
@@ -131,7 +135,7 @@
           <label>Meter Magnet</label>
           <input
             type='checkbox'
-            v-model='magnetMode'
+            v-model='meterMagnetMode'
             @click='preventSpaceToggle'>
         </div>
         <div class='cbRow'>
@@ -187,6 +191,8 @@
         :trajTimePts='trajTimePts'
         :groupable='groupable'
         :trajSelStatus='trajSelStatus'
+        :instrument='piece.instrumentation[editingInstIdx]'
+        :selectedMode='selectedMode'
         @groupSelectedTrajs='groupSelectedTrajs'
         @ungroupSelectedTrajs='ungroupSelectedTrajs'
         @mutateTraj='mutateTrajEmit'
@@ -240,6 +246,7 @@
   :minPitch='minPitch'
   :sargamLineColor='sargamLineColor'
   :instTracks='instTracks'
+  :editingInstIdx='editingInstIdx'
   @resizeHeightEmit='resizeHeight'
   @movePlayheadsEmit='movePlayheads'
   @currentTimeEmit='setCurrentTime'
@@ -354,7 +361,8 @@ import {
   StrokeNicknameType,
   InstrumentTrackType,
   TrajSelectionStatus,
-  PhraseDivDisplayType
+  PhraseDivDisplayType,
+  TrajRenderObj
 } from '@/ts/types';
 import { EditorMode, Instrument } from '@/ts/enums';
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
@@ -454,7 +462,7 @@ type EditorDataType = {
   loop: boolean,
   init: boolean,
   minTrajDur: number,
-  setNewTraj: boolean,
+  // setNewTraj: boolean,
   setNewPhraseDiv: boolean,
   justEnded: boolean,
   editable: boolean,
@@ -498,7 +506,7 @@ type EditorDataType = {
   pulseDragInitX?: number,
   insertPulseMode: boolean,
   insertPulses: number[],
-  magnetMode: boolean,
+  meterMagnetMode: boolean,
   contextMenuX: number,
   contextMenuY: number,
   contextMenuClosed: boolean,
@@ -548,7 +556,8 @@ type EditorDataType = {
     time: number, 
     logFreq: number,
     pIdx: number,
-    tIdx: number
+    tIdx: number,
+    track: number,
   }[],
   drawingRegion: boolean,
   regionStartPx: number,
@@ -615,6 +624,7 @@ type EditorDataType = {
   selectedPhraseDivUid?: string,
   throttledAlterSlope: ReturnType<typeof throttle> | undefined,
   throttledAlterVibObj: ReturnType<typeof throttle> | undefined,
+  editingInstIdx: number,
 }
 
 // DebouncedFunc<(newSlope: number) => void>
@@ -653,7 +663,7 @@ export default defineComponent({
       loop: false,
       init: true,
       minTrajDur: 0.05,
-      setNewTraj: false,
+      // setNewTraj: false,
       setNewPhraseDiv: false,
       justEnded: false,
       editable: false,
@@ -697,7 +707,7 @@ export default defineComponent({
       pulseDragInitX: undefined,
       insertPulseMode: false,
       insertPulses: [],
-      magnetMode: false,
+      meterMagnetMode: false,
       contextMenuX: 0,
       contextMenuY: 0,
       contextMenuClosed: true,
@@ -793,6 +803,7 @@ export default defineComponent({
       selectedPhraseDivUid: undefined,
       throttledAlterSlope: undefined,
       throttledAlterVibObj: undefined,
+      editingInstIdx: 0,
     }
   },
   components: {
@@ -1079,8 +1090,8 @@ export default defineComponent({
   },
 
   computed: {
-    newPulseLims() {
-      this.insertPulses
+    setNewTraj() {
+      return this.selectedMode === EditorMode.Trajectory;
     },
 
     freqMin() {
@@ -1505,9 +1516,19 @@ export default defineComponent({
     newTrajEmit(idx: number) {
       this.unsavedChanges = true;
       this.trajTimePts.sort((a, b) => a.time - b.time);
-      const logSGLines = this.visibleSargam.map(s => Math.log2(s));
+      // const logSGLines = this.visibleSargam.map(s => Math.log2(s));
+      const logSGLines = this.piece.raga.getFrequencies({
+        low: this.freqMin,
+        high: this.freqMax
+      }).map(f => Math.log2(f));
+      const visPitches = this.piece.raga.getPitches({
+        low: this.freqMin,
+        high: this.freqMax
+      });
+
       const pitches = this.trajTimePts.map(ttp => {
-        return new Pitch(this.visPitches[logSGLines.indexOf(ttp.logFreq)])
+        const logFreq = ttp.logFreq;
+        return new Pitch(visPitches[logSGLines.indexOf(ttp.logFreq)])
       })
       const ttp = this.trajTimePts;
       const durTot = ttp[ttp.length - 1].time - ttp[0].time;
@@ -1550,9 +1571,10 @@ export default defineComponent({
       };
       const pIdx = this.trajTimePts[0].pIdx;
       const tIdx = this.trajTimePts[0].tIdx;
-      const phrase = this.piece.phrases[pIdx];
+      const track = this.trajTimePts[0].track;
+      const phrase = this.piece.phraseGrid[track][pIdx];
       if (this.piece.instrumentation) {
-        trajObj.instrumentation = this.piece.instrumentation[0];
+        trajObj.instrumentation = this.piece.instrumentation[track];
       }
       const newTraj = new Trajectory(trajObj);
       const trajs = phrase.trajectories;
@@ -1567,26 +1589,10 @@ export default defineComponent({
         silentTraj.durTot = silentTraj.durTot - durTot;
         trajs.splice(tIdx, 0, newTraj);
         phrase.reset();
-        const followingTrajs = trajs.slice(tIdx + 1, trajs.length);
-        followingTrajs.reverse().forEach(traj => {
-          if (traj.id !== 12) {
-            const oldId = `p${pIdx}t${traj.num! - 1}`;
-            const newId = `p${pIdx}t${traj.num}`;
-            this.reIdAllReps(oldId, newId);
-          }
-        })
       } else if (endsEqual) { // if replaces right side of silent traj
         silentTraj.durTot = silentTraj.durTot - durTot;
         phrase.trajectories.splice(tIdx + 1, 0, newTraj);
         phrase.reset();
-        const followingTrajs = trajs.slice(tIdx + 1, trajs.length);
-        followingTrajs.reverse().forEach(traj => {
-          if (traj.id !== 12) {
-            const oldId = `p${pIdx}t${traj.num! - 1}`;
-            const newId = `p${pIdx}t${traj.num}`;
-            this.reIdAllReps(oldId, newId);
-          }
-        })
       } else { // if replaces internal portion of silent traj
         const firstDur = times[0] - st;
         const lastDur = (st + silentTraj.durTot) - times[times.length - 1];
@@ -1603,89 +1609,57 @@ export default defineComponent({
           durTot: lastDur,
           fundID12: this.piece.raga.fundamental
         };
-        if (this.piece.instrumentation) {
-          lstObj.instrumentation = this.piece.instrumentation[0];
-        }
+        lstObj.instrumentation = this.piece.instrumentation[track];
         const lastSilentTraj = new Trajectory(lstObj);
         phrase.trajectories.splice(tIdx + 1, 0, newTraj);
         phrase.trajectories.splice(tIdx + 2, 0, lastSilentTraj);
         phrase.reset();
-        const followingTrajs = trajs.slice(tIdx + 2, trajs.length);
-        followingTrajs.reverse().forEach(traj => {
-          if (traj.id !== 12) {
-            const oldId = `p${pIdx}t${traj.num! - 2}`;
-            const newId = `p${pIdx}t${traj.num!}`;
-            this.reIdAllReps(oldId, newId);
-          }
-        })
       }
-      //
-      const vowelIdxs = phrase.firstTrajIdxs();
-      this.codifiedAddTraj(newTraj, phrase.startTime!, vowelIdxs);
-      this.selectedTraj = newTraj;
-      this.selectedTrajs = [this.selectedTraj];
-      this.selectedTrajID = `p${newTraj.phraseIdx}t${newTraj.num}`;
-      d3Select(`#${this.selectedTrajID}`)
-        .attr('stroke', this.selTrajColor)
-      d3Select(`#overlay__${this.selectedTrajID}`)
-        .style('cursor', 'auto')
-      d3Select(`#dampen${this.selectedTrajID}`)
-        .attr('stroke', this.selTrajColor)
-      d3Select(`#pluck${this.selectedTrajID}`)
-        .attr('stroke', this.selArtColor)
-        .attr('fill', this.selArtColor)
-      this.updateArtColors(this.selectedTraj, true);
-      this.setNewTraj = false;
+      this.selectedMode = EditorMode.None
+      const r = this.$refs.renderer as typeof Renderer;
+      const tLayer = r.transcriptionLayer as typeof TranscriptionLayer;
+      tLayer.resetTrajRenderStatus([newTraj.uniqueId]);
+      console.log(tLayer.selectedTraj)
+      tLayer.renderTraj(newTraj);
+      tLayer.refreshSargam(newTraj.uniqueId!);
+      const inst = this.piece.instrumentation[track];
+      if (inst === Instrument.Vocal_M || inst === Instrument.Vocal_F) {
+        tLayer.refreshVowel(newTraj.uniqueId!);
+        tLayer.refreshEndingConsonant(newTraj.uniqueId!);
+      }
+      tLayer.refreshDragDots();
       this.trajTimePts = [];
-      this.svg.style('cursor', 'auto');
-      d3SelectAll(`.newTrajDot`).remove();
-      
-      this.addAllDragDots();
-      const altId = this.selectedTraj.id >= 12 ? 
-                    this.selectedTraj.id - 1: 
-                    this.selectedTraj.id; 
+      const altId = tLayer.selectedTraj.id >= 12 ? 
+                    tLayer.selectedTraj.id - 1: 
+                    tLayer.selectedTraj.id; 
       tsp.selectedIdx = tsp.trajIdxs.indexOf(altId);
       tsp.parentSelected = true;
-      tsp.slope = Math.log2(this.selectedTraj.slope);
-      if (this.selectedTraj.vibObj) {
-        tsp.extent = this.selectedTraj.vibObj.extent;
-        tsp.initUp = this.selectedTraj.vibObj.initUp;
-        tsp.periods = this.selectedTraj.vibObj.periods;
-        tsp.offset = this.selectedTraj.vibObj.vertOffset;
+      tsp.slope = Math.log2(tLayer.selectedTraj.slope);
+      if (tLayer.selectedTraj.vibObj) {
+        tsp.extent = tLayer.selectedTraj.vibObj.extent;
+        tsp.initUp = tLayer.selectedTraj.vibObj.initUp;
+        tsp.periods = tLayer.selectedTraj.vibObj.periods;
+        tsp.offset = tLayer.selectedTraj.vibObj.vertOffset;
       }
-      const selT = this.selectedTraj;
-      const c1 = this.selectedTraj.articulations[0];
-      const c2 = this.selectedTraj.articulations['0.00'];
+      const selT = tLayer.selectedTraj;
+      const c1 = tLayer.selectedTraj.articulations[0];
+      const c2 = tLayer.selectedTraj.articulations['0.00'];
       const c3 = c1 && selT.articulations[0].name === 'pluck';
       const c4 = c2 && selT.articulations['0.00'].name === 'pluck';
       if (c3 || c4) {
         tsp.pluckBool = true
       } else {
-        tsp.pluckBool = false
+        if (tsp.pluckBool) {
+          tsp.pluckBool = false
+        }
       }
       if (!this.audioDBDoc) {
         this.extendDurTot();
-      }
-      this.resetSargam();
-      this.resetBols();
-      const stIdx = this.selectedTraj.num!;
-      if (this.vocal && phrase.trajectories[stIdx+1]) {
-        const followingTraj = phrase.trajectories[stIdx+1];
-        this.moveVowel(followingTraj, phrase.startTime!, true);
-      } else if (this.vocal && phrase.trajectories[stIdx+2]) {
-        const followingTraj = phrase.trajectories[stIdx+2];
-        this.moveVowel(followingTraj, phrase.startTime!, true);
-      }
-      if ((this.selectedTraj.minFreq / 2) < this.freqMin) {
-        tsp.canShiftDown = false;
-      } else {
-        tsp.canShiftDown = true;
-      }
-      if ((this.selectedTraj.maxFreq * 2) > this.freqMax) {
-        tsp.canShiftUp = false;
-      } else {
-        tsp.canShiftUp = true;
-      }
+      };
+      this.$nextTick(() => {
+        tLayer.selectTraj(newTraj.uniqueId!);
+      })
+      this.trajTimePts = [];
     },
 
     pluckBoolEmit(pluckBool: boolean) {
@@ -5410,7 +5384,7 @@ export default defineComponent({
         this.setChikari = false;
         this.svg.style('cursor', 'auto');
       } else if (this.setNewTraj) {
-        if (this.magnetMode) {
+        if (this.meterMagnetMode) {
           time = this.magnetize(time);
         }
         const logSGLines = this.visibleSargam.map(s => Math.log2(s));
@@ -5478,7 +5452,7 @@ export default defineComponent({
           }
         }
       } else if (this.setNewSeries) {
-        if (this.magnetMode) {
+        if (this.meterMagnetMode) {
           time = this.magnetize(time);
         }
         const logSGLines = this.visibleSargam.map(s => Math.log2(s));

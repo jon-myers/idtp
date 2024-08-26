@@ -2077,7 +2077,7 @@ class Phrase {
     const start = traj.startTime!;
     const dur = traj.durTot;
     const end = start + dur;
-    const chikaris = this.chikariGrid[track];
+    const chikaris = this.chikariGrid[0];
     const chikarisDuring = Object.keys(chikaris).filter(k => {
       const chikari = chikaris[k];
       const time = Number(k);
