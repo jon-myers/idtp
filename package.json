@@ -64,7 +64,7 @@
     "soundtouchjs": "^0.1.30",
     "stream-browserify": "^3.0.0",
     "uuid": "^9.0.0",
-    "vue": "^3.2.47",
+    "vue": "^3.4.38",
     "vue-cookies": "^1.8.3",
     "vue-cookies-ts": "^1.5.19",
     "vue-meta": "^3.0.0-alpha.2",

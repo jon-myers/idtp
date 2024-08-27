@@ -2297,12 +2297,21 @@ export default defineComponent({
       const totWidth = pbo.getBoundingClientRect().width;
       pbi.style.width = this.progress * totWidth + 'px';
     },
-    loopPlayAnimation() {
+    loopPlayAnimation(timestamp: number) {
+      // if (!this.lastFrameTime) {
+      //   this.lastFrameTime = timestamp;
+      // }
+      // const interval = 1000 / 60;
+      // const elapsed = timestamp - this.lastFrameTime;
+      // if (elapsed > interval) {
+        // console.log(elapsed, interval)
+        // this.lastFrameTime = timestamp - (elapsed % interval);
+        this.updateProgress();
+        this.updateFormattedCurrentTime();
+        this.updateFormattedTimeLeft();
+        this.$emit('currentTimeEmit', this.getCurTime());
+      // }
       this.requestId = undefined;
-      this.updateProgress();
-      this.updateFormattedCurrentTime();
-      this.updateFormattedTimeLeft();
-      this.$emit('currentTimeEmit', this.getCurTime());
       this.startPlayCursorAnimation();
     },
     stopPlayCursorAnimation() {

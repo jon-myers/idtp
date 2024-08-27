@@ -31,6 +31,8 @@
       :initViewDur='initViewDur'
       :meterMagnetMode='meterMagnetMode'
       :editingInstIdx='editingInstIdx'
+      :currentTime='currentTime'
+      :playing='playing'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
@@ -42,6 +44,7 @@
       @update:selPhraseDivUid='updateSelPhraseDivUid($event)'
       @update:trajTimePts='trajTimePts = $event'
       @update:editingInstIdx='editingInstIdx = $event'
+      @update:currentTime='updateCurrentTime'
       />
     <div class='controlBox'>
       <div class='scrollingControlBox'>
@@ -1111,10 +1114,64 @@ export default defineComponent({
       const r = this.$refs.renderer as typeof Renderer;
       const tLayer = r.$refs.transcriptionLayer as typeof TranscriptionLayer;
       return tLayer.selectedTraj;
+    },
+
+    playing() {
+      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+      return ap.playing;
     }
   },
 
   methods: {
+
+    async updateCurrentTime(time: number) {
+      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+      // wait until 
+      while (ap.loading) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      if (ap.regionSpeedOn) {
+        const afterStart = time >= this.regionStartTime!;
+        const beforeEnd = time <= this.regionEndTime!;
+        if (afterStart && beforeEnd) {
+          this.currentTime = time;
+          if (!ap.playing) {
+            ap.pausedAt = time;
+            ap.updateProgress();
+            ap.updateFormattedCurrentTime();
+            ap.updateFormattedTimeLeft();
+          } else {
+            ap.stop();
+            ap.pausedAt = time;
+            ap.play();
+          } 
+        }
+      } else {
+        this.currentTime = time;
+        if (!ap.playing) {
+          ap.pausedAt = time;
+          ap.updateProgress();
+          ap.updateFormattedCurrentTime();
+          ap.updateFormattedTimeLeft();
+        } else {
+          ap.stop();
+          ap.pausedAt = time;
+          this.animationStart = time;
+          ap.play();
+          ap.cancelPlayTrajs();
+          if (ap.string) {
+            ap.cancelBursts();
+          }
+          ap.bufferSourceNodes = [];
+          ap.playTrajs(ap.getCurTime(), ap.now());
+          if (ap.string) {
+            ap.playChikaris(ap.getCurTime(), ap.now(), ap.otherNode)
+          }
+        }
+        // this.movePlayhead();
+        // this.moveShadowPlayhead();
+      }
+    },
 
     updatePhraseDivRendering(pd: PhraseDivDisplayType) {
       const r = this.$refs.renderer as typeof Renderer;
@@ -4041,6 +4098,11 @@ export default defineComponent({
           tsp.selectIcon(keyNums.indexOf(e.key))
         }
       }
+      if (e.key === ' ') {
+        e.preventDefault();
+        const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+        ap.togglePlay()
+      }
     },
 
     // handleKeydown(e: KeyboardEvent) {
@@ -5065,56 +5127,56 @@ export default defineComponent({
       return collectedTrajs
     },
     
-    handleDblClick(z: MouseEvent) {
-      const graphX = z.clientX - this.yAxWidth;
-      const time = this.xr().invert(z.clientX);
-      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-      if (ap.regionSpeedOn) {
-        const afterStart = time >= this.regionStartTime!;
-        const beforeEnd = time <= this.regionEndTime!;
-        if (afterStart && beforeEnd) {
-          if (graphX >= 0) {
-            this.currentTime = time;
-            if (!ap.playing) {
-              ap.pausedAt = time;
-              ap.updateProgress();
-              ap.updateFormattedCurrentTime();
-              ap.updateFormattedTimeLeft();
-            } else {
-              ap.stop();
-              ap.pausedAt = time;
-              ap.play();
-            }
-            this.movePlayhead();
-            this.moveShadowPlayhead();
-          }
-        }
-      } else if (graphX >= 0) {
-        this.currentTime = time;
-        if (!ap.playing) {
-          ap.pausedAt = time;
-          ap.updateProgress();
-          ap.updateFormattedCurrentTime();
-          ap.updateFormattedTimeLeft();
-        } else {
-          ap.stop();
-          ap.pausedAt = time;
-          this.animationStart = time;
-          ap.play();
-          ap.cancelPlayTrajs();
-          if (ap.string) {
-            ap.cancelBursts();
-          }
-          ap.bufferSourceNodes = [];
-          ap.playTrajs(ap.getCurTime(), ap.now());
-          if (ap.string) {
-            ap.playChikaris(ap.getCurTime(), ap.now(), ap.otherNode)
-          }
-        }
-        this.movePlayhead();
-        this.moveShadowPlayhead();
-      }
-    },
+    // handleDblClick(time: number) {
+    //   // const graphX = z.clientX - this.yAxWidth;
+    //   // const time = this.xr().invert(z.clientX);
+    //   const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+    //   if (ap.regionSpeedOn) {
+    //     const afterStart = time >= this.regionStartTime!;
+    //     const beforeEnd = time <= this.regionEndTime!;
+    //     if (afterStart && beforeEnd) {
+    //       if (graphX >= 0) {
+    //         this.currentTime = time;
+    //         if (!ap.playing) {
+    //           ap.pausedAt = time;
+    //           ap.updateProgress();
+    //           ap.updateFormattedCurrentTime();
+    //           ap.updateFormattedTimeLeft();
+    //         } else {
+    //           ap.stop();
+    //           ap.pausedAt = time;
+    //           ap.play();
+    //         }
+    //         this.movePlayhead();
+    //         this.moveShadowPlayhead();
+    //       }
+    //     }
+    //   } else {
+    //     this.currentTime = time;
+    //     if (!ap.playing) {
+    //       ap.pausedAt = time;
+    //       ap.updateProgress();
+    //       ap.updateFormattedCurrentTime();
+    //       ap.updateFormattedTimeLeft();
+    //     } else {
+    //       ap.stop();
+    //       ap.pausedAt = time;
+    //       this.animationStart = time;
+    //       ap.play();
+    //       ap.cancelPlayTrajs();
+    //       if (ap.string) {
+    //         ap.cancelBursts();
+    //       }
+    //       ap.bufferSourceNodes = [];
+    //       ap.playTrajs(ap.getCurTime(), ap.now());
+    //       if (ap.string) {
+    //         ap.playChikaris(ap.getCurTime(), ap.now(), ap.otherNode)
+    //       }
+    //     }
+    //     this.movePlayhead();
+    //     this.moveShadowPlayhead();
+    //   }
+    // },
 
     trajIdxFromTime(phrase: Phrase, time: number) {
       let phraseTime = time - phrase.startTime!;

@@ -1,6 +1,15 @@
 <template>
   <div class='tranContainer' ref='tranContainer' :style='dynamicStyle'>
-    <svg ref='tranSvg' class='tranSvg'></svg>
+    <svg ref='tranSvg' class='tranSvg'>
+      <rect
+        :x='playheadX'
+        :y='0'
+        width='3'
+        :height='height'
+        fill='grey'
+        :style='playheadStyle'
+      ></rect>
+    </svg>
     <div class='emptyOverlay' ref='emptyOverlay'></div>
   </div>
 </template>
@@ -141,7 +150,22 @@ export default defineComponent({
     meterMagnetMode: {
       type: Boolean,
       required: true
-    }
+    },
+    currentTime: {
+      type: Number,
+      required: true
+    },
+    displayRange: {
+      type: Array as PropType<number[]>,
+      required: true,
+      validator: (val: number[]) => {
+        return val.length === 2;
+      }
+    },
+    playing: {
+      type: Boolean,
+      required: true
+    },
   },
   setup(props, { emit }) {
     const tranContainer = ref<HTMLDivElement | null>(null);
@@ -306,6 +330,14 @@ export default defineComponent({
       return selectedTrajs.value.length === 1 ? 
         selectedTrajs.value[0] : 
         undefined;
+    });
+    const playheadStyle = computed(() => {
+      return {
+        transition: 'x 0.017s linear',
+      }
+    });
+    const playheadX = computed(() => {
+      return props.xScale(props.currentTime)
     });
 
     // watched values
@@ -509,6 +541,13 @@ export default defineComponent({
         handleEscape()
       }
     });
+    watch(() => props.currentTime, t => {
+      if (props.playing) {
+        if (t > props.displayRange[1]) {
+          moveGraph(0.85)
+        }
+      }
+    })
 
     // adding svg groups
     const addSargamG = () => {
@@ -536,11 +575,12 @@ export default defineComponent({
     const addSargamLineG = () => {
       if (tranSvg.value) {
         const svg = d3.select(tranSvg.value);
-        svg.append('g')
+        svg.insert('g', 'rect')
           .attr('class', 'sargamLinesG')
           .style('opacity', Number(props.showSargamLines))
       }
     };
+
     const addPhonemeG = () => {
       if (tranSvg.value) {
         const svg = d3.select(tranSvg.value);
@@ -1045,7 +1085,7 @@ export default defineComponent({
         const svg = d3.select(tranSvg.value);
         svg.selectAll('.transcriptionG').remove();
         tracks.length = 0;
-        const transcriptionG = svg.append('g')
+        const transcriptionG = svg.insert('g', 'rect')
           .attr('class', 'transcriptionG')
         for (let i = 0; i < props.piece.instrumentation.length; i++) {
           const g = transcriptionG.append('g')
@@ -2270,11 +2310,13 @@ export default defineComponent({
         .attr('height', props.height)
         .call(selBoxDrag)
         .on('click', debouncedHandleClick)
+        .on('dblclick', handleDoubleClick)
     };
 
     
 
     const handleClick = (e: MouseEvent) => {
+      console.log('click');
       let time = props.xScale.invert(e.offsetX);
       const logFreq = props.yScale.invert(e.offsetY);
       const track = props.editingInstIdx;
@@ -2300,6 +2342,12 @@ export default defineComponent({
         }
       }
     };
+
+    const handleDoubleClick = (e: MouseEvent) => {
+      let time = props.xScale.invert(e.offsetX);
+      emit('update:currentTime', time);
+
+    }
 
     const debouncedHandleClick = debounce(handleClick, 100);
 
@@ -2722,6 +2770,8 @@ export default defineComponent({
       clearDragDots,
       refreshSargam,
       selectTraj,
+      playheadStyle,
+      playheadX,
     }
   }
 })

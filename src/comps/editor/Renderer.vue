@@ -69,7 +69,7 @@
             :height='scaledHeight'
             :showMelograph='showMelograph'
             :color='melographColor'
-            :audioID='piece.audioID'
+            :audioID='piece.audioID!'
             :xScale='xScale'
             :yScale='yScale'
             ref='melographLayer'
@@ -105,6 +105,9 @@
               :scrollingContainer='scrollingContainer'
               :editingInstIdx='editingInstIdx'
               :meterMagnetMode='meterMagnetMode'
+              :currentTime='currentTime'
+              :displayRange='displayRange'
+              :playing='playing'
               @update:selectedMode='$emit("update:selectedMode", $event)'
               @unsavedChanges='$emit("unsavedChanges", $event)'
               @update:TrajSelStatus='$emit("update:TrajSelStatus", $event)'
@@ -113,6 +116,7 @@
               @moveGraph='moveGraph'
               @update:editingInstIdx='$emit("update:editingInstIdx", $event)'
               @update:trajTimePts='$emit("update:trajTimePts", $event)'
+              @update:currentTime='$emit("update:currentTime", $event)'
             />
           />
         </div>
@@ -130,6 +134,7 @@ import {
   watch, 
   PropType,
   computed,
+  watchEffect
 } from 'vue';
 import { throttle } from 'lodash';
 
@@ -261,7 +266,15 @@ export default defineComponent({
     editingInstIdx: {
       type: Number,
       required: true
-    }
+    },
+    currentTime: {
+      type: Number,
+      required: true
+    },
+    playing: {
+      type: Boolean,
+      required: true
+    },
   },
   setup(props, { emit }) {
     const layersContainer = ref<HTMLDivElement | null>(null);
@@ -276,6 +289,7 @@ export default defineComponent({
     const xAxis = ref<HTMLDivElement | null>(null);
     const minDrawDur = ref(0.01);
     const transcriptionLayer = ref<typeof TranscriptionLayer | null>(null);
+    const scrollUpdateIdx = ref(0);
     const editorMode = EditorMode;
     // const editingInstIdx = ref(0);
 
@@ -319,6 +333,22 @@ export default defineComponent({
       '--modeSelectorHeight': `${modeSelectorHeight}px`
     }));
 
+    const displayRange = computed(() => {
+      const idx = scrollUpdateIdx.value;
+      const scrollLeft = scrollingContainer.value!.scrollLeft;
+      const clientWidth = scrollingContainer.value!.clientWidth;
+      const start = xScale.value!.invert(scrollLeft);
+      const end = xScale.value!.invert(scrollLeft + clientWidth);
+      return [start, end];
+    });
+
+
+    watch(scrollingContainer, () => {
+      console.log('scrollingContainer changed');
+    }, {deep: true})
+
+
+
     const zoomOutY = () => emit('zoomOutY');
     const zoomInY = () => emit('zoomInY');
     const zoomOutX = () =>  emit('zoomOutX');
@@ -360,13 +390,12 @@ export default defineComponent({
     };
 
     const resetYScroll = () => {
-      const displayRange = getDisplayRange();
       let allTrajs: Trajectory[] = [];
       props.piece.instrumentation.forEach((_, i) => {
         const trajs = props.piece.allTrajectories(i);
         const starts = props.piece.trajStartTimes(i);
         trajs.map((traj, idx) => {
-          if (starts[idx] >= displayRange[0] && starts[idx] <= displayRange[1]) {
+          if (starts[idx] >= displayRange.value[0] && starts[idx] <= displayRange.value[1]) {
             allTrajs.push(traj);
           }
         })
@@ -384,13 +413,13 @@ export default defineComponent({
       scrollingContainer.value!.scrollTop = scrollTop;   
     }
 
-    const getDisplayRange = () => {
-      const scrollLeft = scrollingContainer.value!.scrollLeft;
-      const clientWidth = scrollingContainer.value!.clientWidth;
-      const start = xScale.value!.invert(scrollLeft);
-      const end = xScale.value!.invert(scrollLeft + clientWidth);
-      return [start, end];
-    };
+    // const getDisplayRange = () => {
+    //   const scrollLeft = scrollingContainer.value!.scrollLeft;
+    //   const clientWidth = scrollingContainer.value!.clientWidth;
+    //   const start = xScale.value!.invert(scrollLeft);
+    //   const end = xScale.value!.invert(scrollLeft + clientWidth);
+    //   return [start, end];
+    // };
 
     const moveToX = (x: number) => {
       scrollingContainer.value!.scrollLeft = x;
@@ -398,20 +427,26 @@ export default defineComponent({
     }
 
     const moveGraph = (amt: number) => {
-      const displayRange = getDisplayRange();
-      if (amt === 0.5) {
-        const mid = (displayRange[0] + displayRange[1]) / 2;
-        const x = xScale.value!(mid);
-        scrollingContainer.value!.scrollLeft = x;
-        resetYScroll();
-      } else if (amt === -0.5) {
-        const start = displayRange[0];
-        const midDur = (displayRange[1] - displayRange[0]) / 2;
-        const newStart = start - midDur;
-        const x = xScale.value!(newStart);
-        scrollingContainer.value!.scrollLeft = x;
-        resetYScroll();
-      }
+      // const displayRange = getDisplayRange();
+      // if (amt === 0.5) {
+      //   const mid = (displayRange.value[0] + displayRange.value[1]) / 2;
+      //   const x = xScale.value!(mid);
+      //   scrollingContainer.value!.scrollLeft = x;
+      //   resetYScroll();
+      // } else if (amt === -0.5) {
+      //   const start = displayRange.value[0];
+      //   const midDur = (displayRange.value[1] - displayRange.value[0]) / 2;
+      //   const newStart = start - midDur;
+      //   const x = xScale.value!(newStart);
+      //   scrollingContainer.value!.scrollLeft = x;
+      //   resetYScroll();
+      // }
+      const start = displayRange.value[0];
+      const dur = displayRange.value[1] - displayRange.value[0];
+      const newStart = start + amt * dur;
+      const x = xScale.value!(newStart);
+      scrollingContainer.value!.scrollLeft = x;
+      resetYScroll();
     }
 
     const updateAxesScroll = throttle(() => {
@@ -424,6 +459,7 @@ export default defineComponent({
       updateClientWidth();
       scrollingContainer.value?.addEventListener('scroll', () => {
         updateAxesScroll();
+        scrollUpdateIdx.value += 1;
         // if (!isXScrolling && !isYScrolling) {
         //   isXScrolling = true;
         //   isYScrolling = true;
@@ -496,7 +532,8 @@ export default defineComponent({
       moveGraph,
       editorMode,
       instTracksEnum,
-      availableModes
+      availableModes,
+      displayRange
     }
   }
   
