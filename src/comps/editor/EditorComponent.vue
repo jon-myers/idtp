@@ -923,8 +923,8 @@ export default defineComponent({
       // await this.initializePiece();
       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
       ap.parentLoaded();
-      const colors = ['#204580', '#532080', '#802030', '#428020'];
-      const selColors = ['#4089ff', '#a640ff', '#ff4060', '#83ff40']
+      const colors = ['#204580', '#802030', '#532080', '#428020'];
+      const selColors = ['#4089ff', '#ff4060', '#a640ff', '#83ff40']
       this.piece.instrumentation.forEach((inst, idx) => {
         if (idx > 3) {
           throw 'IDTP logger: Too many instruments in instrumentation array.'

@@ -2199,10 +2199,15 @@ class Phrase {
   trajIdxFromTime(time: number) {
     const phraseTime = time - this.startTime!;
     const trajs = this.trajectories.filter(traj => {
-      const a = phraseTime >= traj.startTime!;
+      const smallOffset = 1e-10;
+      const a = phraseTime >= traj.startTime! - smallOffset;
       const b = phraseTime < traj.startTime! + traj.durTot;
       return a && b
     })
+    if (trajs.length === 0) {
+      // breakpoint
+      throw new Error('No trajectory found')
+    }
     return trajs[0].num
   }
 

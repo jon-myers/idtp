@@ -347,7 +347,7 @@ type TrajSelectPanelDataType = {
   offset: number,
   initUp: boolean,
   extent: number,
-  dampen: boolean,
+  // dampen: boolean,
   // showPhraseRadio: boolean,
   phraseDivType?: 'phrase' | 'section',
   trajIdxs: number[],
@@ -374,6 +374,8 @@ type TrajSelectPanelDataType = {
   cEngTrans: string[],
   selectedTrajs: Trajectory[],
   selectedTraj: Trajectory | undefined,
+  internalPluckBool: boolean,
+  internalDampen: boolean,
 }
 
 export default defineComponent({
@@ -394,7 +396,7 @@ export default defineComponent({
       offset: 0,
       initUp: true,
       extent: 0.05,
-      dampen: false,
+      // dampen: false,
       // showPhraseRadio: false,
       phraseDivType: undefined,
       trajIdxs: [],
@@ -421,6 +423,8 @@ export default defineComponent({
       cEngTrans: [],
       selectedTrajs: [],
       selectedTraj: undefined,
+      internalPluckBool: false,
+      internalDampen: false,
     }
   },
   
@@ -514,7 +518,6 @@ export default defineComponent({
   },
   computed: {
     pluckBool: {
-
       get() {
         if (this.selectedTraj !== undefined) {
           const st = this.selectedTraj;
@@ -525,13 +528,31 @@ export default defineComponent({
           const c5 = c3 && st.articulations['0.00'].name === 'pluck';
           return c4 || c5;
         } else {
-          return false;
+          return this.internalPluckBool;
         }
       },
-
       set(newVal: boolean) {
         if (this.parentSelected) {
           this.$emit('pluckBool', newVal)
+        } else {
+          this.internalPluckBool = newVal;
+        }
+      }
+    },
+    dampen: {
+      get() {
+        if (this.selectedTraj !== undefined) {
+          const arts = this.selectedTraj.articulations;
+          return arts['1.00'] && arts['1.00'].name === 'dampen';
+        } else {
+          return this.internalDampen;
+        }
+      },
+      set(newVal: boolean) {
+        if (this.parentSelected) {
+          this.$emit('dampen', newVal)
+        } else {
+          this.internalDampen = newVal;
         }
       }
     },
@@ -668,6 +689,12 @@ export default defineComponent({
         const track = this.piece!.trackFromPhraseUId(newVal);
         const isSectionDiv = this.piece.sectionStartsGrid[track].includes(pIdx);
         this.phraseDivType = isSectionDiv ? 'section' : 'phrase';
+      }
+    },
+
+    selectedMode(newVal) {
+      if (newVal === EditorMode.Series) {
+        this.internalPluckBool = false;
       }
     }
   },
@@ -896,11 +923,11 @@ export default defineComponent({
       }
     },
 
-    updateDampen() {
-      if (this.parentSelected) {
-        this.$emit('dampen', this.dampen)
-      }
-    },
+    // updateDampen() {
+    //   if (this.parentSelected) {
+    //     this.$emit('dampen', this.dampen)
+    //   }
+    // },
 
     updateVowel() {
       if (this.parentSelected) {
