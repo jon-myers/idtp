@@ -191,13 +191,22 @@ export default defineComponent({
     let dragDotIdx: number | undefined = undefined;
     let dragShadowTraj: Trajectory | undefined = undefined;
     const minTrajDur = 0.05;
-    let trajTimePts: { 
+    console.log('setting up')
+    // let trajTimePts: { 
+    //   time: number, 
+    //   logFreq: number, 
+    //   pIdx: number, 
+    //   tIdx: number, 
+    //   track: number 
+    // }[] = [];
+
+    const trajTimePts = ref<{ 
       time: number, 
       logFreq: number, 
       pIdx: number, 
       tIdx: number, 
       track: number 
-    }[] = [];
+    }[]>([]);
 
     const emptyDivIdxMap = new Map<HTMLDivElement, number>();
     const maxEmptyDivWidth = props.clientWidth;
@@ -244,9 +253,12 @@ export default defineComponent({
           trajRenderStatus.value.push([])
         }
         trajRenderStatus.value[i] = props.piece.allTrajectories(i).map(t => {
+          const prev = trajRenderStatus.value[i].find(obj => {
+            return obj.uniqueId === t.uniqueId
+          });
           return { 
             uniqueId: t.uniqueId!, 
-            renderStatus: false,
+            renderStatus: prev ? prev.renderStatus : false,
             selectedStatus: persistingTrajUIds.includes(t.uniqueId!),
             track: i
           }
@@ -523,6 +535,9 @@ export default defineComponent({
         const svg = d3.select(tranSvg.value);
         svg.style('cursor', 's-resize');
       } else if (mode === EditorMode.Trajectory) {
+        const svg = d3.select(tranSvg.value);
+        svg.style('cursor', 'crosshair');
+      } else if (mode === EditorMode.Series) {
         const svg = d3.select(tranSvg.value);
         svg.style('cursor', 'crosshair');
       }
@@ -1026,6 +1041,7 @@ export default defineComponent({
     }
 
     const deleteTrajs = (trajs: Trajectory[]) => {
+      console.log(trajs)
       const affectedPhrases: Phrase[] = [];
       trajs.forEach(traj => {
         removeTraj(traj);
@@ -1628,6 +1644,14 @@ export default defineComponent({
       d3.selectAll('.timePt').remove();
     };
 
+    const refreshTimePts = () => {
+      clearTimePts();
+      trajTimePts.value.forEach(tpObj => {
+        renderTimePt(tpObj);
+      })
+
+    };
+
     const refreshDragDots = () => {
       if (selectedTrajs.value.length === 1) {
         const traj = selectedTrajs.value[0];
@@ -1822,7 +1846,7 @@ export default defineComponent({
       selectedChikari.value = undefined;
       selectedPhraseDivUid.value = undefined;
       selectedDragDotIdx.value = undefined;
-      trajTimePts = [];
+      trajTimePts.value = [];
     }
 
     const clearDragDots = () => {
@@ -2313,10 +2337,7 @@ export default defineComponent({
         .on('dblclick', handleDoubleClick)
     };
 
-    
-
     const handleClick = (e: MouseEvent) => {
-      console.log('click');
       let time = props.xScale.invert(e.offsetX);
       const logFreq = props.yScale.invert(e.offsetY);
       const track = props.editingInstIdx;
@@ -2326,6 +2347,8 @@ export default defineComponent({
       } else if (props.selectedMode === EditorMode.PhraseDiv) {
         insertNewPhraseDiv(time, track, pIdx);
       } else if (props.selectedMode === EditorMode.Trajectory) { 
+        insertNewTrajDot(time, logFreq, track, pIdx);
+      } else if (props.selectedMode === EditorMode.Series) {
         insertNewTrajDot(time, logFreq, track, pIdx);
       } else {
         const target = e.target! as HTMLElement;
@@ -2381,6 +2404,11 @@ export default defineComponent({
       if (props.meterMagnetMode) {
         time = meterMagnetize(time)
       }
+      if (props.selectedMode === EditorMode.Series && trajTimePts.value.length === 1) {
+        if (time < trajTimePts.value[0].time) {
+          return;
+        }
+      }
       if (props.sargamMagnetMode) {
         const pitch = props.piece.raga.pitchFromLogFreq(logFreq);
         pitch.logOffset = 0;
@@ -2391,15 +2419,15 @@ export default defineComponent({
       const traj = phrase.trajectories[tIdx];
       if (traj.id === 12) {
         let setIt = true;
-        if (trajTimePts.length > 0) {
-          const c1 = trajTimePts[0].tIdx === tIdx;
-          const c2 = trajTimePts[0].pIdx === pIdx;
-          const c3 = trajTimePts[0].track === track;
+        if (trajTimePts.value.length > 0) {
+          const c1 = trajTimePts.value[0].tIdx === tIdx;
+          const c2 = trajTimePts.value[0].pIdx === pIdx;
+          const c3 = trajTimePts.value[0].track === track;
           if (!(c1 && c2 && c3)) {
             setIt = false;
           }
         }
-        const diffs = trajTimePts.map(ttp => {
+        const diffs = trajTimePts.value.map(ttp => {
           return Math.abs(ttp.time - time)
         });
         const minDiff = Math.min(...diffs);
@@ -2418,9 +2446,9 @@ export default defineComponent({
             tIdx,
             track
           };
-          trajTimePts.push(tpObj);
+          trajTimePts.value.push(tpObj);
           renderTimePt(tpObj);
-          emit('update:trajTimePts', trajTimePts);
+          emit('update:trajTimePts', trajTimePts.value);
         }
       }
     }
@@ -2672,6 +2700,7 @@ export default defineComponent({
     };
 
     const refreshVowel = (trajUId: string) => {
+      console.log('refreshing vowel')
       const track = props.piece.trackFromTrajUId(trajUId);
       const vowelDisplayObjs = props.piece.allDisplayVowels(track)
         .filter(obj => obj.uId === trajUId);
@@ -2772,6 +2801,8 @@ export default defineComponent({
       selectTraj,
       playheadStyle,
       playheadX,
+      refreshTimePts,
+      trajTimePts
     }
   }
 })

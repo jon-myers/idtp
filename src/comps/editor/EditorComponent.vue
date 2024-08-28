@@ -42,7 +42,7 @@
       @unsavedChanges='unsavedChanges = $event'
       @update:TrajSelStatus='trajSelStatus = $event'
       @update:selPhraseDivUid='updateSelPhraseDivUid($event)'
-      @update:trajTimePts='trajTimePts = $event'
+      @update:trajTimePts='updateTrajTimePts'
       @update:editingInstIdx='editingInstIdx = $event'
       @update:currentTime='updateCurrentTime'
       />
@@ -617,6 +617,7 @@ type EditorDataType = {
   throttledAlterSlope: ReturnType<typeof throttle> | undefined,
   throttledAlterVibObj: ReturnType<typeof throttle> | undefined,
   editingInstIdx: number,
+  heldLogFreq?: number,
 }
 
 // DebouncedFunc<(newSlope: number) => void>
@@ -796,6 +797,7 @@ export default defineComponent({
       throttledAlterSlope: undefined,
       throttledAlterVibObj: undefined,
       editingInstIdx: 0,
+      heldLogFreq: undefined,
     }
   },
   components: {
@@ -1079,6 +1081,26 @@ export default defineComponent({
         this.svg.style('cursor', 'default');
       }
     },
+
+    trajTimePts: {
+      handler(newVal) {
+        if (this.selectedMode === EditorMode.Series) {
+          if (newVal.length === 2) {
+            this.insertSeriesTraj();
+          }
+        }
+      },
+      deep: true
+    },
+
+    // trajTimePts(newVal) {
+    //   console.log('doing it')
+    //   if (this.selectedMode === EditorMode.Series) {
+    //     if (newVal.length === 2) {
+    //       this.insertSeriesTraj();
+    //     }
+    //   }
+    // }
   },
 
   computed: {
@@ -1123,6 +1145,16 @@ export default defineComponent({
   },
 
   methods: {
+
+    updateTrajTimePts(timePts: { time: number, logFreq: number, pIdx: number, tIdx: number, track: number }[]) {
+      this.trajTimePts.splice(0, this.trajTimePts.length, ...timePts);
+    },
+
+    insertSeriesTraj() {
+      this.heldLogFreq = this.trajTimePts[1].logFreq;
+      this.trajTimePts[1].logFreq = this.trajTimePts[0].logFreq;
+      this.newTrajEmit(0);
+    },
 
     async updateCurrentTime(time: number) {
       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
@@ -1667,10 +1699,14 @@ export default defineComponent({
         phrase.trajectories.splice(tIdx + 2, 0, lastSilentTraj);
         phrase.reset();
       }
-      this.selectedMode = EditorMode.None
+      
       const r = this.$refs.renderer as typeof Renderer;
       const tLayer = r.transcriptionLayer as typeof TranscriptionLayer;
-      tLayer.resetTrajRenderStatus([newTraj.uniqueId]);
+      if (this.selectedMode === EditorMode.Trajectory) {
+        tLayer.resetTrajRenderStatus([newTraj.uniqueId]);
+      } else {
+        tLayer.resetTrajRenderStatus();
+      }
       tLayer.renderTraj(newTraj);
       tLayer.refreshSargam(newTraj.uniqueId!);
       const inst = this.piece.instrumentation[track];
@@ -1678,39 +1714,54 @@ export default defineComponent({
         tLayer.refreshVowel(newTraj.uniqueId!);
         tLayer.refreshEndingConsonant(newTraj.uniqueId!);
       }
-      tLayer.refreshDragDots();
-      this.trajTimePts = [];
-      const altId = tLayer.selectedTraj.id >= 12 ? 
-                    tLayer.selectedTraj.id - 1: 
-                    tLayer.selectedTraj.id; 
-      tsp.selectedIdx = tsp.trajIdxs.indexOf(altId);
-      tsp.parentSelected = true;
-      tsp.slope = Math.log2(tLayer.selectedTraj.slope);
-      if (tLayer.selectedTraj.vibObj) {
-        tsp.extent = tLayer.selectedTraj.vibObj.extent;
-        tsp.initUp = tLayer.selectedTraj.vibObj.initUp;
-        tsp.periods = tLayer.selectedTraj.vibObj.periods;
-        tsp.offset = tLayer.selectedTraj.vibObj.vertOffset;
-      }
-      const selT = tLayer.selectedTraj;
-      const c1 = tLayer.selectedTraj.articulations[0];
-      const c2 = tLayer.selectedTraj.articulations['0.00'];
-      const c3 = c1 && selT.articulations[0].name === 'pluck';
-      const c4 = c2 && selT.articulations['0.00'].name === 'pluck';
-      if (c3 || c4) {
-        tsp.pluckBool = true
-      } else {
-        if (tsp.pluckBool) {
-          tsp.pluckBool = false
+      if (this.selectedMode === EditorMode.Trajectory) {
+        this.selectedMode = EditorMode.None
+        this.trajTimePts = [];
+        tLayer.refreshDragDots();
+        this.$nextTick(() => {
+          tLayer.selectTraj(newTraj.uniqueId!);
+        })
+        const altId = tLayer.selectedTraj.id >= 12 ? 
+                      tLayer.selectedTraj.id - 1: 
+                      tLayer.selectedTraj.id; 
+        tsp.selectedIdx = tsp.trajIdxs.indexOf(altId);
+        tsp.parentSelected = true;
+        tsp.slope = Math.log2(tLayer.selectedTraj.slope);
+        if (tLayer.selectedTraj.vibObj) {
+          tsp.extent = tLayer.selectedTraj.vibObj.extent;
+          tsp.initUp = tLayer.selectedTraj.vibObj.initUp;
+          tsp.periods = tLayer.selectedTraj.vibObj.periods;
+          tsp.offset = tLayer.selectedTraj.vibObj.vertOffset;
         }
+        const selT = tLayer.selectedTraj;
+        const c1 = tLayer.selectedTraj.articulations[0];
+        const c2 = tLayer.selectedTraj.articulations['0.00'];
+        const c3 = c1 && selT.articulations[0].name === 'pluck';
+        const c4 = c2 && selT.articulations['0.00'].name === 'pluck';
+        if (c3 || c4) {
+          tsp.pluckBool = true
+        } else {
+          if (tsp.pluckBool) {
+            tsp.pluckBool = false
+          }
+        }
+      } else if (this.selectedMode === EditorMode.Series) {
+        tLayer.trajTimePts.shift();
+        this.trajTimePts.shift();
+        this.trajTimePts[0].logFreq = this.heldLogFreq!;
+        const tIdx = phrase.trajIdxFromTime(this.trajTimePts[0].time);
+        if (tIdx === undefined) {
+          throw new Error('Trajectory index not found')
+        }
+        this.trajTimePts[0].tIdx = tIdx;
+        tLayer.refreshTimePts();
+        this.heldLogFreq = undefined;
       }
       if (!this.audioDBDoc) {
         this.extendDurTot();
       };
-      this.$nextTick(() => {
-        tLayer.selectTraj(newTraj.uniqueId!);
-      })
-      this.trajTimePts = [];
+      
+      
     },
 
     pluckBoolEmit(pluckBool: boolean) {
