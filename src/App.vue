@@ -45,4 +45,14 @@ body {
 body, html {
   overscroll-behavior-x: none;
 }
+
+/* this is just for hiding something wierd about the new devtools installed */
+
+#vue-inspector-container {
+  width: 0%;
+}
+
+#__vue-devtools-container__ {
+  width: 0%;
+}
 </style>

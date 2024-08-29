@@ -31,8 +31,21 @@ enum Instrument {
   Harmonium = 'Harmonium',
 }
 
+enum ControlsMode {
+  Display = 'Display',
+  Tag = 'Tag',
+  Meter = 'Meter',
+  Download = 'Download',
+  Tuning = 'Tuning',
+  Synthesis = 'Synthesis',
+  None = 'None',
+}
+
+
+
 export {
   SortState,
   EditorMode,
   Instrument,
+  ControlsMode
 }

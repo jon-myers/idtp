@@ -371,6 +371,7 @@ import MeterControls from '@/comps/editor/MeterControls.vue';
 import LabelEditor from '@/comps/editor/LabelEditor.vue';
 import { Meter } from '@/js/meter.ts'
 import { RecType, MusicianType, InstrumentTrackType } from '@/ts/types.ts';
+import { ControlsMode } from '@/ts/enums.ts';
 
 
 type EditorAudioPlayerData = {
@@ -497,6 +498,7 @@ type EditorAudioPlayerData = {
   tuningSines: OscillatorNode[];
   sarangiSynth?: SarangiSynthType;
   klattMiddleGain?: GainNode;
+  selectedControlsMode: ControlsMode;
 }
 
 interface RubberBandNodeType extends AudioWorkletNode {
@@ -736,6 +738,7 @@ export default defineComponent({
       sarangi: false, // placeholder
       sarangiSynth: undefined,
       klattMiddleGain: undefined,
+      selectedControlsMode: ControlsMode.Synthesis
     };
   },
   props: {
@@ -1008,6 +1011,50 @@ export default defineComponent({
         this.otherNode.freq1!.linearRampToValueAtTime(freqs[1] * transp, et);
       }
     },
+    selectedControlsMode(mode, oldMode) {
+      this.showSpecControls = false;
+      this.showMeterControls = false;
+      this.showLabelControls = false;
+      this.showDownloads = false;
+      this.showTuning = false;
+      this.showControls = false;
+      const controlsImg = this.$refs.controlsImg as HTMLImageElement;
+      controlsImg.classList.remove('showControls');
+      const tuningImg = this.$refs.tuningImg as HTMLImageElement;
+      tuningImg.classList.remove('showTuning');
+      const downloadImg = this.$refs.downloadImg as HTMLImageElement;
+      downloadImg.classList.remove('showDownloads');
+      const meterImg = this.$refs.meterImg as HTMLImageElement;
+      meterImg.classList.remove('showMeterControls');
+      const tagsImg = this.$refs.tagsImg as HTMLImageElement;
+      tagsImg.classList.remove('showLabelControls');
+      const specImg = this.$refs.specImg as HTMLImageElement;
+      specImg.classList.remove('showSpecControls');
+      if (mode === ControlsMode.Display) {
+        this.showSpecControls = true;
+        specImg.classList.add('showSpecControls');
+      } else if (mode === ControlsMode.Tag) {
+        this.showLabelControls = true;
+        tagsImg.classList.add('showLabelControls');
+      } else if (mode === ControlsMode.Meter) {
+        this.showMeterControls = true;
+        meterImg.classList.add('showMeterControls');
+      } else if (mode === ControlsMode.Download) {
+        this.showDownloads = true;
+        downloadImg.classList.add('showDownloads');
+      } else if (mode === ControlsMode.Tuning) {
+        this.showTuning = true;
+        tuningImg.classList.add('showTuning');
+      } else if (mode === ControlsMode.Synthesis) {
+        this.showControls = true;
+        controlsImg.classList.add('showControls');
+      } else if (mode === ControlsMode.None) {
+        this.$emit('resizeHeightEmit', false);
+      }
+      if (oldMode === ControlsMode.None) {
+        this.$emit('resizeHeightEmit', true);
+      }
+    }
   },
   methods: {
 
@@ -2415,210 +2462,59 @@ export default defineComponent({
     },
     toggleControls(e: MouseEvent) {
       if (!this.loading) {
-        const cl = (e.target as HTMLImageElement).classList;
-        cl.toggle('showControls');
-        this.showControls = this.showControls ? false : true;
-        if (this.showTuning) {
-          this.showTuning = false;
-          const tuningImg = this.$refs.tuningImg as HTMLImageElement;
-          tuningImg.classList.remove('showTuning');
-        } else if (this.showDownloads) {
-          this.showDownloads = false;
-          const downloadImg = this.$refs.downloadImg as HTMLImageElement;
-          downloadImg.classList.remove('showDownloads')
-        } else if (this.showMeterControls) {
-          this.showMeterControls = false;
-          const meterImg = this.$refs.meterImg as HTMLImageElement;
-          meterImg.classList.remove('showMeterControls');
-        } else if (this.showLabelControls) {
-          this.showLabelControls = false;
-          const tagsImg = this.$refs.tagsImg as HTMLElement;
-          tagsImg.classList.remove('showLabelControls')
-        } else if (this.showSpecControls) {
-          this.showSpecControls = false;
-          const specImg = this.$refs.specImg as HTMLImageElement;
-          specImg.classList.remove('showSpecControls');
+        if (this.selectedControlsMode === ControlsMode.Synthesis) {
+          this.selectedControlsMode = ControlsMode.None;
         } else {
-          this.$emit('resizeHeightEmit', this.showControls);
+          this.selectedControlsMode = ControlsMode.Synthesis;
         }
       }
     },
     toggleTuning(e: MouseEvent) {
       if (!this.loading) {
-        const target = e.target as HTMLImageElement;
-        const cl = target.classList;
-        cl.toggle('showTuning');
-        if (this.showTuning) {
-          this.showTuning = false;
-          this.tuningGains.forEach((_, i) => {
-            this.tuningGains[i] = 0;
-            this.updateTuningGain(i)
-          })
+        if (this.selectedControlsMode === ControlsMode.Tuning) {
+          this.selectedControlsMode = ControlsMode.None;
         } else {
-          this.showTuning = true
-        }
-        if (this.showControls) {
-          this.showControls = false;
-          const controlsImg = this.$refs.controlsImg as HTMLImageElement;
-          controlsImg.classList.remove('showControls');
-        } else if (this.showDownloads) {
-          this.showDownloads = false;
-          const downloadImg = this.$refs.downloadImg as HTMLImageElement;
-          downloadImg.classList.remove('showDownloads')
-        } else if (this.showMeterControls) {
-          this.showMeterControls = false;
-          const meterImg = this.$refs.meterImg as HTMLImageElement;
-          meterImg.classList.remove('showMeterControls');
-        } else if (this.showLabelControls) {
-          this.showLabelControls = false;
-          const tagsImg = this.$refs.tagsImg as HTMLElement;
-          tagsImg.classList.remove('showLabelControls')
-        } else if (this.showSpecControls) {
-          this.showSpecControls = false;
-          const specImg = this.$refs.specImg as HTMLImageElement;
-          specImg.classList.remove('showSpecControls');
-        } else {
-          this.$emit('resizeHeightEmit', this.showTuning)
+          this.selectedControlsMode = ControlsMode.Tuning;
         }
       }
       
     },
     toggleDownloads(e: MouseEvent) {
       if (!this.loading) {
-        const cl = (e.target as HTMLImageElement).classList;
-        cl.toggle('showDownloads');
-        this.showDownloads = this.showDownloads ? false : true;
-        if (this.showControls) {
-          this.showControls = false;
-          const controlsImg = this.$refs.controlsImg as HTMLImageElement;
-          controlsImg.classList.remove('showControls');
-        } else if (this.showTuning) {
-          this.showTuning = false;
-          const tuningImg = this.$refs.tuningImg as HTMLImageElement;
-          tuningImg.classList.remove('showTuning');
-        } else if (this.showMeterControls) {
-          this.showMeterControls = false;
-          const meterImg = this.$refs.meterImg as HTMLImageElement;
-          meterImg.classList.remove('showMeterControls');
-        } else if (this.showLabelControls) {
-          this.showLabelControls = false;
-          const tagsImg = this.$refs.tagsImg as HTMLElement;
-          tagsImg.classList.remove('showLabelControls')
-        } else if (this.showSpecControls) {
-          this.showSpecControls = false;
-          const specImg = this.$refs.specImg as HTMLImageElement;
-          specImg.classList.remove('showSpecControls');
+        if (this.selectedControlsMode === ControlsMode.Download) {
+          this.selectedControlsMode = ControlsMode.None;
         } else {
-          this.$emit('resizeHeightEmit', this.showDownloads);
+          this.selectedControlsMode = ControlsMode.Download;
         }
       }
     },
 
     toggleMeterControls(e?: MouseEvent) {
       if (!this.loading) {
-        let target;
-        if (e === undefined) {
-          target = this.$refs.meterImg as HTMLImageElement;
+        if (this.selectedControlsMode === ControlsMode.Meter) {
+          this.selectedControlsMode = ControlsMode.None;
         } else {
-          target = e.target as HTMLImageElement;
-        }
-        const cl = (target as HTMLImageElement).classList;
-        cl.toggle('showMeterControls');
-        this.showMeterControls = this.showMeterControls ? false : true;
-        if (this.showControls) {
-          this.showControls = false;
-          const controlsImg = this.$refs.controlsImg as HTMLImageElement;
-          controlsImg.classList.remove('showControls');
-        } else if (this.showTuning) {
-          this.showTuning = false;
-          const tuningImg = this.$refs.tuningImg as HTMLImageElement;
-          tuningImg.classList.remove('showTuning');
-        } else if (this.showDownloads) {
-          this.showDownloads = false;
-          const downloadImg = this.$refs.downloadImg as HTMLImageElement;
-          downloadImg.classList.remove('showDownloads')
-        } else if (this.showLabelControls) {
-          this.showLabelControls = false;
-          const tagsImg = this.$refs.tagsImg as HTMLElement;
-          tagsImg.classList.remove('showLabelControls')
-        } else if (this.showSpecControls) {
-          this.showSpecControls = false;
-          const specImg = this.$refs.specImg as HTMLImageElement;
-          specImg.classList.remove('showSpecControls');
-        } else {
-          this.$emit('resizeHeightEmit', this.showMeterControls);
+          this.selectedControlsMode = ControlsMode.Meter;
         }
       }
     },
 
     toggleLabelControls(e?: MouseEvent) {
       if (!this.loading) {
-        let cl;
-        if (e === undefined) {
-          cl = (this.$refs.tagsImg as HTMLElement).classList;
+        if (this.selectedControlsMode === ControlsMode.Tag) {
+          this.selectedControlsMode = ControlsMode.None;
         } else {
-          cl = (e.target as HTMLElement).classList
-        }
-        cl.toggle('showLabelControls');
-        this.showLabelControls = !this.showLabelControls;
-        if (this.showControls) {
-          this.showControls = false;
-          const controlsImg = this.$refs.controlsImg as HTMLImageElement;
-          controlsImg.classList.remove('showControls');
-        } else if (this.showTuning) {
-          this.showTuning = false;
-          const tuningImg = this.$refs.tuningImg as HTMLImageElement;
-          tuningImg.classList.remove('showTuning');
-        } else if (this.showDownloads) {
-          this.showDownloads = false;
-          const downloadImg = this.$refs.downloadImg as HTMLImageElement;
-          downloadImg.classList.remove('showDownloads')
-        } else if (this.showMeterControls) {
-          this.showMeterControls = false;
-          const meterImg = this.$refs.meterImg as HTMLImageElement;
-          meterImg.classList.remove('showMeterControls');
-        } else if (this.showSpecControls) {
-          this.showSpecControls = false;
-          const specImg = this.$refs.specImg as HTMLImageElement;
-          specImg.classList.remove('showSpecControls');
-        } else {
-          this.$emit('resizeHeightEmit', this.showLabelControls);
+          this.selectedControlsMode = ControlsMode.Tag;
         }
       }
     },
 
     toggleSpecControls(e?: MouseEvent) {
       if (!this.loading) {
-        let cl;
-        if (e === undefined) {
-          cl = (this.$refs.specImg as HTMLImageElement).classList;
+        if (this.selectedControlsMode === ControlsMode.Display) {
+          this.selectedControlsMode = ControlsMode.None;
         } else {
-          cl = (e.target as HTMLImageElement).classList;
-        }
-        cl.toggle('showSpecControls');
-        this.showSpecControls = !this.showSpecControls;
-        if (this.showControls) {
-          this.showControls = false;
-          const controlsImg = this.$refs.controlsImg as HTMLImageElement;
-          controlsImg.classList.remove('showControls');
-        } else if (this.showTuning) {
-          this.showTuning = false;
-          const tuningImg = this.$refs.tuningImg as HTMLImageElement;
-          tuningImg.classList.remove('showTuning');
-        } else if (this.showDownloads) {
-          this.showDownloads = false;
-          const downloadImg = this.$refs.downloadImg as HTMLImageElement;
-          downloadImg.classList.remove('showDownloads')
-        } else if (this.showMeterControls) {
-          this.showMeterControls = false;
-          const meterImg = this.$refs.meterImg as HTMLImageElement;
-          meterImg.classList.remove('showMeterControls');
-        } else if (this.showLabelControls) {
-          this.showLabelControls = false;
-          const tagsImg = this.$refs.tagsImg as HTMLElement;
-          tagsImg.classList.remove('showLabelControls')
-        } else {
-          this.$emit('resizeHeightEmit', this.showSpecControls);
+          this.selectedControlsMode = ControlsMode.Display;
         }
       }
     },

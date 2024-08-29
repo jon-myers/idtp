@@ -846,6 +846,7 @@ export default defineComponent({
 
   async mounted() {
     window.addEventListener('beforeunload', this.beforeUnload);
+    window.addEventListener('resize', this.resizeHeight);
     this.fullWidth = window.innerWidth;
     this.throttledAlterSlope = throttle(this.alterSlope, 16);
     this.throttledAlterVibObj = throttle(this.alterVibObj, 16);
@@ -998,6 +999,7 @@ export default defineComponent({
     window.removeEventListener('keydown', this.handleKeydown);
     // window.removeEventListener('keyup', this.handleKeyup);
     window.removeEventListener('beforeunload', this.beforeUnload);
+    window.removeEventListener('resize', this.resizeHeight);
   },
 
   watch: {
@@ -2513,7 +2515,8 @@ export default defineComponent({
       this.contextMenuClosed = false;
     },
 
-    async resizeHeight(controlsOpenOverride = undefined) {
+    resizeHeight(controlsOpenOverride = undefined) {
+      // console.log('this is still running?')
       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
       let controlsOpen = ap.showControls || ap.showDownloads || ap.showTuning;
       if (controlsOpenOverride !== undefined) {
@@ -2522,25 +2525,6 @@ export default defineComponent({
       const controlsHeight = controlsOpen ? ap.controlsHeight : 0;
       const less = this.navHeight + controlsHeight + this.playerHeight + 1;
       this.editorHeight = window.innerHeight - less;
-      try {
-        const leftTime = this.leftTime;
-        const currentXK = this.tx!().k;
-        const currentYK = this.ty!().k;
-        const yProp = this.getScrollYDraggerTranslate();
-        const backColorElem = document.querySelector('#backColor') as 
-          HTMLElement;
-        const currentHeight = backColorElem.getBoundingClientRect().height;
-        const scalingParam = currentYK * currentHeight;
-        // await this.initializePiece(leftTime, currentXK, scalingParam, yProp);
-        // const scrollY = this.getScrollYVal(yProp);
-        // this.gy.call(this.zoomY!.translateTo, 0, scrollY, [0, 0]);
-        // this.transformScrollYDragger();
-
-        this.resize();
-
-      } catch (err) {
-        console.log(err)
-      }
     },
 
     getCenterPoint() {
@@ -4659,22 +4643,12 @@ export default defineComponent({
     },
 
     resize() {
+      console.log('resized')
       const diff = Math.abs(this.oldHeight! - window.innerHeight);
       if (diff > 53) {
         console.log('changed real height')
         this.resizeHeight();
       }
-
-      const rect = this.rect();
-      this.svg
-        .attr('viewBox', [0, 0, rect.width, rect.height])
-      this.x!.range([this.yAxWidth, rect.width])
-      this.y!.range([this.xAxHeight, rect.height])
-      this.updateBackgroundColors();
-      this.updateClipPaths();
-      this.resizeScrollX();
-      this.redraw();
-      this.resetZoom();
       this.oldHeight = window.innerHeight;
       this.fullWidth = window.innerWidth;
     },
