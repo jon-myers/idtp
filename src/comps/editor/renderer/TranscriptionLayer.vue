@@ -1874,6 +1874,7 @@ export default defineComponent({
       selectedPhraseDivUid.value = undefined;
       selectedDragDotIdx.value = undefined;
       trajTimePts.value = [];
+      d3.selectAll('#selBox').remove();
     }
 
     const clearDragDots = () => {
@@ -2319,7 +2320,8 @@ export default defineComponent({
           startTime,
           endTime,
           minLogFreq: lowLogFreq,
-          maxLogFreq: highLogFreq
+          maxLogFreq: highLogFreq,
+          track: props.editingInstIdx
         });
       } else {
         debouncedHandleClick(e.sourceEvent! as MouseEvent);
@@ -2661,28 +2663,28 @@ export default defineComponent({
       startTime?: number, 
       endTime?: number, 
       minLogFreq?: number, 
-      maxLogFreq?: number
+      maxLogFreq?: number,
+      track?: number
     } = {
       startTime: undefined,
       endTime: undefined,
       minLogFreq: undefined,
-      maxLogFreq: undefined
+      maxLogFreq: undefined,
+      track: undefined
     }) => {
       
-      if (options.startTime === undefined || options.endTime === undefined ||
-          options.minLogFreq === undefined || options.maxLogFreq === undefined) {
+      if (options.startTime === undefined || 
+          options.endTime === undefined ||
+          options.minLogFreq === undefined || 
+          options.maxLogFreq === undefined || 
+          options.track === undefined) {
         throw new Error('Missing selection box parameters');
       }
       const startTime = options.startTime;
       const endTime = options.endTime;
       const minLogFreq = options.minLogFreq;
       const maxLogFreq = options.maxLogFreq;
-      const instIdxs = props.instTracks
-        .filter(t => t.displaying)
-        .map(t => t.idx);
-      const trajs = instIdxs
-        .map(i => props.piece.allTrajectories(i))
-        .flat()
+      const trajs = props.piece.allTrajectories(options.track)
         .filter(traj => {
           const track = props.piece.trackFromTraj(traj);
           const phraseStart = props.piece.phraseGrid[track][traj.phraseIdx!].startTime!;
