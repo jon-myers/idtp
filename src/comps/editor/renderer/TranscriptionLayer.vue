@@ -682,7 +682,7 @@ export default defineComponent({
           .attr('stroke-linecap', 'round')
           .attr('class', `trajShadow uId${traj.uniqueId!}`)
           .style('opacity', '0')
-          .style('cursor', 'pointer')
+          // .style('cursor', 'pointer')
           .on('mouseover', () => handleTrajMouseOver(traj, track))
           .on('mouseout', () => handleTrajMouseOut(traj, track))
           .on('click', () => handleClickTraj(traj, track))
@@ -724,7 +724,7 @@ export default defineComponent({
           .attr('stroke', 'black')
           .attr('transform', d => `translate(${d.x + offset}, ${d.y}) rotate(90)`)
           .style('opacity', '0')
-          .style('cursor', 'pointer')
+          // .style('cursor', 'pointer')
           .classed(`pluckShadow uId${traj.uniqueId!}`, true)
           .on('mouseover', () => handleTrajMouseOver(traj, track))
           .on('mouseout', () => handleTrajMouseOut(traj, track))
@@ -770,7 +770,7 @@ export default defineComponent({
             return `translate(${props.xScale(d.x)}, ${props.yScale(d.y)})`
           })
           .style('opacity', '0')
-          .style('cursor', 'pointer')
+          // .style('cursor', 'pointer')
           .classed(`dampenShadow uId${traj.uniqueId!}`, true)
           .on('mouseover', () => handleTrajMouseOver(traj, track))
           .on('mouseout', () => handleTrajMouseOut(traj, track))
@@ -1174,6 +1174,9 @@ export default defineComponent({
       emit('update:selectedMode', EditorMode.None);
       nextTick(() => {
         selectedPhraseDivUid.value = undefined;
+        if (shifted.value && track !== props.editingInstIdx) {
+          return
+        }
         emit('update:editingInstIdx', track);
         if (!shifted.value) {
           selectedTrajs.value.forEach(traj => {
@@ -1187,11 +1190,13 @@ export default defineComponent({
           });
           renderObj!.selectedStatus = true;
         } else {
-          clearDragDots();
-          const renderObj = trajRenderStatus.value[track].find(obj => {
-            return obj.uniqueId === traj.uniqueId
-          });
-          renderObj!.selectedStatus = true;
+          if (track === currentTrack.value) {
+            clearDragDots();
+            const renderObj = trajRenderStatus.value[track].find(obj => {
+              return obj.uniqueId === traj.uniqueId
+            });
+            renderObj!.selectedStatus = true;
+          }
         }
         selectedChikari.value = undefined;
       })
@@ -1710,11 +1715,24 @@ export default defineComponent({
     }
 
     const handleTrajMouseOver = (traj: Trajectory, track: number) => {
+      if (shifted.value && track !== props.editingInstIdx) {
+        return
+      }
       const selector = `.traj.uId${traj.uniqueId!}`
       d3.selectAll(selector)
         .attr('stroke', props.instTracks[track].selColor)
       d3.selectAll(selector + '.pluck')
         .attr('fill', props.instTracks[track].selColor)
+      
+      const cursorTrajSelector = `.trajShadow.uId${traj.uniqueId!}`
+      d3.selectAll(cursorTrajSelector)
+        .style('cursor', 'pointer')
+      const cursorDampenSelector = `.dampenShadow.uId${traj.uniqueId!}`
+      d3.selectAll(cursorDampenSelector)
+        .style('cursor', 'pointer');
+      const cursorPluckSelector = `.pluckShadow.uId${traj.uniqueId!}`
+      d3.selectAll(cursorPluckSelector)
+        .style('cursor', 'pointer');
     }
     const handleTrajMouseOut = (traj: Trajectory, track: number) => {
       const selector = `.traj.uId${traj.uniqueId!}`
@@ -1732,6 +1750,15 @@ export default defineComponent({
         d3.selectAll(selector + '.pluck')
           .attr('fill', props.instTracks[track].selColor)
       }
+      const cursorSelector = `.trajShadow.uId${traj.uniqueId!}`
+      d3.selectAll(cursorSelector)
+        .style('cursor', 'default')
+      const cursorDampenSelector = `.dampenShadow.uId${traj.uniqueId!}`
+      d3.selectAll(cursorDampenSelector)
+        .style('cursor', 'default')
+      const cursorPluckSelector = `.pluckShadow.uId${traj.uniqueId!}`
+      d3.selectAll(cursorPluckSelector)
+        .style('cursor', 'default');
     }
 
     const handleChikariMouseOver = (cd: ChikariDisplayType) => {
@@ -2297,6 +2324,8 @@ export default defineComponent({
       } else {
         debouncedHandleClick(e.sourceEvent! as MouseEvent);
       }
+      selBoxStartX = undefined;
+      selBoxStartY = undefined;
       
     }
 
@@ -2350,7 +2379,7 @@ export default defineComponent({
         insertNewTrajDot(time, logFreq, track, pIdx);
       } else if (props.selectedMode === EditorMode.Series) {
         insertNewTrajDot(time, logFreq, track, pIdx);
-      } else {
+      } else if (props.selectedMode === EditorMode.None) {
         const target = e.target! as HTMLElement;
         const classes = [
           'tranSvg', 
@@ -2360,7 +2389,7 @@ export default defineComponent({
           'consonantLabel'
         ];
         const f = classes.some(c => target.classList.contains(c));
-        if (f) {
+        if (f && !shifted.value) {
           handleEscape();
         }
       }
