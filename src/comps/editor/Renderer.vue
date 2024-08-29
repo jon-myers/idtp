@@ -108,6 +108,7 @@
               :currentTime='currentTime'
               :displayRange='displayRange'
               :playing='playing'
+              :browser='browser'
               @update:selectedMode='$emit("update:selectedMode", $event)'
               @unsavedChanges='$emit("unsavedChanges", $event)'
               @update:TrajSelStatus='$emit("update:TrajSelStatus", $event)'
@@ -148,6 +149,7 @@ import { Piece, Trajectory } from '@/js/classes.ts';
 import * as d3 from 'd3';
 import { InstrumentTrackType } from '@/ts/types.ts';
 import { EditorMode, Instrument } from '@/ts/enums.ts';
+import { BrowserInfo } from 'detect-browser';
 
 
 export default defineComponent({
@@ -275,6 +277,10 @@ export default defineComponent({
       type: Boolean,
       required: true
     },
+    browser: {
+      type: Object as PropType<BrowserInfo>,
+      required: true
+    }
   },
   setup(props, { emit }) {
     const layersContainer = ref<HTMLDivElement | null>(null);

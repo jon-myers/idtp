@@ -825,6 +825,14 @@ type TrajRenderObj = {
   track: number
 }
 
+type TrajTimePoint = {
+  time: number,
+  logFreq: number,
+  pIdx: number,
+  tIdx: number,
+  track: number,
+}
+
 export type { 
   CollectionType, 
   UserType, 
@@ -895,5 +903,6 @@ export type {
   TrajSelectionStatus,
   ChikariDisplayType,
   TrajRenderObj,
+  TrajTimePoint,
 };
 

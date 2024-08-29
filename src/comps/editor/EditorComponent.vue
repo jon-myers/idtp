@@ -32,6 +32,7 @@
       :meterMagnetMode='meterMagnetMode'
       :editingInstIdx='editingInstIdx'
       :currentTime='currentTime'
+      :browser='browser'
       :playing='playing'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
@@ -354,7 +355,8 @@ import {
   InstrumentTrackType,
   TrajSelectionStatus,
   PhraseDivDisplayType,
-  TrajRenderObj
+  TrajRenderObj,
+  TrajTimePoint,
 } from '@/ts/types';
 import { EditorMode, Instrument } from '@/ts/enums';
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
@@ -544,13 +546,7 @@ type EditorDataType = {
   clipG: Selection<SVGGElement, undefined, null, undefined>,
   scrollXWidth: number,
   initXOffset: number,
-  trajTimePts: {
-    time: number, 
-    logFreq: number,
-    pIdx: number,
-    tIdx: number,
-    track: number,
-  }[],
+  trajTimePts: TrajTimePoint[],
   drawingRegion: boolean,
   regionStartPx: number,
   regionEndPx: number,
@@ -933,8 +929,8 @@ export default defineComponent({
         this.instTracks.push({
           inst,
           idx,
-          displaying: idx === 0,
-          sounding: idx === 0,
+          displaying: true,
+          sounding: true,
           color: colors[idx],
           selColor: selColors[idx]
         })
@@ -2009,15 +2005,19 @@ export default defineComponent({
 
     cleanPhrases() {
       // if a phrase is shorter than some very small number, delete it.
-      const realPhrases = this.piece.phrases.filter(phrase => {
-        return phrase.durTot! > 0.0000001
-      });
-      this.piece.phrases = realPhrases;
+      // const realPhrases = this.piece.phrases.filter(phrase => {
+      //   return phrase.durTot! > 0.0000001
+      // });
+      this.piece.phraseGrid.forEach((phrases, track) => {
+        const realPhrases = phrases.filter(phrase => {
+          return phrase.durTot! > 0.0000001
+        });
+        this.piece.phraseGrid[track] = realPhrases;
+      })
       this.piece.durTotFromPhrases();
       this.piece.durArrayFromPhrases();
       this.piece.updateStartTimes();
       this.removeAccidentalSilentTrajs()
-      this.resetZoom();
     },
  
     setScrollY() {
@@ -9125,48 +9125,50 @@ export default defineComponent({
     removeAccidentalSilentTrajs() {
       // remove all silent trajs that are shorter than a very small threshold
       let ct = 0;
-      this.piece.phrases.forEach((phrase, pIdx) => {
-        phrase.trajectories.forEach((traj, tIdx) => {
-          if (traj.id === 12 && traj.durTot < 0.01) {
-            
-            ct += 1
-            if (tIdx === phrase.trajectories.length - 1) {
-              // ones at the end of a phrase             
-              const splicedTraj = phrase.trajectories.splice(tIdx, 1)[0];
-              if (splicedTraj && phrase.trajectories[tIdx-1]) {
+      this.piece.phraseGrid.forEach(phrases => {
+        phrases.forEach((phrase, pIdx) => {
+          phrase.trajectories.forEach((traj, tIdx) => {
+            if (traj.id === 12 && traj.durTot < 0.01) {
+              
+              ct += 1
+              if (tIdx === phrase.trajectories.length - 1) {
+                // ones at the end of a phrase             
+                const splicedTraj = phrase.trajectories.splice(tIdx, 1)[0];
+                if (splicedTraj && phrase.trajectories[tIdx-1]) {
+                  phrase.trajectories[tIdx-1].durTot += splicedTraj.durTot;
+                }     
+                phrase.durTotFromTrajectories();
+                phrase.durArrayFromTrajectories();
+              } else if (tIdx !== 0) {
+                // ones in the middle of a phrase
+                const splicedTraj = phrase.trajectories.splice(tIdx, 1)[0];
                 phrase.trajectories[tIdx-1].durTot += splicedTraj.durTot;
-              }     
-              phrase.durTotFromTrajectories();
-              phrase.durArrayFromTrajectories();
-            } else if (tIdx !== 0) {
-              // ones in the middle of a phrase
-              const splicedTraj = phrase.trajectories.splice(tIdx, 1)[0];
-              phrase.trajectories[tIdx-1].durTot += splicedTraj.durTot;
-              phrase.durTotFromTrajectories();
-              phrase.durArrayFromTrajectories();
-              phrase.assignStartTimes();
-              phrase.assignTrajNums();
-              for (let i = tIdx; i < phrase.trajectories.length; i++) {
-                const oldId = `p${pIdx}t${i+1}`;
-                const newId = `p${pIdx}t${i}`;
-                this.reIdAllReps(oldId, newId);
-              }
-            } else {
-              // ones at the beginning of a phrase
-              const splicedTraj = phrase.trajectories.splice(tIdx, 1)[0];
-              phrase.trajectories[tIdx].durTot += splicedTraj.durTot;
-              phrase.durTotFromTrajectories();
-              phrase.durArrayFromTrajectories();
-              phrase.assignStartTimes();
-              phrase.assignTrajNums();
-              for (let i = 0; i < phrase.trajectories.length; i++) {
-                const oldId = `p${pIdx}t${i+1}`;
-                const newId = `p${pIdx}t${i}`;
-                this.reIdAllReps(oldId, newId);
+                phrase.durTotFromTrajectories();
+                phrase.durArrayFromTrajectories();
+                phrase.assignStartTimes();
+                phrase.assignTrajNums();
+                for (let i = tIdx; i < phrase.trajectories.length; i++) {
+                  const oldId = `p${pIdx}t${i+1}`;
+                  const newId = `p${pIdx}t${i}`;
+                  this.reIdAllReps(oldId, newId);
+                }
+              } else {
+                // ones at the beginning of a phrase
+                const splicedTraj = phrase.trajectories.splice(tIdx, 1)[0];
+                phrase.trajectories[tIdx].durTot += splicedTraj.durTot;
+                phrase.durTotFromTrajectories();
+                phrase.durArrayFromTrajectories();
+                phrase.assignStartTimes();
+                phrase.assignTrajNums();
+                for (let i = 0; i < phrase.trajectories.length; i++) {
+                  const oldId = `p${pIdx}t${i+1}`;
+                  const newId = `p${pIdx}t${i}`;
+                  this.reIdAllReps(oldId, newId);
+                }
               }
             }
-          }
-        })
+          })
+        });
       });
       console.log(`removed ${ct} silent trajs`)
     },

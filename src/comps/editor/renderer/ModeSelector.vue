@@ -4,7 +4,7 @@
       class='tile'
       v-for='mode in possibleModeTiles' 
       :key='mode'
-      :id='mode'
+      :id='String(mode)'
       @click='() => $emit("update:selectedMode", mode)'
       >
       <div class='tileText'>
@@ -21,7 +21,7 @@ export default defineComponent({
   name: 'ModeSelector',
   props: {
     selectedMode: {
-      type: [String, Number] as PropType<EditorMode | Record<string, number>>,
+      type: [String, Number] as PropType<EditorMode | Record<string, number> | number>,
     },
     height: {
       type: Number,

@@ -31,6 +31,7 @@ import {
 import * as d3 from 'd3';
 import { linSpace, cumsum, getClosest } from '@/ts/utils.ts';
 import { EditorMode, Instrument } from '@/ts/enums.ts';
+import { BrowserInfo } from 'detect-browser';
 
 import { 
   Piece, 
@@ -49,7 +50,8 @@ import {
   PhraseDivDisplayType,
   TrajSelectionStatus,
   ChikariDisplayType,
-  TrajRenderObj
+  TrajRenderObj,
+  TrajTimePoint
 } from '@/ts/types.ts';
 
 export default defineComponent({
@@ -166,6 +168,10 @@ export default defineComponent({
       type: Boolean,
       required: true
     },
+    browser: {
+      type: Object as PropType<BrowserInfo>,
+      required: true
+    }
   },
   setup(props, { emit }) {
     const tranContainer = ref<HTMLDivElement | null>(null);
@@ -176,6 +182,7 @@ export default defineComponent({
     const editorMode = ref<EditorMode>(EditorMode.None);
     const shifted = ref<boolean>(false);
     const alted = ref<boolean>(false);
+    const metad = ref<boolean>(false);
     const trajRenderStatus = ref<TrajRenderObj[][]>([]);
     const selectedPhraseDivUid = ref<string | undefined>(undefined);
     const lowOctOffsetRef = toRef(props, 'lowOctOffset');
@@ -183,30 +190,15 @@ export default defineComponent({
     const selectedChikari = ref<ChikariDisplayType | undefined>(undefined);
     const currentTrack = ref<number>(0);
     const selectedDragDotIdx = ref<number | undefined>(undefined);
+    const trajTimePts = ref<TrajTimePoint[]>([]);
+    const clipboardTrajs = ref<Trajectory[]>([]);
 
     let justDeletedPhraseDiv = false;
-    const selPhraseDivColor = 'red';
     const dragDotColor = 'purple';
     const selectedDragDotColor = '#d602d6';
     let dragDotIdx: number | undefined = undefined;
-    let dragShadowTraj: Trajectory | undefined = undefined;
     const minTrajDur = 0.05;
-    console.log('setting up')
-    // let trajTimePts: { 
-    //   time: number, 
-    //   logFreq: number, 
-    //   pIdx: number, 
-    //   tIdx: number, 
-    //   track: number 
-    // }[] = [];
 
-    const trajTimePts = ref<{ 
-      time: number, 
-      logFreq: number, 
-      pIdx: number, 
-      tIdx: number, 
-      track: number 
-    }[]>([]);
 
     const emptyDivIdxMap = new Map<HTMLDivElement, number>();
     const maxEmptyDivWidth = props.clientWidth;
@@ -1890,7 +1882,9 @@ export default defineComponent({
       } else if (e.key === 't') {
         emit('update:selectedMode', EditorMode.Trajectory);
       } else if (e.key === 'c') {
-        if (props.instTracks[props.editingInstIdx].inst === Instrument.Sitar) {
+        if (metad.value) {
+          clipboardTrajs.value = [...selectedTrajs.value];
+        } else if (props.instTracks[props.editingInstIdx].inst === Instrument.Sitar) {
           emit('update:selectedMode', EditorMode.Chikari);
         }
       } else if (e.key === 'm') {
@@ -1960,6 +1954,10 @@ export default defineComponent({
       } else if (e.key === ']') {
         e.preventDefault();
         moveGraph(0.5);
+      } else if (e.key === 'Meta' && props.browser.os!.includes('Mac OS')) {
+        metad.value = true;
+      } else if (e.key === 'Control' && props.browser.os!.includes('Windows')) {
+        metad.value = true
       }
     }
 
@@ -2264,6 +2262,10 @@ export default defineComponent({
         shifted.value = false;
       } else if (e.key === 'Alt') {
         alted.value = false;
+      } else if (e.key === 'Meta' && props.browser.os!.includes('Mac OS')) {
+        metad.value = false;
+      } else if (e.key === 'Control' && props.browser.os!.includes('Windows')) {
+        metad.value = false;
       }
     }
 
@@ -2833,7 +2835,9 @@ export default defineComponent({
       playheadStyle,
       playheadX,
       refreshTimePts,
-      trajTimePts
+      trajTimePts,
+      metad,
+      clipboardTrajs
     }
   }
 })
