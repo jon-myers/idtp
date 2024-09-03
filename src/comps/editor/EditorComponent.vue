@@ -46,6 +46,7 @@
       @update:trajTimePts='updateTrajTimePts'
       @update:editingInstIdx='editingInstIdx = $event'
       @update:currentTime='updateCurrentTime'
+      @update:recomputeTrigger='recomputeTrigger += 1'
       />
     <div class='controlBox'>
       <div class='scrollingControlBox'>
@@ -196,6 +197,7 @@
         :trajSelStatus='trajSelStatus'
         :instrument='piece.instrumentation[editingInstIdx]'
         :selectedMode='selectedMode'
+        :editingInstIdx='editingInstIdx'
         @mutateTraj='mutateTrajEmit'
         @pluckBool='pluckBoolEmit'
         @newTraj='newTrajEmit'
@@ -208,6 +210,8 @@
         @alterSlope='throttledAlterSlope'
         @update:phraseDivRendering='updatePhraseDivRendering'
         @unsavedChanges='updateUnsavedChanges'
+        @groupSelectedTrajs='groupSelectedTrajs'
+        @ungroupSelectedTrajs='ungroupSelectedTrajs'
         />
     </div>
   </div>
@@ -484,7 +488,7 @@ type EditorDataType = {
   instructionsText: string,
   clipboardTrajs: Trajectory[],
   pastedTrajs: Trajectory[],
-  groupable: boolean,
+  // groupable: boolean,
   playerHeight: number,
   oldHeight?: number,
   leftTime: number,
@@ -614,6 +618,7 @@ type EditorDataType = {
   throttledAlterVibObj: ReturnType<typeof throttle> | undefined,
   editingInstIdx: number,
   heldLogFreq?: number,
+  recomputeTrigger: number
 }
 
 // DebouncedFunc<(newSlope: number) => void>
@@ -680,7 +685,7 @@ export default defineComponent({
       instructionsText: instructionsText,
       clipboardTrajs: [],
       pastedTrajs: [],
-      groupable: false,
+      // groupable: false,
       playerHeight: 100,
       oldHeight: undefined,
       leftTime: 0,
@@ -794,6 +799,7 @@ export default defineComponent({
       throttledAlterVibObj: undefined,
       editingInstIdx: 0,
       heldLogFreq: undefined,
+      recomputeTrigger: 0
     }
   },
   components: {
@@ -1130,15 +1136,38 @@ export default defineComponent({
       return false;
     },
 
-    selectedTraj() {
+    selectedTraj(): Trajectory | undefined {
       const r = this.$refs.renderer as typeof Renderer;
-      const tLayer = r.$refs.transcriptionLayer as typeof TranscriptionLayer;
+      const tLayer = r.transcriptionLayer as typeof TranscriptionLayer;
       return tLayer.selectedTraj;
     },
 
-    playing() {
+    selectedTrajs(): Trajectory[] {
+      this.recomputeTrigger;
+      const r = this.$refs.renderer as typeof Renderer;
+      if (!r) {
+        console.log('no renderer')
+        return [];
+      }
+      const tLayer = r.transcriptionLayer as typeof TranscriptionLayer;
+      if (!tLayer) {
+        console.log('no transcription layer')
+        return []; 
+      }
+      return tLayer.selectedTrajs;
+    },
+
+    playing() { 
       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
       return ap.playing;
+    },
+
+    groupable() {
+      if (this.selectedTrajs.length > 1) {
+        return this.selectedTrajsGroupable();
+      } else {
+        return false;
+      }
     }
   },
 
@@ -6906,43 +6935,47 @@ export default defineComponent({
       }
     },
 
-    // groupSelectedTrajs() {
-    //   if (this.selectedTrajsGroupable()) {
-    //     const pIdx = this.selectedTrajs[0].phraseIdx;
-    //     const phrase = this.piece.phrases[Number(pIdx)];
-    //     const group = new Group({ trajectories: this.selectedTrajs });
-    //     phrase.getGroups(0).push(group)
-    //   } else {
-    //     throw new Error('Cannot group selected trajectories');
-    //   }
-    // },
+    groupSelectedTrajs() {
+      if (this.selectedTrajsGroupable()) {
+        const pIdx = this.selectedTrajs[0].phraseIdx!;
+        const track = this.editingInstIdx;
+        const phrase = this.piece.phraseGrid[track][pIdx];
+        const group = new Group({ trajectories: this.selectedTrajs });
+        phrase.getGroups(0).push(group)
+      } else {
+        throw new Error('Cannot group selected trajectories');
+      }
+    },
 
-    // ungroupSelectedTrajs() {
-    //   if (this.selectedTrajsConstituteAGroup()) {
-    //     const groupId = this.selectedTrajs[0].groupId;
-    //     this.selectedTrajs.forEach(traj => {
-    //       traj.groupId = undefined
-    //     });
-    //     const pIdx = this.selectedTrajs[0].phraseIdx;
-    //     const phrase = this.piece.phrases[Number(pIdx)];
-    //     const groups = phrase.getGroups(0);
-    //     // remove group from groups
-    //     const idx = groups.findIndex(group => group.id === groupId);
-    //     groups.splice(idx, 1);
+    ungroupSelectedTrajs() {
+      if (this.selectedTrajsConstituteAGroup()) {
+        const groupId = this.selectedTrajs[0].groupId;
+        this.selectedTrajs.forEach(traj => {
+          traj.groupId = undefined
+        });
+        const pIdx = this.selectedTrajs[0].phraseIdx;
+        const phrase = this.piece.phrases[Number(pIdx)];
+        const groups = phrase.getGroups(0);
+        // remove group from groups
+        const idx = groups.findIndex(group => group.id === groupId);
+        groups.splice(idx, 1);
 
-    //   } else {
-    //     throw new Error('Cannot ungroup selected trajectories');
-    //   }
-    // },
+      } else {
+        throw new Error('Cannot ungroup selected trajectories');
+      }
+    },
 
-    // selectedTrajsConstituteAGroup() {
-    //   const phrase = this.piece.phrases[this.selectedTrajs[0]!.phraseIdx!];
-    //   const id = this.selectedTrajs[0].groupId!;
-    //   const group = phrase.getGroupFromId(id)!;
-    //   const c1 = group.trajectories.length === this.selectedTrajs.length;
-    //   const c2 = this.selectedTrajs.every(traj => traj.groupId === id);
-    //   return c1 && c2
-    // },
+    selectedTrajsConstituteAGroup() {
+      const track = this.editingInstIdx;
+      const phrases = this.piece.phraseGrid[track];
+      const phrase = phrases[this.selectedTrajs[0]!.phraseIdx!];
+      const id = this.selectedTrajs[0].groupId!;
+      const group = phrase.getGroupFromId(id)!;
+      if (group === undefined) return false;
+      const c1 = group.trajectories.length === this.selectedTrajs.length;
+      const c2 = this.selectedTrajs.every(traj => traj.groupId === id);
+      return c1 && c2
+    },
 
     moveEConsonant(
         traj: Trajectory, 
@@ -7764,25 +7797,25 @@ export default defineComponent({
         .attr('cursor', 'pointer')
     },
 
-    // selectedTrajsGroupable() {// tests whether all trajs in this.selectedTrajs
-    //   // are adjacent to one another and part of the same phrase
-    //   const uniquePIdxs = [...new Set(this.selectedTrajs.map(t => t.phraseIdx))]
-    //   if (uniquePIdxs.length === 1) {
-    //     // sort by num
-    //     this.selectedTrajs.sort((a, b) => a.num! - b.num!);
-    //     const nums = this.selectedTrajs.map(traj => traj.num!);
-    //     const diffs = nums.slice(1).map((num, nIdx) => {
-    //       return num - nums[nIdx];
-    //     })
-    //     const c1 = diffs.every(diff => diff === 1);
-    //     const c2 = this.selectedTrajs.every(traj => {
-    //       return traj.groupId === this.selectedTrajs[0].groupId
-    //     });
-    //     return c1 && c2
-    //   } else {
-    //     return false
-    //   }
-    // },
+    selectedTrajsGroupable() {// tests whether all trajs in this.selectedTrajs
+      // are adjacent to one another and part of the same phrase
+      const uniquePIdxs = [...new Set(this.selectedTrajs.map(t => t.phraseIdx))]
+      if (uniquePIdxs.length === 1) {
+        // sort by num
+        this.selectedTrajs.sort((a, b) => a.num! - b.num!);
+        const nums = this.selectedTrajs.map(traj => traj.num!);
+        const diffs = nums.slice(1).map((num, nIdx) => {
+          return num - nums[nIdx];
+        })
+        const c1 = diffs.every(diff => diff === 1);
+        const c2 = this.selectedTrajs.every(traj => {
+          return traj.groupId === this.selectedTrajs[0].groupId
+        });
+        return c1 && c2
+      } else {
+        return false
+      }
+    },
 
     // selectedTrajsGrouped() {
     //   const groupIDs = [...new Set(this.selectedTrajs.map(t => t.groupId))];

@@ -462,6 +462,7 @@ export default defineComponent({
     
 
     onMounted(async () => {
+      emit('update:recomputeTrigger');
       updateClientWidth();
       scrollingContainer.value?.addEventListener('scroll', () => {
         updateAxesScroll();
