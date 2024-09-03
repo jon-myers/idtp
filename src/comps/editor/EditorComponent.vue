@@ -2141,175 +2141,175 @@ export default defineComponent({
       yDragger.attr('transform', `translate(2, ${deltaY})`)
     },
 
-    // pasteTrajs() {
-    //   this.pastedTrajs = [];
-    //   //make sure they are sorted by time first
-    //   this.clipboardTrajs.sort((a, b) => {
-    //     const aPhrase = this.piece.phrases[a.phraseIdx!];
-    //     const aPhraseStart = aPhrase.startTime;
-    //     const aStart = a.startTime! + aPhraseStart!;
-    //     const bPhrase = this.piece.phrases[b.phraseIdx!];
-    //     const bPhraseStart = bPhrase.startTime;
-    //     const bStart = b.startTime! + bPhraseStart!;
-    //     return aStart - bStart;
-    //   });
+    pasteTrajs() {
+      this.pastedTrajs = [];
+      //make sure they are sorted by time first
+      this.clipboardTrajs.sort((a, b) => {
+        const aPhrase = this.piece.phrases[a.phraseIdx!];
+        const aPhraseStart = aPhrase.startTime;
+        const aStart = a.startTime! + aPhraseStart!;
+        const bPhrase = this.piece.phrases[b.phraseIdx!];
+        const bPhraseStart = bPhrase.startTime;
+        const bStart = b.startTime! + bPhraseStart!;
+        return aStart - bStart;
+      });
 
-    //   // make sure they all fit within a single silent traj, otherwise indicate
-    //   // somehow that they don't fit
-    //   const fT = this.clipboardTrajs[0];
-    //   const fP = this.piece.phrases[fT.phraseIdx!];
-    //   const fPStart = fP.startTime! + fT.startTime!;
-    //   const lT = this.clipboardTrajs[this.clipboardTrajs.length - 1];
-    //   const lP = this.piece.phrases[lT.phraseIdx!];
-    //   const lPEnd = lP.startTime! + lT.startTime! + lT.durTot;
-    //   const dur = lPEnd - fPStart;
-    //   let realST: number = this.currentTime;
-    //   const startPIdx = this.phraseIdxFromTime(realST)!;
-    //   const startP = this.piece.phrases[startPIdx];
-    //   const startTIdx = this.trajIdxFromTime(startP, realST)!;
-    //   const startT = startP.trajectories[startTIdx];
-    //   const realET = realST + dur;
-    //   const endPIdx = this.phraseIdxFromTime(realET)!;
-    //   const endP = this.piece.phrases[endPIdx];
-    //   const endTIdx = this.trajIdxFromTime(endP, realET)!;
-    //   if (startPIdx === endPIdx && startTIdx === endTIdx && startT.id === 12) {
-    //     let grouped = false;
-    //     if (this.clipboardTrajs[0].groupId !== undefined) {
-    //       grouped = true;
-    //     }
-    //     this.clipboardTrajs.forEach(traj => {
-    //       // first, find real start time for original traj
-    //       const origPhrase = this.piece.phrases[traj.phraseIdx!];
-    //       const origPhraseStart = origPhrase.startTime!;
-    //       const origTrajStart = origPhraseStart + traj.startTime!;
-    //       const offsetTrajStart = origTrajStart - fPStart;
-    //       realST = realST + offsetTrajStart;
+      // make sure they all fit within a single silent traj, otherwise indicate
+      // somehow that they don't fit
+      const fT = this.clipboardTrajs[0];
+      const fP = this.piece.phrases[fT.phraseIdx!];
+      const fPStart = fP.startTime! + fT.startTime!;
+      const lT = this.clipboardTrajs[this.clipboardTrajs.length - 1];
+      const lP = this.piece.phrases[lT.phraseIdx!];
+      const lPEnd = lP.startTime! + lT.startTime! + lT.durTot;
+      const dur = lPEnd - fPStart;
+      let realST: number = this.currentTime;
+      const startPIdx = this.phraseIdxFromTime(realST)!;
+      const startP = this.piece.phrases[startPIdx];
+      const startTIdx = this.trajIdxFromTime(startP, realST)!;
+      const startT = startP.trajectories[startTIdx];
+      const realET = realST + dur;
+      const endPIdx = this.phraseIdxFromTime(realET)!;
+      const endP = this.piece.phrases[endPIdx];
+      const endTIdx = this.trajIdxFromTime(endP, realET)!;
+      if (startPIdx === endPIdx && startTIdx === endTIdx && startT.id === 12) {
+        let grouped = false;
+        if (this.clipboardTrajs[0].groupId !== undefined) {
+          grouped = true;
+        }
+        this.clipboardTrajs.forEach(traj => {
+          // first, find real start time for original traj
+          const origPhrase = this.piece.phrases[traj.phraseIdx!];
+          const origPhraseStart = origPhrase.startTime!;
+          const origTrajStart = origPhraseStart + traj.startTime!;
+          const offsetTrajStart = origTrajStart - fPStart;
+          realST = realST + offsetTrajStart;
 
-    //       // get idx of phrase and traj in which to paste
-    //       const targetPIdx = this.phraseIdxFromTime(realST);
-    //       const targetP = this.piece.phrases[targetPIdx!];
-    //       const targetTIdx = this.trajIdxFromTime(targetP, realST)!;
-    //       const targetT = targetP.trajectories[targetTIdx];
-    //       // make a copy of traj.toJSON() without reference to original
-    //       const copyObj = JSON.parse(JSON.stringify(traj.toJSON()))
-    //       copyObj.groupId = undefined;
-    //       copyObj.pitches.forEach((pitch: object, pIdx: number) => {
-    //         copyObj.pitches[pIdx] = new Pitch(pitch)
-    //       })
-    //       const newTraj = new Trajectory(copyObj);
-    //       const startingTime = realST - targetP.startTime!;
-    //       const startsTogether = targetT.startTime! === startingTime;
-    //       const targetEnd = targetT.startTime! + targetT.durTot;
-    //       const computedEnd = realST - targetP.startTime! + traj.durTot;
-    //       const endsTogether = targetEnd === computedEnd;
-    //       const trajs = targetP.trajectories;
-    //       if (startsTogether && endsTogether) {
-    //         // replace silent traj with copied traj
-    //         trajs[targetTIdx] = newTraj;
-    //         targetP.reset();
-    //       } else if (startsTogether) {
-    //         // replace with copied traj followed by silent traj
-    //         targetT.durTot = targetT.durTot - newTraj.durTot;
-    //         trajs.splice(targetTIdx, 0, newTraj);
-    //         targetP.reset();
-    //         const followingTrajs = trajs.slice(targetTIdx + 1, trajs.length);
-    //         followingTrajs.reverse().forEach(t => {
-    //           if (t.id !== 12) {
-    //             const oldId = `p${t.phraseIdx}t${t.num! - 1}`;
-    //             const newId = `p${t.phraseIdx}t${t.num}`;
-    //             this.reIdAllReps(oldId, newId);
-    //           }
-    //         })
-    //       } else if (endsTogether) {
-    //         // replace with silent traj followed by copied traj
-    //         targetT.durTot = targetT.durTot - newTraj.durTot;
-    //         trajs.splice(targetTIdx + 1, 0, newTraj);
-    //         targetP.reset();
-    //         const followingTrajs = trajs.slice(targetTIdx + 1, trajs.length);
-    //         followingTrajs.reverse().forEach(t => {
-    //           if (t.id !== 12) {
-    //             const oldId = `p${t.phraseIdx}t${t.num! - 1}`;
-    //             const newId = `p${t.phraseIdx}t${t.num}`;
-    //             this.reIdAllReps(oldId, newId);
-    //           }
-    //         })
-    //       } else {
-    //         // replace with silent traj followed by copied traj followed by 
-    //         // silent traj
-    //         const firstDur = realST - targetP.startTime! - targetT.startTime!;
-    //         const lastDur = targetT.durTot - firstDur - newTraj.durTot;
-    //         targetT.durTot = firstDur;
-    //         const lstObj: {
-    //           id: number,
-    //           pitches: Pitch[],
-    //           durTot: number,
-    //           fundID12: number,
-    //           instrument?: string
-    //         } = {
-    //           id: 12,
-    //           pitches: [],
-    //           durTot: lastDur,
-    //           fundID12: this.piece.raga.fundamental
-    //         };
-    //         if (this.piece.instrumentation) {
-    //           lstObj.instrument = this.piece.instrumentation[0];
-    //         }
-    //         const lastTraj = new Trajectory(lstObj);
-    //         trajs.splice(targetTIdx + 1, 0, newTraj);
-    //         trajs.splice(targetTIdx + 2, 0, lastTraj);
-    //         targetP.reset();
-    //         const followingTrajs = trajs.slice(targetTIdx + 2, trajs.length);
-    //         followingTrajs.reverse().forEach(t => {
-    //           if (t.id !== 12) {
-    //             const oldId = `p${t.phraseIdx}t${t.num! - 2}`;
-    //             const newId = `p${t.phraseIdx}t${t.num}`;
-    //             this.reIdAllReps(oldId, newId);
-    //           }
-    //         })
-    //       }
-    //       const vowelIdxs = targetP.firstTrajIdxs();
-    //       this.codifiedAddTraj(newTraj, targetP.startTime!, vowelIdxs)
-    //       this.pastedTrajs.push(newTraj);
-    //     });
+          // get idx of phrase and traj in which to paste
+          const targetPIdx = this.phraseIdxFromTime(realST);
+          const targetP = this.piece.phrases[targetPIdx!];
+          const targetTIdx = this.trajIdxFromTime(targetP, realST)!;
+          const targetT = targetP.trajectories[targetTIdx];
+          // make a copy of traj.toJSON() without reference to original
+          const copyObj = JSON.parse(JSON.stringify(traj.toJSON()))
+          copyObj.groupId = undefined;
+          copyObj.pitches.forEach((pitch: object, pIdx: number) => {
+            copyObj.pitches[pIdx] = new Pitch(pitch)
+          })
+          const newTraj = new Trajectory(copyObj);
+          const startingTime = realST - targetP.startTime!;
+          const startsTogether = targetT.startTime! === startingTime;
+          const targetEnd = targetT.startTime! + targetT.durTot;
+          const computedEnd = realST - targetP.startTime! + traj.durTot;
+          const endsTogether = targetEnd === computedEnd;
+          const trajs = targetP.trajectories;
+          if (startsTogether && endsTogether) {
+            // replace silent traj with copied traj
+            trajs[targetTIdx] = newTraj;
+            targetP.reset();
+          } else if (startsTogether) {
+            // replace with copied traj followed by silent traj
+            targetT.durTot = targetT.durTot - newTraj.durTot;
+            trajs.splice(targetTIdx, 0, newTraj);
+            targetP.reset();
+            const followingTrajs = trajs.slice(targetTIdx + 1, trajs.length);
+            followingTrajs.reverse().forEach(t => {
+              if (t.id !== 12) {
+                const oldId = `p${t.phraseIdx}t${t.num! - 1}`;
+                const newId = `p${t.phraseIdx}t${t.num}`;
+                this.reIdAllReps(oldId, newId);
+              }
+            })
+          } else if (endsTogether) {
+            // replace with silent traj followed by copied traj
+            targetT.durTot = targetT.durTot - newTraj.durTot;
+            trajs.splice(targetTIdx + 1, 0, newTraj);
+            targetP.reset();
+            const followingTrajs = trajs.slice(targetTIdx + 1, trajs.length);
+            followingTrajs.reverse().forEach(t => {
+              if (t.id !== 12) {
+                const oldId = `p${t.phraseIdx}t${t.num! - 1}`;
+                const newId = `p${t.phraseIdx}t${t.num}`;
+                this.reIdAllReps(oldId, newId);
+              }
+            })
+          } else {
+            // replace with silent traj followed by copied traj followed by 
+            // silent traj
+            const firstDur = realST - targetP.startTime! - targetT.startTime!;
+            const lastDur = targetT.durTot - firstDur - newTraj.durTot;
+            targetT.durTot = firstDur;
+            const lstObj: {
+              id: number,
+              pitches: Pitch[],
+              durTot: number,
+              fundID12: number,
+              instrument?: string
+            } = {
+              id: 12,
+              pitches: [],
+              durTot: lastDur,
+              fundID12: this.piece.raga.fundamental
+            };
+            if (this.piece.instrumentation) {
+              lstObj.instrument = this.piece.instrumentation[0];
+            }
+            const lastTraj = new Trajectory(lstObj);
+            trajs.splice(targetTIdx + 1, 0, newTraj);
+            trajs.splice(targetTIdx + 2, 0, lastTraj);
+            targetP.reset();
+            const followingTrajs = trajs.slice(targetTIdx + 2, trajs.length);
+            followingTrajs.reverse().forEach(t => {
+              if (t.id !== 12) {
+                const oldId = `p${t.phraseIdx}t${t.num! - 2}`;
+                const newId = `p${t.phraseIdx}t${t.num}`;
+                this.reIdAllReps(oldId, newId);
+              }
+            })
+          }
+          const vowelIdxs = targetP.firstTrajIdxs();
+          this.codifiedAddTraj(newTraj, targetP.startTime!, vowelIdxs)
+          this.pastedTrajs.push(newTraj);
+        });
         
-    //     this.selectedTrajs = this.pastedTrajs;
-    //     if (grouped) {
-    //       this.groupSelectedTrajs()
-    //     }
-    //     if (this.selectedTrajs.length === 1) {
-    //       this.selectedTraj = this.selectedTrajs[0];
-    //       const st = this.selectedTraj;
-    //       this.selectedTrajID = `p${st.phraseIdx}t${st.num}`
-    //       d3Select('#' + this.selectedTrajID)
-    //         .attr('stroke', this.selTrajColor)
-    //       d3Select(`#dampen${this.selectedTrajID}`)
-    //         .attr('stroke', this.selTrajColor)
-    //       d3Select(`#pluck${this.selectedTrajID}`)
-    //         .attr('stroke', this.selArtColor)
-    //         .attr('fill', this.selArtColor)
-    //       d3Select(`#overlay__${this.selectedTrajID}`)
-    //         // .attr('cursor', 'default')
-    //     } else {
-    //       this.selectedTrajs.forEach(traj => {
-    //         const id = `p${traj.phraseIdx}t${traj.num}`;
-    //         d3Select(`#${id}`)
-    //           .attr('stroke', this.selTrajColor)
-    //         d3Select(`#dampen${id}`)
-    //           .attr('stroke', this.selTrajColor)
-    //         d3Select(`#pluck${id}`)
-    //           .attr('fill', this.selArtColor)
-    //         d3Select(`#pluck${id}`)
-    //           .attr('stroke', this.selArtColor)
-    //         d3Select('#overlay__' + id)
-    //           // .attr('cursor', 'default')
-    //       })
-    //     }
-    //   } else {
-    //     console.log("Can't paste here")
-    //   }
+        this.selectedTrajs = this.pastedTrajs;
+        if (grouped) {
+          this.groupSelectedTrajs()
+        }
+        if (this.selectedTrajs.length === 1) {
+          this.selectedTraj = this.selectedTrajs[0];
+          const st = this.selectedTraj;
+          this.selectedTrajID = `p${st.phraseIdx}t${st.num}`
+          d3Select('#' + this.selectedTrajID)
+            .attr('stroke', this.selTrajColor)
+          d3Select(`#dampen${this.selectedTrajID}`)
+            .attr('stroke', this.selTrajColor)
+          d3Select(`#pluck${this.selectedTrajID}`)
+            .attr('stroke', this.selArtColor)
+            .attr('fill', this.selArtColor)
+          d3Select(`#overlay__${this.selectedTrajID}`)
+            // .attr('cursor', 'default')
+        } else {
+          this.selectedTrajs.forEach(traj => {
+            const id = `p${traj.phraseIdx}t${traj.num}`;
+            d3Select(`#${id}`)
+              .attr('stroke', this.selTrajColor)
+            d3Select(`#dampen${id}`)
+              .attr('stroke', this.selTrajColor)
+            d3Select(`#pluck${id}`)
+              .attr('fill', this.selArtColor)
+            d3Select(`#pluck${id}`)
+              .attr('stroke', this.selArtColor)
+            d3Select('#overlay__' + id)
+              // .attr('cursor', 'default')
+          })
+        }
+      } else {
+        console.log("Can't paste here")
+      }
 
       
-    // },
+    },
 
     codifiedAddSargamLabels() { // this 
       const allTrajs = this.piece.phrases.map(p => p.trajectories).flat();

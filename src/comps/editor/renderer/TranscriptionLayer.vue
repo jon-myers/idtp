@@ -39,7 +39,8 @@ import {
   Phrase, 
   Pitch, 
   Chikari,
-  Raga 
+  Raga,
+  Group
 } from '@/js/classes.ts';
 import { throttle, debounce } from 'lodash';
 import { 
@@ -188,7 +189,6 @@ export default defineComponent({
     const lowOctOffsetRef = toRef(props, 'lowOctOffset');
     const highOctOffsetRef = toRef(props, 'highOctOffset');
     const selectedChikari = ref<ChikariDisplayType | undefined>(undefined);
-    const currentTrack = ref<number>(0);
     const selectedDragDotIdx = ref<number | undefined>(undefined);
     const trajTimePts = ref<TrajTimePoint[]>([]);
     const clipboardTrajs = ref<Trajectory[]>([]);
@@ -988,7 +988,8 @@ export default defineComponent({
       g.selectAll(`.consonantLabel.uId${uId}`).remove();
     };
     const removePhraseDiv = (uId: string) => {
-      const g = d3.select('.phraseDivG');
+      const track = props.piece.trackFromPhraseUId(uId);
+      const g = tracks[track].select('.phraseDivG');
       g.selectAll(`.uId${uId}`).remove();
     };
     const clearChikari = (cd: ChikariDisplayType) => {
@@ -1131,12 +1132,12 @@ export default defineComponent({
     const currentPhrase = () => {
       const tolerance = 0.1;
       const time = props.xScale.invert(props.scrollingContainer.scrollLeft);
-      const starts = props.piece.phraseGrid[currentTrack.value]
+      const starts = props.piece.phraseGrid[props.editingInstIdx]
         .map(p => p.startTime!);
       const idx = starts.reduceRight((lastIndex, t, index) => {
         return t <= time + tolerance && lastIndex === -1 ? index : lastIndex;
       }, -1);
-      return [currentTrack.value, idx];
+      return [props.editingInstIdx, idx];
     }
 
     const moveToPhrase = (track: number, phraseIdx: number) => {
@@ -1167,6 +1168,7 @@ export default defineComponent({
       nextTick(() => {
         selectedPhraseDivUid.value = undefined;
         if (shifted.value && track !== props.editingInstIdx) {
+          console.log('getting cancelled out')
           return
         }
         emit('update:editingInstIdx', track);
@@ -1182,7 +1184,7 @@ export default defineComponent({
           });
           renderObj!.selectedStatus = true;
         } else {
-          if (track === currentTrack.value) {
+          if (track === props.editingInstIdx) {
             clearDragDots();
             const renderObj = trajRenderStatus.value[track].find(obj => {
               return obj.uniqueId === traj.uniqueId
@@ -1887,6 +1889,10 @@ export default defineComponent({
         } else if (props.instTracks[props.editingInstIdx].inst === Instrument.Sitar) {
           emit('update:selectedMode', EditorMode.Chikari);
         }
+      } else if (e.key === 'v') {
+        if (metad.value) {
+          pasteTrajs();
+        }
       } else if (e.key === 'm') {
         emit('update:selectedMode', EditorMode.Meter);
       } else if (e.key === 'p') {
@@ -2011,7 +2017,6 @@ export default defineComponent({
         }
         const prevPhrase = phrases[pIdx - 1];
         if (prevPhrase.trajectories.length < 2) {
-          console.log('thiss hould stop things')
           return;
         }
         const lastTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
@@ -2753,6 +2758,122 @@ export default defineComponent({
       if (consonantDisplayObjs.length === 1) {
         renderEndingConsonant(consonantDisplayObjs[0]);
       }
+    }
+
+    const pasteTrajs = () => {
+      if (clipboardTrajs.value.length === 0) {
+        return;
+      }
+      clipboardTrajs.value.sort((a, b) => {
+        const phrases = props.piece.phraseGrid[props.editingInstIdx];
+        const aPhrase = phrases[a.phraseIdx!];
+        const aStart = aPhrase.startTime! + a.startTime!;
+        const bPhrase = phrases[b.phraseIdx!];
+        const bStart = bPhrase.startTime! + b.startTime!;
+        return aStart - bStart;
+      });
+      const track = props.editingInstIdx;
+      const fTraj = clipboardTrajs.value[0];
+      const fPhrase = props.piece.phraseGrid[track][fTraj.phraseIdx!];
+      const fPhraseStart = fPhrase.startTime! + fTraj.startTime!;
+      const lTraj = clipboardTrajs.value[clipboardTrajs.value.length - 1];
+      const lPhrase = props.piece.phraseGrid[track][lTraj.phraseIdx!];
+      const lPhraseEnd = lPhrase.startTime! + lTraj.startTime! + lTraj.durTot;
+      const dur = lPhraseEnd - fPhraseStart;
+      let realST: number = props.currentTime;
+      const startPIdx = props.piece.phraseIdxFromTime(realST, track);
+      const startPhrase = props.piece.phraseGrid[track][startPIdx];
+      const startTIdx = startPhrase.trajIdxFromTime(realST)!;
+      const startTraj = startPhrase.trajectories[startTIdx];
+      const realET = realST + dur;
+      const endPIdx = props.piece.phraseIdxFromTime(realET, track);
+      const endPhrase = props.piece.phraseGrid[track][endPIdx];
+      const endTIdx = endPhrase.trajIdxFromTime(realET)!;
+      if (startPIdx === endPIdx && startTIdx === endTIdx && startTraj.id === 12) {
+        // save groupings in order to reapply to pasted trajs
+        let groupedIdxs: { idxs: number[], uId: string}[] = [];
+        clipboardTrajs.value.forEach((traj, idx) => {
+          if (traj.groupId !== undefined) {
+            const gIdx = groupedIdxs.findIndex(g => g.uId === traj.groupId);
+            if (gIdx === -1) {
+              groupedIdxs.push({ idxs: [idx], uId: traj.groupId });
+            } else {
+              groupedIdxs[gIdx].idxs.push(idx);
+            }
+          }
+        });
+        const pastedTrajs: Trajectory[] = [];
+
+        clipboardTrajs.value.forEach((traj, tIdx) => {
+          const origPhrase = props.piece.phraseGrid[track][traj.phraseIdx!];
+          const origTrajStart = traj.startTime! + origPhrase.startTime!;
+          const offsetTrajStart = origTrajStart - fPhraseStart;
+          const newTrajStart = realST + offsetTrajStart;
+          const targetPhrase = props.piece.phraseGrid[track][startPIdx];
+          const targetTIdx = targetPhrase.trajIdxFromTime(newTrajStart)!;
+          const targetT = targetPhrase.trajectories[targetTIdx];
+          const copyObj = JSON.parse(JSON.stringify(traj));
+          copyObj.uniqueId = undefined;
+          copyObj.groupId = undefined;
+          copyObj.pitches.forEach((pitch: object, pIdx: number) => {
+            copyObj.pitches[pIdx] = new Pitch(pitch);
+          })
+          const newTraj = new Trajectory(copyObj);
+          const startingTime = newTrajStart - targetPhrase.startTime!;
+          const startsTogether = targetT.startTime! === startingTime;
+          const targetEnd = targetT.startTime! + targetT.durTot;
+          const computedEnd = newTrajStart - targetPhrase.startTime! + newTraj.durTot;
+          const endsTogether = targetEnd === computedEnd;
+          const trajs = targetPhrase.trajectories;
+          if (startsTogether && endsTogether) {
+            trajs.splice(startTIdx, 1, newTraj);
+            targetPhrase.reset();
+          } else if (startsTogether) {
+            targetT.durTot = targetT.durTot - newTraj.durTot;
+            trajs.splice(targetTIdx, 0, newTraj);
+            targetPhrase.reset();
+          } else if (endsTogether) {
+            targetT.durTot = targetT.durTot - newTraj.durTot;
+            trajs.splice(targetTIdx + 1, 0, newTraj);
+            targetPhrase.reset();
+          } else {
+            const firstDur = newTrajStart - targetPhrase.startTime! - targetT.startTime!;
+            const lastDur = targetT.durTot - firstDur - newTraj.durTot;
+            targetT.durTot = firstDur;
+            const lstObj: {
+              id: number,
+              durTot: number,
+              pitches: Pitch[],
+              fundID12: number,
+              instrument?: string
+            } = {
+              id: 12,
+              durTot: lastDur,
+              pitches: [],
+              fundID12: props.piece.raga.fundamental
+            };
+            lstObj.instrument = props.piece.instrumentation[track];
+            const lastTraj = new Trajectory(lstObj);
+            trajs.splice(targetTIdx + 1, 0, newTraj, lastTraj);
+            targetPhrase.reset();
+          }
+          pastedTrajs.push(newTraj);
+        })
+        groupedIdxs.forEach(g => {
+          const trajsToBeGrouped = pastedTrajs.filter((_, idx) => {
+            return g.idxs.includes(idx);
+          });
+          const phrase = props.piece.phraseGrid[track][startPIdx];
+          const group = new Group({ trajectories: trajsToBeGrouped });
+          phrase.getGroups().push(group);
+        });
+        resetTrajRenderStatus(pastedTrajs.map(t => t.uniqueId!));
+        pastedTrajs.forEach(traj => {
+          renderTraj(traj);
+        });
+      }
+
+
     }
 
     const mutateTraj = (newIdx: number) => {
