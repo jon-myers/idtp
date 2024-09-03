@@ -21,14 +21,16 @@
       </button>
     </div>
     <div class='selectionRow checks' v-if='groupable'>
-      <label>Grouped</label>
+      <label for='groupCheckbox' >Grouped</label>
       <input
+        id='groupCheckbox'
         v-if='editable'
         type='checkbox'
         v-model='grouped'
         @change='toggleGroup'
       />
       <input
+        id='groupCheckbox'
         v-if='!editable'
         type='checkbox'
         v-model='grouped'
@@ -483,6 +485,10 @@ export default defineComponent({
       type: String as PropType<EditorMode>,
       required: true
     },
+    editingInstIdx: {
+      type: Number,
+      required: true
+    },
   },
 
   async mounted() {
@@ -642,6 +648,9 @@ export default defineComponent({
           this.selectedTraj = undefined;
         }
         // this.instrument = newVal.instrument;
+        this.$nextTick(() => {
+          this.grouped = this.selectedTrajsConstituteAGroup();
+        })
       } else {
         this.selectedTrajs = [];
         this.selectedTraj = undefined;
@@ -700,6 +709,18 @@ export default defineComponent({
   },
 
   methods: {
+
+    selectedTrajsConstituteAGroup() {
+      const track = this.editingInstIdx;
+      const phrases = this.piece.phraseGrid[track];
+      const phrase = phrases[this.selectedTrajs[0]!.phraseIdx!];
+      const id = this.selectedTrajs[0].groupId!;
+      const group = phrase.getGroupFromId(id)!;
+      if (group === undefined) return false;
+      const c1 = group.trajectories.length === this.selectedTrajs.length;
+      const c2 = this.selectedTrajs.every(traj => traj.groupId === id);
+      return c1 && c2
+    },
 
     updatePhraseDivType() {
       const phrase = this.piece!.phraseFromUId(this.selectedPhraseDivUid!);

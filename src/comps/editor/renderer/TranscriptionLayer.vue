@@ -1173,16 +1173,29 @@ export default defineComponent({
         }
         emit('update:editingInstIdx', track);
         if (!shifted.value) {
+          clearDragDots();
           selectedTrajs.value.forEach(traj => {
             const rObj = trajRenderStatus.value.flat().find(obj => {
               return obj.uniqueId === traj.uniqueId
             });
             rObj!.selectedStatus = false;
           })
-          const renderObj = trajRenderStatus.value[track].find(obj => {
-            return obj.uniqueId === traj.uniqueId
-          });
-          renderObj!.selectedStatus = true;
+          if (traj.groupId !== undefined) {
+            // const group = props.piece.trajGroups[traj.groupId];
+            const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
+            const group = phrase.getGroupFromId(traj.groupId)!;
+            group.trajectories.forEach(t => {
+              const rObj = trajRenderStatus.value.flat().find(obj => {
+                return obj.uniqueId === t.uniqueId
+              });
+              rObj!.selectedStatus = true;
+            })
+          } else {
+            const rObj = trajRenderStatus.value[track].find(obj => {
+              return obj.uniqueId === traj.uniqueId
+            });
+            rObj!.selectedStatus = true;
+          }
         } else {
           if (track === props.editingInstIdx) {
             clearDragDots();
@@ -1190,6 +1203,16 @@ export default defineComponent({
               return obj.uniqueId === traj.uniqueId
             });
             renderObj!.selectedStatus = true;
+          }
+          if (traj.groupId !== undefined) {
+            const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
+            const group = phrase.getGroupFromId(traj.groupId)!;
+            group.trajectories.forEach(t => {
+              const rObj = trajRenderStatus.value.flat().find(obj => {
+                return obj.uniqueId === t.uniqueId
+              });
+              rObj!.selectedStatus = true;
+            })
           }
         }
         selectedChikari.value = undefined;
@@ -1727,6 +1750,17 @@ export default defineComponent({
       const cursorPluckSelector = `.pluckShadow.uId${traj.uniqueId!}`
       d3.selectAll(cursorPluckSelector)
         .style('cursor', 'pointer');
+      if (traj.groupId !== undefined) {
+        const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
+        const group = phrase.getGroupFromId(traj.groupId)!;
+        group.trajectories.forEach(t => {
+          const selector = `.traj.uId${t.uniqueId!}`
+          d3.selectAll(selector)
+            .attr('stroke', props.instTracks[track].selColor)
+          d3.selectAll(selector + '.pluck')
+            .attr('fill', props.instTracks[track].selColor)
+        })
+      }
     }
     const handleTrajMouseOut = (traj: Trajectory, track: number) => {
       const selector = `.traj.uId${traj.uniqueId!}`
@@ -1753,6 +1787,28 @@ export default defineComponent({
       const cursorPluckSelector = `.pluckShadow.uId${traj.uniqueId!}`
       d3.selectAll(cursorPluckSelector)
         .style('cursor', 'default');
+      
+      if (traj.groupId !== undefined) {
+        const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
+        const group = phrase.getGroupFromId(traj.groupId)!;
+        group.trajectories.forEach(t => {
+          const selector = `.traj.uId${t.uniqueId!}`
+          const renderObj = trajRenderStatus.value[track].find(obj => {
+            return obj.uniqueId === t.uniqueId
+          });
+          if (renderObj!.selectedStatus === false) {
+            d3.selectAll(selector)
+              .attr('stroke', props.instTracks[track].color)
+            d3.selectAll(selector + '.pluck')
+              .attr('fill', props.instTracks[track].color)
+          } else {
+            d3.selectAll(selector)
+              .attr('stroke', props.instTracks[track].selColor)
+            d3.selectAll(selector + '.pluck')
+              .attr('fill', props.instTracks[track].selColor)
+          }
+        })
+      }
     }
 
     const handleChikariMouseOver = (cd: ChikariDisplayType) => {

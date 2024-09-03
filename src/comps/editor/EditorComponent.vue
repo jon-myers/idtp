@@ -6941,7 +6941,8 @@ export default defineComponent({
         const track = this.editingInstIdx;
         const phrase = this.piece.phraseGrid[track][pIdx];
         const group = new Group({ trajectories: this.selectedTrajs });
-        phrase.getGroups(0).push(group)
+        phrase.getGroups(0).push(group);
+        this.unsavedChanges = true;
       } else {
         throw new Error('Cannot group selected trajectories');
       }
@@ -6959,6 +6960,7 @@ export default defineComponent({
         // remove group from groups
         const idx = groups.findIndex(group => group.id === groupId);
         groups.splice(idx, 1);
+        this.unsavedChanges = true;
 
       } else {
         throw new Error('Cannot ungroup selected trajectories');
