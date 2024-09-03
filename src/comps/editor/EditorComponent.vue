@@ -251,6 +251,8 @@
   :sargamLineColor='sargamLineColor'
   :instTracks='instTracks'
   :editingInstIdx='editingInstIdx'
+  :meterColor='meterColor'
+  :selectedMeterColor='selMeterColor'
   @resizeHeightEmit='resizeHeight'
   @currentTimeEmit='setCurrentTime'
   @updateSargamLinesEmit='updateSargamLines'
@@ -271,6 +273,8 @@
   @update:maxPitch='updateMaxPitch'
   @update:sargamLineColor='sargamLineColor = $event'
   @update:instTracks='updateInstTracks'
+  @update:meterColor='meterColor = $event'
+  @update:selMeterColor='selMeterColor = $event'
   />
   <ContextMenu 
     :x='contextMenuX'

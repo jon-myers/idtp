@@ -314,7 +314,9 @@
       :raga='raga'
       :sargamLineColor='sargamLineColor'
       :instTracks='instTracks'
-      :editingInstIdx='editingInstIdx' 
+      :editingInstIdx='editingInstIdx'
+      :meterColor='meterColor'
+      :selectedMeterColor='selectedMeterColor'
       @specCanvas='handleSpecCanvas'
       @update:backgroundColor='$emit("update:backgroundColor", $event)'
       @update:axisColor='$emit("update:axisColor", $event)'
@@ -324,6 +326,8 @@
       @update:minPitch='$emit("update:minPitch", $event)'
       @update:sargamLineColor='$emit("update:sargamLineColor", $event)'
       @update:instTracks='$emit("update:instTracks", $event)'
+      @update:meterColor='$emit("update:meterColor", $event)'
+      @update:selectedMeterColor='$emit("update:selectedMeterColor", $event)'
       />
   </div>
 </template>
@@ -855,7 +859,14 @@ export default defineComponent({
       type: Number,
       required: true
     },
-    
+    meterColor: {
+      type: String,
+      required: true
+    },
+    selectedMeterColor: {
+      type: String,
+      required: true
+    },
   },
 
   components: {

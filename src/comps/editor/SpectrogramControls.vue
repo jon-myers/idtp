@@ -103,6 +103,14 @@
           <label>Sargam Lines</label>
           <input type='color' v-model='sLineColor'/>
         </div>
+        <div class='row'>
+          <label>Meter</label>
+          <input type='color' v-model='metColor'/>
+        </div>
+        <div class='row'>
+          <label>Selected Meter</label>
+          <input type='color' v-model='selMetColor'/>
+        </div>
       </div>
       
     </div>
@@ -228,6 +236,14 @@ export default defineComponent({
     editingInstIdx: {
       type: Number,
       required: true
+    },
+    meterColor: {
+      type: String,
+      required: true
+    },
+    selectedMeterColor: {
+      type: String,
+      required: true
     }
   },
   setup(props, { emit }) {
@@ -250,6 +266,8 @@ export default defineComponent({
     const maxPitchObj = ref(props.maxPitch);
     const minPitchObj = ref(props.minPitch);
     const tempTracks = ref(props.instTracks);
+    const metColor = ref(props.meterColor);
+    const selMetColor = ref(props.selectedMeterColor);
 
     const isEqual = (p1: Pitch, p2: Pitch) => {
       const swara = p1.swara === p2.swara;
@@ -358,6 +376,12 @@ export default defineComponent({
     }, { deep: true });
     watch(() => props.editingInstIdx, newVal => {
       props.instTracks[newVal].displaying = true;
+    });
+    watch(metColor, newVal => {
+      emit('update:meterColor', newVal);
+    });
+    watch(selMetColor, newVal => {
+      emit('update:selectedMeterColor', newVal);
     });
 
 
@@ -487,7 +511,9 @@ export default defineComponent({
       minPitchOptions,
       minPitchObj,
       minPitchIdx,
-      tempTracks
+      tempTracks,
+      metColor,
+      selMetColor
     }
   }
 })
@@ -515,7 +541,7 @@ export default defineComponent({
   flex-direction: column;
   align-items: center;
   margin: 0px;
-  width: 190px;
+  width: 210px;
   min-width: 190px;
   border-right: 1px solid white;
 }
@@ -546,6 +572,7 @@ export default defineComponent({
   min-height: 160px;
   overflow-y: scroll;
   overflow-x: hidden;
+
 }
 
 
@@ -581,7 +608,7 @@ export default defineComponent({
 }
 
 .row > label {
-  width: 100px;
+  width: 110px;
   box-sizing: border-box;
   text-align: right;
 }
