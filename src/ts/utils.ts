@@ -53,6 +53,8 @@ const getClosest = (counts: number[], goal: number) => {
 
 const isUpperCase = (str: string) => str === str.toUpperCase();
 
+const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
+
 
 export { 
   getContrastingTextColor, 
@@ -63,4 +65,5 @@ export {
   cumsum,
   getClosest,
   isUpperCase,
+  sum
 };

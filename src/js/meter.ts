@@ -1000,7 +1000,7 @@ class Meter {
     const bottomLayerPulses = this.allPulses.filter(p => {
       return p.lowestLayer <= layer - 1
     })
-    const pulseIdx = bottomLayerPulses.indexOf(pulse);
+    const pulseIdx = bottomLayerPulses.map(p => p.uniqueId).indexOf(pulse.uniqueId);
     if (pulseIdx === -1) {
       throw new Error(`Pulse ${pulse.uniqueId} not found`)
     } else if (pulseIdx === 0) {

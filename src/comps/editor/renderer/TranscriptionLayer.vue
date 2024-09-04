@@ -29,7 +29,7 @@ import {
   toRef
 } from 'vue';
 import * as d3 from 'd3';
-import { linSpace, cumsum, getClosest } from '@/ts/utils.ts';
+import { linSpace, cumsum, getClosest, sum } from '@/ts/utils.ts';
 import { EditorMode, Instrument } from '@/ts/enums.ts';
 import { BrowserInfo } from 'detect-browser';
 
@@ -210,13 +210,13 @@ export default defineComponent({
     const trajTimePts = ref<TrajTimePoint[]>([]);
     const clipboardTrajs = ref<Trajectory[]>([]);
     const selectedMeter = ref<Meter | undefined>(undefined);
+    const selectedPulse = ref<Pulse | undefined>(undefined);
 
     let justDeletedPhraseDiv = false;
     const dragDotColor = 'purple';
     const selectedDragDotColor = '#d602d6';
     let dragDotIdx: number | undefined = undefined;
     const minTrajDur = 0.05;
-    let pulseDragInitX = 0;
     let pulseDragEnabled = false;
 
 
@@ -594,7 +594,52 @@ export default defineComponent({
       d3.selectAll('.metricGrid:not(.selected)')
         .attr('stroke', props.meterColor)
     });
-
+    watch(() => props.maxMetricLayer, () => {
+      for (let i = 0; i <= 4; i++) {
+        d3.selectAll(`.metricGrid.layer${i}`)
+          .filter((d, idx: number, nodes) => {
+            return !d3.select(nodes[idx]).classed('overlay')
+          })
+          .style('opacity', i <= props.maxMetricLayer ? 1 : 0)
+      }
+    });
+    watch(selectedMeter, (newVal, oldVal) => {
+      if (oldVal !== undefined) {
+        const oldSelector = `.metricGrid.meterId${oldVal.uniqueId}`;
+        d3.selectAll(oldSelector)
+          .classed('selected', false)
+          .attr('stroke', props.meterColor)
+      }
+      if (newVal !== undefined) {
+        const selector = `.metricGrid.meterId${newVal.uniqueId}`;
+        d3.selectAll(selector)
+          .classed('selected', true)
+          .attr('stroke', props.selectedMeterColor)
+      }
+      d3.selectAll('.metricGrid:not(.selected)')
+        .attr('stroke', props.meterColor)
+      if (newVal !== undefined) {
+        const selector = `.metricGrid.uId${newVal.uniqueId}`;
+        d3.selectAll(selector)
+          .attr('stroke', props.selectedMeterColor)
+      }
+    });
+    watch(selectedPulse, (newVal, oldVal) => {
+      if (oldVal !== undefined) {
+        const oldSelector = `#pulseId${oldVal.uniqueId}`;
+        const color = selectedMeter.value ? 
+          props.selectedMeterColor: 
+          props.meterColor;
+        d3.selectAll(oldSelector)
+          .attr('stroke', color)
+      }
+      if (newVal !== undefined) {
+        const selector = `#pulseId${newVal.uniqueId}`;
+        d3.selectAll(selector)
+          .attr('stroke', selectedDragDotColor)
+      }
+    });
+    
     // adding svg groups
     const addSargamG = () => {
       if (tranSvg.value) {
@@ -629,7 +674,7 @@ export default defineComponent({
     const addMeterG = () => {
       if (tranSvg.value) {
         const svg = d3.select(tranSvg.value);
-        svg.append('g')
+        svg.insert('g', 'rect')
           .attr('class', 'meterG')
           .style('opacity', Number(props.showMeter))
       }
@@ -720,7 +765,6 @@ export default defineComponent({
           .attr('stroke-linecap', 'round')
           .attr('class', `trajShadow uId${traj.uniqueId!}`)
           .style('opacity', '0')
-          // .style('cursor', 'pointer')
           .on('mouseover', () => handleTrajMouseOver(traj, track))
           .on('mouseout', () => handleTrajMouseOut(traj, track))
           .on('click', () => handleClickTraj(traj, track))
@@ -762,7 +806,6 @@ export default defineComponent({
           .attr('stroke', 'black')
           .attr('transform', d => `translate(${d.x + offset}, ${d.y}) rotate(90)`)
           .style('opacity', '0')
-          // .style('cursor', 'pointer')
           .classed(`pluckShadow uId${traj.uniqueId!}`, true)
           .on('mouseover', () => handleTrajMouseOver(traj, track))
           .on('mouseout', () => handleTrajMouseOut(traj, track))
@@ -808,7 +851,6 @@ export default defineComponent({
             return `translate(${props.xScale(d.x)}, ${props.yScale(d.y)})`
           })
           .style('opacity', '0')
-          // .style('cursor', 'pointer')
           .classed(`dampenShadow uId${traj.uniqueId!}`, true)
           .on('mouseover', () => handleTrajMouseOver(traj, track))
           .on('mouseout', () => handleTrajMouseOut(traj, track))
@@ -849,7 +891,6 @@ export default defineComponent({
         .attr('stroke-width', 5)
         .attr('stroke-linecap', 'round')
         .style('opacity', 0)
-        .style('cursor', 'pointer')
         .attr('transform', d => `translate(${x}, ${y})`)
         .attr('class', `chikariShadow uId${cd.uId}`)
         .on('click', () => handleClickChikari(cd))
@@ -1003,7 +1044,13 @@ export default defineComponent({
       d3.selectAll('.metricGrid.meterId' + meter.uniqueId).remove();
       const pulses = meter.allCorporealPulses;
       const layerWidth = [1.5, 1, 0.5, 0.25];
+      
       pulses.forEach((pulse => {
+        let color = meter === selectedMeter.value ? 
+        props.selectedMeterColor : props.meterColor;
+        if (selectedPulse.value && pulse.uniqueId === selectedPulse.value!.uniqueId) {
+          color = selectedDragDotColor;
+        }
         const x = props.xScale(pulse.realTime);
         let strokeWidth = layerWidth[pulse.lowestLayer];
         if (pulse.lowestLayer === 0 && pulse.affiliations[0].strong) {
@@ -1013,28 +1060,29 @@ export default defineComponent({
           }
         }
         const drag = (pulse: Pulse) => {
-          return d3.drag()
+          return d3.drag<SVGPathElement, Datum>()
             .on('start', pulseDragStart(pulse))
             .on('drag', pulseDragging(pulse))
             .on('end', pulseDragEnd(pulse))
         };
         const opacity = props.maxMetricLayer >= pulse.lowestLayer ? 1 : 0;
         const line = d3.line()([
-          [x, props.yScale(logMin.value)],
-          [x, props.yScale(logMax.value)]
+          [0, props.yScale(logMin.value)],
+          [0, props.yScale(logMax.value)]
         ])
         const g = d3.select('.meterG');
-        g.append('path')
+        const p = g.append('path')
           .classed('metricGrid', true)
           .classed(`layer${pulse.lowestLayer}`, true)
           .classed(`meterId${pulse.meterId}`, true)
           .attr('id', `pulseId${pulse.uniqueId}`)
-          .attr('stroke', props.meterColor)
+          .attr('stroke', color)
           .attr('stroke-width', strokeWidth)
           .attr('d', line)
           .attr('opacity', opacity)
-        
-        g.append('path')
+          .attr('transform', `translate(${x},0)`)
+          
+          const pOverlay = g.append('path')
           .classed('metricGrid', true)
           .classed(`layer${pulse.lowestLayer}`, true)
           .classed(`meterId${pulse.meterId}`, true)
@@ -1044,15 +1092,28 @@ export default defineComponent({
           .attr('opacity', 0)
           .attr('stroke-width', '6px')
           .attr('d', line)
+          .attr('transform', `translate(${x},0)`)
           .on('mouseover', () => handleMouseOverMeter(meter))
           .on('mouseout', () => handleMouseOutMeter(meter))
-          .on('click', () => handleClickMeter(meter))
+          .on('click', () => handleClickMeter(meter, pulse)) as 
+          d3.Selection<SVGPathElement, Datum, HTMLElement, any>;
+        if (selectedMeter.value === meter) {
+          p.classed('selected', true)
+          pOverlay.classed('selected', true)
+        }
+        pOverlay.call(drag(pulse))
       }))
     };
 
     const pulseDragStart = (pulse: Pulse) => {
       return (e: d3.D3DragEvent<HTMLDivElement, any, MouseEvent>) => {
-        pulseDragInitX = e.x;
+        if (props.selectedMode !== EditorMode.Meter) return;
+        if (alted.value) return
+        const aff = pulse.affiliations[0];
+        const meter = props.piece.meters.find(m => m.uniqueId === pulse.meterId)!;
+        if (pulse === meter.allCorporealPulses[0]) return
+
+        // if (aff.idx === 0 && aff.layer === 0 && aff.segmentedMeterIdx === 0) return;
         if (selectedMeter.value && pulse.meterId === selectedMeter.value.uniqueId) {
           pulseDragEnabled = true;
         }
@@ -1060,7 +1121,104 @@ export default defineComponent({
     };
     const pulseDragging = (pulse: Pulse) => {
       return (e: d3.D3DragEvent<HTMLDivElement, any, MouseEvent>) => {
-        const c1 = pulse.meterId === selectedMeter.value.uniqueId;
+        if (props.selectedMode !== EditorMode.Meter) return;
+        const c1 = selectedMeter.value;
+        const c2 = pulse.meterId === selectedMeter.value!.uniqueId;
+        if (c1 && c2 && props.editable) {
+          const aff = pulse.affiliations[0];
+          const psId = aff.psId;
+          const ps = selectedMeter.value!.getPSFromId(psId);
+          let minTime, maxTime;
+
+          if (aff.idx === 0 && aff.segmentedMeterIdx === 0 && aff.layer === 0) {
+            const psIdx = selectedMeter.value!.pulseStructures[0].indexOf(ps);
+            let cycleNum, subdivs;
+            const hierarchy = selectedMeter.value!.hierarchy[0];
+            if (typeof hierarchy === 'number') {
+              cycleNum = psIdx
+              subdivs = hierarchy
+            } else {
+              cycleNum = Math.floor(psIdx / hierarchy.length);
+              subdivs = sum(hierarchy);
+            }
+            const st = selectedMeter.value!.startTime;
+            const center = st + selectedMeter.value!.cycleDur * cycleNum;
+            const subDur = selectedMeter.value!.cycleDur / subdivs;
+            const maxOff = subDur / 2;
+            maxTime = center + maxOff;
+            minTime = center - maxOff;
+          } else {
+            const maxOff = ps.pulseDur / 2;
+            const pulseIdx = ps.pulses.map(p => p.uniqueId).indexOf(pulse.uniqueId);
+            const center = ps.startTime + ps.pulseDur * pulseIdx;
+            maxTime = center + maxOff;
+            minTime = center - maxOff;
+          }
+          let newX = e.x;
+          if (newX < props.xScale(minTime)) {
+            newX = props.xScale(minTime);
+          } else if (newX > props.xScale(maxTime)) {
+            newX = props.xScale(maxTime);
+          }
+          if (pulseDragEnabled) {
+            d3.select(`#pulseId${pulse.uniqueId}`)
+              .attr('transform', `translate(${newX},0)`)
+          }
+        }
+      }
+    }
+
+    const pulseDragEnd = (pulse: Pulse) => {
+      return (e: d3.D3DragEvent<HTMLDivElement, any, MouseEvent>) => {
+        if (props.selectedMode !== EditorMode.Meter) return;
+
+        if (pulseDragEnabled && props.editable) {
+          const aff = pulse.affiliations[0];
+          const psId = aff.psId;
+          const ps = selectedMeter.value!.getPSFromId(psId);
+          let minTime, maxTime;
+
+          if (aff.idx === 0 && aff.segmentedMeterIdx === 0 && aff.layer === 0) {
+            const psIdx = selectedMeter.value!.pulseStructures[0].indexOf(ps);
+            let cycleNum, subdivs;
+            const hierarchy = selectedMeter.value!.hierarchy[0];
+            if (typeof hierarchy === 'number') {
+              cycleNum = psIdx
+              subdivs = hierarchy
+            } else {
+              cycleNum = Math.floor(psIdx / hierarchy.length);
+              subdivs = sum(hierarchy);
+            }
+            const st = selectedMeter.value!.startTime;
+            const center = st + selectedMeter.value!.cycleDur * cycleNum;
+            const subDur = selectedMeter.value!.cycleDur / subdivs;
+            const maxOff = subDur / 2;
+            maxTime = center + maxOff;
+            minTime = center - maxOff;
+          } else {
+            const maxOff = ps.pulseDur / 2;
+            const pulseIdx = ps.pulses.map(p => p.uniqueId).indexOf(pulse.uniqueId);
+            const center = ps.startTime + ps.pulseDur * pulseIdx;
+            maxTime = center + maxOff;
+            minTime = center - maxOff;
+          }
+          let newX = e.x;
+          if (newX < props.xScale(minTime)) {
+            newX = props.xScale(minTime);
+          } else if (newX > props.xScale(maxTime)) {
+            newX = props.xScale(maxTime);
+          }
+          const oldTime = pulse.realTime;
+          const newTime = props.xScale.invert(newX);
+          const time = newTime - oldTime;
+          selectedMeter.value!.offsetPulse(pulse, time, true);
+          selectedMeter.value!.resetTempo();
+          renderMeter(selectedMeter.value!);
+          pulseDragEnabled = false;
+          emit('unsavedChanges', true);
+
+
+        }
       }
     }
 
@@ -1068,8 +1226,9 @@ export default defineComponent({
     const handleMouseOverMeter = (meter: Meter) => {
       if (props.selectedMode === EditorMode.Meter) {
         if (selectedMeter.value && selectedMeter.value === meter) {
+          const cursor = alted.value ? 'pointer' : 'col-resize';
           d3.selectAll(`.metricGrid.meterId${meter.uniqueId}`)
-            .attr('cursor', 'col-resize')
+            .attr('cursor', cursor)
         } else {
           d3.selectAll(`.metricGrid.meterId${meter.uniqueId}:not(.selected)`)
             .attr('cursor', 'pointer')
@@ -1084,27 +1243,16 @@ export default defineComponent({
         .attr('stroke', props.meterColor)
         .attr('cursor', meterMode ? 'crosshair' : 'default')
     };
-    const handleClickMeter = (meter: Meter) => {
-      if (props.selectedMode === EditorMode.Meter) {
-        if (selectedMeter.value !== undefined) {
-          if (selectedMeter.value !== meter) {
-            d3.selectAll('.metricGrid.meterId' + selectedMeter.value.uniqueId)
-              .classed('selected', false)
-              .attr('stroke', props.meterColor)
-            selectedMeter.value = meter;
-            d3.selectAll('.metricGrid.meterId' + meter.uniqueId)
-              .classed('selected', true)
-              .attr('stroke', props.selectedMeterColor)
-          }
+    const handleClickMeter = (meter: Meter, pulse: Pulse) => {
+      const c1 = props.selectedMode === EditorMode.Meter;
+      if (c1) {
+        if (meter === selectedMeter.value) {
+          selectedPulse.value = pulse;
         } else {
           selectedMeter.value = meter;
-          d3.selectAll('.metricGrid.meterId' + meter.uniqueId)
-            .classed('selected', true)
-            .attr('stroke', props.selectedMeterColor)
         }
+
       }
-        
-        
     }
 
     // clearing / removing functions
@@ -1319,6 +1467,7 @@ export default defineComponent({
       .curve(d3.curveMonotoneX);
 
     const handleClickTraj = (traj: Trajectory, track: number) => {
+      if (props.selectedMode === EditorMode.Meter) return;
       emit('update:selectedMode', EditorMode.None);
       nextTick(() => {
         selectedPhraseDivUid.value = undefined;
@@ -1890,6 +2039,7 @@ export default defineComponent({
       if (shifted.value && track !== props.editingInstIdx) {
         return
       }
+      if (props.selectedMode === EditorMode.Meter) return;
       const selector = `.traj.uId${traj.uniqueId!}`
       d3.selectAll(selector)
         .attr('stroke', props.instTracks[track].selColor)
@@ -1918,6 +2068,7 @@ export default defineComponent({
       }
     }
     const handleTrajMouseOut = (traj: Trajectory, track: number) => {
+      if (props.selectedMode === EditorMode.Meter) return;
       const selector = `.traj.uId${traj.uniqueId!}`
       const renderObj = trajRenderStatus.value[track].find(obj => {
         return obj.uniqueId === traj.uniqueId
@@ -1970,6 +2121,7 @@ export default defineComponent({
       const selector = `.chikari.uId${cd.uId}`
       d3.selectAll(selector)
         .attr('stroke', props.instTracks[cd.track].selColor)
+        .attr('cusor', 'pointer')
     };
     const handleChikariMouseOut = (cd: ChikariDisplayType) => {
       const selector = `.chikari.uId${cd.uId}`
@@ -1978,6 +2130,7 @@ export default defineComponent({
         props.instTracks[cd.track].color;
       d3.selectAll(selector)
         .attr('stroke', color)
+        .attr('cursor', 'default')
     };
 
     const updateSargamLineSpacing = () => {
@@ -2078,6 +2231,8 @@ export default defineComponent({
       selectedChikari.value = undefined;
       selectedPhraseDivUid.value = undefined;
       selectedDragDotIdx.value = undefined;
+      selectedMeter.value = undefined;
+      selectedPulse.value = undefined;
       trajTimePts.value = [];
       d3.selectAll('#selBox').remove();
     }
@@ -2134,6 +2289,9 @@ export default defineComponent({
         } else if (selectedDragDotIdx.value !== undefined) {
           e.preventDefault();
           nudgeDragDot('left')
+        } else if (selectedPulse.value !== undefined) {
+          e.preventDefault();
+          nudgePulse('left');
         }
       } else if (e.key === 'ArrowRight') {
         if (selectedChikari.value !== undefined) {
@@ -2145,6 +2303,9 @@ export default defineComponent({
         } else if (selectedDragDotIdx.value !== undefined) {
           e.preventDefault();
           nudgeDragDot('right')
+        } else if (selectedPulse.value !== undefined) {
+          e.preventDefault();
+          nudgePulse('right');
         }
       } else if (e.key === 'ArrowDown') {
         if (selectedDragDotIdx.value !== undefined) {
@@ -2274,6 +2435,70 @@ export default defineComponent({
       clearChikari(cd);
       nextTick(() => {
         renderChikari(newCd);
+      });
+      emit('unsavedChanges', true);
+    };
+
+    const nudgePulse = (dir: 'left' | 'right') => {
+      if (selectedPulse.value === undefined) {
+        throw new Error('No pulse selected');
+      }
+      if (!props.editable) return;
+      if (selectedPulse.value === selectedMeter.value!.allCorporealPulses[0]) {
+        return;
+      }
+      const pulse = selectedMeter.value!.allCorporealPulses.find(p => {
+        return p.uniqueId === selectedPulse.value!.uniqueId
+      })!;
+      const amt = 0.01;
+      const aff = pulse.affiliations[0];
+      const psId = aff.psId;
+      const ps = selectedMeter.value!.getPSFromId(psId);
+      let minTime, maxTime, newX;
+      if (aff.idx === 0 && aff.segmentedMeterIdx === 0 && aff.layer === 0) {
+        const psIdx = selectedMeter.value!.pulseStructures[0].indexOf(ps);
+        let cycleNum, subdivs;
+        const hierarchy = selectedMeter.value!.hierarchy[0];
+        if (typeof hierarchy === 'number') {
+          cycleNum = psIdx
+          subdivs = hierarchy
+        } else {
+          cycleNum = Math.floor(psIdx / hierarchy.length);
+          subdivs = sum(hierarchy);
+        }
+        const st = selectedMeter.value!.startTime;
+        const center = st + selectedMeter.value!.cycleDur * cycleNum;
+        const subDur = selectedMeter.value!.cycleDur / subdivs;
+        const maxOff = subDur / 2;
+        maxTime = center + maxOff;
+        minTime = center - maxOff;
+      } else {
+        const maxOff = ps.pulseDur / 2;
+        const pulseIdx = ps.pulses.map(p => p.uniqueId).indexOf(pulse.uniqueId);
+        if (pulseIdx === -1) {
+          throw new Error('Pulse not found in pulse structure');
+        }
+        const center = ps.startTime + ps.pulseDur * pulseIdx;
+        maxTime = center + maxOff;
+        minTime = center - maxOff;
+      }
+      if (dir === 'left') {
+        newX = props.xScale(pulse.realTime - amt);
+      } else {
+        newX = props.xScale(pulse.realTime + amt);
+      }
+      if (newX < props.xScale(minTime)) {
+        newX = props.xScale(minTime);
+      } else if (newX > props.xScale(maxTime)) {
+        newX = props.xScale(maxTime);
+      }
+      const oldTime = pulse.realTime;
+      const newTime = props.xScale.invert(newX);
+      const time = newTime - oldTime;
+      nextTick(() => {
+        selectedMeter.value!.offsetPulse(pulse, time, true);
+        selectedMeter.value!.resetTempo();
+        renderMeter(selectedMeter.value!);
       });
       emit('unsavedChanges', true);
     };
@@ -2587,6 +2812,7 @@ export default defineComponent({
     };
 
     const handleClick = (e: MouseEvent) => {
+      console.log('clicking')
       let time = props.xScale.invert(e.offsetX);
       const logFreq = props.yScale.invert(e.offsetY);
       const track = props.editingInstIdx;
@@ -2599,6 +2825,8 @@ export default defineComponent({
         insertNewTrajDot(time, logFreq, track, pIdx);
       } else if (props.selectedMode === EditorMode.Series) {
         insertNewTrajDot(time, logFreq, track, pIdx);
+      } else if (props.selectedMode === EditorMode.Meter) {
+        // need to implement this stuff
       } else if (props.selectedMode === EditorMode.None) {
         const target = e.target! as HTMLElement;
         const classes = [
@@ -2612,7 +2840,7 @@ export default defineComponent({
         if (f && !shifted.value) {
           handleEscape();
         }
-      }
+      } 
     };
 
     const handleDoubleClick = (e: MouseEvent) => {

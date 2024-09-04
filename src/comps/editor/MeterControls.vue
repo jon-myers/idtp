@@ -335,13 +335,13 @@ export default defineComponent({
     },
 
     updateVisibility() {
-      for (let i = 0; i <= 4; i++) {
-        const selects = d3SelectAll(`.layer_${i}`)
-          .filter((d, idx: number, nodes) => { 
-            return !d3Select(nodes[idx]).classed('overlay')
-        })
-          .style('opacity', this.maxLayer >= i ? 1 : 0)
-      }
+      // for (let i = 0; i <= 4; i++) {
+      //   const selects = d3SelectAll(`.layer_${i}`)
+      //     .filter((d, idx: number, nodes) => { 
+      //       return !d3Select(nodes[idx]).classed('overlay')
+      //   })
+      //     .style('opacity', this.maxLayer >= i ? 1 : 0)
+      // }
       this.$emit('maxLayerEmit', this.maxLayer);
     },
 
