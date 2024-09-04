@@ -54,6 +54,7 @@ import {
   TrajRenderObj,
   TrajTimePoint
 } from '@/ts/types.ts';
+import { Meter, Pulse } from '@/js/meter.ts';
 
 export default defineComponent({
   name: 'TranscriptionLayer',
@@ -172,7 +173,23 @@ export default defineComponent({
     browser: {
       type: Object as PropType<BrowserInfo>,
       required: true
-    }
+    },
+    maxMetricLayer: {
+      type: Number,
+      required: true
+    },
+    showMeter: {
+      type: Boolean,
+      required: true
+    },
+    meterColor: {
+      type: String,
+      required: true
+    },
+    selectedMeterColor: {
+      type: String,
+      required: true
+    },
   },
   setup(props, { emit }) {
     const tranContainer = ref<HTMLDivElement | null>(null);
@@ -192,12 +209,15 @@ export default defineComponent({
     const selectedDragDotIdx = ref<number | undefined>(undefined);
     const trajTimePts = ref<TrajTimePoint[]>([]);
     const clipboardTrajs = ref<Trajectory[]>([]);
+    const selectedMeter = ref<Meter | undefined>(undefined);
 
     let justDeletedPhraseDiv = false;
     const dragDotColor = 'purple';
     const selectedDragDotColor = '#d602d6';
     let dragDotIdx: number | undefined = undefined;
     const minTrajDur = 0.05;
+    let pulseDragInitX = 0;
+    let pulseDragEnabled = false;
 
 
     const emptyDivIdxMap = new Map<HTMLDivElement, number>();
@@ -226,10 +246,14 @@ export default defineComponent({
             props.piece.chunkedDisplayChikaris(inst, dur)[idx].forEach(cd => {
               renderChikari(cd);
             });
+            props.piece.chunkedPhraseDivs(inst, dur)[idx].forEach(pd => {
+              renderPhraseDiv(pd);
+            });
           }
-          props.piece.chunkedPhraseDivs(dur)[idx].forEach(pd => {
-            renderPhraseDiv(pd);
-          });
+          props.piece.chunkedMeters(dur)[idx].forEach(m => {
+            renderMeter(m);
+          })
+          
           observer.unobserve(entry.target);
         }
       })
@@ -468,6 +492,10 @@ export default defineComponent({
       d3.selectAll('.phraseDivG')
         .style('opacity', Number(props.showPhraseDivs))
     });
+    watch(() => props.showMeter, () => {
+      d3.selectAll('.meterG')
+        .style('opacity', Number(props.showMeter))
+    });
     watch(selectedPhraseDivUid, (newVal, oldVal) => {
       if (newVal !== undefined) {
         const track = props.piece.trackFromPhraseUId(newVal);
@@ -532,6 +560,9 @@ export default defineComponent({
       } else if (mode === EditorMode.Series) {
         const svg = d3.select(tranSvg.value);
         svg.style('cursor', 'crosshair');
+      } else if (mode === EditorMode.Meter) {
+        const svg = d3.select(tranSvg.value);
+        svg.style('cursor', 'crosshair');
       }
     });
     watch(() => props.editingInstIdx, (instIdx) => {
@@ -554,7 +585,15 @@ export default defineComponent({
           moveGraph(0.85)
         }
       }
-    })
+    });
+    watch(() => props.selectedMeterColor, () => {
+      d3.selectAll('.metricGrid.selected')
+        .attr('stroke', props.selectedMeterColor)
+    });
+    watch(() => props.meterColor, () => {
+      d3.selectAll('.metricGrid:not(.selected)')
+        .attr('stroke', props.meterColor)
+    });
 
     // adding svg groups
     const addSargamG = () => {
@@ -587,7 +626,14 @@ export default defineComponent({
           .style('opacity', Number(props.showSargamLines))
       }
     };
-
+    const addMeterG = () => {
+      if (tranSvg.value) {
+        const svg = d3.select(tranSvg.value);
+        svg.append('g')
+          .attr('class', 'meterG')
+          .style('opacity', Number(props.showMeter))
+      }
+    };
     const addPhonemeG = () => {
       if (tranSvg.value) {
         const svg = d3.select(tranSvg.value);
@@ -952,6 +998,113 @@ export default defineComponent({
         .style('cursor', 'pointer')
         .on('click', () => handleClickPhraseDiv(pd))
         .attr('class', `phraseDivShadow pIdx${pd.idx} uId${pd.uId}`)
+    };
+    const renderMeter = (meter: Meter) => {
+      d3.selectAll('.metricGrid.meterId' + meter.uniqueId).remove();
+      const pulses = meter.allCorporealPulses;
+      const layerWidth = [1.5, 1, 0.5, 0.25];
+      pulses.forEach((pulse => {
+        const x = props.xScale(pulse.realTime);
+        let strokeWidth = layerWidth[pulse.lowestLayer];
+        if (pulse.lowestLayer === 0 && pulse.affiliations[0].strong) {
+          strokeWidth += 0.5;
+          if (pulse.affiliations[0].segmentedMeterIdx === 0) {
+            strokeWidth += 0.5;
+          }
+        }
+        const drag = (pulse: Pulse) => {
+          return d3.drag()
+            .on('start', pulseDragStart(pulse))
+            .on('drag', pulseDragging(pulse))
+            .on('end', pulseDragEnd(pulse))
+        };
+        const opacity = props.maxMetricLayer >= pulse.lowestLayer ? 1 : 0;
+        const line = d3.line()([
+          [x, props.yScale(logMin.value)],
+          [x, props.yScale(logMax.value)]
+        ])
+        const g = d3.select('.meterG');
+        g.append('path')
+          .classed('metricGrid', true)
+          .classed(`layer${pulse.lowestLayer}`, true)
+          .classed(`meterId${pulse.meterId}`, true)
+          .attr('id', `pulseId${pulse.uniqueId}`)
+          .attr('stroke', props.meterColor)
+          .attr('stroke-width', strokeWidth)
+          .attr('d', line)
+          .attr('opacity', opacity)
+        
+        g.append('path')
+          .classed('metricGrid', true)
+          .classed(`layer${pulse.lowestLayer}`, true)
+          .classed(`meterId${pulse.meterId}`, true)
+          .classed('overlay', true)
+          .attr('id', `pulseId${pulse.uniqueId}`)
+          .attr('stroke', 'black')
+          .attr('opacity', 0)
+          .attr('stroke-width', '6px')
+          .attr('d', line)
+          .on('mouseover', () => handleMouseOverMeter(meter))
+          .on('mouseout', () => handleMouseOutMeter(meter))
+          .on('click', () => handleClickMeter(meter))
+      }))
+    };
+
+    const pulseDragStart = (pulse: Pulse) => {
+      return (e: d3.D3DragEvent<HTMLDivElement, any, MouseEvent>) => {
+        pulseDragInitX = e.x;
+        if (selectedMeter.value && pulse.meterId === selectedMeter.value.uniqueId) {
+          pulseDragEnabled = true;
+        }
+      }
+    };
+    const pulseDragging = (pulse: Pulse) => {
+      return (e: d3.D3DragEvent<HTMLDivElement, any, MouseEvent>) => {
+        const c1 = pulse.meterId === selectedMeter.value.uniqueId;
+      }
+    }
+
+
+    const handleMouseOverMeter = (meter: Meter) => {
+      if (props.selectedMode === EditorMode.Meter) {
+        if (selectedMeter.value && selectedMeter.value === meter) {
+          d3.selectAll(`.metricGrid.meterId${meter.uniqueId}`)
+            .attr('cursor', 'col-resize')
+        } else {
+          d3.selectAll(`.metricGrid.meterId${meter.uniqueId}:not(.selected)`)
+            .attr('cursor', 'pointer')
+            .attr('stroke', props.selectedMeterColor)
+        }
+
+      }
+    };
+    const handleMouseOutMeter = (meter: Meter) => {
+      const meterMode = props.selectedMode === EditorMode.Meter;
+      d3.selectAll(`.metricGrid.meterId${meter.uniqueId}:not(.selected)`)
+        .attr('stroke', props.meterColor)
+        .attr('cursor', meterMode ? 'crosshair' : 'default')
+    };
+    const handleClickMeter = (meter: Meter) => {
+      if (props.selectedMode === EditorMode.Meter) {
+        if (selectedMeter.value !== undefined) {
+          if (selectedMeter.value !== meter) {
+            d3.selectAll('.metricGrid.meterId' + selectedMeter.value.uniqueId)
+              .classed('selected', false)
+              .attr('stroke', props.meterColor)
+            selectedMeter.value = meter;
+            d3.selectAll('.metricGrid.meterId' + meter.uniqueId)
+              .classed('selected', true)
+              .attr('stroke', props.selectedMeterColor)
+          }
+        } else {
+          selectedMeter.value = meter;
+          d3.selectAll('.metricGrid.meterId' + meter.uniqueId)
+            .classed('selected', true)
+            .attr('stroke', props.selectedMeterColor)
+        }
+      }
+        
+        
     }
 
     // clearing / removing functions
@@ -961,6 +1114,7 @@ export default defineComponent({
       d3.selectAll('.phonemeG').remove();
       d3.selectAll('.phraseDivG').remove();
       d3.selectAll('.sargamLinesG').remove();
+      d3.selectAll('.chikariG').remove();
     };
     const removeTraj = (traj: Trajectory) => {
       const track = props.piece.trackFromTraj(traj);
@@ -1005,6 +1159,7 @@ export default defineComponent({
       resetObserver();
       addSargamLineG();
       refreshSargamLines();
+      addMeterG();
       initializeTracks();
       addPhraseDivG();
       addSargamG();
@@ -3014,7 +3169,8 @@ export default defineComponent({
       refreshTimePts,
       trajTimePts,
       metad,
-      clipboardTrajs
+      clipboardTrajs,
+      selectedMeter
     }
   }
 })

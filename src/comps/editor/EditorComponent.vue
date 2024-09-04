@@ -34,6 +34,10 @@
       :currentTime='currentTime'
       :browser='browser'
       :playing='playing'
+      :maxMetricLayer='maxMetricLayer'
+      :showMeter='showMeter'
+      :meterColor='meterColor'
+      :selectedMeterColor='selMeterColor'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
@@ -264,7 +268,7 @@
   @assignPrevMeterEmit='assignPrevMeter'
   @goToPhraseEmit='moveToPhrase'
   @goToSectionEmit='moveToSection'
-  @maxLayerEmit='updateMaxLayer'
+  @maxLayerEmit='updatemaxMetricLayer'
   @update:backgroundColor='backColor = $event'
   @update:axisColor='axisColor = $event'
   @update:melographColor='melographColor = $event'
@@ -595,7 +599,7 @@ type EditorDataType = {
   sarangi: boolean,
   sitar: boolean,
   d3ZoomEvent?: D3ZoomEvent<Element, unknown>,
-  maxLayer: number,
+  maxMetricLayer: number,
   visibilityTab: boolean,
   rotation: number,
   showMelody: boolean,
@@ -776,7 +780,7 @@ export default defineComponent({
       sarangi: false,
       sitar: false,
       d3ZoomEvent: undefined,
-      maxLayer: 3,
+      maxMetricLayer: 3,
       visibilityTab: false,
       rotation: -90,
       showMelody: true,
@@ -1357,8 +1361,8 @@ export default defineComponent({
       }
     },
 
-    updateMaxLayer(e: number) {
-      this.maxLayer = e
+    updatemaxMetricLayer(e: number) {
+      this.maxMetricLayer = e
     },
 
     permissionToEdit(piece: Piece) {
@@ -3045,7 +3049,7 @@ export default defineComponent({
             .on('end', this.pulseDragEnd(pulse))
         }
 
-        const opacity = this.maxLayer >= pulse.lowestLayer ? '1' : '0';
+        const opacity = this.maxMetricLayer >= pulse.lowestLayer ? '1' : '0';
         this.phraseG
           .append('path')
           .classed('metricGrid', true)

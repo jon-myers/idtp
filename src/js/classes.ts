@@ -3136,12 +3136,24 @@ class Piece {
     return chunks
   }
 
-  chunkedPhraseDivs(duration = 30) {
-    const phraseDivs = this.allPhraseDivs();
+  chunkedPhraseDivs(inst = 0, duration = 30) {
+    const phraseDivs = this.allPhraseDivs(inst);
     const chunks: PhraseDivDisplayType[][] = [];
     for (let i = 0; i < this.durTot!; i += duration) {
       const chunk = phraseDivs.filter(pd => {
         return pd.time >= i && pd.time < i + duration
+      });
+      chunks.push(chunk)
+    }
+    return chunks
+  }
+
+  chunkedMeters(duration = 30) {
+    const meters = this.meters;
+    const chunks: Meter[][] = [];
+    for (let i = 0; i < this.durTot!; i += duration) {
+      const chunk = meters.filter(m => {
+        return m.startTime >= i && m.startTime < i + duration
       });
       chunks.push(chunk)
     }

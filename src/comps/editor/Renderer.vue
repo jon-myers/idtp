@@ -109,6 +109,10 @@
               :displayRange='displayRange'
               :playing='playing'
               :browser='browser'
+              :maxMetricLayer='maxMetricLayer'
+              :showMeter='showMeter'
+              :meterColor='meterColor'
+              :selectedMeterColor='selectedMeterColor'
               @update:selectedMode='$emit("update:selectedMode", $event)'
               @unsavedChanges='$emit("unsavedChanges", $event)'
               @update:TrajSelStatus='$emit("update:TrajSelStatus", $event)'
@@ -279,6 +283,22 @@ export default defineComponent({
     },
     browser: {
       type: Object as PropType<BrowserInfo>,
+      required: true
+    },
+    maxMetricLayer: {
+      type: Number,
+      required: true
+    },
+    showMeter: {
+      type: Boolean,
+      required: true
+    },
+    meterColor: {
+      type: String,
+      required: true
+    },
+    selectedMeterColor: {
+      type: String,
       required: true
     }
   },
