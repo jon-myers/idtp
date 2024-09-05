@@ -51,6 +51,8 @@
       @update:editingInstIdx='editingInstIdx = $event'
       @update:currentTime='updateCurrentTime'
       @update:recomputeTrigger='recomputeTrigger += 1'
+      @update:prevMeter='updatePrevMeter'
+      @update:insertPulses='insertPulses = $event'
       />
     <div class='controlBox'>
       <div class='scrollingControlBox'>
@@ -257,6 +259,7 @@
   :editingInstIdx='editingInstIdx'
   :meterColor='meterColor'
   :selectedMeterColor='selMeterColor'
+  :editorMode='selectedMode'
   @resizeHeightEmit='resizeHeight'
   @currentTimeEmit='setCurrentTime'
   @updateSargamLinesEmit='updateSargamLines'
@@ -279,6 +282,7 @@
   @update:instTracks='updateInstTracks'
   @update:meterColor='meterColor = $event'
   @update:selMeterColor='selMeterColor = $event'
+  @renderMeter='renderMeter'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -1181,6 +1185,18 @@ export default defineComponent({
 
   methods: {
 
+    renderMeter(meter: Meter) {
+      const r = this.$refs.renderer as typeof Renderer;
+      const tLayer = r.transcriptionLayer as typeof TranscriptionLayer;
+      tLayer.renderMeter(meter);
+    },
+
+    updatePrevMeter(bool: boolean) {
+      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+      const meterControls = ap.$refs.meterControls as typeof MeterControls;
+      meterControls.prevMeter = bool;
+    },
+
     updateTrajTimePts(timePts: { time: number, logFreq: number, pIdx: number, tIdx: number, track: number }[]) {
       this.trajTimePts.splice(0, this.trajTimePts.length, ...timePts);
     },
@@ -1431,6 +1447,9 @@ export default defineComponent({
       const meterControls = ap.$refs.meterControls as typeof MeterControls;
       const mtrStarts = this.piece.meters.map(m => m.startTime);
       const mIdx = findClosestStartTime(mtrStarts, this.insertPulses[0]);
+      const r = this.$refs.renderer as typeof Renderer;
+      const tLayer = r.$refs.transcriptionLayer as typeof TranscriptionLayer;
+      tLayer.selectedMeter = this.piece.meters[mIdx];
       meterControls.meter = this.piece.meters[mIdx];
     },
 
@@ -1439,10 +1458,16 @@ export default defineComponent({
     },
 
     addMeter(meter: Meter) {
+      // this stays after cleanup
       this.piece.addMeter(meter);
       this.unsavedChanges = true;
-      this.selMeter = meter;
-      this.meterMode = true;
+      // this.selMeter = meter;
+      this.selectedMode = EditorMode.Meter;
+      const r = this.$refs.renderer as typeof Renderer;
+      const tLayer = r.$refs.transcriptionLayer as typeof TranscriptionLayer;
+      tLayer.renderMeter(meter);
+      tLayer.clearInsertPulses();
+      tLayer.selectedMeter = meter;
     },
 
     timeWithinMeter(time: number): boolean {
@@ -3023,168 +3048,168 @@ export default defineComponent({
     //   this.updatePhraseDivs();
     // },
 
-    addMetricGrid(codified=true) {
-      this.insertPulseMode = false;
-      d3SelectAll('.metricGrid').remove();
-      const allPulses: Pulse[] = [];
-      this.piece.meters.forEach(meter => {
-        allPulses.push(...meter.allCorporealPulses)
-      });
-      const layerWidth = [1.5, 1, 0.5, 0.25]
-      allPulses.forEach(pulse => {
-        const x = codified ? 
-            this.codifiedXR!(pulse.realTime) : 
-            this.xr()(pulse.realTime);
-        let strokeWidth = layerWidth[pulse.lowestLayer];
-        if (pulse.lowestLayer === 0 && pulse.affiliations[0].strong) {
-          strokeWidth += 0.5;
-          if (pulse.affiliations[0].segmentedMeterIdx === 0) {
-            strokeWidth += 0.5;
-          }
-        }
-        const drag = (pulse: Pulse) => {
-          return d3Drag()
-            .on('start', this.pulseDragStart(pulse))
-            .on('drag', this.pulseDragging(pulse))
-            .on('end', this.pulseDragEnd(pulse))
-        }
+    // addMetricGrid(codified=true) {
+    //   this.insertPulseMode = false;
+    //   d3SelectAll('.metricGrid').remove();
+    //   const allPulses: Pulse[] = [];
+    //   this.piece.meters.forEach(meter => {
+    //     allPulses.push(...meter.allCorporealPulses)
+    //   });
+    //   const layerWidth = [1.5, 1, 0.5, 0.25]
+    //   allPulses.forEach(pulse => {
+    //     const x = codified ? 
+    //         this.codifiedXR!(pulse.realTime) : 
+    //         this.xr()(pulse.realTime);
+    //     let strokeWidth = layerWidth[pulse.lowestLayer];
+    //     if (pulse.lowestLayer === 0 && pulse.affiliations[0].strong) {
+    //       strokeWidth += 0.5;
+    //       if (pulse.affiliations[0].segmentedMeterIdx === 0) {
+    //         strokeWidth += 0.5;
+    //       }
+    //     }
+    //     const drag = (pulse: Pulse) => {
+    //       return d3Drag()
+    //         .on('start', this.pulseDragStart(pulse))
+    //         .on('drag', this.pulseDragging(pulse))
+    //         .on('end', this.pulseDragEnd(pulse))
+    //     }
 
-        const opacity = this.maxMetricLayer >= pulse.lowestLayer ? '1' : '0';
-        this.phraseG
-          .append('path')
-          .classed('metricGrid', true)
-          .classed(`layer_${pulse.lowestLayer}`, true)
-          .classed(`meterId_${pulse.meterId}`, true)
-          .attr('id', `metricGrid_${pulse.uniqueId}`)
-          .attr('stroke', this.meterColor)
-          .attr('stroke-width', `${strokeWidth}px`)
-          .attr('d', this.playheadLine(codified))
-          .style('opacity', opacity)
-          .attr('transform', `translate(${x},0)`)
+    //     const opacity = this.maxMetricLayer >= pulse.lowestLayer ? '1' : '0';
+    //     this.phraseG
+    //       .append('path')
+    //       .classed('metricGrid', true)
+    //       .classed(`layer_${pulse.lowestLayer}`, true)
+    //       .classed(`meterId_${pulse.meterId}`, true)
+    //       .attr('id', `metricGrid_${pulse.uniqueId}`)
+    //       .attr('stroke', this.meterColor)
+    //       .attr('stroke-width', `${strokeWidth}px`)
+    //       .attr('d', this.playheadLine(codified))
+    //       .style('opacity', opacity)
+    //       .attr('transform', `translate(${x},0)`)
 
-        this.phraseG
-          .append('path')
-          .classed('metricGrid', true)
-          .classed(`layer_${pulse.lowestLayer}`, true)
-          .classed(`meterId_${pulse.meterId}`, true)
-          .classed('overlay', true)
-          .attr('id', `metricGrid_${pulse.uniqueId}`)
-          .attr('stroke', this.meterColor)
-          .style('opacity', '0')
-          .attr('stroke-width', `5px`)
-          .attr('d', this.playheadLine(codified))
-          .on('click', (e: MouseEvent) => {
-            if (this.meterMode) {
-              e.preventDefault();
-              e.stopPropagation();
-              this.selectMeter(pulse.uniqueId)
-            }
+    //     this.phraseG
+    //       .append('path')
+    //       .classed('metricGrid', true)
+    //       .classed(`layer_${pulse.lowestLayer}`, true)
+    //       .classed(`meterId_${pulse.meterId}`, true)
+    //       .classed('overlay', true)
+    //       .attr('id', `metricGrid_${pulse.uniqueId}`)
+    //       .attr('stroke', this.meterColor)
+    //       .style('opacity', '0')
+    //       .attr('stroke-width', `5px`)
+    //       .attr('d', this.playheadLine(codified))
+    //       .on('click', (e: MouseEvent) => {
+    //         if (this.meterMode) {
+    //           e.preventDefault();
+    //           e.stopPropagation();
+    //           this.selectMeter(pulse.uniqueId)
+    //         }
             
-          })
-          .on('contextmenu', (e: MouseEvent) => {
-            const target = e.target as SVGPathElement;
-            if (this.meterMode) {
-              e.preventDefault();
-              e.stopPropagation();
-              this.contextMenuX = e.x;
-              this.contextMenuY = e.y;
-              this.contextMenuClosed = false;
-              const pulseId = target.id.slice(11);
-              const pulse = this.selMeter!.getPulseFromId(pulseId)!;
-              const cycle = this.selMeter!.cycleOfPulse(pulse);
-              this.contextMenuChoices = [];
-              if (cycle === 0) {
-                this.contextMenuChoices.push({
-                  text: 'Hide Pulse and priors',
-                  action: () => {
-                    this.selMeter!.hidePulseAndPriors(pulse);
-                    this.contextMenuClosed = true;
-                    this.resetZoom();
-                    this.selectMeter(pulse.uniqueId)
-                  },
-                  enabled: true
-                })
-              } else if (cycle === this.selMeter!.repetitions - 1) {
-                this.contextMenuChoices.push({
-                  text: 'Hide Pulse and nexts',
-                  action: () => {
-                    this.selMeter!.hidePulseAndFollowing(pulse);
-                    this.contextMenuClosed = true;
-                    this.resetZoom();
-                    this.selectMeter(pulse.uniqueId)
-                  },
-                  enabled: true
-                })
-              }
-              if (!this.selMeter!.allPulses[0].corporeal) {
-                this.contextMenuChoices.push({
-                  text: 'Show all Prior Pulses',
-                  action: () => {
-                    this.selMeter!.showPriorPulses();
-                    this.contextMenuClosed = true;
-                    this.resetZoom();
-                    this.selectMeter(pulse.uniqueId)
-                  },
-                  enabled: true
-                })
-              }
-              const ap = this.selMeter!.allPulses;
-              if (!ap[ap.length - 1].corporeal) {
-                this.contextMenuChoices.push({
-                  text: 'Show all Later Pulses',
-                  action: () => {
-                    this.selMeter!.showLaterPulses();
-                    this.contextMenuClosed = true;
-                    this.resetZoom();
-                    this.selectMeter(pulse.uniqueId)
-                  },
-                  enabled: true
-                })
-              }
-            }
-          })
-          .on('mouseover', () => this.hoverMeter(pulse.uniqueId))
-          .on('mouseout', () => this.unhoverMeter(pulse.uniqueId))
-          .attr('transform', `translate(${x},0)`)
-          .call(drag(pulse))
-      });
-      this.piece.meters.forEach(meter => {
-        const endTime = meter.startTime + meter.durTot;
-        const x = codified ? 
-            this.codifiedXR!(endTime) : 
-            this.xr()(endTime);
-        this.phraseG
-          .append('path')
-          .classed('metricGrid', true)
-          .classed(`meterId_${meter.uniqueId}`, true)
-          .attr('id', `metricGrid_${meter.uniqueId}`)
-          .attr('stroke', this.meterColor)
-          .attr('stroke-width', '1px')
-          .attr('stroke-dasharray', ('5,5'))
-          .attr('d', this.playheadLine(codified))
-          .attr('transform', `translate(${x},0)`)
+    //       })
+    //       .on('contextmenu', (e: MouseEvent) => {
+    //         const target = e.target as SVGPathElement;
+    //         if (this.meterMode) {
+    //           e.preventDefault();
+    //           e.stopPropagation();
+    //           this.contextMenuX = e.x;
+    //           this.contextMenuY = e.y;
+    //           this.contextMenuClosed = false;
+    //           const pulseId = target.id.slice(11);
+    //           const pulse = this.selMeter!.getPulseFromId(pulseId)!;
+    //           const cycle = this.selMeter!.cycleOfPulse(pulse);
+    //           this.contextMenuChoices = [];
+    //           if (cycle === 0) {
+    //             this.contextMenuChoices.push({
+    //               text: 'Hide Pulse and priors',
+    //               action: () => {
+    //                 this.selMeter!.hidePulseAndPriors(pulse);
+    //                 this.contextMenuClosed = true;
+    //                 this.resetZoom();
+    //                 this.selectMeter(pulse.uniqueId)
+    //               },
+    //               enabled: true
+    //             })
+    //           } else if (cycle === this.selMeter!.repetitions - 1) {
+    //             this.contextMenuChoices.push({
+    //               text: 'Hide Pulse and nexts',
+    //               action: () => {
+    //                 this.selMeter!.hidePulseAndFollowing(pulse);
+    //                 this.contextMenuClosed = true;
+    //                 this.resetZoom();
+    //                 this.selectMeter(pulse.uniqueId)
+    //               },
+    //               enabled: true
+    //             })
+    //           }
+    //           if (!this.selMeter!.allPulses[0].corporeal) {
+    //             this.contextMenuChoices.push({
+    //               text: 'Show all Prior Pulses',
+    //               action: () => {
+    //                 this.selMeter!.showPriorPulses();
+    //                 this.contextMenuClosed = true;
+    //                 this.resetZoom();
+    //                 this.selectMeter(pulse.uniqueId)
+    //               },
+    //               enabled: true
+    //             })
+    //           }
+    //           const ap = this.selMeter!.allPulses;
+    //           if (!ap[ap.length - 1].corporeal) {
+    //             this.contextMenuChoices.push({
+    //               text: 'Show all Later Pulses',
+    //               action: () => {
+    //                 this.selMeter!.showLaterPulses();
+    //                 this.contextMenuClosed = true;
+    //                 this.resetZoom();
+    //                 this.selectMeter(pulse.uniqueId)
+    //               },
+    //               enabled: true
+    //             })
+    //           }
+    //         }
+    //       })
+    //       .on('mouseover', () => this.hoverMeter(pulse.uniqueId))
+    //       .on('mouseout', () => this.unhoverMeter(pulse.uniqueId))
+    //       .attr('transform', `translate(${x},0)`)
+    //       .call(drag(pulse))
+    //   });
+    //   this.piece.meters.forEach(meter => {
+    //     const endTime = meter.startTime + meter.durTot;
+    //     const x = codified ? 
+    //         this.codifiedXR!(endTime) : 
+    //         this.xr()(endTime);
+    //     this.phraseG
+    //       .append('path')
+    //       .classed('metricGrid', true)
+    //       .classed(`meterId_${meter.uniqueId}`, true)
+    //       .attr('id', `metricGrid_${meter.uniqueId}`)
+    //       .attr('stroke', this.meterColor)
+    //       .attr('stroke-width', '1px')
+    //       .attr('stroke-dasharray', ('5,5'))
+    //       .attr('d', this.playheadLine(codified))
+    //       .attr('transform', `translate(${x},0)`)
 
-        this.phraseG
-          .append('path')
-          .classed('metricGrid', true)
-          .classed(`meterId_${meter.uniqueId}`, true)
-          .attr('id', `metricGrid_${meter.uniqueId}`)
-          .attr('stroke', this.meterColor)
-          .attr('stroke-width', '5px')
-          .style('opacity', '0')
-          .attr('d', this.playheadLine(codified))
-          .attr('transform', `translate(${x},0)`)
-          .on('mouseover', () => this.hoverMeter(meter.uniqueId, false))
-          .on('mouseout', () => this.unhoverMeter(meter.uniqueId, false))
-          .on('click', (e: MouseEvent) => {
-            if (this.meterMode) {
-              e.preventDefault();
-              e.stopPropagation();
-              this.selectMeter(meter.uniqueId, false, false)
-            }
-          })
-      })
-    },
+    //     this.phraseG
+    //       .append('path')
+    //       .classed('metricGrid', true)
+    //       .classed(`meterId_${meter.uniqueId}`, true)
+    //       .attr('id', `metricGrid_${meter.uniqueId}`)
+    //       .attr('stroke', this.meterColor)
+    //       .attr('stroke-width', '5px')
+    //       .style('opacity', '0')
+    //       .attr('d', this.playheadLine(codified))
+    //       .attr('transform', `translate(${x},0)`)
+    //       .on('mouseover', () => this.hoverMeter(meter.uniqueId, false))
+    //       .on('mouseout', () => this.unhoverMeter(meter.uniqueId, false))
+    //       .on('click', (e: MouseEvent) => {
+    //         if (this.meterMode) {
+    //           e.preventDefault();
+    //           e.stopPropagation();
+    //           this.selectMeter(meter.uniqueId, false, false)
+    //         }
+    //       })
+    //   })
+    // },
 
     pulseDragStart(pulse: Pulse) {
       return (e: D3DragEvent<HTMLDivElement, any, MouseEvent>) => {
@@ -3242,58 +3267,58 @@ export default defineComponent({
       }
     },
 
-    pulseDragEnd(pulse: Pulse) {
-      return (e: D3DragEvent<HTMLDivElement, any, MouseEvent>) => {
-        if (this.pulseDragEnabled && this.editable) {
-          const aff = pulse.affiliations[0];
-          const psId = pulse.affiliations[0].psId;
-          const ps = this.selMeter!.getPSFromId(psId);
-          let minTime, maxTime;
-          if (aff.idx === 0 && aff.segmentedMeterIdx === 0 && aff.layer === 0) {
-            const psIdx = this.selMeter!.pulseStructures[0].indexOf(ps);
-            let cycleNum, subdivs;
-            const hierarchy = this.selMeter!.hierarchy[0];
-            if (typeof hierarchy === 'number') {
-              cycleNum = psIdx
-              subdivs = hierarchy
-            } else {
-              cycleNum = Math.floor(psIdx / hierarchy.length);
-              subdivs = sum(hierarchy);
-            }
-            const st = this.selMeter!.startTime;
-            const center = st + this.selMeter!.cycleDur * cycleNum;
-            const subDur = this.selMeter!.cycleDur / subdivs;
-            const maxOff = subDur / 2;
-            maxTime = center + maxOff;
-            minTime = center - maxOff;
-          } else {
-            const maxOff = ps.pulseDur / 2;
-            const pulseIdx = ps.pulses.indexOf(pulse);
-            const center = ps.startTime + ps.pulseDur * pulseIdx;
-            maxTime = center + maxOff;
-            minTime = center - maxOff;
-          }
-          let newX = e.x;
-          if (newX < this.codifiedXR!(minTime)) {
-            newX = this.codifiedXR!(minTime);
-          } else if (newX > this.codifiedXR!(maxTime)) {
-            newX = this.codifiedXR!(maxTime);
-          }
-          const oldTime = pulse.realTime;
-          const newTime = this.codifiedXR!.invert(newX);
-          const time = newTime - oldTime;
-          this.selMeter!.offsetPulse(pulse, time, true);
-          this.selMeter!.resetTempo();
-          this.resetZoom();
-          this.pulseDragEnabled = false;
-          this.pulseDragInitX = undefined
-          this.selectMeter(pulse.uniqueId);
-          const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-          const meterControls = ap.$refs.meterControls as typeof MeterControls;
-          meterControls.updateVisibility();
-        }
-      }
-    },
+    // pulseDragEnd(pulse: Pulse) {
+    //   return (e: D3DragEvent<HTMLDivElement, any, MouseEvent>) => {
+    //     if (this.pulseDragEnabled && this.editable) {
+    //       const aff = pulse.affiliations[0];
+    //       const psId = pulse.affiliations[0].psId;
+    //       const ps = this.selMeter!.getPSFromId(psId);
+    //       let minTime, maxTime;
+    //       if (aff.idx === 0 && aff.segmentedMeterIdx === 0 && aff.layer === 0) {
+    //         const psIdx = this.selMeter!.pulseStructures[0].indexOf(ps);
+    //         let cycleNum, subdivs;
+    //         const hierarchy = this.selMeter!.hierarchy[0];
+    //         if (typeof hierarchy === 'number') {
+    //           cycleNum = psIdx
+    //           subdivs = hierarchy
+    //         } else {
+    //           cycleNum = Math.floor(psIdx / hierarchy.length);
+    //           subdivs = sum(hierarchy);
+    //         }
+    //         const st = this.selMeter!.startTime;
+    //         const center = st + this.selMeter!.cycleDur * cycleNum;
+    //         const subDur = this.selMeter!.cycleDur / subdivs;
+    //         const maxOff = subDur / 2;
+    //         maxTime = center + maxOff;
+    //         minTime = center - maxOff;
+    //       } else {
+    //         const maxOff = ps.pulseDur / 2;
+    //         const pulseIdx = ps.pulses.indexOf(pulse);
+    //         const center = ps.startTime + ps.pulseDur * pulseIdx;
+    //         maxTime = center + maxOff;
+    //         minTime = center - maxOff;
+    //       }
+    //       let newX = e.x;
+    //       if (newX < this.codifiedXR!(minTime)) {
+    //         newX = this.codifiedXR!(minTime);
+    //       } else if (newX > this.codifiedXR!(maxTime)) {
+    //         newX = this.codifiedXR!(maxTime);
+    //       }
+    //       const oldTime = pulse.realTime;
+    //       const newTime = this.codifiedXR!.invert(newX);
+    //       const time = newTime - oldTime;
+    //       this.selMeter!.offsetPulse(pulse, time, true);
+    //       this.selMeter!.resetTempo();
+    //       this.resetZoom();
+    //       this.pulseDragEnabled = false;
+    //       this.pulseDragInitX = undefined
+    //       this.selectMeter(pulse.uniqueId);
+    //       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+    //       const meterControls = ap.$refs.meterControls as typeof MeterControls;
+    //       meterControls.updateVisibility();
+    //     }
+    //   }
+    // },
 
     hoverMeter(id: string, pulseId: boolean = true) {
       if (this.meterMode) {
@@ -3359,48 +3384,57 @@ export default defineComponent({
     },
 
     selectMeter(id: string, turnMMOn = false, pulseId = true) {
-      if (turnMMOn) {
-        this.meterMode = true;
-        this.insertPulseMode = false;
-        d3SelectAll('.insertPulse').remove();
-      }
-      if (this.meterMode) {
-        const allPulses: Pulse[] = []
-        this.piece.meters.forEach(meter => {
-          allPulses.push(...meter.allPulses)
-        });
+      // if (turnMMOn) {
+      //   this.meterMode = true;
+      //   this.insertPulseMode = false;
+      //   d3SelectAll('.insertPulse').remove();
+      // }
+      // if (this.meterMode) {
+      //   const allPulses: Pulse[] = []
+      //   this.piece.meters.forEach(meter => {
+      //     allPulses.push(...meter.allPulses)
+      //   });
         
-        const audioPlayer = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-        const meterControls = audioPlayer.$refs.meterControls as 
-          typeof MeterControls;
-        meterControls.meterSelected = true;
-        let pulse: Pulse;
-        let meter: Meter;
-        if (pulseId) {
-          pulse = allPulses.find(pulse => pulse.uniqueId === id)!;
-          meter = this.piece.meters.find(meter => {
-            return meter.uniqueId === pulse.meterId
-          })!;
-        } else {
-          meter = this.piece.meters.find(meter => {
-            return meter.uniqueId === id
-          })!;
-          pulse = meter.allPulses[0];
-        }
+      //   const audioPlayer = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+      //   const meterControls = audioPlayer.$refs.meterControls as 
+      //     typeof MeterControls;
+      //   meterControls.meterSelected = true;
+      //   let pulse: Pulse;
+      //   let meter: Meter;
+      //   if (pulseId) {
+      //     pulse = allPulses.find(pulse => pulse.uniqueId === id)!;
+      //     meter = this.piece.meters.find(meter => {
+      //       return meter.uniqueId === pulse.meterId
+      //     })!;
+      //   } else {
+      //     meter = this.piece.meters.find(meter => {
+      //       return meter.uniqueId === id
+      //     })!;
+      //     pulse = meter.allPulses[0];
+      //   }
         
-        this.selMeter = meter;
-        meterControls.meter = meter;
-        //should go to the meter controls, if not selected
-        if (audioPlayer.showMeterControls === false) {
-          audioPlayer.toggleMeterControls()
-        }
-        d3SelectAll('.metricGrid')
-          .attr('stroke', this.meterColor)
-        d3SelectAll(`.meterId_${pulse.meterId}`)
-          .filter((d, i, nodes) => !d3Select(nodes[i]).classed('overlay'))
-          .attr('stroke', this.selMeterColor)
-        meterControls.assignData();
-      }   
+      //   this.selMeter = meter;
+      //   meterControls.meter = meter;
+      //   //should go to the meter controls, if not selected
+      //   if (audioPlayer.showMeterControls === false) {
+      //     audioPlayer.toggleMeterControls()
+      //   }
+      //   d3SelectAll('.metricGrid')
+      //     .attr('stroke', this.meterColor)
+      //   d3SelectAll(`.meterId_${pulse.meterId}`)
+      //     .filter((d, i, nodes) => !d3Select(nodes[i]).classed('overlay'))
+      //     .attr('stroke', this.selMeterColor)
+      //   meterControls.assignData();
+      // }   
+      const allPulses: Pulse[] = [];
+      this.piece.meters.forEach(meter => {
+        allPulses.push(...meter.allPulses)
+      });
+      const pulse = allPulses.find(pulse => pulse.uniqueId === id)!;
+      const meter = this.piece.meters.find(meter => {
+        return meter.uniqueId === pulse.meterId
+      })!;
+      this.selMeter = meter;
     },
 
     async removeMeter(meter: Meter) { // the specific graph
@@ -7757,40 +7791,40 @@ export default defineComponent({
       }
     },
 
-    adjustMeter(left = true) {
-      if (this.selMeter === undefined) {
-        throw new Error('No meter selected')
-      }
-      const offset = 0.02;
-      const startTime = this.selMeter.startTime;
-      let adjustment = 0;
-      if (left) {
-        if (startTime - offset >= 0) {
-          this.selMeter.adjustStartTime(-offset);
-          adjustment = this.codifiedXR!(0) - this.codifiedXR!(0.02);
-        } else if (startTime !== 0) {
-          this.selMeter.setStartTime(0);
-          adjustment = this.codifiedXR!(0) - this.codifiedXR!(startTime);
-        } else {
-          return
-        }
-      } else {
-        this.selMeter.adjustStartTime(offset);
-        adjustment = this.codifiedXR!(0.02) - this.codifiedXR!(0);
-      }
-      const selected = d3SelectAll(`.meterId_${this.selMeter.uniqueId}`);
-      const nodes = selected.nodes() as SVGPathElement[];
-      nodes.forEach(node => {
-        console.log(node)
-        const curX = node!.transform.baseVal[0].matrix.e;
-        const newX = curX + adjustment;
-        d3Select(node).attr('transform', `translate(${newX}, 0)`);
-      })
-      this.resetZoom();
-      this.selectMeter(this.selMeter.allPulses[0].uniqueId);
-      this.unsavedChanges = true;
+    // adjustMeter(left = true) {
+    //   if (this.selMeter === undefined) {
+    //     throw new Error('No meter selected')
+    //   }
+    //   const offset = 0.02;
+    //   const startTime = this.selMeter.startTime;
+    //   let adjustment = 0;
+    //   if (left) {
+    //     if (startTime - offset >= 0) {
+    //       this.selMeter.adjustStartTime(-offset);
+    //       adjustment = this.codifiedXR!(0) - this.codifiedXR!(0.02);
+    //     } else if (startTime !== 0) {
+    //       this.selMeter.setStartTime(0);
+    //       adjustment = this.codifiedXR!(0) - this.codifiedXR!(startTime);
+    //     } else {
+    //       return
+    //     }
+    //   } else {
+    //     this.selMeter.adjustStartTime(offset);
+    //     adjustment = this.codifiedXR!(0.02) - this.codifiedXR!(0);
+    //   }
+    //   const selected = d3SelectAll(`.meterId_${this.selMeter.uniqueId}`);
+    //   const nodes = selected.nodes() as SVGPathElement[];
+    //   nodes.forEach(node => {
+    //     console.log(node)
+    //     const curX = node!.transform.baseVal[0].matrix.e;
+    //     const newX = curX + adjustment;
+    //     d3Select(node).attr('transform', `translate(${newX}, 0)`);
+    //   })
+    //   this.resetZoom();
+    //   this.selectMeter(this.selMeter.allPulses[0].uniqueId);
+    //   this.unsavedChanges = true;
       
-    },
+    // },
 
     setTrajColor(id: string, color: string, altColor?: string = undefined) {
       // sets the colors for the traj stroke, dampen, pluck, and turns the 

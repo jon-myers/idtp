@@ -267,6 +267,7 @@
       :editable='editable'
       :currentTime='parentCurrentTime'
       :insertPulses='insertPulses'
+      :editorMode='editorMode'
       ref='meterControls'
       @passthroughResetZoomEmit='passthroughResetZoom'
       @pSelectMeterEmit='passthroughSelectMeter'
@@ -276,6 +277,7 @@
       @passthroughUnsavedChangesEmit='passthroughUnsavedChanges'
       @passthroughAssignPrevMeterEmit='passthroughAssignPrevMeter'
       @maxLayerEmit='$emit("maxLayerEmit", $event)'
+      @renderMeter='$emit("renderMeter", $event)'
       />
     <LabelEditor
       v-if='showLabelControls'
@@ -343,8 +345,7 @@ import shuffleIcon from '@/assets/icons/shuffle.svg';
 import rulerIcon from '@/assets/icons/ruler.svg';
 import tagsIcon from '@/assets/icons/tags.svg';
 import SpectrogramControls from '@/comps/editor/SpectrogramControls.vue';
-import { defineComponent } from 'vue';
-import { PropType } from 'vue';
+import { defineComponent, PropType } from 'vue';
 import { 
   getStarts, 
   getEnds, 
@@ -355,6 +356,7 @@ import {
   Piece,
   Pitch
 } from '@/js/classes.ts';
+import { EditorMode } from '@/ts/enums.ts';
 import { AudioWorklet } from '@/audio-worklet';
 import tuningForkIcon from '@/assets/icons/tuning_fork.png';
 import downloadIcon from '@/assets/icons/download.svg';
@@ -867,6 +869,10 @@ export default defineComponent({
       type: String,
       required: true
     },
+    editorMode: {
+      type: String as PropType<EditorMode>,
+      required: true
+    }
   },
 
   components: {

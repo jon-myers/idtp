@@ -150,6 +150,7 @@ import {
   select as d3Select,
  } from 'd3';
 import { defineComponent, PropType } from 'vue';
+import { EditorMode } from '@/ts/enums.ts';
  
 type MeterControlsDataType = {
   numLayers: number,
@@ -163,7 +164,7 @@ type MeterControlsDataType = {
   meter?: Meter,
   meterSelected: boolean,
   maxLayer: number,
-  insertPulseMode: boolean,
+  // insertPulseMode: boolean,
   insertLayer: number,
   attachToPrevMeter: boolean,
   prevMeter: boolean,
@@ -189,7 +190,7 @@ export default defineComponent({
       meter: undefined,
       meterSelected: false,
       maxLayer: 3,
-      insertPulseMode: false,
+      // insertPulseMode: false,
       insertLayer: 0,
       attachToPrevMeter: false,
       prevMeter: false,
@@ -216,10 +217,22 @@ export default defineComponent({
       type: Array as PropType<number[]>,
       required: true,
     },
+    editorMode: {
+      type: String as PropType<EditorMode>,
+      required: true,
+    }
   },
 
   mounted() {
     this.$emit('maxLayerEmit', this.maxLayer);
+  },
+
+  computed: {
+
+    insertPulseMode(): boolean {
+      return this.editorMode === EditorMode.Meter;
+    },
+
   },
   
   methods: {
@@ -434,7 +447,7 @@ export default defineComponent({
       });
       this.$emit('passthroughAddMeterEmit', meter);
       this.$emit('passthroughUnsavedChangesEmit', true)
-      this.$emit('passthroughAddMetricGridEmit', true);
+      // this.$emit('passthroughAddMetricGridEmit', true);
       this.meterSelected = true;
       this.$emit('pSelectMeterEmit', meter.allPulses[0].uniqueId)
     },
@@ -458,28 +471,28 @@ export default defineComponent({
         layer: Number(this.insertLayer),
       });
       this.$emit('passthroughAddMeterEmit', meter);
-      this.$emit('passthroughAddMetricGridEmit', true);
+      // this.$emit('passthroughAddMetricGridEmit', true);
       this.meterSelected = true;
       this.$emit('pSelectMeterEmit', meter.allPulses[0].uniqueId)
-      d3SelectAll('.insertPulse').remove();
-      this.insertPulseMode = false;
     },
 
     addTimePointsToPrevMeter() {
       const timePoints = this.insertPulses;
       timePoints.sort((a: number, b: number) => a - b);
       this.meter!.addTimePoints(timePoints, this.insertLayer);
-      this.$emit('passthroughAddMetricGridEmit', true);
+      // this.$emit('passthroughAddMetricGridEmit', true);
       this.meterSelected = true;
       this.$emit('pSelectMeterEmit', this.meter!.allPulses[0].uniqueId, true)
-      this.$emit('passthroughUnsavedChangesEmit', true)
-      d3SelectAll('.insertPulse').remove();
-      this.insertPulseMode = false;
+      this.$emit('passthroughUnsavedChangesEmit', true);
+      this.$emit('renderMeter', this.meter);
+      // d3SelectAll('.insertPulse').remove();
+      // this.insertPulseMode = false;
     },
 
     updateAttachToPrevMeter() {
       if (this.attachToPrevMeter === true) {
         this.$emit('passthroughAssignPrevMeterEmit');
+        // this.$emit('pSelectMeterEmit', this.meter!.allPulses[0].uniqueId)
         this.numLayers = this.meter!.hierarchy.length;
         if (typeof this.meter!.hierarchy[0] === 'number') {
           this.layerCompounds[0] = 1;

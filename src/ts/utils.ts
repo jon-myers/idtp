@@ -55,6 +55,37 @@ const isUpperCase = (str: string) => str === str.toUpperCase();
 
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
 
+const findClosestStartTimeAfter = (startTimes: number[], timepoint: number) => {
+  let closestIndex = -1;
+  let closestDiff = Infinity;
+  for (let i = 0; i < startTimes.length; i++) {
+    if (startTimes[i] <= timepoint) continue; // Skip start times <= timepoint
+
+    const diff = startTimes[i] - timepoint;
+    if (diff < closestDiff) {
+      closestDiff = diff;
+      closestIndex = i;
+    }
+  }
+  return closestIndex;
+}
+
+const  findClosestStartTime = (startTimes: number[], timepoint: number) => {
+  let closestIndex = -1;
+  let closestDiff = Infinity;
+
+  for (let i = 0; i < startTimes.length; i++) {
+    if (startTimes[i] > timepoint) continue; // Skip start times after timepoint
+
+    const diff = timepoint - startTimes[i];
+    if (diff < closestDiff) {
+      closestDiff = diff;
+      closestIndex = i;
+    }
+  }
+  return closestIndex;
+}
+
 
 export { 
   getContrastingTextColor, 
@@ -65,5 +96,7 @@ export {
   cumsum,
   getClosest,
   isUpperCase,
-  sum
+  sum,
+  findClosestStartTime,
+  findClosestStartTimeAfter
 };

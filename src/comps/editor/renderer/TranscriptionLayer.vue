@@ -29,7 +29,14 @@ import {
   toRef
 } from 'vue';
 import * as d3 from 'd3';
-import { linSpace, cumsum, getClosest, sum } from '@/ts/utils.ts';
+import { 
+  linSpace, 
+  cumsum, 
+  getClosest, 
+  sum,
+  findClosestStartTimeAfter,
+  findClosestStartTime,
+} from '@/ts/utils.ts';
 import { EditorMode, Instrument } from '@/ts/enums.ts';
 import { BrowserInfo } from 'detect-browser';
 
@@ -211,6 +218,7 @@ export default defineComponent({
     const clipboardTrajs = ref<Trajectory[]>([]);
     const selectedMeter = ref<Meter | undefined>(undefined);
     const selectedPulse = ref<Pulse | undefined>(undefined);
+    const insertPulses = ref<number[]>([]);
 
     let justDeletedPhraseDiv = false;
     const dragDotColor = 'purple';
@@ -369,6 +377,36 @@ export default defineComponent({
     const playheadX = computed(() => {
       return props.xScale(props.currentTime)
     });
+    const ipLims = computed(() => {
+      // for inserting insert pulses, this lets us know the limits, based on
+      // other meters and already inserted pulses.
+      let out = [0, 0];
+      if (insertPulses.value.length === 0) {
+        return [0, props.piece.durTot!];
+      } else {
+        const mtrStarts = props.piece.meters.map(m => m.startTime);
+        const ip = insertPulses.value[0];
+        if (Math.min(...mtrStarts) > ip) {
+          const afterIdx = findClosestStartTimeAfter(mtrStarts, ip);
+          const after = props.piece.meters[afterIdx];
+          if (after === undefined) {
+            return [0, props.piece.durTot!];
+          } else {
+            return [0, after.startTime];
+          }
+        } else if (Math.max(...mtrStarts) < ip) {
+          const beforeIdx = findClosestStartTime(mtrStarts, ip);
+          const before = props.piece.meters[beforeIdx];
+          return [before.startTime + before.durTot, props.piece.durTot!];
+        } else {
+          const beforeIdx = findClosestStartTime(mtrStarts, ip);
+          const afterIdx = findClosestStartTimeAfter(mtrStarts, ip);
+          const before = props.piece.meters[beforeIdx];
+          const after = props.piece.meters[afterIdx];
+          return [before.startTime + before.durTot, after.startTime];
+        }
+      }
+    })
 
     // watched values
     watch(() => props.sargamLineColor, () => {
@@ -569,7 +607,7 @@ export default defineComponent({
         svg.attr('cursor', 'crosshair');
       } else if (mode === EditorMode.Meter) {
         const svg = d3.select(tranSvg.value);
-        svg.attr('cursor', 'crosshair');
+        svg.attr('cursor', 's-resize');
         if (meterHovering !== undefined) {
           d3.selectAll(`.metricGrid.meterId${meterHovering.uniqueId}`)
             .attr('cursor', 'pointer')
@@ -661,7 +699,10 @@ export default defineComponent({
         d3.selectAll('.metricGrid')
           .attr('cursor', 'col-resize')
       }
-    })
+    });
+    watch(insertPulses, newVal => {
+      emit('update:insertPulses', newVal);
+    });
     
     // adding svg groups
     const addSargamG = () => {
@@ -1249,7 +1290,6 @@ export default defineComponent({
             .attr('cursor', cursor)
           selMeterHovering = true;
         } else {
-          console.log('this should still be happening')
           d3.selectAll(`.metricGrid.meterId${meter.uniqueId}`)
             .attr('cursor', 'pointer')
             .attr('stroke', props.selectedMeterColor)
@@ -1340,6 +1380,7 @@ export default defineComponent({
       addChikariG();
       clearDragDots();
       refreshDragDots();
+      renderInsertPulses();
     };
 
     const deletePhraseDiv = (uId: string) => {
@@ -2252,6 +2293,7 @@ export default defineComponent({
       });
       clearDragDots();
       clearTimePts();
+      clearInsertPulses();
       selectedChikari.value = undefined;
       selectedPhraseDivUid.value = undefined;
       selectedDragDotIdx.value = undefined;
@@ -2842,8 +2884,79 @@ export default defineComponent({
         .on('dblclick', handleDoubleClick)
     };
 
+    const timeWithinMeter = (time: number) => {
+      let out = false;
+      props.piece.meters.forEach(meter => {
+        const corpTimes = meter.realCorpTimes;
+        if (time >= corpTimes[0] && time <= corpTimes[corpTimes.length - 1]) {
+          out = true;
+        }
+      });
+      return out;
+    }
+
+    const insertPulse = (e: MouseEvent) => {
+      const time = props.xScale.invert(e.offsetX);
+      let inserted = false;
+      if (!timeWithinMeter(time)) {
+        if (insertPulses.value.length > 0) {
+          if (time >= ipLims.value[0] && time < ipLims.value[1]) {
+            insertPulses.value.push(time);
+            inserted = true;
+          }
+        } else {
+          insertPulses.value.push(time);
+          inserted = true;
+        }
+        if (inserted) {
+          const meterG = d3.select('.meterG');
+          const x = props.xScale(time);
+          const line = d3.line()([
+            [0, props.yScale(logMin.value)],
+            [0, props.yScale(logMax.value)]
+          ]);
+          meterG.append('path')
+            .classed('insertPulse', true)
+            .attr('stroke', props.selectedMeterColor)
+            .attr('stroke-width', 2)
+            .attr('d', line)
+            .attr('transform', `translate(${x}, 0)`);
+        }
+        if (insertPulses.value.length === 0) {
+          emit('update:prevMeter', false)
+        } else {
+          const mtrStarts = props.piece.meters.map(m => m.startTime);
+          emit('update:prevMeter', Math.min(...mtrStarts) < insertPulses.value[0])
+        }
+
+      }
+    };
+
+    const clearInsertPulses = () => {
+      insertPulses.value = [];
+      d3.selectAll('.insertPulse').remove();
+      emit('update:prevMeter', false);
+    };
+
+    const renderInsertPulses = () => {
+      d3.selectAll('.insertPulse').remove();
+      insertPulses.value.forEach(time => {
+        const meterG = d3.select('.meterG');
+        const x = props.xScale(time);
+        const line = d3.line()([
+          [0, props.yScale(logMin.value)],
+          [0, props.yScale(logMax.value)]
+        ]);
+        meterG.append('path')
+          .classed('insertPulse', true)
+          .attr('stroke', props.selectedMeterColor)
+          .attr('stroke-width', 2)
+          .attr('d', line)
+          .attr('transform', `translate(${x}, 0)`);
+      });
+    };
+ 
     const handleClick = (e: MouseEvent) => {
-      console.log('clicking')
       let time = props.xScale.invert(e.offsetX);
       const logFreq = props.yScale.invert(e.offsetY);
       const track = props.editingInstIdx;
@@ -2861,6 +2974,7 @@ export default defineComponent({
         if (selectedMeter.value) {
           handleEscape();
         }
+        insertPulse(e);
 
       } else if (props.selectedMode === EditorMode.None) {
         const target = e.target! as HTMLElement;
@@ -3433,7 +3547,9 @@ export default defineComponent({
       trajTimePts,
       metad,
       clipboardTrajs,
-      selectedMeter
+      selectedMeter,
+      renderMeter,
+      clearInsertPulses
     }
   }
 })

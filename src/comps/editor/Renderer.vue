@@ -113,6 +113,7 @@
               :showMeter='showMeter'
               :meterColor='meterColor'
               :selectedMeterColor='selectedMeterColor'
+              @update:prevMeter='$emit("update:prevMeter", $event)'
               @update:selectedMode='$emit("update:selectedMode", $event)'
               @unsavedChanges='$emit("unsavedChanges", $event)'
               @update:TrajSelStatus='$emit("update:TrajSelStatus", $event)'
@@ -122,6 +123,7 @@
               @update:editingInstIdx='$emit("update:editingInstIdx", $event)'
               @update:trajTimePts='$emit("update:trajTimePts", $event)'
               @update:currentTime='$emit("update:currentTime", $event)'
+              @update:insertPulses='$emit("update:insertPulses", $event)'
             />
           />
         </div>
