@@ -218,6 +218,8 @@ export default defineComponent({
     let dragDotIdx: number | undefined = undefined;
     const minTrajDur = 0.05;
     let pulseDragEnabled = false;
+    let meterHovering: Meter | undefined = undefined;
+    let selMeterHovering = false;
 
 
     const emptyDivIdxMap = new Map<HTMLDivElement, number>();
@@ -548,6 +550,11 @@ export default defineComponent({
       if (mode === EditorMode.None) {
         const svg = d3.select(tranSvg.value);
         svg.style('cursor', 'default');
+        if (meterHovering !== undefined) {
+          d3.selectAll(`.metricGrid.meterId${meterHovering.uniqueId}`)
+            .attr('cursor', 'default')
+            .attr('stroke', props.meterColor)
+        }
       } else if (mode === EditorMode.Chikari) {
         const svg = d3.select(tranSvg.value);
         svg.style('cursor', 'crosshair');
@@ -563,6 +570,11 @@ export default defineComponent({
       } else if (mode === EditorMode.Meter) {
         const svg = d3.select(tranSvg.value);
         svg.style('cursor', 'crosshair');
+        if (meterHovering !== undefined) {
+          d3.selectAll(`.metricGrid.meterId${meterHovering.uniqueId}`)
+            .style('cursor', 'pointer')
+            .attr('stroke', props.selectedMeterColor)
+        }
       }
     });
     watch(() => props.editingInstIdx, (instIdx) => {
@@ -639,6 +651,15 @@ export default defineComponent({
           .attr('stroke', selectedDragDotColor)
       }
     });
+    watch(alted, (newVal, oldVal) => {
+      if (newVal && selMeterHovering) {
+        d3.selectAll('.metricGrid')
+          .style('cursor', 'pointer')
+      } else if (!newVal && selMeterHovering) {
+        d3.selectAll('.metricGrid')
+          .style('cursor', 'col-resize')
+      }
+    })
     
     // adding svg groups
     const addSargamG = () => {
@@ -708,9 +729,6 @@ export default defineComponent({
             .attr('class', `phraseDivG`)
             .style('opacity', Number(props.showPhraseDivs))
         }
-        // svg.append('g')
-        //   .attr('class', 'phraseDivG')
-        //   .style('opacity', Number(props.showPhraseDivs))
       }
     };
 
@@ -1095,7 +1113,7 @@ export default defineComponent({
           .attr('transform', `translate(${x},0)`)
           .on('mouseover', () => handleMouseOverMeter(meter))
           .on('mouseout', () => handleMouseOutMeter(meter))
-          .on('click', () => handleClickMeter(meter, pulse)) as 
+          .on('click', (e) => handleClickMeter(meter, pulse, e)) as 
           d3.Selection<SVGPathElement, Datum, HTMLElement, any>;
         if (selectedMeter.value === meter) {
           p.classed('selected', true)
@@ -1216,8 +1234,6 @@ export default defineComponent({
           renderMeter(selectedMeter.value!);
           pulseDragEnabled = false;
           emit('unsavedChanges', true);
-
-
         }
       }
     }
@@ -1229,23 +1245,29 @@ export default defineComponent({
           const cursor = alted.value ? 'pointer' : 'col-resize';
           d3.selectAll(`.metricGrid.meterId${meter.uniqueId}`)
             .attr('cursor', cursor)
+          selMeterHovering = true;
         } else {
-          d3.selectAll(`.metricGrid.meterId${meter.uniqueId}:not(.selected)`)
+          console.log('this should still be happening')
+          d3.selectAll(`.metricGrid.meterId${meter.uniqueId}`)
             .attr('cursor', 'pointer')
             .attr('stroke', props.selectedMeterColor)
         }
-
       }
+      meterHovering = meter;
     };
     const handleMouseOutMeter = (meter: Meter) => {
       const meterMode = props.selectedMode === EditorMode.Meter;
       d3.selectAll(`.metricGrid.meterId${meter.uniqueId}:not(.selected)`)
         .attr('stroke', props.meterColor)
         .attr('cursor', meterMode ? 'crosshair' : 'default')
+      selMeterHovering = false;
+      meterHovering = undefined;
     };
-    const handleClickMeter = (meter: Meter, pulse: Pulse) => {
+    const handleClickMeter = (meter: Meter, pulse: Pulse, e: MouseEvent) => {
       const c1 = props.selectedMode === EditorMode.Meter;
       if (c1) {
+        e.preventDefault();
+        e.stopPropagation();
         if (meter === selectedMeter.value) {
           selectedPulse.value = pulse;
         } else {
@@ -2235,6 +2257,8 @@ export default defineComponent({
       selectedPulse.value = undefined;
       trajTimePts.value = [];
       d3.selectAll('#selBox').remove();
+      d3.selectAll('.metricGrid')
+        .attr('cursor', 'default')
     }
 
     const clearDragDots = () => {
@@ -2244,7 +2268,12 @@ export default defineComponent({
 
     const handleKeydown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        handleEscape();
+        if (selectedPulse.value) {
+          selectedPulse.value = undefined;
+        } else {
+
+          handleEscape();
+        }
       } else if (e.key === 's') {
         emit('update:selectedMode', EditorMode.Series);
       } else if (e.key === 't') {
@@ -2827,6 +2856,10 @@ export default defineComponent({
         insertNewTrajDot(time, logFreq, track, pIdx);
       } else if (props.selectedMode === EditorMode.Meter) {
         // need to implement this stuff
+        if (selectedMeter.value) {
+          handleEscape();
+        }
+
       } else if (props.selectedMode === EditorMode.None) {
         const target = e.target! as HTMLElement;
         const classes = [
