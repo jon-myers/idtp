@@ -549,7 +549,7 @@ export default defineComponent({
       handleEscape(false);
       if (mode === EditorMode.None) {
         const svg = d3.select(tranSvg.value);
-        svg.style('cursor', 'default');
+        svg.attr('cursor', 'default');
         if (meterHovering !== undefined) {
           d3.selectAll(`.metricGrid.meterId${meterHovering.uniqueId}`)
             .attr('cursor', 'default')
@@ -557,22 +557,22 @@ export default defineComponent({
         }
       } else if (mode === EditorMode.Chikari) {
         const svg = d3.select(tranSvg.value);
-        svg.style('cursor', 'crosshair');
+        svg.attr('cursor', 'crosshair');
       } else if (mode === EditorMode.PhraseDiv) {
         const svg = d3.select(tranSvg.value);
-        svg.style('cursor', 's-resize');
+        svg.attr('cursor', 's-resize');
       } else if (mode === EditorMode.Trajectory) {
         const svg = d3.select(tranSvg.value);
-        svg.style('cursor', 'crosshair');
+        svg.attr('cursor', 'crosshair');
       } else if (mode === EditorMode.Series) {
         const svg = d3.select(tranSvg.value);
-        svg.style('cursor', 'crosshair');
+        svg.attr('cursor', 'crosshair');
       } else if (mode === EditorMode.Meter) {
         const svg = d3.select(tranSvg.value);
-        svg.style('cursor', 'crosshair');
+        svg.attr('cursor', 'crosshair');
         if (meterHovering !== undefined) {
           d3.selectAll(`.metricGrid.meterId${meterHovering.uniqueId}`)
-            .style('cursor', 'pointer')
+            .attr('cursor', 'pointer')
             .attr('stroke', props.selectedMeterColor)
         }
       }
@@ -627,6 +627,8 @@ export default defineComponent({
         d3.selectAll(selector)
           .classed('selected', true)
           .attr('stroke', props.selectedMeterColor)
+        d3.select(tranSvg.value)
+          .attr('cursor', 'default')
       }
       d3.selectAll('.metricGrid:not(.selected)')
         .attr('stroke', props.meterColor)
@@ -654,10 +656,10 @@ export default defineComponent({
     watch(alted, (newVal, oldVal) => {
       if (newVal && selMeterHovering) {
         d3.selectAll('.metricGrid')
-          .style('cursor', 'pointer')
+          .attr('cursor', 'pointer')
       } else if (!newVal && selMeterHovering) {
         d3.selectAll('.metricGrid')
-          .style('cursor', 'col-resize')
+          .attr('cursor', 'col-resize')
       }
     })
     
@@ -1054,7 +1056,7 @@ export default defineComponent({
         .attr('stroke', 'white')
         .attr('stroke-width', 8)
         .style('opacity', 0)
-        .style('cursor', 'pointer')
+        .attr('cursor', 'pointer')
         .on('click', () => handleClickPhraseDiv(pd))
         .attr('class', `phraseDivShadow pIdx${pd.idx} uId${pd.uId}`)
     };
@@ -2031,7 +2033,7 @@ export default defineComponent({
             .attr('cy', props.yScale(logFreqs[i]))
             .attr('r', 4)
             .style('fill', color)
-            .style('cursor', 'pointer')
+            .attr('cursor', 'pointer')
             .on('click', handleClickDragDot)
         })
         if (props.editable) {
@@ -2070,13 +2072,13 @@ export default defineComponent({
       
       const cursorTrajSelector = `.trajShadow.uId${traj.uniqueId!}`
       d3.selectAll(cursorTrajSelector)
-        .style('cursor', 'pointer')
+        .attr('cursor', 'pointer')
       const cursorDampenSelector = `.dampenShadow.uId${traj.uniqueId!}`
       d3.selectAll(cursorDampenSelector)
-        .style('cursor', 'pointer');
+        .attr('cursor', 'pointer');
       const cursorPluckSelector = `.pluckShadow.uId${traj.uniqueId!}`
       d3.selectAll(cursorPluckSelector)
-        .style('cursor', 'pointer');
+        .attr('cursor', 'pointer');
       if (traj.groupId !== undefined) {
         const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
         const group = phrase.getGroupFromId(traj.groupId)!;
@@ -2108,13 +2110,13 @@ export default defineComponent({
       }
       const cursorSelector = `.trajShadow.uId${traj.uniqueId!}`
       d3.selectAll(cursorSelector)
-        .style('cursor', 'default')
+        .attr('cursor', 'default')
       const cursorDampenSelector = `.dampenShadow.uId${traj.uniqueId!}`
       d3.selectAll(cursorDampenSelector)
-        .style('cursor', 'default')
+        .attr('cursor', 'default')
       const cursorPluckSelector = `.pluckShadow.uId${traj.uniqueId!}`
       d3.selectAll(cursorPluckSelector)
-        .style('cursor', 'default');
+        .attr('cursor', 'default');
       
       if (traj.groupId !== undefined) {
         const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
