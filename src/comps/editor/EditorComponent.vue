@@ -1436,28 +1436,28 @@ export default defineComponent({
       })
     },
 
-    // addTrajToSelectedGroup(traj: Trajectory) {
-    //   const longEnough = this.selectedTrajs.length > 1;
-    //   if (longEnough && this.selectedTrajs[0].groupId !== undefined) {
-    //     const pIdx = this.selectedTrajs[0].phraseIdx!;
-    //     const phrase = this.piece.phrases[pIdx];
-    //     const group = phrase.getGroupFromId(this.selectedTrajs[0].groupId!)!;
-    //     group.addTraj(traj);
-    //     this.selectedTrajs.push(traj);
-    //     const tIdx = traj.num!;
-    //     const id = `p${pIdx}t${tIdx}`;
-    //     d3Select(`#${id}`)
-    //       .attr('stroke', this.selTrajColor)
-    //     d3Select(`#dampen${id}`)
-    //       .attr('stroke', this.selTrajColor)
-    //     d3Select(`#pluck${id}`)
-    //       .attr('fill', this.selArtColor)
-    //       .attr('stroke', this.selArtColor)
-    //     d3Select('#overlay__' + id)
-    //       .attr('cursor', 'default')
-    //     this.updateArtColors(traj, true)
-    //   }
-    // },
+    addTrajToSelectedGroup(traj: Trajectory) {
+      const longEnough = this.selectedTrajs.length > 1;
+      if (longEnough && this.selectedTrajs[0].groupId !== undefined) {
+        const pIdx = this.selectedTrajs[0].phraseIdx!;
+        const phrase = this.piece.phrases[pIdx];
+        const group = phrase.getGroupFromId(this.selectedTrajs[0].groupId!)!;
+        group.addTraj(traj);
+        this.selectedTrajs.push(traj);
+        const tIdx = traj.num!;
+        const id = `p${pIdx}t${tIdx}`;
+        d3Select(`#${id}`)
+          .attr('stroke', this.selTrajColor)
+        d3Select(`#dampen${id}`)
+          .attr('stroke', this.selTrajColor)
+        d3Select(`#pluck${id}`)
+          .attr('fill', this.selArtColor)
+          .attr('stroke', this.selArtColor)
+        d3Select('#overlay__' + id)
+          .attr('cursor', 'default')
+        this.updateArtColors(traj, true)
+      }
+    },
 
     assignPrevMeter() {
       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
@@ -5697,65 +5697,65 @@ export default defineComponent({
       this.resetZoom();
     },
 
-    // insertSilentTrajLeft(traj: Trajectory, dur=0.1) {
-    //   if (traj.durTot < 0.2) dur = 0.1 * traj.durTot;
-    //   const pIdx = traj.phraseIdx!;
-    //   const tIdx = traj.num!;
-    //   const phrase = this.piece.phrases[pIdx];
-    //   if (traj.id === 12) {
-    //     throw new Error('traj is already silent');
-    //   }
-    //   if (tIdx === 0) {
-    //     if (pIdx > 0) {
-    //       const prevPhrase = this.piece.phrases[pIdx - 1];
-    //       const trajs = prevPhrase.trajectories;
-    //       const prevTraj = trajs[trajs.length - 1];
-    //       if (prevTraj.id === 12) {
-    //         throw new Error('previous traj is already silent');
-    //       }
-    //     }
-    //   } else {
-    //     const prevTraj = phrase.trajectories[tIdx - 1];
-    //     if (prevTraj.id === 12) {
-    //       throw new Error('previous traj is already silent');
-    //     }
-    //   }
-    //   const newTraj = new Trajectory({
-    //     id: 12,
-    //     durTot: dur,
-    //     pitches: [],
-    //     fundID12: this.piece.raga.fundamental
-    //   });
-    //   if (traj.durArray!.length === 1) {
-    //     traj.durTot -= dur;
-    //   } else {
-    //     const durs = traj.durArray!.map(d => d * traj.durTot);
-    //     durs[0] -= dur;
-    //     traj.durTot -= dur;
-    //     traj.durArray = durs.map(d => d / traj.durTot);
-    //   }
-    //   phrase.trajectories.splice(tIdx, 0, newTraj);
-    //   phrase.reset();
+    insertSilentTrajLeft(traj: Trajectory, dur=0.1) {
+      if (traj.durTot < 0.2) dur = 0.1 * traj.durTot;
+      const pIdx = traj.phraseIdx!;
+      const tIdx = traj.num!;
+      const phrase = this.piece.phrases[pIdx];
+      if (traj.id === 12) {
+        throw new Error('traj is already silent');
+      }
+      if (tIdx === 0) {
+        if (pIdx > 0) {
+          const prevPhrase = this.piece.phrases[pIdx - 1];
+          const trajs = prevPhrase.trajectories;
+          const prevTraj = trajs[trajs.length - 1];
+          if (prevTraj.id === 12) {
+            throw new Error('previous traj is already silent');
+          }
+        }
+      } else {
+        const prevTraj = phrase.trajectories[tIdx - 1];
+        if (prevTraj.id === 12) {
+          throw new Error('previous traj is already silent');
+        }
+      }
+      const newTraj = new Trajectory({
+        id: 12,
+        durTot: dur,
+        pitches: [],
+        fundID12: this.piece.raga.fundamental
+      });
+      if (traj.durArray!.length === 1) {
+        traj.durTot -= dur;
+      } else {
+        const durs = traj.durArray!.map(d => d * traj.durTot);
+        durs[0] -= dur;
+        traj.durTot -= dur;
+        traj.durArray = durs.map(d => d / traj.durTot);
+      }
+      phrase.trajectories.splice(tIdx, 0, newTraj);
+      phrase.reset();
 
-    //   const data = this.makeTrajData(traj, phrase.startTime!);
-    //   d3Select(`#p${pIdx}t${tIdx}`)
-    //     .datum(data)
-    //     .attr('d', this.codifiedPhraseLine())
-    //   d3Select(`#overlay__p${pIdx}t${tIdx}`)
-    //     .datum(data)
-    //     .attr('d', this.codifiedPhraseLine())
+      const data = this.makeTrajData(traj, phrase.startTime!);
+      d3Select(`#p${pIdx}t${tIdx}`)
+        .datum(data)
+        .attr('d', this.codifiedPhraseLine())
+      d3Select(`#overlay__p${pIdx}t${tIdx}`)
+        .datum(data)
+        .attr('d', this.codifiedPhraseLine())
       
 
-    //   for (let i = phrase.trajectories.length - 2; i >= tIdx; i--) {
-    //     const oldId = `p${pIdx}t${i}`;
-    //     const newId = `p${pIdx}t${i + 1}`;
-    //     this.reIdAllReps(oldId, newId);
-    //   }
-    //   this.selectedTrajID = `p${pIdx}t${tIdx + 1}`;
-    //   // d3SelectAll('.dragDots').remove();
-    //   // this.addAllDragDots();
-    //   this.resetZoom();
-    // },
+      for (let i = phrase.trajectories.length - 2; i >= tIdx; i--) {
+        const oldId = `p${pIdx}t${i}`;
+        const newId = `p${pIdx}t${i + 1}`;
+        this.reIdAllReps(oldId, newId);
+      }
+      this.selectedTrajID = `p${pIdx}t${tIdx + 1}`;
+      // d3SelectAll('.dragDots').remove();
+      // this.addAllDragDots();
+      this.resetZoom();
+    },
 
     // insertFixedTrajRight(traj: Trajectory, dur=0.1) {
     //   if (traj.durTot < 0.2) dur = 0.1 * traj.durTot;
@@ -5817,78 +5817,78 @@ export default defineComponent({
     //   this.resetZoom();
     // },
 
-    // insertFixedTrajLeft(traj: Trajectory, dur=0.1) {
-    //   if (traj.durTot < 0.2) dur = 0.1 * traj.durTot;
-    //   const pIdx = traj.phraseIdx!;
-    //   const tIdx = traj.num!;
-    //   const phrase = this.piece.phrases[pIdx];
-    //   if (traj.id === 0) {
-    //     throw new Error('traj is already fixed');
-    //   }
-    //   const newPitch = new Pitch(traj.pitches[0]);
-    //   const art = traj.articulations['0.00'];
-    //   const newArts = art && art.name === 'pluck' ? 
-    //         [{ '0.00': new Articulation({ 
-    //           name: 'pluck',
-    //           stroke: 'd',
-    //           strokeNickname: 'da' 
-    //         }) }] : 
-    //         [{ }];
-    //   const newTraj = new Trajectory({
-    //     id: 0,
-    //     durTot: dur,
-    //     pitches: [newPitch],
-    //     articulations: newArts,
-    //     vowel: traj.vowel,
-    //     vowelEngTrans: traj.vowelEngTrans,
-    //     vowelHindi: traj.vowelHindi,
-    //     vowelIpa: traj.vowelIpa,
-    //     startConsonant: traj.startConsonant,
-    //     startConsonantEngTrans: traj.startConsonantEngTrans,
-    //     startConsonantHindi: traj.startConsonantHindi,
-    //     startConsonantIpa: traj.startConsonantIpa,
-    //   });
-    //   traj.startConsonant = undefined;
-    //   traj.startConsonantEngTrans = undefined;
-    //   traj.startConsonantHindi = undefined;
-    //   traj.startConsonantIpa = undefined;
-    //   if (art && art.name === 'consonant') {
-    //     delete traj.articulations['0.00'];
-    //   }
-    //   if (art && art.name === 'pluck') {
-    //     delete traj.articulations['0.00'];
-    //   }
-    //   if (traj.durArray!.length === 1) {
-    //     traj.durTot -= dur;
-    //   } else {
-    //     const durs = traj.durArray!.map(d => d * traj.durTot);
-    //     durs[0] -= dur;
-    //     traj.durTot -= dur;
-    //     traj.durArray = durs.map(d => d / traj.durTot);
-    //   }
-    //   phrase.trajectories.splice(tIdx, 0, newTraj);
-    //   phrase.reset();
+    insertFixedTrajLeft(traj: Trajectory, dur=0.1) {
+      if (traj.durTot < 0.2) dur = 0.1 * traj.durTot;
+      const pIdx = traj.phraseIdx!;
+      const tIdx = traj.num!;
+      const phrase = this.piece.phrases[pIdx];
+      if (traj.id === 0) {
+        throw new Error('traj is already fixed');
+      }
+      const newPitch = new Pitch(traj.pitches[0]);
+      const art = traj.articulations['0.00'];
+      const newArts = art && art.name === 'pluck' ? 
+            [{ '0.00': new Articulation({ 
+              name: 'pluck',
+              stroke: 'd',
+              strokeNickname: 'da' 
+            }) }] : 
+            [{ }];
+      const newTraj = new Trajectory({
+        id: 0,
+        durTot: dur,
+        pitches: [newPitch],
+        articulations: newArts,
+        vowel: traj.vowel,
+        vowelEngTrans: traj.vowelEngTrans,
+        vowelHindi: traj.vowelHindi,
+        vowelIpa: traj.vowelIpa,
+        startConsonant: traj.startConsonant,
+        startConsonantEngTrans: traj.startConsonantEngTrans,
+        startConsonantHindi: traj.startConsonantHindi,
+        startConsonantIpa: traj.startConsonantIpa,
+      });
+      traj.startConsonant = undefined;
+      traj.startConsonantEngTrans = undefined;
+      traj.startConsonantHindi = undefined;
+      traj.startConsonantIpa = undefined;
+      if (art && art.name === 'consonant') {
+        delete traj.articulations['0.00'];
+      }
+      if (art && art.name === 'pluck') {
+        delete traj.articulations['0.00'];
+      }
+      if (traj.durArray!.length === 1) {
+        traj.durTot -= dur;
+      } else {
+        const durs = traj.durArray!.map(d => d * traj.durTot);
+        durs[0] -= dur;
+        traj.durTot -= dur;
+        traj.durArray = durs.map(d => d / traj.durTot);
+      }
+      phrase.trajectories.splice(tIdx, 0, newTraj);
+      phrase.reset();
 
-    //   const origTrajData = this.makeTrajData(traj, phrase.startTime!);
-    //   d3Select(`#p${pIdx}t${tIdx}`)
-    //     .datum(origTrajData)
-    //     .attr('d', this.codifiedPhraseLine())
-    //   d3Select(`#overlay__p${pIdx}t${tIdx}`)
-    //     .datum(origTrajData)
-    //     .attr('d', this.codifiedPhraseLine())
+      const origTrajData = this.makeTrajData(traj, phrase.startTime!);
+      d3Select(`#p${pIdx}t${tIdx}`)
+        .datum(origTrajData)
+        .attr('d', this.codifiedPhraseLine())
+      d3Select(`#overlay__p${pIdx}t${tIdx}`)
+        .datum(origTrajData)
+        .attr('d', this.codifiedPhraseLine())
       
-    //   const vowelIdxs = phrase.firstTrajIdxs();
-    //   this.codifiedAddTraj(newTraj, phrase.startTime!, vowelIdxs);
-    //   for (let i = phrase.trajectories.length - 2; i >= tIdx; i--) {
-    //     const oldId = `p${pIdx}t${i}`;
-    //     const newId = `p${pIdx}t${i + 1}`;
-    //     this.reIdAllReps(oldId, newId);
-    //   }
-    //   this.selectedTrajID = `p${pIdx}t${tIdx + 1}`;
-    //   this.resetZoom();
+      const vowelIdxs = phrase.firstTrajIdxs();
+      this.codifiedAddTraj(newTraj, phrase.startTime!, vowelIdxs);
+      for (let i = phrase.trajectories.length - 2; i >= tIdx; i--) {
+        const oldId = `p${pIdx}t${i}`;
+        const newId = `p${pIdx}t${i + 1}`;
+        this.reIdAllReps(oldId, newId);
+      }
+      this.selectedTrajID = `p${pIdx}t${tIdx + 1}`;
+      this.resetZoom();
 
 
-    // },
+    },
 
     scrollYDragStart(e: MouseEvent) {
       const elem = d3Select('.scrollYDragger');
@@ -5962,31 +5962,6 @@ export default defineComponent({
     },
 
     moveToPhrase(pIdx: number) {
-      // move scroll
-      // const offsetDurTot = this.piece.durTot! * (1 - 1 / this.tx!().k);
-      // const time = this.piece.phrases[pIdx].startTime!;
-      // const scrollX = this.getScrollXVal(time / offsetDurTot);
-      // this.gx.call(this.zoomX!.translateTo, scrollX, 0, [0, 0]);
-      // this.redraw();
-      // //move playhead
-      // this.currentTime = time;
-      // const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-      // if (!ap.loading) {
-      //   if (!ap.playing) {
-      //     ap.pausedAt = time;
-      //     ap.updateProgress();
-      //     ap.updateFormattedCurrentTime();
-      //     ap.updateFormattedTimeLeft();
-      //   } else {
-      //     ap.stop();
-      //     ap.pausedAt = time;
-      //     ap.play();
-      //   }
-      // }
-      // this.movePlayhead();
-      // this.moveShadowPlayhead();
-      // const query = this.$route.query;
-      // this.$router.push({ query: { id: query.id, pIdx: pIdx.toString() } });
       const r = this.$refs.renderer as typeof Renderer;
       const tLayer = r.transcriptionLayer as typeof TranscriptionLayer;
       tLayer.moveToPhrase(this.editingInstIdx, pIdx);
@@ -6216,330 +6191,328 @@ export default defineComponent({
 
     },
 
-    // trajContextMenuClick(e: MouseEvent) {
-    //   if (!this.meterMode) {
-    //     e.preventDefault();
-    //     e.stopPropagation();
-    //     this.contextMenuX = e.x;
-    //     this.contextMenuY = e.y;
-    //     const target = e.target as SVGPathElement;
-    //     const trajID = target.id.split('__')[1];
-    //     const tIdx = Number(trajID.split('t')[1]);
-    //     const pIdx = Number(trajID.split('t')[0].split('p')[1]);
-    //     const phrase = this.piece.phrases[pIdx];
-    //     const traj = phrase.trajectories[tIdx];
+    trajContextMenuClick(e: MouseEvent) {
+      if (!this.meterMode) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.contextMenuX = e.x;
+        this.contextMenuY = e.y;
+        const target = e.target as SVGPathElement;
+        const trajID = target.id.split('__')[1];
+        const tIdx = Number(trajID.split('t')[1]);
+        const pIdx = Number(trajID.split('t')[0].split('p')[1]);
+        const phrase = this.piece.phrases[pIdx];
+        const traj = phrase.trajectories[tIdx];
         
-    //     if (traj.groupId === undefined) {
-    //       let insertSilenceLeft = false;
-    //       let insertSilenceRight = false;
-    //       let insertFixedLeft = false;
-    //       let insertFixedRight = false;
-    //       if (phrase.trajectories.length > tIdx + 1) {
-    //         const nextTraj = phrase.trajectories[tIdx + 1];
-    //         if (nextTraj.id !== 12) {
-    //           insertSilenceRight = true;
-    //         }
-    //         if (nextTraj.id !== 0 && traj.id !== 0) {
-    //           insertFixedRight = true;
-    //         }
-    //       } else if (this.piece.phrases.length > pIdx + 1) {
-    //         const nextPhrase = this.piece.phrases[pIdx + 1];
-    //         if (nextPhrase.trajectories.length > 0) {
-    //           const nextTraj = nextPhrase.trajectories[0];
-    //           if (nextTraj.id !== 12) {
-    //             insertSilenceRight = true;
-    //           }
-    //           if (nextTraj.id !== 0 && traj.id !== 0) {
-    //             insertFixedRight = true;
-    //           }
-    //         }
-    //       }
-    //       if (tIdx > 0) {
-    //         const prevTraj = phrase.trajectories[tIdx - 1];
-    //         if (prevTraj.id !== 12) {
-    //           insertSilenceLeft = true;
-    //         }
-    //         if (prevTraj.id !== 0 && traj.id !== 0) {
-    //           insertFixedLeft = true;
-    //         }
-    //       } else if (pIdx > 0) {
-    //         const prevP = this.piece.phrases[pIdx - 1];
-    //         if (prevP.trajectories.length > 0) {
-    //           const prevTraj = prevP.trajectories[prevP.trajectories.length - 1];
-    //           if (prevTraj.id !== 12) {
-    //             insertSilenceLeft = true;
-    //           }
-    //           if (prevTraj.id !== 0 && traj.id !== 0) {
-    //             insertFixedLeft = true;
-    //           }
-    //         }
-    //       }
-    //       this.contextMenuChoices = [];
-    //       if (insertSilenceLeft) {
-    //         this.contextMenuChoices.push({
-    //           text: 'Insert Silence Left',
-    //           action: () => {
-    //             this.insertSilentTrajLeft(traj);
-    //             this.contextMenuClosed = true;
-    //           },
-    //           enabled: true
-    //         })
-    //       }
-    //       if (insertSilenceRight) {
-    //         this.contextMenuChoices.push({
-    //           text: 'Insert Silence Right',
-    //           action: () => {
-    //             this.insertSilentTrajRight(traj);
-    //             this.contextMenuClosed = true;
-    //           },
-    //           enabled: true
-    //         })
-    //       } 
-    //       if (insertFixedLeft) {
-    //         this.contextMenuChoices.push({
-    //           text: 'Insert Fixed Left',
-    //           action: () => {
-    //             this.insertFixedTrajLeft(traj);
-    //             this.contextMenuClosed = true;
-    //           },
-    //           enabled: true
-    //         })
-    //       }
-    //       if (insertFixedRight) {
-    //         this.contextMenuChoices.push({
-    //           text: 'Insert Fixed Right',
-    //           action: () => {
-    //             this.insertFixedTrajRight(traj);
-    //             this.contextMenuClosed = true;
-    //           },
-    //           enabled: true
+        if (traj.groupId === undefined) {
+          let insertSilenceLeft = false;
+          let insertSilenceRight = false;
+          let insertFixedLeft = false;
+          let insertFixedRight = false;
+          if (phrase.trajectories.length > tIdx + 1) {
+            const nextTraj = phrase.trajectories[tIdx + 1];
+            if (nextTraj.id !== 12) {
+              insertSilenceRight = true;
+            }
+            if (nextTraj.id !== 0 && traj.id !== 0) {
+              insertFixedRight = true;
+            }
+          } else if (this.piece.phrases.length > pIdx + 1) {
+            const nextPhrase = this.piece.phrases[pIdx + 1];
+            if (nextPhrase.trajectories.length > 0) {
+              const nextTraj = nextPhrase.trajectories[0];
+              if (nextTraj.id !== 12) {
+                insertSilenceRight = true;
+              }
+              if (nextTraj.id !== 0 && traj.id !== 0) {
+                insertFixedRight = true;
+              }
+            }
+          }
+          if (tIdx > 0) {
+            const prevTraj = phrase.trajectories[tIdx - 1];
+            if (prevTraj.id !== 12) {
+              insertSilenceLeft = true;
+            }
+            if (prevTraj.id !== 0 && traj.id !== 0) {
+              insertFixedLeft = true;
+            }
+          } else if (pIdx > 0) {
+            const prevP = this.piece.phrases[pIdx - 1];
+            if (prevP.trajectories.length > 0) {
+              const prevTraj = prevP.trajectories[prevP.trajectories.length - 1];
+              if (prevTraj.id !== 12) {
+                insertSilenceLeft = true;
+              }
+              if (prevTraj.id !== 0 && traj.id !== 0) {
+                insertFixedLeft = true;
+              }
+            }
+          }
+          this.contextMenuChoices = [];
+          if (insertSilenceLeft) {
+            this.contextMenuChoices.push({
+              text: 'Insert Silence Left',
+              action: () => {
+                this.insertSilentTrajLeft(traj);
+                this.contextMenuClosed = true;
+              },
+              enabled: true
+            })
+          }
+          if (insertSilenceRight) {
+            this.contextMenuChoices.push({
+              text: 'Insert Silence Right',
+              action: () => {
+                this.insertSilentTrajRight(traj);
+                this.contextMenuClosed = true;
+              },
+              enabled: true
+            })
+          } 
+          if (insertFixedLeft) {
+            this.contextMenuChoices.push({
+              text: 'Insert Fixed Left',
+              action: () => {
+                this.insertFixedTrajLeft(traj);
+                this.contextMenuClosed = true;
+              },
+              enabled: true
+            })
+          }
+          if (insertFixedRight) {
+            this.contextMenuChoices.push({
+              text: 'Insert Fixed Right',
+              action: () => {
+                this.insertFixedTrajRight(traj);
+                this.contextMenuClosed = true;
+              },
+              enabled: true
 
-    //         })
-    //       };
-    //       if (tIdx > 0) {
-    //         const pt = phrase.trajectories[tIdx - 1];
-    //         if (pt.groupId !== undefined && this.selectedTrajs.includes(pt)) {
-    //           this.contextMenuChoices.push({
-    //             text: 'Add to Selected Group',
-    //             action: () => {
-    //               this.addTrajToSelectedGroup(traj);
-    //               this.contextMenuClosed = true;
-    //             },
-    //             enabled: true
-    //           })
-    //         }
-    //       }
-    //       if (phrase.trajectories.length > tIdx + 1) {
-    //         const nt = phrase.trajectories[tIdx + 1];
-    //         if (nt.groupId !== undefined && this.selectedTrajs.includes(nt)) {
-    //           this.contextMenuChoices.push({
-    //             text: 'Add to Selected Group',
-    //             action: () => {
-    //               this.addTrajToSelectedGroup(traj);
-    //               this.contextMenuClosed = true;
-    //             },
-    //             enabled: true
-    //           })
-    //         }
-    //       }
-    //       const selTrajCond = this.selectedTrajs.length === 1 && 
-    //         this.selectedTrajs[0] === traj;
-    //       if (
-    //         (this.selectedTrajs.length === 0 || selTrajCond) &&
-    //         (this.sarangi || this.vocal)
-    //         ) {
-    //         this.contextMenuChoices.push({
-    //           text: 'Adjust Volume',
-    //           action: () => {
-    //             const phrase = this.piece.phrases[pIdx];
-    //             const startTime = phrase.startTime! + traj.startTime!;
-    //             const xStart = this.xr()(startTime);
-    //             const xEnd = this.xr()(startTime + traj.durTot);
-    //             this.autoWindowWidth = xEnd - xStart + 40;
-    //             const minLogFreq = Math.min(...traj.logFreqs);
-    //             const yPxl = this.yr()(minLogFreq) + this.navHeight;
-    //             this.autoTrajs = [traj];
-    //             this.autoWindowOpen = true;
-    //             this.contextMenuClosed = true;
-    //             this.autoWindowX = xStart - 20;
-    //             this.autoWindowY = yPxl + 20;
-    //           },
-    //           enabled: this.editable
-    //         })
-    //       } else if (this.selectedTrajsGroupable() && (this.sarangi || this.vocal)) {
-    //         this.contextMenuChoices.push({
-    //           text: 'Adjust Volume',
-    //           action: () => {
-    //             const startTraj = this.selectedTrajs[0];
-    //             const startPIdx = startTraj.phraseIdx!;
-    //             const startPhrase = this.piece.phrases[startPIdx];
-    //             const startTime = phrase.startTime! + startTraj.startTime!;
-    //             const endTraj = this.selectedTrajs[this.selectedTrajs.length - 1];
-    //             const endPIdx = endTraj.phraseIdx!;
-    //             const endPhrase = this.piece.phrases[endPIdx];
-    //             const xStart = this.xr()(startTime);
-    //             const endTime = endPhrase.startTime! + endTraj.startTime! + endTraj.durTot;
-    //             const xEnd = this.xr()(endTime);
-    //             this.autoWindowWidth = xEnd - xStart + 40;
-    //             let minLogFreq = Infinity;
-    //             this.selectedTrajs.forEach(traj => {
-    //               const min = Math.min(...traj.logFreqs);
-    //               if (min < minLogFreq) minLogFreq = min;
-    //             });
-    //             const yPxl = this.yr()(minLogFreq) + this.navHeight;
-    //             this.autoTrajs = this.selectedTrajs;
-    //             this.autoWindowOpen = true;
-    //             this.autoWindowX = xStart - 20;
-    //             this.autoWindowY = yPxl + 20;
-    //             this.contextMenuClosed = true;
-    //           },
-    //           enabled: this.editable
-    //         })
-    //       }
-    //     } else {
-    //       let groupInsertSilenceLeft = false;
-    //       let groupInsertSilenceRight = false;
-    //       let groupInsertFixedLeft = false;
-    //       let groupInsertFixedRight = false;
-    //       const group = phrase.getGroupFromId(traj.groupId)!;
-    //       const firstTraj = group.trajectories[0];
-    //       const lastTraj = group.trajectories[group.trajectories.length - 1];
-    //       if (phrase.trajectories.length > lastTraj.num! + 1) {
-    //         const nextTraj = phrase.trajectories[lastTraj.num! + 1];
-    //         if (nextTraj.id !== 12) {
-    //           groupInsertSilenceRight = true;
-    //         }
-    //         if (nextTraj.id !== 0 && lastTraj.id !== 0) {
-    //           groupInsertFixedRight = true;
-    //         }
-    //       } else if (this.piece.phrases.length > pIdx + 1) {
-    //         const nextPhrase = this.piece.phrases[pIdx + 1];
-    //         if (nextPhrase.trajectories.length > 0) {
-    //           const nextTraj = nextPhrase.trajectories[0];
-    //           if (nextTraj.id !== 12) {
-    //             groupInsertSilenceRight = true;
-    //           }
-    //           if (nextTraj.id !== 0 && lastTraj.id !== 0) {
-    //             groupInsertFixedRight = true;
-    //           }
-    //         }
-    //       }
-    //       if (firstTraj.num! > 0) {
-    //         const prevTraj = phrase.trajectories[firstTraj.num! - 1];
-    //         if (prevTraj.id !== 12) {
-    //           groupInsertSilenceLeft = true;
-    //         }
-    //         if (prevTraj.id !== 0 && firstTraj.id !== 0) {
-    //           groupInsertFixedLeft = true;
-    //         }
-    //       } else if (pIdx > 0) {
-    //         const prevP = this.piece.phrases[pIdx - 1];
-    //         if (prevP.trajectories.length > 0) {
-    //           const prevT = prevP.trajectories[prevP.trajectories.length - 1];
-    //           if (prevT.id !== 12) {
-    //             groupInsertSilenceLeft = true;
-    //           }
-    //           if (prevT.id !== 0 && firstTraj.id !== 0) {
-    //             groupInsertFixedLeft = true;
-    //           }
-    //         }
-    //       };
-    //       this.contextMenuChoices = [];
-    //       if (groupInsertSilenceLeft) {
-    //         this.contextMenuChoices.push({
-    //           text: 'Insert Silence Left',
-    //           action: () => {
-    //             this.insertSilentTrajLeft(firstTraj);
-    //             this.contextMenuClosed = true;
-    //           },
-    //           enabled: true
-    //         })
-    //       }
-    //       if (groupInsertSilenceRight) {
-    //         this.contextMenuChoices.push({
-    //           text: 'Insert Silence Right',
-    //           action: () => {
-    //             this.insertSilentTrajRight(lastTraj);
-    //             this.contextMenuClosed = true;
-    //           },
-    //           enabled: true
-    //         })
-    //       }
-    //       if (groupInsertFixedLeft) {
-    //         this.contextMenuChoices.push({
-    //           text: 'Insert Fixed Left',
-    //           action: () => {
-    //             this.insertFixedTrajLeft(firstTraj);
-    //             this.contextMenuClosed = true;
-    //           },
-    //           enabled: true
-    //         })
-    //       }
-    //       if (groupInsertFixedRight) {
-    //         this.contextMenuChoices.push({
-    //           text: 'Insert Fixed Right',
-    //           action: () => {
-    //             this.insertFixedTrajRight(lastTraj);
-    //             this.contextMenuClosed = true;
-    //           },
-    //           enabled: true
-    //         })
-    //       }
-    //       if (this.selectedTrajsGroupable() && (this.sarangi || this.vocal)) {
-    //         this.contextMenuChoices.push({
-    //           text: 'Adjust Volume',
-    //           action: () => {
-    //             const startTraj = this.selectedTrajs[0];
-    //             const startPIdx = startTraj.phraseIdx!;
-    //             const startPhrase = this.piece.phrases[startPIdx];
-    //             const startTime = phrase.startTime! + startTraj.startTime!;
-    //             const endTraj = this.selectedTrajs[this.selectedTrajs.length - 1];
-    //             const endPIdx = endTraj.phraseIdx!;
-    //             const endPhrase = this.piece.phrases[endPIdx];
-    //             const xStart = this.xr()(startTime);
-    //             const endTime = endPhrase.startTime! + endTraj.startTime! + endTraj.durTot;
-    //             const xEnd = this.xr()(endTime);
-    //             this.autoWindowWidth = xEnd - xStart + 40;
-    //             let minLogFreq = Infinity;
-    //             this.selectedTrajs.forEach(traj => {
-    //               const min = Math.min(...traj.logFreqs);
-    //               if (min < minLogFreq) minLogFreq = min;
-    //             });
-    //             const yPxl = this.yr()(minLogFreq) + this.navHeight;
-    //             this.autoTrajs = this.selectedTrajs;
-    //             this.autoWindowOpen = true;
-    //             this.autoWindowX = xStart - 20;
-    //             this.autoWindowY = yPxl + 20;
-    //             this.contextMenuClosed = true;
-    //           },
-    //           enabled: this.editable
-    //         })
-    //       }
-    //     };
-    //     const pArt = traj.articulations['0.00'];
-    //     if (pArt && pArt.name === 'pluck') {
-    //       const nChoices: StrokeNicknameType[] = 
-    //         ['da', 'di', 'd', 'ra', 'ri', 'r',];
-    //       nChoices.forEach(n => {
-    //         const add = pArt.strokeNickname === n ? ' \u2713' : '';
-    //         this.contextMenuChoices.push({
-    //           text: `Stroke: ${n + add}`,
-    //           action: () => {
-    //             if (pArt.strokeNickname !== n) {
-    //               this.updatePluckNickname(traj, n);
-    //               this.resetBols();
-    //             }
-    //             this.contextMenuClosed = true;
-    //           },
-    //           enabled: true
-    //         })
-    //       })
-    //     }
-    //     if (this.contextMenuChoices.length > 0) {
-    //       this.contextMenuClosed = false;
-    //     }
-    //   }
-    // },
+            })
+          };
+          if (tIdx > 0) {
+            const pt = phrase.trajectories[tIdx - 1];
+            if (pt.groupId !== undefined && this.selectedTrajs.includes(pt)) {
+              this.contextMenuChoices.push({
+                text: 'Add to Selected Group',
+                action: () => {
+                  this.addTrajToSelectedGroup(traj);
+                  this.contextMenuClosed = true;
+                },
+                enabled: true
+              })
+            }
+          }
+          if (phrase.trajectories.length > tIdx + 1) {
+            const nt = phrase.trajectories[tIdx + 1];
+            if (nt.groupId !== undefined && this.selectedTrajs.includes(nt)) {
+              this.contextMenuChoices.push({
+                text: 'Add to Selected Group',
+                action: () => {
+                  this.addTrajToSelectedGroup(traj);
+                  this.contextMenuClosed = true;
+                },
+                enabled: true
+              })
+            }
+          }
+          const selTrajCond = this.selectedTrajs.length === 1 && 
+            this.selectedTrajs[0] === traj;
+          if (
+            (this.selectedTrajs.length === 0 || selTrajCond) &&
+            (this.sarangi || this.vocal)
+            ) {
+            this.contextMenuChoices.push({
+              text: 'Adjust Volume',
+              action: () => {
+                const phrase = this.piece.phrases[pIdx];
+                const startTime = phrase.startTime! + traj.startTime!;
+                const xStart = this.xr()(startTime);
+                const xEnd = this.xr()(startTime + traj.durTot);
+                this.autoWindowWidth = xEnd - xStart + 40;
+                const minLogFreq = Math.min(...traj.logFreqs);
+                const yPxl = this.yr()(minLogFreq) + this.navHeight;
+                this.autoTrajs = [traj];
+                this.autoWindowOpen = true;
+                this.contextMenuClosed = true;
+                this.autoWindowX = xStart - 20;
+                this.autoWindowY = yPxl + 20;
+              },
+              enabled: this.editable
+            })
+          } else if (this.selectedTrajsGroupable() && (this.sarangi || this.vocal)) {
+            this.contextMenuChoices.push({
+              text: 'Adjust Volume',
+              action: () => {
+                const startTraj = this.selectedTrajs[0];
+                const startTime = phrase.startTime! + startTraj.startTime!;
+                const endTraj = this.selectedTrajs[this.selectedTrajs.length - 1];
+                const endPIdx = endTraj.phraseIdx!;
+                const endPhrase = this.piece.phrases[endPIdx];
+                const xStart = this.xr()(startTime);
+                const endTime = endPhrase.startTime! + endTraj.startTime! + endTraj.durTot;
+                const xEnd = this.xr()(endTime);
+                this.autoWindowWidth = xEnd - xStart + 40;
+                let minLogFreq = Infinity;
+                this.selectedTrajs.forEach(traj => {
+                  const min = Math.min(...traj.logFreqs);
+                  if (min < minLogFreq) minLogFreq = min;
+                });
+                const yPxl = this.yr()(minLogFreq) + this.navHeight;
+                this.autoTrajs = this.selectedTrajs;
+                this.autoWindowOpen = true;
+                this.autoWindowX = xStart - 20;
+                this.autoWindowY = yPxl + 20;
+                this.contextMenuClosed = true;
+              },
+              enabled: this.editable
+            })
+          }
+        } else {
+          let groupInsertSilenceLeft = false;
+          let groupInsertSilenceRight = false;
+          let groupInsertFixedLeft = false;
+          let groupInsertFixedRight = false;
+          const group = phrase.getGroupFromId(traj.groupId)!;
+          const firstTraj = group.trajectories[0];
+          const lastTraj = group.trajectories[group.trajectories.length - 1];
+          if (phrase.trajectories.length > lastTraj.num! + 1) {
+            const nextTraj = phrase.trajectories[lastTraj.num! + 1];
+            if (nextTraj.id !== 12) {
+              groupInsertSilenceRight = true;
+            }
+            if (nextTraj.id !== 0 && lastTraj.id !== 0) {
+              groupInsertFixedRight = true;
+            }
+          } else if (this.piece.phrases.length > pIdx + 1) {
+            const nextPhrase = this.piece.phrases[pIdx + 1];
+            if (nextPhrase.trajectories.length > 0) {
+              const nextTraj = nextPhrase.trajectories[0];
+              if (nextTraj.id !== 12) {
+                groupInsertSilenceRight = true;
+              }
+              if (nextTraj.id !== 0 && lastTraj.id !== 0) {
+                groupInsertFixedRight = true;
+              }
+            }
+          }
+          if (firstTraj.num! > 0) {
+            const prevTraj = phrase.trajectories[firstTraj.num! - 1];
+            if (prevTraj.id !== 12) {
+              groupInsertSilenceLeft = true;
+            }
+            if (prevTraj.id !== 0 && firstTraj.id !== 0) {
+              groupInsertFixedLeft = true;
+            }
+          } else if (pIdx > 0) {
+            const prevP = this.piece.phrases[pIdx - 1];
+            if (prevP.trajectories.length > 0) {
+              const prevT = prevP.trajectories[prevP.trajectories.length - 1];
+              if (prevT.id !== 12) {
+                groupInsertSilenceLeft = true;
+              }
+              if (prevT.id !== 0 && firstTraj.id !== 0) {
+                groupInsertFixedLeft = true;
+              }
+            }
+          };
+          this.contextMenuChoices = [];
+          if (groupInsertSilenceLeft) {
+            this.contextMenuChoices.push({
+              text: 'Insert Silence Left',
+              action: () => {
+                this.insertSilentTrajLeft(firstTraj);
+                this.contextMenuClosed = true;
+              },
+              enabled: true
+            })
+          }
+          if (groupInsertSilenceRight) {
+            this.contextMenuChoices.push({
+              text: 'Insert Silence Right',
+              action: () => {
+                this.insertSilentTrajRight(lastTraj);
+                this.contextMenuClosed = true;
+              },
+              enabled: true
+            })
+          }
+          if (groupInsertFixedLeft) {
+            this.contextMenuChoices.push({
+              text: 'Insert Fixed Left',
+              action: () => {
+                this.insertFixedTrajLeft(firstTraj);
+                this.contextMenuClosed = true;
+              },
+              enabled: true
+            })
+          }
+          if (groupInsertFixedRight) {
+            this.contextMenuChoices.push({
+              text: 'Insert Fixed Right',
+              action: () => {
+                this.insertFixedTrajRight(lastTraj);
+                this.contextMenuClosed = true;
+              },
+              enabled: true
+            })
+          }
+          if (this.selectedTrajsGroupable() && (this.sarangi || this.vocal)) {
+            this.contextMenuChoices.push({
+              text: 'Adjust Volume',
+              action: () => {
+                const startTraj = this.selectedTrajs[0];
+                const startPIdx = startTraj.phraseIdx!;
+                const startPhrase = this.piece.phrases[startPIdx];
+                const startTime = phrase.startTime! + startTraj.startTime!;
+                const endTraj = this.selectedTrajs[this.selectedTrajs.length - 1];
+                const endPIdx = endTraj.phraseIdx!;
+                const endPhrase = this.piece.phrases[endPIdx];
+                const xStart = this.xr()(startTime);
+                const endTime = endPhrase.startTime! + endTraj.startTime! + endTraj.durTot;
+                const xEnd = this.xr()(endTime);
+                this.autoWindowWidth = xEnd - xStart + 40;
+                let minLogFreq = Infinity;
+                this.selectedTrajs.forEach(traj => {
+                  const min = Math.min(...traj.logFreqs);
+                  if (min < minLogFreq) minLogFreq = min;
+                });
+                const yPxl = this.yr()(minLogFreq) + this.navHeight;
+                this.autoTrajs = this.selectedTrajs;
+                this.autoWindowOpen = true;
+                this.autoWindowX = xStart - 20;
+                this.autoWindowY = yPxl + 20;
+                this.contextMenuClosed = true;
+              },
+              enabled: this.editable
+            })
+          }
+        };
+        const pArt = traj.articulations['0.00'];
+        if (pArt && pArt.name === 'pluck') {
+          const nChoices: StrokeNicknameType[] = 
+            ['da', 'di', 'd', 'ra', 'ri', 'r',];
+          nChoices.forEach(n => {
+            const add = pArt.strokeNickname === n ? ' \u2713' : '';
+            this.contextMenuChoices.push({
+              text: `Stroke: ${n + add}`,
+              action: () => {
+                if (pArt.strokeNickname !== n) {
+                  this.updatePluckNickname(traj, n);
+                  this.resetBols();
+                }
+                this.contextMenuClosed = true;
+              },
+              enabled: true
+            })
+          })
+        }
+        if (this.contextMenuChoices.length > 0) {
+          this.contextMenuClosed = false;
+        }
+      }
+    },
 
     addArticulations(
         traj: Trajectory, 

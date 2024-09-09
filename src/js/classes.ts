@@ -2793,6 +2793,7 @@ class Piece {
       }
     }
     if (track === undefined) {
+      console.log('here')
       throw new Error('Phrase not found')
     }
     return track
@@ -2860,6 +2861,14 @@ class Piece {
         return trajs[idx + 1]
       }
     }
+  }
+
+  trajFromUId(uId: string, track: number) {
+    const traj = this.allTrajectories(track).find(t => t.uniqueId === uId);
+    if (traj === undefined) {
+      throw new Error('Trajectory not found')
+    }
+    return traj
   }
 
   phraseFromTime(time: number, track: number) {

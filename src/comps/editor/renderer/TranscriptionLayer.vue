@@ -53,7 +53,8 @@ import {
   Pitch, 
   Chikari,
   Raga,
-  Group
+  Group,
+  Articulation
 } from '@/js/classes.ts';
 import { throttle, debounce } from 'lodash';
 import { 
@@ -67,7 +68,8 @@ import {
   TrajRenderObj,
   TrajTimePoint,
   ContextMenuOptionType,
-  LabelEditorOptions
+  LabelEditorOptions,
+  StrokeNicknameType
 } from '@/ts/types.ts';
 import { Meter, Pulse } from '@/js/meter.ts';
 import ContextMenu from'@/comps/ContextMenu.vue';
@@ -249,6 +251,12 @@ export default defineComponent({
     const contextMenuY = ref<number>(0);
     const contextMenuClosed = ref<boolean>(true);
     const contextMenuChoices = ref<ContextMenuOptionType[]>([]);
+    const autoWindowWidth = ref<number>(300);
+    const autoTrajs = ref<Trajectory[]>([]);
+    const autoWindowOpen = ref<boolean>(false);
+    const autoWindowX = ref<number>(500);
+    const autoWindowY = ref<number>(500);
+
 
 
     let justDeletedPhraseDiv = false;
@@ -288,6 +296,7 @@ export default defineComponent({
               renderChikari(cd);
             });
             props.piece.chunkedPhraseDivs(inst, dur)[idx].forEach(pd => {
+              console.log(pd)
               renderPhraseDiv(pd);
             });
           }
@@ -436,6 +445,13 @@ export default defineComponent({
           const after = props.piece.meters[afterIdx];
           return [before.startTime + before.durTot, after.startTime];
         }
+      }
+    });
+    const groupable = computed(() => {
+      if (selectedTrajs.value.length > 1) {
+        return selectedTrajsGroupable();
+      } else {
+        return false
       }
     })
 
@@ -860,6 +876,7 @@ export default defineComponent({
           .on('mouseover', () => handleTrajMouseOver(traj, track))
           .on('mouseout', () => handleTrajMouseOut(traj, track))
           .on('click', () => handleClickTraj(traj, track))
+          .on('contextmenu', (e: MouseEvent) => handleTrajContextMenu(traj, track, e))
     };
     const renderPlucks = (traj: Trajectory, track: number) => {
       const trajUIds = props.piece.allTrajectories(track).map(t => t.uniqueId);
@@ -1417,6 +1434,7 @@ export default defineComponent({
     const deletePhraseDiv = (uId: string) => {
       const phrase = props.piece.phraseFromUId(uId);
       const track = props.piece.trackFromPhraseUId(uId);
+      removePhraseDiv(uId);
       const prevPhrase = props.piece.phraseGrid[track][phrase.pieceIdx! - 1];
       prevPhrase.trajectories.push(...phrase.trajectories);
       prevPhrase.consolidateSilentTrajs();
@@ -1426,10 +1444,11 @@ export default defineComponent({
       // prevPhrase.assignStartTimes();
       props.piece.phraseGrid[track].splice(phrase.pieceIdx!, 1);
       props.piece.durArrayFromPhrases();
-      removePhraseDiv(uId);
+      
       justDeletedPhraseDiv = true;
       selectedPhraseDivUid.value = undefined;
       emit('unsavedChanges', true);
+      emit('update:selPhraseDivUid', undefined);
     }
 
     const deleteTrajs = (trajs: Trajectory[]) => {
@@ -1561,6 +1580,547 @@ export default defineComponent({
       .x(d => props.xScale(d.x))
       .y(d => props.yScale(d.y))
       .curve(d3.curveMonotoneX);
+
+    const handleTrajContextMenu = (traj: Trajectory, track: number, e: MouseEvent) => {
+      console.log('triggering')
+      if (props.selectedMode === EditorMode.Meter) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const tIdx = traj.num!;
+      const pIdx = traj.phraseIdx!;
+      const phrase = props.piece.phraseGrid[track][pIdx];
+      contextMenuX.value = e.offsetX;
+      contextMenuY.value = e.offsetY;
+      if (traj.groupId === undefined) {
+        let insertSilenceLeft = false;
+        let insertSilenceRight = false;
+        let insertFixedLeft = false;
+        let insertFixedRight = false;
+        if (phrase.trajectories.length > tIdx + 1) {
+          const nextTraj = phrase.trajectories[tIdx + 1];
+          if (nextTraj.id !== 12) {
+            insertSilenceRight = true;
+          } 
+          if (nextTraj.id !== 0 && traj.id !== 0) {
+            insertFixedRight = true;
+          }
+        } else if (props.piece.phraseGrid[track].length > pIdx + 1) {
+          const nextPhrase = props.piece.phraseGrid[track][pIdx + 1];
+          if (nextPhrase.trajectories.length > 0) {
+            const nextTraj = nextPhrase.trajectories[0];
+            if (nextTraj.id !== 12) {
+              insertSilenceRight = true;
+            }
+            if (nextTraj.id !== 0 && traj.id !== 0) {
+              insertFixedRight = true;
+            }
+          }
+        }
+        if (tIdx > 0) {
+          const prevTraj = phrase.trajectories[tIdx - 1];
+          if (prevTraj.id !== 12) {
+            insertSilenceLeft = true;
+          }
+          if (prevTraj.id !== 0 && traj.id !== 0) {
+            insertFixedLeft = true;
+          }
+        } else if (pIdx > 0) {
+          const prevPhrase = props.piece.phraseGrid[track][pIdx - 1];
+          if (prevPhrase.trajectories.length > 0) {
+            const prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
+            if (prevTraj.id !== 12) {
+              insertSilenceLeft = true;
+            }
+            if (prevTraj.id !== 0 && traj.id !== 0) {
+              insertFixedLeft = true;
+            }
+          }
+        }
+        contextMenuChoices.value = [];
+        if (insertSilenceLeft) {
+          contextMenuChoices.value.push({
+            text: 'Insert Silence Left',
+            action: () => {
+              insertSilentTrajLeft(traj, track);
+              contextMenuClosed.value = true;
+            },
+            enabled: true
+          })
+        };
+        if (insertSilenceRight) {
+          contextMenuChoices.value.push({
+            text: 'Insert Silence Right',
+            action: () => {
+              insertSilentTrajRight(traj, track);
+              contextMenuClosed.value = true;
+            },
+            enabled: true
+          })
+        };
+        if (insertFixedLeft) {
+          contextMenuChoices.value.push({
+            text: 'Insert Fixed Pitch Left',
+            action: () => {
+              insertFixedTrajLeft(traj, track);
+              contextMenuClosed.value = true;
+            },
+            enabled: true
+          })
+        };
+        if (insertFixedRight) {
+          contextMenuChoices.value.push({
+            text: 'Insert Fixed Pitch Right',
+            action: () => {
+              insertFixedTrajRight(traj, track);
+              contextMenuClosed.value = true;
+            },
+            enabled: true
+          })
+        };
+        const sts = selectedTrajs.value;
+        const stsGrouped = sts.length === sts.filter(t => t.groupId === sts[0].groupId).length;
+        if (tIdx > 0) {
+          const pt = phrase.trajectories[tIdx - 1];
+          if (pt.groupId !== undefined && sts.includes(pt) && stsGrouped) {
+            contextMenuChoices.value.push({
+              text: 'Add to Selected Group',
+              action: () => {
+                addTrajToSelectedGroup(traj, track);
+                contextMenuClosed.value = true;
+              },
+              enabled: true
+            })
+          }
+        }
+        if (phrase.trajectories.length > tIdx + 1) {
+          const nt = phrase.trajectories[tIdx + 1];
+          if (nt.groupId !== undefined && sts.includes(nt) && stsGrouped) {
+            contextMenuChoices.value.push({
+              text: 'Add to Selected Group',
+              action: () => {
+                addTrajToSelectedGroup(traj, track);
+                contextMenuClosed.value = true;
+              },
+              enabled: true
+            })
+          }
+        }
+        const selTrajCond = sts.length === 1 && sts[0] === traj;
+        const sarangi = props.piece.instrumentation[track] === Instrument.Sarangi;
+        const vocal = ([Instrument.Vocal_M, Instrument.Vocal_F]).includes(props.piece.instrumentation[track]);
+        if (
+          (sts.length === 0 || selTrajCond) &&
+          (sarangi || vocal)
+        ) {
+          contextMenuChoices.value.push({
+            text: 'Adjust Volume',
+            action: () => {
+              const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
+              const startTime = phrase.startTime! + traj.startTime!;
+              const xStart = props.xScale(startTime);
+              const xEnd = props.xScale(startTime + traj.durTot);
+              autoWindowWidth.value = xEnd - xStart + 40;
+              const minLogFreq = Math.min(...traj.logFreqs);
+              const yPxl = props.yScale(minLogFreq);
+              autoTrajs.value = [traj];
+              autoWindowOpen.value = true;
+              autoWindowX.value = xStart - 20;
+              autoWindowY.value = yPxl + 20;
+            },
+            enabled: props.editable
+          })
+        } else if (groupable.value && (sarangi || vocal)) {
+          contextMenuChoices.value.push({
+            text: 'AdjustVolume',
+            action: () => {
+              const startTraj = sts[0];
+              const startTime = phrase.startTime! + startTraj.startTime!;
+              const endTraj = sts[sts.length - 1];
+              const endPIdx = endTraj.phraseIdx!;
+              const endPhrase = props.piece.phraseGrid[track][endPIdx];
+              const xStart = props.xScale(startTime);
+              const endTime = endPhrase.startTime! + endTraj.startTime! + endTraj.durTot;
+              const xEnd = props.xScale(endTime);
+              autoWindowWidth.value = xEnd - xStart + 40;
+              let minLogFreq = Infinity;
+              sts.forEach(t => {
+                const min = Math.min(...t.logFreqs);
+                if (min < minLogFreq) {
+                  minLogFreq = min;
+                }
+              });
+              const yPxl = props.yScale(minLogFreq);
+              autoTrajs.value = sts;
+              autoWindowOpen.value = true;
+              autoWindowX.value = xStart - 20;
+              autoWindowY.value = yPxl + 20;
+              contextMenuClosed.value = true;
+            },
+            enabled: props.editable
+          })
+        }
+      } else {
+        let groupInsertSilenceLeft = false;
+        let groupInsertSilenceRight = false;
+        let groupInsertFixedLeft = false;
+        let groupInsertFixedRight = false;
+        const group = phrase.getGroupFromId(traj.groupId!)!;
+        const firstTraj = group.trajectories[0];
+        const lastTraj = group.trajectories[group.trajectories.length - 1];
+        if (phrase.trajectories.length > lastTraj.num! + 1) {
+          const nextTraj = phrase.trajectories[lastTraj.num! + 1];
+          if (nextTraj.id === 12) {
+            groupInsertSilenceRight = true;
+          } 
+          if (nextTraj.id !== 0 && lastTraj.id !== 0) {
+            groupInsertFixedRight = true;
+          }
+        } else if (props.piece.phraseGrid[track].length > pIdx + 1) {
+          const nextPhrase = props.piece.phraseGrid[track][pIdx + 1];
+          if (nextPhrase.trajectories.length > 0) {
+            const nextTraj = nextPhrase.trajectories[0];
+            if (nextTraj.id !== 12) {
+              groupInsertSilenceRight = true;
+            }
+            if (nextTraj.id !== 0 && lastTraj.id !== 0) {
+              groupInsertFixedRight = true;
+            }
+          }
+        }
+        if (firstTraj.num! > 0) {
+          const prevTraj = phrase.trajectories[firstTraj.num! - 1];
+          if (prevTraj.id === 12) {
+            groupInsertSilenceLeft = true;
+          }
+          if (prevTraj.id !== 0 && firstTraj.id !== 0) {
+            groupInsertFixedLeft = true;
+          }
+        } else if (pIdx > 0) {
+          const prevPhrase = props.piece.phraseGrid[track][pIdx - 1];
+          if (prevPhrase.trajectories.length > 0) {
+            const prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
+            if (prevTraj.id === 12) {
+              groupInsertSilenceLeft = true;
+            }
+            if (prevTraj.id !== 0 && firstTraj.id !== 0) {
+              groupInsertFixedLeft = true;
+            }
+          }
+        };
+        contextMenuChoices.value = [];
+        if (groupInsertSilenceLeft) {
+          contextMenuChoices.value.push({
+            text: 'Insert Silence Left',
+            action: () => {
+              insertSilentTrajLeft(firstTraj, track);
+              contextMenuClosed.value = true;
+            },
+            enabled: true
+          })
+        };
+        if (groupInsertSilenceRight) {
+          contextMenuChoices.value.push({
+            text: 'Insert Silence Right',
+            action: () => {
+              insertSilentTrajRight(lastTraj, track);
+              contextMenuClosed.value = true;
+            },
+            enabled: true
+          })
+        }
+        if (groupInsertFixedLeft) {
+          contextMenuChoices.value.push({
+            text: 'Insert Fixed Left',
+            action: () => {
+              insertFixedTrajLeft(firstTraj, track);
+              contextMenuClosed.value = true;
+            },
+            enabled: true
+          })
+        }
+        if (groupInsertFixedRight) {
+          contextMenuChoices.value.push({
+            text: 'Insert Fixed Right',
+            action: () => {
+              insertFixedTrajRight(lastTraj, track);
+              contextMenuClosed.value = true;
+            },
+            enabled: true
+          })
+        }
+        const sarangi = props.piece.instrumentation[track] === Instrument.Sarangi;
+        const vocal = ([Instrument.Vocal_M, Instrument.Vocal_F]).includes(props.piece.instrumentation[track]);
+        if (groupable.value && (sarangi || vocal)) {
+          contextMenuChoices.value.push({
+            text: 'Adjust Volume',
+            action: () => {
+              const startTime = phrase.startTime! + firstTraj.startTime!;
+              const xStart = props.xScale(startTime);
+              const endTime = phrase.startTime! + lastTraj.startTime! + lastTraj.durTot;
+              const xEnd = props.xScale(endTime);
+              autoWindowWidth.value = xEnd - xStart + 40;
+              let minLogFreq = Infinity;
+              group.trajectories.forEach(t => {
+                const min = Math.min(...t.logFreqs);
+                if (min < minLogFreq) {
+                  minLogFreq = min;
+                }
+              });
+              const yPxl = props.yScale(minLogFreq);
+              autoTrajs.value = group.trajectories;
+              autoWindowOpen.value = true;
+              autoWindowX.value = xStart - 20;
+              autoWindowY.value = yPxl + 20;
+              contextMenuClosed.value = true;
+            },
+            enabled: props.editable
+          })
+        }
+      };
+      const pArt = traj.articulations['0.00'];
+      if (pArt && pArt.name === 'pluck') {
+        const nChoices: StrokeNicknameType[] = 
+        ['da', 'di', 'd', 'ra', 'ri', 'r'];
+        nChoices.forEach(n => {
+          const add = pArt.strokeNickname === n ? ` \u2713` : '';
+          contextMenuChoices.value.push({
+            text: `Stroke: ${n + add}`,
+            action: () => {
+              if (pArt.strokeNickname !== n) {
+                updatePluckNickname(traj, n);
+                resetBols();
+              }
+              contextMenuClosed.value = true;
+            },
+            enabled: true
+          })
+        })
+      }
+      console.log(contextMenuChoices.value)
+      if (contextMenuChoices.value.length > 0) {
+        contextMenuClosed.value = false;
+      }
+      console.log(contextMenuClosed.value)
+    };
+
+    const addTrajToSelectedGroup = (traj: Trajectory, track: number) => {
+      const longEnough = selectedTrajs.value.length > 1;
+      if (longEnough && selectedTrajs.value[0].groupId !== undefined) {
+        const pIdx = selectedTrajs.value[0].phraseIdx!;
+        const phrase = props.piece.phraseGrid[track][pIdx];
+        const group = phrase.getGroupFromId(selectedTrajs.value[0].groupId!)!;
+        group.addTraj(traj);
+        const renderObj = trajRenderStatus.value[track].find(obj => {
+          return obj.uniqueId === traj.uniqueId
+        });
+        if (renderObj === undefined) {
+          throw new Error('Trajectory not found in render status array');
+        }
+        renderObj.selectedStatus = true;
+      }
+    };
+
+    const insertSilentTrajLeft = (traj: Trajectory, track: number, dur = 0.1) => {
+      if (traj.durTot < 0.2) dur = 0.1 * traj.durTot;
+      const pIdx = traj.phraseIdx!;
+      const tIdx = traj.num!;
+      const phrase = props.piece.phraseGrid[track][pIdx];
+      if (traj.id === 12) {
+        throw new Error('Cannot insert silence to a silent trajectory');
+      }
+      if (tIdx === 0) {
+        if (pIdx > 0) {
+          const prevPhrase = props.piece.phraseGrid[track][pIdx - 1];
+          const prevTrajs = prevPhrase.trajectories;
+          const prevTraj = prevTrajs[prevTrajs.length - 1];
+          if (prevTraj.id === 12) {
+            throw new Error('Prev traj is already silent');
+          }
+        }
+      } else {
+        const prevTraj = phrase.trajectories[tIdx - 1];
+        if (prevTraj.id === 12) {
+          throw new Error('Prev traj is already silent');
+        }
+      }
+      const newTraj = new Trajectory({
+        id: 12,
+        durTot: dur,
+        pitches: [],
+        fundID12: props.piece.raga.fundamental
+      });
+      if (traj.durArray!.length === 1) {
+        traj.durTot -= dur;
+      } else {
+        const durs = traj.durArray!.map(d => d * traj.durTot);
+        durs[0] -= dur;
+        traj.durTot -= dur;
+        traj.durArray = durs.map(d => d / traj.durTot);
+      }
+      phrase.trajectories.splice(tIdx, 0, newTraj);
+      phrase.reset();
+      refreshTraj(traj);
+      emit('unsavedChanges', true);
+    };
+
+    const insertSilentTrajRight = (traj: Trajectory, track: number, dur = 0.1) => {
+      if (traj.durTot < 0.2) dur = 0.1 * traj.durTot;
+      const pIdx = traj.phraseIdx!;
+      const tIdx = traj.num!;
+      const phrase = props.piece.phraseGrid[track][pIdx];
+      if (traj.id === 12) {
+        throw new Error('Cannot insert silence to a silent trajectory');
+      }
+      if (tIdx === phrase.trajectories.length - 1) {
+        if (pIdx < props.piece.phraseGrid[track].length - 1) {
+          const nextPhrase = props.piece.phraseGrid[track][pIdx + 1];
+          const nextTrajs = nextPhrase.trajectories;
+          const nextTraj = nextTrajs[0];
+          if (nextTraj.id === 12) {
+            throw new Error('Next traj is already silent');
+          }
+        }
+      } else {
+        const nextTraj = phrase.trajectories[tIdx + 1];
+        if (nextTraj.id === 12) {
+          throw new Error('Next traj is already silent');
+        }
+      }
+      const newTraj = new Trajectory({
+        id: 12,
+        durTot: dur,
+        pitches: [],
+        fundID12: props.piece.raga.fundamental
+      });
+      if (traj.durArray!.length === 1) {
+        traj.durTot -= dur;
+      } else {
+        const durs = traj.durArray!.map(d => d * traj.durTot);
+        durs[durs.length - 1] -= dur;
+        traj.durTot -= dur;
+        traj.durArray = durs.map(d => d / traj.durTot);
+      }
+      phrase.trajectories.splice(tIdx + 1, 0, newTraj);
+      phrase.reset();
+      refreshTraj(traj);
+      emit('unsavedChanges', true);
+    }
+
+    const insertFixedTrajLeft = (traj: Trajectory, track: number, dur = 0.1) => {
+      if (traj.durTot < 0.2) dur = 0.1 * traj.durTot;
+      const pIdx = traj.phraseIdx!;
+      const tIdx = traj.num!;
+      const phrase = props.piece.phraseGrid[track][pIdx];
+      if (traj.id === 0) {
+        throw new Error('Cannot insert fixed pitch to a fixed pitch trajectory');
+      }
+      const newPitch = new Pitch(traj.pitches[0]);
+      const art = traj.articulations['0.00'];
+      const newArts = art && art.name === 'pluck' ? 
+        [{ '0.00': new Articulation({
+          name: 'pluck',
+          stroke: 'd',
+          strokeNickname: 'da'
+        }) }] :
+        [{ }];
+      const newTraj = new Trajectory({
+        id: 0,
+        durTot: dur,
+        pitches: [newPitch],
+        articulations: newArts,
+        vowel: traj.vowel,
+        vowelEngTrans: traj.vowelEngTrans,
+        vowelHindi: traj.vowelHindi,
+        vowelIpa: traj.vowelIpa,
+        startConsonant: traj.startConsonant,
+        startConsonantEngTrans: traj.startConsonantEngTrans,
+        startConsonantHindi: traj.startConsonantHindi,
+        startConsonantIpa: traj.startConsonantIpa,
+      });
+      traj.startConsonant = undefined;
+      traj.startConsonantEngTrans = undefined;
+      traj.startConsonantHindi = undefined;
+      traj.startConsonantIpa = undefined;
+      if (art && art.name === 'consonant') {
+        delete traj.articulations['0.00'];
+      }
+      if (art && art.name === 'pluck') {
+        delete traj.articulations['0.00'];
+      }
+      if (traj.durArray!.length === 1) {
+        traj.durTot -= dur
+      } else {
+        const durs = traj.durArray!.map(d => d * traj.durTot);
+        durs[0] -= dur;
+        traj.durTot -= dur;
+        traj.durArray = durs.map(d => d / traj.durTot);
+      }
+      phrase.trajectories.splice(tIdx, 0, newTraj);
+      phrase.reset();
+      trajRenderStatus.value[track].push({
+        uniqueId: newTraj.uniqueId!,
+        renderStatus: false,
+        selectedStatus: true, 
+        track
+      });
+      refreshTraj(traj);
+      refreshTraj(newTraj);
+      emit('unsavedChanges', true);
+    }
+
+    const insertFixedTrajRight = (traj: Trajectory, track: number, dur = 0.1) => {
+      if (traj.durTot < 0.2) dur = 0.1 * traj.durTot;
+      const pIdx = traj.phraseIdx!;
+      const tIdx = traj.num!;
+      const phrase = props.piece.phraseGrid[track][pIdx];
+      if (traj.id === 0) {
+        throw new Error('Cannot insert fixed pitch to a fixed pitch trajectory');
+      }
+      const newPitch = new Pitch(traj.pitches[traj.pitches.length - 1]);
+      const newTraj = new Trajectory({
+        id: 0,
+        durTot: dur,
+        pitches: [newPitch],
+        articulations: {},
+        vowel: traj.vowel,
+        vowelEngTrans: traj.vowelEngTrans,
+        vowelHindi: traj.vowelHindi,
+        vowelIpa: traj.vowelIpa,
+        endConsonant: traj.endConsonant,
+        endConsonantEngTrans: traj.endConsonantEngTrans,
+        endConsonantHindi: traj.endConsonantHindi,
+        endConsonantIpa: traj.endConsonantIpa,
+      });
+      traj.endConsonant = undefined;
+      traj.endConsonantEngTrans = undefined;
+      traj.endConsonantHindi = undefined;
+      traj.endConsonantIpa = undefined;
+      const art = traj.articulations['1.00'];
+      if (art && art.name === 'consonant') {
+        delete traj.articulations['1.00'];
+      }
+      if (traj.durArray!.length === 1) {
+        traj.durTot -= dur
+      } else {
+        const durs = traj.durArray!.map(d => d * traj.durTot);
+        durs[durs.length - 1] -= dur;
+        traj.durTot -= dur;
+        traj.durArray = durs.map(d => d / traj.durTot);
+      }
+      phrase.trajectories.splice(tIdx + 1, 0, newTraj);
+      phrase.reset();
+      trajRenderStatus.value[track].push({
+        uniqueId: newTraj.uniqueId!,
+        renderStatus: false,
+        selectedStatus: true, 
+        track
+      });
+      refreshTraj(traj);
+      refreshTraj(newTraj);
+      emit('unsavedChanges', true);
+    };
+
+    
 
     const handleClickTraj = (traj: Trajectory, track: number) => {
       if (props.selectedMode === EditorMode.Meter) return;
@@ -3030,6 +3590,7 @@ export default defineComponent({
         },
         enabled: true
       });
+
       
     }
  
@@ -3154,7 +3715,27 @@ export default defineComponent({
           emit('update:trajTimePts', trajTimePts.value);
         }
       }
-    }
+    };
+
+    const selectedTrajsGroupable = () => {// tests whether all trajs in this.selectedTrajs
+      // are adjacent to one another and part of the same phrase
+      const uniquePIdxs = [...new Set(selectedTrajs.value.map(t => t.phraseIdx))]
+      if (uniquePIdxs.length === 1) {
+        // sort by num
+        selectedTrajs.value.sort((a, b) => a.num! - b.num!);
+        const nums = selectedTrajs.value.map(traj => traj.num!);
+        const diffs = nums.slice(1).map((num, nIdx) => {
+          return num - nums[nIdx];
+        })
+        const c1 = diffs.every(diff => diff === 1);
+        const c2 = selectedTrajs.value.every(traj => {
+          return traj.groupId === selectedTrajs.value[0].groupId
+        });
+        return c1 && c2
+      } else {
+        return false
+      }
+    };
 
     const insertNewPhraseDiv = (time: number, track: number, pIdx: number) => {
       const phrase = props.piece.phraseGrid[track][pIdx];
@@ -3611,7 +4192,6 @@ export default defineComponent({
       removePhraseDiv,
       renderPhraseDiv,
       moveToPhraseUid,
-      moveToPhrase,
       currentPhrase,
       selectedChikari,
       resetTrajRenderStatus,
@@ -3631,7 +4211,8 @@ export default defineComponent({
       contextMenuX,
       contextMenuY,
       contextMenuClosed,
-      contextMenuChoices
+      contextMenuChoices,
+      selectedPhraseDivUid,
     }
   }
 })
