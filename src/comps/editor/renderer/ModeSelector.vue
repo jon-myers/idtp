@@ -8,7 +8,7 @@
       @click='() => $emit("update:selectedMode", mode)'
       >
       <div class='tileText'>
-        {{ typeof mode === 'string' ? mode[0] : mode }}
+        {{ typeof mode === 'string' ? mode[0] : mode + 1 }}
       </div>
     </div>
   </div>
@@ -34,7 +34,7 @@ export default defineComponent({
     noneEnumItem: {
       type: [String, Number] as PropType<string | number>,
       required: true
-    }
+    },
   },
   setup(props) {
     const modeSelectorMain = ref<HTMLDivElement | null>(null);

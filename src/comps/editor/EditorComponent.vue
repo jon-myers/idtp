@@ -53,6 +53,7 @@
       @update:recomputeTrigger='recomputeTrigger += 1'
       @update:prevMeter='updatePrevMeter'
       @update:insertPulses='insertPulses = $event'
+      @open:labelEditor='engageLabelEditor'
       />
     <div class='controlBox'>
       <div class='scrollingControlBox'>
@@ -265,7 +266,6 @@
   @updateSargamLinesEmit='updateSargamLines'
   @selectMeterEmit='selectMeter'
   @addMeterEmit='addMeter'
-  @addMetricGridEmit='addMetricGrid'
   @removeMeterEmit='removeMeter'
   @unsavedChangesEmit='updateUnsavedChanges'
   @assignPrevMeterEmit='assignPrevMeter'
@@ -373,8 +373,9 @@ import {
   PhraseDivDisplayType,
   TrajRenderObj,
   TrajTimePoint,
+  LabelEditorOptions,
 } from '@/ts/types';
-import { EditorMode, Instrument } from '@/ts/enums';
+import { EditorMode, Instrument, ControlsMode } from '@/ts/enums';
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
 
 const getStarts = (durArray: number[]) => {
@@ -1184,6 +1185,22 @@ export default defineComponent({
   },
 
   methods: {
+
+    engageLabelEditor(options: LabelEditorOptions) {
+      const eap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+      eap.selectedControlsMode = ControlsMode.Tag;
+      this.$nextTick(() => {
+        const le = eap.$refs.labelControls as typeof LabelEditor;
+        le.selectedHierarchy = options.type;
+        le.currentTrack = options.track;
+        if (options.type === 'Phrase') {
+          le.scrollToPhrase(options.idx);
+        } else {
+          le.scrollToSection(options.idx)
+        }
+      })
+
+    },
 
     renderMeter(meter: Meter) {
       const r = this.$refs.renderer as typeof Renderer;
@@ -5946,35 +5963,43 @@ export default defineComponent({
 
     moveToPhrase(pIdx: number) {
       // move scroll
-      const offsetDurTot = this.piece.durTot! * (1 - 1 / this.tx!().k);
-      const time = this.piece.phrases[pIdx].startTime!;
-      const scrollX = this.getScrollXVal(time / offsetDurTot);
-      this.gx.call(this.zoomX!.translateTo, scrollX, 0, [0, 0]);
-      this.redraw();
-      //move playhead
-      this.currentTime = time;
-      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-      if (!ap.loading) {
-        if (!ap.playing) {
-          ap.pausedAt = time;
-          ap.updateProgress();
-          ap.updateFormattedCurrentTime();
-          ap.updateFormattedTimeLeft();
-        } else {
-          ap.stop();
-          ap.pausedAt = time;
-          ap.play();
-        }
-      }
-      this.movePlayhead();
-      this.moveShadowPlayhead();
-      const query = this.$route.query;
-      this.$router.push({ query: { id: query.id, pIdx: pIdx.toString() } });
+      // const offsetDurTot = this.piece.durTot! * (1 - 1 / this.tx!().k);
+      // const time = this.piece.phrases[pIdx].startTime!;
+      // const scrollX = this.getScrollXVal(time / offsetDurTot);
+      // this.gx.call(this.zoomX!.translateTo, scrollX, 0, [0, 0]);
+      // this.redraw();
+      // //move playhead
+      // this.currentTime = time;
+      // const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+      // if (!ap.loading) {
+      //   if (!ap.playing) {
+      //     ap.pausedAt = time;
+      //     ap.updateProgress();
+      //     ap.updateFormattedCurrentTime();
+      //     ap.updateFormattedTimeLeft();
+      //   } else {
+      //     ap.stop();
+      //     ap.pausedAt = time;
+      //     ap.play();
+      //   }
+      // }
+      // this.movePlayhead();
+      // this.moveShadowPlayhead();
+      // const query = this.$route.query;
+      // this.$router.push({ query: { id: query.id, pIdx: pIdx.toString() } });
+      const r = this.$refs.renderer as typeof Renderer;
+      const tLayer = r.transcriptionLayer as typeof TranscriptionLayer;
+      tLayer.moveToPhrase(this.editingInstIdx, pIdx);
     },
 
     moveToSection(sIdx: number) {
-      const pIdx = this.piece.sectionStarts[sIdx];
-      this.moveToPhrase(pIdx);
+      console.log('moveToSection');
+      // const pIdx = this.piece.sectionStarts[sIdx];
+      const pIdx = this.piece.sectionStartsGrid[this.editingInstIdx][sIdx];
+      const r = this.$refs.renderer as typeof Renderer;
+      const tLayer = r.transcriptionLayer as typeof TranscriptionLayer;
+      tLayer.moveToPhrase(this.editingInstIdx, pIdx);
+      // this.moveToPhrase(pIdx);
     },
 
     moveToTime(time: number, point: [number, number], redraw=false) {

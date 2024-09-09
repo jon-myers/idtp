@@ -286,6 +286,7 @@
       :editable='editable'
       :piece='piece'
       :vocal='vocal!'
+      :editingInstIdx='editingInstIdx'
       @unsavedChanges='$emit("unsavedChangesEmit", true)'
       @goToPhraseEmit='goToPhrase'
       @goToSectionEmit='goToSection'

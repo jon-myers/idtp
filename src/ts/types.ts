@@ -833,6 +833,12 @@ type TrajTimePoint = {
   track: number,
 }
 
+type LabelEditorOptions = {
+  type: 'Phrase' | 'Section',
+  idx: number,
+  track: number,
+}
+
 export type { 
   CollectionType, 
   UserType, 
@@ -904,5 +910,6 @@ export type {
   ChikariDisplayType,
   TrajRenderObj,
   TrajTimePoint,
+  LabelEditorOptions,
 };
 

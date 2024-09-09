@@ -58,13 +58,14 @@
         <div class='layersContainer' ref='layersContainer'>
           <div class='backgroundLayer'></div>
           <SpectrogramLayer
+            v-if='piece.audioID !== undefined'
             :width='scaledWidth'
             :height='scaledHeight'
             :showSpectrogram='showSpectrogram'
             ref='spectrogramLayer'
             />
           <MelographLayer
-            v-if='yScale !== null && xScale !== null'
+            v-if='yScale !== null && xScale !== null && piece.audioID !== undefined'
             :width='scaledWidth'
             :height='scaledHeight'
             :showMelograph='showMelograph'
@@ -124,6 +125,7 @@
               @update:trajTimePts='$emit("update:trajTimePts", $event)'
               @update:currentTime='$emit("update:currentTime", $event)'
               @update:insertPulses='$emit("update:insertPulses", $event)'
+              @open:labelEditor='$emit("open:labelEditor", $event)'
             />
           />
         </div>

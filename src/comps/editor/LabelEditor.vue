@@ -1,6 +1,7 @@
 <template>
   <div class='outerBox'>
     <div class='hierarchyPicker'>
+      <label>Track {{ `Track ${editingInstIdx + 1}: ${piece.instrumentation[editingInstIdx]}`}}</label>
       <label>
         <input type='radio' value='Section' v-model='selectedHierarchy'/>
         Section
@@ -15,10 +16,11 @@
       v-show='selectedHierarchy === "Section"'
       ref='sectionLabelHolder'>
       <SectionLabelEditor 
-      v-for='(section, i) in piece.sections'
+      v-for='(section, i) in piece.sectionsGrid[editingInstIdx]'
         :sNum='i'
         :piece='piece'
         :editable='editable'
+        :editingInstIdx='editingInstIdx'
         @unsavedChanges='$emit("unsavedChanges")'
         :section='section'
         @dblclick='goToSection($event, i)'
@@ -32,12 +34,13 @@
       ref='phraseLabelHolder'
       >
       <PhraseLabelEditor 
-      v-for='(phrase, i) in piece.phrases'
+      v-for='(phrase, i) in piece.phraseGrid[editingInstIdx]'
       @dblclick='goToPhrase($event, i)'
       :phraseNum='i'
       :vocal='vocal'
       :piece='piece'
       :editable='editable'
+      :editingInstIdx='editingInstIdx'
       @unsavedChanges='$emit("unsavedChanges")'
       ref='phraseLabelEditors'
       />
@@ -58,7 +61,7 @@ export default defineComponent({
   name: 'LabelEditor',
   data() {
     return {
-      selectedHierarchy: 'Section'
+      selectedHierarchy: 'Section',
     }
   },
   props: {
@@ -80,6 +83,10 @@ export default defineComponent({
     },
     vocal: {
       type: Boolean,
+      required: true
+    },
+    editingInstIdx: {
+      type: Number,
       required: true
     }
   },

@@ -12,6 +12,12 @@
     </svg>
     <div class='emptyOverlay' ref='emptyOverlay'></div>
   </div>
+  <ContextMenu
+    :x='contextMenuX'
+    :y='contextMenuY'
+    :closed='contextMenuClosed'
+    :choices='contextMenuChoices'
+    />
 </template>
 
 <script lang='ts'>
@@ -59,12 +65,18 @@ import {
   TrajSelectionStatus,
   ChikariDisplayType,
   TrajRenderObj,
-  TrajTimePoint
+  TrajTimePoint,
+  ContextMenuOptionType,
+  LabelEditorOptions
 } from '@/ts/types.ts';
 import { Meter, Pulse } from '@/js/meter.ts';
+import ContextMenu from'@/comps/ContextMenu.vue';
 
 export default defineComponent({
   name: 'TranscriptionLayer',
+  components: {
+    ContextMenu
+  },
   props: {
     width: {
       type: Number,
@@ -198,6 +210,20 @@ export default defineComponent({
       required: true
     },
   },
+  emits: [
+    'update:TrajSelStatus',
+    'update:selPhraseDivUid',
+    'update:insertPulses',
+    'unsavedChanges',
+    'moveGraph',
+    'moveToX',
+    'update:selectedMode',
+    'update:editingInstIdx',
+    'update:prevMeter',
+    'open:labelEditor',
+    'update:currentTime',
+    'update:trajTimePts',
+  ],
   setup(props, { emit }) {
     const tranContainer = ref<HTMLDivElement | null>(null);
     const tranSvg = ref<SVGSVGElement | null>(null);
@@ -219,6 +245,11 @@ export default defineComponent({
     const selectedMeter = ref<Meter | undefined>(undefined);
     const selectedPulse = ref<Pulse | undefined>(undefined);
     const insertPulses = ref<number[]>([]);
+    const contextMenuX = ref<number>(0);
+    const contextMenuY = ref<number>(0);
+    const contextMenuClosed = ref<boolean>(true);
+    const contextMenuChoices = ref<ContextMenuOptionType[]>([]);
+
 
     let justDeletedPhraseDiv = false;
     const dragDotColor = 'purple';
@@ -2302,7 +2333,8 @@ export default defineComponent({
       trajTimePts.value = [];
       d3.selectAll('#selBox').remove();
       d3.selectAll('.metricGrid')
-        .attr('cursor', 'default')
+        .attr('cursor', 'default');
+      contextMenuClosed.value = true;
     }
 
     const clearDragDots = () => {
@@ -2882,6 +2914,7 @@ export default defineComponent({
         .call(selBoxDrag)
         .on('click', debouncedHandleClick)
         .on('dblclick', handleDoubleClick)
+        .on('contextmenu', backgroundContextMenuClick)
     };
 
     const timeWithinMeter = (time: number) => {
@@ -2955,6 +2988,50 @@ export default defineComponent({
           .attr('transform', `translate(${x}, 0)`);
       });
     };
+
+    const backgroundContextMenuClick = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      contextMenuX.value = e.offsetX;
+      contextMenuY.value = e.offsetY;
+      contextMenuClosed.value = false;
+      const time = props.xScale.invert(e.offsetX);
+      const pIdx = props.piece.phraseIdxFromTime(time, props.editingInstIdx);
+      const ss = props.piece.sectionStartsGrid[props.editingInstIdx];
+      const sectionIdx = ss.findLastIndex(s => s <= pIdx);
+      contextMenuChoices.value = [];
+      contextMenuChoices.value.push({
+        text: `Edit Section ${sectionIdx + 1} labels`,
+        action: () => {
+          contextMenuClosed.value = true;
+          d3.select(tranSvg.value)
+            .attr('cursor', 'default');
+          const options: LabelEditorOptions = {
+            type: 'Section',
+            idx: sectionIdx,
+            track: props.editingInstIdx
+          }
+          emit('open:labelEditor', options)
+        },
+        enabled: true
+      });
+      contextMenuChoices.value.push({
+        text: `Edit Phrase ${pIdx + 1} labels`,
+        action: () => {
+          contextMenuClosed.value = true;
+          d3.select(tranSvg.value)
+            .attr('cursor', 'default');
+          const options: LabelEditorOptions = {
+            type: 'Phrase',
+            idx: pIdx,
+            track: props.editingInstIdx
+          }
+          emit('open:labelEditor', options)
+        },
+        enabled: true
+      });
+      
+    }
  
     const handleClick = (e: MouseEvent) => {
       let time = props.xScale.invert(e.offsetX);
@@ -3534,6 +3611,7 @@ export default defineComponent({
       removePhraseDiv,
       renderPhraseDiv,
       moveToPhraseUid,
+      moveToPhrase,
       currentPhrase,
       selectedChikari,
       resetTrajRenderStatus,
@@ -3549,7 +3627,11 @@ export default defineComponent({
       clipboardTrajs,
       selectedMeter,
       renderMeter,
-      clearInsertPulses
+      clearInsertPulses,
+      contextMenuX,
+      contextMenuY,
+      contextMenuClosed,
+      contextMenuChoices
     }
   }
 })

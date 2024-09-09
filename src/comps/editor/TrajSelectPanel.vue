@@ -159,20 +159,22 @@
     </div>
     <div class='radioGroup' v-if='showPhraseRadio'>
       <div class='selectionRow'>
-        <label>Phrase Division</label>
+        <label for='phraseRadio'>Phrase Division</label>
         <input 
         type='radio' 
-        name='phraseDiv' 
+        name='phraseDiv'
+        id='phraseRadio'
         v-model='phraseDivType' 
         value='phrase'
         @change='updatePhraseDivType'
         >
       </div>
       <div class='selectionRow'>
-        <label>Section Division</label>
+        <label for='sectionRadio'>Section Division</label>
         <input 
         type='radio' 
-        name='phraseDiv' 
+        name='phraseDiv'
+        id='sectionRadio'
         v-model='phraseDivType'
         @change='updatePhraseDivType'
         value='section'

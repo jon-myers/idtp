@@ -2552,8 +2552,8 @@ class Piece {
       const com = c['Composition Type'];
       let comSecTemp = c['Comp.-section/Tempo'];
       if (comSecTemp === undefined) {
-        // tslint:disable-next-line
-        comSecTemp = c['Composition-section/Tempo']
+      // @ts-ignore
+      comSecTemp = c['Composition-section/Tempo']
       }
       const tala = c['Tala'];
       const improv = c['Improvisation'];
@@ -2576,11 +2576,12 @@ class Piece {
       }
     }
     if (c['Comp.-section/Tempo'] === undefined) {
+      // @ts-ignore
       c['Comp.-section/Tempo'] = c['Composition-section/Tempo'];
+      // @ts-ignore
       delete c['Composition-section/Tempo']
     }
   }
-  
 
   putRagaInPhrase() {
     this.phraseGrid.forEach(ps => ps.forEach(p => p.raga = this.raga))
