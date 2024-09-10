@@ -126,12 +126,13 @@
               @update:TrajSelStatus='$emit("update:TrajSelStatus", $event)'
               @update:selPhraseDivUid='$emit("update:selPhraseDivUid", $event)'
               @moveToX='moveToX'
-              @moveGraph='moveGraph'
+              @horizontalMoveGraph='horizontalMoveGraph'
               @update:editingInstIdx='$emit("update:editingInstIdx", $event)'
               @update:trajTimePts='$emit("update:trajTimePts", $event)'
               @update:currentTime='$emit("update:currentTime", $event)'
               @update:insertPulses='$emit("update:insertPulses", $event)'
               @open:labelEditor='$emit("open:labelEditor", $event)'
+              @verticalMoveGraph='verticalMoveGraph'
             />
           />
         </div>
@@ -326,8 +327,8 @@ export default defineComponent({
     const minDrawDur = ref(0.01);
     const transcriptionLayer = ref<typeof TranscriptionLayer | null>(null);
     const scrollUpdateIdx = ref(0);
+    const verticalScrollUpdateIdx = ref(0);
     const editorMode = EditorMode;
-    // const editingInstIdx = ref(0);
 
     const availableModes = computed(() => {
       let entries = Object.entries(EditorMode);
@@ -394,6 +395,14 @@ export default defineComponent({
       return [start, end];
     });
 
+    const verticalDisplayRange = computed(() => {
+      const idx = verticalScrollUpdateIdx.value;
+      const scrollTop = scrollingContainer.value!.scrollTop;
+      const clientHeight = scrollingContainer.value!.clientHeight;
+      const start = yScale.value!.invert(scrollTop);
+      const end = yScale.value!.invert(scrollTop + clientHeight);
+      return [start, end];
+    });
 
     watch(scrollingContainer, () => {
       console.log('scrollingContainer changed');
@@ -465,40 +474,26 @@ export default defineComponent({
       scrollingContainer.value!.scrollTop = scrollTop;   
     }
 
-    // const getDisplayRange = () => {
-    //   const scrollLeft = scrollingContainer.value!.scrollLeft;
-    //   const clientWidth = scrollingContainer.value!.clientWidth;
-    //   const start = xScale.value!.invert(scrollLeft);
-    //   const end = xScale.value!.invert(scrollLeft + clientWidth);
-    //   return [start, end];
-    // };
-
     const moveToX = (x: number) => {
       scrollingContainer.value!.scrollLeft = x;
       resetYScroll();
     }
 
-    const moveGraph = (amt: number) => {
-      // const displayRange = getDisplayRange();
-      // if (amt === 0.5) {
-      //   const mid = (displayRange.value[0] + displayRange.value[1]) / 2;
-      //   const x = xScale.value!(mid);
-      //   scrollingContainer.value!.scrollLeft = x;
-      //   resetYScroll();
-      // } else if (amt === -0.5) {
-      //   const start = displayRange.value[0];
-      //   const midDur = (displayRange.value[1] - displayRange.value[0]) / 2;
-      //   const newStart = start - midDur;
-      //   const x = xScale.value!(newStart);
-      //   scrollingContainer.value!.scrollLeft = x;
-      //   resetYScroll();
-      // }
+    const horizontalMoveGraph = (amt: number) => {
       const start = displayRange.value[0];
       const dur = displayRange.value[1] - displayRange.value[0];
       const newStart = start + amt * dur;
       const x = xScale.value!(newStart);
       scrollingContainer.value!.scrollLeft = x;
       resetYScroll();
+    };
+
+    const verticalMoveGraph = (amt: number) => {
+      const start = verticalDisplayRange.value[0];
+      const delta = verticalDisplayRange.value[1] - start;
+      const newStart = start - amt * delta;
+      const y = yScale.value!(newStart);
+      scrollingContainer.value!.scrollTop = y;
     }
 
     const updateAxesScroll = throttle(() => {
@@ -513,6 +508,7 @@ export default defineComponent({
       scrollingContainer.value?.addEventListener('scroll', () => {
         updateAxesScroll();
         scrollUpdateIdx.value += 1;
+        verticalScrollUpdateIdx.value += 1;
         // if (!isXScrolling && !isYScrolling) {
         //   isXScrolling = true;
         //   isYScrolling = true;
@@ -582,13 +578,14 @@ export default defineComponent({
       transcriptionLayer,
       resetYScroll,
       moveToX,
-      moveGraph,
+      horizontalMoveGraph,
       editorMode,
       instTracksEnum,
       availableModes,
       displayRange,
       editorModeTexts,
       instTrackTexts,
+      verticalMoveGraph
     }
   }
   

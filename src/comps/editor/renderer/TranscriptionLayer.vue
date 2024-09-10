@@ -217,7 +217,7 @@ export default defineComponent({
     'update:selPhraseDivUid',
     'update:insertPulses',
     'unsavedChanges',
-    'moveGraph',
+    'horizontalMoveGraph',
     'moveToX',
     'update:selectedMode',
     'update:editingInstIdx',
@@ -225,6 +225,7 @@ export default defineComponent({
     'open:labelEditor',
     'update:currentTime',
     'update:trajTimePts',
+    'verticalMoveGraph',
   ],
   setup(props, { emit }) {
     const tranContainer = ref<HTMLDivElement | null>(null);
@@ -678,7 +679,7 @@ export default defineComponent({
     watch(() => props.currentTime, t => {
       if (props.playing) {
         if (t > props.displayRange[1]) {
-          moveGraph(0.85)
+          horizontalMoveGraph(0.85)
         }
       }
     });
@@ -1535,9 +1536,13 @@ export default defineComponent({
       });
     };
 
-    const moveGraph = (amt: number) => {
-      emit('moveGraph', amt);
+    const horizontalMoveGraph = (amt: number) => {
+      emit('horizontalMoveGraph', amt);
     };
+
+    const verticalMoveGraph = (amt: number) => {
+      emit('verticalMoveGraph', amt);
+    }
 
     const moveToPhraseUid = (uId: string) => {
       const phrase = props.piece.phraseFromUId(uId);
@@ -2956,6 +2961,9 @@ export default defineComponent({
         } else if (selectedPulse.value !== undefined) {
           e.preventDefault();
           nudgePulse('left');
+        } else {
+          e.preventDefault();
+          horizontalMoveGraph(-0.1);
         }
       } else if (e.key === 'ArrowRight') {
         if (selectedChikari.value !== undefined) {
@@ -2970,16 +2978,25 @@ export default defineComponent({
         } else if (selectedPulse.value !== undefined) {
           e.preventDefault();
           nudgePulse('right');
+        } else {
+          e.preventDefault();
+          horizontalMoveGraph(0.1);
         }
       } else if (e.key === 'ArrowDown') {
         if (selectedDragDotIdx.value !== undefined) {
           e.preventDefault();
           nudgeDragDot('down')
+        } else {
+          e.preventDefault();
+          verticalMoveGraph(-0.1);
         }
       } else if (e.key === 'ArrowUp') {
         if (selectedDragDotIdx.value !== undefined) {
           e.preventDefault();
           nudgeDragDot('up')
+        } else {
+          e.preventDefault();
+          verticalMoveGraph(0.1);
         }
       } else if (e.key === 'Tab') {
         e.preventDefault();
@@ -2992,10 +3009,10 @@ export default defineComponent({
         alted.value = true;
       } else if (e.key === '[') {
         e.preventDefault();
-        moveGraph(-0.5);
+        horizontalMoveGraph(-0.5);
       } else if (e.key === ']') {
         e.preventDefault();
-        moveGraph(0.5);
+        horizontalMoveGraph(0.5);
       } else if (e.key === 'Meta' && props.browser.os!.includes('Mac OS')) {
         metad.value = true;
       } else if (e.key === 'Control' && props.browser.os!.includes('Windows')) {
@@ -3379,6 +3396,8 @@ export default defineComponent({
     let selBox: d3.Selection<SVGRectElement, unknown, null, undefined> | null = 
       null;
 
+    let regionStartX: number | undefined = undefined;
+
     const selBoxDragStart = (e: d3.D3DragEvent<SVGSVGElement, Datum, SVGSVGElement>) => {
       if (shifted.value) {
         selBoxStartX = e.x;
@@ -3386,6 +3405,8 @@ export default defineComponent({
         selBox = d3.select(tranSvg.value)
           .append('rect')
           .attr('id', 'selBox')
+      } else if (alted.value) {
+        regionStartX = e.x;
       }
     }
 
@@ -3463,14 +3484,14 @@ export default defineComponent({
     const setUpSvg = () => {
       const svg = (d3.select(tranSvg.value) as 
         d3.Selection<SVGSVGElement, Datum, null, undefined>);
-      const selBoxDrag = d3.drag<SVGSVGElement, Datum>()
+      const drag = d3.drag<SVGSVGElement, Datum>()
         .on('start', selBoxDragStart)
         .on('drag', selBoxDragMove)
         .on('end', selBoxDragEnd);
       svg
         .attr('width', props.width)
         .attr('height', props.height)
-        .call(selBoxDrag)
+        .call(drag)
         .on('click', debouncedHandleClick)
         .on('dblclick', handleDoubleClick)
         .on('contextmenu', backgroundContextMenuClick)
