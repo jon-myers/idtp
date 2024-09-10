@@ -54,6 +54,8 @@
       @update:prevMeter='updatePrevMeter'
       @update:insertPulses='insertPulses = $event'
       @open:labelEditor='engageLabelEditor'
+      @showTooltip='showTooltip'
+      @hideTooltip='hideTooltip'
       />
     <div class='controlBox'>
       <div class='scrollingControlBox'>
@@ -283,6 +285,8 @@
   @update:meterColor='meterColor = $event'
   @update:selMeterColor='selMeterColor = $event'
   @renderMeter='renderMeter'
+  @showTooltip='showTooltip'
+  @hideTooltip='hideTooltip'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -297,6 +301,12 @@
     :y='autoWindowY'
     :width='autoWindowWidth'
     :piece='piece'
+    />
+    <Tooltip
+      :x='tooltipX'
+      :y='tooltipY'
+      :open='tooltipOpen'
+      :text='tooltipText'
     />
 </template>
 <script lang='ts'>
@@ -358,6 +368,7 @@ import AutomationWindow from '@/comps/editor/AutomationWindow.vue';
 import Renderer from '@/comps/editor/Renderer.vue';
 import TranscriptionLayer from '@/comps/editor/renderer/TranscriptionLayer.vue';
 import YAxis from '@/comps/editor/renderer/YAxis.vue';
+import Tooltip from '@/comps/Tooltip.vue';
 import { detect, BrowserInfo } from 'detect-browser';
 import { throttle } from 'lodash';
 import { defineComponent } from 'vue';
@@ -374,6 +385,7 @@ import {
   TrajRenderObj,
   TrajTimePoint,
   LabelEditorOptions,
+  TooltipData
 } from '@/ts/types';
 import { EditorMode, Instrument, ControlsMode } from '@/ts/enums';
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
@@ -631,7 +643,12 @@ type EditorDataType = {
   throttledAlterVibObj: ReturnType<typeof throttle> | undefined,
   editingInstIdx: number,
   heldLogFreq?: number,
-  recomputeTrigger: number
+  recomputeTrigger: number,
+  tooltipX: number,
+  tooltipY: number,
+  tooltipOpen: boolean,
+  tooltipText: string,
+  hoverTimeout: number | undefined,
 }
 
 // DebouncedFunc<(newSlope: number) => void>
@@ -812,7 +829,12 @@ export default defineComponent({
       throttledAlterVibObj: undefined,
       editingInstIdx: 0,
       heldLogFreq: undefined,
-      recomputeTrigger: 0
+      recomputeTrigger: 0,
+      tooltipX: 0,
+      tooltipY: 0,
+      tooltipOpen: false,
+      tooltipText: '',
+      hoverTimeout: undefined,
     }
   },
   components: {
@@ -821,7 +843,7 @@ export default defineComponent({
     ContextMenu,
     AutomationWindow,
     Renderer,
-
+    Tooltip
   },
   created() {
     this.throttledRedraw = throttle(this.redraw.bind(this), this.transitionTime);
@@ -861,7 +883,7 @@ export default defineComponent({
 
   async mounted() {
     window.addEventListener('beforeunload', this.beforeUnload);
-    window.addEventListener('resize', this.resizeHeight);
+    // window.addEventListener('resize', this.resizeHeight);
     this.fullWidth = window.innerWidth;
     this.throttledAlterSlope = throttle(this.alterSlope, 16);
     this.throttledAlterVibObj = throttle(this.alterVibObj, 16);
@@ -1109,15 +1131,6 @@ export default defineComponent({
       },
       deep: true
     },
-
-    // trajTimePts(newVal) {
-    //   console.log('doing it')
-    //   if (this.selectedMode === EditorMode.Series) {
-    //     if (newVal.length === 2) {
-    //       this.insertSeriesTraj();
-    //     }
-    //   }
-    // }
   },
 
   computed: {
@@ -1185,6 +1198,18 @@ export default defineComponent({
   },
 
   methods: {
+
+    showTooltip(data: TooltipData) {
+      this.tooltipText = data.text;
+      this.tooltipOpen = true;
+      this.tooltipX = data.x;
+      this.tooltipY = data.y;
+    },
+
+    hideTooltip() {
+      this.tooltipOpen = false;
+      this.tooltipText = '';
+    },
 
     engageLabelEditor(options: LabelEditorOptions) {
       const eap = this.$refs.audioPlayer as typeof EditorAudioPlayer;

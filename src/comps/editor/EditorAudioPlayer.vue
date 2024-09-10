@@ -51,6 +51,8 @@
               @click='toggleSpecControls'
               class='specImg'
               ref='specImg'
+              @mouseover='controlsMouseOver'
+              @mouseout='controlsMouseOut'
             />
           </div>
           <div class="rulerBox">
@@ -59,6 +61,8 @@
               @click="toggleLabelControls"
               class="tagsImg"
               ref="tagsImg"
+              @mouseover='controlsMouseOver'
+              @mouseout='controlsMouseOut'
             />
           </div>
           <div class="rulerBox">
@@ -67,6 +71,8 @@
               @click="toggleMeterControls"
               class="meterImg"
               ref="meterImg"
+              @mouseover='controlsMouseOver'
+              @mouseout='controlsMouseOut'
             />
           </div>
           <div class="rulerBox">
@@ -75,6 +81,8 @@
               @click="toggleDownloads"
               class="downloadImg"
               ref="downloadImg"
+              @mouseover='controlsMouseOver'
+              @mouseout='controlsMouseOut'
             />
           </div>
           <div class="rulerBox">
@@ -83,6 +91,8 @@
               @click="toggleTuning"
               class="tuningFork"
               ref="tuningImg"
+              @mouseover='controlsMouseOver'
+              @mouseout='controlsMouseOut'
             />
           </div>
           <div class="rulerBox">
@@ -91,6 +101,8 @@
               @click="toggleControls" 
               ref="controlsImg" 
               class='showControls'
+              @mouseover='controlsMouseOver'
+              @mouseout='controlsMouseOut'
               />
           </div>
         </div>
@@ -377,7 +389,12 @@ import stretcherURL from '@/js/bundledStretcherWorker.js?url';
 import MeterControls from '@/comps/editor/MeterControls.vue';
 import LabelEditor from '@/comps/editor/LabelEditor.vue';
 import { Meter } from '@/js/meter.ts'
-import { RecType, MusicianType, InstrumentTrackType } from '@/ts/types.ts';
+import { 
+  RecType, 
+  MusicianType,
+  InstrumentTrackType, 
+  TooltipData 
+} from '@/ts/types.ts';
 import { ControlsMode } from '@/ts/enums.ts';
 
 
@@ -506,6 +523,8 @@ type EditorAudioPlayerData = {
   sarangiSynth?: SarangiSynthType;
   klattMiddleGain?: GainNode;
   selectedControlsMode: ControlsMode;
+  controlsHoverTimeout?: NodeJS.Timeout;
+  controlsTexts: {[key: string]: string};
 }
 
 interface RubberBandNodeType extends AudioWorkletNode {
@@ -745,7 +764,16 @@ export default defineComponent({
       sarangi: false, // placeholder
       sarangiSynth: undefined,
       klattMiddleGain: undefined,
-      selectedControlsMode: ControlsMode.Synthesis
+      selectedControlsMode: ControlsMode.Synthesis,
+      controlsHoverTimeout: undefined,
+      controlsTexts: {
+        specImg: 'Imaging and Color Controls',
+        tagsImg: 'Label Editor',
+        meterImg: 'Meter Controls',
+        downloadImg: 'Download Data',
+        tuningFork: 'Tuning Controls',
+        showControls: 'Synthesis Controls'
+      }
     };
   },
   props: {
@@ -1075,6 +1103,32 @@ export default defineComponent({
     }
   },
   methods: {
+
+    controlsMouseOver(e: MouseEvent) {
+      if (this.controlsHoverTimeout === undefined) {
+        this.controlsHoverTimeout = setTimeout(() => {
+          const key = (e.target as HTMLElement).classList[0];
+          const text = this.controlsTexts[key];
+          const data: TooltipData = {
+            text: text,
+            x: e.clientX,
+            y: e.clientY
+          };
+          this.$emit('showTooltip', data);
+        }, 500);
+      }
+
+    },
+
+    controlsMouseOut(e: MouseEvent) {
+      if (this.controlsHoverTimeout) {
+        clearTimeout(this.controlsHoverTimeout);
+        this.controlsHoverTimeout = undefined;
+        this.$emit('hideTooltip');
+      }
+
+
+    },
 
     handleSpecCanvas(specCanvas: HTMLCanvasElement) {
       this.$emit('specCanvas', specCanvas);

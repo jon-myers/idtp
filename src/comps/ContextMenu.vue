@@ -1,6 +1,6 @@
 <template>
   <div 
-    :class='`dropDown + ${ closed ? "closed" : "" }`' 
+    :class='`dropDown ${ closed ? "closed" : "" }`' 
     :style='{ top: y + "px", left: x + "px" }'
     >
     <div 

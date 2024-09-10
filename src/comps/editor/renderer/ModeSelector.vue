@@ -2,10 +2,12 @@
   <div class='modeSelectorMain' :style='cssVars' ref='modeSelectorMain'>
     <div
       class='tile'
-      v-for='mode in possibleModeTiles' 
+      v-for='(mode, mIdx) in possibleModeTiles' 
       :key='mode'
-      :id='String(mode)'
+      :id='`${mIdx}`'
       @click='() => $emit("update:selectedMode", mode)'
+      @mouseover='handleMouseOver'
+      @mouseout='handleMouseOut'
       >
       <div class='tileText'>
         {{ typeof mode === 'string' ? mode[0] : mode + 1 }}
@@ -17,6 +19,7 @@
 <script lang='ts'>
 import { defineComponent, ref, onMounted, PropType, computed, watch } from 'vue';
 import { EditorMode } from '@/ts/enums.ts';
+import { TooltipData } from '@/ts/types.ts';
 export default defineComponent({
   name: 'ModeSelector',
   props: {
@@ -35,14 +38,45 @@ export default defineComponent({
       type: [String, Number] as PropType<string | number>,
       required: true
     },
-  },
-  setup(props) {
-    const modeSelectorMain = ref<HTMLDivElement | null>(null);
-    const possibleModeTiles = ref<(string | number)[]>(Object.values(props.enum));
-    const noneIdx = possibleModeTiles.value.indexOf(props.noneEnumItem);
-    if (noneIdx > -1) {
-      possibleModeTiles.value.splice(noneIdx, 1);
+    tooltipTexts: {
+      type: Object as PropType<string[]>,
+      required: true
     }
+  },
+  setup(props, { emit }) {
+    const modeSelectorMain = ref<HTMLDivElement | null>(null);
+    const hoverTimeout = ref<NodeJS.Timeout | undefined>(undefined);
+    const possibleModeTiles = computed(() => {
+      const noneIdx = Object.values(props.enum).indexOf(props.noneEnumItem);
+      const possibleModeTiles = Object.values(props.enum);
+      if (noneIdx > -1) {
+        possibleModeTiles.splice(noneIdx, 1);
+      }
+      return possibleModeTiles;
+    });
+
+    const handleMouseOver = (e: MouseEvent) => {
+      if (hoverTimeout.value === undefined) {
+        hoverTimeout.value = setTimeout(() => {
+          const target = e.target as HTMLDivElement;
+          const text = props.tooltipTexts[Number(target.id)];
+          const data: TooltipData = {
+            text,
+            x: e.clientX,
+            y: e.clientY,
+          }
+          emit('showTooltip', data)
+        }, 500);
+      }
+    };
+
+    const handleMouseOut = () => {
+      if (hoverTimeout.value) {
+        clearTimeout(hoverTimeout.value);
+        hoverTimeout.value = undefined;
+      }
+      emit('hideTooltip');
+    };
 
     watch(() => props.selectedMode, newMode => {
       if (modeSelectorMain.value) {
@@ -74,7 +108,9 @@ export default defineComponent({
     return {
       modeSelectorMain,
       possibleModeTiles,
-      cssVars
+      cssVars,
+      handleMouseOver,
+      handleMouseOut
     }
   }
 })
@@ -115,5 +151,6 @@ export default defineComponent({
   right: 5px;
   font-size: 10px;
   text-align: right;
+  pointer-events: none;
 }
 </style>

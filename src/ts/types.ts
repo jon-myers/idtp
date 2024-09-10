@@ -839,6 +839,12 @@ type LabelEditorOptions = {
   track: number,
 }
 
+type TooltipData = {
+  text: string,
+  x: number,
+  y: number,
+}
+
 export type { 
   CollectionType, 
   UserType, 
@@ -911,5 +917,6 @@ export type {
   TrajRenderObj,
   TrajTimePoint,
   LabelEditorOptions,
+  TooltipData,
 };
 

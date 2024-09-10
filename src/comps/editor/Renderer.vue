@@ -7,19 +7,25 @@
         :selectedMode='selectedMode'
         :enum='availableModes'
         :noneEnumItem='editorMode.None'
+        :tooltipTexts='editorModeTexts'
         @update:selectedMode='$emit("update:selectedMode", $event)'
+        @showTooltip='$emit("showTooltip", $event)'
+        @hideTooltip='$emit("hideTooltip")'
         />
-        <ModeSelector
-          class='modeSelector'
-          v-if='instTracks.length > 1' 
-          :height='modeSelectorHeight'
-          :selectedMode='editingInstIdx'
-          :enum='instTracksEnum'
-          :noneEnumItem='-1'
-          @update:selectedMode='$emit("update:editingInstIdx", $event)'
-          
-          
-        />
+      <ModeSelector
+        class='modeSelector'
+        v-if='instTracks.length > 1' 
+        :height='modeSelectorHeight'
+        :selectedMode='editingInstIdx'
+        :enum='instTracksEnum'
+        :noneEnumItem='-1'
+        :tooltipTexts='instTrackTexts'
+        @update:selectedMode='$emit("update:editingInstIdx", $event)'
+        @showTooltip='$emit("showTooltip", $event)'
+        @hideTooltip='$emit("hideTooltip")'
+        
+        
+      />
     </div>
     <div class='wrapper'>
       <div class='xAxisContainer' ref='xAxisContainer'>
@@ -343,10 +349,26 @@ export default defineComponent({
       });
       enumObj['None'] = -1;
       return enumObj;
-      
     })
+    const instTrackTexts = computed(() => {
+      return props.instTracks.map(it => `Track ${ it.idx + 1 }: ${ it.inst }`);
+    })
+
     const clientWidth = ref(0);
     const modeSelectorHeight = 30;
+    const editorModeTexts = computed(() => {
+      const choices = [
+        'Trajectory Mode',
+        'Series Mode',
+        'Phrase Division Mode',
+        'Meter Mode',
+        'Chikari Mode',
+      ];
+      if (props.instTracks[props.editingInstIdx].inst !== Instrument.Sitar) {
+        choices.splice(4, 1);
+      }
+      return choices;
+    });
 
     let isXScrolling = false;
     let isYScrolling = false;
@@ -564,7 +586,9 @@ export default defineComponent({
       editorMode,
       instTracksEnum,
       availableModes,
-      displayRange
+      displayRange,
+      editorModeTexts,
+      instTrackTexts,
     }
   }
   

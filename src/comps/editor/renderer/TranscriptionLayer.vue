@@ -296,7 +296,6 @@ export default defineComponent({
               renderChikari(cd);
             });
             props.piece.chunkedPhraseDivs(inst, dur)[idx].forEach(pd => {
-              console.log(pd)
               renderPhraseDiv(pd);
             });
           }
