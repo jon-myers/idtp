@@ -226,6 +226,7 @@ export default defineComponent({
     'update:currentTime',
     'update:trajTimePts',
     'verticalMoveGraph',
+    'update:apStretchable',
   ],
   setup(props, { emit }) {
     const tranContainer = ref<HTMLDivElement | null>(null);
@@ -257,6 +258,7 @@ export default defineComponent({
     const autoWindowOpen = ref<boolean>(false);
     const autoWindowX = ref<number>(500);
     const autoWindowY = ref<number>(500);
+    const regionG = ref<d3.Selection<SVGGElement, unknown, null, undefined> | undefined>(undefined);
 
 
 
@@ -641,25 +643,22 @@ export default defineComponent({
             .attr('stroke', props.meterColor)
         }
       } else if (mode === EditorMode.Chikari) {
-        const svg = d3.select(tranSvg.value);
-        svg.attr('cursor', 'crosshair');
+        d3.select(tranSvg.value).attr('cursor', 'crosshair');
       } else if (mode === EditorMode.PhraseDiv) {
-        const svg = d3.select(tranSvg.value);
-        svg.attr('cursor', 's-resize');
+        d3.select(tranSvg.value).attr('cursor', 's-resize');
       } else if (mode === EditorMode.Trajectory) {
-        const svg = d3.select(tranSvg.value);
-        svg.attr('cursor', 'crosshair');
+        d3.select(tranSvg.value).attr('cursor', 'crosshair');
       } else if (mode === EditorMode.Series) {
-        const svg = d3.select(tranSvg.value);
-        svg.attr('cursor', 'crosshair');
+        d3.select(tranSvg.value).attr('cursor', 'crosshair');
       } else if (mode === EditorMode.Meter) {
-        const svg = d3.select(tranSvg.value);
-        svg.attr('cursor', 's-resize');
+        d3.select(tranSvg.value).attr('cursor', 's-resize');
         if (meterHovering !== undefined) {
           d3.selectAll(`.metricGrid.meterId${meterHovering.uniqueId}`)
             .attr('cursor', 'pointer')
             .attr('stroke', props.selectedMeterColor)
         }
+      } else if (mode === EditorMode.Region) {
+        d3.select(tranSvg.value).attr('cursor', 'alias');
       }
     });
     watch(() => props.editingInstIdx, (instIdx) => {
@@ -750,6 +749,14 @@ export default defineComponent({
     watch(insertPulses, newVal => {
       emit('update:insertPulses', newVal);
     });
+
+    const addRegionG = () => {
+      if (tranSvg.value) {
+        const svg = d3.select(tranSvg.value);
+        regionG.value = svg.append('g')
+          .attr('class', 'regionG')
+      }
+    };
     
     // adding svg groups
     const addSargamG = () => {
@@ -1422,6 +1429,7 @@ export default defineComponent({
       addMeterG();
       initializeTracks();
       addPhraseDivG();
+      addRegionG();
       addSargamG();
       addPhonemeG();
       addTrajG();
@@ -2899,6 +2907,9 @@ export default defineComponent({
       d3.selectAll('.metricGrid')
         .attr('cursor', 'default');
       contextMenuClosed.value = true;
+      d3.selectAll('.region').remove();
+      d3.selectAll('.regionStart').remove();
+      d3.selectAll('.regionEnd').remove();
     }
 
     const clearDragDots = () => {
@@ -2932,6 +2943,8 @@ export default defineComponent({
         emit('update:selectedMode', EditorMode.Meter);
       } else if (e.key === 'p') {
         emit('update:selectedMode', EditorMode.PhraseDiv);
+      } else if (e.key === 'r') {
+        emit('update:selectedMode', EditorMode.Region);
       } else if (e.key === 'Shift') {
         shifted.value = true;
       } else if (e.key === 'Backspace') {
@@ -3396,7 +3409,40 @@ export default defineComponent({
     let selBox: d3.Selection<SVGRectElement, unknown, null, undefined> | null = 
       null;
 
-    let regionStartX: number | undefined = undefined;
+    const regionStartPxl = ref<number | undefined>(undefined);
+    const regionEndPxl = ref<number | undefined>(undefined);
+    const regionStartX = ref<number | undefined>(undefined);
+    const regionEndX = ref<number | undefined>(undefined);
+
+    watch(regionStartPxl, newVal => {
+      if (newVal === undefined) {
+        regionStartX.value = undefined;
+      } else {
+        regionStartX.value = props.xScale.invert(newVal);
+      }
+    });
+    watch(regionEndPxl, newVal => {
+      if (newVal === undefined) {
+        regionEndX.value = undefined;
+      } else {
+        regionEndX.value = props.xScale.invert(newVal);
+      }
+    });
+    watch(regionStartX, newVal => {
+      if (newVal === undefined) {
+        regionStartPxl.value = undefined;
+      } else {
+        regionStartPxl.value = props.xScale(newVal);
+      }
+    });
+    watch(regionEndX, newVal => {
+      if (newVal === undefined) {
+        regionEndPxl.value = undefined;
+      } else {
+        regionEndPxl.value = props.xScale(newVal);
+      }
+    });
+
 
     const selBoxDragStart = (e: d3.D3DragEvent<SVGSVGElement, Datum, SVGSVGElement>) => {
       if (shifted.value) {
@@ -3406,7 +3452,7 @@ export default defineComponent({
           .append('rect')
           .attr('id', 'selBox')
       } else if (alted.value) {
-        regionStartX = e.x;
+        regionStartPxl.value = e.x;
       }
     }
 
@@ -3431,32 +3477,84 @@ export default defineComponent({
       }
     }
 
-    const selBoxDragEnd = (e: d3.D3DragEvent<SVGSVGElement, Datum, SVGSVGElement>) => {
-     
-      const c = selBoxStartX === e.x && selBoxStartY === e.y;
-      if (selBoxStartX !== undefined && selBoxStartY !== undefined && !c) {
-        const x = Math.min(selBoxStartX, e.x);
-        const y = Math.min(selBoxStartY, e.y);
-        const width = Math.abs(selBoxStartX - e.x);
-        const height = Math.abs(selBoxStartY - e.y);
-        d3.select('#selBox').remove();
-        const startTime = props.xScale.invert(x);
-        const endTime = props.xScale.invert(x + width);
-        const lowLogFreq = props.yScale.invert(y + height);
-        const highLogFreq = props.yScale.invert(y);
-        selBoxSelectTrajs({
-          startTime,
-          endTime,
-          minLogFreq: lowLogFreq,
-          maxLogFreq: highLogFreq,
-          track: props.editingInstIdx
-        });
-      } else {
-        debouncedHandleClick(e.sourceEvent! as MouseEvent);
+    const setUpRegion = () => {
+      if (regionStartPxl.value === undefined || regionEndPxl.value === undefined) {
+        console.log(regionStartPxl.value, regionEndPxl.value);
+        throw new Error('Region start or end is undefined');
       }
-      selBoxStartX = undefined;
-      selBoxStartY = undefined;
-      
+      emit('update:apStretchable', true);
+      const regionLine = d3.line()([
+        [0, 0],
+        [0, props.height]
+      ]);
+      d3.selectAll('.region').remove();
+      d3.selectAll('.regionStart').remove();
+      d3.selectAll('.regionEnd').remove();
+     
+      const regionG = d3.select(tranSvg.value)
+        .select('.regionG');
+      regionG
+        .append('rect')
+        .classed('region', true)
+        .style('pointer-events', 'none')
+        .attr('width', regionEndPxl.value - regionStartPxl.value)
+        .attr('height', props.height)
+        .attr('fill', 'white')
+        .attr('opacity', 0.4)
+        .attr('transform', `translate(${regionStartPxl.value}, 0)`);
+      regionG
+        .append('path')
+        .classed('regionStart', true)
+        .attr('d', regionLine)
+        .attr('stroke', 'grey')
+        .attr('opacity', 0.5)
+        .attr('stroke-width', 1)
+        .attr('transform', `translate(${regionStartPxl.value}, 0)`);
+      regionG
+        .append('path')
+        .classed('regionEnd', true)
+        .attr('d', regionLine)
+        .attr('stroke', 'grey')
+        .attr('opacity', 0.5)
+        .attr('stroke-width', 1)
+        .attr('transform', `translate(${regionEndPxl.value}, 0)`);
+
+    };
+
+    const selBoxDragEnd = (e: d3.D3DragEvent<SVGSVGElement, Datum, SVGSVGElement>) => {
+      if (alted.value && regionStartPxl.value !== undefined) {
+        if (e.x < regionStartPxl.value!) {
+          regionEndPxl.value = regionStartPxl.value;
+          regionStartPxl.value = e.x;
+        } else {
+          regionEndPxl.value = e.x;
+        }
+        setUpRegion();
+      } else {
+        const c = selBoxStartX === e.x && selBoxStartY === e.y;
+        if (selBoxStartX !== undefined && selBoxStartY !== undefined && !c) {
+          const x = Math.min(selBoxStartX, e.x);
+          const y = Math.min(selBoxStartY, e.y);
+          const width = Math.abs(selBoxStartX - e.x);
+          const height = Math.abs(selBoxStartY - e.y);
+          d3.select('#selBox').remove();
+          const startTime = props.xScale.invert(x);
+          const endTime = props.xScale.invert(x + width);
+          const lowLogFreq = props.yScale.invert(y + height);
+          const highLogFreq = props.yScale.invert(y);
+          selBoxSelectTrajs({
+            startTime,
+            endTime,
+            minLogFreq: lowLogFreq,
+            maxLogFreq: highLogFreq,
+            track: props.editingInstIdx
+          });
+        } else {
+          debouncedHandleClick(e.sourceEvent! as MouseEvent);
+        }
+        selBoxStartX = undefined;
+        selBoxStartY = undefined;
+      }
     }
 
     const possibleTrajDivs = (track: number, pIdx?: number) => {
@@ -3647,7 +3745,13 @@ export default defineComponent({
         if (f && !shifted.value) {
           handleEscape();
         }
-      } 
+      } else if (props.selectedMode === EditorMode.Region) {
+        const phrase = props.piece.phraseGrid[track][pIdx];
+        regionStartX.value = phrase.startTime!;
+        regionEndX.value = phrase.startTime! + phrase.durTot!;
+        emit('update:selectedMode', EditorMode.None);
+        nextTick(() => setUpRegion());
+      }
     };
 
     const handleDoubleClick = (e: MouseEvent) => {
@@ -4233,6 +4337,9 @@ export default defineComponent({
       contextMenuClosed,
       contextMenuChoices,
       selectedPhraseDivUid,
+      setUpRegion,
+      regionStartPxl,
+      regionEndPxl,
     }
   }
 })

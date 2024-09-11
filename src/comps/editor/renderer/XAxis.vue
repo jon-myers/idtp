@@ -36,9 +36,11 @@ export default defineComponent({
       required: true
     },
   },
-  setup(props) {
+  setup(props, { emit }) {
     const xAxisContainer = ref<HTMLDivElement | null>(null);
     const axSvg = ref<SVGSVGElement | null>(null);
+    const regionStartPxl = ref<number | undefined>(undefined);
+    const regionEndPxl = ref<number | undefined>(undefined);    
     
     watch(() => props.axisColor, newColor => {
       if (axSvg.value) {
@@ -132,6 +134,31 @@ export default defineComponent({
       }
     });
 
+    const handleMouseDown = (e: MouseEvent) => {
+      console.log('handle mouse down');
+      e.preventDefault();
+      e.stopPropagation();
+      regionStartPxl.value = e.offsetX;
+      console.log(e)
+    };
+    
+    const handleMouseUp = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (regionStartPxl.value === undefined) {
+        throw new Error('regionStartPxl is undefined');
+      }
+      if (e.x < regionStartPxl.value) {
+        regionEndPxl.value = regionStartPxl.value;
+        regionStartPxl.value = e.offsetX;
+      } else {
+        regionEndPxl.value = e.offsetX;
+      }
+      emit('update:region', [regionStartPxl.value, regionEndPxl.value]);
+      regionStartPxl.value = undefined;
+      regionEndPxl.value = undefined;
+    };
+
     onMounted(() => {
       // put the axis on the axSvg
       if (axSvg.value) {
@@ -142,12 +169,21 @@ export default defineComponent({
           .attr('width', props.scaledWidth)
           .attr('height', props.height)
           .attr('fill', props.axisColor)
+          .on('mousedown', handleMouseDown)
+          .on('mouseup', handleMouseUp)
+          .on('mouseout', handleMouseUp)
           
         svg.append('g')
           .attr('transform', `translate(0, ${props.height})`)
           .call(axis.value)
           .selectAll('text')
           .style('fill', 'black')
+          .style('pointer-events', 'none')
+
+          // .on('mousedown', handleMouseDown)
+          // .on('mouseup', handleMouseUp)
+          // .on('mouseout', handleMouseUp)
+          
       }
 
 

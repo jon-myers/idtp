@@ -35,6 +35,7 @@
           :height='xAxHeight'
           :scale='xScale'
           :axisColor='axisColor'
+          @update:region='updateRegion'
           ref='xAxis'/>
       </div>
       <div class='yAxisContainer' ref='yAxisContainer'>
@@ -133,6 +134,7 @@
               @update:insertPulses='$emit("update:insertPulses", $event)'
               @open:labelEditor='$emit("open:labelEditor", $event)'
               @verticalMoveGraph='verticalMoveGraph'
+              @update:apStretchable='$emit("update:apStretchable", $event)'
             />
           />
         </div>
@@ -150,7 +152,7 @@ import {
   watch, 
   PropType,
   computed,
-  watchEffect
+  nextTick
 } from 'vue';
 import { throttle } from 'lodash';
 
@@ -364,6 +366,7 @@ export default defineComponent({
         'Phrase Division Mode',
         'Meter Mode',
         'Chikari Mode',
+        'Region: Click on phrase to set'
       ];
       if (props.instTracks[props.editingInstIdx].inst !== Instrument.Sitar) {
         choices.splice(4, 1);
@@ -440,6 +443,18 @@ export default defineComponent({
         const logMin = logSaFreq - props.lowOctOffset;
         yScale.value.domain([logMax, logMin]);
       }
+    };
+
+    const updateRegion = (region: [number, number]) => {
+      console.log('update region', region)
+      const tLayer = transcriptionLayer.value!;
+      tLayer.regionStartPxl = region[0];
+      tLayer.regionEndPxl = region[1];
+      nextTick(() => {
+        console.log(tLayer.regionStartPxl, tLayer.regionEndPxl);
+        tLayer.setUpRegion();
+      });
+      // tLayer.setUpRegion();
     };
 
     const updateClientWidth = () => {
@@ -585,7 +600,8 @@ export default defineComponent({
       displayRange,
       editorModeTexts,
       instTrackTexts,
-      verticalMoveGraph
+      verticalMoveGraph,
+      updateRegion
     }
   }
   

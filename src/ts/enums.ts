@@ -9,6 +9,7 @@ enum EditorMode {
   PhraseDiv = 'PhraseDiv',
   Meter = 'Meter',
   Chikari = 'Chikari',
+  Region = 'Region',
   None = 'None',
 }
 

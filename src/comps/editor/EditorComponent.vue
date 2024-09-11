@@ -56,6 +56,7 @@
       @open:labelEditor='engageLabelEditor'
       @showTooltip='showTooltip'
       @hideTooltip='hideTooltip'
+      @update:apStretchable='updateApStretchable'
       />
     <div class='controlBox'>
       <div class='scrollingControlBox'>
@@ -1198,6 +1199,11 @@ export default defineComponent({
   },
 
   methods: {
+
+    updateApStretchable(stretchable: boolean) {
+      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+      ap.stretchable = stretchable;
+    },
 
     showTooltip(data: TooltipData) {
       this.tooltipText = data.text;

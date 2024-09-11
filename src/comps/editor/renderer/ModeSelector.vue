@@ -81,8 +81,10 @@ export default defineComponent({
     watch(() => props.selectedMode, newMode => {
       if (modeSelectorMain.value) {
         const tiles = modeSelectorMain.value.querySelectorAll('.tile');
-        tiles.forEach(tile => {
-          if (tile.id === String(newMode)) {
+        const newModeIdx = Object.values(props.enum)
+          .indexOf(newMode as string | number);
+        tiles.forEach((tile, tIdx) => {
+          if (tile.id === String(newModeIdx)) {
             tile.classList.add('selected');
           } else {
             tile.classList.remove('selected');
