@@ -1,13 +1,15 @@
 <template>
   <div class='tranContainer' ref='tranContainer' :style='dynamicStyle'>
     <svg ref='tranSvg' class='tranSvg'>
+      <!-- this rect needs to stay because of how things are inserted -->
       <rect
+        ref='playhead'
         :x='playheadX'
         :y='0'
         width='3'
         :height='height'
         fill='grey'
-        :style='playheadStyle'
+        :style='{ opacity: 0 }'
       ></rect>
     </svg>
     <div class='emptyOverlay' ref='emptyOverlay'></div>
@@ -227,6 +229,7 @@ export default defineComponent({
     'update:trajTimePts',
     'verticalMoveGraph',
     'update:apStretchable',
+    'update:region'
   ],
   setup(props, { emit }) {
     const tranContainer = ref<HTMLDivElement | null>(null);
@@ -260,8 +263,7 @@ export default defineComponent({
     const autoWindowY = ref<number>(500);
     const regionG = ref<d3.Selection<SVGGElement, unknown, null, undefined> | undefined>(undefined);
 
-
-
+    let playheadLineIdx = 0;
     let justDeletedPhraseDiv = false;
     const dragDotColor = 'purple';
     const selectedDragDotColor = '#d602d6';
@@ -315,7 +317,7 @@ export default defineComponent({
       threshold: 0.0
     });
 
-    const resetTrajRenderStatus = (persistingTrajUIds: string[] = []) => {
+    const resetTrajRenderStatus = (persistingTrajUIds: string[] = [], redraw = true) => {
       for (let i = 0; i < props.piece.instrumentation.length; i++) {
         if (trajRenderStatus.value[i] === undefined) {
           trajRenderStatus.value.push([])
@@ -324,9 +326,10 @@ export default defineComponent({
           const prev = trajRenderStatus.value[i].find(obj => {
             return obj.uniqueId === t.uniqueId
           });
+          let status = redraw ? false : prev ? prev.renderStatus : false;
           return { 
             uniqueId: t.uniqueId!, 
-            renderStatus: prev ? prev.renderStatus : false,
+            renderStatus: status,
             selectedStatus: persistingTrajUIds.includes(t.uniqueId!),
             track: i
           }
@@ -474,6 +477,12 @@ export default defineComponent({
         d3.select(tranSvg.value)
           .attr('width', props.width)
         updateSargamLineWidth();
+        if (regionStartX.value !== undefined) {
+          regionStartPxl.value = props.xScale(regionStartX.value);
+        }
+        if (regionEndX.value !== undefined) {
+          regionEndPxl.value = props.xScale(regionEndX.value);
+        }
         resetTranscription();
       }
     });
@@ -633,7 +642,7 @@ export default defineComponent({
       }
     });
     watch(() => props.selectedMode, (mode) => {
-      handleEscape(false);
+      handleEscape({ includeMode: false });
       if (mode === EditorMode.None) {
         const svg = d3.select(tranSvg.value);
         svg.attr('cursor', 'default');
@@ -749,6 +758,33 @@ export default defineComponent({
     watch(insertPulses, newVal => {
       emit('update:insertPulses', newVal);
     });
+    watch(playheadX, () => {
+      updatePlayhead();
+    })
+
+    const updatePlayhead = () => {
+      const svg = d3.select(tranSvg.value);
+      svg.append('rect')
+        .attr('x', playheadX.value)
+        .attr('y', 0)
+        .attr('width', 3)
+        .attr('height', props.height)
+        .attr('fill', 'grey')
+        .attr('class', 'playhead')
+        .attr('id', `playheadLine${playheadLineIdx}`)
+        .style('opacity', 0)
+        .transition()
+        .duration(20)
+        .style('opacity', 1)
+
+      d3.selectAll(`#playheadLine${playheadLineIdx - 1}`)
+        .transition()
+        .duration(40)
+        .style('opacity', 0)
+        .remove()
+      playheadLineIdx++;
+
+    }
 
     const addRegionG = () => {
       if (tranSvg.value) {
@@ -853,6 +889,7 @@ export default defineComponent({
       }
     };
     const renderMelodicCurve = (traj: Trajectory, track: number = 0) => {
+        
       const trajUIds = props.piece.allTrajectories(track).map(t => t.uniqueId);
       const trajIdx = trajUIds.indexOf(traj.uniqueId);
       const trajStart = trajStartTimes.value[track][trajIdx];
@@ -1437,6 +1474,10 @@ export default defineComponent({
       clearDragDots();
       refreshDragDots();
       renderInsertPulses();
+      if (regionStartX.value !== undefined && regionEndX.value !== undefined) {
+        setUpRegion();
+      }
+      updatePlayhead();
     };
 
     const deletePhraseDiv = (uId: string) => {
@@ -2880,8 +2921,14 @@ export default defineComponent({
       });
     };
 
-    const handleEscape = (includeMode = true) => {
-      if (includeMode) emit('update:selectedMode', EditorMode.None);
+    const handleEscape = (options: {
+        includeMode?: boolean,
+        includeRegion?: boolean
+      } = {
+        includeMode: true,
+        includeRegion: true 
+      }) => {
+      if (options.includeMode) emit('update:selectedMode', EditorMode.None);
       selectedTrajs.value.forEach(traj => {
         const renderObj = trajRenderStatus.value.flat().find(obj => {
           return obj.uniqueId === traj.uniqueId
@@ -2907,9 +2954,13 @@ export default defineComponent({
       d3.selectAll('.metricGrid')
         .attr('cursor', 'default');
       contextMenuClosed.value = true;
-      d3.selectAll('.region').remove();
-      d3.selectAll('.regionStart').remove();
-      d3.selectAll('.regionEnd').remove();
+      if (options.includeRegion) {
+        d3.selectAll('.region').remove();
+        d3.selectAll('.regionStart').remove();
+        d3.selectAll('.regionEnd').remove();
+        regionStartX.value = undefined;
+        regionEndX.value = undefined;
+      }
     }
 
     const clearDragDots = () => {
@@ -3433,7 +3484,7 @@ export default defineComponent({
         regionStartPxl.value = undefined;
       } else {
         regionStartPxl.value = props.xScale(newVal);
-      }
+      };
     });
     watch(regionEndX, newVal => {
       if (newVal === undefined) {
@@ -3483,6 +3534,7 @@ export default defineComponent({
         throw new Error('Region start or end is undefined');
       }
       emit('update:apStretchable', true);
+      emit('update:region')
       const regionLine = d3.line()([
         [0, 0],
         [0, props.height]
@@ -3743,7 +3795,7 @@ export default defineComponent({
         ];
         const f = classes.some(c => target.classList.contains(c));
         if (f && !shifted.value) {
-          handleEscape();
+          handleEscape({ includeRegion: false });
         }
       } else if (props.selectedMode === EditorMode.Region) {
         const phrase = props.piece.phraseGrid[track][pIdx];
@@ -4237,7 +4289,7 @@ export default defineComponent({
           const group = new Group({ trajectories: trajsToBeGrouped });
           phrase.getGroups().push(group);
         });
-        resetTrajRenderStatus(pastedTrajs.map(t => t.uniqueId!));
+        resetTrajRenderStatus(pastedTrajs.map(t => t.uniqueId!), false);
         pastedTrajs.forEach(traj => {
           renderTraj(traj);
         });
@@ -4340,6 +4392,8 @@ export default defineComponent({
       setUpRegion,
       regionStartPxl,
       regionEndPxl,
+      regionStartX,
+      regionEndX,
     }
   }
 })

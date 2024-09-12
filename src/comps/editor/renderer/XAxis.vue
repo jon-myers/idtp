@@ -112,11 +112,15 @@ export default defineComponent({
         .attr('width', props.scaledWidth)
         .attr('height', props.height)
         .attr('fill', props.axisColor)
+        .on('mousedown', handleMouseDown)
+        .on('mouseup', handleMouseUp)
+        .on('mouseout', handleMouseUp)
       svg.append('g')
         .attr('transform', `translate(0, ${props.height})`)
         .call(axis.value)
         .selectAll('text')
         .style('fill', 'black')
+        .style('pointer-events', 'none')
     }
 
     watch(() => props.scaledWidth, () => {
@@ -135,18 +139,16 @@ export default defineComponent({
     });
 
     const handleMouseDown = (e: MouseEvent) => {
-      console.log('handle mouse down');
       e.preventDefault();
       e.stopPropagation();
       regionStartPxl.value = e.offsetX;
-      console.log(e)
     };
     
     const handleMouseUp = (e: MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
       if (regionStartPxl.value === undefined) {
-        throw new Error('regionStartPxl is undefined');
+        return
       }
       if (e.x < regionStartPxl.value) {
         regionEndPxl.value = regionStartPxl.value;
@@ -154,6 +156,7 @@ export default defineComponent({
       } else {
         regionEndPxl.value = e.offsetX;
       }
+      console.log('about to update region')
       emit('update:region', [regionStartPxl.value, regionEndPxl.value]);
       regionStartPxl.value = undefined;
       regionEndPxl.value = undefined;
@@ -172,32 +175,14 @@ export default defineComponent({
           .on('mousedown', handleMouseDown)
           .on('mouseup', handleMouseUp)
           .on('mouseout', handleMouseUp)
-          
         svg.append('g')
           .attr('transform', `translate(0, ${props.height})`)
           .call(axis.value)
           .selectAll('text')
           .style('fill', 'black')
-          .style('pointer-events', 'none')
-
-          // .on('mousedown', handleMouseDown)
-          // .on('mouseup', handleMouseUp)
-          // .on('mouseout', handleMouseUp)
-          
+          .style('pointer-events', 'none')   
       }
-
-
     })
-
-
-
-
-
-
-
-   
-
-
 
     return {
       xAxisContainer,

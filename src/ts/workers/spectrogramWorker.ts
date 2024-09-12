@@ -81,7 +81,7 @@ const scale = () => {
   }
   const [newHeight, newWidth] = scaledShape as [number, number];
   const [oldHeight, oldWidth] = croppedData.shape;
-  scaledData = ndarray(new Array(newHeight * newWidth), scaledShape);
+  scaledData = ndarray(new Float32Array(newHeight * newWidth), scaledShape);
   const yScale = oldHeight / newHeight;
   const xScale = oldWidth / newWidth;
   let trigger = false;
@@ -109,11 +109,18 @@ const scale = () => {
         // console.log(Math.ceil(x), oldWidth - 1)
       }
       try {
+        // console.log(`Attempting to set value at [${i}, ${j}] with val=${val}`);
         scaledData.set(i, j, val);
+        // console.log(`Successfully set value at [${i}, ${j}] with val=${val}`);
       } catch (err) {
-        console.log('error', i, j, val);
-        console.log(scaledData.shape);
-        console.log(scaledData.data.length)
+        console.log('Error details:', {
+          i,
+          j,
+          val,
+          shape: scaledData.shape,
+          dataLength: scaledData.data.length,
+          error: err.message
+        });
         throw err;
       }
     }
@@ -146,7 +153,7 @@ const intensify = () => {
   if (verbose) {
     now = performance.now() as number;
   }
-  intensifiedData = ndarray(new Array(scaledData.size), scaledData.shape);
+  intensifiedData = ndarray(new Float32Array(scaledData.size), scaledData.shape);
   if (power !== 1) {
     const scData = scaledData.data as Uint8Array;
     maxVal = scData.reduce((acc, val) => Math.max(acc, val), 0);

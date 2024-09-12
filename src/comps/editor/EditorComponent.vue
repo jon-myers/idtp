@@ -57,6 +57,7 @@
       @showTooltip='showTooltip'
       @hideTooltip='hideTooltip'
       @update:apStretchable='updateApStretchable'
+      @update:region='regionIdx += 1'
       />
     <div class='controlBox'>
       <div class='scrollingControlBox'>
@@ -505,8 +506,8 @@ type EditorDataType = {
   setNewRegion: boolean,
   shifted: boolean,
   metad: boolean,
-  regionStartTime?: number,
-  regionEndTime?: number,
+  // regionStartTime?: number,
+  // regionEndTime?: number,
   scrollDragColor: string,
   scrollDragColorHover: string,
   playheadReturn: boolean,
@@ -650,6 +651,7 @@ type EditorDataType = {
   tooltipOpen: boolean,
   tooltipText: string,
   hoverTimeout: number | undefined,
+  regionIdx: number
 }
 
 // DebouncedFunc<(newSlope: number) => void>
@@ -707,8 +709,8 @@ export default defineComponent({
       setNewRegion: false,
       shifted: false,
       metad: false,
-      regionStartTime: undefined,
-      regionEndTime: undefined,
+      // regionStartTime: undefined,
+      // regionEndTime: undefined,
       scrollDragColor: '#9c9c9c',
       scrollDragColorHover: '#AAAAAA',
       playheadReturn: false,
@@ -836,6 +838,7 @@ export default defineComponent({
       tooltipOpen: false,
       tooltipText: '',
       hoverTimeout: undefined,
+      regionIdx: 0,
     }
   },
   components: {
@@ -1195,7 +1198,25 @@ export default defineComponent({
       } else {
         return false;
       }
-    }
+    },
+
+    regionStartTime() {
+      this.regionIdx;
+      const r = this.$refs.renderer as typeof Renderer;
+      if (!r) return undefined;
+      const tLayer = r.transcriptionLayer as typeof TranscriptionLayer;
+      if (!tLayer) return undefined;
+      return tLayer.regionStartX;
+    },
+
+    regionEndTime() {
+      this.regionIdx;
+      const r = this.$refs.renderer as typeof Renderer;
+      if (!r) return undefined;
+      const tLayer = r.transcriptionLayer as typeof TranscriptionLayer;
+      if (!tLayer) return undefined;
+      return tLayer.regionEndX;
+    },
   },
 
   methods: {
@@ -1979,52 +2000,52 @@ export default defineComponent({
     //   })
     // },
 
-    setRegionToPhrase(pIdx: number) {
-      const phrase = this.piece.phrases[pIdx];
-      const startTime = phrase.startTime!;
-      const endTime = startTime + phrase.durTot!;
-      this.regionStartTime = startTime;
-      this.regionEndTime = endTime;
-      this.regionStartPx = this.xr()(startTime);
-      this.regionEndPx = this.xr()(endTime);
-      this.setUpRegion();
-      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-      this.currentTime = startTime;
-        if (!ap.playing) {
-          ap.pausedAt = startTime;
-          ap.updateProgress();
-          ap.updateFormattedCurrentTime();
-          ap.updateFormattedTimeLeft();
-        } else {
-          ap.stop();
-          ap.pausedAt = startTime;
-          ap.play();
-        }
-        this.movePlayhead();
-        this.moveShadowPlayhead();
-    },
+    // setRegionToPhrase(pIdx: number) {
+    //   const phrase = this.piece.phrases[pIdx];
+    //   const startTime = phrase.startTime!;
+    //   const endTime = startTime + phrase.durTot!;
+    //   this.regionStartTime = startTime;
+    //   this.regionEndTime = endTime;
+    //   this.regionStartPx = this.xr()(startTime);
+    //   this.regionEndPx = this.xr()(endTime);
+    //   this.setUpRegion();
+    //   const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+    //   this.currentTime = startTime;
+    //     if (!ap.playing) {
+    //       ap.pausedAt = startTime;
+    //       ap.updateProgress();
+    //       ap.updateFormattedCurrentTime();
+    //       ap.updateFormattedTimeLeft();
+    //     } else {
+    //       ap.stop();
+    //       ap.pausedAt = startTime;
+    //       ap.play();
+    //     }
+    //     this.movePlayhead();
+    //     this.moveShadowPlayhead();
+    // },
 
-    setRegionToTimes(startTime: number, endTime: number) {
-      this.regionStartTime = startTime;
-      this.regionEndTime = endTime;
-      this.regionStartPx = this.xr()(startTime);
-      this.regionEndPx = this.xr()(endTime);
-      this.setUpRegion();
-      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-      this.currentTime = startTime;
-        if (!ap.playing) {
-          ap.pausedAt = startTime;
-          ap.updateProgress();
-          ap.updateFormattedCurrentTime();
-          ap.updateFormattedTimeLeft();
-        } else {
-          ap.stop();
-          ap.pausedAt = startTime;
-          ap.play();
-        }
-        this.movePlayhead();
-        this.moveShadowPlayhead();
-    },
+    // setRegionToTimes(startTime: number, endTime: number) {
+    //   this.regionStartTime = startTime;
+    //   this.regionEndTime = endTime;
+    //   this.regionStartPx = this.xr()(startTime);
+    //   this.regionEndPx = this.xr()(endTime);
+    //   this.setUpRegion();
+    //   const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+    //   this.currentTime = startTime;
+    //     if (!ap.playing) {
+    //       ap.pausedAt = startTime;
+    //       ap.updateProgress();
+    //       ap.updateFormattedCurrentTime();
+    //       ap.updateFormattedTimeLeft();
+    //     } else {
+    //       ap.stop();
+    //       ap.pausedAt = startTime;
+    //       ap.play();
+    //     }
+    //     this.movePlayhead();
+    //     this.moveShadowPlayhead();
+    // },
 
     // toggleSpectrogram() {
     //   // this.showSpectrogram = !this.showSpectrogram;
@@ -4182,57 +4203,57 @@ export default defineComponent({
     //   const vowelIdxs = phrase.firstTrajIdxs();
     // },
     
-    clearAll(regionToo = true) {
-      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-      const mc = ap.$refs.meterControls as typeof MeterControls;
-      mc.prevMeter = false;
-      mc.attachToPrevMeter = false;
-      this.clearSelectedChikari();
-      this.clearSelectedTraj();
-      this.clearTrajSelectPanel();
-      this.clearSelectedPhraseDiv();
-      if (this.setChikari) {
-        this.setChikari = false;
-        this.svg.style('cursor', 'auto')
-      }
-      if (this.setNewTraj) {
-        this.setNewTraj = false;
-        this.trajTimePts = [];
-        this.svg.style('cursor', 'auto');
-        d3SelectAll(`.newTrajDot`).remove()
-      }
-      if (this.setNewSeries) {
-        this.setNewSeries = false;
-        d3SelectAll('.newSeriesDot').remove();
-      }
-      if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
-      if (this.regionG && regionToo) {
-        this.regionG.remove();
-        this.regionG = undefined;
-        this.regionStartTime = 0;
-        this.regionEndTime = this.durTot;
-        this.mouseUpUpdateLoop(); 
-        if (this.audioDBDoc) ap.updateStretchBuf();
-        ap.stretchable = false;
-      }
-      if (this.setNewRegion) this.setNewRegion = false;
-      this.meterMode = false;
-      d3SelectAll('.metricGrid')
-        .filter((d, i, nodes) => !d3Select(nodes[i]).classed('overlay'))
-        .attr('stroke', this.meterColor)
-      this.selMeter = undefined;
-      const meterControls = ap.$refs.meterControls;
-      meterControls.meter = undefined;
-      meterControls.meterSelected = false;
-      this.insertPulses = [];
-      this.insertPulseMode = false;
-      meterControls.insertPulseMode = false;
-      d3SelectAll('.insertPulse').remove();
-      this.contextMenuClosed = true;
-      this.autoWindowOpen = false;
-      this.svg.style('cursor', 'auto');
-      d3Select('#selBox').remove();
-    },
+    // clearAll(regionToo = true) {
+    //   const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+    //   const mc = ap.$refs.meterControls as typeof MeterControls;
+    //   mc.prevMeter = false;
+    //   mc.attachToPrevMeter = false;
+    //   this.clearSelectedChikari();
+    //   this.clearSelectedTraj();
+    //   this.clearTrajSelectPanel();
+    //   this.clearSelectedPhraseDiv();
+    //   if (this.setChikari) {
+    //     this.setChikari = false;
+    //     this.svg.style('cursor', 'auto')
+    //   }
+    //   if (this.setNewTraj) {
+    //     this.setNewTraj = false;
+    //     this.trajTimePts = [];
+    //     this.svg.style('cursor', 'auto');
+    //     d3SelectAll(`.newTrajDot`).remove()
+    //   }
+    //   if (this.setNewSeries) {
+    //     this.setNewSeries = false;
+    //     d3SelectAll('.newSeriesDot').remove();
+    //   }
+    //   if (this.setNewPhraseDiv) this.setNewPhraseDiv = false;
+    //   if (this.regionG && regionToo) {
+    //     this.regionG.remove();
+    //     this.regionG = undefined;
+    //     this.regionStartTime = 0;
+    //     this.regionEndTime = this.durTot;
+    //     this.mouseUpUpdateLoop(); 
+    //     if (this.audioDBDoc) ap.updateStretchBuf();
+    //     ap.stretchable = false;
+    //   }
+    //   if (this.setNewRegion) this.setNewRegion = false;
+    //   this.meterMode = false;
+    //   d3SelectAll('.metricGrid')
+    //     .filter((d, i, nodes) => !d3Select(nodes[i]).classed('overlay'))
+    //     .attr('stroke', this.meterColor)
+    //   this.selMeter = undefined;
+    //   const meterControls = ap.$refs.meterControls;
+    //   meterControls.meter = undefined;
+    //   meterControls.meterSelected = false;
+    //   this.insertPulses = [];
+    //   this.insertPulseMode = false;
+    //   meterControls.insertPulseMode = false;
+    //   d3SelectAll('.insertPulse').remove();
+    //   this.contextMenuClosed = true;
+    //   this.autoWindowOpen = false;
+    //   this.svg.style('cursor', 'auto');
+    //   d3Select('#selBox').remove();
+    // },
 
     handleKeyup(e: KeyboardEvent) {
       if (e.key === 'Shift') this.shifted = false;
@@ -4802,147 +4823,147 @@ export default defineComponent({
       return filtered[0].pieceIdx
     },
 
-    handleMousedown(e: MouseEvent) {
-      if (e.offsetY < this.xAxHeight) {
-        this.drawingRegion = true;
-        this.regionStartTime = this.xr().invert(e.offsetX);
-        this.regionStartPx = e.offsetX;
-      }
-    },
+    // handleMousedown(e: MouseEvent) {
+    //   if (e.offsetY < this.xAxHeight) {
+    //     this.drawingRegion = true;
+    //     this.regionStartTime = this.xr().invert(e.offsetX);
+    //     this.regionStartPx = e.offsetX;
+    //   }
+    // },
 
-    handleMouseup(e: MouseEvent) {
-      if (e.offsetY < this.xAxHeight && this.drawingRegion) {
-        if (e.offsetX < this.regionStartPx) {
-          this.regionEndPx = this.regionStartPx;
-          this.regionEndTime = this.xr().invert(this.regionEndPx)
-          this.regionStartPx = e.offsetX;
-          this.regionStartTime = this.xr().invert(this.regionStartPx)
-        } else {
-          this.regionEndTime = this.xr().invert(e.offsetX);
-          this.regionEndPx = e.offsetX;
-        }
-        this.mouseUpUpdateLoop();
-        this.setUpRegion();
-        if (this.audioDBDoc) {
-          const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-          if (!ap.loading) {
-            ap.updateStretchBuf();
-          }
-        }
-      }
-    },
+    // handleMouseup(e: MouseEvent) {
+    //   if (e.offsetY < this.xAxHeight && this.drawingRegion) {
+    //     if (e.offsetX < this.regionStartPx) {
+    //       this.regionEndPx = this.regionStartPx;
+    //       this.regionEndTime = this.xr().invert(this.regionEndPx)
+    //       this.regionStartPx = e.offsetX;
+    //       this.regionStartTime = this.xr().invert(this.regionStartPx)
+    //     } else {
+    //       this.regionEndTime = this.xr().invert(e.offsetX);
+    //       this.regionEndPx = e.offsetX;
+    //     }
+    //     this.mouseUpUpdateLoop();
+    //     this.setUpRegion();
+    //     if (this.audioDBDoc) {
+    //       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+    //       if (!ap.loading) {
+    //         ap.updateStretchBuf();
+    //       }
+    //     }
+    //   }
+    // },
 
-    setUpRegion() {
-      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
-      ap.stretchable = true;
-      const rect = this.rect();
-      const regionLine = d3Line()([
-          [0, 0],
-          [0, rect.height]
-        ]);
-        if (!this.regionG) {
-          this.regionG = this.svg
-            .append('g')
-            .classed('regionG', true)
-            .attr('clip-path', 'url(#playheadClip)');
-          this.regionG
-            .append('rect')
-            .classed('region', true)
-            .style('pointer-events', 'none')
-            .attr('width', this.regionEndPx - this.regionStartPx)
-            .attr('height', rect.height)
-            .attr('fill', 'white')
-            .attr('opacity', '0.4')
-            .attr('transform', `translate(${this.regionStartPx},0)`);
-          this.regionG
-            .append('path')
-            .classed('regionStart', true)
-            .attr('d', regionLine)
-            .attr('stroke', 'grey')
-            .attr('opacity', '0.6')
-            .attr('stroke-width', 1)
-            .attr('transform', `translate(${this.regionStartPx},0)`);
-          const rsDrag = () => {
-            const dragged = (e: MouseEvent) => {
-              d3Select('.clickableRegionStart')
-                .attr('transform', `translate(${e.x},0)`)
-              d3Select('.regionStart')
-                .attr('transform', `translate(${e.x}, 0)`);
-              d3Select('.region')
-                .attr('width', this.xr()(this.regionEndTime!) - e.x)
-                .attr('transform', `translate(${e.x}, 0)`)
-            }
-            const dragended = (e: MouseEvent) => {
-              this.regionStartPx = e.x;
-              this.regionStartTime = this.xr().invert(this.regionStartPx);
-              this.updateLoop();
-              if (this.audioDBDoc) ap.updateStretchBuf();
-            }
-            return d3Drag()
-              .on('drag', dragged)
-              .on('end', dragended)
-          };
+    // setUpRegion() {
+    //   const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+    //   ap.stretchable = true;
+    //   const rect = this.rect();
+    //   const regionLine = d3Line()([
+    //       [0, 0],
+    //       [0, rect.height]
+    //     ]);
+    //     if (!this.regionG) {
+    //       this.regionG = this.svg
+    //         .append('g')
+    //         .classed('regionG', true)
+    //         .attr('clip-path', 'url(#playheadClip)');
+    //       this.regionG
+    //         .append('rect')
+    //         .classed('region', true)
+    //         .style('pointer-events', 'none')
+    //         .attr('width', this.regionEndPx - this.regionStartPx)
+    //         .attr('height', rect.height)
+    //         .attr('fill', 'white')
+    //         .attr('opacity', '0.4')
+    //         .attr('transform', `translate(${this.regionStartPx},0)`);
+    //       this.regionG
+    //         .append('path')
+    //         .classed('regionStart', true)
+    //         .attr('d', regionLine)
+    //         .attr('stroke', 'grey')
+    //         .attr('opacity', '0.6')
+    //         .attr('stroke-width', 1)
+    //         .attr('transform', `translate(${this.regionStartPx},0)`);
+    //       const rsDrag = () => {
+    //         const dragged = (e: MouseEvent) => {
+    //           d3Select('.clickableRegionStart')
+    //             .attr('transform', `translate(${e.x},0)`)
+    //           d3Select('.regionStart')
+    //             .attr('transform', `translate(${e.x}, 0)`);
+    //           d3Select('.region')
+    //             .attr('width', this.xr()(this.regionEndTime!) - e.x)
+    //             .attr('transform', `translate(${e.x}, 0)`)
+    //         }
+    //         const dragended = (e: MouseEvent) => {
+    //           this.regionStartPx = e.x;
+    //           this.regionStartTime = this.xr().invert(this.regionStartPx);
+    //           this.updateLoop();
+    //           if (this.audioDBDoc) ap.updateStretchBuf();
+    //         }
+    //         return d3Drag()
+    //           .on('drag', dragged)
+    //           .on('end', dragended)
+    //       };
 
-          const reDrag = () => {
-            const dragged = (e: MouseEvent) => {
-              d3Select('.clickableRegionEnd')
-                .attr('transform', `translate(${e.x},0)`)
-              d3Select('.regionEnd').attr('transform', `translate(${e.x}, 0)`);
-              d3Select('.region')
-                .attr('width', e.x - this.xr()(this.regionStartTime!))
-            }
-            const dragended = (e: MouseEvent) => {
-              this.regionEndPx = e.x;
-              this.regionEndTime = this.xr().invert(this.regionEndPx);
-              this.updateLoop();
-              if (this.audioDBDoc) ap.updateStretchBuf();
+    //       const reDrag = () => {
+    //         const dragged = (e: MouseEvent) => {
+    //           d3Select('.clickableRegionEnd')
+    //             .attr('transform', `translate(${e.x},0)`)
+    //           d3Select('.regionEnd').attr('transform', `translate(${e.x}, 0)`);
+    //           d3Select('.region')
+    //             .attr('width', e.x - this.xr()(this.regionStartTime!))
+    //         }
+    //         const dragended = (e: MouseEvent) => {
+    //           this.regionEndPx = e.x;
+    //           this.regionEndTime = this.xr().invert(this.regionEndPx);
+    //           this.updateLoop();
+    //           if (this.audioDBDoc) ap.updateStretchBuf();
 
-            }
-            return d3Drag()
-              .on('drag', dragged)
-              .on('end', dragended)
-          };
+    //         }
+    //         return d3Drag()
+    //           .on('drag', dragged)
+    //           .on('end', dragended)
+    //       };
           
-          this.regionG
-            .append('path')
-            .classed('clickableRegionStart', true)
-            .attr('d', regionLine)
-            .attr('stroke', 'grey')
-            .attr('opacity', '0')
-            .attr('stroke-width', 8)
-            .attr('transform', `translate(${this.regionStartPx},0)`)
-            .style('cursor', 'col-resize')
-            .call(rsDrag())
+    //       this.regionG
+    //         .append('path')
+    //         .classed('clickableRegionStart', true)
+    //         .attr('d', regionLine)
+    //         .attr('stroke', 'grey')
+    //         .attr('opacity', '0')
+    //         .attr('stroke-width', 8)
+    //         .attr('transform', `translate(${this.regionStartPx},0)`)
+    //         .style('cursor', 'col-resize')
+    //         .call(rsDrag())
 
-          this.regionG
-            .append('path')
-            .classed('regionEnd', true)
-            .attr('d', regionLine)
-            .attr('stroke', 'grey')
-            .attr('opacity', '0.6')
-            .attr('stroke-width', 1)
-            .attr('transform', `translate(${this.regionEndPx},0)`)
+    //       this.regionG
+    //         .append('path')
+    //         .classed('regionEnd', true)
+    //         .attr('d', regionLine)
+    //         .attr('stroke', 'grey')
+    //         .attr('opacity', '0.6')
+    //         .attr('stroke-width', 1)
+    //         .attr('transform', `translate(${this.regionEndPx},0)`)
 
-          this.regionG
-            .append('path')
-            .classed('clickableRegionEnd', true)
-            .attr('d', regionLine)
-            .attr('stroke', 'grey')
-            .attr('opacity', '0')
-            .attr('stroke-width', 8)
-            .attr('transform', `translate(${this.regionEndPx},0)`)
-            .style('cursor', 'col-resize')
-            .call(reDrag())
-        } else {
-          d3Select('.region')
-            .attr('width', this.regionEndPx - this.regionStartPx)
-            .attr('transform', `translate(${this.regionStartPx},0)`)
-          d3Select('.regionStart')
-            .attr('transform', `translate(${this.regionStartPx},0)`)
-          d3Select('.regionEnd')
-            .attr('transform', `translate(${this.regionEndPx},0)`)
-        }
-    },
+    //       this.regionG
+    //         .append('path')
+    //         .classed('clickableRegionEnd', true)
+    //         .attr('d', regionLine)
+    //         .attr('stroke', 'grey')
+    //         .attr('opacity', '0')
+    //         .attr('stroke-width', 8)
+    //         .attr('transform', `translate(${this.regionEndPx},0)`)
+    //         .style('cursor', 'col-resize')
+    //         .call(reDrag())
+    //     } else {
+    //       d3Select('.region')
+    //         .attr('width', this.regionEndPx - this.regionStartPx)
+    //         .attr('transform', `translate(${this.regionStartPx},0)`)
+    //       d3Select('.regionStart')
+    //         .attr('transform', `translate(${this.regionStartPx},0)`)
+    //       d3Select('.regionEnd')
+    //         .attr('transform', `translate(${this.regionEndPx},0)`)
+    //     }
+    // },
 
     moveRegion() {
       const start = this.xr()(this.regionStartTime!);

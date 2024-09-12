@@ -135,6 +135,7 @@
               @open:labelEditor='$emit("open:labelEditor", $event)'
               @verticalMoveGraph='verticalMoveGraph'
               @update:apStretchable='$emit("update:apStretchable", $event)'
+              @update:region='$emit("update:region")'
             />
           />
         </div>
@@ -407,9 +408,9 @@ export default defineComponent({
       return [start, end];
     });
 
-    watch(scrollingContainer, () => {
-      console.log('scrollingContainer changed');
-    }, {deep: true})
+    // watch(scrollingContainer, () => {
+    //   console.log('scrollingContainer changed');
+    // }, {deep: true})
 
 
 
@@ -446,15 +447,10 @@ export default defineComponent({
     };
 
     const updateRegion = (region: [number, number]) => {
-      console.log('update region', region)
       const tLayer = transcriptionLayer.value!;
       tLayer.regionStartPxl = region[0];
       tLayer.regionEndPxl = region[1];
-      nextTick(() => {
-        console.log(tLayer.regionStartPxl, tLayer.regionEndPxl);
-        tLayer.setUpRegion();
-      });
-      // tLayer.setUpRegion();
+      nextTick(() => tLayer.setUpRegion());
     };
 
     const updateClientWidth = () => {
