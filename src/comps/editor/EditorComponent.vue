@@ -38,6 +38,7 @@
       :showMeter='showMeter'
       :meterColor='meterColor'
       :selectedMeterColor='selMeterColor'
+      :playheadColor='playheadColor'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
@@ -265,6 +266,7 @@
   :meterColor='meterColor'
   :selectedMeterColor='selMeterColor'
   :editorMode='selectedMode'
+  :playheadColor='playheadColor'
   @resizeHeightEmit='resizeHeight'
   @currentTimeEmit='setCurrentTime'
   @updateSargamLinesEmit='updateSargamLines'
@@ -289,6 +291,7 @@
   @renderMeter='renderMeter'
   @showTooltip='showTooltip'
   @hideTooltip='hideTooltip'
+  @update:playheadColor='playheadColor = $event'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -651,7 +654,8 @@ type EditorDataType = {
   tooltipOpen: boolean,
   tooltipText: string,
   hoverTimeout: number | undefined,
-  regionIdx: number
+  regionIdx: number,
+  playheadColor: string,
 }
 
 // DebouncedFunc<(newSlope: number) => void>
@@ -839,6 +843,7 @@ export default defineComponent({
       tooltipText: '',
       hoverTimeout: undefined,
       regionIdx: 0,
+      playheadColor: '#808080'
     }
   },
   components: {

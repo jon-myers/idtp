@@ -213,6 +213,10 @@ export default defineComponent({
       type: String,
       required: true
     },
+    playheadColor: {
+      type: String,
+      required: true
+    },
   },
   emits: [
     'update:TrajSelStatus',
@@ -262,6 +266,10 @@ export default defineComponent({
     const autoWindowX = ref<number>(500);
     const autoWindowY = ref<number>(500);
     const regionG = ref<d3.Selection<SVGGElement, unknown, null, undefined> | undefined>(undefined);
+    const regionStartPxl = ref<number | undefined>(undefined);
+    const regionEndPxl = ref<number | undefined>(undefined);
+    const regionStartX = ref<number | undefined>(undefined);
+    const regionEndX = ref<number | undefined>(undefined);
 
     let playheadLineIdx = 0;
     let justDeletedPhraseDiv = false;
@@ -272,6 +280,11 @@ export default defineComponent({
     let pulseDragEnabled = false;
     let meterHovering: Meter | undefined = undefined;
     let selMeterHovering = false;
+    let selBoxStartX: number | undefined = undefined;
+    let selBoxStartY: number | undefined = undefined;
+    let selBox: d3.Selection<SVGRectElement, unknown, null, undefined> | null = 
+      null;
+
 
 
     const emptyDivIdxMap = new Map<HTMLDivElement, number>();
@@ -759,32 +772,69 @@ export default defineComponent({
       emit('update:insertPulses', newVal);
     });
     watch(playheadX, () => {
+      // throttledUpdatePlayhead();
       updatePlayhead();
-    })
+    });
+    watch(regionStartPxl, newVal => {
+      if (newVal === undefined) {
+        regionStartX.value = undefined;
+      } else {
+        regionStartX.value = props.xScale.invert(newVal);
+      }
+    });
+    watch(regionEndPxl, newVal => {
+      if (newVal === undefined) {
+        regionEndX.value = undefined;
+      } else {
+        regionEndX.value = props.xScale.invert(newVal);
+      }
+    });
+    watch(regionStartX, newVal => {
+      if (newVal === undefined) {
+        regionStartPxl.value = undefined;
+      } else {
+        regionStartPxl.value = props.xScale(newVal);
+      };
+    });
+    watch(regionEndX, newVal => {
+      if (newVal === undefined) {
+        regionEndPxl.value = undefined;
+      } else {
+        regionEndPxl.value = props.xScale(newVal);
+      }
+    });
+    watch(() => props.playheadColor, newVal => {
+      d3.selectAll('.playhead')
+        .attr('fill', newVal)
+    });
+    
 
     const updatePlayhead = () => {
+      console.log('updatePlayhead');
       const svg = d3.select(tranSvg.value);
       svg.append('rect')
+        .classed('playhead', true)
         .attr('x', playheadX.value)
         .attr('y', 0)
         .attr('width', 3)
         .attr('height', props.height)
-        .attr('fill', 'grey')
+        .attr('fill', props.playheadColor)
         .attr('class', 'playhead')
         .attr('id', `playheadLine${playheadLineIdx}`)
         .style('opacity', 0)
-        .transition()
-        .duration(20)
+        .transition() 
+        .duration(30)
         .style('opacity', 1)
 
       d3.selectAll(`#playheadLine${playheadLineIdx - 1}`)
         .transition()
-        .duration(40)
+        .duration(60)
         .style('opacity', 0)
         .remove()
       playheadLineIdx++;
+    } 
 
-    }
+    // const throttledUpdatePlayhead = throttle(updatePlayhead, 16);
 
     const addRegionG = () => {
       if (tranSvg.value) {
@@ -3455,44 +3505,10 @@ export default defineComponent({
       }
     }
 
-    let selBoxStartX: number | undefined = undefined;
-    let selBoxStartY: number | undefined = undefined;
-    let selBox: d3.Selection<SVGRectElement, unknown, null, undefined> | null = 
-      null;
+    
 
-    const regionStartPxl = ref<number | undefined>(undefined);
-    const regionEndPxl = ref<number | undefined>(undefined);
-    const regionStartX = ref<number | undefined>(undefined);
-    const regionEndX = ref<number | undefined>(undefined);
+    
 
-    watch(regionStartPxl, newVal => {
-      if (newVal === undefined) {
-        regionStartX.value = undefined;
-      } else {
-        regionStartX.value = props.xScale.invert(newVal);
-      }
-    });
-    watch(regionEndPxl, newVal => {
-      if (newVal === undefined) {
-        regionEndX.value = undefined;
-      } else {
-        regionEndX.value = props.xScale.invert(newVal);
-      }
-    });
-    watch(regionStartX, newVal => {
-      if (newVal === undefined) {
-        regionStartPxl.value = undefined;
-      } else {
-        regionStartPxl.value = props.xScale(newVal);
-      };
-    });
-    watch(regionEndX, newVal => {
-      if (newVal === undefined) {
-        regionEndPxl.value = undefined;
-      } else {
-        regionEndPxl.value = props.xScale(newVal);
-      }
-    });
 
 
     const selBoxDragStart = (e: d3.D3DragEvent<SVGSVGElement, Datum, SVGSVGElement>) => {

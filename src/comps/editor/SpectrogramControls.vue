@@ -82,7 +82,7 @@
         </div>
       </div>
     </div>
-    <div class='col'>
+    <div class='col colors'>
       <div class='titleBox'>
         <label>Colors</label>
       </div>
@@ -110,6 +110,10 @@
         <div class='row'>
           <label>Selected Meter</label>
           <input type='color' v-model='selMetColor'/>
+        </div>
+        <div class='row'>
+          <label>Playhead</label>
+          <input type='color' v-model='selPlayheadColor'/>
         </div>
       </div>
       
@@ -244,6 +248,10 @@ export default defineComponent({
     selectedMeterColor: {
       type: String,
       required: true
+    },
+    playheadColor: {
+      type: String,
+      required: true
     }
   },
   setup(props, { emit }) {
@@ -268,6 +276,7 @@ export default defineComponent({
     const tempTracks = ref(props.instTracks);
     const metColor = ref(props.meterColor);
     const selMetColor = ref(props.selectedMeterColor);
+    const selPlayheadColor = ref(props.playheadColor);
 
     const isEqual = (p1: Pitch, p2: Pitch) => {
       const swara = p1.swara === p2.swara;
@@ -382,6 +391,9 @@ export default defineComponent({
     });
     watch(selMetColor, newVal => {
       emit('update:selectedMeterColor', newVal);
+    });
+    watch(selPlayheadColor, newVal => {
+      emit('update:playheadColor', newVal);
     });
 
 
@@ -513,7 +525,8 @@ export default defineComponent({
       minPitchIdx,
       tempTracks,
       metColor,
-      selMetColor
+      selMetColor,
+      selPlayheadColor
     }
   }
 })
@@ -552,6 +565,12 @@ export default defineComponent({
 
 .col > input {
   width: 40px;
+}
+
+.col.colors > * > .row {
+  height: 25px;
+  min-height: 25px;
+  max-height: 25px;
 }
 
 

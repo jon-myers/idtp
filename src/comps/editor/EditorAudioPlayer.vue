@@ -332,6 +332,7 @@
       :editingInstIdx='editingInstIdx'
       :meterColor='meterColor'
       :selectedMeterColor='selectedMeterColor'
+      :playheadColor='playheadColor'
       @specCanvas='handleSpecCanvas'
       @update:backgroundColor='$emit("update:backgroundColor", $event)'
       @update:axisColor='$emit("update:axisColor", $event)'
@@ -343,6 +344,7 @@
       @update:instTracks='$emit("update:instTracks", $event)'
       @update:meterColor='$emit("update:meterColor", $event)'
       @update:selectedMeterColor='$emit("update:selectedMeterColor", $event)'
+      @update:playheadColor='$emit("update:playheadColor", $event)'
       />
   </div>
 </template>
@@ -901,7 +903,11 @@ export default defineComponent({
     editorMode: {
       type: String as PropType<EditorMode>,
       required: true
-    }
+    },
+    playheadColor: {
+      type: String,
+      required: true
+    },
   },
 
   components: {

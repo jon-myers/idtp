@@ -121,6 +121,7 @@
               :showMeter='showMeter'
               :meterColor='meterColor'
               :selectedMeterColor='selectedMeterColor'
+              :playheadColor='playheadColor'
               @update:prevMeter='$emit("update:prevMeter", $event)'
               @update:selectedMode='$emit("update:selectedMode", $event)'
               @unsavedChanges='$emit("unsavedChanges", $event)'
@@ -314,7 +315,11 @@ export default defineComponent({
     selectedMeterColor: {
       type: String,
       required: true
-    }
+    },
+    playheadColor: {
+      type: String,
+      required: true
+    },
   },
   setup(props, { emit }) {
     const layersContainer = ref<HTMLDivElement | null>(null);
