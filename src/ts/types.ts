@@ -845,6 +845,42 @@ type TooltipData = {
   y: number,
 }
 
+type DisplaySettings = {
+  title: string,
+  colors: {
+    background: string,
+    axes: string,
+    melograph: string,
+    sargamLines: string,
+    meter: string,
+    selectedMeter: string,
+    playhead: string
+  },
+  instruments: {
+    display: boolean,
+    sonify: boolean,
+    trajColor: string,
+    selectedTrajColor: string,
+  }[],
+  spectrogram: {
+    colorMap: CMap,
+    intensity: number,
+  },
+  pitchRange: {
+    max: {
+      swara: number,
+      raised: boolean,
+      oct: number
+    },
+    min: {
+      swara: number,
+      raised: boolean,
+      oct: number
+    }
+  },
+  uniqueId: string,
+}
+
 export type { 
   CollectionType, 
   UserType, 
@@ -918,5 +954,6 @@ export type {
   TrajTimePoint,
   LabelEditorOptions,
   TooltipData,
+  DisplaySettings
 };
 

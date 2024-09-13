@@ -1422,7 +1422,8 @@ import {
   LocationType,
   NewPieceDataType,
   OnProgressType,
-  MusicianNameType
+  MusicianNameType,
+  DisplaySettings
 } from '@/ts/types.ts'
 
 const userLoginGoogle = async (userData: UserDataType) => {
@@ -1909,6 +1910,106 @@ const getEditableCollections = async (userID: string): Promise<CollectionType[]>
   return out
 }
 
+const getSavedSettings = async (userID: string) => {
+  let out: DisplaySettings[] = [];
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const params = new URLSearchParams({ userID: userID });
+    const res = await fetch(url + 'getSavedSettings?' + params, request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const saveDisplaySettings = async (userID: string, settings: DisplaySettings) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userID, settings })
+  };
+  try {
+    const res = await fetch(url + 'saveDisplaySettings', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const getDefaultSettings = async (userID: string) => {
+  let out: string = '';
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const params = new URLSearchParams({ userID: userID });
+    const res = await fetch(url + 'getDefaultSettings?' + params, request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const setDefaultSettings = async (userID: string, settingsID: string) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userID, settingsID })
+  };
+  try {
+    const res = await fetch(url + 'setDefaultSettings', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+};
+
+const updateDisplaySettings = async (userId: string, uniqueId: string, settings: DisplaySettings) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userId, uniqueId, settings })
+  };
+  try {
+    const res = await fetch(url + 'updateDisplaySettings', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
 
 export { 
   getPiece,
@@ -1988,4 +2089,9 @@ export {
   saveMultiQuery,
   loadQueries,
   deleteQuery,
+  getSavedSettings,
+  saveDisplaySettings,
+  getDefaultSettings,
+  setDefaultSettings,
+  updateDisplaySettings
 }

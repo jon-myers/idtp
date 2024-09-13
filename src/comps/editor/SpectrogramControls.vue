@@ -140,6 +140,47 @@
         </div>
       </div>
     </div>
+    <div class='col'>
+      <div class='titleBox'>
+        <label>Display Settings</label>
+      </div>
+      <div class='rowBox'>
+        <label>Saved Settings</label>
+        <div class='row'>
+          <select v-model='selectedSetting' class='wide'>
+            <option v-for='setting in savedSettings' :value='setting'>
+              {{ setting.title }}
+            </option>
+          </select>
+          <button @click='loadSetting'>Load</button>
+        </div>
+        <div class='row'>
+          <button @click='updateDisplaySetting_'>
+            Update
+          </button>
+          <button 
+            @click='deleteSetting'
+            :disabled='selectedSetting.uniqueId === "ffa38001-f592-4778-a91e-c4ef5c99b081"'
+            >
+            Delete
+          </button>
+          <button 
+            @click='setAsDefaultSetting'
+            >Set Default</button>
+        </div>
+      </div>
+      <div class='rowBox'>
+        <label>Save Current Settings</label>
+        <input 
+          type='text' 
+          v-model='displaySettingsTitle' 
+          placeholder='Enter settings title here'
+          @keydown.space.stop
+          />
+        <button @click='saveSettings'>Save</button>
+      </div>
+
+    </div>
   </div>
 </template>
 
@@ -154,13 +195,21 @@ import {
   nextTick
 } from 'vue';
 import { getWorker } from '@/ts/workers/workerManager.ts'
-import { CMap, InstrumentTrackType } from '@/ts/types.ts';
+import { CMap, InstrumentTrackType, DisplaySettings } from '@/ts/types.ts';
 import SwatchSelect from '@/comps/SwatchSelect.vue';
 import {
   Pitch, 
   Raga
 } from '@/js/classes.ts';
-
+import { 
+  getSavedSettings, 
+  saveDisplaySettings,
+  getDefaultSettings,
+  setDefaultSettings,
+  updateDisplaySettings
+} from '@/js/serverCalls.ts'
+import { useStore } from 'vuex';
+import { v4 as uuidv4 } from 'uuid';
 export default defineComponent({
   name: 'SpectrogramControls',
   components: {
@@ -255,6 +304,45 @@ export default defineComponent({
     }
   },
   setup(props, { emit }) {
+
+    const defaultSetting = {
+      "title": "Default",
+      "colors": {
+          "background": "#f0f8ff",
+          "axes": "#c4b18b",
+          "melograph": "#006400",
+          "sargamLines": "#808080",
+          "meter": "#0D3D0E",
+          "selectedMeter": "#3dcc63",
+          "playhead": "#808080"
+      },
+      "instruments": [
+          {
+              "display": true,
+              "sonify": true,
+              "trajColor": "#204580",
+              "selectedTrajColor": "#4089ff"
+          }
+      ],
+      "spectrogram": {
+          "colorMap": "interpolateViridis",
+          "intensity": 1
+      },
+      "pitchRange": {
+          "max": {
+              "swara": 0,
+              "raised": true,
+              "oct": 2
+          },
+          "min": {
+              "swara": 0,
+              "raised": true,
+              "oct": -1
+          }
+      },
+      "uniqueId": "ffa38001-f592-4778-a91e-c4ef5c99b081"
+    } as DisplaySettings;
+
     const intensityPower = ref(1);
     const lowOctOffset = ref(props.extLowOctOffset);
     const highOctOffset = ref(props.extHighOctOffset);
@@ -277,6 +365,12 @@ export default defineComponent({
     const metColor = ref(props.meterColor);
     const selMetColor = ref(props.selectedMeterColor);
     const selPlayheadColor = ref(props.playheadColor);
+    const displaySettingsTitle = ref('');
+    const savedSettings = ref<DisplaySettings[]>([]);
+    const selectedSetting = ref<DisplaySettings>(defaultSetting);
+
+
+    const store = useStore();
 
     const isEqual = (p1: Pitch, p2: Pitch) => {
       const swara = p1.swara === p2.swara;
@@ -395,6 +489,27 @@ export default defineComponent({
     watch(selPlayheadColor, newVal => {
       emit('update:playheadColor', newVal);
     });
+        // watch for changes in saGain, update gain node
+    watch(saGain, newVal => {
+      if (gainNode.value) {
+        const curVal = gainNode.value.gain.value;
+        const now = props.ac.currentTime;
+        gainNode.value.gain.setValueAtTime(curVal, now);
+        gainNode.value.gain.linearRampToValueAtTime(newVal, now + lag);
+      }
+    });
+    watch(saFreq, newVal => {
+      if (oscNode.value) {
+        const curVal = oscNode.value.frequency.value;
+        const now = props.ac.currentTime;
+        oscNode.value.frequency.setValueAtTime(curVal, now);
+        oscNode.value.frequency.exponentialRampToValueAtTime(newVal, now + lag);
+      }
+    });
+
+    const savedSettingsTitles = computed(() => {
+      return savedSettings.value.map(setting => setting.title);
+    })
 
 
 
@@ -465,25 +580,92 @@ export default defineComponent({
 
     const lag = 0.01;
 
-    // watch for changes in saGain, update gain node
-    watch(saGain, newVal => {
-      if (gainNode.value) {
-        const curVal = gainNode.value.gain.value;
-        const now = props.ac.currentTime;
-        gainNode.value.gain.setValueAtTime(curVal, now);
-        gainNode.value.gain.linearRampToValueAtTime(newVal, now + lag);
+    const getDisplaySettings = (id?: string): DisplaySettings => {
+      const colors = {
+        background: props.backgroundColor,
+        axes: props.axisColor,
+        melograph: props.melographColor,
+        sargamLines: props.sargamLineColor,
+        meter: props.meterColor,
+        selectedMeter: props.selectedMeterColor,
+        playhead: props.playheadColor
+      };
+      const instruments = props.instTracks.map(track => {
+        return {
+          display: track.displaying,
+          sonify: track.sounding,
+          trajColor: track.color,
+          selectedTrajColor: track.selColor
+        }
+      });
+      const spectrogram = {
+        colorMap: cMapName.value,
+        intensity: intensityPower.value,  
+      };
+      const pitchRange = {
+        max: {
+          swara: maxPitchObj.value.swara as number,
+          raised: maxPitchObj.value.raised,
+          oct: maxPitchObj.value.oct
+        },
+        min: {
+          swara: minPitchObj.value.swara as number,
+          raised: minPitchObj.value.raised,
+          oct: minPitchObj.value.oct
+        }
+      };
+      const uId = id ? id : uuidv4();
+      return {
+        title: displaySettingsTitle.value,
+        colors,
+        instruments,
+        spectrogram,
+        pitchRange,
+        uniqueId: uId
       }
-    });
-    watch(saFreq, newVal => {
-      if (oscNode.value) {
-        const curVal = oscNode.value.frequency.value;
-        const now = props.ac.currentTime;
-        oscNode.value.frequency.setValueAtTime(curVal, now);
-        oscNode.value.frequency.exponentialRampToValueAtTime(newVal, now + lag);
-      }
-    });
+    };
 
-    onMounted(() => {
+    const saveSettings = () => {
+      const newSettings = getDisplaySettings();
+      saveDisplaySettings(store.state.userID, newSettings);
+    }
+
+    const loadSetting = () => {
+      const s = selectedSetting.value;
+      bgColor.value = s.colors.background;
+      axColor.value = s.colors.axes;
+      melColor.value = s.colors.melograph;
+      sLineColor.value = s.colors.sargamLines;
+      metColor.value = s.colors.meter;
+      selMetColor.value = s.colors.selectedMeter;
+      selPlayheadColor.value = s.colors.playhead;
+      for (let i = 0; i < tempTracks.value.length; i++) {
+        if (s.instruments[i]) {
+          tempTracks.value[i].displaying = s.instruments[i].display;
+          tempTracks.value[i].sounding = s.instruments[i].sonify;
+          tempTracks.value[i].color = s.instruments[i].trajColor;
+          tempTracks.value[i].selColor = s.instruments[i].selectedTrajColor;
+        }
+      };
+      cMapName.value = s.spectrogram.colorMap;
+      intensityPower.value = s.spectrogram.intensity;
+      maxPitchObj.value = new Pitch(s.pitchRange.max);
+      minPitchObj.value = new Pitch(s.pitchRange.min);
+      displaySettingsTitle.value = s.title;
+    };
+
+    const setAsDefaultSetting = () => {
+      setDefaultSettings(store.state.userID, selectedSetting.value.uniqueId);
+    }
+
+    const updateDisplaySetting_ = () => {
+      const newSettings = getDisplaySettings(selectedSetting.value.uniqueId);
+      updateDisplaySettings(store.state.userID, selectedSetting.value.uniqueId, newSettings);
+    }
+
+
+
+    onMounted( async () => {
       gainNode.value = props.ac.createGain();
       gainNode.value.gain.value = saGain.value;
       gainNode.value.connect(props.ac.destination);
@@ -491,6 +673,19 @@ export default defineComponent({
       oscNode.value.frequency.value = saFreq.value;
       oscNode.value.connect(gainNode.value);
       oscNode.value.start();
+      try {
+        const userID = store.state.userID;
+        savedSettings.value = await getSavedSettings(userID);
+        savedSettings.value.unshift(defaultSetting);
+        // selectedSetting.value = savedSettings.value[0];
+        const defaultID = await getDefaultSettings(userID);
+        selectedSetting.value = savedSettings.value.find(setting => {
+          return setting.uniqueId === defaultID
+        }) || defaultSetting;
+        loadSetting();
+      } catch (e) {
+        console.error(e);
+      }
 
     })
     
@@ -526,7 +721,16 @@ export default defineComponent({
       tempTracks,
       metColor,
       selMetColor,
-      selPlayheadColor
+      selPlayheadColor,
+      savedSettings,
+      getDisplaySettings,
+      savedSettingsTitles,
+      displaySettingsTitle,
+      selectedSetting,
+      saveSettings,
+      loadSetting,
+      setAsDefaultSetting,
+      updateDisplaySetting_
     }
   }
 })
@@ -639,6 +843,9 @@ export default defineComponent({
   width: 45px;
   height: 20px;
   box-sizing: border-box;
+}
+.row > select.wide {
+  width: 120px
 }
 
 select {

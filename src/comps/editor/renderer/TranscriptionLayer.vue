@@ -586,6 +586,14 @@ export default defineComponent({
           .attr('stroke', track.color)
         d3.selectAll(`.track${track.idx} .pluck`)
           .attr('stroke', track.color)
+
+        // chikaris
+        d3.selectAll(`.track${track.idx} .chikari`)
+          .attr('stroke', track.color)
+
+        // phrase divs
+        d3.selectAll(`.track${track.idx} .phraseDiv`)
+          .attr('stroke', track.color)
       })
       selectedTrajs.value.forEach(traj => {
         const renderObj = trajRenderStatus.value.flat().find(obj => {

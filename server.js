@@ -1847,6 +1847,92 @@ const runServer = async () => {
       }
     });
 
+    app.get('/getSavedSettings', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.query.userID) };
+        const projection = { savedSettings: 1, _id: 0 };
+        const result = await users.findOne(query, projection);
+        if (result && result.savedSettings) {
+          res.json(result.savedSettings)
+        } else {
+          res.json([])
+        }
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
+
+    app.post('/saveDisplaySettings', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.body.userID) };
+        const user = await users.findOne(query);
+        if (user) {
+          if (user.savedSettings) {
+            const update = { $push: { savedSettings: req.body.settings } };
+            const result = await users.updateOne(query, update);
+            res.json(result);
+          } else {
+            const update = { $set: { savedSettings: [req.body.settings] } };
+            const result = await users.updateOne(query, update);
+            res.json(result);
+          }
+        } else {
+          res.status(404).send('User not found');
+        }
+        
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
+
+    app.post('/updateDisplaySettings', async (req, res) => {
+      try {
+        const { userId, uniqueId, settings } = req.body;
+        const query = { _id: ObjectId(userId), 'savedSettings.uniqueId': uniqueId };
+        const update = { $set: { 'savedSettings.$': settings } };
+        const result = await users.updateOne(query, update);
+        // console.log(userID, uniqueId, settings)
+        if (result.matchedCount === 0) {
+          res.status(404).send('User or display settings not found');
+        } else {
+          res.json(result);
+        }
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
+
+    app.get('/getDefaultSettings', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.query.userID) };
+        const projection = { defaultSettingsID: 1, _id: 0 };
+        const result = await users.findOne(query, projection);
+        if (result && result.defaultSettingsID) {
+          res.json(result.defaultSettingsID)
+        } else {
+          res.json('ffa38001-f592-4778-a91e-c4ef5c99b081')
+        }
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
+    app.post('/setDefaultSettings', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.body.userID) };
+        const update = { $set: { defaultSettingsID: req.body.settingsID } };
+        const result = await users.updateOne(query, update);
+        res.json(result);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
     const setNoCache = res => {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
