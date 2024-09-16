@@ -1990,7 +1990,7 @@ const setDefaultSettings = async (userID: string, settingsID: string) => {
   return out
 };
 
-const updateDisplaySettings = async (userId: string, uniqueId: string, settings: DisplaySettings) => {
+const updateSavedDisplaySettings = async (userId: string, uniqueId: string, settings: DisplaySettings) => {
   let out;
   const request = {
     method: 'POST',
@@ -2001,6 +2001,26 @@ const updateDisplaySettings = async (userId: string, uniqueId: string, settings:
   };
   try {
     const res = await fetch(url + 'updateDisplaySettings', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const deleteSavedDisplaySettings = async (userId: string, uniqueId: string) => {
+  let out;
+  const request = {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userId, uniqueId })
+  };
+  try {
+    const res = await fetch(url + 'deleteDisplaySettings', request);
     if (res.ok) {
       out = await res.json()
     }
@@ -2093,5 +2113,6 @@ export {
   saveDisplaySettings,
   getDefaultSettings,
   setDefaultSettings,
-  updateDisplaySettings
+  updateSavedDisplaySettings,
+  deleteSavedDisplaySettings
 }

@@ -147,17 +147,17 @@
       <div class='rowBox'>
         <label>Saved Settings</label>
         <div class='row'>
-          <select v-model='selectedSetting' class='wide'>
+          <select 
+            v-model='selectedSetting' 
+            class='wide' 
+            @change='loadSetting'
+            >
             <option v-for='setting in savedSettings' :value='setting'>
               {{ setting.title }}
             </option>
           </select>
-          <button @click='loadSetting'>Load</button>
         </div>
         <div class='row'>
-          <button @click='updateDisplaySetting_'>
-            Update
-          </button>
           <button 
             @click='deleteSetting'
             :disabled='selectedSetting.uniqueId === "ffa38001-f592-4778-a91e-c4ef5c99b081"'
@@ -177,14 +177,31 @@
           placeholder='Enter settings title here'
           @keydown.space.stop
           />
-        <button @click='saveSettings'>Save</button>
+          <div class='row'>
+          <button 
+            @click='updateDisplaySetting'
+            :disabled='settingMatchesSaved || selectedSetting.title === "Default"'>
+            Update Current
+          </button>
+          <button 
+            @click='saveSettings' 
+            :disabled='
+              displaySettingsTitle === "Default" || 
+              settingMatchesSaved ||
+              savedSettingsTitles.includes(displaySettingsTitle)'
+              >
+            New Save
+          </button>
+        </div>
       </div>
-
     </div>
   </div>
 </template>
 
 <script lang='ts'>
+import { 
+  isEqual
+} from 'lodash';
 import { 
   defineComponent, 
   ref,
@@ -206,7 +223,8 @@ import {
   saveDisplaySettings,
   getDefaultSettings,
   setDefaultSettings,
-  updateDisplaySettings
+  updateSavedDisplaySettings,
+  deleteSavedDisplaySettings
 } from '@/js/serverCalls.ts'
 import { useStore } from 'vuex';
 import { v4 as uuidv4 } from 'uuid';
@@ -372,7 +390,7 @@ export default defineComponent({
 
     const store = useStore();
 
-    const isEqual = (p1: Pitch, p2: Pitch) => {
+    const pitchIsEqual = (p1: Pitch, p2: Pitch) => {
       const swara = p1.swara === p2.swara;
       const oct = p1.oct === p2.oct;
       const raised = p1.raised === p2.raised;
@@ -382,7 +400,7 @@ export default defineComponent({
     const maxPitchIdx = computed({
       get() {
         return maxPitchOptions.value.findIndex(pitch => {
-          return isEqual(pitch, maxPitchObj.value);
+          return pitchIsEqual(pitch, maxPitchObj.value);
         })
       },
       set(idx) {
@@ -404,7 +422,6 @@ export default defineComponent({
         })
       }
     })
-
     const maxPitchOptions = computed(() => {
       const pitches = props.raga.getPitches({
         low: saFreq.value,
@@ -412,11 +429,10 @@ export default defineComponent({
       }).reverse();
       return pitches;
     })
-
     const minPitchIdx = computed({
       get() {
         return minPitchOptions.value.findIndex(pitch => {
-          return isEqual(pitch, minPitchObj.value);
+          return pitchIsEqual(pitch, minPitchObj.value);
         })
       },
       set(idx) {
@@ -436,7 +452,6 @@ export default defineComponent({
         })
       }
     })
-
     const minPitchOptions = computed(() => {
       const pitches = props.raga.getPitches({
         low: 75, // in the spec data generation, this is the min freq
@@ -444,7 +459,6 @@ export default defineComponent({
       }).reverse();
       return pitches;
     })
-
     const saFreqDisplay = computed({
       get: () => saFreq.value.toFixed(0),
       set: (newVal) => {
@@ -455,6 +469,23 @@ export default defineComponent({
       '--height': `${props.height}px`,
       '--playerHeight': `${props.playerHeight}px`
     }))
+    const savedSettingsTitles = computed(() => {
+      return savedSettings.value.map(setting => setting.title);
+    })
+    const settingMatchesSaved = computed(() => {
+      let out = true;
+      const dp = getDisplaySettings(selectedSetting.value.uniqueId);
+      const keys = Object.keys(dp) as (keyof DisplaySettings)[];
+      for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
+        if (!isEqual(dp[key], selectedSetting.value[key])) {
+          out = false;
+          break;
+        }
+      }
+      return out;
+    })
+
 
     watch(bgColor, newVal => {
       emit('update:backgroundColor', newVal);
@@ -507,9 +538,7 @@ export default defineComponent({
       }
     });
 
-    const savedSettingsTitles = computed(() => {
-      return savedSettings.value.map(setting => setting.title);
-    })
+    
 
 
 
@@ -570,6 +599,18 @@ export default defineComponent({
       })
     };
 
+    const deleteSetting = async () => {
+      try {
+        const res = await deleteSavedDisplaySettings(store.state.userID, selectedSetting.value.uniqueId);
+        console.log(res);
+        await resyncToServerSettings();
+        selectedSetting.value = defaultSetting;
+        loadSetting();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     const handleLogSaFreqChange = () => {
       saFreq.value = Math.pow(2, logSaFreq.value);
     }
@@ -581,6 +622,8 @@ export default defineComponent({
     const lag = 0.01;
 
     const getDisplaySettings = (id?: string): DisplaySettings => {
+      // this gets settings as currently set on the controls of this component
+      // and displaying to the transcriptionLayer. 
       const colors = {
         background: props.backgroundColor,
         axes: props.axisColor,
@@ -624,13 +667,37 @@ export default defineComponent({
         uniqueId: uId
       }
     };
+    const resyncToServerSettings = async (selectedId?: string) => {
+      const userID = store.state.userID;
+      savedSettings.value = await getSavedSettings(userID);
+      console.log(savedSettings.value.length)
+      savedSettings.value.unshift(defaultSetting);
+      console.log(savedSettings.value.length)
 
-    const saveSettings = () => {
+      const defaultID = await getDefaultSettings(userID);
+      console.log(selectedId)
+      selectedSetting.value = savedSettings.value.find(setting => {
+        console.log('inside: ', setting.uniqueId, selectedId)
+        return setting.uniqueId === (selectedId ? selectedId : defaultID)
+      }) || defaultSetting
+        // loadSetting();
+    
+    }
+
+    const saveSettings = async () => {
       const newSettings = getDisplaySettings();
-      saveDisplaySettings(store.state.userID, newSettings);
+      try {
+        await saveDisplaySettings(store.state.userID, newSettings);
+        await resyncToServerSettings(selectedSetting.value.uniqueId);
+        selectedSetting.value = newSettings;
+
+      } catch (e) {
+        console.error(e);
+      }
     }
 
     const loadSetting = () => {
+      console.log('loading settings')
       const s = selectedSetting.value;
       bgColor.value = s.colors.background;
       axColor.value = s.colors.axes;
@@ -656,11 +723,20 @@ export default defineComponent({
 
     const setAsDefaultSetting = () => {
       setDefaultSettings(store.state.userID, selectedSetting.value.uniqueId);
+      
     }
 
-    const updateDisplaySetting_ = () => {
-      const newSettings = getDisplaySettings(selectedSetting.value.uniqueId);
-      updateDisplaySettings(store.state.userID, selectedSetting.value.uniqueId, newSettings);
+    const updateDisplaySetting = async () => {
+      const uid = selectedSetting.value.uniqueId;
+      const newSettings = getDisplaySettings(uid);
+      try {
+        // selectedSetting.value = newSettings;
+        await updateSavedDisplaySettings(store.state.userID, uid, newSettings);
+        await resyncToServerSettings(selectedSetting.value.uniqueId);
+
+      } catch (e) {
+        console.error(e);
+      }
     }
 
 
@@ -730,7 +806,9 @@ export default defineComponent({
       saveSettings,
       loadSetting,
       setAsDefaultSetting,
-      updateDisplaySetting_
+      updateDisplaySetting,
+      settingMatchesSaved,
+      deleteSetting
     }
   }
 })

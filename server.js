@@ -1933,6 +1933,19 @@ const runServer = async () => {
       }
     })
 
+    app.delete('/deleteDisplaySettings', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.body.userId) };
+        const savedSettings = { uniqueId: req.body.uniqueId };
+        const update = { $pull: { savedSettings } };
+        const result = await users.updateOne(query, update);
+        res.json(result);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
     const setNoCache = res => {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
