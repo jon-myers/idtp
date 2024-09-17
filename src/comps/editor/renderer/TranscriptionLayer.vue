@@ -2903,13 +2903,11 @@ export default defineComponent({
         const logFreqs = times.map((_, i) => {
           return traj.logFreqs[i] || traj.logFreqs[i - 1]
         });
-        console.log('logFreqs', logFreqs)
         times.forEach((t, i) => {
 
           const color = selectedDragDotIdx.value === i ? 
             selectedDragDotColor : dragDotColor;
           const cy = props.yScale(logFreqs[i]);
-          console.log('cy', cy)
           dragDotsG.append('circle')
             .attr('id', `dragDot${i}`)
             .attr('class', `refreshed dragDot track${track}`)
