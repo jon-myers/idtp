@@ -4,12 +4,11 @@
       <!-- this rect needs to stay because of how things are inserted -->
       <rect
         ref='playhead'
-        :x='playheadX'
-        :y='0'
-        width='3'
+        x='0'
+        y='0'
+        width='1'
         :height='height'
         fill='grey'
-        :style='{ opacity: 0 }'
       ></rect>
     </svg>
     <div class='emptyOverlay' ref='emptyOverlay'></div>
@@ -275,6 +274,13 @@ export default defineComponent({
     const regionEndPxl = ref<number | undefined>(undefined);
     const regionStartX = ref<number | undefined>(undefined);
     const regionEndX = ref<number | undefined>(undefined);
+    const playhead = ref<SVGRectElement | null>(null);
+    const currentPlayheadX = ref<number>(0);
+    const laggingDragDotX = ref<number>(0);
+    const laggingDragDotY = ref<number>(0);
+    const targetDragDotX = ref<number | undefined>(undefined);
+    const targetDragDotY = ref<number | undefined>(undefined);
+
 
     let playheadLineIdx = 0;
     let justDeletedPhraseDiv = false;
@@ -441,7 +447,7 @@ export default defineComponent({
         transition: 'x 0.017s linear',
       }
     });
-    const playheadX = computed(() => {
+    const targetPlayheadX = computed(() => {
       return props.xScale(props.currentTime)
     });
     const ipLims = computed(() => {
@@ -593,6 +599,8 @@ export default defineComponent({
           .style('opacity', Number(track.displaying))
         d3.selectAll(`.track${track.idx} .traj`)
           .attr('stroke', track.color)
+        d3.selectAll('.pluck')
+          .attr('fill', track.color)
         d3.selectAll(`.track${track.idx} .pluck`)
           .attr('stroke', track.color)
 
@@ -719,6 +727,8 @@ export default defineComponent({
         if (t > props.displayRange[1]) {
           horizontalMoveGraph(0.85)
         }
+      } else {
+        updatePlayheadPosition();
       }
     });
     watch(() => props.selectedMeterColor, () => {
@@ -788,10 +798,6 @@ export default defineComponent({
     watch(insertPulses, newVal => {
       emit('update:insertPulses', newVal);
     });
-    watch(playheadX, () => {
-      // throttledUpdatePlayhead();
-      updatePlayhead();
-    });
     watch(regionStartPxl, newVal => {
       if (newVal === undefined) {
         regionStartX.value = undefined;
@@ -828,35 +834,57 @@ export default defineComponent({
       d3.selectAll('.bolsG')
         .style('opacity', Number(newVal))
     });
+    watch(() => props.playing, newVal => {
+      if (newVal) {
+        updatePlayheadPosition();
+      }
+    });
+
+    const startPlaying = () => {
+      updatePlayheadPosition();
+    }
+
+    const smooth = (current: number, target: number, smoothing: number = 0.5) => {
+      return current + (target - current) * smoothing;
+    }
+
+    const updatePlayheadPosition = () => {
+      if (!props.playing) {
+        currentPlayheadX.value = targetPlayheadX.value;
+        playhead.value!.style.x = `${currentPlayheadX.value}px`;
+      } else {
+        currentPlayheadX.value = smooth(currentPlayheadX.value, targetPlayheadX.value, 0.2);
+        playhead.value!.style.x = `${currentPlayheadX.value}px`;
+        requestAnimationFrame(updatePlayheadPosition)
+      }
+    }
     
     
+ 
+    // const updatePlayhead = () => {
+    //   const svg = d3.select(tranSvg.value);
+    //   svg.append('rect')
+    //     .classed('playhead', true)
+    //     .attr('x', targetPlayheadX.value)
+    //     .attr('y', 0)
+    //     .attr('width', 3)
+    //     .attr('height', props.height)
+    //     .attr('fill', props.playheadColor)
+    //     .attr('class', 'playhead')
+    //     .attr('id', `playheadLine${playheadLineIdx}`)
+    //     .style('opacity', 0)
+    //     .transition() 
+    //     .duration(30)
+    //     .style('opacity', 1)
 
-    const updatePlayhead = () => {
-      console.log('updatePlayhead');
-      const svg = d3.select(tranSvg.value);
-      svg.append('rect')
-        .classed('playhead', true)
-        .attr('x', playheadX.value)
-        .attr('y', 0)
-        .attr('width', 3)
-        .attr('height', props.height)
-        .attr('fill', props.playheadColor)
-        .attr('class', 'playhead')
-        .attr('id', `playheadLine${playheadLineIdx}`)
-        .style('opacity', 0)
-        .transition() 
-        .duration(30)
-        .style('opacity', 1)
+    //   d3.selectAll(`#playheadLine${playheadLineIdx - 1}`)
+    //     .transition()
+    //     .duration(60)
+    //     .style('opacity', 0)
+    //     .remove()
+    //   playheadLineIdx++;
+    // } 
 
-      d3.selectAll(`#playheadLine${playheadLineIdx - 1}`)
-        .transition()
-        .duration(60)
-        .style('opacity', 0)
-        .remove()
-      playheadLineIdx++;
-    } 
-
-    // const throttledUpdatePlayhead = throttle(updatePlayhead, 16);
 
     const addRegionG = () => {
       if (tranSvg.value) {
@@ -1588,7 +1616,7 @@ export default defineComponent({
       if (regionStartX.value !== undefined && regionEndX.value !== undefined) {
         setUpRegion();
       }
-      updatePlayhead();
+      // updatePlayhead();
     };
 
     const deletePhraseDiv = (uId: string) => {
@@ -2528,6 +2556,25 @@ export default defineComponent({
       return newDurArray;
     };
 
+    let dragDotDragging = false;
+
+    const dragDotAnimationStep = () => {
+      if (dragDotDragging) {
+        if (targetDragDotX.value === undefined) {
+          throw new Error('targetDragDotX is undefined');
+        }
+        if (targetDragDotY.value === undefined) {
+          throw new Error('targetDragDotY is undefined');
+        }
+        laggingDragDotX.value = smooth(laggingDragDotX.value, targetDragDotX.value, 0.2);
+        laggingDragDotY.value = smooth(laggingDragDotY.value, targetDragDotY.value, 0.2);
+        d3.select(`#dragDot${dragDotIdx}`)
+          .attr('cx', laggingDragDotX.value)
+          .attr('cy', laggingDragDotY.value);
+        requestAnimationFrame(dragDotAnimationStep);
+      }
+    }
+
     const dragDotStart = (e: d3.D3DragEvent<
       SVGCircleElement, Datum, MouseEvent
     >) => {
@@ -2536,30 +2583,42 @@ export default defineComponent({
       const track = props.piece.trackFromTraj(traj);
       const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
       const startTime = phrase.startTime! + traj.startTime!;
+      let times = [0, ...traj.durArray!.map(cumsum())];
+      times = times.map(t => t * traj.durTot + startTime);
       dragDotIdx = Number(e.sourceEvent.target.id.split('dragDot')[1]);
+      const time = times[dragDotIdx];
+      const logFreq = traj.logFreqs[dragDotIdx] || traj.logFreqs[dragDotIdx - 1]
       const trajData = makeTrajData(traj, startTime);
-      const trajG = d3.select(tranSvg.value)
-        .select('.trajG')
-      trajG.append('path')
-        .datum(trajData)
-        .attr('d', trajCurve)
-        .classed('dragShadowTraj', true)
-        .attr('fill', 'none')
-        .attr('stroke', props.instTracks[0].color)
-        .attr('stroke-width', '3px')
-        .attr('stroke-linejoin', 'round')
-        .attr('stroke-linecap', 'round')
-        .style('opacity', '0.35')
+      dragDotDragging = true;
+      targetDragDotX.value = e.x
+      targetDragDotY.value = e.y;
+      laggingDragDotX.value = e.x;
+      laggingDragDotY.value = e.y;
+
+      requestAnimationFrame(dragDotAnimationStep);
+      // const trajG = d3.select(tranSvg.value)
+      //   .select('.trajG')
+      // trajG.append('path')
+      //   .datum(trajData)
+      //   .attr('d', trajCurve)
+      //   .classed('dragShadowTraj', true)
+      //   .attr('fill', 'none')
+      //   .attr('stroke', props.instTracks[0].color)
+      //   .attr('stroke-width', '3px')
+      //   .attr('stroke-linejoin', 'round')
+      //   .attr('stroke-linecap', 'round')
+      //   .style('opacity', '0.35')
+      
     };
 
-    const updateTrajCurve = throttle((
-        traj: Trajectory, 
-        startTime: number) => {
-      const data = makeTrajData(traj, startTime);
-      d3.select('.dragShadowTraj')
-        .datum(data)
-        .attr('d', trajCurve)
-    }, 50)
+    // const updateTrajCurve = throttle((
+    //     traj: Trajectory, 
+    //     startTime: number) => {
+    //   const data = makeTrajData(traj, startTime);
+    //   d3.select('.dragShadowTraj')
+    //     .datum(data)
+    //     .attr('d', trajCurve)
+    // }, 50)
 
     const updateDurArray = (traj: any, delta: number) => {
       if (traj.durArray && traj.durArray.length > 1) {
@@ -2597,15 +2656,23 @@ export default defineComponent({
       });
     };
 
+    const updateTargetDragDot = (e: d3.D3DragEvent<SVGCircleElement, Datum, MouseEvent>) => {
+      if (alted.value) return;
+      const initTime = props.xScale.invert(e.x);
+      const time = constrainTime(initTime, dragDotIdx!);
+      targetDragDotX.value = props.xScale(time);
+      targetDragDotY.value = e.y;
+    };
+
 
     const dragDotMove = (e: d3.D3DragEvent<SVGCircleElement, Datum, MouseEvent>) => {
       if (alted.value) return;
       const initTime = props.xScale.invert(e.x);
       const time = constrainTime(initTime, dragDotIdx!);
       const x = props.xScale(time);
-      d3.select(`#dragDot${dragDotIdx}`)
-        .attr('cx', x)
-        .attr('cy', e.y);
+      // d3.select(`#dragDot${dragDotIdx}`)
+      //   .attr('cx', x)
+      //   .attr('cy', e.y);
       const traj = selectedTrajs.value[0];
       const track = props.piece.trackFromTraj(traj);
       const idx = dragDotIdx!;
@@ -2676,16 +2743,13 @@ export default defineComponent({
       // updateTrajCurve(traj, phrase.startTime! + traj.startTime!);
     };
 
-    const throttledDragDotMove = throttle((e: d3.D3DragEvent<SVGCircleElement, Datum, MouseEvent>) => {
-      dragDotMove(e)
-    }, 16);
-
     const dragDotEnd = (e: d3.D3DragEvent<
       SVGCircleElement, Datum, MouseEvent
     >) => {
       if (alted.value) return;
       dragDotMove(e);
-      d3.selectAll('.dragShadowTraj').remove();
+      dragDotDragging = false;
+      // d3.selectAll('.dragShadowTraj').remove();
       emit('unsavedChanges', true);
       const idx = dragDotIdx!;
       const traj = selectedTrajs.value[0];
@@ -2823,10 +2887,11 @@ export default defineComponent({
         const track = props.piece.trackFromTrajUId(traj.uniqueId!);
         const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
         d3.selectAll('.dragDots').remove();
+        d3.selectAll('.dragDot').remove();
         const drag = () => {
           return d3.drag<SVGCircleElement, Datum>()
           .on('start', dragDotStart)
-          .on('drag', throttledDragDotMove)
+          .on('drag', updateTargetDragDot)
           .on('end', dragDotEnd)
         };
         const dragDotsG = d3.select(tranSvg.value)
@@ -2838,14 +2903,18 @@ export default defineComponent({
         const logFreqs = times.map((_, i) => {
           return traj.logFreqs[i] || traj.logFreqs[i - 1]
         });
+        console.log('logFreqs', logFreqs)
         times.forEach((t, i) => {
+
           const color = selectedDragDotIdx.value === i ? 
             selectedDragDotColor : dragDotColor;
+          const cy = props.yScale(logFreqs[i]);
+          console.log('cy', cy)
           dragDotsG.append('circle')
             .attr('id', `dragDot${i}`)
-            .attr('class', `track${track}`)
+            .attr('class', `refreshed dragDot track${track}`)
             .attr('cx', props.xScale(t))
-            .attr('cy', props.yScale(logFreqs[i]))
+            .attr('cy', cy)
             .attr('r', 4)
             .style('fill', color)
             .attr('cursor', 'pointer')
@@ -4466,7 +4535,7 @@ export default defineComponent({
       refreshSargam,
       selectTraj,
       playheadStyle,
-      playheadX,
+      targetPlayheadX,
       refreshTimePts,
       trajTimePts,
       metad,
@@ -4484,6 +4553,7 @@ export default defineComponent({
       regionEndPxl,
       regionStartX,
       regionEndX,
+      playhead
     }
   }
 })

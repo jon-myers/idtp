@@ -527,7 +527,6 @@ export default defineComponent({
       emit('update:recomputeTrigger');
       updateClientWidth();
       scrollingContainer.value?.addEventListener('click', (e) => {
-        console.log('getting click');
         e.preventDefault();
       })
       scrollingContainer.value?.addEventListener('scroll', () => {

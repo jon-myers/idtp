@@ -495,7 +495,7 @@ export default defineComponent({
 
   async mounted() {
     // if (this.piece.instrumentation.length > 0) {
-    //   // this.instrument = this.piece.instrumentation[0] as Instrument;
+    //   this.instrument = this.piece.instrumentation[0] as Instrument;
     // }
     try {
       let result = await getIpaVowels();
@@ -518,6 +518,7 @@ export default defineComponent({
       })
       this.consonantList.push('none');
       this.cIso_15919.push(undefined);
+      this.trajIdxs = this.piece!.possibleTrajs[this.instrument];
     } catch (e) {
       console.error(e);
     }
@@ -661,6 +662,7 @@ export default defineComponent({
     },
 
     instrument(newVal: Instrument) {
+      console.log('instrument changed')
       if (newVal) {
         this.trajIdxs = this.piece!.possibleTrajs[newVal];
       }
