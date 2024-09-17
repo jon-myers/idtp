@@ -71,7 +71,8 @@ import {
   TrajTimePoint,
   ContextMenuOptionType,
   LabelEditorOptions,
-  StrokeNicknameType
+  StrokeNicknameType,
+  BolDisplayType
 } from '@/ts/types.ts';
 import { Meter, Pulse } from '@/js/meter.ts';
 import ContextMenu from'@/comps/ContextMenu.vue';
@@ -217,6 +218,10 @@ export default defineComponent({
       type: String,
       required: true
     },
+    showBols: {
+      type: Boolean,
+      required: true
+    },
   },
   emits: [
     'update:TrajSelStatus',
@@ -306,12 +311,16 @@ export default defineComponent({
               props.piece.chunkedDisplayConsonants(inst, dur)[idx].forEach(c => {
                 renderEndingConsonant(c);
               })
+            } else if (props.piece.instrumentation[inst] === Instrument.Sitar) {
+              props.piece.chunkedDisplayChikaris(inst, dur)[idx].forEach(cd => {
+                renderChikari(cd);
+              });
+              props.piece.chunkedDisplayBols(inst, dur)[idx].forEach(b => {
+                renderBol(b);
+              })
             }
             props.piece.chunkedTrajs(inst, dur)[idx].forEach(traj => {
               if (traj.id !== 12) renderTraj(traj);
-            });
-            props.piece.chunkedDisplayChikaris(inst, dur)[idx].forEach(cd => {
-              renderChikari(cd);
             });
             props.piece.chunkedPhraseDivs(inst, dur)[idx].forEach(pd => {
               renderPhraseDiv(pd);
@@ -815,6 +824,11 @@ export default defineComponent({
       d3.selectAll('.playhead')
         .attr('fill', newVal)
     });
+    watch(() => props.showBols, newVal => {
+      d3.selectAll('.bolsG')
+        .style('opacity', Number(newVal))
+    });
+    
     
 
     const updatePlayhead = () => {
@@ -919,6 +933,20 @@ export default defineComponent({
           trackG.append('g')
             .attr('class', `phraseDivG`)
             .style('opacity', Number(props.showPhraseDivs))
+        }
+      }
+    };
+
+    const addBolsG = () => {
+      if (tranSvg.value) {
+        const svg = d3.select(tranSvg.value);
+        for (let i = 0; i < props.piece.instrumentation.length; i++) {
+          if (props.piece.instrumentation[i] === Instrument.Sitar) {
+            const trackG = tracks[i];
+            trackG.append('g')
+              .attr('class', `bolsG`)
+              .style('opacity', Number(props.showBols))
+          }
         }
       }
     };
@@ -1133,6 +1161,25 @@ export default defineComponent({
         .attr('fill', 'black')
         .attr('class', `sargamLabel uId${s.uId}`)
     };
+
+    const renderBol = (b: BolDisplayType) => {
+      const y = props.yScale(b.logFreq);
+      const x = props.xScale(b.time);
+      const track = props.piece.trackFromTrajUId(b.uId);
+      const trackG = tracks[track];
+      const g = trackG.select('.bolsG');
+      // console.log(b.bol, b.time)
+      g.append('text')
+        .text(b.bol)
+        .attr('x', x)
+        .attr('y', y - 15)
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'middle')
+        .attr('font-size', 14)
+        .attr('fill', 'black')
+        .attr('class', `bolLabel uId${b.uId}`)
+    };
+
     const renderVowel = (v: VowelDisplayType) => {
       const svg = d3.select(tranSvg.value);
       const verticalOffset = 14;
@@ -1527,6 +1574,7 @@ export default defineComponent({
       addRegionG();
       addSargamG();
       addPhonemeG();
+      addBolsG();
       addTrajG();
       addChikariG();
       clearDragDots();

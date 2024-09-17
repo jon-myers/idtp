@@ -122,6 +122,7 @@
               :meterColor='meterColor'
               :selectedMeterColor='selectedMeterColor'
               :playheadColor='playheadColor'
+              :showBols='showBols'
               @update:prevMeter='$emit("update:prevMeter", $event)'
               @update:selectedMode='$emit("update:selectedMode", $event)'
               @unsavedChanges='$emit("unsavedChanges", $event)'
@@ -318,6 +319,10 @@ export default defineComponent({
     },
     playheadColor: {
       type: String,
+      required: true
+    },
+    showBols: {
+      type: Boolean,
       required: true
     },
   },
@@ -521,6 +526,10 @@ export default defineComponent({
     onMounted(async () => {
       emit('update:recomputeTrigger');
       updateClientWidth();
+      scrollingContainer.value?.addEventListener('click', (e) => {
+        console.log('getting click');
+        e.preventDefault();
+      })
       scrollingContainer.value?.addEventListener('scroll', () => {
         updateAxesScroll();
         scrollUpdateIdx.value += 1;

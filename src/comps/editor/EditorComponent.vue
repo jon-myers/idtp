@@ -39,6 +39,7 @@
       :meterColor='meterColor'
       :selectedMeterColor='selMeterColor'
       :playheadColor='playheadColor'
+      :showBols='showBols'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'

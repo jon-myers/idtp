@@ -15,6 +15,7 @@ import {
   ConsonantDisplayType,
   PhraseDivDisplayType,
   ChikariDisplayType,
+  BolDisplayType
 } from '@/ts/types.ts';
 import { Instrument } from '@/ts/enums.ts';
 import { closeTo, getClosest, isUpperCase } from '@/ts/utils.ts';
@@ -2922,6 +2923,28 @@ class Piece {
     return chunks
   }
 
+  allDisplayBols(inst = 0) {
+    const trajs = this.allTrajectories(inst);
+    const starts = this.trajStartTimes(inst);
+    const idxs: number[] = [];
+    const bols: BolDisplayType[] = trajs
+      .filter((t, tIdx) => {
+        const c = t.articulations['0.00'] && t.articulations['0.00'].name === 'pluck';
+        if (c) {
+          idxs.push(tIdx)
+        }
+        return c
+      })
+      .map((t, tIdx) => {
+        const time = starts[idxs[tIdx]];
+        const bol = t.articulations['0.00'].strokeNickname!;
+        const uId = t.uniqueId!;
+        const logFreq = t.logFreqs[0];
+        return { time, bol, uId, logFreq, track: inst }
+      })
+    return bols
+  }
+
   allDisplaySargam(inst = 0){
     const trajs = this.allTrajectories(inst);
     const starts = this.trajStartTimes(inst);
@@ -3140,6 +3163,18 @@ class Piece {
     for (let i = 0; i < this.durTot!; i += duration) {
       const chunk = displaySargam.filter(s => {
         return s.time >= i && s.time < i + duration
+      });
+      chunks.push(chunk)
+    }
+    return chunks
+  }
+
+  chunkedDisplayBols(inst = 0, duration = 30) {
+    const displayBols = this.allDisplayBols(inst);
+    const chunks: BolDisplayType[][] = [];
+    for (let i = 0; i < this.durTot!; i += duration) {
+      const chunk = displayBols.filter(b => {
+        return b.time >= i && b.time < i + duration
       });
       chunks.push(chunk)
     }

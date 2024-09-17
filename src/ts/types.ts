@@ -769,6 +769,14 @@ type SargamDisplayType = {
   pos?: number,
 };
 
+type BolDisplayType = {
+  bol: string,
+  time: number,
+  logFreq: number,
+  uId: string,
+  track: number,
+}
+
 type VowelDisplayType = {
   time: number,
   logFreq: number,
@@ -954,6 +962,7 @@ export type {
   TrajTimePoint,
   LabelEditorOptions,
   TooltipData,
-  DisplaySettings
+  DisplaySettings,
+  BolDisplayType
 };
 
