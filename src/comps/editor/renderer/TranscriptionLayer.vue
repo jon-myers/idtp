@@ -1162,6 +1162,11 @@ export default defineComponent({
         .attr('class', `sargamLabel uId${s.uId}`)
     };
 
+    const refreshBol = (b: BolDisplayType) => {
+      d3.select(`.bolLabel.uId${b.uId}`).remove();
+      renderBol(b);
+    }
+
     const renderBol = (b: BolDisplayType) => {
       const y = props.yScale(b.logFreq);
       const x = props.xScale(b.time);
@@ -2047,7 +2052,14 @@ export default defineComponent({
             action: () => {
               if (pArt.strokeNickname !== n) {
                 updatePluckNickname(traj, n);
-                resetBols();
+                const bObj: BolDisplayType = {
+                  bol: n,
+                  time: traj.startTime! + phrase.startTime!,
+                  track,
+                  uId: traj.uniqueId!,
+                  logFreq: traj.logFreqs[0]
+                }
+                refreshBol(bObj);
               }
               contextMenuClosed.value = true;
             },
@@ -2060,6 +2072,18 @@ export default defineComponent({
         contextMenuClosed.value = false;
       }
       console.log(contextMenuClosed.value)
+    };
+
+    const updatePluckNickname = (traj: Trajectory, n: StrokeNicknameType) => {
+      const dNames = ['da', 'd', 'di'];
+      const rNames = ['ra', 'r', 'ri'];
+      if (dNames.includes(n)) {
+        traj.articulations['0.00'].stroke = 'd'
+      } else if (rNames.includes(n)) {
+        traj.articulations['0.00'].stroke = 'r'
+      }
+      traj.articulations['0.00'].strokeNickname = n;
+      emit('unsavedChanges', true);
     };
 
     const addTrajToSelectedGroup = (traj: Trajectory, track: number) => {
@@ -3560,12 +3584,6 @@ export default defineComponent({
         metad.value = false;
       }
     }
-
-    
-
-    
-
-
 
     const selBoxDragStart = (e: d3.D3DragEvent<SVGSVGElement, Datum, SVGSVGElement>) => {
       if (shifted.value) {
