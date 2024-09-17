@@ -117,13 +117,21 @@
           </option>
         </select>
       </div>
-      <div class='formRow' v-if='instrumentation'>
+      <div class='formRow'>
+        <label>Number of Instruments</label>
+        <input type='number' v-model='instrumentationLength'/>
+      </div>
+      <div class='formRow tall' v-if='instrumentation'>
         <label>Instrumentation</label>
-        <select v-model='instrumentation[0]'>
-          <option v-for='inst in instruments' :key='inst'>
-            {{inst}}
-          </option>
-        </select>
+        <div class='selectCol'>
+          <div class='selectRow' v-for='(inst, i) in instrumentation' :key='i'>
+            <select v-model='instrumentation[i]'>
+              <option v-for='inst in instruments' :key='inst'>
+                {{inst}}
+              </option>
+            </select>
+          </div>
+        </div>
       </div>
       <div class='buttonRow'>
         <div class='buttonCol'>
@@ -237,7 +245,6 @@
   
 </template>
 <script lang='ts'>
-
 import { 
   getAllAEMetadata, 
   getRagaNames, 
@@ -249,15 +256,14 @@ import {
   getAllUsers
 } from '@/js/serverCalls.ts';
 import { defineComponent } from 'vue';
-
 import {
   PassedDataType,
   RecType, 
   UserType,
   AudioEventMetadataType,
-  RulesType
+  RulesType,
 } from '@/ts/types.ts'
-
+import { Instrument } from '@/ts/enums.ts'
 type NewPieceRegistrarDataType = {
   title?: string;
   transcriber?: string;
@@ -279,7 +285,7 @@ type NewPieceRegistrarDataType = {
   cloning: boolean;
   permissionTypes: string[];
   rulesTemplate: RulesType;
-  instrumentation: string[];
+  instrumentation: Instrument[];
   instruments?: string[];
   noAE: boolean;
   looseRecs: RecType[];
@@ -365,7 +371,7 @@ export default defineComponent({
           raised: false
         }
       },
-      instrumentation: ['Sitar'],
+      instrumentation: [Instrument.Sitar],
       instruments: undefined,
       noAE: false,
       looseRecs: [],
@@ -399,6 +405,20 @@ export default defineComponent({
         return true
       } else {
         return false
+      }
+    },
+    instrumentationLength: {
+      get() {
+        return this.instrumentation.length
+      },
+      set(newVal: number) {
+        if (newVal > this.instrumentation.length) {
+          for (let i = this.instrumentation.length; i < newVal; i++) {
+            this.instrumentation.push(Instrument.Sitar)
+          }
+        } else if (newVal < this.instrumentation.length) {
+          this.instrumentation = this.instrumentation.slice(0, newVal)
+        }
       }
     }
   },
@@ -739,7 +759,7 @@ export default defineComponent({
       }
     },
 
-    getInstrumentation() {
+    getInstrumentation(): Instrument[] {
       let rec: RecType;
       if (!this.noAE) {
         const recNum = Number(this.recording);
@@ -748,10 +768,10 @@ export default defineComponent({
         rec = this.recording as RecType;
       }
       const musicians = Object.keys(rec.musicians);
-      const instrumentation: string[] = [];
+      const instrumentation: Instrument[] = [];
       musicians.forEach(m => {
         if (rec.musicians[m].role === 'Soloist') {
-          instrumentation.push(rec.musicians[m].instrument!)
+          instrumentation.push(rec.musicians[m].instrument! as Instrument)
         }
       })
       return instrumentation

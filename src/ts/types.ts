@@ -563,7 +563,7 @@ type PassedDataType = {
   family_name?: string;
   given_name?: string;
   name?: string;
-  instrumentation?: string[];
+  instrumentation?: Instrument[];
   transcriber?: string;
   soloist?: string;
   soloInstrument?: string;
