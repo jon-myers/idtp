@@ -662,7 +662,6 @@ export default defineComponent({
     },
 
     instrument(newVal: Instrument) {
-      console.log('instrument changed')
       if (newVal) {
         this.trajIdxs = this.piece!.possibleTrajs[newVal];
       }

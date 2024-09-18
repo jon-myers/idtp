@@ -15,6 +15,9 @@ import {
   MultipleOptionType,
   MelographData
 } from '@/ts/types.ts';
+import {
+  Instrument
+} from '@/ts/enums.ts';
 const getPiece = async (id: string): Promise<Piece> => {
   let piece;
   const request = {
@@ -108,6 +111,7 @@ const getAudioDBEntry = async (_id: string): Promise<RecType> => {
 
 
 const savePiece = async (piece: Piece) => {
+  console.log(piece)
   const data = JSON.stringify(piece);
   let result;
   let request = {
@@ -2030,6 +2034,46 @@ const deleteSavedDisplaySettings = async (userId: string, uniqueId: string) => {
   return out
 }
 
+const getTranscriptionInstrumentation = async (transcriptionID: string) => {
+  let out: Instrument[] = [];
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const params = new URLSearchParams({ transcriptionID: transcriptionID });
+    const res = await fetch(url + 'getTranscriptionInstrumentation?' + params, request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const updateInstrumentation = async (transcriptionID: string, instrumentation: Instrument[]) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ transcriptionID, instrumentation })
+  };
+  try {
+    const res = await fetch(url + 'updateInstrumentation', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
 
 export { 
   getPiece,
@@ -2114,5 +2158,7 @@ export {
   getDefaultSettings,
   setDefaultSettings,
   updateSavedDisplaySettings,
-  deleteSavedDisplaySettings
+  deleteSavedDisplaySettings,
+  getTranscriptionInstrumentation,
+  updateInstrumentation
 }

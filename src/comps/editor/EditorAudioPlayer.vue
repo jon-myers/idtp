@@ -317,7 +317,6 @@
       :saFreq='2*saEstimate'
       :scaledWidth='transcriptionWidth'
       :scaledHeight='transcriptionHeight'
-      :xRangeInView='xRangeInView'
       :extLowOctOffset='lowOctOffset'
       :extHighOctOffset='highOctOffset'
       :backgroundColor='backgroundColor'
@@ -847,10 +846,6 @@ export default defineComponent({
       type: Number,
       required: true,
       validator: (val: number) => Number.isInteger(val)
-    },
-    xRangeInView: {
-      type: Array as PropType<number[]>,
-      required: true
     },
     lowOctOffset: {
       type: Number,

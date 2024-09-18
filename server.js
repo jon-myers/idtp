@@ -1622,6 +1622,7 @@ const runServer = async () => {
     })
 
     app.get('/getInstrumentation', async (req, res) => {
+      // from the audio recording.
       try {
         const audioID = ObjectId(JSON.parse(req.query.audioID));
         const query = { _id: audioID };
@@ -1640,6 +1641,21 @@ const runServer = async () => {
         musiciansArr.sort((a, b) => ordering[a.role] - ordering[b.role]);
         const instrumentation = musiciansArr.map(m => m.instrument);
         res.json(instrumentation);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
+    app.get('/getTranscriptionInstrumentation', async (req, res) => {
+      // from the transcription.
+      try {
+        const transcriptionID = ObjectId(req.query.transcriptionID);
+        const query = { _id: transcriptionID };
+        console.log(query)
+        const projection = { projection: { instrumentation: 1, _id: 0 } };
+        const result = await transcriptions.findOne(query, projection);
+        res.json(result.instrumentation);
       } catch (err) {
         console.error(err);
         res.status(500).send(err);
@@ -1945,6 +1961,55 @@ const runServer = async () => {
         res.status(500).send(err);
       }
     })
+
+    app.post('/updateInstrumentation', async (req, res) => {
+      try {
+        // first get the transcription included in the query under 
+        // the transcriptionID key.
+        // then, update the instrumentation field of the transcription.
+        // If the new length of instrumentation is less than the original,
+        // delete the corresponding idxs from the following fields: 
+        // instrumentation, phrases, phraseGrid, durArrayGrid, sectionCatGrid, 
+        // and sectionStartsGrid.
+
+        // If the new length of instrumentation is greater than the original,
+        // add the new instrument name to the end of the instrumentation array.
+        const { transcriptionID, instrumentation } = req.body;
+        if (!transcriptionID || !instrumentation) {
+          res.status(400).send('TranscriptionID and instrumentation are required');
+        };
+        const query = { _id: ObjectId(transcriptionID) };
+        const transcription = await transcriptions.findOne(query);
+        if (!transcription) {
+          res.status(404).send('Transcription not found');
+        }
+        const originalInstrumentation = transcription.instrumentation;
+        const originalLength = originalInstrumentation.length;
+        const newLength = instrumentation.length;
+
+        await transcriptions.updateOne(query, { $set: { instrumentation } });
+        if (newLength < originalLength) {
+          const fieldsToUpdate = [
+            'instrumentation', 
+            'phraseGrid', 
+            'durArrayGrid', 
+            'sectionCatGrid', 
+            'sectionStartsGrid'
+          ];
+          const updateOps = fieldsToUpdate.map(field => ({
+            [field]: transcription[field].slice(0, newLength)
+          }));
+          await transcriptions.updateOne(query, { 
+            $set: Object.assign({}, ...updateOps) 
+          });
+        }
+        // res.status(200).send('Instrumentation updated');
+        res.json({ status: 200, message: 'Instrumentation updated' });
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
 
     const setNoCache = res => {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');

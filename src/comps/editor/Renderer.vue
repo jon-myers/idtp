@@ -14,15 +14,15 @@
         />
       <ModeSelector
         class='modeSelector'
-        v-if='instTracks.length > 1' 
         :height='modeSelectorHeight'
         :selectedMode='editingInstIdx'
         :enum='instTracksEnum'
         :noneEnumItem='-1'
         :tooltipTexts='instTrackTexts'
         @update:selectedMode='$emit("update:editingInstIdx", $event)'
-        @showTooltip='$emit("showTooltip", $event)'
+        @showTooltip='handleShowTooltip'
         @hideTooltip='$emit("hideTooltip")'
+        @contextmenu='handleContextMenuClick'
         
         
       />
@@ -143,6 +143,17 @@
         </div>
       </div>
     </div>
+    <ContextMenu
+      :x='contextMenuX'
+      :y='contextMenuY'
+      :closed='contextMenuClosed'
+      :choices='contextMenuChoices'
+    />
+    <EditInstrumentation 
+      v-if='showEditInstrumentation'
+      :transMetadata='(piece as TransMetadataType)'
+      @close='handleUpdateInstrumentation'
+    />
   </div>
 </template>
 
@@ -167,9 +178,14 @@ import TranscriptionLayer from '@/comps/editor/renderer/TranscriptionLayer.vue';
 import ModeSelector from '@/comps/editor/renderer/ModeSelector.vue';
 import { Piece, Trajectory } from '@/js/classes.ts';
 import * as d3 from 'd3';
-import { InstrumentTrackType } from '@/ts/types.ts';
+import { 
+  InstrumentTrackType, 
+  ContextMenuOptionType,
+  TransMetadataType } from '@/ts/types.ts';
 import { EditorMode, Instrument } from '@/ts/enums.ts';
 import { BrowserInfo } from 'detect-browser';
+import ContextMenu from '@/comps/ContextMenu.vue';
+import EditInstrumentation from '@/comps/EditInstrumentation.vue';
 
 
 export default defineComponent({
@@ -180,7 +196,9 @@ export default defineComponent({
     XAxis,
     YAxis,
     TranscriptionLayer,
-    ModeSelector
+    ModeSelector,
+    ContextMenu,
+    EditInstrumentation
   },
   props: {
     yAxWidth: {
@@ -325,7 +343,32 @@ export default defineComponent({
       type: Boolean,
       required: true
     },
+    navHeight: {
+      type: Number,
+      required: true
+    },
   },
+  emits: [
+    'update:recomputeTrigger',
+    'update:editingInstIdx',
+    'showTooltip',
+    'hideTooltip',
+    'update:selectedMode',
+    'unsavedChanges',
+    'update:TrajSelStatus',
+    'update:selPhraseDivUid',
+    'update:trajTimePts',
+    'update:currentTime',
+    'update:insertPulses',
+    'open:labelEditor',
+    'update:apStretchable',
+    'update:prevMeter',
+    'update:region',
+    'zoomOutY',
+    'zoomInY',
+    'zoomOutX',
+    'zoomInX',
+  ],
   setup(props, { emit }) {
     const layersContainer = ref<HTMLDivElement | null>(null);
     const xAxisContainer = ref<HTMLDivElement | null>(null);
@@ -342,6 +385,11 @@ export default defineComponent({
     const scrollUpdateIdx = ref(0);
     const verticalScrollUpdateIdx = ref(0);
     const editorMode = EditorMode;
+    const contextMenuX = ref(0);
+    const contextMenuY = ref(0);
+    const contextMenuClosed = ref(true);
+    const contextMenuChoices = ref<ContextMenuOptionType[]>([]);
+    const showEditInstrumentation = ref(false);
 
     const availableModes = computed(() => {
       let entries = Object.entries(EditorMode);
@@ -358,8 +406,24 @@ export default defineComponent({
     });
     const instTracksEnum = computed(() => {
       const enumObj: Record<string, number> = {};
-      props.instTracks.forEach((instTrack, i) => {
-        enumObj[instTrack.inst] = i;
+      const duplicateNames: Instrument[] = [];
+      props.instTracks.forEach(instTrack => {
+        if (!duplicateNames.includes(instTrack.inst)) {
+          duplicateNames.push(instTrack.inst);
+        }
+      });
+      const allNames: string[] = [...props.instTracks.map(it => it.inst)];
+      duplicateNames.forEach(n => {
+        let ctr = 1;
+        allNames.forEach((name, nIdx) => {
+          if (name === n) {
+            allNames[nIdx] = `${name}_${ctr}`;
+          }
+          ctr += 1;
+        }) 
+      })
+      props.instTracks.forEach((_, i) => {
+        enumObj[allNames[i]] = i;
       });
       enumObj['None'] = -1;
       return enumObj;
@@ -417,13 +481,6 @@ export default defineComponent({
       const end = yScale.value!.invert(scrollTop + clientHeight);
       return [start, end];
     });
-
-    // watch(scrollingContainer, () => {
-    //   console.log('scrollingContainer changed');
-    // }, {deep: true})
-
-
-
     const zoomOutY = () => emit('zoomOutY');
     const zoomInY = () => emit('zoomInY');
     const zoomOutX = () =>  emit('zoomOutX');
@@ -521,9 +578,41 @@ export default defineComponent({
       xAxisContainer.value!.scrollLeft = scrollingContainer.value!.scrollLeft;
       yAxisContainer.value!.scrollTop = scrollingContainer.value!.scrollTop;
     }, 16);
-    
 
+    const handleContextMenuClick = (e: MouseEvent) => {
+      e.preventDefault();
+      emit('hideTooltip')
+      contextMenuX.value = e.x;
+      contextMenuY.value = e.y - props.navHeight;
+      contextMenuClosed.value = false;
+      contextMenuChoices.value = [{
+        text: 'Edit Instrumentation',
+        action: () => {
+          // openInstrumentationEditor();
+          showEditInstrumentation.value = true;
+          contextMenuClosed.value = true;
+        },
+        enabled: true
+      }]
+    };
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        contextMenuClosed.value = true;
+        showEditInstrumentation.value = false;
+      }
+    };
+    const handleShowTooltip = (e: MouseEvent) => {
+      if (contextMenuClosed.value) emit('showTooltip', e);
+    };
+    const handleUpdateInstrumentation = () => {
+      showEditInstrumentation.value = false;
+      window.location.reload();
+    };
     onMounted(async () => {
+      window.addEventListener('keydown', handleKeydown);
+      window.addEventListener('click', () => {
+        contextMenuClosed.value = true;
+      })
       emit('update:recomputeTrigger');
       updateClientWidth();
       scrollingContainer.value?.addEventListener('click', (e) => {
@@ -533,29 +622,7 @@ export default defineComponent({
         updateAxesScroll();
         scrollUpdateIdx.value += 1;
         verticalScrollUpdateIdx.value += 1;
-        // if (!isXScrolling && !isYScrolling) {
-        //   isXScrolling = true;
-        //   isYScrolling = true;
-        //   xAxisContainer.value!.scrollLeft = scrollingContainer.value!.scrollLeft;
-        //   yAxisContainer.value!.scrollTop = scrollingContainer.value!.scrollTop;
-        //   isXScrolling = false;
-        //   isYScrolling = false
-        // }
       });
-      // xAxisContainer.value?.addEventListener('scroll', () => {
-      //   if (!isXScrolling) {
-      //     isXScrolling = true;
-      //     scrollingContainer.value!.scrollLeft = xAxisContainer.value!.scrollLeft
-      //     isXScrolling = false;
-      //   }
-      // });
-      // yAxisContainer.value?.addEventListener('scroll', () => {
-      //   if (!isYScrolling) {
-      //     isYScrolling = true;
-      //     scrollingContainer.value!.scrollTop = yAxisContainer.value!.scrollTop
-      //     isYScrolling = false;
-      //   }
-      // });
       window.addEventListener('resize', updateClientWidth);
       const durTot = props.piece.durTot;
       if (durTot === undefined) {
@@ -577,6 +644,10 @@ export default defineComponent({
 
     onBeforeUnmount(() => {
       window.removeEventListener('resize', updateClientWidth);
+      window.removeEventListener('keydown', handleKeydown);
+      window.removeEventListener('click', () => {
+        contextMenuClosed.value = true;
+      })
     });
     return {
       scrollingContainer,
@@ -610,7 +681,15 @@ export default defineComponent({
       editorModeTexts,
       instTrackTexts,
       verticalMoveGraph,
-      updateRegion
+      updateRegion,
+      handleContextMenuClick,
+      contextMenuX,
+      contextMenuY,
+      contextMenuClosed,
+      contextMenuChoices,
+      handleShowTooltip,
+      showEditInstrumentation,
+      handleUpdateInstrumentation
     }
   }
   

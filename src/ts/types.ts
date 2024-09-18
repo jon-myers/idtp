@@ -57,23 +57,21 @@ type ContextMenuOptionType = {
 
 type TransMetadataType = {
   title: string,
-  audioID: string,
-  dateCreated: string,
-  dateModified: string,
+  audioID: string | undefined,
+  dateCreated: Date,
+  dateModified: Date,
   durTot: number,
   family_name: string,
   given_name: string,
-  instrumentation: string[],
+  instrumentation: Instrument[],
   location: string,
   name: string,
   permissions: string,
-  performers: string[],
   raga: {
     name: string,
     fundamental: number,
     ratios: number[]
   },
-  transcriber: string,
   userID: string,
   _id: string,
   explicitPermissions: {
@@ -796,7 +794,7 @@ type ConsonantDisplayType = {
 }
 
 type InstrumentTrackType = {
-  inst: string,
+  inst: Instrument,
   idx: number,
   displaying: boolean,
   sounding: boolean,

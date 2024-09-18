@@ -40,11 +40,11 @@
       :selectedMeterColor='selMeterColor'
       :playheadColor='playheadColor'
       :showBols='showBols'
+      :navHeight='navHeight'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
       @zoomOutX='zoomOutX'
-      @xRangeInView='(xRange: [number, number]) => xRangeInView = xRange'
       @update:selectedMode='(mode: EditorMode) => selectedMode = mode'
       @unsavedChanges='unsavedChanges = $event'
       @update:TrajSelStatus='trajSelStatus = $event'
@@ -251,7 +251,6 @@
   :insertPulses='insertPulses'
   :transcriptionWidth='transcriptionWidth'
   :transcriptionHeight='transcriptionHeight'
-  :xRangeInView='xRangeInView'
   :saEstimate='audioDBDoc?.saEstimate'
   :id='audioDBDoc?._id'
   :lowOctOffset='lowOctOffset'
@@ -630,7 +629,6 @@ type EditorDataType = {
   throttledRedraw: (() => void) | undefined,
   transcriptionWidth: number,
   transcriptionHeight: number,
-  xRangeInView: [number, number],
   lowOctOffset: number,
   highOctOffset: number,
   showSpectrogram: boolean,
@@ -818,7 +816,6 @@ export default defineComponent({
       throttledRedraw: undefined,
       transcriptionWidth: 0,
       transcriptionHeight: 0,
-      xRangeInView: [0, 0],
       lowOctOffset: 1.1,
       highOctOffset: 2.1,
       showSpectrogram: false,
@@ -974,7 +971,7 @@ export default defineComponent({
       const colors = ['#204580', '#802030', '#532080', '#428020'];
       const selColors = ['#4089ff', '#ff4060', '#a640ff', '#83ff40']
       this.piece.instrumentation.forEach((inst, idx) => {
-        if (idx > 3) {
+        if (idx > 4) {
           throw 'IDTP logger: Too many instruments in instrumentation array.'
         }
         this.instTracks.push({
@@ -1402,17 +1399,6 @@ export default defineComponent({
       this.transcriptionWidth = Math.round(this.transcriptionWidth / 1.1);
     },
 
-    getXRangeInView(): [number, number] {
-
-      const renderer = this.$refs.renderer as typeof Renderer;
-      const el = renderer.$el as HTMLElement;
-      const width = el.clientWidth;
-      const pxlLeft = el.scrollLeft;
-      const pxlRight = pxlLeft + width;
-      const xLeft = pxlLeft / el.scrollWidth;
-      const xRight = pxlRight / el.scrollWidth;
-      return [xLeft, xRight] 
-    },
 
     updateMeterVisibility() {
       if (!this.showMeter) {
@@ -4740,7 +4726,10 @@ export default defineComponent({
           const chikariEntries = chikariKeys.map(key => phrase.chikaris[key]);
           const chikariObj: { [key: string]: Chikari } = {};
           chikariKeys.forEach((key, i) => {
-            chikariObj[key] = new Chikari(chikariEntries[i])
+            // console.log(chikariEntries[i])
+            const entry = chikariEntries[i];
+            entry.pitches = entry.pitches.map(p => new Pitch(p))
+            chikariObj[key] = new Chikari(entry)
           })
           phrase.chikaris = chikariObj;
           if (piece.instrumentation) {
