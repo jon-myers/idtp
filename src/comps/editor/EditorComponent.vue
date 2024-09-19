@@ -42,6 +42,7 @@
       :showBols='showBols'
       :navHeight='navHeight'
       :unsavedChanges='unsavedChanges'
+      :loop='loop'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'

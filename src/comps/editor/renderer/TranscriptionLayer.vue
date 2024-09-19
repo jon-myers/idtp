@@ -222,6 +222,10 @@ export default defineComponent({
       type: Boolean,
       required: true
     },
+    loop: {
+      type: Boolean,
+      required: true
+    },
   },
   emits: [
     'update:TrajSelStatus',
@@ -513,7 +517,7 @@ export default defineComponent({
           regionEndPxl.value = props.xScale(regionEndX.value);
         }
         resetTranscription();
-        // updatePlayheadPosition();
+        updatePlayheadPosition(props.currentTime);
 
       }
     });
@@ -853,20 +857,63 @@ export default defineComponent({
     let playheadAnimation: Animation | undefined = undefined;
 
     const startPlayingTransition = () => {
-      const duration = props.piece.durTot! - props.currentTime; 
-      const endPxl = props.xScale(props.piece.durTot!);
-      const startPxl = props.xScale(props.currentTime);
-      if (playheadAnimation) {
-        playheadAnimation.cancel();
+      let startPxl = props.xScale(props.currentTime);
+      if (props.loop && regionEndPxl.value !== undefined && startPxl < regionEndPxl.value) {
+        if (startPxl > regionStartPxl.value!) {
+          emit('update:currentTime', regionStartX.value!);
+          nextTick(() => {
+            startPxl = regionStartPxl.value!;
+            if (playheadAnimation) playheadAnimation.cancel();
+            playheadAnimation = playhead.value!.animate([
+              { transform: `translateX(${startPxl}px)` },
+              { transform: `translateX(${regionEndPxl.value}px)` }
+            ], {
+              duration: (regionEndX.value! - regionStartX.value!) * 1000,
+              easing: 'linear',
+              fill: 'forwards',
+              iterations: Infinity
+            });
+          })
+        } else {
+          if (playheadAnimation) playheadAnimation.cancel();
+          playheadAnimation = playhead.value!.animate([
+            { transform: `translateX(${startPxl}px)` },
+            { transform: `translateX(${regionEndPxl.value}px)` }
+          ], {
+            duration: (regionEndX.value! - props.currentTime) * 1000,
+            easing: 'linear',
+            fill: 'forwards'
+          });
+          playheadAnimation.onfinish = () => {
+            if (playheadAnimation) playheadAnimation.cancel();
+            playheadAnimation = playhead.value!.animate([
+              { transform: `translateX(${regionStartPxl.value}px)` },
+              { transform: `translateX(${regionEndPxl.value}px)` }
+            ], {
+              duration: (regionEndX.value! - regionStartX.value!) * 1000,
+              easing: 'linear',
+              fill: 'forwards',
+              iterations: Infinity
+            });
+          }
+        }
+
+      } else {
+        const duration = props.piece.durTot! - props.currentTime; 
+        const endPxl = props.xScale(props.piece.durTot!);
+        if (playheadAnimation) {
+          playheadAnimation.cancel();
+        }
+        playheadAnimation = playhead.value?.animate([
+          { transform: `translateX(${startPxl}px)` },
+          { transform: `translateX(${endPxl}px)` }
+        ], {
+          duration: duration * 1000,
+          easing: 'linear',
+          fill: 'forwards'
+        });
+
       }
-      playheadAnimation = playhead.value?.animate([
-        { transform: `translateX(${startPxl}px)` },
-        { transform: `translateX(${endPxl}px)` }
-      ], {
-        duration: duration * 1000,
-        easing: 'linear',
-        fill: 'forwards'
-      });
       
     };
 

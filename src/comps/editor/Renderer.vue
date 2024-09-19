@@ -123,6 +123,7 @@
               :selectedMeterColor='selectedMeterColor'
               :playheadColor='playheadColor'
               :showBols='showBols'
+              :loop='loop'
               @update:prevMeter='$emit("update:prevMeter", $event)'
               @update:selectedMode='$emit("update:selectedMode", $event)'
               @unsavedChanges='$emit("unsavedChanges", $event)'
@@ -349,6 +350,10 @@ export default defineComponent({
       required: true
     },
     unsavedChanges: {
+      type: Boolean,
+      required: true
+    },
+    loop: {
       type: Boolean,
       required: true
     },
