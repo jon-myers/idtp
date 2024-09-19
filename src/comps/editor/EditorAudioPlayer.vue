@@ -2494,6 +2494,11 @@ export default defineComponent({
           })
           this.klattNode.extGain!.setValueAtTime(curGain, when);
           this.klattNode.extGain!.linearRampToValueAtTime(0, when + 0.01);
+          this.klattMiddleGain?.gain.cancelScheduledValues(when);
+          const kmCurGain = this.klattMiddleGain!.gain.value;
+          this.klattMiddleGain!.gain.setValueAtTime(kmCurGain, when);
+          this.klattMiddleGain!.gain.linearRampToValueAtTime(0, when + 0.01);
+
         } else {
           this.vocalNode!.frequency.cancelScheduledValues(when);
           this.vocalGainNode!.gain.cancelScheduledValues(when);
