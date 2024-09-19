@@ -124,6 +124,7 @@
               :playheadColor='playheadColor'
               :showBols='showBols'
               :loop='loop'
+              :stretchedFactor='stretchedFactor'
               @update:prevMeter='$emit("update:prevMeter", $event)'
               @update:selectedMode='$emit("update:selectedMode", $event)'
               @unsavedChanges='$emit("unsavedChanges", $event)'
@@ -139,6 +140,7 @@
               @verticalMoveGraph='verticalMoveGraph'
               @update:apStretchable='$emit("update:apStretchable", $event)'
               @update:region='$emit("update:region")'
+              @cancelRegionSpeed='$emit("cancelRegionSpeed")'
             />
           />
         </div>
@@ -357,6 +359,10 @@ export default defineComponent({
       type: Boolean,
       required: true
     },
+    stretchedFactor: {
+      type: Number,
+      required: true
+    },
   },
   emits: [
     'update:recomputeTrigger',
@@ -378,6 +384,7 @@ export default defineComponent({
     'zoomInY',
     'zoomOutX',
     'zoomInX',
+    'cancelRegionSpeed'
   ],
   setup(props, { emit }) {
     const layersContainer = ref<HTMLDivElement | null>(null);

@@ -190,7 +190,7 @@
           v-model="regionSpeed"
           orient='vertical'
           :disabled='playing || !regionSpeedOn || !stretchable'
-          @mouseup='handleregionSpeedChange'
+          @mouseup='handleRegionSpeedChange'
           />
       </div>
 
@@ -1481,6 +1481,9 @@ export default defineComponent({
             );
             this.stretchedBuffer.copyToChannel(e.data.left, 0);
             this.stretchedBuffer.copyToChannel(e.data.right, 1);
+            const initDur = this.regionEndTime! - this.regionStartTime!;
+            const factor = initDur / this.stretchedBuffer!.duration;
+            this.$emit('update:stretchedFactor', factor)
           }
         }
       }
@@ -1490,11 +1493,12 @@ export default defineComponent({
       this.stretchWorker = new Worker(stretcherURL);
     },
 
-    handleregionSpeedChange() {
+    handleRegionSpeedChange() {
       this.stretch(2 ** this.regionSpeed);
     },
 
     toggleRegionSpeed() {
+      console.log('toggling region speed')
       if (this.regionSpeedOn) {
         this.stretch(2 ** this.regionSpeed);
         const time = this.regionStartTime!;
@@ -1525,6 +1529,7 @@ export default defineComponent({
 
       } else {
         this.regionSpeed = 0;
+        this.$emit('update:stretchedFactor', 1)
         this.stretchedBuffer = undefined;
         this.synthGainDisabled = false;
         this.chikariGainDisabled = false;
@@ -1548,6 +1553,7 @@ export default defineComponent({
     updateStretchBuf() {
       const start = this.regionStartTime!;
       const end = this.regionEndTime!;
+      console.log('start: ', start, 'end: ', end)
       const startSample = Math.round(start * this.ac!.sampleRate);
       const endSample = Math.round(end * this.ac!.sampleRate);
       // make new audio buffer
@@ -2181,6 +2187,7 @@ export default defineComponent({
 
     playStretched() {
       const offset = (this.parentCurrentTime - this.regionStartTime!);
+      console.log('playing stretched, offset: ', offset)
       const scaledOffset = offset / (2 ** this.regionSpeed);
       this.sourceNode = this.ac!.createBufferSource();
       this.sourceNode.connect(this.gainNode!);
@@ -2188,11 +2195,16 @@ export default defineComponent({
       this.sourceNode.loop = this.loop;
       this.sourceNode.start(this.now(), scaledOffset);
       this.sourceNode.addEventListener('ended', () => {
+        console.log('stretched ended')
         this.pauseStretched(this.playing); // this is a fancy way of saying that 
         // if the sourceNode has ended naturally (without the user pausing it),
         // then it should return to the beginning, otehrwise, stay where it is.
         // this.$emit('stopStretchedAnimationEmit')
-        this.$emit('currentTimeEmit', this.getStretchedCurTime());
+        if (this.loop) {
+          this.$emit('currentTimeEmit', this.regionStartTime);
+        } else {
+          this.$emit('currentTimeEmit', this.getStretchedCurTime());
+        }
       })
       this.playing = true;
       this.pausedAt = 0;
@@ -2200,6 +2212,7 @@ export default defineComponent({
     },
 
     pauseStretched(returnToStart=false) {
+      console.log('pausing stretched')
       if (this.regionEndTime === undefined) {
         throw new Error('regionEndTime is undefined')
       }
@@ -2418,19 +2431,10 @@ export default defineComponent({
       pbi.style.width = this.progress * totWidth + 'px';
     },
     loopPlayAnimation(timestamp: number) {
-      // if (!this.lastFrameTime) {
-      //   this.lastFrameTime = timestamp;
-      // }
-      // const interval = 1000 / 60;
-      // const elapsed = timestamp - this.lastFrameTime;
-      // if (elapsed > interval) {
-        // console.log(elapsed, interval)
-        // this.lastFrameTime = timestamp - (elapsed % interval);
         this.updateProgress();
         this.updateFormattedCurrentTime();
         this.updateFormattedTimeLeft();
         this.$emit('currentTimeEmit', this.getCurTime());
-      // }
       this.requestId = undefined;
       this.startPlayCursorAnimation();
     },
@@ -2446,20 +2450,16 @@ export default defineComponent({
           this.playStretched();
           const playImg = this.$refs.playImg as HTMLImageElement;
           playImg.classList.add('playing');
-          // this.$emit('startStretchedAnimationEmit', this.getStretchedCurTime())
         } else {
           this.pauseStretched();
           const playImg = this.$refs.playImg as HTMLImageElement;
           playImg.classList.remove('playing');
-          // this.$emit('stopStretchedAnimationEmit')
         }
       } else {
         if (!this.playing) {
           this.play();
           const playImg = this.$refs.playImg as HTMLImageElement;
           playImg.classList.add('playing');
-          // this.$emit('startAnimationFrameEmit')
-          // this.$emit('setAnimationStartEmit', this.getCurTime())
           this.startPlayCursorAnimation();
           this.playTrajs(this.getCurTime(), this.now());
           if (this.string) {
@@ -2470,7 +2470,6 @@ export default defineComponent({
           this.pause();
           const playImg = this.$refs.playImg as HTMLImageElement;
           playImg.classList.remove('playing');
-          // this.$emit('stopAnimationFrameEmit')
           this.stopPlayCursorAnimation();
           this.cancelPlayTrajs();
           if (this.string) {

@@ -43,6 +43,7 @@
       :navHeight='navHeight'
       :unsavedChanges='unsavedChanges'
       :loop='loop'
+      :stretchedFactor='stretchedFactor'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
@@ -62,6 +63,7 @@
       @hideTooltip='hideTooltip'
       @update:apStretchable='updateApStretchable'
       @update:region='regionIdx += 1'
+      @cancelRegionSpeed='cancelRegionSpeed'
       />
     <div class='controlBox'>
       <div class='scrollingControlBox'>
@@ -294,6 +296,7 @@
   @showTooltip='showTooltip'
   @hideTooltip='hideTooltip'
   @update:playheadColor='playheadColor = $event'
+  @update:stretchedFactor='stretchedFactor = $event'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -657,6 +660,7 @@ type EditorDataType = {
   hoverTimeout: number | undefined,
   regionIdx: number,
   playheadColor: string,
+  stretchedFactor: number,
 }
 
 // DebouncedFunc<(newSlope: number) => void>
@@ -843,7 +847,8 @@ export default defineComponent({
       tooltipText: '',
       hoverTimeout: undefined,
       regionIdx: 0,
-      playheadColor: '#000000'
+      playheadColor: '#000000',
+      stretchedFactor: 1,
     }
   },
   components: {
@@ -1226,9 +1231,18 @@ export default defineComponent({
 
   methods: {
 
+    cancelRegionSpeed() {
+      const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
+      if (ap.regionSpeedOn) {
+        ap.regionSpeedOn = false;
+        ap.toggleRegionSpeed()
+      };
+    },
+
     updateApStretchable(stretchable: boolean) {
       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
       ap.stretchable = stretchable;
+      ap.updateStretchBuf();
     },
 
     showTooltip(data: TooltipData) {

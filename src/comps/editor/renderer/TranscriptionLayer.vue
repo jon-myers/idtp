@@ -226,6 +226,10 @@ export default defineComponent({
       type: Boolean,
       required: true
     },
+    stretchedFactor: {
+      type: Number,
+      required: true
+    },
   },
   emits: [
     'update:TrajSelStatus',
@@ -242,7 +246,8 @@ export default defineComponent({
     'update:trajTimePts',
     'verticalMoveGraph',
     'update:apStretchable',
-    'update:region'
+    'update:region',
+    'cancelRegionSpeed',
   ],
   setup(props, { emit }) {
     const tranContainer = ref<HTMLDivElement | null>(null);
@@ -735,7 +740,7 @@ export default defineComponent({
           horizontalMoveGraph(0.85)
         }
       } else {
-        // updatePlayheadPosition();
+        updatePlayheadPosition(props.currentTime);
       }
     });
     watch(() => props.selectedMeterColor, () => {
@@ -868,7 +873,7 @@ export default defineComponent({
               { transform: `translateX(${startPxl}px)` },
               { transform: `translateX(${regionEndPxl.value}px)` }
             ], {
-              duration: (regionEndX.value! - regionStartX.value!) * 1000,
+              duration: (regionEndX.value! - regionStartX.value!) * 1000 / props.stretchedFactor,
               easing: 'linear',
               fill: 'forwards',
               iterations: Infinity
@@ -880,7 +885,7 @@ export default defineComponent({
             { transform: `translateX(${startPxl}px)` },
             { transform: `translateX(${regionEndPxl.value}px)` }
           ], {
-            duration: (regionEndX.value! - props.currentTime) * 1000,
+            duration: (regionEndX.value! - props.currentTime) * 1000 / props.stretchedFactor,
             easing: 'linear',
             fill: 'forwards'
           });
@@ -890,7 +895,7 @@ export default defineComponent({
               { transform: `translateX(${regionStartPxl.value}px)` },
               { transform: `translateX(${regionEndPxl.value}px)` }
             ], {
-              duration: (regionEndX.value! - regionStartX.value!) * 1000,
+              duration: (regionEndX.value! - regionStartX.value!) * 1000 / props.stretchedFactor,
               easing: 'linear',
               fill: 'forwards',
               iterations: Infinity
@@ -908,7 +913,7 @@ export default defineComponent({
           { transform: `translateX(${startPxl}px)` },
           { transform: `translateX(${endPxl}px)` }
         ], {
-          duration: duration * 1000,
+          duration: duration * 1000 / props.stretchedFactor,
           easing: 'linear',
           fill: 'forwards'
         });
@@ -918,10 +923,15 @@ export default defineComponent({
     };
 
     const stopPlayingTransition = () => {
-      const currentPxl = props.xScale(props.currentTime);
+      // console.log('stopping playhead transition');
       playheadAnimation?.cancel();
       playheadAnimation = undefined;
-      playhead.value!.style.transform = `translateX(${currentPxl}px)`;
+      nextTick(() => {
+        const currentPxl = props.xScale(props.currentTime);
+        // console.log('current time: ', props.currentTime);
+
+        playhead.value!.style.transform = `translateX(${currentPxl}px)`;
+      })
 
     };
 
@@ -3221,6 +3231,7 @@ export default defineComponent({
         d3.selectAll('.regionEnd').remove();
         regionStartX.value = undefined;
         regionEndX.value = undefined;
+        emit('cancelRegionSpeed')
       }
     }
 
@@ -3753,8 +3764,8 @@ export default defineComponent({
       if (regionStartPxl.value === undefined || regionEndPxl.value === undefined) {
         throw new Error('Region start or end is undefined');
       }
-      emit('update:apStretchable', true);
       emit('update:region')
+      nextTick(() => emit('update:apStretchable', true));
       const regionLine = d3.line()([
         [0, 0],
         [0, props.height]
