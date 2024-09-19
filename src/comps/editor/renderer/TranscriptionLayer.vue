@@ -6,9 +6,9 @@
         ref='playhead'
         x='0'
         y='0'
-        width='1'
+        width='2'
         :height='height'
-        fill='grey'
+        :stroke='playheadColor'
       ></rect>
     </svg>
     <div class='emptyOverlay' ref='emptyOverlay'></div>
@@ -512,6 +512,8 @@ export default defineComponent({
           regionEndPxl.value = props.xScale(regionEndX.value);
         }
         resetTranscription();
+        updatePlayheadPosition();
+
       }
     });
     watch(() => props.showSargam, () => {
@@ -851,10 +853,13 @@ export default defineComponent({
     const updatePlayheadPosition = () => {
       if (!props.playing) {
         currentPlayheadX.value = targetPlayheadX.value;
-        playhead.value!.style.x = `${currentPlayheadX.value}px`;
+        // playhead.value!.style.x = `${currentPlayheadX.value}px`;
+        playhead.value!.style.transform = `translateX(${currentPlayheadX.value}px)`;
+
       } else {
         currentPlayheadX.value = smooth(currentPlayheadX.value, targetPlayheadX.value, 0.2);
-        playhead.value!.style.x = `${currentPlayheadX.value}px`;
+        // playhead.value!.style.x = `${currentPlayheadX.value}px`;
+        playhead.value!.style.transform = `translateX(${currentPlayheadX.value}px)`;
         requestAnimationFrame(updatePlayheadPosition)
       }
     }

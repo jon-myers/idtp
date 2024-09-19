@@ -842,7 +842,7 @@ export default defineComponent({
       tooltipText: '',
       hoverTimeout: undefined,
       regionIdx: 0,
-      playheadColor: '#808080'
+      playheadColor: '#000000'
     }
   },
   components: {
