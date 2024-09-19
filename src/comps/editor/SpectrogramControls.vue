@@ -697,7 +697,6 @@ export default defineComponent({
     }
 
     const loadSetting = () => {
-      console.log('loading settings')
       const s = selectedSetting.value;
       bgColor.value = s.colors.background;
       axColor.value = s.colors.axes;

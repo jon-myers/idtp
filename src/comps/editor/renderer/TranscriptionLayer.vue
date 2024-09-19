@@ -4,6 +4,7 @@
       <!-- this rect needs to stay because of how things are inserted -->
       <rect
         ref='playhead'
+        class='playhead'
         x='0'
         y='0'
         width='2'
@@ -512,7 +513,7 @@ export default defineComponent({
           regionEndPxl.value = props.xScale(regionEndX.value);
         }
         resetTranscription();
-        updatePlayheadPosition();
+        // updatePlayheadPosition();
 
       }
     });
@@ -730,7 +731,7 @@ export default defineComponent({
           horizontalMoveGraph(0.85)
         }
       } else {
-        updatePlayheadPosition();
+        // updatePlayheadPosition();
       }
     });
     watch(() => props.selectedMeterColor, () => {
@@ -830,7 +831,7 @@ export default defineComponent({
     });
     watch(() => props.playheadColor, newVal => {
       d3.selectAll('.playhead')
-        .attr('fill', newVal)
+        .attr('stroke', newVal)
     });
     watch(() => props.showBols, newVal => {
       d3.selectAll('.bolsG')
@@ -838,59 +839,70 @@ export default defineComponent({
     });
     watch(() => props.playing, newVal => {
       if (newVal) {
-        updatePlayheadPosition();
+        // updatePlayheadPosition();
+        startPlayingTransition();
+      } else {
+        stopPlayingTransition();
       }
     });
-
-    const startPlaying = () => {
-      updatePlayheadPosition();
-    }
 
     const smooth = (current: number, target: number, smoothing: number = 0.5) => {
       return current + (target - current) * smoothing;
     }
 
-    const updatePlayheadPosition = () => {
+    let playheadAnimation: Animation | undefined = undefined;
+
+    const startPlayingTransition = () => {
+      const duration = props.piece.durTot! - props.currentTime; 
+      const endPxl = props.xScale(props.piece.durTot!);
+      const startPxl = props.xScale(props.currentTime);
+      if (playheadAnimation) {
+        playheadAnimation.cancel();
+      }
+      playheadAnimation = playhead.value?.animate([
+        { transform: `translateX(${startPxl}px)` },
+        { transform: `translateX(${endPxl}px)` }
+      ], {
+        duration: duration * 1000,
+        easing: 'linear',
+        fill: 'forwards'
+      });
+      
+    };
+
+    const stopPlayingTransition = () => {
+      const currentPxl = props.xScale(props.currentTime);
+      playheadAnimation?.cancel();
+      playheadAnimation = undefined;
+      playhead.value!.style.transform = `translateX(${currentPxl}px)`;
+
+    };
+
+    const updatePlayheadPosition = (time: number) => {
       if (!props.playing) {
-        currentPlayheadX.value = targetPlayheadX.value;
-        // playhead.value!.style.x = `${currentPlayheadX.value}px`;
-        playhead.value!.style.transform = `translateX(${currentPlayheadX.value}px)`;
+        const pxlX = props.xScale(time);
+        playhead.value!.style.transform = `translateX(${pxlX}px)`;
 
       } else {
-        currentPlayheadX.value = smooth(currentPlayheadX.value, targetPlayheadX.value, 0.2);
-        // playhead.value!.style.x = `${currentPlayheadX.value}px`;
-        playhead.value!.style.transform = `translateX(${currentPlayheadX.value}px)`;
-        requestAnimationFrame(updatePlayheadPosition)
+        const startPxl = props.xScale(time);
+        const endPxl = props.xScale(props.piece.durTot!);
+        if (playheadAnimation) {
+          playheadAnimation.cancel();
+        }
+        playheadAnimation = playhead.value?.animate([
+          { transform: `translateX(${startPxl}px)` },
+          { transform: `translateX(${endPxl}px)` }
+        ], {
+          duration: (props.piece.durTot! - time) * 1000,
+          easing: 'linear',
+          fill: 'forwards'
+        });
+        playheadAnimation!.onfinish = () => {
+          playheadAnimation = undefined;
+        }
       }
     }
-    
-    
- 
-    // const updatePlayhead = () => {
-    //   const svg = d3.select(tranSvg.value);
-    //   svg.append('rect')
-    //     .classed('playhead', true)
-    //     .attr('x', targetPlayheadX.value)
-    //     .attr('y', 0)
-    //     .attr('width', 3)
-    //     .attr('height', props.height)
-    //     .attr('fill', props.playheadColor)
-    //     .attr('class', 'playhead')
-    //     .attr('id', `playheadLine${playheadLineIdx}`)
-    //     .style('opacity', 0)
-    //     .transition() 
-    //     .duration(30)
-    //     .style('opacity', 1)
-
-    //   d3.selectAll(`#playheadLine${playheadLineIdx - 1}`)
-    //     .transition()
-    //     .duration(60)
-    //     .style('opacity', 0)
-    //     .remove()
-    //   playheadLineIdx++;
-    // } 
-
-
+  
     const addRegionG = () => {
       if (tranSvg.value) {
         const svg = d3.select(tranSvg.value);
@@ -3692,7 +3704,6 @@ export default defineComponent({
 
     const setUpRegion = () => {
       if (regionStartPxl.value === undefined || regionEndPxl.value === undefined) {
-        console.log(regionStartPxl.value, regionEndPxl.value);
         throw new Error('Region start or end is undefined');
       }
       emit('update:apStretchable', true);
@@ -3971,6 +3982,8 @@ export default defineComponent({
     const handleDoubleClick = (e: MouseEvent) => {
       let time = props.xScale.invert(e.offsetX);
       emit('update:currentTime', time);
+
+      updatePlayheadPosition(time);
 
     }
 

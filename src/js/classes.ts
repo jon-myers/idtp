@@ -2483,7 +2483,6 @@ class Piece {
     }
 
     this.sectionStartsGrid.forEach((ss, ssIdx) => {
-      console.log(ssIdx, ss, this.sectionCatGrid)
       if (ss.length > this.sectionCatGrid[ssIdx].length) {
         const dif = ss.length - this.sectionCatGrid[ssIdx].length;
         for (let i = 0; i < dif; i++) {

@@ -150,13 +150,12 @@ export default defineComponent({
       if (regionStartPxl.value === undefined) {
         return
       }
-      if (e.x < regionStartPxl.value) {
+      if (e.offsetX < regionStartPxl.value) {
         regionEndPxl.value = regionStartPxl.value;
         regionStartPxl.value = e.offsetX;
       } else {
         regionEndPxl.value = e.offsetX;
       }
-      console.log('about to update region')
       emit('update:region', [regionStartPxl.value, regionEndPxl.value]);
       regionStartPxl.value = undefined;
       regionEndPxl.value = undefined;
@@ -188,7 +187,9 @@ export default defineComponent({
       xAxisContainer,
       dynamicStyle,
       axSvg,
-      integerTicks
+      integerTicks,
+      regionStartPxl,
+      regionEndPxl
     }
   }
 })
