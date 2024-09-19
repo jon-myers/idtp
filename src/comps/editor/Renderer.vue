@@ -152,6 +152,7 @@
     <EditInstrumentation 
       v-if='showEditInstrumentation'
       :transMetadata='(piece as TransMetadataType)'
+      :unsavedChanges='unsavedChanges'
       @close='handleUpdateInstrumentation'
     />
   </div>
@@ -345,6 +346,10 @@ export default defineComponent({
     },
     navHeight: {
       type: Number,
+      required: true
+    },
+    unsavedChanges: {
+      type: Boolean,
       required: true
     },
   },

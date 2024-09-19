@@ -2408,20 +2408,11 @@ class Piece {
     this.sectionStartsGrid.forEach((ss, i) => {
       ss.sort((a, b) => a - b);
     })
-    // if (sectionCategorization !== undefined) {
-    //   this.sectionCategorization = sectionCategorization;
-    //   this.sectionCategorization.forEach(this.cleanUpSectionCategorization)
-    // } else {
-    //   this.sectionCategorization = this.sectionStarts.map(() => {
-    //     return initSecCategorization()
-    //   })
-    // }
     if (sectionCatGrid !== undefined) {
       this.sectionCatGrid = sectionCatGrid;
       for (let i = 1; i < instrumentation.length; i++) {
         const ss = this.sectionStartsGrid[i];
         this.sectionCatGrid.push(ss.map(() => initSecCategorization()))
-        this.sectionCatGrid.length = instrumentation.length;
       }
     } else {
       this.sectionCatGrid = this.sectionStartsGrid.map((ss, ssIdx) => {
@@ -2492,6 +2483,7 @@ class Piece {
     }
 
     this.sectionStartsGrid.forEach((ss, ssIdx) => {
+      console.log(ssIdx, ss, this.sectionCatGrid)
       if (ss.length > this.sectionCatGrid[ssIdx].length) {
         const dif = ss.length - this.sectionCatGrid[ssIdx].length;
         for (let i = 0; i < dif; i++) {

@@ -24,18 +24,24 @@
           </div>
         </div>
       </div>
-      <div class='formRow' v-if='destructive || !permissible'>
+      <div class='formRow' v-if='destructive || !permissible || unsavedChanges'>
         <div class='warning' v-if='destructive'>
         {{ warningText }}
         </div>
         <div class='warning' v-if='!permissible'>
           {{ permissionText }}
         </div>
+        <div class='warning' v-if='unsavedChanges'>
+          Warning: You have unsaved changes. Save before updating instrumentation.
+        </div>
       </div>
       <div class='buttonRow'>
         <button 
           @click='submitNewInstrumentation'
-          :disabled='!altered || instrumentation.some(i => i === undefined)'
+          :disabled='
+            !altered || 
+            instrumentation.some(i => i === undefined) ||
+            unsavedChanges'
           >
           Submit
         </button>
@@ -58,6 +64,10 @@ export default defineComponent({
     transMetadata: {
       type: Object as PropType<TransMetadataType>,
       required: true
+    },
+    unsavedChanges: {
+      type: Boolean,
+      default: false
     }
   },
   emits: ['close'],

@@ -41,6 +41,7 @@
       :playheadColor='playheadColor'
       :showBols='showBols'
       :navHeight='navHeight'
+      :unsavedChanges='unsavedChanges'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
