@@ -1746,10 +1746,9 @@ export default defineComponent({
         low: this.freqMin,
         high: this.freqMax
       });
-
       const pitches = this.trajTimePts.map(ttp => {
-        const logFreq = ttp.logFreq;
-        return new Pitch(visPitches[logSGLines.indexOf(ttp.logFreq)])
+        // return new Pitch(visPitches[logSGLines.indexOf(ttp.logFreq)])
+        return this.piece.raga.pitchFromLogFreq(ttp.logFreq);
       })
       const ttp = this.trajTimePts;
       const durTot = ttp[ttp.length - 1].time - ttp[0].time;
