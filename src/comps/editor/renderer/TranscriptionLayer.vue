@@ -452,11 +452,11 @@ export default defineComponent({
         selectedTrajs.value[0] : 
         undefined;
     });
-    const playheadStyle = computed(() => {
-      return {
-        transition: 'x 0.017s linear',
-      }
-    });
+    // const playheadStyle = computed(() => {
+    //   return {
+    //     transition: 'x 0.017s linear',
+    //   }
+    // });
     const targetPlayheadX = computed(() => {
       return props.xScale(props.currentTime)
     });
@@ -4601,6 +4601,7 @@ export default defineComponent({
       removePhraseDiv,
       renderPhraseDiv,
       moveToPhraseUid,
+      moveToPhrase,
       currentPhrase,
       selectedChikari,
       resetTrajRenderStatus,
@@ -4608,7 +4609,7 @@ export default defineComponent({
       clearDragDots,
       refreshSargam,
       selectTraj,
-      playheadStyle,
+      // playheadStyle,
       targetPlayheadX,
       refreshTimePts,
       trajTimePts,
@@ -4654,6 +4655,10 @@ export default defineComponent({
   height: var(--height);
   display: flex;
   flex-direction: row;
+}
+
+.playhead {
+  will-change: transform;
 }
 
 </style>

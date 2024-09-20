@@ -377,7 +377,7 @@ import downloadIcon from '@/assets/icons/download.svg';
 import meterIcon from '@/assets/icons/meter.svg';
 import specControlIcon from '@/assets/icons/specControls.svg';
 import { excelData, jsonData } from '@/js/serverCalls.ts';
-import ksURL from '@/audioWorklets/karplusStrong.worklet.js?url';
+import ksURL from '@/audioWorklets/karplusStrong2.worklet.js?url';
 import ssURL from '@/audioWorklets/sarangi.worklet.js?url';
 import cURL from '@/audioWorklets/chikaris.worklet.js?url';
 import caURL from '@/audioWorklets/captureAudio.worklet.js?url';
