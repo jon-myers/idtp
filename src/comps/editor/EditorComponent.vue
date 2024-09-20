@@ -64,6 +64,7 @@
       @update:apStretchable='updateApStretchable'
       @update:region='regionIdx += 1'
       @cancelRegionSpeed='cancelRegionSpeed'
+      @update:togglePluck='togglePluck'
       />
     <div class='controlBox'>
       <div class='scrollingControlBox'>
@@ -1231,6 +1232,11 @@ export default defineComponent({
 
   methods: {
 
+    togglePluck() { 
+      const tsp = this.$refs.trajSelectPanel as typeof TrajSelectPanel;
+      tsp.pluckBool = !tsp.pluckBool;
+    },
+
     cancelRegionSpeed() {
       const ap = this.$refs.audioPlayer as typeof EditorAudioPlayer;
       if (ap.regionSpeedOn) {
@@ -1360,7 +1366,9 @@ export default defineComponent({
     },
 
     updateSaFreq(f: number) {
-      this.piece.raga.fundamental = f;
+      console.log(f)
+      // this.piece.raga.fundamental = f;
+      this.piece.updateFundamental(f);
       this.minPitch.fundamental = f;
       this.maxPitch.fundamental = f;
       const minPitchFreq = this.minPitch.frequency;

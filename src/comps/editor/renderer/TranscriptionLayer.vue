@@ -248,6 +248,7 @@ export default defineComponent({
     'update:apStretchable',
     'update:region',
     'cancelRegionSpeed',
+    'update:togglePluck'
   ],
   setup(props, { emit }) {
     const tranContainer = ref<HTMLDivElement | null>(null);
@@ -1116,7 +1117,7 @@ export default defineComponent({
       const trajStart = trajStartTimes.value[track][trajIdx];
       const trackG = tracks[track];
       const g = trackG.select('.trajG');
-      const size = 20;
+      const size = 40;
       const offset = (size ** 0.5) / 2;
       const color = selectedTrajs.value.includes(traj) ? 
         props.instTracks[track].selColor : props.instTracks[track].color;
@@ -1848,7 +1849,6 @@ export default defineComponent({
       .curve(d3.curveMonotoneX);
 
     const handleTrajContextMenu = (traj: Trajectory, track: number, e: MouseEvent) => {
-      console.log('triggering')
       if (props.selectedMode === EditorMode.Meter) return;
       e.preventDefault();
       e.stopPropagation();
@@ -2169,11 +2169,9 @@ export default defineComponent({
           })
         })
       }
-      console.log(contextMenuChoices.value)
       if (contextMenuChoices.value.length > 0) {
         contextMenuClosed.value = false;
       }
-      console.log(contextMenuClosed.value)
     };
 
     const updatePluckNickname = (traj: Trajectory, n: StrokeNicknameType) => {
@@ -3265,7 +3263,12 @@ export default defineComponent({
       } else if (e.key === 'm') {
         emit('update:selectedMode', EditorMode.Meter);
       } else if (e.key === 'p') {
-        emit('update:selectedMode', EditorMode.PhraseDiv);
+        const inst = props.instTracks[props.editingInstIdx].inst;
+        if (selectedTraj.value !== undefined && inst === Instrument.Sitar) {
+          emit('update:togglePluck')
+        } else {
+          emit('update:selectedMode', EditorMode.PhraseDiv);
+        }
       } else if (e.key === 'r') {
         emit('update:selectedMode', EditorMode.Region);
       } else if (e.key === 'Shift') {

@@ -141,6 +141,7 @@
               @update:apStretchable='$emit("update:apStretchable", $event)'
               @update:region='$emit("update:region")'
               @cancelRegionSpeed='$emit("cancelRegionSpeed")'
+              @update:togglePluck='$emit("update:togglePluck")'
             />
           />
         </div>
@@ -384,7 +385,8 @@ export default defineComponent({
     'zoomInY',
     'zoomOutX',
     'zoomInX',
-    'cancelRegionSpeed'
+    'cancelRegionSpeed',
+    'update:togglePluck',
   ],
   setup(props, { emit }) {
     const layersContainer = ref<HTMLDivElement | null>(null);

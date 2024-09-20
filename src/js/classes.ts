@@ -1191,6 +1191,10 @@ class Trajectory {
     })
   }
 
+  updateFundamental(fundamental: number) {
+    this.pitches.forEach(p => p.fundamental = fundamental)
+  }
+
   get minFreq() {
     return Math.min(...this.freqs)
   }
@@ -1920,6 +1924,10 @@ class Phrase {
     }
   }
 
+  updateFundamental(fundamental: number) {
+    this.trajectories.forEach(traj => traj.updateFundamental(fundamental))
+  }
+
   getGroups(idx = 0) {
     if (this.groupsGrid[idx] !== undefined) {
       return this.groupsGrid[idx]
@@ -2531,6 +2539,13 @@ class Piece {
 
   set sectionCategorization(arr) { 
     this.sectionCatGrid[0] = arr
+  }
+
+  updateFundamental(fundamental: number) {
+    this.raga.fundamental = fundamental;
+    this.phraseGrid.forEach(phrases => {
+      phrases.forEach(phrase => phrase.updateFundamental(fundamental))
+    })
   }
 
   cleanUpSectionCategorization(c: SecCatType) {

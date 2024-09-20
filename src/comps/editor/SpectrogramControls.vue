@@ -244,7 +244,7 @@ export default defineComponent({
     },
     audioID: {
       type: String,
-      required: true
+      required: false
     },
     saFreq: {
       type: Number,
@@ -407,19 +407,21 @@ export default defineComponent({
         maxPitchObj.value = new Pitch(maxPitchOptions.value[idx]);
         maxPitchObj.value.fundamental = saFreq.value;
         emit('update:maxPitch', maxPitchObj.value);
-        nextTick(() => {
-          console.log('maxPitchIdx set');
-          const processOptions = {
-            type: 'crop',
-            logMin: logSaFreq.value - lowOctOffset.value,
-            logMax: logSaFreq.value + highOctOffset.value,
-            newVerbose: true
-          };
-          spectrogramWorker.postMessage({
-            msg: 'process',
-            payload: processOptions
+        if (spectrogramWorker !== undefined) {
+          nextTick(() => {
+            console.log('maxPitchIdx set');
+            const processOptions = {
+              type: 'crop',
+              logMin: logSaFreq.value - lowOctOffset.value,
+              logMax: logSaFreq.value + highOctOffset.value,
+              newVerbose: true
+            };
+            spectrogramWorker!.postMessage({
+              msg: 'process',
+              payload: processOptions
+            })
           })
-        })
+        };
       }
     })
     const maxPitchOptions = computed(() => {
@@ -439,17 +441,19 @@ export default defineComponent({
         minPitchObj.value = new Pitch(minPitchOptions.value[idx]);
         minPitchObj.value.fundamental = saFreq.value;
         emit('update:minPitch', minPitchObj.value);
-        nextTick(() => {
-          const processOptions = {
-            type: 'crop',
-            logMin: logSaFreq.value - lowOctOffset.value,
-            logMax: logSaFreq.value + highOctOffset.value
-          };
-          spectrogramWorker.postMessage({
-            msg: 'process',
-            payload: processOptions
+        if (spectrogramWorker !== undefined) {
+          nextTick(() => {
+            const processOptions = {
+              type: 'crop',
+              logMin: logSaFreq.value - lowOctOffset.value,
+              logMax: logSaFreq.value + highOctOffset.value
+            };
+            spectrogramWorker!.postMessage({
+              msg: 'process',
+              payload: processOptions
+            })
           })
-        })
+        }
       }
     })
     const minPitchOptions = computed(() => {
@@ -540,28 +544,30 @@ export default defineComponent({
 
     
 
-
-
-    const spectrogramWorker = getWorker();
-    const logSa = Math.log2(props.saFreq);
-    const low = logSa - lowOctOffset.value;
-    const high = logSa + highOctOffset.value;
-
-    const processOptions = {
-      type: 'initial',
-      logMin: low,
-      logMax: high,
-      newScaledShape: [props.scaledHeight, props.scaledWidth],
-      audioID: props.audioID,
-      newVerbose: false
+    let spectrogramWorker: Worker | undefined = undefined;
+    if (props.audioID !== undefined && props.saFreq !== undefined) {
+      spectrogramWorker = getWorker();
+      const logSa = Math.log2(props.saFreq);
+      const low = logSa - lowOctOffset.value;
+      const high = logSa + highOctOffset.value;
+  
+      const processOptions = {
+        type: 'initial',
+        logMin: low,
+        logMax: high,
+        newScaledShape: [props.scaledHeight, props.scaledWidth],
+        audioID: props.audioID,
+        newVerbose: false
+      }
+  
+      spectrogramWorker.postMessage({
+        msg: 'process',
+        payload: processOptions
+      })
     }
 
-    spectrogramWorker.postMessage({
-      msg: 'process',
-      payload: processOptions
-    })
-
     const updateColorMap = () => {
+      if (spectrogramWorker === undefined) return;
       const processOptions = {
         type: 'color',
         newCMap: cMapName.value,
@@ -573,6 +579,7 @@ export default defineComponent({
     }
 
     const updateIntensity = () => {
+      if (spectrogramWorker === undefined) return;
       const processOptions = {
         type: 'power',
         newPower: intensityPower.value
@@ -586,6 +593,7 @@ export default defineComponent({
     const updateSaFreq = () => {
       logSaFreq.value = Math.log2(saFreq.value);
       emit('update:saFreq', saFreq.value);
+      if (spectrogramWorker === undefined) return;
       nextTick(() => {
         const processOptions = {
           type: 'crop',

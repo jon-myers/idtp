@@ -306,15 +306,14 @@
     />
     <SpectrogramControls
       v-if='
-        id !== undefined && 
-        saEstimate !== undefined && 
-        transcriptionWidth !== 0
+        transcriptionWidth !== 0 &&
+        raga
         '
       v-show='showSpecControls'
       :height='controlsHeight'
       :playerHeight='playerHeight'
       :audioID='id'
-      :saFreq='2*saEstimate'
+      :saFreq='saEstimate ? 2*saEstimate : raga.fundamental'
       :scaledWidth='transcriptionWidth'
       :scaledHeight='transcriptionHeight'
       :extLowOctOffset='lowOctOffset'
