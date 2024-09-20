@@ -142,6 +142,7 @@
               @update:region='$emit("update:region")'
               @cancelRegionSpeed='$emit("cancelRegionSpeed")'
               @update:togglePluck='$emit("update:togglePluck")'
+              @update:toggleDampen='$emit("update:toggleDampen")'
             />
           />
         </div>
@@ -387,6 +388,7 @@ export default defineComponent({
     'zoomInX',
     'cancelRegionSpeed',
     'update:togglePluck',
+    'update:toggleDampen'
   ],
   setup(props, { emit }) {
     const layersContainer = ref<HTMLDivElement | null>(null);
@@ -397,10 +399,10 @@ export default defineComponent({
     const scrollBarHeight = ref(15);
     const xScale = ref<d3.ScaleLinear<number, number> | null>(null);
     const yScale = ref<d3.ScaleLinear<number, number> | null>(null);
-    const yAxis = ref<HTMLDivElement | null>(null);
-    const xAxis = ref<HTMLDivElement | null>(null);
+    const yAxis = ref<InstanceType<typeof YAxis> | null>(null);
+    const xAxis = ref<InstanceType<typeof XAxis> | null>(null);
     const minDrawDur = ref(0.01);
-    const transcriptionLayer = ref<typeof TranscriptionLayer | null>(null);
+    const transcriptionLayer = ref<InstanceType<typeof TranscriptionLayer> | null>(null);
     const scrollUpdateIdx = ref(0);
     const verticalScrollUpdateIdx = ref(0);
     const editorMode = EditorMode;

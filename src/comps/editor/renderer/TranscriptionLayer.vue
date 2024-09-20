@@ -248,7 +248,8 @@ export default defineComponent({
     'update:apStretchable',
     'update:region',
     'cancelRegionSpeed',
-    'update:togglePluck'
+    'update:togglePluck',
+    'update:toggleDampen',
   ],
   setup(props, { emit }) {
     const tranContainer = ref<HTMLDivElement | null>(null);
@@ -3239,6 +3240,7 @@ export default defineComponent({
     }
 
     const handleKeydown = (e: KeyboardEvent) => {
+      const inst = props.instTracks[props.editingInstIdx].inst;
       if (e.key === 'Escape') {
         if (selectedPulse.value) {
           selectedPulse.value = undefined;
@@ -3262,8 +3264,11 @@ export default defineComponent({
         }
       } else if (e.key === 'm') {
         emit('update:selectedMode', EditorMode.Meter);
+      } else if (e.key === 'd') {
+        if (selectedTraj.value !== undefined && inst === Instrument.Sitar) {
+          emit('update:toggleDampen')
+        }
       } else if (e.key === 'p') {
-        const inst = props.instTracks[props.editingInstIdx].inst;
         if (selectedTraj.value !== undefined && inst === Instrument.Sitar) {
           emit('update:togglePluck')
         } else {
