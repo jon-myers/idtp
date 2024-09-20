@@ -947,11 +947,11 @@ export default defineComponent({
       }
     },
 
-    // updateDampen() {
-    //   if (this.parentSelected) {
-    //     this.$emit('dampen', this.dampen)
-    //   }
-    // },
+    updateDampen() {
+      if (this.parentSelected) {
+        this.$emit('dampen', this.dampen)
+      }
+    },
 
     updateVowel() {
       if (this.parentSelected) {

@@ -357,7 +357,7 @@ import playIcon from '@/assets/icons/play.svg';
 import shuffleIcon from '@/assets/icons/shuffle.svg';
 import rulerIcon from '@/assets/icons/ruler.svg';
 import tagsIcon from '@/assets/icons/tags.svg';
-import SpectrogramControls from '@/comps/editor/SpectrogramControls.vue';
+import SpectrogramControls from '@/comps/editor/audioPlayer/SpectrogramControls.vue';
 import { defineComponent, PropType } from 'vue';
 import { 
   getStarts, 
@@ -386,7 +386,7 @@ import { createRubberBandNode as createRBNode } from 'rubberband-web';
 import { BrowserInfo, detect } from 'detect-browser';
 import { drag as d3Drag, select as d3Select } from 'd3';
 import stretcherURL from '@/js/bundledStretcherWorker.js?url';
-import MeterControls from '@/comps/editor/MeterControls.vue';
+import MeterControls from '@/comps/editor/audioPlayer/MeterControls.vue';
 import LabelEditor from '@/comps/editor/LabelEditor.vue';
 import { Meter } from '@/js/meter.ts'
 import { 
@@ -1735,28 +1735,7 @@ export default defineComponent({
         })
       }
     },
-    createCurveVals(start: number, duration: number) {
-      // time in transcription, not this.ac
-      const env = new Float32Array(Math.round(duration * this.valueCurveMinim));
-      const computeTimes = env.map((_, i) => this.valueCurveMinim * i + start);
-      const allTrajs = this.piece.phrases.map((p) => p.trajectories).flat();
-      const allStarts = getStarts(allTrajs.map((t) => t.durTot));
-      const computedVals = [];
-      let lastVal = this.piece.raga.fundamental;
-      for (let i = 0; i < computeTimes.length; i++) {
-        const time = computeTimes[i];
-        const traj = allTrajs[allStarts.findIndex((s) => s >= time)];
-        const trajX = (time - traj.startTime!) / traj.durTot;
-        let val;
-        if (traj.id === 12) {
-          val = lastVal;
-        } else {
-          val = traj.compute(trajX);
-          lastVal = val;
-        }
-        computedVals.push(val);
-      }
-    },
+  
     sendBurst(when: number, dur: number, to: AudioNode, atk = 0.05, amp = 1) {
       amp *= 2;
       if (this.ac === undefined) {

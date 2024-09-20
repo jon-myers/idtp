@@ -369,8 +369,8 @@ import {
   getMelographJSON
 } from '@/js/serverCalls.ts';
 import { Meter, Pulse } from '@/js/meter.ts';
-import EditorAudioPlayer from '@/comps/editor/EditorAudioPlayer.vue';
-import MeterControls from '@/comps/editor/MeterControls.vue';
+import EditorAudioPlayer from '@/comps/editor/audioPlayer/EditorAudioPlayer.vue';
+import MeterControls from '@/comps/editor/audioPlayer/MeterControls.vue';
 import TrajSelectPanel from '@/comps/editor/TrajSelectPanel.vue';
 import ContextMenu from'@/comps/ContextMenu.vue';
 import LabelEditor from '@/comps/editor/LabelEditor.vue';
