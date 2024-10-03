@@ -46,11 +46,6 @@ const routes = [
     path: '/collections',
     name: 'Collections',
     component: () => import('@/comps/collections/CollectionsComponent.vue')
-  },
-  {
-    path: '/testSpectrogram',
-    name: 'TestSpectrogram',
-    component: () => import('@/comps/TestSpectrogram.vue')
   }
 ];
 

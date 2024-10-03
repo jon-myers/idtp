@@ -8,8 +8,10 @@
         x='0'
         y='0'
         width='2'
+        opacity='0.5'
         :height='height'
         :stroke='playheadColor'
+        :style='playheadStyle'
       ></rect>
     </svg>
     <div class='emptyOverlay' ref='emptyOverlay'></div>
@@ -307,6 +309,13 @@ export default defineComponent({
     let selBoxStartY: number | undefined = undefined;
     let selBox: d3.Selection<SVGRectElement, unknown, null, undefined> | null = 
       null;
+    let playheadRealStartTime = 0;
+    let playheadMusicStartTime = 0;
+    let playheadStartPxl = 0;
+    let lastUpdateTime = 0;
+    let movingPlayhead = false;
+    const fps = 30;
+    const frameDur = 1 / fps;
 
 
 
@@ -454,11 +463,11 @@ export default defineComponent({
         selectedTrajs.value[0] : 
         undefined;
     });
-    // const playheadStyle = computed(() => {
-    //   return {
-    //     transition: 'x 0.017s linear',
-    //   }
-    // });
+    const playheadStyle = computed(() => {
+      return {
+        filter: 'blur(2px) drop-shadow(0 0 10px rgba(0, 0, 0, 0.8))',
+      }
+    });
     const targetPlayheadX = computed(() => {
       return props.xScale(props.currentTime)
     });
@@ -863,75 +872,91 @@ export default defineComponent({
 
     let playheadAnimation: Animation | undefined = undefined;
 
+    const movePlayhead = () => {
+      const now = performance.now() / 1000;
+      const elapsed = now - playheadRealStartTime;
+      const musicTime = playheadMusicStartTime + elapsed;
+      if (now - lastUpdateTime > frameDur) {
+        const xPosition = props.xScale(musicTime);
+        playhead.value!.style.transform = `translateX(${xPosition}px)`;
+        lastUpdateTime = now;
+      }
+      if (musicTime < props.piece.durTot! && movingPlayhead) {
+        requestAnimationFrame(movePlayhead)
+      }
+    }
+
     const startPlayingTransition = () => {
-      let startPxl = props.xScale(props.currentTime);
-      if (props.loop && regionEndPxl.value !== undefined && startPxl < regionEndPxl.value) {
-        if (startPxl > regionStartPxl.value!) {
+      movingPlayhead = true;
+      playheadMusicStartTime = props.currentTime;
+      playheadStartPxl = props.xScale(props.currentTime);
+      if (props.loop && regionEndPxl.value !== undefined && playheadStartPxl < regionEndPxl.value) {
+        if (playheadStartPxl > regionStartPxl.value!) {
           emit('update:currentTime', regionStartX.value!);
           nextTick(() => {
-            startPxl = regionStartPxl.value!;
-            if (playheadAnimation) playheadAnimation.cancel();
-            playheadAnimation = playhead.value!.animate([
-              { transform: `translateX(${startPxl}px)` },
-              { transform: `translateX(${regionEndPxl.value}px)` }
-            ], {
-              duration: (regionEndX.value! - regionStartX.value!) * 1000 / props.stretchedFactor,
-              easing: 'linear',
-              fill: 'forwards',
-              iterations: Infinity
-            });
+            playheadStartPxl = regionStartPxl.value!;
+            throw new Error("haven't implemented yet")
+            // if (playheadAnimation) playheadAnimation.cancel();
+            // playheadAnimation = playhead.value!.animate([
+            //   { transform: `translateX(${startPxl}px)` },
+            //   { transform: `translateX(${regionEndPxl.value}px)` }
+            // ], {
+            //   duration: (regionEndX.value! - regionStartX.value!) * 1000 / props.stretchedFactor,
+            //   easing: 'linear',
+            //   fill: 'forwards',
+            //   iterations: Infinity
+            // });
           })
         } else {
-          if (playheadAnimation) playheadAnimation.cancel();
-          playheadAnimation = playhead.value!.animate([
-            { transform: `translateX(${startPxl}px)` },
-            { transform: `translateX(${regionEndPxl.value}px)` }
-          ], {
-            duration: (regionEndX.value! - props.currentTime) * 1000 / props.stretchedFactor,
-            easing: 'linear',
-            fill: 'forwards'
-          });
-          playheadAnimation.onfinish = () => {
-            if (playheadAnimation) playheadAnimation.cancel();
-            playheadAnimation = playhead.value!.animate([
-              { transform: `translateX(${regionStartPxl.value}px)` },
-              { transform: `translateX(${regionEndPxl.value}px)` }
-            ], {
-              duration: (regionEndX.value! - regionStartX.value!) * 1000 / props.stretchedFactor,
-              easing: 'linear',
-              fill: 'forwards',
-              iterations: Infinity
-            });
-          }
+          // if (playheadAnimation) playheadAnimation.cancel();
+          // playheadAnimation = playhead.value!.animate([
+          //   { transform: `translateX(${startPxl}px)` },
+          //   { transform: `translateX(${regionEndPxl.value}px)` }
+          // ], {
+          //   duration: (regionEndX.value! - props.currentTime) * 1000 / props.stretchedFactor,
+          //   easing: 'linear',
+          //   fill: 'forwards'
+          // });
+          // playheadAnimation.onfinish = () => {
+          //   if (playheadAnimation) playheadAnimation.cancel();
+          //   playheadAnimation = playhead.value!.animate([
+          //     { transform: `translateX(${regionStartPxl.value}px)` },
+          //     { transform: `translateX(${regionEndPxl.value}px)` }
+          //   ], {
+          //     duration: (regionEndX.value! - regionStartX.value!) * 1000 / props.stretchedFactor,
+          //     easing: 'linear',
+          //     fill: 'forwards',
+          //     iterations: Infinity
+          //   });
+          // }
         }
 
       } else {
         const duration = props.piece.durTot! - props.currentTime; 
         const endPxl = props.xScale(props.piece.durTot!);
-        if (playheadAnimation) {
-          playheadAnimation.cancel();
-        }
-        playheadAnimation = playhead.value?.animate([
-          { transform: `translateX(${startPxl}px)` },
-          { transform: `translateX(${endPxl}px)` }
-        ], {
-          duration: duration * 1000 / props.stretchedFactor,
-          easing: 'linear',
-          fill: 'forwards'
-        });
+        // if (playheadAnimation) {
+        //   playheadAnimation.cancel();
+        // }
+        // playheadAnimation = playhead.value?.animate([
+        //   { transform: `translateX(${startPxl}px)` },
+        //   { transform: `translateX(${endPxl}px)` }
+        // ], {
+        //   duration: duration * 1000 / props.stretchedFactor,
+        //   easing: 'linear',
+        //   fill: 'forwards'
+        // });
+        playheadRealStartTime = performance.now() / 1000;
+        requestAnimationFrame(movePlayhead);
 
       }
       
     };
 
     const stopPlayingTransition = () => {
-      // console.log('stopping playhead transition');
-      playheadAnimation?.cancel();
-      playheadAnimation = undefined;
+      movingPlayhead = false;
+
       nextTick(() => {
         const currentPxl = props.xScale(props.currentTime);
-        // console.log('current time: ', props.currentTime);
-
         playhead.value!.style.transform = `translateX(${currentPxl}px)`;
       })
 
@@ -2812,13 +2837,49 @@ export default defineComponent({
           updatePhraseChikaris(nextPhrase, delta);
         }
       }
+      
       // this looks good, but it maybe is causing visual discomfort ...
       // updateTrajCurve(traj, phrase.startTime! + traj.startTime!);
     };
 
+    const updateKrintinArticulations = (traj: Trajectory) => {
+        const plucked = traj.articulations['0.00']?.name === 'pluck';
+        const offset = plucked ? 1 : 0;
+        const artKeys = Object.keys(traj.articulations).map(k => Number(k)).sort();
+        if (traj.id === 7 || traj.id === 11) {
+          traj.articulations[traj.durArray![0]] = traj.articulations[artKeys[offset]];
+          delete traj.articulations[artKeys[offset]];
+        } else if (traj.id === 8) {
+          traj.articulations[traj.durArray![0]] = traj.articulations[artKeys[offset]];
+          traj.articulations[traj.durArray![1]] = traj.articulations[artKeys[offset + 1]];
+          delete traj.articulations[artKeys[offset]];
+          delete traj.articulations[artKeys[offset + 1]];
+        } else if (traj.id === 9) {
+          traj.articulations[traj.durArray![0]] = traj.articulations[artKeys[offset]];
+          traj.articulations[traj.durArray![1]] = traj.articulations[artKeys[offset + 1]];
+          traj.articulations[traj.durArray![2]] = traj.articulations[artKeys[offset + 2]];
+          delete traj.articulations[artKeys[offset]];
+          delete traj.articulations[artKeys[offset + 1]];
+          delete traj.articulations[artKeys[offset + 2]];
+        } else if (traj.id === 10) {
+          traj.articulations[traj.durArray![0]] = traj.articulations[artKeys[offset]];
+          traj.articulations[traj.durArray![1]] = traj.articulations[artKeys[offset + 1]];
+          traj.articulations[traj.durArray![2]] = traj.articulations[artKeys[offset + 2]];
+          traj.articulations[traj.durArray![3]] = traj.articulations[artKeys[offset + 3]];
+          traj.articulations[traj.durArray![4]] = traj.articulations[artKeys[offset + 4]];
+          delete traj.articulations[artKeys[offset]];
+          delete traj.articulations[artKeys[offset + 1]];
+          delete traj.articulations[artKeys[offset + 2]];
+          delete traj.articulations[artKeys[offset + 3]];
+          delete traj.articulations[artKeys[offset + 4]];
+        }
+      };
+
     const dragDotEnd = (e: d3.D3DragEvent<
       SVGCircleElement, Datum, MouseEvent
     >) => {
+      console.log('triggers no matter what')
+
       if (alted.value) return;
       dragDotMove(e);
       dragDotDragging = false;
@@ -2826,6 +2887,11 @@ export default defineComponent({
       emit('unsavedChanges', true);
       const idx = dragDotIdx!;
       const traj = selectedTrajs.value[0];
+
+      // const affectedIds = [7, 8, 9, 10, 11];
+      // if (affectedIds.includes(traj.id)) updateKrintinArticulations(traj)
+
+
       const track = props.piece.trackFromTraj(traj);
       const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
       const pIdx = traj.phraseIdx!;
@@ -2880,7 +2946,11 @@ export default defineComponent({
           affectedPhraseDivUid = nextPhrase.uniqueId;
         }
       }
-      affectedTrajs.forEach(traj => refreshTraj(traj));
+      affectedTrajs.forEach(traj => {
+        const affectedIds = [7, 8, 9, 10, 11];
+        if (affectedIds.includes(traj.id)) updateKrintinArticulations(traj)
+        refreshTraj(traj)
+      });
       if (affectedPhraseDivUid !== undefined) {
         removePhraseDiv(affectedPhraseDivUid);
         const pdObj = props.piece.allPhraseDivs(track).find(pd => {
@@ -3708,7 +3778,12 @@ export default defineComponent({
           affectedPhraseDivUid = nextPhrase.uniqueId;
         }
       }
-      affectedTrajs.forEach(traj => refreshTraj(traj));
+
+      affectedTrajs.forEach(traj => {
+        const affectedIds = [7, 8, 9, 10, 11];
+        if (affectedIds.includes(traj.id)) updateKrintinArticulations(traj)
+        refreshTraj(traj)
+      });
 
       if (affectedPhraseDivUid !== undefined) {
         removePhraseDiv(affectedPhraseDivUid);
@@ -4636,7 +4711,8 @@ export default defineComponent({
       regionEndPxl,
       regionStartX,
       regionEndX,
-      playhead
+      playhead,
+      playheadStyle
     }
   }
 })

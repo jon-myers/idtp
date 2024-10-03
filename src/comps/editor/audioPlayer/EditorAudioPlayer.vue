@@ -108,7 +108,7 @@
         </div>
       </div>
     </div>
-    <div class="synthControls" v-if="showControls">
+    <!-- <div class="synthControls" v-if="showControls">
       <div class="cbBoxSmall" v-if='!noAudio'>
         <label>Recording Gain</label>
         <input 
@@ -193,8 +193,41 @@
           @mouseup='handleRegionSpeedChange'
           />
       </div>
-
-    </div>
+    </div> -->
+    <!-- <InstrumentControl 
+      class='synthControls' 
+      v-if='showControls && synthControls.length > 0'
+      :synthControl='synthControls[0]'
+      :height='controlsHeight'
+      :sonify='instTracks[0].sounding'
+    /> -->
+    <SynthesisControls
+      class='synthControls'
+      v-if='showControls && synthControls.length > 0'
+      :synthControls='synthControls'
+      :instTracks='instTracks'
+      :height='controlsHeight'
+      :transposition='transposition'
+      :regionSpeed='regionSpeed'
+      :playing='playing'
+      :stretchable='stretchable'
+      :shiftOn='shiftOn'
+      :regionSpeedOn='regionSpeedOn'
+      :readyToShift='readyToShift'
+      :mixedGainVal='mixedGainVal'
+      :recGainVal='recGain'
+      :hasRecording='hasRecording'
+      @update:transposition='transposition = Number($event)'
+      @update:regionSpeed='regionSpeed = $event'
+      @update:regionSpeedOn='regionSpeedOn = $event'
+      @toggleShift='toggleShift'
+      @update:shiftOn='shiftOn = $event'
+      @toggleRegionSpeed='toggleRegionSpeed'
+      @regionSpeedChange='handleRegionSpeedChange'
+      @update:mixedGainVal='updateMixedGainVal'
+      @update:recGainVal='updateRecGainVal'
+      @update:gainNode='handleUpdateGainNode'
+    />
     <div class='downloads' v-if='showDownloads'>
       <label>Data</label>
       <fieldset class='dataRadioButtons'>
@@ -344,9 +377,34 @@
       @update:selectedMeterColor='$emit("update:selectedMeterColor", $event)'
       @update:playheadColor='$emit("update:playheadColor", $event)'
       />
+      <Synths
+        ref='synths'
+        v-if='ac !== undefined && instTracks.length > 0 && synthControls.length > 0'
+        :ac='ac'
+        :piece='piece'
+        :gainVal='1'
+        :instTracks='instTracks'
+        :controls='synthControls'
+        :curPlayTime='curPlayTime'
+        :transposition='transposition'
+        :uniformVowel='uniformVowel'
+      />
   </div>
 </template>
 <script lang='ts'>
+import { defineComponent, PropType } from 'vue';
+import { BrowserInfo, detect } from 'detect-browser';
+import { drag as d3Drag, select as d3Select } from 'd3';
+
+// Components
+import SpectrogramControls from '@/comps/editor/audioPlayer/SpectrogramControls.vue';
+import MeterControls from '@/comps/editor/audioPlayer/MeterControls.vue';
+import LabelEditor from '@/comps/editor/LabelEditor.vue';
+import Synths from '@/comps/editor/audioPlayer/Synths.vue';
+import InstrumentControl from '@/comps/editor/audioPlayer/InstrumentControl.vue';
+import SynthesisControls from '@/comps/editor/audioPlayer/SynthesisControls.vue';
+
+// Icons
 import beginningIcon from '@/assets/icons/beginning.svg';
 import endIcon from '@/assets/icons/end.svg';
 import loopIcon from '@/assets/icons/loop.svg';
@@ -357,8 +415,17 @@ import playIcon from '@/assets/icons/play.svg';
 import shuffleIcon from '@/assets/icons/shuffle.svg';
 import rulerIcon from '@/assets/icons/ruler.svg';
 import tagsIcon from '@/assets/icons/tags.svg';
-import SpectrogramControls from '@/comps/editor/audioPlayer/SpectrogramControls.vue';
-import { defineComponent, PropType } from 'vue';
+import tuningForkIcon from '@/assets/icons/tuning_fork.png';
+import downloadIcon from '@/assets/icons/download.svg';
+import meterIcon from '@/assets/icons/meter.svg';
+import specControlIcon from '@/assets/icons/specControls.svg';
+
+// URLs
+import caURL from '@/audioWorklets/captureAudio.worklet.js?url';
+import rubberBandUrl from '@/audioWorklets/rubberband-processor.js?url';
+import stretcherURL from '@/js/bundledStretcherWorker.js?url';
+
+// Classes and Types
 import { 
   getStarts, 
   getEnds, 
@@ -371,32 +438,22 @@ import {
 } from '@/js/classes.ts';
 import { EditorMode } from '@/ts/enums.ts';
 import { AudioWorklet } from '@/audio-worklet';
-import tuningForkIcon from '@/assets/icons/tuning_fork.png';
-import downloadIcon from '@/assets/icons/download.svg';
-import meterIcon from '@/assets/icons/meter.svg';
-import specControlIcon from '@/assets/icons/specControls.svg';
 import { excelData, jsonData } from '@/js/serverCalls.ts';
-import ksURL from '@/audioWorklets/karplusStrong2.worklet.js?url';
-import ssURL from '@/audioWorklets/sarangi.worklet.js?url';
-import cURL from '@/audioWorklets/chikaris.worklet.js?url';
-import caURL from '@/audioWorklets/captureAudio.worklet.js?url';
-import klattURL from '@/audioWorklets/klattSynth2.worklet.js?url';
-import rubberBandUrl from '@/audioWorklets/rubberband-processor.js?url';
-import { createRubberBandNode as createRBNode } from 'rubberband-web';
-import { BrowserInfo, detect } from 'detect-browser';
-import { drag as d3Drag, select as d3Select } from 'd3';
-import stretcherURL from '@/js/bundledStretcherWorker.js?url';
-import MeterControls from '@/comps/editor/audioPlayer/MeterControls.vue';
-import LabelEditor from '@/comps/editor/LabelEditor.vue';
-import { Meter } from '@/js/meter.ts'
+import { Meter } from '@/js/meter.ts';
 import { 
   RecType, 
   MusicianType,
   InstrumentTrackType, 
-  TooltipData 
+  TooltipData,
+  SynthControl,
+  SitarSynthType,
+  SarangiSynthType,
+  KlattSynthType, 
 } from '@/ts/types.ts';
-import { ControlsMode } from '@/ts/enums.ts';
+import { ControlsMode, Instrument } from '@/ts/enums.ts';
 
+// External Libraries
+import { createRubberBandNode as createRBNode } from 'rubberband-web';
 
 type EditorAudioPlayerData = {
   progress: number;
@@ -520,11 +577,14 @@ type EditorAudioPlayerData = {
   tuningMasterGainNode?: GainNode;
   tuningGainNodes: GainNode[];
   tuningSines: OscillatorNode[];
-  sarangiSynth?: SarangiSynthType;
+  // sarangiSynth?: SarangiSynthType;
   klattMiddleGain?: GainNode;
   selectedControlsMode: ControlsMode;
   controlsHoverTimeout?: NodeJS.Timeout;
   controlsTexts: {[key: string]: string};
+  synthControls: SynthControl[],
+  initializedSynthControls: boolean,
+  mixedGainVal: number,
 }
 
 interface RubberBandNodeType extends AudioWorkletNode {
@@ -602,11 +662,11 @@ interface KlattNodeType extends AudioWorkletNode {
   nasalFormantDb?: AudioParam;
 }
 
-interface SarangiSynthType extends AudioWorkletNode {
-  freq?: AudioParam;
-  bowGain?: AudioParam;
-  gain?: AudioParam;
-}
+// interface SarangiSynthType extends AudioWorkletNode {
+//   freq?: AudioParam;
+//   bowGain?: AudioParam;
+//   gain?: AudioParam;
+// }
 
 const structuredTime = (dur: number) => {
   const hours = String(Math.floor(dur / 3600));
@@ -762,7 +822,7 @@ export default defineComponent({
       tuningGainNodes: [],
       tuningSines: [],
       sarangi: false, // placeholder
-      sarangiSynth: undefined,
+      // sarangiSynth: undefined,
       klattMiddleGain: undefined,
       selectedControlsMode: ControlsMode.Synthesis,
       controlsHoverTimeout: undefined,
@@ -773,7 +833,10 @@ export default defineComponent({
         downloadImg: 'Download Data',
         tuningFork: 'Tuning Controls',
         showControls: 'Synthesis Controls'
-      }
+      },
+      synthControls: [],
+      initializedSynthControls: false,
+      mixedGainVal: 1,
     };
   },
   props: {
@@ -908,6 +971,9 @@ export default defineComponent({
     MeterControls,
     LabelEditor,
     SpectrogramControls,
+    Synths,
+    InstrumentControl,
+    SynthesisControls,
   },
 
   async mounted() {
@@ -918,15 +984,8 @@ export default defineComponent({
     }
     this.ac = new AudioContext({ sampleRate: 48000 });
     this.gainNode = this.ac.createGain();
-    this.gainNode.gain.setValueAtTime(Number(this.recGain), this.now());
-    this.synthGainNode = this.ac.createGain();
-    this.synthGainNode.gain.setValueAtTime(Number(this.synthGain), this.now());
-    this.intSynthGainNode = this.ac.createGain();
-    this.intSynthGainNode.connect(this.synthGainNode);
-    this.chikariGainNode = this.ac.createGain();
-    this.chikariGainNode.connect(this.ac.destination);
-    this.chikariGainNode.gain.setValueAtTime(this.chikariGain, this.now());
-    this.synthGainNode.connect(this.ac.destination);
+    this.gainNode.gain.setValueAtTime(this.recGain, this.now());
+    this.initializeStretching();
     this.moduleCt = 0;
     const browser = detect();
     const mac = browser!.os === 'Mac OS';
@@ -935,8 +994,7 @@ export default defineComponent({
     if (mac && (!safari) && (!firefox)) {
       this.transposable = true;
     }
-    this.gainNode.connect(this.ac.destination);
-    
+    this.gainNode.connect(this.ac.destination);    
     if (this.audioDBDoc && this.piece) this.gatherInfo();
     this.synthLoopBufSourceNode = this.ac.createBufferSource();
     this.synthLoopBufSourceNode.loop = true; 
@@ -947,27 +1005,8 @@ export default defineComponent({
       this.tuningGains[i] = 0;
       this.updateTuningGain(i)
     });
-    if (this.gainNode === undefined) {
-      throw new Error('gainNode is undefined');
-    }
-    if (this.synthGainNode === undefined) {
-      throw new Error('synthGainNode is undefined');
-    }
-    if (this.chikariGainNode === undefined) {
-      throw new Error('chikariGainNode is undefined');
-    }
-    const curGain = this.gainNode.gain.value;
-    this.gainNode.gain.setValueAtTime(curGain, this.now());
-    const endTime = this.now() + this.lagTime;
-    this.gainNode.gain.linearRampToValueAtTime(0, endTime);
-    const curSynthGain = this.synthGainNode.gain.value;
-    this.synthGainNode.gain.setValueAtTime(curSynthGain, this.now());
-    this.synthGainNode.gain.linearRampToValueAtTime(0, endTime);
-    const curChikariGain = this.chikariGainNode.gain.value;
-    this.chikariGainNode.gain.setValueAtTime(curChikariGain, this.now());
-    this.chikariGainNode.gain.linearRampToValueAtTime(0, endTime);
+
     setTimeout(() => this.ac?.close(), this.lagTime * 1000);
-    // this.$emit('stopAnimationFrameEmit')
     const nodes = [
       this.gainNode,
       this.synthGainNode,
@@ -1005,34 +1044,34 @@ export default defineComponent({
       this.updateFormattedTimeLeft();
       
     },
-    recGain(newGain) {
-      if (this.ac!.state === 'suspended') this.ac!.resume();
-      const currentGain = this.gainNode!.gain.value;
-      const gain = this.gainNode!.gain;
-      gain.setValueAtTime(currentGain, this.now());
-      gain.linearRampToValueAtTime(newGain, this.now() + this.lagTime);
-    },
-    synthGain(newGain) {
-      if (this.ac!.state === 'suspended') this.ac!.resume();
-      const currentGain = this.synthGainNode!.gain.value;
-      const gain = this.synthGainNode!.gain;
-      gain.setValueAtTime(currentGain, this.now());
-      gain.linearRampToValueAtTime(newGain, this.now() + this.lagTime);
-    },
-    synthDamp(newVal) {
-      if (this.ac!.state === 'suspended') this.ac!.resume();
-      const currentDamp = this.pluckNode!.cutoff!.value;
-      const cutoff = this.pluckNode!.cutoff!;
-      cutoff.setValueAtTime(currentDamp, this.now());
-      cutoff.linearRampToValueAtTime(newVal, this.now() + this.lagTime);
-    },
-    chikariGain(newVal) {
-      if (this.ac!.state === 'suspended') this.ac!.resume();
-      const currentGain = this.chikariGainNode!.gain.value;
-      const gain = this.chikariGainNode!.gain;
-      gain.setValueAtTime(currentGain, this.now());
-      gain.linearRampToValueAtTime(newVal, this.now() + this.lagTime);
-    },
+    // recGain(newGain) {
+    //   if (this.ac!.state === 'suspended') this.ac!.resume();
+    //   const currentGain = this.gainNode!.gain.value;
+    //   const gain = this.gainNode!.gain;
+    //   gain.setValueAtTime(currentGain, this.now());
+    //   gain.linearRampToValueAtTime(newGain, this.now() + this.lagTime);
+    // },
+    // synthGain(newGain) {
+    //   if (this.ac!.state === 'suspended') this.ac!.resume();
+    //   const currentGain = this.synthGainNode!.gain.value;
+    //   const gain = this.synthGainNode!.gain;
+    //   gain.setValueAtTime(currentGain, this.now());
+    //   gain.linearRampToValueAtTime(newGain, this.now() + this.lagTime);
+    // },
+    // synthDamp(newVal) {
+    //   if (this.ac!.state === 'suspended') this.ac!.resume();
+    //   const currentDamp = this.pluckNode!.cutoff!.value;
+    //   const cutoff = this.pluckNode!.cutoff!;
+    //   cutoff.setValueAtTime(currentDamp, this.now());
+    //   cutoff.linearRampToValueAtTime(newVal, this.now() + this.lagTime);
+    // },
+    // chikariGain(newVal) {
+    //   if (this.ac!.state === 'suspended') this.ac!.resume();
+    //   const currentGain = this.chikariGainNode!.gain.value;
+    //   const gain = this.chikariGainNode!.gain;
+    //   gain.setValueAtTime(currentGain, this.now());
+    //   gain.linearRampToValueAtTime(newVal, this.now() + this.lagTime);
+    // },
     transposition(cents) {
       const newVal = 2 ** (cents / 1200);
       this.rubberBandNode!.setPitch(newVal);
@@ -1044,18 +1083,21 @@ export default defineComponent({
       const raga = this.piece.raga;
       const freqs = raga.chikariPitches.map((p) => p.frequency);
       const transp = 2 ** (this.transposition / 1200);
-      if (this.string) {
-        if (this.otherNode === undefined) {
-          throw new Error('otherNode is undefined');
+      const synthsComp = this.$refs.synths as InstanceType<typeof Synths>;
+      this.instTracks.forEach((track, idx) => {
+        if (track.inst === Instrument.Sitar) {
+          console.log(synthsComp)
+          const nodesObj = synthsComp.synths[idx] as SitarSynthType;
+          const chikariNode = nodesObj.chikariNode;
+          const curFreq0 = chikariNode.freq0!.value;
+          const curFreq1 = chikariNode.freq1!.value;
+          chikariNode.freq0!.setValueAtTime(curFreq0, this.now());
+          chikariNode.freq1!.setValueAtTime(curFreq1, this.now());
+          const et = this.now() + this.lagTime;
+          chikariNode.freq0!.linearRampToValueAtTime(freqs[0] * transp, et);
+          chikariNode.freq1!.linearRampToValueAtTime(freqs[1] * transp, et);
         }
-        const curFreq0 = this.otherNode.freq0!.value;
-        const curFreq1 = this.otherNode.freq1!.value;
-        this.otherNode.freq0!.setValueAtTime(curFreq0, this.now());
-        this.otherNode.freq1!.setValueAtTime(curFreq1, this.now());
-        const et = this.now() + this.lagTime;
-        this.otherNode.freq0!.linearRampToValueAtTime(freqs[0] * transp, et);
-        this.otherNode.freq1!.linearRampToValueAtTime(freqs[1] * transp, et);
-      }
+      })
     },
     selectedControlsMode(mode, oldMode) {
       this.showSpecControls = false;
@@ -1100,9 +1142,127 @@ export default defineComponent({
       if (oldMode === ControlsMode.None) {
         this.$emit('resizeHeightEmit', true);
       }
+    },
+    instTracks: {
+      handler(newTracks) {
+        if (newTracks.length > 0 && !this.initializedSynthControls) {
+          this.initializeSynthControls()
+        }
+      },
+      deep: true
+    }
+  },
+  computed: {
+    hasRecording() {
+      return this.piece.audioID !== undefined;
+    },
+    curPlayTime() {
+      if (this.pausedAt) {
+        return this.pausedAt;
+      } else if (this.playing) {
+        if (this.startingDelta === undefined) {
+          throw new Error('startingDelta is undefined')
+        }
+        if (this.loop && this.startingDelta < this.loopEnd!) {
+          const dur = this.loopEnd! - this.loopStart!;
+          const realTime = this.now() - this.startedAt;
+          this.loopTime = realTime;
+          if (realTime > this.loopEnd!) {
+            this.loopTime =
+              this.loopStart! + ((realTime - this.loopStart!) % dur);
+          }
+          return this.loopTime;
+        } else {
+          return this.now() - this.startedAt;
+        }
+      } else {
+        return 0;
+      }
     }
   },
   methods: {
+
+    updateMixedGainVal(val: string) {
+      this.mixedGainVal = Number(val);
+      const s = this.$refs.synths as InstanceType<typeof Synths>;
+      const curVal = s.mixNode.gain.value;
+      s.mixNode.gain.setValueAtTime(curVal, this.now());
+      const targetTime = this.now() + this.lagTime;
+      s.mixNode.gain.linearRampToValueAtTime(this.mixedGainVal, targetTime);
+    },
+
+    updateRecGainVal(val: string) {
+      this.recGain = Number(val);
+      const curVal = this.gainNode!.gain.value;
+      const gain = this.gainNode!.gain;
+      gain.setValueAtTime(curVal, this.now());
+      gain.linearRampToValueAtTime(this.recGain, this.now() + this.lagTime);
+
+    },
+
+    handleUpdateGainNode(slider: { 
+      label: string, 
+      target: number, 
+      paramName: string,
+      instIdx: number,
+    }) {
+      const s = this.$refs.synths as InstanceType<typeof Synths>;
+      // if slider.label === 
+      // console.log(slider.instIdx, this.instTracks)
+      const inst = this.instTracks[slider.instIdx].inst;
+      let synth: KlattSynthType | SitarSynthType | SarangiSynthType;
+      let node: GainNode;
+      if (inst === Instrument.Sitar) {
+        synth = s.synths[slider.instIdx] as SitarSynthType;
+        node = synth[slider.paramName as keyof typeof synth] as GainNode;
+      } else if (inst === Instrument.Sarangi) {
+        synth = s.synths[slider.instIdx] as unknown as SarangiSynthType;
+        node = synth[slider.paramName as keyof typeof synth] as GainNode;
+      } else if (inst === Instrument.Vocal_M || inst === Instrument.Vocal_F) {
+        synth = s.synths[slider.instIdx] as unknown as KlattSynthType;
+        node = synth[slider.paramName as keyof typeof synth] as GainNode;
+      } else {
+        throw new Error('Invalid instrument')
+      }
+      const curVal = node.gain.value;
+      node.gain.setValueAtTime(curVal, this.now());
+      node.gain.linearRampToValueAtTime(slider.target, this.now() + this.lagTime);
+    },
+
+    initializeSynthControls() {
+      console.log('initializing synth controls');
+      this.initializedSynthControls = true;
+      this.instTracks.forEach((track, i) => {
+        if (track.inst === Instrument.Sitar) {
+          this.synthControls.push({
+            inst: track.inst,
+            idx: i,
+            params: {
+              dampen: 0.5,
+              outGain: 0,
+              extSitarGain: 1,
+              extChikariGain: 1,
+            }
+          });
+        } else if (track.inst === Instrument.Sarangi) {
+          this.synthControls.push({
+            inst: track.inst,
+            idx: i,
+            params: {
+              extSarangiGain: 0,
+            }
+          })
+        } else if (track.inst === Instrument.Vocal_M || track.inst === Instrument.Vocal_F) {
+          this.synthControls.push({
+            inst: track.inst,
+            idx: i,
+            params: {
+              extGain: 0,
+            }
+          })
+        }
+      })
+    },
 
     controlsMouseOver(e: MouseEvent) {
       if (this.controlsHoverTimeout === undefined) {
@@ -1143,10 +1303,11 @@ export default defineComponent({
     },
 
     reinitializeAC() {
+      console.log('reinitializing audio context');
       if (this.ac) this.ac.close();
       this.ac = new AudioContext({ sampleRate: 48000 });
       this.gainNode = this.ac.createGain();
-      this.gainNode.gain.setValueAtTime(Number(this.recGain), this.now());
+      this.gainNode.gain.setValueAtTime(this.recGain, this.now());
       this.synthGainNode = this.ac.createGain();
       this.synthGainNode.gain.setValueAtTime(this.synthGain, this.now());
       this.intSynthGainNode = this.ac.createGain();
@@ -1314,85 +1475,85 @@ export default defineComponent({
       });
     },
     // addKlattModule(url = this.ksUrl)
-    async setUpKlattNode(url: string, destination: GainNode) {
-      try {
-        await this.ac!.audioWorklet.addModule(url);
-        this.klattNode = new AudioWorkletNode(this.ac!, 'klatt-synth');
-        const params = this.klattNode.parameters;
-        const kn = this.klattNode;
-        kn.f0 = params.get('f0');
-        kn.f1 = params.get('f1');
-        kn.f2 = params.get('f2');
-        kn.f3 = params.get('f3');
-        kn.f4 = params.get('f4');
-        kn.f5 = params.get('f5');
-        kn.f6 = params.get('f6');
-        kn.b1 = params.get('b1');
-        kn.b2 = params.get('b2');
-        kn.b3 = params.get('b3');
-        kn.b4 = params.get('b4');
-        kn.b5 = params.get('b5');
-        kn.b6 = params.get('b6');
-        kn.db1 = params.get('db1');
-        kn.db2 = params.get('db2');
-        kn.db3 = params.get('db3');
-        kn.db4 = params.get('db4');
-        kn.db5 = params.get('db5');
-        kn.db6 = params.get('db6');
-        kn.flutterLevel = params.get('flutterLevel');
-        kn.openPhaseRatio = params.get('openPhaseRatio');
-        kn.breathinessDb = params.get('breathinessDb');
-        kn.tiltDb = params.get('tiltDb');
-        kn.gainDb = params.get('gainDb');
-        kn.agcRmsLevel = params.get('agcRmsLevel');
-        kn.cascadeEnabled = params.get('cascadeEnabled');
-        kn.cascadeVoicingDb = params.get('cascadeVoicingDb');
-        kn.cascadeAspirationDb = params.get('cascadeAspirationDb');
-        kn.cascadeAspirationMod = params.get('cascadeAspirationMod');
-        kn.nasalFormantFreq = params.get('nasalFormantFreq');
-        kn.nasalFormantFreqToggle = params.get('nasalFormantFreqToggle');
-        kn.nasalFormantBw = params.get('nasalFormantBw');
-        kn.nasalFormantBwToggle = params.get('nasalFormantBwToggle');
-        kn.nasalAntiformantFreq = params.get('nasalAntiformantFreq');
-        kn.nasalAntiformantFreqToggle = params.get('nasalAntiformantFreqToggle')
-        kn.nasalAntiformantBw = params.get('nasalAntiformantBw');
-        kn.nasalAntiformantBwToggle = params.get('nasalAntiformantBwToggle');
-        kn.parallelEnabled = params.get('parallelEnabled');
-        kn.parallelVoicingDb = params.get('parallelVoicingDb');
-        kn.parallelAspirationDb = params.get('parallelAspirationDb');
-        kn.parallelAspirationMod = params.get('parallelAspirationMod');
-        kn.fricationDb = params.get('fricationDb');
-        kn.fricationMod = params.get('fricationMod');
-        kn.parallelBypassDb = params.get('parallelBypassDb');
-        kn.nasalFormantDb = params.get('nasalFormantDb');
-        kn.extGain = params.get('extGain');
-        const max = 0.125;
+    // async setUpKlattNode(url: string, destination: GainNode) {
+    //   try {
+    //     await this.ac!.audioWorklet.addModule(url);
+    //     this.klattNode = new AudioWorkletNode(this.ac!, 'klatt-synth');
+    //     const params = this.klattNode.parameters;
+    //     const kn = this.klattNode;
+    //     kn.f0 = params.get('f0');
+    //     kn.f1 = params.get('f1');
+    //     kn.f2 = params.get('f2');
+    //     kn.f3 = params.get('f3');
+    //     kn.f4 = params.get('f4');
+    //     kn.f5 = params.get('f5');
+    //     kn.f6 = params.get('f6');
+    //     kn.b1 = params.get('b1');
+    //     kn.b2 = params.get('b2');
+    //     kn.b3 = params.get('b3');
+    //     kn.b4 = params.get('b4');
+    //     kn.b5 = params.get('b5');
+    //     kn.b6 = params.get('b6');
+    //     kn.db1 = params.get('db1');
+    //     kn.db2 = params.get('db2');
+    //     kn.db3 = params.get('db3');
+    //     kn.db4 = params.get('db4');
+    //     kn.db5 = params.get('db5');
+    //     kn.db6 = params.get('db6');
+    //     kn.flutterLevel = params.get('flutterLevel');
+    //     kn.openPhaseRatio = params.get('openPhaseRatio');
+    //     kn.breathinessDb = params.get('breathinessDb');
+    //     kn.tiltDb = params.get('tiltDb');
+    //     kn.gainDb = params.get('gainDb');
+    //     kn.agcRmsLevel = params.get('agcRmsLevel');
+    //     kn.cascadeEnabled = params.get('cascadeEnabled');
+    //     kn.cascadeVoicingDb = params.get('cascadeVoicingDb');
+    //     kn.cascadeAspirationDb = params.get('cascadeAspirationDb');
+    //     kn.cascadeAspirationMod = params.get('cascadeAspirationMod');
+    //     kn.nasalFormantFreq = params.get('nasalFormantFreq');
+    //     kn.nasalFormantFreqToggle = params.get('nasalFormantFreqToggle');
+    //     kn.nasalFormantBw = params.get('nasalFormantBw');
+    //     kn.nasalFormantBwToggle = params.get('nasalFormantBwToggle');
+    //     kn.nasalAntiformantFreq = params.get('nasalAntiformantFreq');
+    //     kn.nasalAntiformantFreqToggle = params.get('nasalAntiformantFreqToggle')
+    //     kn.nasalAntiformantBw = params.get('nasalAntiformantBw');
+    //     kn.nasalAntiformantBwToggle = params.get('nasalAntiformantBwToggle');
+    //     kn.parallelEnabled = params.get('parallelEnabled');
+    //     kn.parallelVoicingDb = params.get('parallelVoicingDb');
+    //     kn.parallelAspirationDb = params.get('parallelAspirationDb');
+    //     kn.parallelAspirationMod = params.get('parallelAspirationMod');
+    //     kn.fricationDb = params.get('fricationDb');
+    //     kn.fricationMod = params.get('fricationMod');
+    //     kn.parallelBypassDb = params.get('parallelBypassDb');
+    //     kn.nasalFormantDb = params.get('nasalFormantDb');
+    //     kn.extGain = params.get('extGain');
+    //     const max = 0.125;
 
-        kn.extGain?.setValueAtTime(max, this.now());
-        this.klattMiddleGain = this.ac!.createGain();
-        this.klattMiddleGain.gain.setValueAtTime(0, this.now());
-        this.klattNode
-          .connect(this.klattMiddleGain)
-          .connect(destination)
-      } catch (e) {
-        console.error(e);
-      }
-    },
+    //     kn.extGain?.setValueAtTime(max, this.now());
+    //     this.klattMiddleGain = this.ac!.createGain();
+    //     this.klattMiddleGain.gain.setValueAtTime(0, this.now());
+    //     this.klattNode
+    //       .connect(this.klattMiddleGain)
+    //       .connect(destination)
+    //   } catch (e) {
+    //     console.error(e);
+    //   }
+    // },
 
-    async setUpSarangiNode(destination: GainNode) {
-      try {
-        await this.ac!.audioWorklet.addModule(ssURL);
-        this.sarangiSynth = new AudioWorkletNode(this.ac!, 'sarangi');
-        this.sarangiSynth.freq = this.sarangiSynth.parameters.get('Frequency');
-        this.sarangiSynth.bowGain = this.sarangiSynth.parameters.get('BowGain');
-        this.sarangiSynth.gain = this.sarangiSynth.parameters.get('Gain');
-        this.sarangiSynth.gain!.setValueAtTime(1.0, this.now());
-        this.sarangiSynth.bowGain!.setValueAtTime(0.0, this.now());
-        this.sarangiSynth.connect(destination);
-      } catch (e) {
-        console.error(e);
-      }
-    },
+    // async setUpSarangiNode(destination: GainNode) {
+    //   try {
+    //     await this.ac!.audioWorklet.addModule(ssURL);
+    //     this.sarangiSynth = new AudioWorkletNode(this.ac!, 'sarangi');
+    //     this.sarangiSynth.freq = this.sarangiSynth.parameters.get('Frequency');
+    //     this.sarangiSynth.bowGain = this.sarangiSynth.parameters.get('BowGain');
+    //     this.sarangiSynth.gain = this.sarangiSynth.parameters.get('Gain');
+    //     this.sarangiSynth.gain!.setValueAtTime(1.0, this.now());
+    //     this.sarangiSynth.bowGain!.setValueAtTime(0.0, this.now());
+    //     this.sarangiSynth.connect(destination);
+    //   } catch (e) {
+    //     console.error(e);
+    //   }
+    // },
     
     async parentLoaded() {
       this.gatherInfo();
@@ -1409,43 +1570,43 @@ export default defineComponent({
       this.vocal = vocInsts.includes(instrumentation);
       this.sarangi = instrumentation === 'Sarangi';
       this.string = stringInsts.includes(instrumentation);
-      if (this.string) {
-        this.ac!.audioWorklet.addModule(AudioWorklet(ksURL))
-          .then(() => {
-            this.moduleCt++;
-            if (this.moduleCt === 3) {
-              this.modsLoaded = true;
-              if (!this.inited && this.piece) this.initAll();
-            }
-          })
-          .catch((err) => {
-            console.log(err);
-          });
-        this.ac!.audioWorklet.addModule(AudioWorklet(cURL))
-          .then(() => {
-            this.moduleCt++;
-            if (this.moduleCt === 3) {
-              this.modsLoaded = true;
-              if (!this.inited && this.piece) this.initAll();
-            }
-          })
-          .catch((err) => {
-            console.log(err);
-          });
-      } 
+      // if (this.string) {
+      //   this.ac!.audioWorklet.addModule(AudioWorklet(ksURL))
+      //     .then(() => {
+      //       this.moduleCt++;
+      //       if (this.moduleCt === 3) {
+      //         this.modsLoaded = true;
+      //         if (!this.inited && this.piece) this.initAll();
+      //       }
+      //     })
+      //     .catch((err) => {
+      //       console.log(err);
+      //     });
+      //   this.ac!.audioWorklet.addModule(AudioWorklet(cURL))
+      //     .then(() => {
+      //       this.moduleCt++;
+      //       if (this.moduleCt === 3) {
+      //         this.modsLoaded = true;
+      //         if (!this.inited && this.piece) this.initAll();
+      //       }
+      //     })
+      //     .catch((err) => {
+      //       console.log(err);
+      //     });
+      // } 
       
-      this.ac!.audioWorklet.addModule(AudioWorklet(caURL))
-        .then(() => {
-          this.moduleCt++;
-          let trialNum = this.string ? 3 : 1;
-          if (this.moduleCt === trialNum) {
-            this.modsLoaded = true;
-            if (!this.inited && this.piece) this.initAll();
-          }
-        })
-        .catch((err) => {
-          console.log(err);
-        });
+      // this.ac!.audioWorklet.addModule(AudioWorklet(caURL))
+      //   .then(() => {
+      //     this.moduleCt++;
+      //     let trialNum = this.string ? 3 : 1;
+      //     if (this.moduleCt === trialNum) {
+      //       this.modsLoaded = true;
+      //       if (!this.inited && this.piece) this.initAll();
+      //     }
+      //   })
+      //   .catch((err) => {
+      //     console.log(err);
+      //   });
 
       this.makeTuningSines();
       if (this.piece) {
@@ -1569,29 +1730,34 @@ export default defineComponent({
       this.stretchBuf.copyToChannel(right, 1);
     },
 
-    initAll() {
-      if (this.string) {
-        this.initializePluckNode();
-        this.initializeChikariNodes();
-      } else if (this.vocal) {
-        const browser = detect();
-        const version = browser!.version!.split('.')[0];
-        const c1 = browser!.name === 'chrome';
-        const c2 = browser!.name === 'firefox' && Number(version) >= 113;
-        const c3 = browser!.name === 'edge-chromium';
-        if (c1 || c2 || c3) {
-          this.setUpKlattNode(klattURL, this.intSynthGainNode!);
-          this.klattActive = true
-        } else {
-          this.initializeVocalNode()
-        }
-      } else if (this.sarangi) {
-        this.setUpSarangiNode(this.intSynthGainNode!)
-      }
-      this.initializeBufferRecorder();
-      this.preSetFirstEnvelope(256);
+    // initAll() {
+    //   if (this.string) {
+    //     this.initializePluckNode();
+    //     this.initializeChikariNodes();
+    //   } else if (this.vocal) {
+    //     const browser = detect();
+    //     const version = browser!.version!.split('.')[0];
+    //     const c1 = browser!.name === 'chrome';
+    //     const c2 = browser!.name === 'firefox' && Number(version) >= 113;
+    //     const c3 = browser!.name === 'edge-chromium';
+    //     if (c1 || c2 || c3) {
+    //       this.setUpKlattNode(klattURL, this.intSynthGainNode!);
+    //       this.klattActive = true
+    //     } else {
+    //       this.initializeVocalNode()
+    //     }
+    //   } else if (this.sarangi) {
+    //     this.setUpSarangiNode(this.intSynthGainNode!)
+    //   }
+    //   this.initializeBufferRecorder();
+    //   this.preSetFirstEnvelope(256);
+    //   this.initStretchWorker();
+    //   this.inited = true;
+    // },
+
+    initializeStretching() {
+      // this.initializeBufferRecorder();
       this.initStretchWorker();
-      this.inited = true;
     },
     gatherInfo() {
       const obj = this.audioDBDoc;
@@ -1965,79 +2131,79 @@ export default defineComponent({
         this.firstLPEnvelope[i] = transp * traj.compute(x) * 2 ** 3;
       }
     },
-    async initializeChikariNodes() {
-      if (this.ac === undefined) {
-        throw new Error('audio context is undefined');
-      }
-      if (this.intChikariGainNode) this.intChikariGainNode.disconnect();
-      this.intChikariGainNode = this.ac.createGain();
-      if (this.chikariNodes) this.chikariNodes.forEach((cn) => cn.disconnect());
-      const options = { numberOfInputs: 1, numberOfOutputs: 2 };
-      const sName = 'chikaris'
-      try {
-        this.otherNode = await new AudioWorkletNode(this.ac, sName, options);
-      } catch (e) {
-        console.log(e);
-        this.ac.audioWorklet.addModule(AudioWorklet(cURL))
-          .then(() => {
-            this.otherNode = new AudioWorkletNode(this.ac!, sName, options);
-          });
-      }
-      if (this.otherNode === undefined) {
-        throw new Error('other node is undefined');
-      }
-      this.otherNode.freq0 = this.otherNode.parameters.get('freq0');
-      this.otherNode.freq1 = this.otherNode.parameters.get('freq1');
-      this.otherNode.cutoff = this.otherNode.parameters.get('Cutoff');
-      this.otherNode.cutoff!.setValueAtTime(0.7, this.now());
-      this.otherNode.connect(this.intChikariGainNode, 0);
-      this.otherNode.connect(this.intChikariGainNode, 1);
-      this.chikariDCOffsetNode = this.ac.createBiquadFilter();
-      this.chikariDCOffsetNode.type = 'highpass';
-      this.chikariDCOffsetNode.frequency.setValueAtTime(5, this.now());
-      this.intChikariGainNode
-        .connect(this.chikariDCOffsetNode)
-        .connect(this.chikariGainNode!);
-      const raga = this.piece.raga;
-      const freqs = raga.chikariPitches.map((p) => p.frequency);
-      const transp = 2 ** (this.transposition / 1200);
-      this.otherNode.freq0!.setValueAtTime(freqs[0] * transp, this.now());
-      this.otherNode.freq1!.setValueAtTime(freqs[1] * transp, this.now());
-    },
-    initializePluckNode() {
-      if (this.pluckNode) {
-        this.pluckNode.disconnect();
-        this.pluckNode.port.close();
-        this.pluckNode = null;
-      }
-      if (this.lowPassNode) this.lowPassNode.disconnect();
-      this.pluckNode = new AudioWorkletNode(this.ac!, 'karplusStrong');
-      this.pluckDCOffsetNode = this.ac!.createBiquadFilter();
-      this.pluckDCOffsetNode.type = 'highpass';
-      this.pluckDCOffsetNode.frequency.setValueAtTime(5, this.now());
-      this.lowPassNode = this.ac!.createBiquadFilter();
-      this.lowPassNode.type = 'lowpass';
-      const fund = this.piece.raga.fundamental;
-      this.lowPassNode.frequency.setValueAtTime(fund * 2 ** 3, this.now());
-      this.pluckNode
-        .connect(this.pluckDCOffsetNode)
-        .connect(this.lowPassNode)
-        .connect(this.intSynthGainNode!);
-      this.pluckNode.frequency = this.pluckNode.parameters.get('Frequency');
-      this.pluckNode.cutoff = this.pluckNode.parameters.get('Cutoff');
-      this.pluckNode.cutoff!.setValueAtTime(Number(this.synthDamp), this.now());
-    },
-    initializeVocalNode() {
-      if (this.vocalNode) this.vocalNode.disconnect();
-      this.vocalNode = this.ac!.createOscillator();
-      this.vocalNode.type = 'triangle';
-      this.vocalGainNode = this.ac!.createGain();
-      this.vocalGainNode.gain.setValueAtTime(0, this.now());
-      this.vocalNode
-        .connect(this.vocalGainNode)
-        .connect(this.intSynthGainNode!);
-      this.vocalNode.start();
-    },  
+    // async initializeChikariNodes() {
+    //   if (this.ac === undefined) {
+    //     throw new Error('audio context is undefined');
+    //   }
+    //   if (this.intChikariGainNode) this.intChikariGainNode.disconnect();
+    //   this.intChikariGainNode = this.ac.createGain();
+    //   if (this.chikariNodes) this.chikariNodes.forEach((cn) => cn.disconnect());
+    //   const options = { numberOfInputs: 1, numberOfOutputs: 2 };
+    //   const sName = 'chikaris'
+    //   try {
+    //     this.otherNode = await new AudioWorkletNode(this.ac, sName, options);
+    //   } catch (e) {
+    //     console.log(e);
+    //     this.ac.audioWorklet.addModule(AudioWorklet(cURL))
+    //       .then(() => {
+    //         this.otherNode = new AudioWorkletNode(this.ac!, sName, options);
+    //       });
+    //   }
+    //   if (this.otherNode === undefined) {
+    //     throw new Error('other node is undefined');
+    //   }
+    //   this.otherNode.freq0 = this.otherNode.parameters.get('freq0');
+    //   this.otherNode.freq1 = this.otherNode.parameters.get('freq1');
+    //   this.otherNode.cutoff = this.otherNode.parameters.get('Cutoff');
+    //   this.otherNode.cutoff!.setValueAtTime(0.7, this.now());
+    //   this.otherNode.connect(this.intChikariGainNode, 0);
+    //   this.otherNode.connect(this.intChikariGainNode, 1);
+    //   this.chikariDCOffsetNode = this.ac.createBiquadFilter();
+    //   this.chikariDCOffsetNode.type = 'highpass';
+    //   this.chikariDCOffsetNode.frequency.setValueAtTime(5, this.now());
+    //   this.intChikariGainNode
+    //     .connect(this.chikariDCOffsetNode)
+    //     .connect(this.chikariGainNode!);
+    //   const raga = this.piece.raga;
+    //   const freqs = raga.chikariPitches.map((p) => p.frequency);
+    //   const transp = 2 ** (this.transposition / 1200);
+    //   this.otherNode.freq0!.setValueAtTime(freqs[0] * transp, this.now());
+    //   this.otherNode.freq1!.setValueAtTime(freqs[1] * transp, this.now());
+    // },
+    // initializePluckNode() {
+    //   if (this.pluckNode) {
+    //     this.pluckNode.disconnect();
+    //     this.pluckNode.port.close();
+    //     this.pluckNode = null;
+    //   }
+    //   if (this.lowPassNode) this.lowPassNode.disconnect();
+    //   this.pluckNode = new AudioWorkletNode(this.ac!, 'karplusStrong');
+    //   this.pluckDCOffsetNode = this.ac!.createBiquadFilter();
+    //   this.pluckDCOffsetNode.type = 'highpass';
+    //   this.pluckDCOffsetNode.frequency.setValueAtTime(5, this.now());
+    //   this.lowPassNode = this.ac!.createBiquadFilter();
+    //   this.lowPassNode.type = 'lowpass';
+    //   const fund = this.piece.raga.fundamental;
+    //   this.lowPassNode.frequency.setValueAtTime(fund * 2 ** 3, this.now());
+    //   this.pluckNode
+    //     .connect(this.pluckDCOffsetNode)
+    //     .connect(this.lowPassNode)
+    //     .connect(this.intSynthGainNode!);
+    //   this.pluckNode.frequency = this.pluckNode.parameters.get('Frequency');
+    //   this.pluckNode.cutoff = this.pluckNode.parameters.get('Cutoff');
+    //   this.pluckNode.cutoff!.setValueAtTime(Number(this.synthDamp), this.now());
+    // },
+    // initializeVocalNode() {
+    //   if (this.vocalNode) this.vocalNode.disconnect();
+    //   this.vocalNode = this.ac!.createOscillator();
+    //   this.vocalNode.type = 'triangle';
+    //   this.vocalGainNode = this.ac!.createGain();
+    //   this.vocalGainNode.gain.setValueAtTime(0, this.now());
+    //   this.vocalNode
+    //     .connect(this.vocalGainNode)
+    //     .connect(this.intSynthGainNode!);
+    //   this.vocalNode.start();
+    // },  
     initializeBufferRecorder() {
       // the buffer source node
       this.synthLoopSource = this.ac!.createBufferSource();
@@ -2271,44 +2437,44 @@ export default defineComponent({
         this.sourceNode.stop(this.now());
         this.sourceNode = null;
       }
-      if (this.synthLoopSource === undefined) {
-        throw new Error('synthLoopSource is undefined')
-      }
-      if (this.chikLoopSource === undefined) {
-        throw new Error('chikLoopSource is undefined')
-      }
-      if (this.synthLoopSource.playing) {
-        const curSynthGain = this.synthLoopGainNode!.gain.value;
-        this.synthLoopGainNode!.gain.setValueAtTime(curSynthGain, this.now());
-        const endTime = this.now() + this.lagTime;
-        this.synthLoopGainNode!.gain.linearRampToValueAtTime(0, endTime)
-        this.synthLoopSource.stop(this.now() + this.lagTime);
-        this.synthLoopSource.onended = () => {
-          this.synthLoopSource!.disconnect();
-          this.synthLoopSource = this.ac!.createBufferSource();
-          this.synthLoopSource.loop = true;
-          this.synthLoopSource
-            .connect(this.synthLoopGainNode!)
-            .connect(this.synthGainNode!);
-        }
-        const curChikGain = this.chikLoopGainNode!.gain.value;
-        this.chikLoopGainNode!.gain.setValueAtTime(curChikGain, this.now());
-        this.chikLoopGainNode!.gain.linearRampToValueAtTime(0, endTime)
-        this.chikLoopSource.stop(this.now() + this.lagTime);
-        this.chikLoopSource.onended = () => {
-          this.chikLoopSource!.disconnect();
-          this.chikLoopSource = this.ac!.createBufferSource();
-          this.chikLoopSource.loop = true;
-          this.chikLoopSource
-            .connect(this.chikLoopGainNode!)
-            .connect(this.chikariGainNode!);
-        }
-      }
-      if (this.capture!.active!.value === 1) {
-        this.capture!.active!.setValueAtTime(0, this.now());
-        this.capture!.cancel!.setValueAtTime(1, this.now());
-        this.capture!.cancel!.setValueAtTime(0, this.now() + 0.1);
-      }
+      // if (this.synthLoopSource === undefined) {
+      //   throw new Error('synthLoopSource is undefined')
+      // }
+      // if (this.chikLoopSource === undefined) {
+      //   throw new Error('chikLoopSource is undefined')
+      // }
+      // if (this.synthLoopSource.playing) {
+      //   const curSynthGain = this.synthLoopGainNode!.gain.value;
+      //   this.synthLoopGainNode!.gain.setValueAtTime(curSynthGain, this.now());
+      //   const endTime = this.now() + this.lagTime;
+      //   this.synthLoopGainNode!.gain.linearRampToValueAtTime(0, endTime)
+      //   this.synthLoopSource.stop(this.now() + this.lagTime);
+      //   this.synthLoopSource.onended = () => {
+      //     this.synthLoopSource!.disconnect();
+      //     this.synthLoopSource = this.ac!.createBufferSource();
+      //     this.synthLoopSource.loop = true;
+      //     this.synthLoopSource
+      //       .connect(this.synthLoopGainNode!)
+      //       .connect(this.synthGainNode!);
+      //   }
+      //   const curChikGain = this.chikLoopGainNode!.gain.value;
+      //   this.chikLoopGainNode!.gain.setValueAtTime(curChikGain, this.now());
+      //   this.chikLoopGainNode!.gain.linearRampToValueAtTime(0, endTime)
+      //   this.chikLoopSource.stop(this.now() + this.lagTime);
+      //   this.chikLoopSource.onended = () => {
+      //     this.chikLoopSource!.disconnect();
+      //     this.chikLoopSource = this.ac!.createBufferSource();
+      //     this.chikLoopSource.loop = true;
+      //     this.chikLoopSource
+      //       .connect(this.chikLoopGainNode!)
+      //       .connect(this.chikariGainNode!);
+      //   }
+      // }
+      // if (this.capture!.active!.value === 1) {
+      //   this.capture!.active!.setValueAtTime(0, this.now());
+      //   this.capture!.cancel!.setValueAtTime(1, this.now());
+      //   this.capture!.cancel!.setValueAtTime(0, this.now() + 0.1);
+      // }
       this.pausedAt = 0;
       this.startedAt = 0;
       this.playing = false;
@@ -2439,20 +2605,19 @@ export default defineComponent({
           const playImg = this.$refs.playImg as HTMLImageElement;
           playImg.classList.add('playing');
           this.startPlayCursorAnimation();
-          this.playTrajs(this.getCurTime(), this.now());
-          if (this.string) {
-            this.playChikaris(this.getCurTime(), this.now(), this.otherNode!);
-          }
-          
+          const s = this.$refs.synths as InstanceType<typeof Synths>;
+          s.playAllTrajs();
         } else {
           this.pause();
           const playImg = this.$refs.playImg as HTMLImageElement;
           playImg.classList.remove('playing');
           this.stopPlayCursorAnimation();
-          this.cancelPlayTrajs();
-          if (this.string) {
-            this.cancelBursts();
-          }
+          const s = this.$refs.synths as InstanceType<typeof Synths>;
+          s.cancelAllTrajs();
+          // this.cancelPlayTrajs();
+          // if (this.string) {
+          //   this.cancelBursts();
+          // }
           this.bufferSourceNodes = [];
         }
       }
@@ -3005,7 +3170,8 @@ export default defineComponent({
   right: 0px;
   bottom: v-bind(playerHeight + 'px');
   background-color: #202621;
-  width: 540px;
+  /* width: 540px; */
+  width: 100%;
   height: v-bind(controlsHeight + 'px');
   border-bottom: 1px solid black;
   color: white;

@@ -887,6 +887,170 @@ type DisplaySettings = {
   uniqueId: string,
 }
 
+interface LoopSourceNode extends AudioBufferSourceNode {
+  playing?: boolean;
+}
+
+interface ChikariNodeType extends AudioWorkletNode {
+  freq0?: AudioParam;
+  freq1?: AudioParam;
+  cutoff?: AudioParam;
+  parameters: Map<string, AudioParam>;
+}
+
+interface PluckNodeType extends AudioWorkletNode {
+  frequency?: AudioParam;
+  cutoff?: AudioParam;
+  parameters: Map<string, AudioParam>;
+}
+
+interface SarangiNodeType extends AudioWorkletNode {
+  freq?: AudioParam;
+  bowGain?: AudioParam;
+  gain?: AudioParam;
+  parameters: Map<string, AudioParam>;
+}
+
+interface CaptureNodeType extends AudioWorkletNode {
+  bufferSize?: AudioParam;
+  active?: AudioParam;
+  cancel?: AudioParam;
+}
+
+interface KlattNodeType extends AudioWorkletNode {
+  extGain?: AudioParam;
+  f0?: AudioParam;
+  f1?: AudioParam;
+  f2?: AudioParam;
+  f3?: AudioParam;
+  f4?: AudioParam;
+  f5?: AudioParam;
+  f6?: AudioParam;
+  b1?: AudioParam;
+  b2?: AudioParam;
+  b3?: AudioParam;
+  b4?: AudioParam;
+  b5?: AudioParam;
+  b6?: AudioParam;
+  db1?: AudioParam;
+  db2?: AudioParam;
+  db3?: AudioParam;
+  db4?: AudioParam;
+  db5?: AudioParam;
+  db6?: AudioParam;
+  flutterLevel?: AudioParam;
+  openPhaseRatio?: AudioParam;
+  breathinessDb?: AudioParam;
+  tiltDb?: AudioParam;
+  gainDb?: AudioParam;
+  agcRmsLevel?: AudioParam;
+  cascadeEnabled?: AudioParam;
+  cascadeVoicingDb?: AudioParam;
+  cascadeAspirationDb?: AudioParam;
+  cascadeAspirationMod?: AudioParam;
+  nasalFormantFreq?: AudioParam;
+  nasalFormantFreqToggle?: AudioParam;
+  nasalFormantBw?: AudioParam;
+  nasalFormantBwToggle?: AudioParam;
+  nasalAntiformantFreq?: AudioParam;
+  nasalAntiformantFreqToggle?: AudioParam;
+  nasalAntiformantBw?: AudioParam;
+  nasalAntiformantBwToggle?: AudioParam;
+  parallelEnabled?: AudioParam;
+  parallelVoicingDb?: AudioParam;
+  parallelAspirationDb?: AudioParam;
+  parallelAspirationMod?: AudioParam;
+  fricationDb?: AudioParam;
+  fricationMod?: AudioParam;
+  parallelBypassDb?: AudioParam;
+  nasalFormantDb?: AudioParam;
+  parameters: Map<string, AudioParam>;
+}
+
+
+type ParamName = (
+  'frequency' | 
+  'cutoff' | 
+  'dampen' | 
+  'outGain' | 
+  'intSitarGain' |
+  'extSitarGain' |
+  'intChikariGain' |
+  'extChikariGain' |
+  'intSarangiGain' | // this basically just turns from 0 to 1 when 'play trajs'
+  // is started. Doesn't get controlled granularly. This is so that there is 
+  // a line that can be tapped by "capture" node, for loopign playback.
+  'extSarangiGain' | // this is controlled by user controlled slider
+  'dynamicSarangiGain' // dynamic is controlled by automation controls
+)
+
+
+type SynthControl = SitarSynthControl | SarangiSynthControl | KlattSynthControl;
+
+type SitarSynthControl = {
+  inst: Instrument.Sitar,
+  idx: number,
+  params: {
+    dampen: number,
+    outGain: number,
+    extSitarGain: number,
+    extChikariGain: number
+  }
+}
+
+type SarangiSynthControl = {
+  inst: Instrument.Sarangi,
+  idx: number,
+  params: {
+    extSarangiGain: number
+  }
+}
+
+type KlattSynthControl = {
+  inst: Instrument.Vocal_M | Instrument.Vocal_F,
+  idx: number,
+  params: {
+    extGain: number
+  }
+}
+
+type SynthType = SitarSynthType | SarangiSynthType | KlattSynthType;
+
+type SitarSynthType = {
+  sitarNode: PluckNodeType,
+  chikariNode: ChikariNodeType,
+  sDCOffsetNode: BiquadFilterNode,
+  lpNode: BiquadFilterNode,
+  outGainNode: GainNode,
+  intSitarGainNode: GainNode,
+  extSitarGainNode: GainNode,
+  intChikariGainNode: GainNode,
+  extChikariGainNode: GainNode,
+  idx: number,
+}
+
+type SarangiSynthType = {
+  sarangiNode: SarangiNodeType,
+  intGain: GainNode,
+  extGain: GainNode,
+  idx: number
+}
+
+type KlattSynthType = {
+  node: KlattNodeType,
+  intGain: GainNode,
+  extGain: GainNode,
+  idx: number
+}
+
+type BurstOption = {
+  when: number,
+  dur?: number,
+  to: AudioNode,
+  atk?: number,
+  amp?: number
+}
+
 export type { 
   CollectionType, 
   UserType, 
@@ -961,6 +1125,22 @@ export type {
   LabelEditorOptions,
   TooltipData,
   DisplaySettings,
-  BolDisplayType
+  BolDisplayType,
+  LoopSourceNode,
+  ChikariNodeType,
+  PluckNodeType,
+  SarangiNodeType,
+  CaptureNodeType,
+  KlattNodeType,
+  ParamName,
+  SynthControl,
+  SitarSynthControl,
+  SarangiSynthControl,
+  KlattSynthControl,
+  SynthType,
+  SitarSynthType,
+  SarangiSynthType,
+  KlattSynthType,
+  BurstOption,
 };
 

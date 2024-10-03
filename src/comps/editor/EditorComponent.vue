@@ -177,7 +177,7 @@
             @click='preventSpaceToggle'>
         </div>
         <div class='cbRow'>
-          <button @click='resetAudio'>Reset Audio</button>
+          <!-- <button @click='resetAudio'>Reset Audio</button> -->
           <button @click='savePiece'>Save</button>
         </div>
         <div class='cbRow'>
