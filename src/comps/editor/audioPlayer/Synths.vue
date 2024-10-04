@@ -1,7 +1,7 @@
 <template>
 </template>
 <script lang='ts'>
-import { defineComponent, PropType, onMounted } from 'vue';
+import { defineComponent, PropType, onMounted, ref } from 'vue';
 import {
   InstrumentTrackType,
 } from '@/ts/types.ts';
@@ -102,6 +102,7 @@ export default defineComponent({
       [[640, 1230, 2550, 80, 70, 140], [420, 940, 2350, 80, 70, 80]],
       [[550, 960, 2400, 80, 50, 130], [360, 1820, 2450, 60, 50, 160]]
     ];
+    const endRecTime = ref(0);
     const sendBurst = (option: BurstOption) => {
       const sr = props.ac.sampleRate;
       const whiteNoise = () => Math.random() * 2 - 1;
@@ -158,6 +159,7 @@ export default defineComponent({
         // load audio worklets
         await props.ac.audioWorklet.addModule(ksURL);
         await props.ac.audioWorklet.addModule(cURL);
+        await props.ac.audioWorklet.addModule(caURL);
 
         // initialize nodes
         const sitarNode = new AudioWorkletNode(props.ac, 'karplusStrong') as 
@@ -174,6 +176,13 @@ export default defineComponent({
         const chikariNode = new AudioWorkletNode(props.ac, 'chikaris', cOpt) as 
           ChikariNodeType;
         const cDCOffsetNode = props.ac.createBiquadFilter();
+        const capOpts = { numberOfInputs: 2, numberOfOutputs: 0 };
+        const capture = new AudioWorkletNode(props.ac, 'captureAudio', capOpts) as 
+          CaptureNodeType;
+        const sitarLoopSourceNode = props.ac.createBufferSource();
+        const chikariLoopSourceNode = props.ac.createBufferSource();
+        const sitarLoopGainNode = props.ac.createGain();
+        const chikariLoopGainNode = props.ac.createGain();
 
         // map parameters
         sitarNode.frequency = sitarNode.parameters.get('Frequency');
@@ -181,6 +190,9 @@ export default defineComponent({
         chikariNode.freq0 = chikariNode.parameters.get('freq0');
         chikariNode.freq1 = chikariNode.parameters.get('freq1');
         chikariNode.cutoff = chikariNode.parameters.get('Cutoff');
+        capture.bufferSize = capture.parameters.get('BufferSize');
+        capture.active = capture.parameters.get('Active');
+        capture.cancel = capture.parameters.get('Cancel');
 
         // set parameters
         sDCOffsetNode.type = 'highpass';
@@ -198,6 +210,27 @@ export default defineComponent({
         intChikariGainNode.gain.value = 0;
         extChikariGainNode.gain.value = control.params.extChikariGain!;
         chikariNode.cutoff!.value = 0.7;
+        sitarLoopGainNode.gain.value = 0;
+        chikariLoopGainNode.gain.value = 0;
+
+        // // set message handlers
+        // capture.port.onmessage = e => {
+        //   // set up sitar buffer
+        //   const sitarArr = new Float32Array(e.data[0]);
+        //   const sr = props.ac.sampleRate;
+        //   const sitarBuffer = props.ac.createBuffer(1, sitarArr.length, sr);
+        //   sitarBuffer.copyToChannel(sitarArr, 0);
+
+        //   // set up chikari buffer
+        //   const chikariArr = new Float32Array(e.data[1]);
+        //   const chikariBuffer = props.ac.createBuffer(1, chikariArr.length, sr);
+        //   chikariBuffer.copyToChannel(chikariArr, 0);
+
+        //   const offset = now() - endRecTime.value;
+        //   sitarLoopSourceNode.buffer = sitarBuffer;
+        //   chikariLoopSourceNode.buffer = chikariBuffer;
+
+        // }
 
         // connect nodes
         sitarNode
@@ -214,6 +247,12 @@ export default defineComponent({
           .connect(intChikariGainNode)
           .connect(extChikariGainNode)
           .connect(outGainNode);
+        sitarLoopSourceNode
+          .connect(sitarLoopGainNode)
+          .connect(extSitarGainNode);
+        chikariLoopSourceNode
+          .connect(chikariLoopGainNode)
+          .connect(extChikariGainNode);
 
         return {
           sitarNode,
@@ -225,12 +264,36 @@ export default defineComponent({
           extChikariGainNode,
           outGainNode,
           extSitarGainNode,
-          idx: control.idx
+          idx: control.idx,
+          sitarLoopSourceNode,
+          chikariLoopSourceNode,
+          capture,
+          sitarLoopGainNode,
+          chikariLoopGainNode
         }
       } catch (e) {
         throw new Error('Error adding Karplus-Strong module');
       }
     };
+
+    const initializeSitarCapture = (synth: SitarSynthType) => {
+      synth.capture.port.onmessage = e => {
+        const sitarArr = new Float32Array(e.data[0]);
+          const sr = props.ac.sampleRate;
+          const sitarBuffer = props.ac.createBuffer(1, sitarArr.length, sr);
+          sitarBuffer.copyToChannel(sitarArr, 0);
+          const chikariArr = new Float32Array(e.data[1]);
+          const chikariBuffer = props.ac.createBuffer(1, chikariArr.length, sr);
+          chikariBuffer.copyToChannel(chikariArr, 0);
+          const offset = now() - endRecTime.value;
+          synth.sitarLoopSourceNode.buffer = sitarBuffer;
+          synth.sitarLoopSourceNode.start(now(), offset);
+          synth.sitarLoopSourceNode.playing = true;
+          synth.chikariLoopSourceNode.buffer = chikariBuffer;
+          synth.chikariLoopSourceNode.start(now(), offset);
+          synth.chikariLoopSourceNode.playing = true;
+      }
+    }
 
     const spawnSarangi = async (
       control: SarangiSynthControl
@@ -618,10 +681,6 @@ export default defineComponent({
       synth.node.flutterLevel!.setValueAtTime(0.15, startTime);
     };
     const playKlattTrajs = (synth: KlattSynthType) => {
-      // synth.intGain.gain.setValueAtTime(0, now());
-      // synth.intGain.gain.linearRampToValueAtTime(1, now() + lagTime);
-      // synth.extGain.gain.setValueAtTime(0, now());
-      // synth.extGain.gain.linearRampToValueAtTime(1, now() + lagTime);
       const trajs = props.piece.allTrajectories(synth.idx);
       const starts = getStarts(trajs.map(t => t.durTot));
       const startIdx = starts.findIndex(s => s >= props.curPlayTime);
@@ -679,7 +738,7 @@ export default defineComponent({
           playKlattTrajs(synths[idx] as KlattSynthType);
         }
       })
-    }
+    };
 
     const cancelAllTrajs = () => {
       props.instTracks.forEach((track, idx) => {
@@ -691,33 +750,125 @@ export default defineComponent({
           cancelKlattTrajs(synths[idx] as KlattSynthType);
         }
       })
+    };
+
+    const recordAllSynths = (start: number, end: number) => {
+      endRecTime.value = end;
+      props.instTracks.forEach((track, idx) => {
+        if (track.inst === Instrument.Sitar) {
+          const synth = synths[idx] as SitarSynthType;
+          recordSitar(synth, start, end);
+        } else if (track.inst === Instrument.Sarangi) {
+          const synth = synths[idx] as SarangiSynthType;
+          recordSarangi(synth, start, end);
+        } else if ([Instrument.Vocal_M, Instrument.Vocal_F].includes(track.inst)) {
+          const synth = synths[idx] as KlattSynthType;
+          recordKlatt(synth, start, end);
+        }
+      })
+    };
+
+    const stopRecordingSynths = () => {
+      props.instTracks.forEach((track, idx) => {
+        if (track.inst === Instrument.Sitar) {
+          const synth = synths[idx] as SitarSynthType;
+          stopRecordingSitar(synth);
+        } else if (track.inst === Instrument.Sarangi) {
+          const synth = synths[idx] as SarangiSynthType;
+          stopRecordingSarangi(synth);
+        } else if ([Instrument.Vocal_M, Instrument.Vocal_F].includes(track.inst)) {
+          const synth = synths[idx] as KlattSynthType;
+          stopRecordingKlatt(synth);
+        }
+      })
     }
 
-    onMounted(async () => {
-      const synthPromises = props.instTracks.map(async (track, idx) => {
-        const vox = [Instrument.Vocal_M, Instrument.Vocal_F];
-        if (track.inst === Instrument.Sitar) {
-          const sitar = await spawnSitar(props.controls[idx] as SitarSynthControl);
-          return sitar;
-        } else if (track.inst === Instrument.Sarangi) {
-          const sarangi = await spawnSarangi(props.controls[idx] as SarangiSynthControl);
-          return sarangi;
-        } else if (vox.includes(track.inst)) {
-          const klatt = await spawnKlatt(props.controls[idx] as KlattSynthControl);
-          return klatt;
-        }
-        return null;
-      });
-      const resolvedSynths = await Promise.all(synthPromises);
-      resolvedSynths.forEach(synth => {
-        if (synth !== null) {
-          synths.push(synth)
-        } else {
-          throw new Error('Synth not resolved')
-        }
-      });
-      preSetFirstEnvelopes();
+    const recordSitar = (synth: SitarSynthType, start: number, end: number) => {
+      const bufSize = (end - start) * props.ac.sampleRate;
+      synth.capture.bufferSize!.setValueAtTime(bufSize, now());
+      synth.capture.active!.setValueAtTime(1, start);
+      synth.capture.active!.setValueAtTime(0, end);
+      const curSitarGain = synth.intSitarGainNode.gain.value;
+      synth.intSitarGainNode.gain.setValueAtTime(curSitarGain, end);
+      synth.intSitarGainNode.gain.setValueAtTime(0, end + lagTime);
+      const curChikariGain = synth.intChikariGainNode.gain.value;
+      synth.intChikariGainNode.gain.setValueAtTime(curChikariGain, end);
+      synth.intChikariGainNode.gain.setValueAtTime(0, end + lagTime);
+      synth.sitarLoopGainNode.gain.setValueAtTime(0, end - lagTime);
+      synth.sitarLoopGainNode.gain.setValueAtTime(1, end);
+      synth.chikariLoopGainNode.gain.setValueAtTime(0, end - lagTime);
+      synth.chikariLoopGainNode.gain.setValueAtTime(1, end);
+    };
+    const stopRecordingSitar = (synth: SitarSynthType) => {
+      const sBufNode = synth.sitarLoopSourceNode;
+      const cBufNode = synth.chikariLoopSourceNode;
+      const sGainNode = synth.sitarLoopGainNode;
+      const cGainNode = synth.chikariLoopGainNode;
+      if (sBufNode.playing && cBufNode.playing) {
+        // turn gain off
+        sGainNode.gain.setValueAtTime(1, now());
+        sGainNode.gain.linearRampToValueAtTime(0, now() + lagTime);
+        cGainNode.gain.setValueAtTime(1, now());
+        cGainNode.gain.linearRampToValueAtTime(0, now() + lagTime);
+
+        // stop buffers
+        sBufNode.stop(now() + lagTime);
+        cBufNode.stop(now() + lagTime);
         
+        // disconnect, reset, and reconnect
+        sBufNode.onended = () => {
+          sBufNode.disconnect();
+          synth.sitarLoopSourceNode = props.ac.createBufferSource();
+          synth.sitarLoopSourceNode.loop = true;
+          synth.sitarLoopSourceNode.connect(sGainNode);
+        };
+        cBufNode.onended = () => {
+          cBufNode.disconnect();
+          synth.chikariLoopSourceNode = props.ac.createBufferSource();
+          synth.chikariLoopSourceNode.loop = true;
+          synth.chikariLoopSourceNode.connect(cGainNode);
+        };
+      }
+
+    }
+    const recordSarangi = (synth: SarangiSynthType, start: number, end: number) => {
+      console.log('need to implment recordSarangi');
+    };
+    const recordKlatt = (synth: KlattSynthType, start: number, end: number) => {
+      console.log('need to implment recordKlatt');
+    };
+
+    onMounted(async () => {
+      // add capture worklet
+      try {
+        await props.ac.audioWorklet.addModule(caURL);
+        const synthPromises = props.instTracks.map(async (track, idx) => {
+          const vox = [Instrument.Vocal_M, Instrument.Vocal_F];
+          if (track.inst === Instrument.Sitar) {
+            const sitar = await spawnSitar(props.controls[idx] as SitarSynthControl);
+            initializeSitarCapture(sitar);
+            return sitar;
+          } else if (track.inst === Instrument.Sarangi) {
+            const sarangi = await spawnSarangi(props.controls[idx] as SarangiSynthControl);
+            return sarangi;
+          } else if (vox.includes(track.inst)) {
+            const klatt = await spawnKlatt(props.controls[idx] as KlattSynthControl);
+            return klatt;
+          }
+          return null;
+        });
+        const resolvedSynths = await Promise.all(synthPromises);
+        resolvedSynths.forEach(synth => {
+          if (synth !== null) {
+            synths.push(synth)
+          } else {
+            throw new Error('Synth not resolved')
+          }
+        });
+        preSetFirstEnvelopes();
+      } catch (e) {
+        throw new Error('Error mounting synths');
+      } 
     });
     return {
       mixNode,
@@ -726,7 +877,8 @@ export default defineComponent({
       cancelBursts,
       playAllTrajs,
       firstEnvelopes,
-      cancelAllTrajs
+      cancelAllTrajs, 
+      recordAllSynths
     }
   }
 })

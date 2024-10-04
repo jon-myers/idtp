@@ -232,6 +232,10 @@ export default defineComponent({
       type: Number,
       required: true
     },
+    hasRecording: {
+      type: Boolean,
+      required: true
+    }
   },
   emits: [
     'update:TrajSelStatus',
@@ -318,6 +322,7 @@ export default defineComponent({
     const frameDur = 1 / fps;
     let everyOther = true;
     let looping = false;
+    let smoothPositionX = 0;
 
 
 
@@ -466,7 +471,8 @@ export default defineComponent({
     });
     const playheadStyle = computed(() => {
       return {
-        filter: 'blur(2px) drop-shadow(0 0 10px rgba(0, 0, 0, 0.8))',
+        // filter: 'blur(2px) drop-shadow(0 0 10px rgba(0, 0, 0, 0.8))',
+        filter: 'drop-shadow(0 0 10px rgba(0, 0, 0, 0.8))',
       }
     });
     const targetPlayheadX = computed(() => {
@@ -885,7 +891,12 @@ export default defineComponent({
           }
         }
         const xPosition = props.xScale(musicTime);
-        playhead.value!.style.transform = `translateX(${xPosition}px)`;
+        if (smoothPositionX > xPosition) {
+          smoothPositionX = xPosition;
+        } else {
+          smoothPositionX = smooth(smoothPositionX, xPosition, 0.5);
+        }
+        playhead.value!.style.transform = `translateX(${smoothPositionX}px)`;
         lastUpdateTime = now;
       }
       everyOther = !everyOther;
@@ -938,24 +949,26 @@ export default defineComponent({
       if (!props.playing) {
         const pxlX = props.xScale(time);
         playhead.value!.style.transform = `translateX(${pxlX}px)`;
+        smoothPositionX = pxlX;
 
       } else {
-        const startPxl = props.xScale(time);
-        const endPxl = props.xScale(props.piece.durTot!);
-        if (playheadAnimation) {
-          playheadAnimation.cancel();
-        }
-        playheadAnimation = playhead.value?.animate([
-          { transform: `translateX(${startPxl}px)` },
-          { transform: `translateX(${endPxl}px)` }
-        ], {
-          duration: (props.piece.durTot! - time) * 1000,
-          easing: 'linear',
-          fill: 'forwards'
-        });
-        playheadAnimation!.onfinish = () => {
-          playheadAnimation = undefined;
-        }
+        // const startPxl = props.xScale(time);
+        // const endPxl = props.xScale(props.piece.durTot!);
+        // if (playheadAnimation) {
+        //   playheadAnimation.cancel();
+        // }
+        // playheadAnimation = playhead.value?.animate([
+        //   { transform: `translateX(${startPxl}px)` },
+        //   { transform: `translateX(${endPxl}px)` }
+        // ], {
+        //   duration: (props.piece.durTot! - time) * 1000,
+        //   easing: 'linear',
+        //   fill: 'forwards'
+        // });
+        // playheadAnimation!.onfinish = () => {
+        //   playheadAnimation = undefined;
+        // }
+        throw new Error('Playing transition not implemented');
       }
     }
   
@@ -3843,7 +3856,9 @@ export default defineComponent({
         throw new Error('Region start or end is undefined');
       }
       emit('update:region')
-      nextTick(() => emit('update:apStretchable', true));
+      if (props.hasRecording) {
+        nextTick(() => emit('update:apStretchable', true))
+      }
       const regionLine = d3.line()([
         [0, 0],
         [0, props.height]

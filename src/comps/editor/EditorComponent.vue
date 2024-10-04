@@ -44,6 +44,7 @@
       :unsavedChanges='unsavedChanges'
       :loop='loop'
       :stretchedFactor='stretchedFactor'
+      :hasRecording='hasRecording'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
@@ -272,6 +273,7 @@
   :selectedMeterColor='selMeterColor'
   :editorMode='selectedMode'
   :playheadColor='playheadColor'
+  :hasRecording='hasRecording'
   @resizeHeightEmit='resizeHeight'
   @currentTimeEmit='setCurrentTime'
   @updateSargamLinesEmit='updateSargamLines'
@@ -1147,6 +1149,10 @@ export default defineComponent({
   },
 
   computed: {
+    hasRecording() {
+      return this.audioDBDoc !== undefined;
+    },
+    
     setNewTraj() {
       return this.selectedMode === EditorMode.Trajectory;
     },

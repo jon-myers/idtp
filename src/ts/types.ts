@@ -915,6 +915,7 @@ interface CaptureNodeType extends AudioWorkletNode {
   bufferSize?: AudioParam;
   active?: AudioParam;
   cancel?: AudioParam;
+  parameters: Map<string, AudioParam>;
 }
 
 interface KlattNodeType extends AudioWorkletNode {
@@ -1027,6 +1028,11 @@ type SitarSynthType = {
   intChikariGainNode: GainNode,
   extChikariGainNode: GainNode,
   idx: number,
+  sitarLoopSourceNode: LoopSourceNode,
+  chikariLoopSourceNode: LoopSourceNode,
+  capture: CaptureNodeType,
+  sitarLoopGainNode: GainNode,
+  chikariLoopGainNode: GainNode,
 }
 
 type SarangiSynthType = {
