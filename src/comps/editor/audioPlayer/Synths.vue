@@ -704,6 +704,20 @@ export default defineComponent({
         }
       })
     };
+    const cancelKlattTrajs = (synth: KlattSynthType) => {
+      const n = now()
+      const curGain = synth.node.extGain!.value;
+      synth.node.parameters.forEach(param => {
+        param.cancelScheduledValues(n + 0.01);
+      });
+      synth.node.extGain!.setValueAtTime(curGain, n);
+      synth.node.extGain!.linearRampToValueAtTime(0, n + 0.01);
+      synth.intGain.gain.cancelScheduledValues(n);
+      const kmCurGain = synth.intGain.gain.value;
+      synth.intGain.gain.setValueAtTime(kmCurGain, n);
+      synth.intGain.gain.linearRampToValueAtTime(0, n + 0.01);
+
+    };
 
     const preSetFirstEnvelopes = () => {
       const valueCt = 256;

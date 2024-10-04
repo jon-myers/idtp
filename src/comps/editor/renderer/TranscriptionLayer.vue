@@ -1148,7 +1148,11 @@ export default defineComponent({
       const color = selectedTrajs.value.includes(traj) ? 
         props.instTracks[track].selColor : props.instTracks[track].color;
       const keys = Object.keys(traj.articulations)
-        .filter(key => traj.articulations[key].name === 'pluck')
+        .filter(key => {
+          const art = traj.articulations[key];
+          console.log(art, key, traj.articulations)
+          return art.name === 'pluck'
+        })
       if (keys.length > 0) {
         const pluckData = keys.map(p => {
           const logY = traj.compute(Number(p), true);
@@ -2850,28 +2854,48 @@ export default defineComponent({
           traj.articulations[traj.durArray![0]] = traj.articulations[artKeys[offset]];
           delete traj.articulations[artKeys[offset]];
         } else if (traj.id === 8) {
-          traj.articulations[traj.durArray![0]] = traj.articulations[artKeys[offset]];
-          traj.articulations[traj.durArray![1]] = traj.articulations[artKeys[offset + 1]];
-          delete traj.articulations[artKeys[offset]];
-          delete traj.articulations[artKeys[offset + 1]];
+          const key1 = traj.durArray![0];
+          const key2 = sum(traj.durArray!.slice(0, 2));
+          const wasKey1New = !(key1 in traj.articulations);
+          const wasKey2New = !(key2 in traj.articulations);
+          if (wasKey1New) traj.articulations[key1] = traj.articulations[artKeys[offset]];
+          if (wasKey2New) traj.articulations[key2] = traj.articulations[artKeys[offset + 1]];
+          if (wasKey1New) delete traj.articulations[artKeys[offset]];
+          if (wasKey2New) delete traj.articulations[artKeys[offset + 1]];
         } else if (traj.id === 9) {
-          traj.articulations[traj.durArray![0]] = traj.articulations[artKeys[offset]];
-          traj.articulations[traj.durArray![1]] = traj.articulations[artKeys[offset + 1]];
-          traj.articulations[traj.durArray![2]] = traj.articulations[artKeys[offset + 2]];
-          delete traj.articulations[artKeys[offset]];
-          delete traj.articulations[artKeys[offset + 1]];
-          delete traj.articulations[artKeys[offset + 2]];
+          const key1 = traj.durArray![0];
+          const key2 = sum(traj.durArray!.slice(0, 2));
+          const key3 = sum(traj.durArray!.slice(0, 3));
+          const wasKey1New = !(key1 in traj.articulations);
+          const wasKey2New = !(key2 in traj.articulations);
+          const wasKey3New = !(key3 in traj.articulations);
+          if (wasKey1New) traj.articulations[key1] = traj.articulations[artKeys[offset]];
+          if (wasKey2New) traj.articulations[key2] = traj.articulations[artKeys[offset + 1]];
+          if (wasKey3New) traj.articulations[key3] = traj.articulations[artKeys[offset + 2]];
+          if (wasKey1New) delete traj.articulations[artKeys[offset]];
+          if (wasKey2New) delete traj.articulations[artKeys[offset + 1]];
+          if (wasKey3New) delete traj.articulations[artKeys[offset + 2]];
         } else if (traj.id === 10) {
-          traj.articulations[traj.durArray![0]] = traj.articulations[artKeys[offset]];
-          traj.articulations[traj.durArray![1]] = traj.articulations[artKeys[offset + 1]];
-          traj.articulations[traj.durArray![2]] = traj.articulations[artKeys[offset + 2]];
-          traj.articulations[traj.durArray![3]] = traj.articulations[artKeys[offset + 3]];
-          traj.articulations[traj.durArray![4]] = traj.articulations[artKeys[offset + 4]];
-          delete traj.articulations[artKeys[offset]];
-          delete traj.articulations[artKeys[offset + 1]];
-          delete traj.articulations[artKeys[offset + 2]];
-          delete traj.articulations[artKeys[offset + 3]];
-          delete traj.articulations[artKeys[offset + 4]];
+          const key1 = traj.durArray![0];
+          const key2 = sum(traj.durArray!.slice(0, 2));
+          const key3 = sum(traj.durArray!.slice(0, 3));
+          const key4 = sum(traj.durArray!.slice(0, 4));
+          const key5 = sum(traj.durArray!.slice(0, 5));
+          const wasKey1New = !(key1 in traj.articulations);
+          const wasKey2New = !(key2 in traj.articulations);
+          const wasKey3New = !(key3 in traj.articulations);
+          const wasKey4New = !(key4 in traj.articulations);
+          const wasKey5New = !(key5 in traj.articulations);
+          if (wasKey1New) traj.articulations[key1] = traj.articulations[artKeys[offset]];
+          if (wasKey2New) traj.articulations[key2] = traj.articulations[artKeys[offset + 1]];
+          if (wasKey3New) traj.articulations[key3] = traj.articulations[artKeys[offset + 2]];
+          if (wasKey4New) traj.articulations[key4] = traj.articulations[artKeys[offset + 3]];
+          if (wasKey5New) traj.articulations[key5] = traj.articulations[artKeys[offset + 4]];
+          if (wasKey1New) delete traj.articulations[artKeys[offset]];
+          if (wasKey2New) delete traj.articulations[artKeys[offset + 1]];
+          if (wasKey3New) delete traj.articulations[artKeys[offset + 2]];
+          if (wasKey4New) delete traj.articulations[artKeys[offset + 3]];
+          if (wasKey5New) delete traj.articulations[artKeys[offset + 4]];
         }
       };
 
