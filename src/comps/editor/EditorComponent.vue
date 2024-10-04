@@ -380,6 +380,7 @@ import Renderer from '@/comps/editor/Renderer.vue';
 import TranscriptionLayer from '@/comps/editor/renderer/TranscriptionLayer.vue';
 import YAxis from '@/comps/editor/renderer/YAxis.vue';
 import Tooltip from '@/comps/Tooltip.vue';
+import Synths from '@/comps/editor/audioPlayer/Synths.vue';
 import { detect, BrowserInfo } from 'detect-browser';
 import { throttle } from 'lodash';
 import { defineComponent } from 'vue';
@@ -1338,18 +1339,22 @@ export default defineComponent({
           ap.pausedAt = time;
           this.animationStart = time;
           ap.play();
-          ap.cancelPlayTrajs();
-          if (ap.string) {
-            ap.cancelBursts();
-          }
-          ap.bufferSourceNodes = [];
-          ap.playTrajs(ap.getCurTime(), ap.now());
-          if (ap.string) {
-            if (ap.otherNode === undefined) {
-              throw 'IDTP logger: otherNode is undefined.'
-            }
-            ap.playChikaris(ap.getCurTime(), ap.now(), ap.otherNode)
-          }
+          const s = ap.$refs.synths as InstanceType<typeof Synths>;
+          s.cancelAllTrajs();
+          s.playAllTrajs();
+
+          // ap.cancelPlayTrajs();
+          // if (ap.string) {
+          //   ap.cancelBursts();
+          // }
+          // ap.bufferSourceNodes = [];
+          // ap.playTrajs(ap.getCurTime(), ap.now());
+          // if (ap.string) {
+          //   if (ap.otherNode === undefined) {
+          //     throw 'IDTP logger: otherNode is undefined.'
+          //   }
+          //   ap.playChikaris(ap.getCurTime(), ap.now(), ap.otherNode)
+          // }
         }
         // this.movePlayhead();
         // this.moveShadowPlayhead();
@@ -1704,6 +1709,7 @@ export default defineComponent({
     // },
 
     vowelEmit(vowel: string) {
+      console.log('emitting vowel')
       // legit 
       const r = this.$refs.renderer as RendererType;
       const tLayer = r.transcriptionLayer as TLayerType;
@@ -1712,7 +1718,7 @@ export default defineComponent({
       selT.updateVowel(vowel)
       const pIdx = selT.phraseIdx!;
       const tIdx = selT.num!;
-      const phrase = this.piece.phrases[pIdx];
+      const phrase = this.piece.phraseGrid[this.editingInstIdx][pIdx];
       tLayer.refreshVowel(selT.uniqueId!);
       // if there is a next traj, check its vowel, and change it if necessary
       if (phrase.trajectories.length > tIdx + 1) {

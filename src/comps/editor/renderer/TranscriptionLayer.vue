@@ -316,6 +316,8 @@ export default defineComponent({
     let movingPlayhead = false;
     const fps = 30;
     const frameDur = 1 / fps;
+    let everyOther = true;
+    let looping = false;
 
 
 
@@ -356,7 +358,6 @@ export default defineComponent({
           props.piece.chunkedMeters(dur)[idx].forEach(m => {
             renderMeter(m);
           })
-          
           observer.unobserve(entry.target);
         }
       })
@@ -875,12 +876,19 @@ export default defineComponent({
     const movePlayhead = () => {
       const now = performance.now() / 1000;
       const elapsed = now - playheadRealStartTime;
-      const musicTime = playheadMusicStartTime + elapsed;
-      if (now - lastUpdateTime > frameDur) {
+      let musicTime = playheadMusicStartTime + elapsed;
+      // if (now - lastUpdateTime > frameDur) {
+      if (everyOther) {
+        if (looping) {
+          while (musicTime > regionEndX.value!) {
+            musicTime -= (regionEndX.value! - regionStartX.value!);
+          }
+        }
         const xPosition = props.xScale(musicTime);
         playhead.value!.style.transform = `translateX(${xPosition}px)`;
         lastUpdateTime = now;
       }
+      everyOther = !everyOther;
       if (musicTime < props.piece.durTot! && movingPlayhead) {
         requestAnimationFrame(movePlayhead)
       }
@@ -891,60 +899,24 @@ export default defineComponent({
       playheadMusicStartTime = props.currentTime;
       playheadStartPxl = props.xScale(props.currentTime);
       if (props.loop && regionEndPxl.value !== undefined && playheadStartPxl < regionEndPxl.value) {
+        looping = true;
+        console.log(playheadStartPxl, regionStartPxl.value)
         if (playheadStartPxl > regionStartPxl.value!) {
+          // console.log('getting triggered')
           emit('update:currentTime', regionStartX.value!);
+          playheadMusicStartTime = regionStartX.value!;
           nextTick(() => {
             playheadStartPxl = regionStartPxl.value!;
-            throw new Error("haven't implemented yet")
-            // if (playheadAnimation) playheadAnimation.cancel();
-            // playheadAnimation = playhead.value!.animate([
-            //   { transform: `translateX(${startPxl}px)` },
-            //   { transform: `translateX(${regionEndPxl.value}px)` }
-            // ], {
-            //   duration: (regionEndX.value! - regionStartX.value!) * 1000 / props.stretchedFactor,
-            //   easing: 'linear',
-            //   fill: 'forwards',
-            //   iterations: Infinity
-            // });
+            playheadRealStartTime = performance.now() / 1000;
+            requestAnimationFrame(movePlayhead);
           })
         } else {
-          // if (playheadAnimation) playheadAnimation.cancel();
-          // playheadAnimation = playhead.value!.animate([
-          //   { transform: `translateX(${startPxl}px)` },
-          //   { transform: `translateX(${regionEndPxl.value}px)` }
-          // ], {
-          //   duration: (regionEndX.value! - props.currentTime) * 1000 / props.stretchedFactor,
-          //   easing: 'linear',
-          //   fill: 'forwards'
-          // });
-          // playheadAnimation.onfinish = () => {
-          //   if (playheadAnimation) playheadAnimation.cancel();
-          //   playheadAnimation = playhead.value!.animate([
-          //     { transform: `translateX(${regionStartPxl.value}px)` },
-          //     { transform: `translateX(${regionEndPxl.value}px)` }
-          //   ], {
-          //     duration: (regionEndX.value! - regionStartX.value!) * 1000 / props.stretchedFactor,
-          //     easing: 'linear',
-          //     fill: 'forwards',
-          //     iterations: Infinity
-          //   });
-          // }
+          playheadRealStartTime = performance.now() / 1000;
+          requestAnimationFrame(movePlayhead);
         }
 
       } else {
-        const duration = props.piece.durTot! - props.currentTime; 
-        const endPxl = props.xScale(props.piece.durTot!);
-        // if (playheadAnimation) {
-        //   playheadAnimation.cancel();
-        // }
-        // playheadAnimation = playhead.value?.animate([
-        //   { transform: `translateX(${startPxl}px)` },
-        //   { transform: `translateX(${endPxl}px)` }
-        // ], {
-        //   duration: duration * 1000 / props.stretchedFactor,
-        //   easing: 'linear',
-        //   fill: 'forwards'
-        // });
+        looping = false;
         playheadRealStartTime = performance.now() / 1000;
         requestAnimationFrame(movePlayhead);
 
@@ -1150,7 +1122,6 @@ export default defineComponent({
       const keys = Object.keys(traj.articulations)
         .filter(key => {
           const art = traj.articulations[key];
-          console.log(art, key, traj.articulations)
           return art.name === 'pluck'
         })
       if (keys.length > 0) {
@@ -4500,7 +4471,6 @@ export default defineComponent({
     };
 
     const refreshVowel = (trajUId: string) => {
-      console.log('refreshing vowel')
       const track = props.piece.trackFromTrajUId(trajUId);
       const vowelDisplayObjs = props.piece.allDisplayVowels(track)
         .filter(obj => obj.uId === trajUId);

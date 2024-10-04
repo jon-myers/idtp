@@ -2398,31 +2398,33 @@ export default defineComponent({
         this.sourceNode.loopStart = this.loopStart!;
         this.sourceNode.loopEnd = this.loopEnd!;
         if (this.pausedAt > this.loopStart!) {
-          console.error("Can't loop a recording that starts after the loop \
-          start point.")
-          this.cancelPlayTrajs();
-          this.cancelBursts();
+          // console.error("Can't loop a recording that starts after the loop \
+          // start point.")
+          this.pausedAt = this.loopStart!;
+          // this.cancelPlayTrajs();
+          // this.cancelBursts();
           this.bufferSourceNodes = [];
-          const curGain = this.intSynthGainNode!.gain.value;
-          this.intSynthGainNode!.gain.setValueAtTime(curGain, this.now());
-          const endTime = this.now() + this.lagTime;
-          this.intSynthGainNode!.gain.setValueAtTime(0, endTime);
+          // const curGain = this.intSynthGainNode!.gain.value;
+          // this.intSynthGainNode!.gain.setValueAtTime(curGain, this.now());
+          // const endTime = this.now() + this.lagTime;
+          // this.intSynthGainNode!.gain.setValueAtTime(0, endTime);
         } else {
-          const startRecTime = this.now() + this.loopStart! - offset;
-          const duration = this.loopEnd! - this.loopStart!;
-          this.endRecTime = startRecTime + duration;
-          const bufSize = duration * this.ac!.sampleRate;
-          this.capture!.bufferSize!.setValueAtTime(bufSize, this.now());
-          this.capture!.active!.setValueAtTime(1, startRecTime);
-          this.capture!.active!.setValueAtTime(0, this.endRecTime);
-          const curGain = this.intSynthGainNode!.gain.value;
-          this.intSynthGainNode!.gain.setValueAtTime(curGain, this.endRecTime);
-          this.intSynthGainNode!.gain
-            .setValueAtTime(0, this.endRecTime + this.lagTime);
-          this.synthLoopGainNode!.gain.setValueAtTime(1, this.endRecTime);
+          console.log('need to reimplement this')
+          // const startRecTime = this.now() + this.loopStart! - offset;
+          // const duration = this.loopEnd! - this.loopStart!;
+          // this.endRecTime = startRecTime + duration;
+          // const bufSize = duration * this.ac!.sampleRate;
+          // this.capture!.bufferSize!.setValueAtTime(bufSize, this.now());
+          // this.capture!.active!.setValueAtTime(1, startRecTime);
+          // this.capture!.active!.setValueAtTime(0, this.endRecTime);
+          // const curGain = this.intSynthGainNode!.gain.value;
+          // this.intSynthGainNode!.gain.setValueAtTime(curGain, this.endRecTime);
+          // this.intSynthGainNode!.gain
+          //   .setValueAtTime(0, this.endRecTime + this.lagTime);
+          // this.synthLoopGainNode!.gain.setValueAtTime(1, this.endRecTime);
           // the following synth stuff needs to be cancelled ...
-          this.cancelPlayTrajs(this.endRecTime + this.lagTime);
-          this.cancelBursts(this.endRecTime + this.lagTime);
+          // this.cancelPlayTrajs(this.endRecTime + this.lagTime);
+          // this.cancelBursts(this.endRecTime + this.lagTime);
           this.bufferSourceNodes = [];
         }
       }

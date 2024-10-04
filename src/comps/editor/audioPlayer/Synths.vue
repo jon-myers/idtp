@@ -102,73 +102,18 @@ export default defineComponent({
       [[640, 1230, 2550, 80, 70, 140], [420, 940, 2350, 80, 70, 80]],
       [[550, 960, 2400, 80, 50, 130], [360, 1820, 2450, 60, 50, 160]]
     ];
-
-    // const sendBurst = (option: BurstOption) => {
-    //   const white = Math.random() * 2 - 1;
-    //   const sr = props.ac.sampleRate;
-    //   if (option.atk === undefined) option.atk = 0.05;
-    //   if (option.amp === undefined) option.amp = 1;
-    //   if (option.dur === undefined) option.dur = 0.1;
-    //   const bufSize = sr * option.dur;
-    //   const noiseBuf = props.ac.createBuffer(1, bufSize, sr);
-    //   const attackSize = sr * option.atk;
-    //   const out = noiseBuf.getChannelData(0);
-    //   const b = new Array(7).fill(0);
-    //   for (let i = 0; i < bufSize; i++) {
-    //     b[0] = 0.99886 * b[0] + white * 0.0555179;
-    //     b[1] = 0.99332 * b[1] + white * 0.0750759;
-    //     b[2] = 0.96900 * b[2] + white * 0.1538520;
-    //     b[3] = 0.86650 * b[3] + white * 0.3104856;
-    //     b[4] = 0.55000 * b[4] + white * 0.5329522;
-    //     b[5] = -0.7616 * b[5] - white * 0.0168980;
-    //     out[i] = b[0] + b[1] + b[2] + b[3] + b[4] + b[5] + b[6] + white * 0.5362;
-    //     out[i] *= 0.11;
-    //     b[6] = white * 0.115926;
-    //   }
-    //   for (let i = 0; i < attackSize; i++) {
-    //     out[i] *= i / attackSize;
-    //   }
-    //   console.log(option.amp)
-    //   for (let i = 0; i < bufSize; i++) {
-    //     out[i] *= option.amp;
-    //   }
-    //   console.log(Math.max(...out))
-    //   const bufferSourceNode = props.ac.createBufferSource();
-      
-    //   const uId = uuidv4();
-    //   bursts[uId] = bufferSourceNode;        
-    //   bufferSourceNode.buffer = noiseBuf;
-    //   bufferSourceNode.connect(option.to);
-    //   bufferSourceNode.start(option.when);
-    //   bufferSourceNode.onended = () => {
-    //     bufferSourceNode.disconnect();
-    //     delete bursts[uId];
-    //   }
-    // };
     const sendBurst = (option: BurstOption) => {
       const sr = props.ac.sampleRate;
       const whiteNoise = () => Math.random() * 2 - 1;
-
-      // Set default values if undefined
       option.atk = option.atk ?? 0.05;
       option.amp = option.amp ?? 1;
       option.dur = option.dur ?? 0.01;
-
-      // Double the amplitude
       option.amp *= 2;
-
-      // Calculate buffer sizes
       const bufSize = sr * option.dur;
       const attackSize = sr * option.atk;
-
-      // Create noise buffer
       const noiseBuf = props.ac.createBuffer(1, bufSize, sr);
       const out = noiseBuf.getChannelData(0);
-
-      // Initialize filter coefficients
       let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-
-      // Generate noise with filtering
       for (let i = 0; i < bufSize; i++) {
         const white = whiteNoise();
         b0 = 0.99886 * b0 + white * 0.0555179;
@@ -180,22 +125,15 @@ export default defineComponent({
         out[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
         b6 = white * 0.115926;
       }
-
-      // Apply attack envelope
       for (let i = 0; i < attackSize; i++) {
         out[i] *= i / attackSize;
       }
-
-      // Apply amplitude
       for (let i = 0; i < bufSize; i++) {
         out[i] *= option.amp;
       }
-
-      // Create buffer source node
       const bufferSourceNode = props.ac.createBufferSource();
       const uId = uuidv4();
       bursts[uId] = bufferSourceNode;
-
       bufferSourceNode.buffer = noiseBuf;
       bufferSourceNode.connect(option.to);
       bufferSourceNode.start(option.when);
@@ -434,22 +372,18 @@ export default defineComponent({
         const slides = keys.filter(k => arts[k].name === 'slide');
         const dampens = keys.filter(k => arts[k].name === 'dampen');
         plucks.forEach(time => {
-          console.log('plucking')
           const when = startTime + Number(time) * traj.durTot;
           sendBurst({ when, to, amp: 0.5 })
         });
         hammerOffs.forEach(time => {
-          console.log('hammer off')
           const when = startTime + Number(time) * traj.durTot;
           sendBurst({ when, to, amp: 0.5 })
         });
         hammerOns.forEach(time => {
-          console.log('hammer on')
           const when = startTime + Number(time) * traj.durTot;
           sendBurst({ when, to, amp: 0.3 })
         });
         slides.forEach(time => {
-          console.log('sliding')
           const when = startTime + Number(time) * traj.durTot;
           sendBurst({ when, to, amp: 0.1 })
         });
