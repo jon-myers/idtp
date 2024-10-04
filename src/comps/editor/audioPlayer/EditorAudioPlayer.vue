@@ -2472,6 +2472,8 @@ export default defineComponent({
       //   this.capture!.cancel!.setValueAtTime(1, this.now());
       //   this.capture!.cancel!.setValueAtTime(0, this.now() + 0.1);
       // }
+      const s = this.$refs.synths as InstanceType<typeof Synths>;
+      s.stopRecordingSynths();
       this.pausedAt = 0;
       this.startedAt = 0;
       this.playing = false;

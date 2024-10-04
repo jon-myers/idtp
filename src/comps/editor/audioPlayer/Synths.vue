@@ -212,25 +212,8 @@ export default defineComponent({
         chikariNode.cutoff!.value = 0.7;
         sitarLoopGainNode.gain.value = 0;
         chikariLoopGainNode.gain.value = 0;
-
-        // // set message handlers
-        // capture.port.onmessage = e => {
-        //   // set up sitar buffer
-        //   const sitarArr = new Float32Array(e.data[0]);
-        //   const sr = props.ac.sampleRate;
-        //   const sitarBuffer = props.ac.createBuffer(1, sitarArr.length, sr);
-        //   sitarBuffer.copyToChannel(sitarArr, 0);
-
-        //   // set up chikari buffer
-        //   const chikariArr = new Float32Array(e.data[1]);
-        //   const chikariBuffer = props.ac.createBuffer(1, chikariArr.length, sr);
-        //   chikariBuffer.copyToChannel(chikariArr, 0);
-
-        //   const offset = now() - endRecTime.value;
-        //   sitarLoopSourceNode.buffer = sitarBuffer;
-        //   chikariLoopSourceNode.buffer = chikariBuffer;
-
-        // }
+        sitarLoopSourceNode.loop = true;
+        chikariLoopSourceNode.loop = true;
 
         // connect nodes
         sitarNode
@@ -277,7 +260,10 @@ export default defineComponent({
     };
 
     const initializeSitarCapture = (synth: SitarSynthType) => {
+      synth.intSitarGainNode.connect(synth.capture, 0, 0);
+      synth.intChikariGainNode.connect(synth.capture, 0, 1);
       synth.capture.port.onmessage = e => {
+        console.log('received message');
         const sitarArr = new Float32Array(e.data[0]);
           const sr = props.ac.sampleRate;
           const sitarBuffer = props.ac.createBuffer(1, sitarArr.length, sr);
@@ -784,6 +770,7 @@ export default defineComponent({
     }
 
     const recordSitar = (synth: SitarSynthType, start: number, end: number) => {
+      console.log('record sitar from ', start, ' to ', end);
       const bufSize = (end - start) * props.ac.sampleRate;
       synth.capture.bufferSize!.setValueAtTime(bufSize, now());
       synth.capture.active!.setValueAtTime(1, start);
@@ -814,9 +801,10 @@ export default defineComponent({
         // stop buffers
         sBufNode.stop(now() + lagTime);
         cBufNode.stop(now() + lagTime);
-        
+
         // disconnect, reset, and reconnect
         sBufNode.onended = () => {
+          console.log('buf ended')
           sBufNode.disconnect();
           synth.sitarLoopSourceNode = props.ac.createBufferSource();
           synth.sitarLoopSourceNode.loop = true;
@@ -878,7 +866,8 @@ export default defineComponent({
       playAllTrajs,
       firstEnvelopes,
       cancelAllTrajs, 
-      recordAllSynths
+      recordAllSynths,
+      stopRecordingSynths,
     }
   }
 })
