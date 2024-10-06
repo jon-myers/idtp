@@ -323,6 +323,7 @@ export default defineComponent({
     let everyOther = true;
     let looping = false;
     let smoothPositionX = 0;
+    let everyTenth = 0;
 
 
 
@@ -471,8 +472,9 @@ export default defineComponent({
     });
     const playheadStyle = computed(() => {
       return {
-        // filter: 'blur(2px) drop-shadow(0 0 10px rgba(0, 0, 0, 0.8))',
-        filter: 'drop-shadow(0 0 10px rgba(0, 0, 0, 0.8))',
+        filter: 'blur(2px) drop-shadow(0 0 10px rgba(0, 0, 0, 0.8))',
+        transform: 'translateZ'
+        // filter: 'drop-shadow(0 0 10px rgba(0, 0, 0, 0.8))',
       }
     });
     const targetPlayheadX = computed(() => {
@@ -884,6 +886,7 @@ export default defineComponent({
       const elapsed = now - playheadRealStartTime;
       let musicTime = playheadMusicStartTime + elapsed;
       // if (now - lastUpdateTime > frameDur) {
+      
       if (everyOther) {
         if (looping) {
           while (musicTime > regionEndX.value!) {
@@ -891,12 +894,12 @@ export default defineComponent({
           }
         }
         const xPosition = props.xScale(musicTime);
-        if (smoothPositionX > xPosition) {
-          smoothPositionX = xPosition;
-        } else {
-          smoothPositionX = smooth(smoothPositionX, xPosition, 0.5);
-        }
-        playhead.value!.style.transform = `translateX(${smoothPositionX}px)`;
+        // if (smoothPositionX > xPosition) {
+        //   smoothPositionX = xPosition;
+        // } else {
+        //   smoothPositionX = smooth(smoothPositionX, xPosition, 0.5);
+        // }
+        playhead.value!.style.transform = `translateX(${xPosition}px)`;
         lastUpdateTime = now;
       }
       everyOther = !everyOther;
