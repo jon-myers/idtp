@@ -48,7 +48,11 @@ class Processor extends AudioWorkletProcessor {
             this.on = true;
         }
         if (this.on) {
+          if (inputs[1]) {
             this.append(inputs[0][0], inputs[1][0], outputBufferSize);
+          } else {
+            this.append(inputs[0][0], undefined, outputBufferSize);
+          }
         }
         if (cancel === 1) {
             this.on = false;

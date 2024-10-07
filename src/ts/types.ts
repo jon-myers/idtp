@@ -1039,14 +1039,21 @@ type SarangiSynthType = {
   sarangiNode: SarangiNodeType,
   intGain: GainNode,
   extGain: GainNode,
-  idx: number
+  idx: number,
+  capture: CaptureNodeType,
+  sarangiLoopSourceNode: LoopSourceNode,
+  sarangiLoopGainNode: GainNode,
 }
 
 type KlattSynthType = {
   node: KlattNodeType,
+  envGain: GainNode,
   intGain: GainNode,
   extGain: GainNode,
-  idx: number
+  idx: number,
+  capture: CaptureNodeType,
+  klattLoopSourceNode: LoopSourceNode,
+  klattLoopGainNode: GainNode,
 }
 
 type BurstOption = {
