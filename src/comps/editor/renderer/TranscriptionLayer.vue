@@ -257,6 +257,7 @@ export default defineComponent({
     'cancelRegionSpeed',
     'update:togglePluck',
     'update:toggleDampen',
+    'savePiece'
   ],
   setup(props, { emit }) {
     const tranContainer = ref<HTMLDivElement | null>(null);
@@ -3044,8 +3045,6 @@ export default defineComponent({
     const dragDotEnd = (e: d3.D3DragEvent<
       SVGCircleElement, Datum, MouseEvent
     >) => {
-      console.log('triggers no matter what')
-
       if (alted.value) return;
       dragDotMove(e);
       dragDotDragging = false;
@@ -3481,11 +3480,15 @@ export default defineComponent({
         if (selectedPulse.value) {
           selectedPulse.value = undefined;
         } else {
-
           handleEscape();
         }
       } else if (e.key === 's') {
-        emit('update:selectedMode', EditorMode.Series);
+        if (metad.value) {
+          e.preventDefault();
+          emit('savePiece');
+        } else {
+          emit('update:selectedMode', EditorMode.Series);
+        }
       } else if (e.key === 't') {
         emit('update:selectedMode', EditorMode.Trajectory);
       } else if (e.key === 'c') {

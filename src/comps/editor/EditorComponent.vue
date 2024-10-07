@@ -67,6 +67,7 @@
       @cancelRegionSpeed='cancelRegionSpeed'
       @update:togglePluck='togglePluck'
       @update:toggleDampen='toggleDampen'
+      @savePiece='savePiece'
       />
     <div class='controlBox'>
       <div class='scrollingControlBox'>
@@ -74,14 +75,14 @@
           <span :style='{ transform: `rotate(${rotation}deg)` }'>▼</span>
           <label>Visibility</label>
         </div>
-        <div class='cbRow' v-if='visibilityTab'>
+        <div class='cbRow' v-if='visibilityTab && hasRecording'>
           <label>Spectrogram</label>
           <input 
             type='checkbox'
             v-model='showSpectrogram'
             @click='preventSpaceToggle'>
         </div>
-        <div class='cbRow' v-if='visibilityTab'>
+        <div class='cbRow' v-if='visibilityTab && hasRecording'>
           <label>Melograph</label>
           <input 
             type='checkbox' 

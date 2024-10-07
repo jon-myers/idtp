@@ -144,6 +144,7 @@
               @cancelRegionSpeed='$emit("cancelRegionSpeed")'
               @update:togglePluck='$emit("update:togglePluck")'
               @update:toggleDampen='$emit("update:toggleDampen")'
+              @savePiece='$emit("savePiece")'
             />
           />
         </div>
@@ -393,7 +394,8 @@ export default defineComponent({
     'zoomInX',
     'cancelRegionSpeed',
     'update:togglePluck',
-    'update:toggleDampen'
+    'update:toggleDampen',
+    'savePiece'
   ],
   setup(props, { emit }) {
     const layersContainer = ref<HTMLDivElement | null>(null);
