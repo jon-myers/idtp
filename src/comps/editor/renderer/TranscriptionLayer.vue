@@ -7,10 +7,10 @@
         class='playhead'
         x='0'
         y='0'
-        width='2'
-        opacity='0.5'
+        width='1'
+        opacity='1'
         :height='height'
-        :stroke='playheadColor'
+        :fill='playheadColor'
         :style='playheadStyle'
       ></rect>
     </svg>
@@ -78,6 +78,7 @@ import {
 } from '@/ts/types.ts';
 import { Meter, Pulse } from '@/js/meter.ts';
 import ContextMenu from'@/comps/ContextMenu.vue';
+import { gsap } from 'gsap';
 
 export default defineComponent({
   name: 'TranscriptionLayer',
@@ -299,7 +300,7 @@ export default defineComponent({
     const targetDragDotX = ref<number | undefined>(undefined);
     const targetDragDotY = ref<number | undefined>(undefined);
 
-
+    let gsapTween: gsap.core.Tween | undefined = undefined;
     let playheadLineIdx = 0;
     let justDeletedPhraseDiv = false;
     const dragDotColor = 'purple';
@@ -473,8 +474,6 @@ export default defineComponent({
     const playheadStyle = computed(() => {
       return {
         filter: 'blur(2px) drop-shadow(0 0 10px rgba(0, 0, 0, 0.8))',
-        transform: 'translateZ'
-        // filter: 'drop-shadow(0 0 10px rgba(0, 0, 0, 0.8))',
       }
     });
     const targetPlayheadX = computed(() => {
@@ -913,38 +912,82 @@ export default defineComponent({
       playheadMusicStartTime = props.currentTime;
       playheadStartPxl = props.xScale(props.currentTime);
       if (props.loop && regionEndPxl.value !== undefined && playheadStartPxl < regionEndPxl.value) {
-        looping = true;
-        console.log(playheadStartPxl, regionStartPxl.value)
+        // looping = true;
+        // console.log(playheadStartPxl, regionStartPxl.value)
         if (playheadStartPxl > regionStartPxl.value!) {
           // console.log('getting triggered')
           emit('update:currentTime', regionStartX.value!);
+          playheadStartPxl = regionStartPxl.value!;
           playheadMusicStartTime = regionStartX.value!;
           nextTick(() => {
             playheadStartPxl = regionStartPxl.value!;
-            playheadRealStartTime = performance.now() / 1000;
-            requestAnimationFrame(movePlayhead);
+            gsapTween = gsap.fromTo(playhead.value!, {
+              x: playheadStartPxl
+            }, {
+              x: regionEndPxl.value!,
+              duration: (regionEndX.value! - regionStartX.value!),
+              ease: 'linear',
+              repeat: -1,
+            })
+            // playheadRealStartTime = performance.now() / 1000;
+            // requestAnimationFrame(movePlayhead);
           })
         } else {
-          playheadRealStartTime = performance.now() / 1000;
-          requestAnimationFrame(movePlayhead);
+          // playheadRealStartTime = performance.now() / 1000;
+          // requestAnimationFrame(movePlayhead);
+          gsapTween = gsap.fromTo(playhead.value!, {
+            x: playheadStartPxl
+          }, {
+            x: regionEndPxl.value!,
+            duration: (regionEndX.value! - props.currentTime),
+            ease: 'linear',
+            onComplete: () => {
+              gsapTween = gsap.fromTo(playhead.value!, {
+                x: regionStartPxl.value!
+              }, {
+                x: regionEndPxl.value!,
+                duration: (regionEndX.value! - regionStartX.value!),
+                ease: 'linear',
+                repeat: -1,
+              })
+            }
+          })
         }
 
       } else {
-        looping = false;
-        playheadRealStartTime = performance.now() / 1000;
-        requestAnimationFrame(movePlayhead);
+        // looping = false;
+        // playheadRealStartTime = performance.now() / 1000;
+        // requestAnimationFrame(movePlayhead);
+        // gsapTween = gsap.to(playhead.value!, {
+        //   x: props.xScale(props.piece.durTot!),
+        //   duration: (props.piece.durTot! - props.currentTime),
+        //   ease: 'linear',
+        // })
+        gsapTween = gsap.fromTo(playhead.value!, {
+          x: playheadStartPxl
+        }, {
+          x: props.xScale(props.piece.durTot!),
+          duration: (props.piece.durTot! - props.currentTime),
+          ease: 'linear',
+          // onUpdate: () => {
+          //   const xPosition = playhead.value!.getBoundingClientRect().left;
+          //   emit('update:currentTime', props.xScale.invert(xPosition));
+          // }
+        })
+        // console.log(gsap.ticker.fps())
 
       }
       
     };
 
     const stopPlayingTransition = () => {
-      movingPlayhead = false;
+      // movingPlayhead = false;
+      gsapTween?.kill();
 
-      nextTick(() => {
-        const currentPxl = props.xScale(props.currentTime);
-        playhead.value!.style.transform = `translateX(${currentPxl}px)`;
-      })
+      // nextTick(() => {
+      //   const currentPxl = props.xScale(props.currentTime);
+      //   playhead.value!.style.transform = `translateX(${currentPxl}px)`;
+      // })
 
     };
 
@@ -1053,7 +1096,6 @@ export default defineComponent({
         }
       }
     };
-
     const addBolsG = () => {
       if (tranSvg.value) {
         const svg = d3.select(tranSvg.value);
@@ -1067,6 +1109,34 @@ export default defineComponent({
         }
       }
     };
+    const addMarkers = () => {
+      const markerBoxWidth = 4;
+      const markerBoxHeight= 4;
+      const refX = markerBoxWidth / 2;
+      const refY = markerBoxHeight / 2;
+      const arrowPoints: [number, number][] = [
+        [0, 0],
+        [0, markerBoxHeight],
+        [markerBoxWidth, refY]
+      ];
+      if (tranSvg.value) {
+        const svg = d3.select(tranSvg.value);
+        const defs = svg.append('defs');
+        defs
+          .append('marker')
+          .attr('id', 'arrow')
+          .attr('viewBox', [0, 0, markerBoxWidth, markerBoxHeight])
+          .attr('refX', refX)
+          .attr('refY', refY)
+          .attr('markerWidth', markerBoxWidth)
+          .attr('markerHeight', markerBoxHeight)
+          .attr('orient', 'auto-start-reverse')
+          .append('path')
+          .attr('d', d3.line()(arrowPoints))
+          .attr('fill', 'black')
+      }
+
+    }
 
     // rendering / refreshing functions
     const renderTraj = (traj: Trajectory) => {
@@ -1081,9 +1151,10 @@ export default defineComponent({
       if (traj.id !== 12) {
         renderMelodicCurve(traj, track);
         const inst = props.piece.instrumentation[track];
-        if (inst === 'Sitar') {
+        if (inst === Instrument.Sitar) {
           renderPlucks(traj, track);
           renderDampener(traj, track);
+          renderKrintin(traj, track);
         }
       };
       renderObj.renderStatus = true;
@@ -1216,6 +1287,89 @@ export default defineComponent({
           .on('click', () => handleClickTraj(traj, track))
       })
     };
+    const renderKrintin = (traj: Trajectory, track: number) => {
+      const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
+      const startTime = phrase.startTime! + traj.startTime!;
+      const keys = Object.keys(traj.articulations);
+      // hamer offs
+      const hammerOffKeys = keys.filter(key => {
+        return traj.articulations[key].name === 'hammer-off'
+      });
+      const hammerOffData = hammerOffKeys.map((key, kIdx) => {
+        const x = props.xScale(startTime + Number(key) * traj.durTot);
+        const y = props.yScale(traj.compute(Number(key) - 0.01, true));
+        return { x, y, kIdx }
+      });
+      hammerOffData.forEach(obj => {
+        const trackG = tracks[track];
+        const g = trackG.select('.trajG');
+        const color = 'black';
+        g.append('path')
+          .classed('articulation', true)
+          .classed('hammer-off', true)
+          .classed('uId' + traj.uniqueId, true)
+          .classed('kIdx' + obj.kIdx, true)
+          .attr('d', d3.line()([[-10, 0], [0, 0], [0, 10]]))
+          .attr('stroke', color)
+          .attr('stroke-width', 1.5)
+          .attr('fill', 'none')
+          .attr('marker-end', 'url(#arrow)')
+          .attr('transform', `translate(${obj.x}, ${obj.y})`)
+      });
+      // hammer ons
+      const hammerOnKeys = keys.filter(key => {
+        return traj.articulations[key].name === 'hammer-on'
+      });
+      const hammerOnData = hammerOnKeys.map((key, kIdx) => {
+        const x = props.xScale(startTime + Number(key) * traj.durTot);
+        const y = props.yScale(traj.compute(Number(key) - 0.01, true));
+        return { x, y, kIdx }
+      });
+      hammerOnData.forEach(obj => {
+        const trackG = tracks[track];
+        const g = trackG.select('.trajG');
+        const color = 'black';
+        g.append('path')
+          .classed('articulation', true)
+          .classed('hammer-on', true)
+          .classed('uId' + traj.uniqueId, true)
+          .classed('kIdx' + obj.kIdx, true)
+          .attr('d', d3.line()([[-10, 0], [0, 0], [0, -10]]))
+          .attr('stroke', color)
+          .attr('stroke-width', 1.5)
+          .attr('fill', 'none')
+          .attr('marker-end', 'url(#arrow)')
+          .attr('transform', `translate(${obj.x}, ${obj.y})`)
+      });
+      // slides
+      const slideKeys = keys.filter(key => {
+        return traj.articulations[key].name === 'slide'
+      });
+      const slideData = slideKeys.map((key, kIdx) => {
+        const x = props.xScale(startTime + Number(key) * traj.durTot);
+        const y = props.yScale(traj.compute(Number(key) - 0.01, true));
+        const dirUp = props.yScale(traj.compute(Number(key), true)) < y;
+        return { x, y, kIdx, dirUp }
+      });
+      slideData.forEach(obj => {
+        const yMotion = obj.dirUp ? [10, -10] : [-10, 10];
+        const trackG = tracks[track];
+        const g = trackG.select('.trajG');
+        const color = 'black';
+        g.append('path')
+          .classed('articulation', true)
+          .classed('slide', true)
+          .classed('uId' + traj.uniqueId, true)
+          .classed('kIdx' + obj.kIdx, true)
+          .attr('d', d3.line()([[0, yMotion[0]], [0, yMotion[1]]]))
+          .attr('stroke', color)
+          .attr('stroke-width', 1.5)
+          .attr('fill', 'none')
+          .attr('marker-end', 'url(#arrow)')
+          .attr('transform', `translate(${obj.x}, ${obj.y})`)
+      });
+
+    }
     const renderChikari = (cd: ChikariDisplayType) => {
       const sym = d3.symbol().type(d3.symbolX).size(80);
       const trajIdxAtTime = props.piece.trajStartTimes(cd.track)
@@ -1691,6 +1845,7 @@ export default defineComponent({
       resetTrajRenderStatus(selectedTrajUIds);
       resetEmptyObserverDivs();
       resetObserver();
+      addMarkers();
       addSargamLineG();
       refreshSargamLines();
       addMeterG();
@@ -4653,6 +4808,7 @@ export default defineComponent({
     };
 
     onMounted(() => {
+      gsap.ticker.fps(fps);
       if (tranSvg.value) {
         setUpSvg();
         resetTranscription();
