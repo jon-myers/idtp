@@ -524,7 +524,14 @@ type NewPieceInfoType = {
   name?: string;
   soloist?: string;
   soloInstrument?: string;
+  fundamental?: number;
 }
+
+type BoolObj = { [key: string]: boolean };
+
+
+type RuleSetType = {[key: string]: (boolean | BoolObj) };
+
 
 type RagaNewPieceInfoType = {
   title: string;
@@ -539,11 +546,12 @@ type RagaNewPieceInfoType = {
   };
   clone?: boolean;
   origID: string;
-  instrumentation?: string[];
+  instrumentation?: Instrument[];
   phrases?: Phrase[];
   family_name?: string;
   given_name?: string;
   name?: string;
+  fundamental?: number;
 }
 
 type RagaSeedType = {
@@ -1155,5 +1163,7 @@ export type {
   SarangiSynthType,
   KlattSynthType,
   BurstOption,
+  BoolObj,
+  RuleSetType,
 };
 

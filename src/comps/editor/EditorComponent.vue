@@ -959,11 +959,11 @@ export default defineComponent({
         this.durTot = piece.durTot!;
       }
       this.initXScale = this.durTot / this.initViewDur;
-      let fund = 246;
-      if (this.audioDBDoc && this.audioDBDoc.saEstimate) {
-        fund = 2 * this.audioDBDoc.saEstimate * 2 ** this.audioDBDoc.octOffset;
-      }
-      await this.getPieceFromJson(piece, fund);
+      // let fund = 246;
+      // if (this.audioDBDoc && this.audioDBDoc.saEstimate) {
+      //   fund = 2 * this.audioDBDoc.saEstimate * 2 ** this.audioDBDoc.octOffset;
+      // }
+      await this.getPieceFromJson(piece);
       useTitle(this.piece.title);
 
 
@@ -4675,8 +4675,8 @@ export default defineComponent({
     //   }
     // },
 
-    async getPieceFromJson(piece: Piece, fundamental: number) {
-      if (fundamental) piece.raga.fundamental = fundamental;
+    async getPieceFromJson(piece: Piece) {
+      // if (fundamental) piece.raga.fundamental = fundamental;
       const rsRes = await getRaagRule(piece.raga.name);
       piece.raga.ruleSet = rsRes.rules;
       piece.raga = new Raga(piece.raga);

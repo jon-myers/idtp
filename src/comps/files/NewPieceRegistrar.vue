@@ -647,9 +647,9 @@ export default defineComponent({
         }
         let newPieceInfo;
         if (this.noAE) {
-          if (this.recording === undefined) {
-            throw new Error('recording is undefined')
-          }
+          // if (this.recording === undefined) {
+          //   throw new Error('recording is undefined')
+          // }
           newPieceInfo = {
             title: this.title,
             transcriber: this.passedInData.transcriber,
@@ -661,7 +661,8 @@ export default defineComponent({
             soloist: this.passedInData.soloist,
             soloInstrument: this.passedInData.soloInstrument,
             instrumentation: this.instrumentation,
-            audioID: (this.recording as RecType)._id,
+            audioID: this.recording ? (this.recording as RecType)._id: undefined,
+            fundamental: this.passedInData.raga.fundamental,
           };
           
         } else {
@@ -678,6 +679,7 @@ export default defineComponent({
             instrumentation: this.instrumentation,
             soloist: this.passedInData.soloist,
             soloInstrument: this.passedInData.soloInstrument,
+            fundamental: this.passedInData.raga.fundamental,
           };
         }
         
@@ -697,12 +699,14 @@ export default defineComponent({
             }
             clone: boolean,
             audioID?: string,
-            instrumentation: string[],
+            instrumentation: Instrument[],
             soloist?: string,
             soloInstrument?: string,
+            fundamental?: number
           };
         if (this.noAE) {
           if (this.noRec) {
+            const fundamental = 246;
             newPieceInfo = {
               title: this.title,
               transcriber: this.transcriber,
@@ -712,12 +716,14 @@ export default defineComponent({
               clone: false,
               instrumentation: this.instrumentation,
               soloist: undefined,
-              soloInstrument: undefined
+              soloInstrument: undefined,
+              fundamental: fundamental
             }
           } else {
-            const soloist = this.getSoloist(this.recording as RecType);
+            const rec = this.recording as RecType;
+            const soloist = this.getSoloist(rec);
             const soloInstrument = soloist ? 
-              (this.recording as RecType).musicians[soloist].instrument : 
+              rec.musicians[soloist].instrument : 
               undefined;
             newPieceInfo = {
               title: this.title,
@@ -727,9 +733,10 @@ export default defineComponent({
               explicitPermissions: this.explicitPermissions,
               clone: false,
               instrumentation: this.instrumentation,
-              audioID: (this.recording as RecType)._id,
+              audioID: rec._id,
               soloist: soloist,
-              soloInstrument: soloInstrument
+              soloInstrument: soloInstrument,
+              fundamental: 2 * rec.saEstimate * 2 ** rec.octOffset
             }
           }
         } else {
@@ -747,12 +754,11 @@ export default defineComponent({
             clone: false,
             instrumentation: this.instrumentation,
             soloist: soloist,
-            soloInstrument: soloInstrument
+            soloInstrument: soloInstrument,
           };
           if (this.aeIdx !== undefined && this.recording !== undefined) {
-            const ae = this.allEvents[this.aeIdx];
-            const recNum = this.recording as number;
-            newPieceInfo.audioID = ae.recordings[recNum].audioFileId;
+            newPieceInfo.audioID = rec.audioFileId;
+            newPieceInfo.fundamental = 2 * rec.saEstimate * 2 ** rec.octOffset
           }
         }
         this.$emit('newPieceInfoEmit', newPieceInfo)

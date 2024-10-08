@@ -346,7 +346,7 @@
       :height='controlsHeight'
       :playerHeight='playerHeight'
       :audioID='id'
-      :saFreq='saEstimate ? 2*saEstimate : raga.fundamental'
+      :saFreq='raga.fundamental'
       :scaledWidth='transcriptionWidth'
       :scaledHeight='transcriptionHeight'
       :extLowOctOffset='lowOctOffset'

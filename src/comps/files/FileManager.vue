@@ -137,6 +137,7 @@ import {
   GetDisplayType,
   UserCheckType,
   MusicianNameType,
+  RuleSetType
 } from '@/ts/types.ts';
 import { SortState } from '@/ts/enums.ts';
 import EditInstrumentation from '@/comps/EditInstrumentation.vue';
@@ -376,7 +377,7 @@ export default defineComponent({
 
   methods: {
 
-    editInstrumentation(item: TransMetadataType) {
+    editInstrumentation() {
       this.showEditInstrumentation = true;
     },
 
@@ -774,10 +775,18 @@ export default defineComponent({
           const stringRaga = npi.raga as string;
           const rsRes = await getRaagRule(stringRaga);
           const ruleSet = rsRes.rules;
-          npi.raga = new Raga({
+          const spawnRagaObj: {
+            name: string;
+            ruleSet: RuleSetType;
+            fundamental?: number;
+          } = {
             name: stringRaga,
             ruleSet: ruleSet,
-          });
+          };
+          if (npi.fundamental !== undefined) {
+            spawnRagaObj.fundamental = npi.fundamental;
+          }
+          npi.raga = new Raga(spawnRagaObj);
           let durTot;
           if (npi.audioID) {
             const audioDBDoc = await getAudioRecording(npi.audioID);

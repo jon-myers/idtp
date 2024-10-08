@@ -15,7 +15,9 @@ import {
   ConsonantDisplayType,
   PhraseDivDisplayType,
   ChikariDisplayType,
-  BolDisplayType
+  BolDisplayType,
+  RuleSetType,
+  BoolObj,
 } from '@/ts/types.ts';
 import { Instrument } from '@/ts/enums.ts';
 import { closeTo, getClosest, isUpperCase } from '@/ts/utils.ts';
@@ -3410,9 +3412,7 @@ class Section {
   }
 }
 
-type BoolObj = { [key: string]: boolean };
 type NumObj = { [key: string]: number };
-type RuleSetType = {[key: string]: (boolean | BoolObj) };
 type TuningType = { [key: string]: number | NumObj };
 
 
