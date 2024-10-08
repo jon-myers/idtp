@@ -24,6 +24,30 @@ async function exists (path) {
   }
 }
 
+// Function to run a Python script and return a Promise
+function runPythonScript(scriptPath, args = []) {
+  return new Promise((resolve, reject) => {
+    const pythonProcess = spawn('python3', [scriptPath, ...args]);
+
+    pythonProcess.stdout.on('data', (data) => {
+      console.log(`stdout from ${scriptPath}: ${data}`);
+    });
+
+    pythonProcess.stderr.on('data', (data) => {
+      console.error(`stderr from ${scriptPath}: ${data}`);
+    });
+
+    pythonProcess.on('close', (code) => {
+      console.log(`${scriptPath} process exited with code ${code}`);
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`${scriptPath} process exited with code ${code}`));
+      }
+    });
+  });
+}
+
 const deleteFiles = async (audioID) => {
   const peaksPath = 'peaks/' + audioID + '.json';
   const spectrogramsPath = 'spectrograms/' + audioID;
@@ -891,6 +915,21 @@ const runServer = async () => {
       }
 
     });
+
+    // app.post('/makeVisualizationData', async (req, res) => {
+    //   // generate visualization data for the given recording ID
+    //   const script1 = './visualization_scripts/generate_melograph.py';
+    //   const script2 = './visualization_scripts/make_spec_data.py';
+    //   try {
+    //     await Promise.all([
+    //       runPythonScript(script1, [req.body.recId]),
+    //       runPythonScript(script2, [req.body.recId])
+    //     ])
+    //   } catch (err) {
+    //     console.error(err);
+    //     res.status(500).send(err);
+    //   }
+    // })
     
     app.post('/makeSpectrograms', async (req, res) => {
       // generate spectrograms for the given recording ID and tonic estimate  
@@ -1756,19 +1795,36 @@ const runServer = async () => {
           processAudio.stderr.on('data', data => {
             console.error(`stderr: ${data}`)
           });
-          processAudio.on('close', () => {
+          processAudio.on('close', async () => {
             console.log('audio processing finished')
-            res.send({
-              status: true,
-              message: 'File is uploaded',
-              data: {
-                name: audioFile.name,
-                mimetype: audioFile.mimetype,
-                size: audioFile.size,
-                audioFileId: newId
-              }
-            });
+            const script1 = './visualization_scripts/generate_melograph.py';
+            const script2 = './visualization_scripts/make_spec_data.py';
+            try {
+              await Promise.all([
+                runPythonScript(script1, [newId]),
+                runPythonScript(script2, [newId])
+              ])
+              res.send({
+                status: true,
+                message: 'File is uploaded',
+                data: {
+                  name: audioFile.name,
+                  mimetype: audioFile.mimetype,
+                  size: audioFile.size,
+                  audioFileId: newId
+                }
+              });
+            } catch (err) {
+              console.error(err);
+              res.status(500).send(err)
+            }
           });
+          // const script1 = './visualization_scripts/generate_melograph.py';
+          // const script2 = './visualization_scripts/make_spec_data.py';
+          // await Promise.all([
+          //   runPythonScript(script1, [newId]),
+          //   runPythonScript(script2, [newId])
+          // ])
         }
       } catch (err) {
         console.error(err);
@@ -1833,7 +1889,7 @@ const runServer = async () => {
             convertToOpus.stderr.on('data', data => {
               console.error(`stderr: ${data}`)
             });
-            await convertToOpus.on('close', () => {
+            convertToOpus.on('close', () => {
               console.log('opus conversion finished')
             })
           }
@@ -1842,7 +1898,7 @@ const runServer = async () => {
           processAudio.stderr.on('data', data => {
             console.error(`stderr: ${data}`)
           });
-          await processAudio.on('close', () => {
+          processAudio.on('close', () => {
             console.log('python closed, finally')
             res.send({
               status: true,
@@ -1855,7 +1911,12 @@ const runServer = async () => {
               }
             });
           });
-          spawn('python3', ['make_images.py', newId.toString()])
+          const script1 = './visualization_scripts/generate_melograph.py';
+          const script2 = './visualization_scripts/make_spec_data.py';
+          await Promise.all([
+            runPythonScript(script1, [newId]),
+            runPythonScript(script2, [newId])
+          ])
         }
       } catch (err) {
         console.error(err)
