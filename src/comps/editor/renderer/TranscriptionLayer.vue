@@ -15,6 +15,14 @@
       ></rect>
     </svg>
     <div class='emptyOverlay' ref='emptyOverlay'></div>
+    <AutomationWindow 
+      v-if='autoWindowOpen && autoTrajs.length > 0 && piece && editable'
+      :trajectories='autoTrajs'
+      :x='autoWindowX'
+      :y='autoWindowY'
+      :width='autoWindowWidth'
+      :piece='piece'
+      />
   </div>
   <ContextMenu
     :x='contextMenuX'
@@ -22,6 +30,7 @@
     :closed='contextMenuClosed'
     :choices='contextMenuChoices'
     />
+    
 </template>
 
 <script lang='ts'>
@@ -49,6 +58,7 @@ import {
 } from '@/ts/utils.ts';
 import { EditorMode, Instrument } from '@/ts/enums.ts';
 import { BrowserInfo } from 'detect-browser';
+import AutomationWindow from '@/comps/editor/AutomationWindow.vue';
 
 import { 
   Piece, 
@@ -83,7 +93,8 @@ import { gsap } from 'gsap';
 export default defineComponent({
   name: 'TranscriptionLayer',
   components: {
-    ContextMenu
+    ContextMenu,
+    AutomationWindow
   },
   props: {
     width: {
@@ -2160,17 +2171,23 @@ export default defineComponent({
               const xEnd = props.xScale(startTime + traj.durTot);
               autoWindowWidth.value = xEnd - xStart + 40;
               const minLogFreq = Math.min(...traj.logFreqs);
+              const maxLogFreq = Math.max(...traj.logFreqs);
               const yPxl = props.yScale(minLogFreq);
               autoTrajs.value = [traj];
               autoWindowOpen.value = true;
               autoWindowX.value = xStart - 20;
               autoWindowY.value = yPxl + 20;
+              if (autoWindowY.value + 100 > props.height) {
+                const yBottomPxl = props.yScale(maxLogFreq);
+                autoWindowY.value = yBottomPxl - 120;
+              }
+              contextMenuClosed.value = true;
             },
             enabled: props.editable
           })
         } else if (groupable.value && (sarangi || vocal)) {
           contextMenuChoices.value.push({
-            text: 'AdjustVolume',
+            text: 'Adjust Volume',
             action: () => {
               const startTraj = sts[0];
               const startTime = phrase.startTime! + startTraj.startTime!;
@@ -2182,10 +2199,15 @@ export default defineComponent({
               const xEnd = props.xScale(endTime);
               autoWindowWidth.value = xEnd - xStart + 40;
               let minLogFreq = Infinity;
+              let maxLogFreq = -Infinity;
               sts.forEach(t => {
                 const min = Math.min(...t.logFreqs);
+                const max = Math.max(...t.logFreqs);
                 if (min < minLogFreq) {
                   minLogFreq = min;
+                }
+                if (max > maxLogFreq) {
+                  maxLogFreq = max;
                 }
               });
               const yPxl = props.yScale(minLogFreq);
@@ -2193,6 +2215,10 @@ export default defineComponent({
               autoWindowOpen.value = true;
               autoWindowX.value = xStart - 20;
               autoWindowY.value = yPxl + 20;
+              if (autoWindowY.value + 100 > props.height) {
+                const yBottomPxl = props.yScale(maxLogFreq);
+                autoWindowY.value = yBottomPxl - 120;
+              }
               contextMenuClosed.value = true;
             },
             enabled: props.editable
@@ -2299,10 +2325,15 @@ export default defineComponent({
               const xEnd = props.xScale(endTime);
               autoWindowWidth.value = xEnd - xStart + 40;
               let minLogFreq = Infinity;
+              let maxLogFreq = -Infinity;
               group.trajectories.forEach(t => {
                 const min = Math.min(...t.logFreqs);
+                const max = Math.max(...t.logFreqs);
                 if (min < minLogFreq) {
                   minLogFreq = min;
+                }
+                if (max > maxLogFreq) {
+                  maxLogFreq = max;
                 }
               });
               const yPxl = props.yScale(minLogFreq);
@@ -2310,6 +2341,11 @@ export default defineComponent({
               autoWindowOpen.value = true;
               autoWindowX.value = xStart - 20;
               autoWindowY.value = yPxl + 20;
+              if (autoWindowY.value + 100 > props.height) {
+                const yBottomPxl = props.yScale(maxLogFreq);
+                autoWindowY.value = yBottomPxl - 120;
+              }
+              console.log(autoWindowY.value)
               contextMenuClosed.value = true;
             },
             enabled: props.editable
@@ -3467,6 +3503,7 @@ export default defineComponent({
         regionEndX.value = undefined;
         emit('cancelRegionSpeed')
       }
+      autoWindowOpen.value = false;
     }
 
     const clearDragDots = () => {
@@ -4883,7 +4920,12 @@ export default defineComponent({
       regionStartX,
       regionEndX,
       playhead,
-      playheadStyle
+      playheadStyle,
+      autoWindowOpen,
+      autoTrajs,
+      autoWindowX,
+      autoWindowY,
+      autoWindowWidth,
     }
   }
 })
