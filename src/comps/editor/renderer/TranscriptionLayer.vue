@@ -7,8 +7,8 @@
         class='playhead'
         x='0'
         y='0'
-        width='1'
-        opacity='1'
+        :width='playing && !playheadMotion ? xScale(1) : 1'
+        :opacity='playing && !playheadMotion ? 0.5 : 1'
         :height='height'
         :fill='playheadColor'
         :style='playheadStyle'
@@ -27,7 +27,7 @@
   <ContextMenu
     :x='contextMenuX'
     :y='contextMenuY'
-    :closed='contextMenuClosed'
+    :closed='contextMenuClosed' 
     :choices='contextMenuChoices'
     />
     
@@ -247,6 +247,10 @@ export default defineComponent({
     hasRecording: {
       type: Boolean,
       required: true
+    },
+    playheadMotion: {
+      type: Boolean,
+      required: true
     }
   },
   emits: [
@@ -311,6 +315,7 @@ export default defineComponent({
     const laggingDragDotY = ref<number>(0);
     const targetDragDotX = ref<number | undefined>(undefined);
     const targetDragDotY = ref<number | undefined>(undefined);
+    const currentSec = ref<number>(0);
 
     let gsapTween: gsap.core.Tween | undefined = undefined;
     let playheadLineIdx = 0;
@@ -485,7 +490,7 @@ export default defineComponent({
     });
     const playheadStyle = computed(() => {
       return {
-        filter: 'blur(2px) drop-shadow(0 0 10px rgba(0, 0, 0, 0.8))',
+        // filter: 'blur(2px) drop-shadow(0 0 10px rgba(0, 0, 0, 0.8))',
       }
     });
     const targetPlayheadX = computed(() => {
@@ -770,6 +775,12 @@ export default defineComponent({
         if (t > props.displayRange[1]) {
           horizontalMoveGraph(0.85)
         }
+        if (!props.playheadMotion) {
+          if (Math.floor(props.currentTime) > currentSec.value) {
+            currentSec.value = Math.floor(props.currentTime);
+            updatePlayheadPosition(currentSec.value);
+          }
+        }
       } else {
         updatePlayheadPosition(props.currentTime);
       }
@@ -924,38 +935,15 @@ export default defineComponent({
       playheadMusicStartTime = props.currentTime;
       playheadStartPxl = props.xScale(props.currentTime);
       if (props.loop && regionEndPxl.value !== undefined && playheadStartPxl < regionEndPxl.value) {
-        // looping = true;
-        // console.log(playheadStartPxl, regionStartPxl.value)
         if (playheadStartPxl > regionStartPxl.value!) {
-          // console.log('getting triggered')
           emit('update:currentTime', regionStartX.value!);
           playheadStartPxl = regionStartPxl.value!;
           playheadMusicStartTime = regionStartX.value!;
           nextTick(() => {
             playheadStartPxl = regionStartPxl.value!;
-            gsapTween = gsap.fromTo(playhead.value!, {
-              x: playheadStartPxl
-            }, {
-              x: regionEndPxl.value!,
-              duration: (regionEndX.value! - regionStartX.value!),
-              ease: 'linear',
-              repeat: -1,
-            })
-            // playheadRealStartTime = performance.now() / 1000;
-            // requestAnimationFrame(movePlayhead);
-          })
-        } else {
-          // playheadRealStartTime = performance.now() / 1000;
-          // requestAnimationFrame(movePlayhead);
-          gsapTween = gsap.fromTo(playhead.value!, {
-            x: playheadStartPxl
-          }, {
-            x: regionEndPxl.value!,
-            duration: (regionEndX.value! - props.currentTime),
-            ease: 'linear',
-            onComplete: () => {
+            if (props.playheadMotion) {
               gsapTween = gsap.fromTo(playhead.value!, {
-                x: regionStartPxl.value!
+                x: playheadStartPxl
               }, {
                 x: regionEndPxl.value!,
                 duration: (regionEndX.value! - regionStartX.value!),
@@ -964,47 +952,56 @@ export default defineComponent({
               })
             }
           })
+        } else {
+          if (props.playheadMotion) {
+            gsapTween = gsap.fromTo(playhead.value!, {
+              x: playheadStartPxl
+            }, {
+              x: regionEndPxl.value!,
+              duration: (regionEndX.value! - props.currentTime),
+              ease: 'linear',
+              onComplete: () => {
+                gsapTween = gsap.fromTo(playhead.value!, {
+                  x: regionStartPxl.value!
+                }, {
+                  x: regionEndPxl.value!,
+                  duration: (regionEndX.value! - regionStartX.value!),
+                  ease: 'linear',
+                  repeat: -1,
+                })
+              }
+            })
+          }
         }
 
       } else {
-        // looping = false;
-        // playheadRealStartTime = performance.now() / 1000;
-        // requestAnimationFrame(movePlayhead);
-        // gsapTween = gsap.to(playhead.value!, {
-        //   x: props.xScale(props.piece.durTot!),
-        //   duration: (props.piece.durTot! - props.currentTime),
-        //   ease: 'linear',
-        // })
-        gsapTween = gsap.fromTo(playhead.value!, {
-          x: playheadStartPxl
-        }, {
-          x: props.xScale(props.piece.durTot!),
-          duration: (props.piece.durTot! - props.currentTime),
-          ease: 'linear',
-          // onUpdate: () => {
-          //   const xPosition = playhead.value!.getBoundingClientRect().left;
-          //   emit('update:currentTime', props.xScale.invert(xPosition));
-          // }
-        })
-        // console.log(gsap.ticker.fps())
-
+        if (props.playheadMotion) {
+          gsapTween = gsap.fromTo(playhead.value!, {
+            x: playheadStartPxl
+          }, {
+            x: props.xScale(props.piece.durTot!),
+            duration: (props.piece.durTot! - props.currentTime),
+            ease: 'linear',
+          })
+        }
       }
-      
     };
 
     const stopPlayingTransition = () => {
-      // movingPlayhead = false;
-      gsapTween?.kill();
+      if (props.playheadMotion) gsapTween?.kill();
+      updatePlayheadPosition(props.currentTime);
 
-      // nextTick(() => {
-      //   const currentPxl = props.xScale(props.currentTime);
-      //   playhead.value!.style.transform = `translateX(${currentPxl}px)`;
-      // })
 
     };
 
     const updatePlayheadPosition = (time: number) => {
       if (!props.playing) {
+        const pxlX = props.xScale(time);
+        playhead.value!.style.transform = `translateX(${pxlX}px)`;
+        smoothPositionX = pxlX;
+        currentSec.value = Math.floor(time);
+
+      } else if (!props.playheadMotion) {
         const pxlX = props.xScale(time);
         playhead.value!.style.transform = `translateX(${pxlX}px)`;
         smoothPositionX = pxlX;

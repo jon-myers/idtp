@@ -1238,6 +1238,8 @@ export default defineComponent({
       console.log('initializing synth controls');
       this.initializedSynthControls = true;
       this.instTracks.forEach((track, i) => {
+        // chikari freqs
+        this.piece.phraseGrid[i]
         if (track.inst === Instrument.Sitar) {
           this.synthControls.push({
             inst: track.inst,
@@ -1247,6 +1249,8 @@ export default defineComponent({
               outGain: 0,
               extSitarGain: 1,
               extChikariGain: 1,
+              chikariFreq0: this.piece.chikariFreqs(i)[0],
+              chikariFreq1: this.piece.chikariFreqs(i)[1],
             }
           });
         } else if (track.inst === Instrument.Sarangi) {

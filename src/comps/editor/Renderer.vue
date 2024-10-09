@@ -126,6 +126,7 @@
               :loop='loop'
               :stretchedFactor='stretchedFactor'
               :hasRecording='hasRecording'
+              :playheadMotion='playheadMotion'
               @update:prevMeter='$emit("update:prevMeter", $event)'
               @update:selectedMode='$emit("update:selectedMode", $event)'
               @unsavedChanges='$emit("unsavedChanges", $event)'
@@ -368,6 +369,10 @@ export default defineComponent({
       required: true
     },
     hasRecording: {
+      type: Boolean,
+      required: true
+    },
+    playheadMotion: {
       type: Boolean,
       required: true
     },

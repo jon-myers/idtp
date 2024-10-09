@@ -45,6 +45,7 @@
       :loop='loop'
       :stretchedFactor='stretchedFactor'
       :hasRecording='hasRecording'
+      :playheadMotion='playheadMotion'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
@@ -140,6 +141,13 @@
           <input 
             type='checkbox' 
             v-model='viewPhrases' 
+            @click='preventSpaceToggle'>
+        </div>
+        <div class='cbRow' v-if='visibilityTab'>
+          <label>Playhead Motion</label>
+          <input 
+            type='checkbox' 
+            v-model='playheadMotion' 
             @click='preventSpaceToggle'>
         </div>
         <div class='lineBreakParent' v-if='visibilityTab'>
@@ -674,6 +682,7 @@ type EditorDataType = {
   regionIdx: number,
   playheadColor: string,
   stretchedFactor: number,
+  playheadMotion: boolean,
 }
 
 // DebouncedFunc<(newSlope: number) => void>
@@ -862,6 +871,7 @@ export default defineComponent({
       regionIdx: 0,
       playheadColor: '#000000',
       stretchedFactor: 1,
+      playheadMotion: true,
     }
   },
   components: {
@@ -1426,19 +1436,19 @@ export default defineComponent({
     },
 
     zoomInY() {
-      this.transcriptionHeight = Math.round(this.transcriptionHeight * 1.1);
+      this.transcriptionHeight = Math.round(this.transcriptionHeight * 1.5);
     },
 
     zoomOutY() {
-      this.transcriptionHeight = Math.round(this.transcriptionHeight / 1.1);
+      this.transcriptionHeight = Math.round(this.transcriptionHeight / 1.5);
     },
 
     zoomInX() {
-      this.transcriptionWidth = Math.round(this.transcriptionWidth * 1.1);
+      this.transcriptionWidth = Math.round(this.transcriptionWidth * 1.5);
     },
 
     zoomOutX() {
-      this.transcriptionWidth = Math.round(this.transcriptionWidth / 1.1);
+      this.transcriptionWidth = Math.round(this.transcriptionWidth / 1.5);
     },
 
 
@@ -1662,58 +1672,6 @@ export default defineComponent({
       }
 
     },
-
-    // multiVowelEmit(vowel: string) {
-    //   this.unsavedChanges = true;
-    //   this.selectedTrajs.sort((a, b) => {
-    //     if (a.phraseIdx === b.phraseIdx) {
-    //       return a.num! - b.num!;
-    //     } else {
-    //       return a.phraseIdx! - b.phraseIdx!;
-    //     }
-    //   })
-    //   this.selectedTrajs.forEach(t => {
-    //     t.updateVowel(vowel)
-    //     const pIdx = t.phraseIdx!;
-    //     const tIdx = t.num!;
-    //     const g = d3Select(`#articulations__p${pIdx}t${tIdx}`) as 
-    //       Selection<SVGGElement, any, any, any>;
-    //     const phrase = this.piece.phrases[pIdx];
-    //     const selected = d3Select(`#vowelp${pIdx}t${tIdx}`);
-    //     let dontReplace = false;
-    //     let prevTraj: Trajectory | undefined;
-    //     if (tIdx > 0) {
-    //       prevTraj = phrase.trajectories[tIdx - 1];
-    //     } else if (pIdx > 0) {
-    //       const prevPhrase = this.piece.phrases[pIdx - 1];
-    //       prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
-    //     }
-    //     if (prevTraj) {
-    //       if (prevTraj.vowel === vowel) {
-    //         dontReplace = true;
-    //       }
-    //     }
-    //     if (selected.node() === null) {
-    //       if (!dontReplace) {
-    //         this.addVowel(t, phrase.startTime!, g, true)
-    //       }
-    //     } else {
-    //       selected.remove();
-    //       if (!dontReplace) {
-    //         this.addVowel(t, phrase.startTime!, g, true)
-    //       }
-    //     }
-    //     const nextTraj = phrase.trajectories[tIdx + 1];
-    //     if (nextTraj) {
-    //       const sel = d3Select(`#vowelp${pIdx}t${tIdx + 1}`);
-    //       sel.remove();
-    //       const vowelIdxs = phrase.firstTrajIdxs();
-    //       if (vowelIdxs.includes(nextTraj.num!)) {
-    //         this.addVowel(nextTraj, phrase.startTime!, g, true)
-    //       }
-    //     }
-    //   })
-    // },
 
     vowelEmit(vowel: string) {
       console.log('emitting vowel')
@@ -4745,7 +4703,13 @@ export default defineComponent({
           chikariKeys.forEach((key, i) => {
             // console.log(chikariEntries[i])
             const entry = chikariEntries[i];
-            entry.pitches = entry.pitches.map(p => new Pitch(p))
+            entry.fundamental = piece.raga.fundamental;
+            entry.pitches = entry.pitches.map(p => {
+              p.fundamental = piece.raga.fundamental;
+              p.ratios = piece.raga.stratifiedRatios;
+              return new Pitch(p)
+            })
+            // console.log(entry)
             chikariObj[key] = new Chikari(entry)
           })
           phrase.chikaris = chikariObj;

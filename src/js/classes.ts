@@ -2321,6 +2321,7 @@ class Piece {
   sectionCatGrid: SecCatType[][];
 
 
+
   constructor({
     phrases = [],
     durTot = undefined,
@@ -2541,6 +2542,20 @@ class Piece {
 
   set sectionCategorization(arr) { 
     this.sectionCatGrid[0] = arr
+  }
+
+  chikariFreqs(instIdx: number) {
+    const allChikaris: Chikari[] = [];
+    this.phraseGrid[instIdx].forEach(p => {
+      const chikaris = Object.values(p.chikaris);
+      allChikaris.push(...chikaris)
+    });
+    if (allChikaris.length === 0) {
+      return [this.raga.fundamental * 2, this.raga.fundamental * 4]
+    } else {
+      // console.log(allChikaris[0].pitches)
+      return allChikaris[0].pitches.slice(0, 2).map(p => p.frequency);
+    }
   }
 
   updateFundamental(fundamental: number) {

@@ -1003,7 +1003,9 @@ type SitarSynthControl = {
     dampen: number,
     outGain: number,
     extSitarGain: number,
-    extChikariGain: number
+    extChikariGain: number,
+    chikariFreq0: number,
+    chikariFreq1: number,
   }
 }
 
