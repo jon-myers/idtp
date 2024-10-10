@@ -785,7 +785,13 @@ export default defineComponent({
           horizontalMoveGraph(0.85)
         }
         if (props.playheadAnimation === PlayheadAnimations.Block) {
+          let doUpdate = false;
           if (Math.floor(props.currentTime) > currentSec.value) {
+            doUpdate = true;
+          } else if (props.loop) {
+            doUpdate = true;
+          }
+          if (doUpdate) {
             currentSec.value = Math.floor(props.currentTime);
             updatePlayheadPosition(currentSec.value);
           }
@@ -1000,9 +1006,7 @@ export default defineComponent({
     const movePlayhead = () => {
       const now = performance.now() / 1000;
       const elapsed = now - playheadRealStartTime;
-      let musicTime = playheadMusicStartTime + elapsed;
-      // if (now - lastUpdateTime > frameDur) {
-      
+      let musicTime = playheadMusicStartTime + elapsed;      
       if (everyOther) {
         if (looping) {
           while (musicTime > regionEndX.value!) {
@@ -1010,11 +1014,6 @@ export default defineComponent({
           }
         }
         const xPosition = props.xScale(musicTime);
-        // if (smoothPositionX > xPosition) {
-        //   smoothPositionX = xPosition;
-        // } else {
-        //   smoothPositionX = smooth(smoothPositionX, xPosition, 0.5);
-        // }
         playhead.value!.style.transform = `translateX(${xPosition}px)`;
         lastUpdateTime = now;
       }
