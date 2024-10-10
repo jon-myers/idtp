@@ -134,6 +134,7 @@
       @update:mixedGainVal='updateMixedGainVal'
       @update:recGainVal='updateRecGainVal'
       @update:gainNode='handleUpdateGainNode'
+      @update:cutoff='handleUpdateCutoff'
     />
     <div class='downloads' v-if='showDownloads'>
       <label>Data</label>
@@ -1117,6 +1118,24 @@ export default defineComponent({
       const curVal = node.gain.value;
       node.gain.setValueAtTime(curVal, this.now());
       node.gain.linearRampToValueAtTime(slider.target, this.now() + this.lagTime);
+    },
+
+    handleUpdateCutoff(slider: {
+      label: string,
+      target: number,
+      paramName: string,
+      instIdx: number
+    }) {
+      const s = this.$refs.synths as InstanceType<typeof Synths>;
+      const inst = this.instTracks[slider.instIdx].inst;
+      const synth = s.synths[slider.instIdx] as SitarSynthType;
+      const pName = slider.paramName as keyof typeof synth;
+      const node = synth[slider.paramName as keyof typeof synth] as 
+        PluckNodeType;
+      const curVal = node.cutoff!.value;
+      node.cutoff!.setValueAtTime(curVal, this.now());
+      node.cutoff!.linearRampToValueAtTime(slider.target, this.now() + this.lagTime);
+
     },
 
     initializeSynthControls() {

@@ -52,7 +52,7 @@ export default defineComponent({
       required: true
     },
   },
-  emits: ['update:sonify', 'update:gainNode'],
+  emits: ['update:sonify', 'update:gainNode', 'update:cutoff'],
   setup(props, { emit }) {
     const tempSynthControl = ref<SynthControl>(props.synthControl);
     const sonifyProxy = computed({
@@ -131,6 +131,7 @@ export default defineComponent({
     
     ) => {
       if (slider.label === 'Dampen') {
+        emit('update:cutoff', slider)
       } else {
         emit('update:gainNode', slider)
       }

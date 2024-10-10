@@ -10,6 +10,7 @@
         :sonify='instTracks[index].sounding'
         @update:sonify='handleUpdateSonify(index, $event)'
         @update:gainNode='$emit("update:gainNode", $event)'
+        @update:cutoff='$emit("update:cutoff", $event)'
         />
       <div class='otherControls'>
         <div class='sliderCol primaryGain' v-if='instTracks.length > 1'>
@@ -150,7 +151,8 @@ export default defineComponent({
     'regionSpeedChange',
     'update:mixedGainVal',
     'update:gainNode',
-    'update:recGainVal'
+    'update:recGainVal',
+    'update:cutoff',
   ],
   setup(props, { emit }) {
 
