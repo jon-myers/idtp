@@ -321,7 +321,7 @@ export default defineComponent({
     const targetDragDotY = ref<number | undefined>(undefined);
     const currentSec = ref<number>(0);
     const litTrajs = ref<(Trajectory | undefined)[]>(Array(props.instTracks.length).fill(undefined));
-    
+    const litChikaris = ref<(string)[]>([]);
     let gsapTween: gsap.core.Tween | undefined = undefined;
     let playheadLineIdx = 0;
     let justDeletedPhraseDiv = false;
@@ -798,6 +798,7 @@ export default defineComponent({
           // still hovering)
           props.instTracks.forEach((track, idx) => {
             if (track.displaying) {
+              // trajs
               const traj = props.piece.trajFromTime(t, idx);
               const litTraj = litTrajs.value[idx];
               if (traj.id !== 12) {
@@ -809,7 +810,6 @@ export default defineComponent({
                       .attr('stroke', track.color)
                     d3.selectAll(litSelectorPluck)
                       .attr('fill', track.color)
-
                     const selector = `.traj.uId${traj.uniqueId}`;
                     const selectorPluck = selector + '.pluck';
                     d3.selectAll(selector)
@@ -836,10 +836,44 @@ export default defineComponent({
                     .attr('fill', track.color)
                   litTrajs.value[idx] = undefined;
                 }
+              };
+              // chikari
+              const cs = props.piece.allDisplayChikaris(idx).filter(c => {
+                const diff = t - c.time;
+                return diff < 0.2 && diff > 0;
+              });
+              if (cs.length > 0) {
+                const newLitChikaris: string[] = [];
+
+                // Highlight new items and collect them in newLitChikaris
+                cs.forEach(c => {
+                  if (!litChikaris.value.includes(c.uId)) {
+                    const selector = '.uId' + c.uId;
+                    d3.selectAll(selector).attr('stroke', track.selColor);
+                  }
+                  newLitChikaris.push(c.uId);
+                });
+
+                // Remove highlights from old items not in cs
+                litChikaris.value.forEach(c => {
+                  if (!cs.map((cdt => cdt.uId)).includes(c)) {
+                    const selector = '.uId' + c;
+                    d3.selectAll(selector).attr('stroke', track.color);
+                  }
+                });
+
+                // Update litChikaris.value to the new list
+                litChikaris.value = newLitChikaris;
+              } else {
+                // Remove highlights from all items
+                litChikaris.value.forEach(c => {
+                  const selector = '.uId' + c;
+                  d3.selectAll(selector).attr('stroke', track.color);
+                });
+                litChikaris.value = [];
               }
             }
           })
-          // throw new Error('Not implemented yet');
         }
       } else {
         updatePlayheadPosition(props.currentTime);
@@ -4719,8 +4753,6 @@ export default defineComponent({
           }
         }
       }
-      
-      
       overlappingTrajs.forEach(traj => {
         const rObj = trajRenderStatus.value.flat().find(obj => {
           return obj.uniqueId === traj.uniqueId
@@ -4806,7 +4838,6 @@ export default defineComponent({
           }
         });
         const pastedTrajs: Trajectory[] = [];
-
         clipboardTrajs.value.forEach((traj, tIdx) => {
           const origPhrase = props.piece.phraseGrid[track][traj.phraseIdx!];
           const origTrajStart = traj.startTime! + origPhrase.startTime!;
