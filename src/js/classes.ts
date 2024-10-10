@@ -2910,8 +2910,10 @@ class Piece {
   trajStartTimes(inst = 0) {
     const trajs = this.allTrajectories(inst);
     const durs = trajs.map(t => t.durTot);
-    return durs.reduce((acc, dur) => {
-      acc.push(acc[acc.length - 1] + dur);
+    return durs.reduce((acc, dur, idx) => {
+      if (idx < durs.length - 1) {
+        acc.push(acc[acc.length - 1] + dur);
+      }
       return acc
     }, [0]);
   }

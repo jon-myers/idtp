@@ -7,8 +7,8 @@
         class='playhead'
         x='0'
         y='0'
-        :width='playing && !playheadMotion ? xScale(1) : 1'
-        :opacity='playing && !playheadMotion ? 0.5 : 1'
+        :width='playing && isBlock ? xScale(1) : 1'
+        :opacity='playing && isBlock ? 0.5 : 1'
         :height='height'
         :fill='playheadColor'
         :style='playheadStyle'
@@ -56,7 +56,7 @@ import {
   findClosestStartTimeAfter,
   findClosestStartTime,
 } from '@/ts/utils.ts';
-import { EditorMode, Instrument } from '@/ts/enums.ts';
+import { EditorMode, Instrument, PlayheadAnimations } from '@/ts/enums.ts';
 import { BrowserInfo } from 'detect-browser';
 import AutomationWindow from '@/comps/editor/AutomationWindow.vue';
 
@@ -248,10 +248,14 @@ export default defineComponent({
       type: Boolean,
       required: true
     },
-    playheadMotion: {
+    highlightTrajs: {
       type: Boolean,
       required: true
-    }
+    },
+    playheadAnimation: {
+      type: String as PropType<PlayheadAnimations>,
+      required: true
+    },
   },
   emits: [
     'update:TrajSelStatus',
@@ -316,7 +320,8 @@ export default defineComponent({
     const targetDragDotX = ref<number | undefined>(undefined);
     const targetDragDotY = ref<number | undefined>(undefined);
     const currentSec = ref<number>(0);
-
+    const litTrajs = ref<(Trajectory | undefined)[]>(Array(props.instTracks.length).fill(undefined));
+    
     let gsapTween: gsap.core.Tween | undefined = undefined;
     let playheadLineIdx = 0;
     let justDeletedPhraseDiv = false;
@@ -342,6 +347,10 @@ export default defineComponent({
     let looping = false;
     let smoothPositionX = 0;
     let everyTenth = 0;
+
+    const isBlock = computed(() => {
+      return props.playheadAnimation === PlayheadAnimations.Block;
+    })
 
 
 
@@ -775,11 +784,62 @@ export default defineComponent({
         if (t > props.displayRange[1]) {
           horizontalMoveGraph(0.85)
         }
-        if (!props.playheadMotion) {
+        if (props.playheadAnimation === PlayheadAnimations.Block) {
           if (Math.floor(props.currentTime) > currentSec.value) {
             currentSec.value = Math.floor(props.currentTime);
             updatePlayheadPosition(currentSec.value);
           }
+        }
+        if (props.highlightTrajs) {
+          // here is where to use curTraj= props.piece.trajFromTime
+          // within instTracks if instTrack is currently "displaying"
+          // then swap to its selColor if its currently playing, 
+          // go back to regular color otherwise (unless it is selected or 
+          // still hovering)
+          props.instTracks.forEach((track, idx) => {
+            if (track.displaying) {
+              const traj = props.piece.trajFromTime(t, idx);
+              const litTraj = litTrajs.value[idx];
+              if (traj.id !== 12) {
+                if (litTraj !== undefined) {
+                  if (litTraj !== traj) {
+                    const litSelector = `.traj.uId${litTrajs.value[idx]!.uniqueId}`;
+                    const litSelectorPluck = litSelector + '.pluck';
+                    d3.selectAll(litSelector)
+                      .attr('stroke', track.color)
+                    d3.selectAll(litSelectorPluck)
+                      .attr('fill', track.color)
+
+                    const selector = `.traj.uId${traj.uniqueId}`;
+                    const selectorPluck = selector + '.pluck';
+                    d3.selectAll(selector)
+                      .attr('stroke', track.selColor)
+                    d3.selectAll(selectorPluck)
+                      .attr('fill', track.selColor)
+                  }
+                } else {
+                  const selector = `.traj.uId${traj.uniqueId}`;
+                  const selectorPluck = selector + '.pluck';
+                  d3.selectAll(selector)
+                    .attr('stroke', track.selColor)
+                  d3.selectAll(selectorPluck)
+                    .attr('fill', track.selColor)
+                }
+                litTrajs.value[idx] = traj;
+              } else {
+                if (litTraj !== undefined) {
+                  const selector = `.traj.uId${litTrajs.value[idx]!.uniqueId}`;
+                  const selectorPluck = selector + '.pluck';
+                  d3.selectAll(selector)
+                    .attr('stroke', track.color)
+                  d3.selectAll(selectorPluck)
+                    .attr('fill', track.color)
+                  litTrajs.value[idx] = undefined;
+                }
+              }
+            }
+          })
+          // throw new Error('Not implemented yet');
         }
       } else {
         updatePlayheadPosition(props.currentTime);
@@ -941,7 +1001,7 @@ export default defineComponent({
           playheadMusicStartTime = regionStartX.value!;
           nextTick(() => {
             playheadStartPxl = regionStartPxl.value!;
-            if (props.playheadMotion) {
+            if (props.playheadAnimation === PlayheadAnimations.Animated) {
               gsapTween = gsap.fromTo(playhead.value!, {
                 x: playheadStartPxl
               }, {
@@ -953,7 +1013,7 @@ export default defineComponent({
             }
           })
         } else {
-          if (props.playheadMotion) {
+          if (props.playheadAnimation === PlayheadAnimations.Animated) {
             gsapTween = gsap.fromTo(playhead.value!, {
               x: playheadStartPxl
             }, {
@@ -975,7 +1035,7 @@ export default defineComponent({
         }
 
       } else {
-        if (props.playheadMotion) {
+        if (props.playheadAnimation === PlayheadAnimations.Animated) {
           gsapTween = gsap.fromTo(playhead.value!, {
             x: playheadStartPxl
           }, {
@@ -988,7 +1048,9 @@ export default defineComponent({
     };
 
     const stopPlayingTransition = () => {
-      if (props.playheadMotion) gsapTween?.kill();
+      if (props.playheadAnimation === PlayheadAnimations.Animated) {
+        return gsapTween?.kill();
+      }
       updatePlayheadPosition(props.currentTime);
 
 
@@ -1001,7 +1063,7 @@ export default defineComponent({
         smoothPositionX = pxlX;
         currentSec.value = Math.floor(time);
 
-      } else if (!props.playheadMotion) {
+      } else if (props.playheadAnimation === PlayheadAnimations.Block) {
         const pxlX = props.xScale(time);
         playhead.value!.style.transform = `translateX(${pxlX}px)`;
         smoothPositionX = pxlX;
@@ -4923,6 +4985,7 @@ export default defineComponent({
       autoWindowX,
       autoWindowY,
       autoWindowWidth,
+      isBlock
     }
   }
 })

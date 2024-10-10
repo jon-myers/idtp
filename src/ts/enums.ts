@@ -42,11 +42,18 @@ enum ControlsMode {
   None = 'None',
 }
 
+enum PlayheadAnimations {
+  Animated = 'Animated',
+  Block = 'Block',
+  None = 'None',
+}
+
 
 
 export {
   SortState,
   EditorMode,
   Instrument,
-  ControlsMode
+  ControlsMode,
+  PlayheadAnimations
 }

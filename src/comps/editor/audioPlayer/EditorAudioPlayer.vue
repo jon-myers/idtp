@@ -364,6 +364,8 @@
       :meterColor='meterColor'
       :selectedMeterColor='selectedMeterColor'
       :playheadColor='playheadColor'
+      :playheadAnimation='playheadAnimation'
+      :highlightTrajs='highlightTrajs'
       @specCanvas='handleSpecCanvas'
       @update:backgroundColor='$emit("update:backgroundColor", $event)'
       @update:axisColor='$emit("update:axisColor", $event)'
@@ -376,6 +378,8 @@
       @update:meterColor='$emit("update:meterColor", $event)'
       @update:selectedMeterColor='$emit("update:selectedMeterColor", $event)'
       @update:playheadColor='$emit("update:playheadColor", $event)'
+      @update:playheadAnimation='$emit("update:playheadAnimation", $event)'
+      @update:highlightTrajs='$emit("update:highlightTrajs", $event)'
       />
       <Synths
         ref='synths'
@@ -436,7 +440,7 @@ import {
   Piece,
   Pitch
 } from '@/js/classes.ts';
-import { EditorMode } from '@/ts/enums.ts';
+import { EditorMode, PlayheadAnimations } from '@/ts/enums.ts';
 import { AudioWorklet } from '@/audio-worklet';
 import { excelData, jsonData } from '@/js/serverCalls.ts';
 import { Meter } from '@/js/meter.ts';
@@ -966,6 +970,14 @@ export default defineComponent({
       required: true
     },
     hasRecording: {
+      type: Boolean,
+      required: true
+    },
+    playheadAnimation: {
+      type: String as PropType<PlayheadAnimations>,
+      required: true
+    },
+    highlightTrajs: {
       type: Boolean,
       required: true
     },

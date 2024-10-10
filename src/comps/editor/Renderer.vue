@@ -126,7 +126,8 @@
               :loop='loop'
               :stretchedFactor='stretchedFactor'
               :hasRecording='hasRecording'
-              :playheadMotion='playheadMotion'
+              :highlightTrajs='highlightTrajs'
+              :playheadAnimation='playheadAnimation'
               @update:prevMeter='$emit("update:prevMeter", $event)'
               @update:selectedMode='$emit("update:selectedMode", $event)'
               @unsavedChanges='$emit("unsavedChanges", $event)'
@@ -191,11 +192,10 @@ import {
   InstrumentTrackType, 
   ContextMenuOptionType,
   TransMetadataType } from '@/ts/types.ts';
-import { EditorMode, Instrument } from '@/ts/enums.ts';
+import { EditorMode, Instrument, PlayheadAnimations } from '@/ts/enums.ts';
 import { BrowserInfo } from 'detect-browser';
 import ContextMenu from '@/comps/ContextMenu.vue';
 import EditInstrumentation from '@/comps/EditInstrumentation.vue';
-
 
 export default defineComponent({
   name: 'Renderer',
@@ -372,8 +372,12 @@ export default defineComponent({
       type: Boolean,
       required: true
     },
-    playheadMotion: {
+    highlightTrajs: {
       type: Boolean,
+      required: true
+    },
+    playheadAnimation: {
+      type: String as PropType<PlayheadAnimations>,
       required: true
     },
   },

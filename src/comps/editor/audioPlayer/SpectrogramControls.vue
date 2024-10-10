@@ -142,6 +142,30 @@
     </div>
     <div class='col'>
       <div class='titleBox'>
+        <label>Playback Animation</label>
+      </div>
+      <div class='rowBox'>
+        <label>Playhead</label>
+        <div class='row'>
+          <select v-model='playheadAnimationProxy'>
+            <option 
+              v-for='animation in playheadAnimations' 
+              :value='animation'
+              >
+              {{ animation }}
+            </option>
+          </select>
+        </div>
+      </div>
+      <div class='rowBox'>
+        <div class='row'>
+          <label>Highlight Trajs</label>
+          <input type='checkbox' v-model='highlightTrajsProxy'/>
+        </div>
+      </div>
+    </div>
+    <div class='col'>
+      <div class='titleBox'>
         <label>Display Settings</label>
       </div>
       <div class='rowBox'>
@@ -213,6 +237,7 @@ import {
 } from 'vue';
 import { getWorker } from '@/ts/workers/workerManager.ts'
 import { CMap, InstrumentTrackType, DisplaySettings } from '@/ts/types.ts';
+import { PlayheadAnimations } from '@/ts/enums';
 import SwatchSelect from '@/comps/SwatchSelect.vue';
 import {
   Pitch, 
@@ -319,8 +344,33 @@ export default defineComponent({
     playheadColor: {
       type: String,
       required: true
+    },
+    playheadAnimation: {
+      type: String as PropType<PlayheadAnimations>,
+      required: true
+    },
+    highlightTrajs: {
+      type: Boolean,
+      required: true
     }
   },
+  emits: [
+    'update:backgroundColor',
+    'update:axisColor',
+    'update:melographColor',
+    'update:sargamLineColor',
+    'update:extLowOctOffset',
+    'update:extHighOctOffset',
+    'update:instTracks',
+    'update:meterColor',
+    'update:selectedMeterColor',
+    'update:playheadColor',
+    'update:saFreq',
+    'update:maxPitch',
+    'update:minPitch',
+    'update:playheadAnimation',
+    'update:highlightTrajs'
+  ],
   setup(props, { emit }) {
 
     const defaultSetting = {
@@ -387,7 +437,24 @@ export default defineComponent({
     const savedSettings = ref<DisplaySettings[]>([]);
     const selectedSetting = ref<DisplaySettings>(defaultSetting);
 
+    const playheadAnimations = Object.values(PlayheadAnimations);
 
+    const playheadAnimationProxy = computed({
+      get() {
+        return props.playheadAnimation;
+      },
+      set(val) {
+        emit('update:playheadAnimation', val);
+      }
+    });
+    const highlightTrajsProxy = computed({
+      get() {
+        return props.highlightTrajs;
+      },
+      set(val) {
+        emit('update:highlightTrajs', val);
+      }
+    });
     const store = useStore();
 
     const pitchIsEqual = (p1: Pitch, p2: Pitch) => {
@@ -815,7 +882,10 @@ export default defineComponent({
       setAsDefaultSetting,
       updateDisplaySetting,
       settingMatchesSaved,
-      deleteSetting
+      deleteSetting,
+      playheadAnimations,
+      playheadAnimationProxy,
+      highlightTrajsProxy
     }
   }
 })
