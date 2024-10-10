@@ -3293,9 +3293,9 @@ export default defineComponent({
         d3.selectAll('.dragDot').remove();
         const drag = () => {
           return d3.drag<SVGCircleElement, Datum>()
-          .on('start', dragDotStart)
-          .on('drag', updateTargetDragDot)
-          .on('end', dragDotEnd)
+            .on('start', dragDotStart)
+            .on('drag', updateTargetDragDot)
+            .on('end', dragDotEnd)
         };
         const dragDotsG = d3.select(tranSvg.value)
           .append('g')
@@ -3307,7 +3307,6 @@ export default defineComponent({
           return traj.logFreqs[i] || traj.logFreqs[i - 1]
         });
         times.forEach((t, i) => {
-
           const color = selectedDragDotIdx.value === i ? 
             selectedDragDotColor : dragDotColor;
           const cy = props.yScale(logFreqs[i]);
