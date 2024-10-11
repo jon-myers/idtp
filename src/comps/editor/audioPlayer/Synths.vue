@@ -574,6 +574,7 @@ export default defineComponent({
       synth.intSitarGainNode.gain.linearRampToValueAtTime(0, now() + lagTime);
       synth.intChikariGainNode.gain.setValueAtTime(1, now());
       synth.intChikariGainNode.gain.linearRampToValueAtTime(0, now() + lagTime);
+      synth.sitarNode.cutoff!.cancelScheduledValues(now());
       cancelBursts();
       const freq = synth.sitarNode.frequency!;
       const lpFreq = synth.lpNode.frequency!;
@@ -599,8 +600,6 @@ export default defineComponent({
       synth.intSitarGainNode.gain.linearRampToValueAtTime(1, now() + lagTime);
       synth.intChikariGainNode.gain.setValueAtTime(0, now());
       synth.intChikariGainNode.gain.linearRampToValueAtTime(1, now() + lagTime);
-      // synth.outGainNode.gain.setValueAtTime(0, now());
-      // synth.outGainNode.gain.linearRampToValueAtTime(1, now() + lagTime);
       // trajs
       const trajs = props.piece.allTrajectories(synth.idx);
       const starts = getStarts(trajs.map(t => t.durTot));
@@ -615,9 +614,6 @@ export default defineComponent({
           playSitarFreqContour(traj, startTime, synth, i === 0);
         }
       });
-
-      // const 
-
       // chikaris
       props.piece.phraseGrid[synth.idx].forEach((phrase: Phrase, pIdx: number) => {
         Object.keys(phrase.chikaris).forEach((key) => {

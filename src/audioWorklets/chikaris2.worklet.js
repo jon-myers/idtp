@@ -1,4 +1,4 @@
-const AMP = 1.0;
+const AMP = 4.0;
 
 class Processor extends AudioWorkletProcessor {
     static get parameterDescriptors() {
