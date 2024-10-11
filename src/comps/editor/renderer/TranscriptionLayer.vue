@@ -810,12 +810,14 @@ export default defineComponent({
               if (traj.id !== 12) {
                 if (litTraj !== undefined) {
                   if (litTraj !== traj) {
-                    const litSelector = `.traj.uId${litTrajs.value[idx]!.uniqueId}`;
-                    const litSelectorPluck = litSelector + '.pluck';
-                    d3.selectAll(litSelector)
-                      .attr('stroke', track.color)
-                    d3.selectAll(litSelectorPluck)
-                      .attr('fill', track.color)
+                    if (!selectedTrajs.value.includes(litTraj)) {
+                      const litSelector = `.traj.uId${litTrajs.value[idx]!.uniqueId}`;
+                      const litSelectorPluck = litSelector + '.pluck';
+                      d3.selectAll(litSelector)
+                        .attr('stroke', track.color)
+                      d3.selectAll(litSelectorPluck)
+                        .attr('fill', track.color)
+                    }
                     const selector = `.traj.uId${traj.uniqueId}`;
                     const selectorPluck = selector + '.pluck';
                     d3.selectAll(selector)
@@ -1085,8 +1087,16 @@ export default defineComponent({
         return gsapTween?.kill();
       }
       updatePlayheadPosition(props.currentTime);
-
-
+      litTrajs.value.forEach((litTraj, idx) => {
+        if (litTraj !== undefined) {
+          const track = props.piece.trackFromTraj(litTraj);
+          const selector = `.traj.uId${litTraj.uniqueId}`;
+          d3.selectAll(selector)
+            .attr('stroke', props.instTracks[track].color)
+          d3.selectAll(selector + '.pluck')
+            .attr('fill', props.instTracks[track].color)
+        }
+      })
     };
 
     const updatePlayheadPosition = (time: number) => {
