@@ -2203,14 +2203,19 @@ export default defineComponent({
       this.piece = new Piece(piece);
       this.dateModified = new Date(this.piece.dateModified);
       this.fixTrajs();
-      this.piece.phrases.forEach(phrase => {
-        phrase.consolidateSilentTrajs()
-      });
+      this.piece.phraseGrid.forEach((phrases, instIdx) => {
+        phrases.forEach(phrase => {
+          phrase.consolidateSilentTrajs()
+        })
+      })
       this.piece.durArrayFromPhrases();
       if (this.piece.durTot !== this.durTot) {
         this.piece.setDurTot(this.durTot)
       }
-      this.piece.sectionStarts = [...new Set(this.piece.sectionStarts)];
+      // this.piece.sectionStarts = [...new Set(this.piece.sectionStarts)];
+      this.piece.sectionStartsGrid = this.piece.sectionStartsGrid.map((arr, i) => {
+        return [...new Set(arr)]
+      })
     },
 
     fixTrajs() {
