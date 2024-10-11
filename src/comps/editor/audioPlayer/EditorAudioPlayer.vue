@@ -110,6 +110,7 @@
     </div>
     <SynthesisControls
       class='synthControls'
+      ref='synthControls'
       v-if='showControls && synthControls.length > 0'
       :synthControls='synthControls'
       :instTracks='instTracks'
@@ -497,6 +498,7 @@ type EditorAudioPlayerData = {
   synthControls: SynthControl[],
   initializedSynthControls: boolean,
   mixedGainVal: number,
+  tempMixedGainVal: number,
 }
 
 interface RubberBandNodeType extends AudioWorkletNode {
@@ -749,6 +751,7 @@ export default defineComponent({
       synthControls: [],
       initializedSynthControls: false,
       mixedGainVal: 1,
+      tempMixedGainVal: 1,
     };
   },
   props: {
@@ -1471,41 +1474,45 @@ export default defineComponent({
         } else {
           console.log('this should not happen')
         }
-        this.$emit('movePlayheadsEmit')
-        this.synthGainDisabled = true;
-        this.chikariGainDisabled = true;
-        const curSG = this.synthGainNode!.gain.value;
-        this.synthGainNode!.gain.setValueAtTime(curSG, this.now());
-        this.synthGain = 0;
-        this.synthGainNode!.gain
-          .linearRampToValueAtTime(0, this.now() + this.lagTime);
-        this.savedSynthGain = curSG;
-        const curCG = this.chikariGainNode!.gain.value;
-        this.chikariGainNode!.gain.setValueAtTime(curCG, this.now());
-        this.chikariGain = 0;
-        this.chikariGainNode!.gain
-          .linearRampToValueAtTime(0, this.now() + this.lagTime);
-        this.savedChikariGain = curCG;
-
+        this.$emit('movePlayheadsEmit');
+        const s = this.$refs.synths as InstanceType<typeof Synths>;
+        const mixGainNode = s.mixNode.gain;
+        const curGain = mixGainNode.value;
+        this.tempMixedGainVal = curGain;
+        mixGainNode.setValueAtTime(curGain, this.now());
+        mixGainNode.linearRampToValueAtTime(0, this.now() + this.lagTime);
+        this.mixedGainVal = 0;
+        const sc = this.$refs.synthControls as InstanceType<typeof SynthesisControls>;
+        if (this.instTracks.length > 1) {
+          sc.mixedGainSliderDisabled = true;
+        } else {
+          const icArr = sc.instControl as InstanceType<typeof InstrumentControl>[];
+          const ic = icArr[0]
+          ic.slider0TempVal = Number(ic.slider![0]!.value)
+          ic.slider0Disabled = true;
+          this.$nextTick(() => {
+            ic.slider![0].value = '0';
+          })
+        }
       } else {
         this.regionSpeed = 0;
         this.$emit('update:stretchedFactor', 1)
         this.stretchedBuffer = undefined;
-        this.synthGainDisabled = false;
-        this.chikariGainDisabled = false;
-        if (this.savedSynthGain !== undefined) {
-          this.synthGainNode!.gain.setValueAtTime(0, this.now());
-          const ssg = this.savedSynthGain;
-          this.synthGainNode!.gain
-            .linearRampToValueAtTime(ssg, this.now() + this.lagTime);
-          this.synthGain = this.savedSynthGain;
-        }
-        if (this.savedChikariGain !== undefined) {
-          this.chikariGainNode!.gain.setValueAtTime(0, this.now());
-          const scg = this.savedChikariGain;
-          this.chikariGainNode!.gain
-            .linearRampToValueAtTime(scg, this.now() + this.lagTime);
-          this.chikariGain = this.savedChikariGain;
+        const s = this.$refs.synths as InstanceType<typeof Synths>;
+        const mixGainNode = s.mixNode.gain;
+        mixGainNode.setValueAtTime(0, this.now());
+        mixGainNode.linearRampToValueAtTime(this.tempMixedGainVal, this.now() + this.lagTime);
+        this.mixedGainVal = this.tempMixedGainVal;
+        const sc = this.$refs.synthControls as InstanceType<typeof SynthesisControls>;
+        if (this.instTracks.length > 1) {
+          sc.mixedGainSliderDisabled = false;
+        } else {
+          const icArr = sc.instControl as InstanceType<typeof InstrumentControl>[];
+          const ic = icArr[0]
+          ic.slider0Disabled = false;
+          this.$nextTick(() => {
+            ic.slider![0].value = String(ic.slider0TempVal);
+          })
         }
       }
     },

@@ -8,6 +8,7 @@
         :synthControl='synthControl'
         :height='height'
         :sonify='instTracks[index].sounding'
+        ref='instControl'
         @update:sonify='handleUpdateSonify(index, $event)'
         @update:gainNode='$emit("update:gainNode", $event)'
         @update:cutoff='$emit("update:cutoff", $event)'
@@ -16,11 +17,13 @@
         <div class='sliderCol primaryGain' v-if='instTracks.length > 1'>
           <label>Mixed Synth Gain</label>
           <input 
+            ref='mixedGainSlider'
             type='range' 
             min='0' 
             max='1' 
             step='0.01'
             v-model='mixedGainValProxy'
+            :disabled='mixedGainSliderDisabled'
           />
         </div>
         <div class='sliderCol primaryGain' v-if='hasRecording'>
@@ -77,7 +80,7 @@
 </div>
 </template>
 <script lang='ts'>
-import { defineComponent, PropType, computed, ref } from 'vue'
+import { defineComponent, PropType, computed, ref, getCurrentInstance } from 'vue'
 import { SynthControl, InstrumentTrackType, SynthType } from '@/ts/types.ts';
 import { Instrument } from '@/ts/enums.ts';
 import InstrumentControl from '@/comps/editor/audioPlayer/InstrumentControl.vue';
@@ -155,6 +158,11 @@ export default defineComponent({
     'update:cutoff',
   ],
   setup(props, { emit }) {
+
+    const mixedGainSlider = ref<HTMLInputElement | null>(null);
+    const mixedGainSliderDisabled = ref(false);
+
+    const instControl = ref<InstanceType<typeof InstrumentControl>[] | null>(null);
 
     const transpositionProxy = computed({
       get() {
@@ -236,6 +244,8 @@ export default defineComponent({
       regionSpeedOnProxy, 
       mixedGainValProxy,
       recGainValProxy,
+      mixedGainSliderDisabled,
+      instControl
     }
 
   }

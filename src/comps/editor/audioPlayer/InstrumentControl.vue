@@ -17,6 +17,9 @@
           step='0.01' 
           v-model.number='slider.target'
           @input='updateParam(slider, $event)'
+          :ref='`slider`'
+          :class='`slider${index}`'
+          :disabled='index === 0 ? slider0Disabled : false'
         />
       </div>
     </div>
@@ -63,6 +66,10 @@ export default defineComponent({
         emit('update:sonify', val)
       }
     });
+    const slider = ref<HTMLInputElement[] | null>(null);
+    const slider0Disabled = ref(false);
+    const slider0TempVal = ref(0);
+
     
     const sliders = computed(() => {
       const inst = tempSynthControl.value.inst;
@@ -150,7 +157,10 @@ export default defineComponent({
       sonifyProxy,
       mainStyle,
       sliders,
-      updateParam
+      updateParam,
+      slider0Disabled,
+      slider,
+      slider0TempVal
      }
   }
 })
