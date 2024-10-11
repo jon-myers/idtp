@@ -15,6 +15,7 @@ import {
   watch
 } from 'vue';
 import * as d3 from 'd3';
+import { getContrastingTextColor } from '@/ts/utils.ts';
 
 export default defineComponent({
   name: 'XAxis',
@@ -40,13 +41,23 @@ export default defineComponent({
     const xAxisContainer = ref<HTMLDivElement | null>(null);
     const axSvg = ref<SVGSVGElement | null>(null);
     const regionStartPxl = ref<number | undefined>(undefined);
-    const regionEndPxl = ref<number | undefined>(undefined);    
+    const regionEndPxl = ref<number | undefined>(undefined);  
     
+    
+    const textColor = computed(() => getContrastingTextColor(props.axisColor));
+
     watch(() => props.axisColor, newColor => {
       if (axSvg.value) {
-        d3.select(axSvg.value)
+        const svg = d3.select(axSvg.value)
+        svg
           .selectAll('rect')
           .attr('fill', newColor)
+        svg
+          .selectAll('text')
+          .style('fill', textColor.value)
+        svg
+          .selectAll('.tick line')
+          .attr('stroke', textColor.value)
       }
     })
 
@@ -119,8 +130,10 @@ export default defineComponent({
         .attr('transform', `translate(0, ${props.height})`)
         .call(axis.value)
         .selectAll('text')
-        .style('fill', 'black')
+        .style('fill', textColor.value)
         .style('pointer-events', 'none')
+      svg.selectAll('.tick line')
+        .style('stroke', textColor.value)
     }
 
     watch(() => props.scaledWidth, () => {
@@ -129,7 +142,7 @@ export default defineComponent({
           .attr('width', props.scaledWidth)
         resetAxis();
       }
-    })
+    });
 
     const dynamicStyle = computed(() => {
       return {
@@ -178,8 +191,10 @@ export default defineComponent({
           .attr('transform', `translate(0, ${props.height})`)
           .call(axis.value)
           .selectAll('text')
-          .style('fill', 'black')
-          .style('pointer-events', 'none')   
+          .style('fill', textColor.value)
+          .style('pointer-events', 'none')
+        svg.selectAll('.tick line')
+          .attr('stroke', textColor.value)   
       }
     })
 

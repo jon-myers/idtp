@@ -16,6 +16,7 @@ import {
 } from 'vue';
 import * as d3 from 'd3';
 import { Raga } from '@/js/classes.ts';
+import { getContrastingTextColor } from '@/ts/utils.ts';
 
 export default defineComponent({
   name: 'YAxis',
@@ -53,6 +54,10 @@ export default defineComponent({
     const yAxisContainer = ref<HTMLDivElement | null>(null);
     const aySvg = ref<SVGSVGElement | null>(null);
 
+    const textColor = computed(() => {
+      return getContrastingTextColor(props.axisColor);
+    })
+
     watch(() => props.scaledHeight, newHeight => {
       if (aySvg.value) {
         d3.select(aySvg.value)
@@ -63,9 +68,15 @@ export default defineComponent({
 
     watch(() => props.axisColor, newColor => {
       if (aySvg.value) {
-        d3.select(aySvg.value)
+        const svg = d3.select(aySvg.value)
+        svg
           .selectAll('rect')
-          .attr('fill', newColor)
+          .style('fill', newColor)
+        svg.selectAll('text')
+          .style('fill', textColor.value)
+        svg.selectAll('.tick line')
+          .style('stroke', textColor.value)
+        
       }
     })
 
@@ -119,8 +130,12 @@ export default defineComponent({
         svg.append('g')
           .attr('transform', `translate(${props.width}, 0)`)
           .call(axis.value)
+        svg
           .selectAll('text')
-          .style('fill', 'black')
+          .style('fill', textColor.value)
+        svg.selectAll('.tick line')
+          .style('stroke', textColor.value)
+        
       })
     };
 
@@ -137,7 +152,9 @@ export default defineComponent({
           .attr('transform', `translate(${props.width}, 0)`)
           .call(axis.value)
           .selectAll('text')
-          .style('fill', 'black')
+          .style('fill', textColor.value)
+        svg.selectAll('.tick line')
+          .style('stroke', textColor.value)
       }
     })
     return {
