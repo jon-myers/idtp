@@ -306,7 +306,10 @@
         :src="urlsFiltered[4 * (odx-1) + (idx-1)]" 
         :key='idx' 
         :id='"id" + ((idx-1) + 4 *(odx-1))' 
-        @click='selectIcon'>
+        @click='selectIcon'
+        @mouseover='handleHoverIcon'
+        @mouseout='handleMouseOut'
+        >
       <div 
         class='keyNum'
         v-if='urlsFiltered[4 * (odx-1) + (idx-1)] !== undefined'
@@ -334,7 +337,11 @@ import { select as d3Select } from 'd3';
 import { getIpaVowels, getConsonants } from '@/js/serverCalls.ts';
 import { PropType, defineComponent } from 'vue';
 import { initSecCategorization, Piece, Trajectory } from '@/js/classes.ts';
-import { TrajSelectionStatus, PhraseDivDisplayType } from '@/ts/types.ts';
+import { 
+  TrajSelectionStatus, 
+  PhraseDivDisplayType,
+  TooltipData 
+} from '@/ts/types.ts';
 import { Instrument, EditorMode } from '@/ts/enums.ts';
 
 type TrajSelectPanelDataType = {
@@ -380,6 +387,7 @@ type TrajSelectPanelDataType = {
   selectedTraj: Trajectory | undefined,
   internalPluckBool: boolean,
   internalDampen: boolean,
+  hoverTimeout: NodeJS.Timeout | undefined,
 }
 
 export default defineComponent({
@@ -429,6 +437,7 @@ export default defineComponent({
       selectedTraj: undefined,
       internalPluckBool: false,
       internalDampen: false,
+      hoverTimeout: undefined,
     }
   },
   
@@ -934,6 +943,40 @@ export default defineComponent({
           }
         }
       } 
+    },
+
+    handleHoverIcon(e: MouseEvent) {
+      if (this.hoverTimeout === undefined) {
+        this.hoverTimeout = setTimeout(() => {
+          let idx;
+          if (e instanceof MouseEvent) {
+            const target = e.target as HTMLElement;
+            idx = Number(target!.id.slice(2));
+          } else {
+            idx = Number(e)
+          }
+          let realIdx = this.trajIdxs[idx];
+          if (realIdx >= 12) {
+            realIdx += 1;
+          }
+          const names = new Trajectory().names;
+          const name = names[realIdx];
+          const data: TooltipData = {
+            text: name,
+            x: e.clientX,
+            y: e.clientY
+          } 
+          this.$emit('showTooltip', data)
+        }, 500)
+      }
+    },
+
+    handleMouseOut() {
+      if (this.hoverTimeout) {
+        clearTimeout(this.hoverTimeout);
+        this.hoverTimeout = undefined;
+      }
+      this.$emit('hideTooltip');
     },
     
     updateSlope() {

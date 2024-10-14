@@ -233,6 +233,8 @@
         @unsavedChanges='updateUnsavedChanges'
         @groupSelectedTrajs='groupSelectedTrajs'
         @ungroupSelectedTrajs='ungroupSelectedTrajs'
+        @showTooltip='showTooltip'
+        @hideTooltip='hideTooltip'
         />
     </div>
   </div>
