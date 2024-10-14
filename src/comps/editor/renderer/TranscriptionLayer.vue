@@ -2940,20 +2940,24 @@ export default defineComponent({
     };
 
     let dragDotDragging = false;
+    let dragDotDraggingCt = 0;
 
     const dragDotAnimationStep = () => {
       if (dragDotDragging) {
-        if (targetDragDotX.value === undefined) {
-          throw new Error('targetDragDotX is undefined');
-        }
-        if (targetDragDotY.value === undefined) {
-          throw new Error('targetDragDotY is undefined');
-        }
-        laggingDragDotX.value = smooth(laggingDragDotX.value, targetDragDotX.value, 0.2);
-        laggingDragDotY.value = smooth(laggingDragDotY.value, targetDragDotY.value, 0.2);
-        d3.select(`#dragDot${dragDotIdx}`)
-          .attr('cx', laggingDragDotX.value)
-          .attr('cy', laggingDragDotY.value);
+        if (dragDotDraggingCt % 2 === 0) {
+          if (targetDragDotX.value === undefined) {
+            throw new Error('targetDragDotX is undefined');
+          }
+          if (targetDragDotY.value === undefined) {
+            throw new Error('targetDragDotY is undefined');
+          }
+          laggingDragDotX.value = smooth(laggingDragDotX.value, targetDragDotX.value, 0.2);
+          laggingDragDotY.value = smooth(laggingDragDotY.value, targetDragDotY.value, 0.2);
+          d3.select(`#dragDot${dragDotIdx}`)
+            .attr('cx', laggingDragDotX.value)
+            .attr('cy', laggingDragDotY.value);
+          }
+        dragDotDraggingCt ^= 1;
         requestAnimationFrame(dragDotAnimationStep);
       }
     }
