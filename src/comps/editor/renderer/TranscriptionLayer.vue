@@ -1742,7 +1742,7 @@ export default defineComponent({
           .attr('opacity', opacity)
           .attr('transform', `translate(${x},0)`)
           
-          const pOverlay = g.append('path')
+        const pOverlay = g.append('path')
           .classed('metricGrid', true)
           .classed(`layer${pulse.lowestLayer}`, true)
           .classed(`meterId${pulse.meterId}`, true)
@@ -1753,9 +1753,21 @@ export default defineComponent({
           .attr('stroke-width', '6px')
           .attr('d', line)
           .attr('transform', `translate(${x},0)`)
-          .on('mouseover', () => handleMouseOverMeter(meter))
-          .on('mouseout', () => handleMouseOutMeter(meter))
-          .on('click', (e) => handleClickMeter(meter, pulse, e)) as 
+          .on('mouseover', () => {
+            if (props.selectedMode === EditorMode.Meter) {
+              handleMouseOverMeter(meter)
+            }
+          })
+          .on('mouseout', () => {
+            if (props.selectedMode === EditorMode.Meter) {
+              handleMouseOutMeter(meter)
+            }
+          })
+          .on('click', (e) => {
+            if (props.selectedMode === EditorMode.Meter) {
+              handleClickMeter(meter, pulse, e)
+            }
+          }) as 
           d3.Selection<SVGPathElement, Datum, HTMLElement, any>;
         if (selectedMeter.value === meter) {
           p.classed('selected', true)
@@ -3613,7 +3625,7 @@ export default defineComponent({
       trajTimePts.value = [];
       d3.selectAll('#selBox').remove();
       d3.selectAll('.metricGrid')
-        .attr('cursor', 'default');
+        .attr('cursor', null);
       contextMenuClosed.value = true;
       if (options.includeRegion) {
         d3.selectAll('.region').remove();
