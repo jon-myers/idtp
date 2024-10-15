@@ -1043,6 +1043,7 @@ type SitarSynthType = {
   capture: CaptureNodeType,
   sitarLoopGainNode: GainNode,
   chikariLoopGainNode: GainNode,
+  sonifyNode: GainNode,
 }
 
 type SarangiSynthType = {
@@ -1053,6 +1054,7 @@ type SarangiSynthType = {
   capture: CaptureNodeType,
   sarangiLoopSourceNode: LoopSourceNode,
   sarangiLoopGainNode: GainNode,
+  sonifyNode: GainNode,
 }
 
 type KlattSynthType = {
@@ -1064,6 +1066,7 @@ type KlattSynthType = {
   capture: CaptureNodeType,
   klattLoopSourceNode: LoopSourceNode,
   klattLoopGainNode: GainNode,
+  sonifyNode: GainNode,
 }
 
 type BurstOption = {

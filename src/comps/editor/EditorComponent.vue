@@ -312,6 +312,7 @@
   @update:playheadAnimation='playheadAnimation = $event'
   @update:highlightTrajs='highlightTrajs = $event'
   @rerenderMeter='rerenderMeter'
+  @update:sonify='handleUpdateSonify'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -1205,6 +1206,10 @@ export default defineComponent({
   },
 
   methods: {
+
+    handleUpdateSonify(data: { idx: number, val: boolean }) {
+      this.instTracks[data.idx].sounding = data.val;
+    },
 
     rerenderMeter(meter: Meter) {
       this.renderMeter(meter);

@@ -134,6 +134,7 @@
       @update:recGainVal='updateRecGainVal'
       @update:gainNode='handleUpdateGainNode'
       @update:cutoff='handleUpdateCutoff'
+      @update:sonify='handleUpdateSonify'
     />
     <div class='downloads' v-if='showDownloads'>
       <label>Data</label>
@@ -1085,6 +1086,10 @@ export default defineComponent({
     }
   },
   methods: {
+
+    handleUpdateSonify(val: boolean) {
+      this.$emit('update:sonify', val);
+    },
 
     updateMixedGainVal(val: string) {
       this.mixedGainVal = Number(val);

@@ -156,6 +156,7 @@ export default defineComponent({
     'update:gainNode',
     'update:recGainVal',
     'update:cutoff',
+    'update:sonify'
   ],
   setup(props, { emit }) {
 
@@ -213,8 +214,8 @@ export default defineComponent({
       }
     })
 
-    const handleUpdateSonify = (index: number, val: boolean) => {
-      // emit('update:sonify', {index, val})
+    const handleUpdateSonify = (idx: number, val: boolean) => {
+      emit('update:sonify', {idx, val})
     };
 
     const mainStyle = computed(() => {
