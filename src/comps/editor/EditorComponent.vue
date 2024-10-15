@@ -70,6 +70,8 @@
       @update:togglePluck='togglePluck'
       @update:toggleDampen='toggleDampen'
       @savePiece='savePiece'
+      @update:selectedMeter='selectMeter($event)'
+      @deleteMeter='removeMeter($event)'
       />
     <div class='controlBox'>
       <div class='scrollingControlBox'>
@@ -280,10 +282,11 @@
   :hasRecording='hasRecording'
   :playheadAnimation='playheadAnimation'
   :highlightTrajs='highlightTrajs'
+  :selectedMeter='selMeter'
   @resizeHeightEmit='resizeHeight'
   @currentTimeEmit='setCurrentTime'
   @updateSargamLinesEmit='updateSargamLines'
-  @selectMeterEmit='selectMeter'
+  @selectMeterEmit='selectMeter($event)'
   @addMeterEmit='addMeter'
   @removeMeterEmit='removeMeter'
   @unsavedChangesEmit='updateUnsavedChanges'
@@ -300,7 +303,7 @@
   @update:sargamLineColor='sargamLineColor = $event'
   @update:instTracks='updateInstTracks'
   @update:meterColor='meterColor = $event'
-  @update:selMeterColor='selMeterColor = $event'
+  @update:selectedMeterColor='selMeterColor = $event'
   @renderMeter='renderMeter'
   @showTooltip='showTooltip'
   @hideTooltip='hideTooltip'
@@ -308,6 +311,7 @@
   @update:stretchedFactor='stretchedFactor = $event'
   @update:playheadAnimation='playheadAnimation = $event'
   @update:highlightTrajs='highlightTrajs = $event'
+  @rerenderMeter='rerenderMeter'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -543,7 +547,6 @@ type EditorDataType = {
   controlsHeight: number,
   unsavedChanges: boolean,
   selMeterColor: string,
-  meterMode: boolean,
   selMeter?: Meter,
   meterColor: string,
   pulseDragEnabled: boolean,
@@ -674,7 +677,8 @@ type EditorDataType = {
   stretchedFactor: number,
   playheadMotion: boolean,
   highlightTrajs: boolean,
-  playheadAnimation: PlayheadAnimations
+  playheadAnimation: PlayheadAnimations,
+  throttledRenderMeter: ReturnType<typeof throttle> | undefined,
 }
 
 export { findClosestStartTime }
@@ -739,7 +743,6 @@ export default defineComponent({
       controlsHeight: 200,
       unsavedChanges: false,
       selMeterColor: '#3dcc63',
-      meterMode: false,
       selMeter: undefined,
       meterColor: '#0D3D0E',
       pulseDragEnabled: false,
@@ -854,7 +857,8 @@ export default defineComponent({
       stretchedFactor: 1,
       playheadMotion: false,
       highlightTrajs: false,
-      playheadAnimation: PlayheadAnimations.Block
+      playheadAnimation: PlayheadAnimations.Block,
+      throttledRenderMeter: undefined,
     }
   },
   components: {
@@ -906,6 +910,7 @@ export default defineComponent({
     this.fullWidth = window.innerWidth;
     this.throttledAlterSlope = throttle(this.alterSlope, 16);
     this.throttledAlterVibObj = throttle(this.alterVibObj, 16);
+    this.throttledRenderMeter = throttle(this.renderMeter, 100);
 
     try {
       // if there's a query id, 1. check if exists, 2. if so, load it, else:
@@ -1097,6 +1102,18 @@ export default defineComponent({
       },
       deep: true
     },
+
+    selectedMode(newVal, oldVal) {
+      if (oldVal === EditorMode.Meter) {
+        const ap = this.$refs.audioPlayer as APType;
+        const mc = ap.$refs.meterControls as MeterControlsType;
+        mc.meterSelected = false;
+      }
+      if (newVal === EditorMode.Meter) {
+        const ap = this.$refs.audioPlayer as APType;
+        ap.selectedControlsMode = ControlsMode.Meter;
+      }
+    }
   },
 
   computed: {
@@ -1146,12 +1163,10 @@ export default defineComponent({
       this.recomputeTrigger;
       const r = this.$refs.renderer as RendererType;
       if (!r) {
-        console.log('no renderer')
         return [];
       }
       const tLayer = r.transcriptionLayer as TLayerType;
       if (!tLayer) {
-        console.log('no transcription layer')
         return []; 
       }
       return tLayer.selectedTrajs;
@@ -1190,6 +1205,10 @@ export default defineComponent({
   },
 
   methods: {
+
+    rerenderMeter(meter: Meter) {
+      this.renderMeter(meter);
+    },
 
     togglePluck() { 
       const tsp = this.$refs.trajSelectPanel as TSPType;
@@ -1240,7 +1259,6 @@ export default defineComponent({
           le.scrollToSection(options.idx)
         }
       })
-
     },
 
     renderMeter(meter: Meter) {
@@ -1988,7 +2006,11 @@ export default defineComponent({
       return durArray
     },
 
-    selectMeter(id: string, turnMMOn = false, pulseId = true) { 
+    selectMeter(id: string | undefined, turnMMOn = false, pulseId = true) { 
+      if (id === undefined) {
+        this.selMeter = undefined;
+        return
+      }
       const allPulses: Pulse[] = [];
       this.piece.meters.forEach(meter => {
         allPulses.push(...meter.allPulses)
@@ -2005,11 +2027,8 @@ export default defineComponent({
       if (meterIdx !== -1) {
         this.piece.meters.splice(meterIdx, 1);
       }
-      d3SelectAll('#metricGrid_' + meter.uniqueId).remove();
-      await this.$nextTick();
-      // this.resetZoom();
-      this.meterMode = false;
-      this.svg.style('cursor', 'default');
+      d3SelectAll('.metricGrid.meterId' + meter.uniqueId).remove();
+      this.selectedMode = EditorMode.None;
       this.unsavedChanges = true;
     },
     

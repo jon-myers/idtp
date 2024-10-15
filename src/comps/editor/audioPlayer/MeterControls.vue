@@ -66,6 +66,7 @@
         min='1' 
         max='1000' 
         step='1' 
+        class='no-text-entry'
         v-model='cycles'
         @input='updateCycles'
         :disabled='!editable'
@@ -107,12 +108,12 @@
       <button 
         @click='insertMeter' 
         v-if='!(meterSelected || insertPulseMode)'
-        :disabled='!editable'
+        :disabled='(!editable || !meterCurrentlyInsertable)'
         >
         Insert Meter at Playhead
       </button>
       <button 
-        v-if='insertPulseMode && !attachToPrevMeter' 
+        v-if='insertPulseMode && !attachToPrevMeter && meterFromPulseInsertable' 
         @click='insertMeterFromPulses'
         :disabled='!editable'>
         Insert Meter from Pulses
@@ -220,7 +221,15 @@ export default defineComponent({
     editorMode: {
       type: String as PropType<EditorMode>,
       required: true,
-    }
+    },
+    selectedMeter: {
+      type: Object as PropType<Meter>,
+      required: false,
+    },
+    meters: {
+      type: Array as PropType<Meter[]>,
+      required: true,
+    },
   },
 
   mounted() {
@@ -229,13 +238,79 @@ export default defineComponent({
 
   computed: {
 
-    insertPulseMode(): boolean {
+    insertPulseMode() {
       return this.editorMode === EditorMode.Meter;
     },
 
+    meterCurrentlyInsertable() {
+      const start = this.currentTime;
+      const relDivs = this.pulseDivisions[0].slice(0, this.layerCompounds[0]);
+      const pulsesPer = this.sum(relDivs);
+      const dur = (this.cycles * (60 / this.tempo) * pulsesPer);
+      const end = start + dur;
+      const conflict = this.meters.some((meter) => {
+        const mEndTime = meter.startTime + meter.cycleDur * meter.repetitions;
+        if (start >= meter.startTime && start <= mEndTime) {
+          return true;
+        }
+        if (end >= meter.startTime && end <= mEndTime) {
+          return true;
+        }
+        if (start <= meter.startTime && end >= mEndTime) {
+          return true;
+        }
+        return false;
+      })
+      return !conflict;
+    },
+
+    meterFromPulseInsertable() {
+      return this.insertPulses.length > 1;
+    },
+  },
+
+  watch: {
+    selectedMeter(newVal, oldVal) {
+      if (newVal !== undefined) {
+        this.meter = newVal;
+        this.assignData();
+      } else {
+        this.meter = undefined;
+        this.numLayers = 2;
+        this.layerCompounds = [1, 1, 1, 1];
+        this.pulseDivisions = [
+          [4, 2, 2, 2],
+          [4, 2, 2, 2],
+          [4, 2, 2, 2],
+          [4, 2, 2, 2]
+        ];
+        this.tempo = 60;
+        this.tempoSlider = 0.5;
+        this.cycles = 1;
+
+      }
+    }
   },
   
   methods: {
+
+    cycleGrowable() {
+      if (this.meter === undefined) {
+        return false;
+      }
+      const start = this.meter.startTime;
+      const dur = this.meter.cycleDur * this.meter.repetitions;
+      const curEnd = start + dur;
+      const grownEnd = curEnd + this.meter.cycleDur;
+      const conflict = this.meters
+        .filter(m => m !== this.meter)
+        .some((meter) => {
+          const out = (meter.startTime >= start && meter.startTime <= grownEnd);
+          return out;
+        })
+      return !conflict;
+    },
+
     increaseCompounds(i: number) {
       this.layerCompounds[i]++;
       // this.updateMeter();
@@ -309,19 +384,25 @@ export default defineComponent({
       }
     },
 
-    updateCycles() {
-      if (this.meter!== undefined) {
+    updateCycles(event: Event) {
+
+      if (this.meter !== undefined) {
         const oldReps = this.meter.repetitions;
         const newReps = this.cycles;
         const diff = newReps - oldReps;
         if (diff > 0) {
-          this.meter.growCycles(diff);
-        } else if (diff < 0) {
+          if (this.cycleGrowable()) {
+            this.meter.growCycles(diff);
+          } else {
+            this.cycles = oldReps;
+          }
+        } else if (diff < 0) { 
           this.meter.shrinkCycles(-diff);
         }
         this.$emit('passthroughResetZoomEmit')
         this.$emit('pSelectMeterEmit', this.meter.allPulses[0].uniqueId)
         this.$emit('passthroughUnsavedChangesEmit', true)
+        this.$emit('rerenderMeter', this.meter);
       }
     },
 
@@ -388,9 +469,11 @@ export default defineComponent({
       const logTempo = logMin + (logMax - logMin) * this.tempoSlider;
       this.tempo = Math.round(Math.exp(logTempo));
       if (this.meter !== undefined) {
-        this.meter?.adjustTempo(this.tempo);
+        this.meter.adjustTempo(this.tempo);
         this.$emit('passthroughResetZoomEmit')
         this.$emit('pSelectMeterEmit', this.meter.allPulses[0].uniqueId)
+        this.$emit('passthroughUnsavedChangesEmit', true)
+        this.$emit('rerenderMeter', this.meter);
       }
     },
 
@@ -449,7 +532,10 @@ export default defineComponent({
       this.$emit('passthroughUnsavedChangesEmit', true)
       // this.$emit('passthroughAddMetricGridEmit', true);
       this.meterSelected = true;
-      this.$emit('pSelectMeterEmit', meter.allPulses[0].uniqueId)
+      // this.$nextTick(() => {
+      //   const p = meter.allPulses[0];
+      //   // this.$emit('pSelectMeterEmit', p.uniqueId)
+      // })
     },
 
     insertMeterFromPulses() {
@@ -615,6 +701,14 @@ select {
   justify-content: left;
   margin-top: 5px;
   margin-bottom: 5px;
+}
+
+.no-text-entry {
+  pointer-events: none; /* Disable text entry */
+}
+.no-text-entry::-webkit-inner-spin-button,
+.no-text-entry::-webkit-outer-spin-button {
+  pointer-events: auto; /* Enable spin buttons */
 }
 
 </style>

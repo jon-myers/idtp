@@ -147,6 +147,8 @@
               @update:togglePluck='$emit("update:togglePluck")'
               @update:toggleDampen='$emit("update:toggleDampen")'
               @savePiece='$emit("savePiece")'
+              @update:selectedMeter='$emit("update:selectedMeter", $event)'
+              @deleteMeter='$emit("deleteMeter", $event)'
             />
           />
         </div>
@@ -196,6 +198,7 @@ import { EditorMode, Instrument, PlayheadAnimations } from '@/ts/enums.ts';
 import { BrowserInfo } from 'detect-browser';
 import ContextMenu from '@/comps/ContextMenu.vue';
 import EditInstrumentation from '@/comps/EditInstrumentation.vue';
+import { Meter } from '@/js/meter.ts';
 
 export default defineComponent({
   name: 'Renderer',
@@ -379,7 +382,7 @@ export default defineComponent({
     playheadAnimation: {
       type: String as PropType<PlayheadAnimations>,
       required: true
-    },
+    }
   },
   emits: [
     'update:recomputeTrigger',
@@ -404,7 +407,9 @@ export default defineComponent({
     'cancelRegionSpeed',
     'update:togglePluck',
     'update:toggleDampen',
-    'savePiece'
+    'savePiece',
+    'update:selectedMeter',
+    'deleteMeter',
   ],
   setup(props, { emit }) {
     const layersContainer = ref<HTMLDivElement | null>(null);

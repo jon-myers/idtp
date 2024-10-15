@@ -215,7 +215,6 @@ export default defineComponent({
         chikariLoopSourceNode.loop = true;
         chikariNode.freq0!.value = control.params.chikariFreq0!;
         chikariNode.freq1!.value = control.params.chikariFreq1!;
-        console.log('chikari freqs', chikariNode.freq0!.value, chikariNode.freq1!.value);
 
         // connect nodes
         sitarNode

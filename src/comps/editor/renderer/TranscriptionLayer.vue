@@ -276,7 +276,9 @@ export default defineComponent({
     'cancelRegionSpeed',
     'update:togglePluck',
     'update:toggleDampen',
-    'savePiece'
+    'savePiece',
+    'update:selectedMeter',
+    'deleteMeter',
   ],
   setup(props, { emit }) {
     const tranContainer = ref<HTMLDivElement | null>(null);
@@ -736,8 +738,13 @@ export default defineComponent({
           .attr('stroke', color)
       }
     });
-    watch(() => props.selectedMode, (mode) => {
-      handleEscape({ includeMode: false });
+    watch(() => props.selectedMode, (mode, oldMode) => {
+      if (oldMode === EditorMode.None && mode === EditorMode.Meter) {
+        handleEscape({ includeMode: false, meterPersist: true });
+      }
+      else {
+        handleEscape({ includeMode: false });
+      }
       if (mode === EditorMode.None) {
         const svg = d3.select(tranSvg.value);
         svg.attr('cursor', 'default');
@@ -918,6 +925,9 @@ export default defineComponent({
           .attr('stroke', props.selectedMeterColor)
         d3.select(tranSvg.value)
           .attr('cursor', 'default')
+        nextTick(() => emit('update:selectedMeter', newVal.allPulses[0].uniqueId))
+      } else {
+        nextTick(() => emit('update:selectedMeter', undefined))
       }
       d3.selectAll('.metricGrid:not(.selected)')
         .attr('stroke', props.meterColor)
@@ -1695,7 +1705,6 @@ export default defineComponent({
       d3.selectAll('.metricGrid.meterId' + meter.uniqueId).remove();
       const pulses = meter.allCorporealPulses;
       const layerWidth = [1.5, 1, 0.5, 0.25];
-      
       pulses.forEach((pulse => {
         let color = meter === selectedMeter.value ? 
         props.selectedMeterColor : props.meterColor;
@@ -1917,6 +1926,10 @@ export default defineComponent({
       d3.selectAll('.phraseDivG').remove();
       d3.selectAll('.sargamLinesG').remove();
       d3.selectAll('.chikariG').remove();
+      d3.selectAll('.bolsG').remove();
+      d3.selectAll('.regionG').remove();
+      d3.selectAll('.meterG').remove();
+
     };
     const removeTraj = (traj: Trajectory) => {
       const track = props.piece.trackFromTraj(traj);
@@ -3569,10 +3582,12 @@ export default defineComponent({
 
     const handleEscape = (options: {
         includeMode?: boolean,
-        includeRegion?: boolean
+        includeRegion?: boolean,
+        meterPersist?: boolean
       } = {
         includeMode: true,
-        includeRegion: true 
+        includeRegion: true,
+        meterPersist: false
       }) => {
       if (options.includeMode) emit('update:selectedMode', EditorMode.None);
       selectedTrajs.value.forEach(traj => {
@@ -3593,7 +3608,7 @@ export default defineComponent({
       selectedChikari.value = undefined;
       selectedPhraseDivUid.value = undefined;
       selectedDragDotIdx.value = undefined;
-      selectedMeter.value = undefined;
+      if (!options.meterPersist) selectedMeter.value = undefined;
       selectedPulse.value = undefined;
       trajTimePts.value = [];
       d3.selectAll('#selBox').remove();
@@ -3671,7 +3686,8 @@ export default defineComponent({
           deletePhraseDiv(selectedPhraseDivUid.value);
         } else if (selectedTrajs.value.length > 0) {
           deleteTrajs(selectedTrajs.value);
-
+        } else if (selectedMeter.value !== undefined) {
+          emit('deleteMeter', selectedMeter.value);
         }
       } else if (e.key === 'ArrowLeft') {
         if (selectedChikari.value !== undefined) {

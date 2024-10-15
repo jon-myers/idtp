@@ -222,6 +222,8 @@
       :currentTime='parentCurrentTime'
       :insertPulses='insertPulses'
       :editorMode='editorMode'
+      :selectedMeter='selectedMeter'
+      :meters='piece.meters'
       ref='meterControls'
       @passthroughResetZoomEmit='passthroughResetZoom'
       @pSelectMeterEmit='passthroughSelectMeter'
@@ -232,6 +234,7 @@
       @passthroughAssignPrevMeterEmit='passthroughAssignPrevMeter'
       @maxLayerEmit='$emit("maxLayerEmit", $event)'
       @renderMeter='$emit("renderMeter", $event)'
+      @rerenderMeter='$emit("rerenderMeter", $event)'
       />
     <LabelEditor
       v-if='showLabelControls'
@@ -349,7 +352,12 @@ import {
   Piece,
   Pitch
 } from '@/js/classes.ts';
-import { EditorMode, PlayheadAnimations } from '@/ts/enums.ts';
+import { 
+  EditorMode, 
+  PlayheadAnimations,
+  ControlsMode,
+  Instrument
+ } from '@/ts/enums.ts';
 import { AudioWorklet } from '@/audio-worklet';
 import { excelData, jsonData } from '@/js/serverCalls.ts';
 import { Meter } from '@/js/meter.ts';
@@ -363,7 +371,6 @@ import {
   SarangiSynthType,
   KlattSynthType, 
 } from '@/ts/types.ts';
-import { ControlsMode, Instrument } from '@/ts/enums.ts';
 
 // External Libraries
 import { createRubberBandNode as createRBNode } from 'rubberband-web';
@@ -892,6 +899,10 @@ export default defineComponent({
       type: Boolean,
       required: true
     },
+    selectedMeter: {
+      type: Object as PropType<Meter>,
+      required: false
+    },
   },
 
   components: {
@@ -961,7 +972,6 @@ export default defineComponent({
   },
   watch: {
     async audioSource(newSrc) {
-      console.log('audio source:', newSrc)
       this.loading = true;
       this.audioBuffer = await this.getAudio(newSrc, false);
       this.loading = false;
@@ -1142,7 +1152,6 @@ export default defineComponent({
     },
 
     initializeSynthControls() {
-      console.log('initializing synth controls');
       this.initializedSynthControls = true;
       this.instTracks.forEach((track, i) => {
         // chikari freqs
@@ -1352,7 +1361,8 @@ export default defineComponent({
     },
 
     passthroughSelectMeter(pulseUniqueId: string, turnMMOn: boolean = false) {
-      this.$emit('selectMeterEmit', pulseUniqueId, turnMMOn) //turn metermode on
+      console.log(pulseUniqueId)
+      this.$emit('selectMeterEmit', pulseUniqueId) //turn metermode on
     },
 
     passthroughAddMeter(meter: Meter) {
@@ -1368,7 +1378,6 @@ export default defineComponent({
     },
 
     passthroughUnsavedChanges(truth: boolean) {
-      console.log('here')
       this.$emit('unsavedChangesEmit', truth)
     },
 
