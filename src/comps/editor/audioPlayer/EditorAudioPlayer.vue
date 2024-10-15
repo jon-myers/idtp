@@ -30,14 +30,12 @@
         <div class="controlFlexer">
           <div class="controlBox" v-if="!loading">
             <img :src="icons.back_15" @click="back_15" />
-            <img :src="icons.beginning" @click="goToBeginning" />
             <div class="playCircle" @click="togglePlay">
               <img
                 ref="playImg"
                 :src="[icons.play, icons.pause][Number(playing)]"
               />
             </div>
-            <img :src="icons.end" @click="trackEnd" />
             <img :src="icons.forward_15" @click="forward_15" class="icon" />
           </div>
           <div class="loadingSymbol" v-else>
