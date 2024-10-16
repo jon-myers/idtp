@@ -669,6 +669,19 @@ export default defineComponent({
       return xScale.value(diff);
     };
 
+    const scrollBackForPlayhead = () => {
+      nextTick(() => {
+        const phPxlOnScreen = curPlayheadPxl();
+        if (phPxlOnScreen < 0) {
+          const playheadPxl = xScale.value!(props.currentTime);
+          const containerWidth = scrollingContainer.value!.clientWidth;
+          const quarterWidth = containerWidth / 4;
+          const desiredScrollLeft = playheadPxl - quarterWidth;
+          scrollingContainer.value!.scrollLeft = desiredScrollLeft;
+        }
+      })      
+    }
+
     const curMiddleTime = () => {
       if (!xScale.value) return clientWidth.value / 2;
       if (!scrollingContainer.value) return clientWidth.value / 2;
@@ -764,7 +777,8 @@ export default defineComponent({
       preZoomPlayheadPxl,
       curPlayheadPxl,
       curMiddleTime,
-      preZoomMiddleTime
+      preZoomMiddleTime,
+      scrollBackForPlayhead
 
     }
   }

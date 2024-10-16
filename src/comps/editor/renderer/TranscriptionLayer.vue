@@ -579,7 +579,7 @@ export default defineComponent({
         resetTranscription();
         updatePlayheadPosition(props.currentTime);
         const c = props.preZoomPlayheadPxl;
-        if (c > 0 && c < props.scrollingContainer.offsetWidth) {
+        if (c > 0 && c < props.scrollingContainer.clientWidth) {
           nextTick(() => scrollToPlayhead())
         } else {
           scrollToOldMiddle();
@@ -1124,7 +1124,7 @@ export default defineComponent({
     };
     const curMiddleTime = () => {
       const leftTime = props.xScale.invert(props.scrollingContainer.scrollLeft);
-      const halfPxl = props.scrollingContainer.offsetWidth / 2;
+      const halfPxl = props.scrollingContainer.clientWidth / 2;
       const halfTime = props.xScale.invert(halfPxl);
       return leftTime + halfTime;
      

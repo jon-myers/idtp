@@ -1765,6 +1765,7 @@ export default defineComponent({
         this.pausedAt = this.startingDelta;
         this.$emit('currentTimeEmit', this.startingDelta);
         this.$emit('movePlayheadsEmit', 'justPlayhead')
+        this.$emit('scrollBackForPlayheadReturn')
       } else {
         this.pausedAt = this.loop ? this.loopTime! : elapsed;
         this.$emit('movePlayheadsEmit', 'justShadowPlayhead')

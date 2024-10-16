@@ -313,6 +313,7 @@
   @update:highlightTrajs='highlightTrajs = $event'
   @rerenderMeter='rerenderMeter'
   @update:sonify='handleUpdateSonify'
+  @scrollBackForPlayheadReturn='scrollBackForPlayhead'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -1206,6 +1207,11 @@ export default defineComponent({
   },
 
   methods: {
+
+    scrollBackForPlayhead() {
+      const r = this.$refs.renderer as RendererType;
+      r.scrollBackForPlayhead();
+    },
 
     handleUpdateSonify(data: { idx: number, val: boolean }) {
       this.instTracks[data.idx].sounding = data.val;
