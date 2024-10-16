@@ -256,6 +256,10 @@ export default defineComponent({
       type: String as PropType<PlayheadAnimations>,
       required: true
     },
+    preZoomPlayheadPxl: {
+      type: Number,
+      required: true
+    },
   },
   emits: [
     'update:TrajSelStatus',
@@ -570,6 +574,7 @@ export default defineComponent({
         }
         resetTranscription();
         updatePlayheadPosition(props.currentTime);
+        scrollToPlayhead();
 
       }
     });
@@ -1090,6 +1095,20 @@ export default defineComponent({
           })
         }
       }
+    };
+
+    const scrollToPlayhead = () => {
+      const curPxl = curPlayheadPxl();
+      const diff = curPxl - props.preZoomPlayheadPxl;
+      props.scrollingContainer.scrollLeft += diff;
+      
+
+    };
+
+    const curPlayheadPxl = () => {
+      const leftTime = props.xScale.invert(props.scrollingContainer.scrollLeft);
+      const diff = props.currentTime - leftTime;
+      return props.xScale(diff);
     };
 
     const stopPlayingTransition = () => {

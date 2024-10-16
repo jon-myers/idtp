@@ -128,6 +128,7 @@
               :hasRecording='hasRecording'
               :highlightTrajs='highlightTrajs'
               :playheadAnimation='playheadAnimation'
+              :preZoomPlayheadPxl='preZoomPlayheadPxl'
               @update:prevMeter='$emit("update:prevMeter", $event)'
               @update:selectedMode='$emit("update:selectedMode", $event)'
               @unsavedChanges='$emit("unsavedChanges", $event)'
@@ -432,6 +433,7 @@ export default defineComponent({
     const contextMenuClosed = ref(true);
     const contextMenuChoices = ref<ContextMenuOptionType[]>([]);
     const showEditInstrumentation = ref(false);
+    const preZoomPlayheadPxl = ref(0);
 
     const availableModes = computed(() => {
       let entries = Object.entries(EditorMode);
@@ -525,8 +527,14 @@ export default defineComponent({
     });
     const zoomOutY = () => emit('zoomOutY');
     const zoomInY = () => emit('zoomInY');
-    const zoomOutX = () =>  emit('zoomOutX');
-    const zoomInX = () => emit('zoomInX');
+    const zoomOutX = () => {
+      preZoomPlayheadPxl.value = curPlayheadPxl();
+      emit('zoomOutX')
+    }
+    const zoomInX = () => {
+      preZoomPlayheadPxl.value = curPlayheadPxl();
+      emit('zoomInX')
+    }
 
     watch(() => props.scaledHeight, () => {
       if (yScale.value) {
@@ -650,6 +658,15 @@ export default defineComponent({
       showEditInstrumentation.value = false;
       window.location.reload();
     };
+
+    const curPlayheadPxl = () => {
+      if (!xScale.value) return 0;
+      if (!scrollingContainer.value) return 0;
+      const leftTime = xScale.value.invert(scrollingContainer.value.scrollLeft);
+      const diff = props.currentTime - leftTime;
+      return xScale.value(diff);
+    };
+
     onMounted(async () => {
       window.addEventListener('keydown', handleKeydown);
       window.addEventListener('click', () => {
@@ -731,7 +748,10 @@ export default defineComponent({
       contextMenuChoices,
       handleShowTooltip,
       showEditInstrumentation,
-      handleUpdateInstrumentation
+      handleUpdateInstrumentation,
+      preZoomPlayheadPxl,
+      curPlayheadPxl
+
     }
   }
   
