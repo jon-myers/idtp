@@ -906,6 +906,7 @@ export default defineComponent({
   flex-direction: row;
   align-items: top;
   justify-content: top;
+  overflow-x: auto;
 }
 
 .col {
