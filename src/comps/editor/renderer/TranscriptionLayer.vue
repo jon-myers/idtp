@@ -260,6 +260,10 @@ export default defineComponent({
       type: Number,
       required: true
     },
+    preZoomMiddleTime: {
+      type: Number,
+      required: true
+    }
   },
   emits: [
     'update:TrajSelStatus',
@@ -574,8 +578,12 @@ export default defineComponent({
         }
         resetTranscription();
         updatePlayheadPosition(props.currentTime);
-        scrollToPlayhead();
-
+        const c = props.preZoomPlayheadPxl;
+        if (c > 0 && c < props.scrollingContainer.offsetWidth) {
+          nextTick(() => scrollToPlayhead())
+        } else {
+          scrollToOldMiddle();
+        }
       }
     });
     watch(() => props.showSargam, () => {
@@ -1101,15 +1109,26 @@ export default defineComponent({
       const curPxl = curPlayheadPxl();
       const diff = curPxl - props.preZoomPlayheadPxl;
       props.scrollingContainer.scrollLeft += diff;
-      
-
     };
+    const scrollToOldMiddle = () => {
+      const curLeft = props.scrollingContainer.scrollLeft;
+      const timeDiff = curMiddleTime() - props.preZoomMiddleTime;
+      const diff = props.xScale(timeDiff);
+      props.scrollingContainer.scrollLeft = curLeft - diff;
+    }
 
     const curPlayheadPxl = () => {
       const leftTime = props.xScale.invert(props.scrollingContainer.scrollLeft);
       const diff = props.currentTime - leftTime;
       return props.xScale(diff);
     };
+    const curMiddleTime = () => {
+      const leftTime = props.xScale.invert(props.scrollingContainer.scrollLeft);
+      const halfPxl = props.scrollingContainer.offsetWidth / 2;
+      const halfTime = props.xScale.invert(halfPxl);
+      return leftTime + halfTime;
+     
+    }
 
     const stopPlayingTransition = () => {
       if (props.playheadAnimation === PlayheadAnimations.Animated) {
@@ -1910,8 +1929,6 @@ export default defineComponent({
         }
       }
     }
-
-
     const handleMouseOverMeter = (meter: Meter) => {
       if (props.selectedMode === EditorMode.Meter) {
         if (selectedMeter.value && selectedMeter.value === meter) {
@@ -1945,7 +1962,6 @@ export default defineComponent({
         } else {
           selectedMeter.value = meter;
         }
-
       }
     }
 
@@ -5075,7 +5091,8 @@ export default defineComponent({
       autoWindowX,
       autoWindowY,
       autoWindowWidth,
-      isBlock
+      isBlock,
+      curPlayheadPxl,
     }
   }
 })

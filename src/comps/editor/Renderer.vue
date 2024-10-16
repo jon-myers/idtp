@@ -23,8 +23,6 @@
         @showTooltip='handleShowTooltip'
         @hideTooltip='$emit("hideTooltip")'
         @contextmenu='handleContextMenuClick'
-        
-        
       />
     </div>
     <div class='wrapper'>
@@ -129,6 +127,7 @@
               :highlightTrajs='highlightTrajs'
               :playheadAnimation='playheadAnimation'
               :preZoomPlayheadPxl='preZoomPlayheadPxl'
+              :preZoomMiddleTime='preZoomMiddleTime'
               @update:prevMeter='$emit("update:prevMeter", $event)'
               @update:selectedMode='$emit("update:selectedMode", $event)'
               @unsavedChanges='$emit("unsavedChanges", $event)'
@@ -434,6 +433,7 @@ export default defineComponent({
     const contextMenuChoices = ref<ContextMenuOptionType[]>([]);
     const showEditInstrumentation = ref(false);
     const preZoomPlayheadPxl = ref(0);
+    const preZoomMiddleTime = ref(0);
 
     const availableModes = computed(() => {
       let entries = Object.entries(EditorMode);
@@ -529,10 +529,12 @@ export default defineComponent({
     const zoomInY = () => emit('zoomInY');
     const zoomOutX = () => {
       preZoomPlayheadPxl.value = curPlayheadPxl();
+      preZoomMiddleTime.value = curMiddleTime();
       emit('zoomOutX')
     }
     const zoomInX = () => {
       preZoomPlayheadPxl.value = curPlayheadPxl();
+      preZoomMiddleTime.value = curMiddleTime();
       emit('zoomInX')
     }
 
@@ -667,6 +669,16 @@ export default defineComponent({
       return xScale.value(diff);
     };
 
+    const curMiddleTime = () => {
+      if (!xScale.value) return clientWidth.value / 2;
+      if (!scrollingContainer.value) return clientWidth.value / 2;
+      const leftTime = xScale.value.invert(scrollingContainer.value.scrollLeft);
+      const halfPxl = clientWidth.value / 2;
+      const halfTime = xScale.value.invert(halfPxl);
+      return leftTime + halfTime;
+     
+    }
+
     onMounted(async () => {
       window.addEventListener('keydown', handleKeydown);
       window.addEventListener('click', () => {
@@ -750,7 +762,9 @@ export default defineComponent({
       showEditInstrumentation,
       handleUpdateInstrumentation,
       preZoomPlayheadPxl,
-      curPlayheadPxl
+      curPlayheadPxl,
+      curMiddleTime,
+      preZoomMiddleTime
 
     }
   }
