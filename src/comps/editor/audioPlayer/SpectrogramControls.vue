@@ -408,6 +408,8 @@ export default defineComponent({
               "oct": -1
           }
       },
+      "playheadAnimationStyle": PlayheadAnimations.Animated,
+      "highlightTrajs": true,
       "uniqueId": "ffa38001-f592-4778-a91e-c4ef5c99b081"
     } as DisplaySettings;
 
@@ -739,7 +741,9 @@ export default defineComponent({
         instruments,
         spectrogram,
         pitchRange,
-        uniqueId: uId
+        uniqueId: uId, 
+        playheadAnimationStyle: playheadAnimationProxy.value,
+        highlightTrajs: highlightTrajsProxy.value
       }
     };
     const resyncToServerSettings = async (selectedId?: string) => {
@@ -793,6 +797,12 @@ export default defineComponent({
       maxPitchObj.value = new Pitch(s.pitchRange.max);
       minPitchObj.value = new Pitch(s.pitchRange.min);
       displaySettingsTitle.value = s.title;
+      if (s.playheadAnimationStyle !== undefined) {
+        playheadAnimationProxy.value = s.playheadAnimationStyle;
+      }
+      if (s.highlightTrajs !== undefined) {
+        highlightTrajsProxy.value = s.highlightTrajs;
+      }
     };
 
     const setAsDefaultSetting = () => {

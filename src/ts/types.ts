@@ -11,7 +11,7 @@ import {
   ValueFn
 } from 'd3';
 
-import { Instrument } from '@/ts/enums';
+import { Instrument, PlayheadAnimations } from '@/ts/enums';
 
 type CollectionType = {
   _id?: string;
@@ -892,6 +892,8 @@ type DisplaySettings = {
       oct: number
     }
   },
+  playheadAnimationStyle: PlayheadAnimations,
+  highlightTrajs: boolean,
   uniqueId: string,
 }
 
