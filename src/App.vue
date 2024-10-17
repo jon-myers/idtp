@@ -55,4 +55,8 @@ body, html {
 #__vue-devtools-container__ {
   width: 0%;
 }
+
+.routerViewContainer {
+  background-color: #202621
+}
 </style>
