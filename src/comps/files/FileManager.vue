@@ -68,6 +68,11 @@
       <button @click='saveNewOwner'>Save New Owner</button>
     </div>
   </div>
+  <EditInstrumentation
+    v-if='showEditInstrumentation && selectedPiece !== undefined'
+    :transMetadata='selectedPiece'
+    @close='showEditInstrumentation = false'
+  />
   <AddToCollection
     v-if='addToCollectionModalOpen'
     :possibleCollections='editableCols'
@@ -132,8 +137,10 @@ import {
   GetDisplayType,
   UserCheckType,
   MusicianNameType,
+  RuleSetType
 } from '@/ts/types.ts';
 import { SortState } from '@/ts/enums.ts';
+import EditInstrumentation from '@/comps/EditInstrumentation.vue';
 
 type FileManagerDataType = {
   designPieceModal: boolean;
@@ -173,6 +180,7 @@ type FileManagerDataType = {
   userID?: string,
   ftLabels: FilterableTableType[],
   allMusicians?: MusicianNameType[],
+  showEditInstrumentation: boolean,
 }
 
 type PieceInfoType = [string?, string?, string?, string?, string?, string?];
@@ -290,7 +298,8 @@ export default defineComponent({
           initSortState: SortState.down,
           getDisplay: this.getEditableDisplay as GetDisplayType
         }
-      ]
+      ],
+      showEditInstrumentation: false,
     };
   },
 
@@ -301,6 +310,7 @@ export default defineComponent({
     RemoveFromCollection,
     PermissionsModal,
     FilterableTable,
+    EditInstrumentation,
   },
 
   props: {
@@ -366,6 +376,10 @@ export default defineComponent({
   },
 
   methods: {
+
+    editInstrumentation() {
+      this.showEditInstrumentation = true;
+    },
 
     handleDoubleClickEmit(item: TransMetadataType, el: HTMLElement) {
       this.openPieceAlt(item);
@@ -453,6 +467,14 @@ export default defineComponent({
             this.contextMenuClosed = true;
           }
         });
+        this.contextMenuChoices.push({
+          text: 'Edit Instrumentation',
+          enabled: this.permissionToEdit(item),
+          action: () => {
+            this.editInstrumentation();
+            this.contextMenuClosed = true;
+          }
+        })
         this.contextMenuChoices.push({
           text: 'Edit Permissions',
           enabled: this.owned(item),
@@ -753,10 +775,18 @@ export default defineComponent({
           const stringRaga = npi.raga as string;
           const rsRes = await getRaagRule(stringRaga);
           const ruleSet = rsRes.rules;
-          npi.raga = new Raga({
+          const spawnRagaObj: {
+            name: string;
+            ruleSet: RuleSetType;
+            fundamental?: number;
+          } = {
             name: stringRaga,
             ruleSet: ruleSet,
-          });
+          };
+          if (npi.fundamental !== undefined) {
+            spawnRagaObj.fundamental = npi.fundamental;
+          }
+          npi.raga = new Raga(spawnRagaObj);
           let durTot;
           if (npi.audioID) {
             const audioDBDoc = await getAudioRecording(npi.audioID);
@@ -1018,6 +1048,7 @@ export default defineComponent({
         this.editTitleModal = false;
         this.editPermissionsModal = false;
         this.editOwnerModal = false;
+        this.showEditInstrumentation = false;
         
       }
     },

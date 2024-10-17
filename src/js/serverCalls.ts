@@ -12,8 +12,12 @@ import {
   RecType,
   CollectionType,
   QueryType,
-  MultipleOptionType 
+  MultipleOptionType,
+  MelographData
 } from '@/ts/types.ts';
+import {
+  Instrument
+} from '@/ts/enums.ts';
 const getPiece = async (id: string): Promise<Piece> => {
   let piece;
   const request = {
@@ -107,6 +111,7 @@ const getAudioDBEntry = async (_id: string): Promise<RecType> => {
 
 
 const savePiece = async (piece: Piece) => {
+  console.log(piece)
   const data = JSON.stringify(piece);
   let result;
   let request = {
@@ -1421,7 +1426,8 @@ import {
   LocationType,
   NewPieceDataType,
   OnProgressType,
-  MusicianNameType
+  MusicianNameType,
+  DisplaySettings
 } from '@/ts/types.ts'
 
 const userLoginGoogle = async (userData: UserDataType) => {
@@ -1805,7 +1811,7 @@ const getAllUsers = async () => {
   }
 }
 
-const getMelographJSON = async (recID: string) => {
+const getMelographJSON = async (recID: string): Promise<MelographData> => {
   let out;
   try {
     const url = `https://swara.studio/melographs/${recID}/melograph.json`;
@@ -1813,10 +1819,11 @@ const getMelographJSON = async (recID: string) => {
     if (response.ok) {
       out = await response.json()
     }
-    return out
+    
   } catch (err) {
     console.error(err)
   }
+  return out
 }
 
 const getRecsFromIds = async (recIDs: string[]) => {
@@ -1907,6 +1914,166 @@ const getEditableCollections = async (userID: string): Promise<CollectionType[]>
   return out
 }
 
+const getSavedSettings = async (userID: string) => {
+  let out: DisplaySettings[] = [];
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const params = new URLSearchParams({ userID: userID });
+    const res = await fetch(url + 'getSavedSettings?' + params, request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const saveDisplaySettings = async (userID: string, settings: DisplaySettings) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userID, settings })
+  };
+  try {
+    const res = await fetch(url + 'saveDisplaySettings', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const getDefaultSettings = async (userID: string) => {
+  let out: string = '';
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const params = new URLSearchParams({ userID: userID });
+    const res = await fetch(url + 'getDefaultSettings?' + params, request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const setDefaultSettings = async (userID: string, settingsID: string) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userID, settingsID })
+  };
+  try {
+    const res = await fetch(url + 'setDefaultSettings', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+};
+
+const updateSavedDisplaySettings = async (userId: string, uniqueId: string, settings: DisplaySettings) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userId, uniqueId, settings })
+  };
+  try {
+    const res = await fetch(url + 'updateDisplaySettings', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const deleteSavedDisplaySettings = async (userId: string, uniqueId: string) => {
+  let out;
+  const request = {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userId, uniqueId })
+  };
+  try {
+    const res = await fetch(url + 'deleteDisplaySettings', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const getTranscriptionInstrumentation = async (transcriptionID: string) => {
+  let out: Instrument[] = [];
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const params = new URLSearchParams({ transcriptionID: transcriptionID });
+    const res = await fetch(url + 'getTranscriptionInstrumentation?' + params, request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const updateInstrumentation = async (transcriptionID: string, instrumentation: Instrument[]) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ transcriptionID, instrumentation })
+  };
+  try {
+    const res = await fetch(url + 'updateInstrumentation', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
 
 export { 
   getPiece,
@@ -1986,4 +2153,12 @@ export {
   saveMultiQuery,
   loadQueries,
   deleteQuery,
+  getSavedSettings,
+  saveDisplaySettings,
+  getDefaultSettings,
+  setDefaultSettings,
+  updateSavedDisplaySettings,
+  deleteSavedDisplaySettings,
+  getTranscriptionInstrumentation,
+  updateInstrumentation
 }

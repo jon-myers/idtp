@@ -21,14 +21,16 @@
       </button>
     </div>
     <div class='selectionRow checks' v-if='groupable'>
-      <label>Grouped</label>
+      <label for='groupCheckbox' >Grouped</label>
       <input
+        id='groupCheckbox'
         v-if='editable'
         type='checkbox'
         v-model='grouped'
         @change='toggleGroup'
       />
       <input
+        id='groupCheckbox'
         v-if='!editable'
         type='checkbox'
         v-model='grouped'
@@ -37,15 +39,17 @@
       />
     </div>
     <div class='selectionRow checks' v-if='sitar && showTrajChecks'>
-      <label>Pluck</label>
+      <label for='pluckCheckboxes'>Pluck</label>
       <input 
-        v-if='editable' 
+        v-if='editable'
+        id='pluckCheckboxes'
         type='checkbox' 
         v-model='pluckBool' 
         @change='updateBool'
       />
       <input 
-        v-if='!editable' 
+        v-if='!editable'
+        id='pluckCheckboxes'
         type='checkbox' 
         v-model='pluckBool' 
         @change='updateBool'
@@ -53,14 +57,16 @@
       />
     </div>
     <div class='selectionRow checks' v-if='sitar && showTrajChecks'>
-      <label class='spaceLeft'>Dampen</label>
-      <input 
+      <label for='dampenCheckbox' class='spaceLeft'>Dampen</label>
+      <input
+        id='dampenCheckbox'
         v-if='editable' 
         type='checkbox' 
         v-model='dampen' 
         @change='updateDampen'
       />
-      <input 
+      <input
+        id='dampenCheckbox'
         v-if='!editable' 
         type='checkbox' 
         v-model='dampen' 
@@ -95,7 +101,7 @@
         </option>
     </select>
     </div>
-    <div class='selectionRow checks' v-if='vocal && showVowelTrajCheck'>
+    <div class='selectionRow checks' v-if='vocal && showTrajChecks'>
       <label class='spaceLeft'>Vowel</label>
       <select
         v-if='editable'
@@ -153,20 +159,24 @@
     </div>
     <div class='radioGroup' v-if='showPhraseRadio'>
       <div class='selectionRow'>
-        <label>Phrase Division</label>
+        <label for='phraseRadio'>Phrase Division</label>
         <input 
         type='radio' 
-        name='phraseDiv' 
+        name='phraseDiv'
+        id='phraseRadio'
         v-model='phraseDivType' 
         value='phrase'
+        @change='updatePhraseDivType'
         >
       </div>
       <div class='selectionRow'>
-        <label>Section Division</label>
+        <label for='sectionRadio'>Section Division</label>
         <input 
         type='radio' 
-        name='phraseDiv' 
-        v-model='phraseDivType' 
+        name='phraseDiv'
+        id='sectionRadio'
+        v-model='phraseDivType'
+        @change='updatePhraseDivType'
         value='section'
         >
       </div>
@@ -296,7 +306,10 @@
         :src="urlsFiltered[4 * (odx-1) + (idx-1)]" 
         :key='idx' 
         :id='"id" + ((idx-1) + 4 *(odx-1))' 
-        @click='selectIcon'>
+        @click='selectIcon'
+        @mouseover='handleHoverIcon'
+        @mouseout='handleMouseOut'
+        >
       <div 
         class='keyNum'
         v-if='urlsFiltered[4 * (odx-1) + (idx-1)] !== undefined'
@@ -324,11 +337,17 @@ import { select as d3Select } from 'd3';
 import { getIpaVowels, getConsonants } from '@/js/serverCalls.ts';
 import { PropType, defineComponent } from 'vue';
 import { initSecCategorization, Piece, Trajectory } from '@/js/classes.ts';
+import { 
+  TrajSelectionStatus, 
+  PhraseDivDisplayType,
+  TooltipData 
+} from '@/ts/types.ts';
+import { Instrument, EditorMode } from '@/ts/enums.ts';
 
 type TrajSelectPanelDataType = {
   urls: string[],
   kNums: string[],
-  pluckBool: boolean,
+  // pluckBool: boolean,
   intraTrajDursBool: boolean,
   selectedIdx?: number,
   parentSelected: boolean,
@@ -339,15 +358,12 @@ type TrajSelectPanelDataType = {
   offset: number,
   initUp: boolean,
   extent: number,
-  dampen: boolean,
-  showTrajChecks: boolean,
-  showVowelTrajCheck: boolean,
-  showPhraseRadio: boolean,
+  // dampen: boolean,
+  // showPhraseRadio: boolean,
   phraseDivType?: 'phrase' | 'section',
   trajIdxs: number[],
   urlsFiltered: string[],
   kNumsFiltered: string[],
-  vocal: boolean,
   vowel: string,
   ipaVowels: string[],
   englishWords: string[],
@@ -365,12 +381,13 @@ type TrajSelectPanelDataType = {
   panelHeight: number,
   vib: boolean,
   octShiftTop: number,
-  canShiftUp: boolean,
-  canShiftDown: boolean,
   vowelList: string[],
   cEngTrans: string[],
-  sitar: boolean,
-  sarangi: boolean,
+  selectedTrajs: Trajectory[],
+  selectedTraj: Trajectory | undefined,
+  internalPluckBool: boolean,
+  internalDampen: boolean,
+  hoverTimeout: NodeJS.Timeout | undefined,
 }
 
 export default defineComponent({
@@ -380,7 +397,7 @@ export default defineComponent({
     return {
       urls: [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13],
       kNums: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'e'],
-      pluckBool: true,
+      // pluckBool: true,
       intraTrajDursBool: false,
       selectedIdx: undefined,
       parentSelected: false,
@@ -391,15 +408,12 @@ export default defineComponent({
       offset: 0,
       initUp: true,
       extent: 0.05,
-      dampen: false,
-      showTrajChecks: false,
-      showVowelTrajCheck: false,
-      showPhraseRadio: false,
+      // dampen: false,
+      // showPhraseRadio: false,
       phraseDivType: undefined,
       trajIdxs: [],
       urlsFiltered: [],
       kNumsFiltered: [],
-      vocal: false,
       vowel: 'a',
       ipaVowels: ['a', 'b', 'c'],
       englishWords: [],
@@ -416,13 +430,14 @@ export default defineComponent({
       panelHeight: 80,
       vib: false,
       octShiftTop: 4,
-      canShiftUp: true,
-      canShiftDown: true,
       englishTrans: [],
       vowelList: [],
       cEngTrans: [],
-      sitar: false,
-      sarangi: false,
+      selectedTrajs: [],
+      selectedTraj: undefined,
+      internalPluckBool: false,
+      internalDampen: false,
+      hoverTimeout: undefined,
     }
   },
   
@@ -439,20 +454,9 @@ export default defineComponent({
       type: Number,
       required: true
     },
-    selectedPhraseDivIdx: {
-      type: Number,
-      required: false
-    },
     piece: {
       type: Object as PropType<Piece>,
-    },
-    selectedTrajs: {
-      type: Array as PropType<Trajectory[]>,
-      required: true
-    },
-    selectedTraj: {
-      type: Object as PropType<Trajectory>,
-      required: false
+      required: true,
     },
     freqMin: {
       type: Number,
@@ -467,36 +471,141 @@ export default defineComponent({
       required: true
     },
     trajTimePts: {
-      type: Array as PropType<{time: number, logFreq: number}[]>,
+      type: Array as PropType<{
+        time: number, 
+        logFreq: number,
+        pIdx: number,
+        tIdx: number,
+        track: number
+      }[]>,
       required: false
-    }
+    },
+    trajSelStatus: {
+      type: Object as PropType<TrajSelectionStatus>,
+      required: false
+    },
+    selectedPhraseDivUid: {
+      type: String,
+      required: false
+    },
+    instrument: {
+      type: String as PropType<Instrument>,
+      required: true
+    },
+    selectedMode: {
+      type: String as PropType<EditorMode>,
+      required: true
+    },
+    editingInstIdx: {
+      type: Number,
+      required: true
+    },
   },
 
   async mounted() {
-    let result = await getIpaVowels();
-    this.ipaVowels = result.map(v => v.ipa);
-    this.iso_15919 = result.map(v => v.iso_15919);
-    this.englishWords = result.map(v => v.english);
-    this.englishTrans = result.map(v => v.eng_trans);
-    this.hindiVowels = result.map(v => v.hindi.initial);
-    this.vowelList = result.map(v => {
-      return `${v.hindi.initial} - ${v.iso_15919} (${v.english})`
-    })
-    const consonantResults = await getConsonants();
-    this.cIpa = consonantResults.map(v => v.ipa);
-    this.cIso_15919 = consonantResults.map(v => v.iso_15919);
-    this.cEngTrans = consonantResults.map(v => v.eng_trans);
-    this.cExample = consonantResults.map(v => v.example);
-    this.hindiConsonants = consonantResults.map(v => v.hindi);
-    this.consonantList = this.cIso_15919.map((iso, idx) => {
-      return `${this.hindiConsonants[idx]} - ${iso} (${this.cExample[idx]})`
-    })
-    this.consonantList.push('none');
-    this.cIso_15919.push(undefined);
+    // if (this.piece.instrumentation.length > 0) {
+    //   this.instrument = this.piece.instrumentation[0] as Instrument;
+    // }
+    try {
+      let result = await getIpaVowels();
+      const consonantResults = await getConsonants();
+      this.ipaVowels = result.map(v => v.ipa);
+      this.iso_15919 = result.map(v => v.iso_15919);
+      this.englishWords = result.map(v => v.english);
+      this.englishTrans = result.map(v => v.eng_trans);
+      this.hindiVowels = result.map(v => v.hindi.initial);
+      this.vowelList = result.map(v => {
+        return `${v.hindi.initial} - ${v.iso_15919} (${v.english})`
+      })
+      this.cIpa = consonantResults.map(v => v.ipa);
+      this.cIso_15919 = consonantResults.map(v => v.iso_15919);
+      this.cEngTrans = consonantResults.map(v => v.eng_trans);
+      this.cExample = consonantResults.map(v => v.example);
+      this.hindiConsonants = consonantResults.map(v => v.hindi);
+      this.consonantList = this.cIso_15919.map((iso, idx) => {
+        return `${this.hindiConsonants[idx]} - ${iso} (${this.cExample[idx]})`
+      })
+      this.consonantList.push('none');
+      this.cIso_15919.push(undefined);
+      this.trajIdxs = this.piece!.possibleTrajs[this.instrument];
+    } catch (e) {
+      console.error(e);
+    }
     if (this.vocal) this.octShiftTop = 75;
     if (this.vocal && this.showSlope) this.octShiftTop = 97
   },
-  
+  computed: {
+    pluckBool: {
+      get() {
+        if (this.selectedTraj !== undefined) {
+          const st = this.selectedTraj;
+          const c1 = st.articulations[0];
+          const c2 = st.articulations['1.00'];
+          const c3 = st.articulations['0.00'];
+          const c4 = c1 && st.articulations[0].name === 'pluck';
+          const c5 = c3 && st.articulations['0.00'].name === 'pluck';
+          return c4 || c5;
+        } else {
+          return this.internalPluckBool;
+        }
+      },
+      set(newVal: boolean) {
+        if (this.parentSelected) {
+          this.$emit('pluckBool', newVal)
+        } else {
+          this.internalPluckBool = newVal;
+        }
+      }
+    },
+    dampen: {
+      get() {
+        if (this.selectedTraj !== undefined) {
+          const arts = this.selectedTraj.articulations;
+          return arts['1.00'] && arts['1.00'].name === 'dampen';
+        } else {
+          return this.internalDampen;
+        }
+      },
+      set(newVal: boolean) {
+        if (this.parentSelected) {
+          this.$emit('dampen', newVal)
+        } else {
+          this.internalDampen = newVal;
+        }
+      }
+    },
+    vocal() {
+      const vox = [Instrument.Vocal_M, Instrument.Vocal_F];
+      return this.instrument && vox.includes(this.instrument);
+    },
+    sitar() {
+      return this.instrument === Instrument.Sitar;
+    },
+    sarangi() {
+      return this.instrument === Instrument.Sarangi;
+    },
+    showTrajChecks() {
+      const c1 = this.selectedTrajs.length === 1;
+      const c2 = this.selectedMode === EditorMode.Trajectory;
+      const c3 = this.selectedMode === EditorMode.Series;
+      return c1 || c2 || c3
+    },
+    selectedFreqMin() {
+      return Math.min(...this.selectedTrajs.map(traj => traj.minFreq));
+    },
+    selectedFreqMax() {
+      return Math.max(...this.selectedTrajs.map(traj => traj.maxFreq));
+    },
+    canShiftDown() {
+      return this.selectedFreqMin / 2 > this.freqMin;
+    },
+    canShiftUp() {
+      return this.selectedFreqMax * 2 < this.freqMax;
+    },
+    showPhraseRadio() {
+      return this.selectedPhraseDivUid !== undefined;
+    }
+  },
   watch: {
     selectedIdx(newVal) {
       document.querySelectorAll('.thumb').forEach(t => {
@@ -511,6 +620,9 @@ export default defineComponent({
         if (this.vocal && this.vowel === undefined) {
           this.vowel = 'a'
         }
+      } else {
+        this.showSlope = false;
+        this.showVibObj = false;
       }
     },
 
@@ -530,41 +642,6 @@ export default defineComponent({
       }
     },
 
-    phraseDivType(newVal, oldVal) {
-      if (oldVal !== undefined && newVal !== undefined) {
-        const realPhraseStart = this.selectedPhraseDivIdx! + 1;
-        if (newVal === 'phrase' && oldVal == 'section') {
-          const piece = this.piece!;
-          const starts = piece.sectionStarts;
-          if (starts === undefined) {
-            throw new Error('starts is undefined')
-          }
-          piece.sectionStarts = starts.filter((s, sIdx) => {
-            const bool = s !== realPhraseStart;
-            if (!bool) {
-              piece.sectionCategorization.splice(sIdx, 1);
-            }
-            return bool
-          });
-          d3Select(`#phraseLine${realPhraseStart-1}`)
-            .attr('stroke-width', '2px')
-        } else if (newVal === 'section' && oldVal == 'phrase') {
-          const piece = this.piece!;
-          const starts = piece.sectionStarts;
-          if (starts === undefined) {
-            throw new Error('starts is undefined')
-          }
-          piece.sectionStarts = [...starts, realPhraseStart];
-          piece.sectionStarts.sort((a, b) => a - b);
-          const newIdx = piece.sectionStarts.indexOf(realPhraseStart);
-          piece.sectionCategorization
-            .splice(newIdx, 0, initSecCategorization());
-          d3Select(`#phraseLine${realPhraseStart-1}`)
-            .attr('stroke-width', '4px')
-        }
-      }
-    },
-
     trajIdxs(newVal) {
       this.urlsFiltered = newVal
         .map((idx: number) => this.urls[idx])
@@ -572,26 +649,111 @@ export default defineComponent({
       this.kNumsFiltered = newVal
         .map((idx: number) => this.kNums[idx])
         .filter((kNum: string) => kNum !== undefined);
+    },
+
+    trajSelStatus(newVal) {
+      if (newVal !== undefined) {
+        this.selectedTrajs = newVal.trajs;
+        if (newVal.trajs.length === 1) {
+          this.selectedTraj = newVal.trajs[0];
+        } else {
+          this.selectedTraj = undefined;
+        }
+        // this.instrument = newVal.instrument;
+        this.$nextTick(() => {
+          this.grouped = this.selectedTrajsConstituteAGroup();
+        })
+      } else {
+        this.selectedTrajs = [];
+        this.selectedTraj = undefined;
+        // this.instrument = undefined;
+      }
+    },
+
+    instrument(newVal: Instrument) {
+      if (newVal) {
+        this.trajIdxs = this.piece!.possibleTrajs[newVal];
+      }
+    },
+
+    selectedTraj(newVal: Trajectory | undefined) {
+      if (newVal !== undefined) {
+        const altId = newVal.id >= 12 ? newVal.id - 1 : newVal.id;
+        this.selectedIdx = this.trajIdxs.indexOf(altId);
+        this.parentSelected = true;
+        this.slope = Math.log2(newVal.slope);
+        if (newVal.vibObj) {
+          this.extent = newVal.vibObj.extent;
+          this.initUp = newVal.vibObj.initUp;
+          this.offset = newVal.vibObj.vertOffset;
+          this.periods = newVal.vibObj.periods;
+        }
+        this.vowel = newVal.vowel!;
+        this.startConsonant = newVal.startConsonant;
+        this.endConsonant = newVal.endConsonant;
+      } else {
+        this.selectedIdx = undefined;
+        this.parentSelected = false;
+        this.slope = 1;
+        this.extent = 0.05;
+        this.initUp = true;
+        this.offset = 0;
+        this.periods = 8;
+        this.vowel = 'a';
+      }
+    },
+
+    selectedPhraseDivUid(newVal) {
+      if (newVal !== undefined) {
+        const phrase = this.piece!.phraseFromUId(newVal);
+        const pIdx = phrase.pieceIdx!;
+        const track = this.piece!.trackFromPhraseUId(newVal);
+        const isSectionDiv = this.piece.sectionStartsGrid[track].includes(pIdx);
+        this.phraseDivType = isSectionDiv ? 'section' : 'phrase';
+      }
+    },
+
+    selectedMode(newVal) {
+      if (newVal === EditorMode.Series) {
+        this.internalPluckBool = false;
+      }
     }
   },
 
   methods: {
 
+    selectedTrajsConstituteAGroup() {
+      const track = this.editingInstIdx;
+      const phrases = this.piece.phraseGrid[track];
+      const phrase = phrases[this.selectedTrajs[0]!.phraseIdx!];
+      const id = this.selectedTrajs[0].groupId!;
+      const group = phrase.getGroupFromId(id)!;
+      if (group === undefined) return false;
+      const c1 = group.trajectories.length === this.selectedTrajs.length;
+      const c2 = this.selectedTrajs.every(traj => traj.groupId === id);
+      return c1 && c2
+    },
+
+    updatePhraseDivType() {
+      const phrase = this.piece!.phraseFromUId(this.selectedPhraseDivUid!);
+      const track = this.piece!.trackFromPhraseUId(this.selectedPhraseDivUid!);
+      const pIdx = phrase.pieceIdx!;
+      const ss = this.piece.sectionStartsGrid[track];
+      if (this.phraseDivType === 'section') {
+        ss.push(pIdx);
+        ss.sort((a, b) => a - b);
+      } else {
+        this.piece.sectionStartsGrid[track] = ss.filter(idx => idx !== pIdx); 
+      }
+      const pdObj: PhraseDivDisplayType = this.piece.allPhraseDivs(track)
+          .find(pd => pd.uId === this.selectedPhraseDivUid)!;
+      this.$emit('update:phraseDivRendering', pdObj);
+      this.$emit('unsavedChanges', true);
+    },
+
     shiftOct(offset = 1) {
       const sts = this.selectedTrajs;
       sts.forEach(traj => this.$emit('shiftOct', traj, offset))
-      const minFreq = Math.min(...sts.map(traj => traj.minFreq));
-      const maxFreq = Math.max(...sts.map(traj => traj.maxFreq));
-      if ((minFreq / 2) < this.freqMin) {
-        this.canShiftDown = false;
-      } else {
-        this.canShiftDown = true;
-      }
-      if ((maxFreq * 2) > this.freqMax) {
-        this.canShiftUp = false;
-      } else {
-        this.canShiftUp = true;
-      }
     },
 
     toggleGroup() {
@@ -781,6 +943,40 @@ export default defineComponent({
           }
         }
       } 
+    },
+
+    handleHoverIcon(e: MouseEvent) {
+      if (this.hoverTimeout === undefined) {
+        this.hoverTimeout = setTimeout(() => {
+          let idx;
+          if (e instanceof MouseEvent) {
+            const target = e.target as HTMLElement;
+            idx = Number(target!.id.slice(2));
+          } else {
+            idx = Number(e)
+          }
+          let realIdx = this.trajIdxs[idx];
+          if (realIdx >= 12) {
+            realIdx += 1;
+          }
+          const names = new Trajectory().names;
+          const name = names[realIdx];
+          const data: TooltipData = {
+            text: name,
+            x: e.clientX,
+            y: e.clientY
+          } 
+          this.$emit('showTooltip', data)
+        }, 500)
+      }
+    },
+
+    handleMouseOut() {
+      if (this.hoverTimeout) {
+        clearTimeout(this.hoverTimeout);
+        this.hoverTimeout = undefined;
+      }
+      this.$emit('hideTooltip');
     },
     
     updateSlope() {

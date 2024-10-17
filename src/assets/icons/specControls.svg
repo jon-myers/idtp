@@ -1,0 +1,26 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Spectrogram Display -->
+  <rect x="10" y="10" width="80" height="50" fill="none" stroke="#fff" stroke-width="2" />
+  <line x1="10" y1="20" x2="90" y2="20" stroke="#fff" stroke-width="1" />
+  <line x1="10" y1="30" x2="90" y2="30" stroke="#fff" stroke-width="1" />
+  <line x1="10" y1="40" x2="90" y2="40" stroke="#fff" stroke-width="1" />
+  <line x1="10" y1="50" x2="90" y2="50" stroke="#fff" stroke-width="1" />
+
+  <!-- Frequency Intensity Bars -->
+  <rect x="15" y="35" width="5" height="15" fill="#fff" />
+  <rect x="25" y="25" width="5" height="25" fill="#fff" />
+  <rect x="35" y="40" width="5" height="10" fill="#fff" />
+  <rect x="45" y="30" width="5" height="20" fill="#fff" />
+  <rect x="55" y="35" width="5" height="15" fill="#fff" />
+  <rect x="65" y="25" width="5" height="25" fill="#fff" />
+  <rect x="75" y="40" width="5" height="10" fill="#fff" />
+
+  <!-- Controls -->
+  <circle cx="20" cy="80" r="7" fill="#fff" />
+  <circle cx="50" cy="80" r="7" fill="#fff" />
+  <circle cx="80" cy="80" r="7" fill="#fff" />
+
+  <line x1="20" y1="70" x2="20" y2="90" stroke="#fff" stroke-width="2" />
+  <line x1="50" y1="70" x2="50" y2="90" stroke="#fff" stroke-width="2" />
+  <line x1="80" y1="70" x2="80" y2="90" stroke="#fff" stroke-width="2" />
+</svg>

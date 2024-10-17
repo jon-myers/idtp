@@ -1,10 +1,10 @@
-import essentia, os, psutil, sys, json, math, bson, io
+import essentia, os, sys, json, math, bson, io
 import matplotlib.pyplot as plt
 import essentia.standard as ess
 # from essentia.standard import (EasyLoader, MonoLoader, NSGConstantQ, NSGIConstantQ)
 import numpy as np
-from sklearn.preprocessing import normalize
-import gzip, pickle
+# from sklearn.preprocessing import normalize
+# import gzip, pickle
 from PIL import Image
 
 def replaceZeros(data):
@@ -33,10 +33,14 @@ max_samples = max_seconds * 44100
 file_id = sys.argv[1]
 sa = float(sys.argv[2])
 
+
+
 # path_to_audio = './../audio'
 path_to_audio = './audio'
 # process = psutil.Process(os.getpid())
 full_path = path_to_audio + '/wav/' + file_id + '.wav'
+if len(sys.argv) > 3:
+    full_path = sys.argv[3]
 loader = ess.EasyLoader(filename = full_path, replayGain=0, startTime=0)
 audio = loader()
 octaves = 3
@@ -76,7 +80,13 @@ for i in range(4):
 
 max_size = 16383
 cmap = 'magma'
+# cmap='gray'
 folder_path = 'spectrograms/' + file_id
+
+if len(sys.argv) > 3:
+    cmap = 'gray'
+    folder_path = 'python/visualization_tools/gray_dir'
+
 if not os.path.exists(folder_path):
     os.mkdir(folder_path)
 for i, array in enumerate(obj):

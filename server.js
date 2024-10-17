@@ -24,6 +24,30 @@ async function exists (path) {
   }
 }
 
+// Function to run a Python script and return a Promise
+function runPythonScript(scriptPath, args = []) {
+  return new Promise((resolve, reject) => {
+    const pythonProcess = spawn('python3', [scriptPath, ...args]);
+
+    pythonProcess.stdout.on('data', (data) => {
+      console.log(`stdout from ${scriptPath}: ${data}`);
+    });
+
+    pythonProcess.stderr.on('data', (data) => {
+      console.error(`stderr from ${scriptPath}: ${data}`);
+    });
+
+    pythonProcess.on('close', (code) => {
+      console.log(`${scriptPath} process exited with code ${code}`);
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`${scriptPath} process exited with code ${code}`));
+      }
+    });
+  });
+}
+
 const deleteFiles = async (audioID) => {
   const peaksPath = 'peaks/' + audioID + '.json';
   const spectrogramsPath = 'spectrograms/' + audioID;
@@ -891,6 +915,21 @@ const runServer = async () => {
       }
 
     });
+
+    // app.post('/makeVisualizationData', async (req, res) => {
+    //   // generate visualization data for the given recording ID
+    //   const script1 = './visualization_scripts/generate_melograph.py';
+    //   const script2 = './visualization_scripts/make_spec_data.py';
+    //   try {
+    //     await Promise.all([
+    //       runPythonScript(script1, [req.body.recId]),
+    //       runPythonScript(script2, [req.body.recId])
+    //     ])
+    //   } catch (err) {
+    //     console.error(err);
+    //     res.status(500).send(err);
+    //   }
+    // })
     
     app.post('/makeSpectrograms', async (req, res) => {
       // generate spectrograms for the given recording ID and tonic estimate  
@@ -1622,6 +1661,7 @@ const runServer = async () => {
     })
 
     app.get('/getInstrumentation', async (req, res) => {
+      // from the audio recording.
       try {
         const audioID = ObjectId(JSON.parse(req.query.audioID));
         const query = { _id: audioID };
@@ -1640,6 +1680,21 @@ const runServer = async () => {
         musiciansArr.sort((a, b) => ordering[a.role] - ordering[b.role]);
         const instrumentation = musiciansArr.map(m => m.instrument);
         res.json(instrumentation);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
+    app.get('/getTranscriptionInstrumentation', async (req, res) => {
+      // from the transcription.
+      try {
+        const transcriptionID = ObjectId(req.query.transcriptionID);
+        const query = { _id: transcriptionID };
+        console.log(query)
+        const projection = { projection: { instrumentation: 1, _id: 0 } };
+        const result = await transcriptions.findOne(query, projection);
+        res.json(result.instrumentation);
       } catch (err) {
         console.error(err);
         res.status(500).send(err);
@@ -1740,19 +1795,36 @@ const runServer = async () => {
           processAudio.stderr.on('data', data => {
             console.error(`stderr: ${data}`)
           });
-          processAudio.on('close', () => {
+          processAudio.on('close', async () => {
             console.log('audio processing finished')
-            res.send({
-              status: true,
-              message: 'File is uploaded',
-              data: {
-                name: audioFile.name,
-                mimetype: audioFile.mimetype,
-                size: audioFile.size,
-                audioFileId: newId
-              }
-            });
+            const script1 = './visualization_scripts/generate_melograph.py';
+            const script2 = './visualization_scripts/make_spec_data.py';
+            try {
+              await Promise.all([
+                runPythonScript(script1, [newId]),
+                runPythonScript(script2, [newId])
+              ])
+              res.send({
+                status: true,
+                message: 'File is uploaded',
+                data: {
+                  name: audioFile.name,
+                  mimetype: audioFile.mimetype,
+                  size: audioFile.size,
+                  audioFileId: newId
+                }
+              });
+            } catch (err) {
+              console.error(err);
+              res.status(500).send(err)
+            }
           });
+          // const script1 = './visualization_scripts/generate_melograph.py';
+          // const script2 = './visualization_scripts/make_spec_data.py';
+          // await Promise.all([
+          //   runPythonScript(script1, [newId]),
+          //   runPythonScript(script2, [newId])
+          // ])
         }
       } catch (err) {
         console.error(err);
@@ -1817,7 +1889,7 @@ const runServer = async () => {
             convertToOpus.stderr.on('data', data => {
               console.error(`stderr: ${data}`)
             });
-            await convertToOpus.on('close', () => {
+            convertToOpus.on('close', () => {
               console.log('opus conversion finished')
             })
           }
@@ -1826,7 +1898,7 @@ const runServer = async () => {
           processAudio.stderr.on('data', data => {
             console.error(`stderr: ${data}`)
           });
-          await processAudio.on('close', () => {
+          processAudio.on('close', () => {
             console.log('python closed, finally')
             res.send({
               status: true,
@@ -1839,10 +1911,163 @@ const runServer = async () => {
               }
             });
           });
-          spawn('python3', ['make_images.py', newId.toString()])
+          const script1 = './visualization_scripts/generate_melograph.py';
+          const script2 = './visualization_scripts/make_spec_data.py';
+          await Promise.all([
+            runPythonScript(script1, [newId]),
+            runPythonScript(script2, [newId])
+          ])
         }
       } catch (err) {
         console.error(err)
+        res.status(500).send(err);
+      }
+    });
+
+    app.get('/getSavedSettings', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.query.userID) };
+        const projection = { savedSettings: 1, _id: 0 };
+        const result = await users.findOne(query, projection);
+        if (result && result.savedSettings) {
+          res.json(result.savedSettings)
+        } else {
+          res.json([])
+        }
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
+
+    app.post('/saveDisplaySettings', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.body.userID) };
+        const user = await users.findOne(query);
+        if (user) {
+          if (user.savedSettings) {
+            const update = { $push: { savedSettings: req.body.settings } };
+            const result = await users.updateOne(query, update);
+            res.json(result);
+          } else {
+            const update = { $set: { savedSettings: [req.body.settings] } };
+            const result = await users.updateOne(query, update);
+            res.json(result);
+          }
+        } else {
+          res.status(404).send('User not found');
+        }
+        
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
+
+    app.post('/updateDisplaySettings', async (req, res) => {
+      try {
+        const { userId, uniqueId, settings } = req.body;
+        const query = { _id: ObjectId(userId), 'savedSettings.uniqueId': uniqueId };
+        const update = { $set: { 'savedSettings.$': settings } };
+        const result = await users.updateOne(query, update);
+        // console.log(userID, uniqueId, settings)
+        if (result.matchedCount === 0) {
+          res.status(404).send('User or display settings not found');
+        } else {
+          res.json(result);
+        }
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
+
+    app.get('/getDefaultSettings', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.query.userID) };
+        const projection = { defaultSettingsID: 1, _id: 0 };
+        const result = await users.findOne(query, projection);
+        if (result && result.defaultSettingsID) {
+          res.json(result.defaultSettingsID)
+        } else {
+          res.json('ffa38001-f592-4778-a91e-c4ef5c99b081')
+        }
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
+    app.post('/setDefaultSettings', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.body.userID) };
+        const update = { $set: { defaultSettingsID: req.body.settingsID } };
+        const result = await users.updateOne(query, update);
+        res.json(result);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
+    app.delete('/deleteDisplaySettings', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.body.userId) };
+        const savedSettings = { uniqueId: req.body.uniqueId };
+        const update = { $pull: { savedSettings } };
+        const result = await users.updateOne(query, update);
+        res.json(result);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
+    app.post('/updateInstrumentation', async (req, res) => {
+      try {
+        // first get the transcription included in the query under 
+        // the transcriptionID key.
+        // then, update the instrumentation field of the transcription.
+        // If the new length of instrumentation is less than the original,
+        // delete the corresponding idxs from the following fields: 
+        // instrumentation, phrases, phraseGrid, durArrayGrid, sectionCatGrid, 
+        // and sectionStartsGrid.
+
+        // If the new length of instrumentation is greater than the original,
+        // add the new instrument name to the end of the instrumentation array.
+        const { transcriptionID, instrumentation } = req.body;
+        if (!transcriptionID || !instrumentation) {
+          res.status(400).send('TranscriptionID and instrumentation are required');
+        };
+        const query = { _id: ObjectId(transcriptionID) };
+        const transcription = await transcriptions.findOne(query);
+        if (!transcription) {
+          res.status(404).send('Transcription not found');
+        }
+        const originalInstrumentation = transcription.instrumentation;
+        const originalLength = originalInstrumentation.length;
+        const newLength = instrumentation.length;
+
+        await transcriptions.updateOne(query, { $set: { instrumentation } });
+        if (newLength < originalLength) {
+          const fieldsToUpdate = [
+            'instrumentation', 
+            'phraseGrid', 
+            'durArrayGrid', 
+            'sectionCatGrid', 
+            'sectionStartsGrid'
+          ];
+          const updateOps = fieldsToUpdate.map(field => ({
+            [field]: transcription[field].slice(0, newLength)
+          }));
+          await transcriptions.updateOne(query, { 
+            $set: Object.assign({}, ...updateOps) 
+          });
+        }
+        // res.status(200).send('Instrumentation updated');
+        res.json({ status: 200, message: 'Instrumentation updated' });
+      } catch (err) {
+        console.error(err);
         res.status(500).send(err);
       }
     });
@@ -1857,6 +2082,9 @@ const runServer = async () => {
     app.use('/test', express.static('test', { setHeaders: setNoCache }));
     app.use('/spectrograms', express.static('spectrograms', { 
       setHeaders: setNoCache 
+    }))
+    app.use('/spec_data', express.static('spec_data', {
+      setHeaders: setNoCache
     }))
     app.use('/melographs', express.static('melographs', { 
       setHeaders: setNoCache 

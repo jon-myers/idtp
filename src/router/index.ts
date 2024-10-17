@@ -46,6 +46,11 @@ const routes = [
     path: '/collections',
     name: 'Collections',
     component: () => import('@/comps/collections/CollectionsComponent.vue')
+  },
+  {
+    path:'/editorInstructions',
+    name: 'Editor Instructions',
+    component: () => import('@/comps/EditorInstructions.vue')
   }
 ];
 

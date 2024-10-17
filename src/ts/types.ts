@@ -3,12 +3,15 @@ import {
   Trajectory, 
   Piece,
   Pitch,
-  Phrase
+  Phrase,
+  Chikari,
 } from '@/js/classes.ts';
 
 import {
   ValueFn
 } from 'd3';
+
+import { Instrument, PlayheadAnimations } from '@/ts/enums';
 
 type CollectionType = {
   _id?: string;
@@ -54,23 +57,21 @@ type ContextMenuOptionType = {
 
 type TransMetadataType = {
   title: string,
-  audioID: string,
-  dateCreated: string,
-  dateModified: string,
+  audioID: string | undefined,
+  dateCreated: Date,
+  dateModified: Date,
   durTot: number,
   family_name: string,
   given_name: string,
-  instrumentation: string[],
+  instrumentation: Instrument[],
   location: string,
   name: string,
   permissions: string,
-  performers: string[],
   raga: {
     name: string,
     fundamental: number,
     ratios: number[]
   },
-  transcriber: string,
   userID: string,
   _id: string,
   explicitPermissions: {
@@ -523,7 +524,14 @@ type NewPieceInfoType = {
   name?: string;
   soloist?: string;
   soloInstrument?: string;
+  fundamental?: number;
 }
+
+type BoolObj = { [key: string]: boolean };
+
+
+type RuleSetType = {[key: string]: (boolean | BoolObj) };
+
 
 type RagaNewPieceInfoType = {
   title: string;
@@ -538,11 +546,12 @@ type RagaNewPieceInfoType = {
   };
   clone?: boolean;
   origID: string;
-  instrumentation?: string[];
+  instrumentation?: Instrument[];
   phrases?: Phrase[];
   family_name?: string;
   given_name?: string;
   name?: string;
+  fundamental?: number;
 }
 
 type RagaSeedType = {
@@ -560,7 +569,7 @@ type PassedDataType = {
   family_name?: string;
   given_name?: string;
   name?: string;
-  instrumentation?: string[];
+  instrumentation?: Instrument[];
   transcriber?: string;
   soloist?: string;
   soloInstrument?: string;
@@ -683,6 +692,393 @@ type FilterableTableType = {
 
 type UserCheckType = (item: RecType | TransMetadataType, userID: string) => boolean;
 
+export enum CMap {
+  Blues = 'interpolateBlues',
+  BrBG = 'interpolateBrBG',
+  BuGn = 'interpolateBuGn',
+  BuPu = 'interpolateBuPu',
+  Cividis = 'interpolateCividis',
+  Cool = 'interpolateCool',
+  CubehelixDefault = 'interpolateCubehelixDefault',
+  GnBu = 'interpolateGnBu',
+  Greens = 'interpolateGreens',
+  Greys = 'interpolateGreys',
+  Inferno = 'interpolateInferno',
+  Magma = 'interpolateMagma',
+  OrRd = 'interpolateOrRd',
+  Oranges = 'interpolateOranges',
+  PRGn = 'interpolatePRGn',
+  PiYG = 'interpolatePiYG',
+  Plasma = 'interpolatePlasma',
+  PuBu = 'interpolatePuBu',
+  PuBuGn = 'interpolatePuBuGn',
+  PuOr = 'interpolatePuOr',
+  PuRd = 'interpolatePuRd',
+  Purples = 'interpolatePurples',
+  Rainbow = 'interpolateRainbow',
+  RdBu = 'interpolateRdBu',
+  RdGy = 'interpolateRdGy',
+  RdPu = 'interpolateRdPu',
+  RdYlBu = 'interpolateRdYlBu',
+  RdYlGn = 'interpolateRdYlGn',
+  Reds = 'interpolateReds',
+  Sinebow = 'interpolateSinebow',
+  Spectral = 'interpolateSpectral',
+  Turbo = 'interpolateTurbo',
+  Viridis = 'interpolateViridis',
+  Warm = 'interpolateWarm',
+  YlGn = 'interpolateYlGn',
+  YlGnBu = 'interpolateYlGnBu',
+  YlOrBr = 'interpolateYlOrBr',
+  YlOrRd = 'interpolateYlOrRd'  
+}
+
+type RenderCall = {
+  canvasIdx: number,
+  startX: number,
+  width: number
+}
+
+type MessageType = 'initial' | 'crop' | 'scale' | 'power' | 'color';
+
+
+interface ProcessMessage {
+  type: MessageType;
+  extData?: number[];
+  extDataShape?: [number, number];
+  logMin?: number;
+  logMax?: number;
+  newScaledShape?: [number, number];
+  newPower?: number;
+  newCMap?: CMap;
+  audioID?: string;
+  newVerbose?: boolean;
+}
+
+interface WorkerMessage {
+  msg: 'process' | 'requestRenderData';
+  payload: ProcessMessage | { startX: number, width: number };
+}
+
+type MelographData = {
+  data_chunks: number[][],
+  time_chunk_starts: number[],
+  time_increment: number,
+}
+
+type SargamDisplayType = { 
+  sargam: string, 
+  time: number, 
+  logFreq: number,
+  uId: string,
+  track: number,
+  pos?: number,
+};
+
+type BolDisplayType = {
+  bol: string,
+  time: number,
+  logFreq: number,
+  uId: string,
+  track: number,
+}
+
+type VowelDisplayType = {
+  time: number,
+  logFreq: number,
+  ipaText: string,
+  devanagariText: string,
+  englishText: string,
+  uId: string,
+}
+
+type ConsonantDisplayType = {
+  time: number,
+  logFreq: number,
+  ipaText: string,
+  devanagariText: string,
+  englishText: string,
+  uId: string
+}
+
+type InstrumentTrackType = {
+  inst: Instrument,
+  idx: number,
+  displaying: boolean,
+  sounding: boolean,
+  color: string,
+  selColor: string,
+}
+
+type PhraseDivDisplayType = {
+  time: number,
+  type: 'phrase' | 'section',
+  idx: number,
+  track: number,
+  uId: string,
+}
+
+type TrajSelectionStatus = {
+  trajs: Trajectory[],
+  instrument: Instrument,
+} | undefined;
+
+type ChikariDisplayType = {
+  time: number,
+  phraseTimeKey: string,
+  phraseIdx: number,
+  track: number,
+  chikari: Chikari,
+  uId: string,
+}
+
+type TrajRenderObj = {
+  uniqueId: string,
+  renderStatus: boolean,
+  selectedStatus: boolean,
+  track: number
+}
+
+type TrajTimePoint = {
+  time: number,
+  logFreq: number,
+  pIdx: number,
+  tIdx: number,
+  track: number,
+}
+
+type LabelEditorOptions = {
+  type: 'Phrase' | 'Section',
+  idx: number,
+  track: number,
+}
+
+type TooltipData = {
+  text: string,
+  x: number,
+  y: number,
+}
+
+type DisplaySettings = {
+  title: string,
+  colors: {
+    background: string,
+    axes: string,
+    melograph: string,
+    sargamLines: string,
+    meter: string,
+    selectedMeter: string,
+    playhead: string
+  },
+  instruments: {
+    display: boolean,
+    sonify: boolean,
+    trajColor: string,
+    selectedTrajColor: string,
+  }[],
+  spectrogram: {
+    colorMap: CMap,
+    intensity: number,
+  },
+  pitchRange: {
+    max: {
+      swara: number,
+      raised: boolean,
+      oct: number
+    },
+    min: {
+      swara: number,
+      raised: boolean,
+      oct: number
+    }
+  },
+  playheadAnimationStyle: PlayheadAnimations,
+  highlightTrajs: boolean,
+  uniqueId: string,
+}
+
+interface LoopSourceNode extends AudioBufferSourceNode {
+  playing?: boolean;
+}
+
+interface ChikariNodeType extends AudioWorkletNode {
+  freq0?: AudioParam;
+  freq1?: AudioParam;
+  cutoff?: AudioParam;
+  parameters: Map<string, AudioParam>;
+}
+
+interface PluckNodeType extends AudioWorkletNode {
+  frequency?: AudioParam;
+  cutoff?: AudioParam;
+  parameters: Map<string, AudioParam>;
+}
+
+interface SarangiNodeType extends AudioWorkletNode {
+  freq?: AudioParam;
+  bowGain?: AudioParam;
+  gain?: AudioParam;
+  parameters: Map<string, AudioParam>;
+}
+
+interface CaptureNodeType extends AudioWorkletNode {
+  bufferSize?: AudioParam;
+  active?: AudioParam;
+  cancel?: AudioParam;
+  parameters: Map<string, AudioParam>;
+}
+
+interface KlattNodeType extends AudioWorkletNode {
+  extGain?: AudioParam;
+  f0?: AudioParam;
+  f1?: AudioParam;
+  f2?: AudioParam;
+  f3?: AudioParam;
+  f4?: AudioParam;
+  f5?: AudioParam;
+  f6?: AudioParam;
+  b1?: AudioParam;
+  b2?: AudioParam;
+  b3?: AudioParam;
+  b4?: AudioParam;
+  b5?: AudioParam;
+  b6?: AudioParam;
+  db1?: AudioParam;
+  db2?: AudioParam;
+  db3?: AudioParam;
+  db4?: AudioParam;
+  db5?: AudioParam;
+  db6?: AudioParam;
+  flutterLevel?: AudioParam;
+  openPhaseRatio?: AudioParam;
+  breathinessDb?: AudioParam;
+  tiltDb?: AudioParam;
+  gainDb?: AudioParam;
+  agcRmsLevel?: AudioParam;
+  cascadeEnabled?: AudioParam;
+  cascadeVoicingDb?: AudioParam;
+  cascadeAspirationDb?: AudioParam;
+  cascadeAspirationMod?: AudioParam;
+  nasalFormantFreq?: AudioParam;
+  nasalFormantFreqToggle?: AudioParam;
+  nasalFormantBw?: AudioParam;
+  nasalFormantBwToggle?: AudioParam;
+  nasalAntiformantFreq?: AudioParam;
+  nasalAntiformantFreqToggle?: AudioParam;
+  nasalAntiformantBw?: AudioParam;
+  nasalAntiformantBwToggle?: AudioParam;
+  parallelEnabled?: AudioParam;
+  parallelVoicingDb?: AudioParam;
+  parallelAspirationDb?: AudioParam;
+  parallelAspirationMod?: AudioParam;
+  fricationDb?: AudioParam;
+  fricationMod?: AudioParam;
+  parallelBypassDb?: AudioParam;
+  nasalFormantDb?: AudioParam;
+  parameters: Map<string, AudioParam>;
+}
+
+
+type ParamName = (
+  'frequency' | 
+  'cutoff' | 
+  'dampen' | 
+  'outGain' | 
+  'intSitarGain' |
+  'extSitarGain' |
+  'intChikariGain' |
+  'extChikariGain' |
+  'intSarangiGain' | // this basically just turns from 0 to 1 when 'play trajs'
+  // is started. Doesn't get controlled granularly. This is so that there is 
+  // a line that can be tapped by "capture" node, for loopign playback.
+  'extSarangiGain' | // this is controlled by user controlled slider
+  'dynamicSarangiGain' // dynamic is controlled by automation controls
+)
+
+
+type SynthControl = SitarSynthControl | SarangiSynthControl | KlattSynthControl;
+
+type SitarSynthControl = {
+  inst: Instrument.Sitar,
+  idx: number,
+  params: {
+    dampen: number,
+    outGain: number,
+    extSitarGain: number,
+    extChikariGain: number,
+    chikariFreq0: number,
+    chikariFreq1: number,
+  }
+}
+
+type SarangiSynthControl = {
+  inst: Instrument.Sarangi,
+  idx: number,
+  params: {
+    extSarangiGain: number
+  }
+}
+
+type KlattSynthControl = {
+  inst: Instrument.Vocal_M | Instrument.Vocal_F,
+  idx: number,
+  params: {
+    extGain: number
+  }
+}
+
+type SynthType = SitarSynthType | SarangiSynthType | KlattSynthType;
+
+type SitarSynthType = {
+  sitarNode: PluckNodeType,
+  chikariNode: ChikariNodeType,
+  sDCOffsetNode: BiquadFilterNode,
+  lpNode: BiquadFilterNode,
+  outGainNode: GainNode,
+  intSitarGainNode: GainNode,
+  extSitarGainNode: GainNode,
+  intChikariGainNode: GainNode,
+  extChikariGainNode: GainNode,
+  idx: number,
+  sitarLoopSourceNode: LoopSourceNode,
+  chikariLoopSourceNode: LoopSourceNode,
+  capture: CaptureNodeType,
+  sitarLoopGainNode: GainNode,
+  chikariLoopGainNode: GainNode,
+  sonifyNode: GainNode,
+}
+
+type SarangiSynthType = {
+  sarangiNode: SarangiNodeType,
+  intGain: GainNode,
+  extGain: GainNode,
+  idx: number,
+  capture: CaptureNodeType,
+  sarangiLoopSourceNode: LoopSourceNode,
+  sarangiLoopGainNode: GainNode,
+  sonifyNode: GainNode,
+}
+
+type KlattSynthType = {
+  node: KlattNodeType,
+  envGain: GainNode,
+  intGain: GainNode,
+  extGain: GainNode,
+  idx: number,
+  capture: CaptureNodeType,
+  klattLoopSourceNode: LoopSourceNode,
+  klattLoopGainNode: GainNode,
+  sonifyNode: GainNode,
+}
+
+type BurstOption = {
+  when: number,
+  dur?: number,
+  to: AudioNode,
+  atk?: number,
+  amp?: number
+}
+
 export type { 
   CollectionType, 
   UserType, 
@@ -740,4 +1136,41 @@ export type {
   GetDisplayType,
   UserCheckType,
   MusicianNameType,
+  RenderCall,
+  MessageType,
+  ProcessMessage,
+  WorkerMessage,
+  MelographData,
+  SargamDisplayType,
+  VowelDisplayType,
+  ConsonantDisplayType,
+  InstrumentTrackType,
+  PhraseDivDisplayType,
+  TrajSelectionStatus,
+  ChikariDisplayType,
+  TrajRenderObj,
+  TrajTimePoint,
+  LabelEditorOptions,
+  TooltipData,
+  DisplaySettings,
+  BolDisplayType,
+  LoopSourceNode,
+  ChikariNodeType,
+  PluckNodeType,
+  SarangiNodeType,
+  CaptureNodeType,
+  KlattNodeType,
+  ParamName,
+  SynthControl,
+  SitarSynthControl,
+  SarangiSynthControl,
+  KlattSynthControl,
+  SynthType,
+  SitarSynthType,
+  SarangiSynthType,
+  KlattSynthType,
+  BurstOption,
+  BoolObj,
+  RuleSetType,
 };
+

@@ -2,7 +2,7 @@
   <div class='outerSecLabel'>
     <div class='topRow'>
       <label>
-      {{`Section ${sNum}`  }}
+      {{`Section ${sNum + 1}`  }}
       </label>
     </div>
     <div class='middleRow'>
@@ -160,6 +160,10 @@ export default defineComponent({
     editable: {
       type: Boolean,
       required: true
+    },
+    editingInstIdx: {
+      type: Number,
+      required: true
     }
   },
 
@@ -221,32 +225,32 @@ export default defineComponent({
       this.compositionType = undefined,
       this.section_tempo = undefined,
       this.section.categorization = initSecCategorization();
-      this.piece.sectionCategorization[this.sNum] = initSecCategorization();
+      this.piece.sectionCatGrid[this.editingInstIdx][this.sNum] = initSecCategorization();
 
       if (this.topLevel === 'Pre-Chiz Alap') {
         const cat = this.section.categorization;
-        const altCat = this.piece.sectionCategorization[this.sNum];
+        const altCat = this.piece.sectionCatGrid[this.editingInstIdx][this.sNum];
         cat['Pre-Chiz Alap']['Pre-Chiz Alap'] = true;
         altCat['Pre-Chiz Alap']['Pre-Chiz Alap'] = true;
       } else if (this.topLevel === 'Improvisation') {
         const cat = this.section.categorization;
-        const altCat = this.piece.sectionCategorization[this.sNum];
+        const altCat = this.piece.sectionCatGrid[this.editingInstIdx][this.sNum];
         cat['Improvisation']['Improvisation'] = true;
         altCat['Improvisation']['Improvisation'] = true;
       } else if (this.topLevel === 'Other') {
         const cat = this.section.categorization;
-        const altCat = this.piece.sectionCategorization[this.sNum];
+        const altCat = this.piece.sectionCatGrid[this.editingInstIdx][this.sNum];
         cat['Other']['Other'] = true;
         altCat['Other']['Other'] = true;
       }
       this.section.categorization['Top Level'] = this.topLevel;
-      this.piece.sectionCategorization[this.sNum]['Top Level'] = this.topLevel;
+      this.piece.sectionCatGrid[this.editingInstIdx][this.sNum]['Top Level'] = this.topLevel;
       this.$emit('unsavedChanges');
     },
     updateCompositionType() {
       if (this.compositionType) {
         const cat = this.section.categorization;
-        const altCat = this.piece.sectionCategorization[this.sNum];
+        const altCat = this.piece.sectionCatGrid[this.editingInstIdx][this.sNum];
         const allKeys = Object.keys(cat['Composition Type']) as 
           CompositionType[];
         allKeys.forEach(key => cat['Composition Type'][key] = false);
@@ -258,7 +262,7 @@ export default defineComponent({
     updateSection_Tempo() {
       if (this.section_tempo) {
         const cat = this.section.categorization;
-        const altCat = this.piece.sectionCategorization[this.sNum];
+        const altCat = this.piece.sectionCatGrid[this.editingInstIdx][this.sNum];
         const allKeys = Object.keys(cat['Comp.-section/Tempo']) as 
           Section_TempoType[];
         allKeys.forEach(key => cat['Comp.-section/Tempo'][key] = false);
@@ -270,7 +274,7 @@ export default defineComponent({
     updateTala() {
       if (this.tala) {
         const cat = this.section.categorization;
-        const altCat = this.piece.sectionCategorization[this.sNum];
+        const altCat = this.piece.sectionCatGrid[this.editingInstIdx][this.sNum];
         const allKeys = Object.keys(cat['Tala']) as TalaType[];
         allKeys.forEach(key => cat['Tala'][key] = false);
         cat['Tala'][this.tala] = true;
@@ -281,7 +285,7 @@ export default defineComponent({
     updateAlapType() {
       if (this.alapType) {
         const cat = this.section.categorization;
-        const altCat = this.piece.sectionCategorization[this.sNum];
+        const altCat = this.piece.sectionCatGrid[this.editingInstIdx][this.sNum];
         const allKeys = Object.keys(cat['Alap']) as AlapType[];
         allKeys.forEach(key => cat['Alap'][key] = false);
         cat['Alap'][this.alapType] = true;

@@ -117,13 +117,21 @@
           </option>
         </select>
       </div>
-      <div class='formRow' v-if='instrumentation'>
+      <div class='formRow'>
+        <label>Number of Instruments</label>
+        <input type='number' v-model='instrumentationLength'/>
+      </div>
+      <div class='formRow tall' v-if='instrumentation'>
         <label>Instrumentation</label>
-        <select v-model='instrumentation[0]'>
-          <option v-for='inst in instruments' :key='inst'>
-            {{inst}}
-          </option>
-        </select>
+        <div class='selectCol'>
+          <div class='selectRow' v-for='(inst, i) in instrumentation' :key='i'>
+            <select v-model='instrumentation[i]'>
+              <option v-for='inst in instruments' :key='inst'>
+                {{inst}}
+              </option>
+            </select>
+          </div>
+        </div>
       </div>
       <div class='buttonRow'>
         <div class='buttonCol'>
@@ -237,7 +245,6 @@
   
 </template>
 <script lang='ts'>
-
 import { 
   getAllAEMetadata, 
   getRagaNames, 
@@ -249,15 +256,14 @@ import {
   getAllUsers
 } from '@/js/serverCalls.ts';
 import { defineComponent } from 'vue';
-
 import {
   PassedDataType,
   RecType, 
   UserType,
   AudioEventMetadataType,
-  RulesType
+  RulesType,
 } from '@/ts/types.ts'
-
+import { Instrument } from '@/ts/enums.ts'
 type NewPieceRegistrarDataType = {
   title?: string;
   transcriber?: string;
@@ -279,7 +285,7 @@ type NewPieceRegistrarDataType = {
   cloning: boolean;
   permissionTypes: string[];
   rulesTemplate: RulesType;
-  instrumentation: string[];
+  instrumentation: Instrument[];
   instruments?: string[];
   noAE: boolean;
   looseRecs: RecType[];
@@ -365,7 +371,7 @@ export default defineComponent({
           raised: false
         }
       },
-      instrumentation: ['Sitar'],
+      instrumentation: [Instrument.Sitar],
       instruments: undefined,
       noAE: false,
       looseRecs: [],
@@ -399,6 +405,20 @@ export default defineComponent({
         return true
       } else {
         return false
+      }
+    },
+    instrumentationLength: {
+      get() {
+        return this.instrumentation.length
+      },
+      set(newVal: number) {
+        if (newVal > this.instrumentation.length) {
+          for (let i = this.instrumentation.length; i < newVal; i++) {
+            this.instrumentation.push(Instrument.Sitar)
+          }
+        } else if (newVal < this.instrumentation.length) {
+          this.instrumentation = this.instrumentation.slice(0, newVal)
+        }
       }
     }
   },
@@ -627,9 +647,9 @@ export default defineComponent({
         }
         let newPieceInfo;
         if (this.noAE) {
-          if (this.recording === undefined) {
-            throw new Error('recording is undefined')
-          }
+          // if (this.recording === undefined) {
+          //   throw new Error('recording is undefined')
+          // }
           newPieceInfo = {
             title: this.title,
             transcriber: this.passedInData.transcriber,
@@ -641,7 +661,8 @@ export default defineComponent({
             soloist: this.passedInData.soloist,
             soloInstrument: this.passedInData.soloInstrument,
             instrumentation: this.instrumentation,
-            audioID: (this.recording as RecType)._id,
+            audioID: this.recording ? (this.recording as RecType)._id: undefined,
+            fundamental: this.passedInData.raga.fundamental,
           };
           
         } else {
@@ -658,6 +679,7 @@ export default defineComponent({
             instrumentation: this.instrumentation,
             soloist: this.passedInData.soloist,
             soloInstrument: this.passedInData.soloInstrument,
+            fundamental: this.passedInData.raga.fundamental,
           };
         }
         
@@ -677,12 +699,14 @@ export default defineComponent({
             }
             clone: boolean,
             audioID?: string,
-            instrumentation: string[],
+            instrumentation: Instrument[],
             soloist?: string,
             soloInstrument?: string,
+            fundamental?: number
           };
         if (this.noAE) {
           if (this.noRec) {
+            const fundamental = 246;
             newPieceInfo = {
               title: this.title,
               transcriber: this.transcriber,
@@ -692,12 +716,14 @@ export default defineComponent({
               clone: false,
               instrumentation: this.instrumentation,
               soloist: undefined,
-              soloInstrument: undefined
+              soloInstrument: undefined,
+              fundamental: fundamental
             }
           } else {
-            const soloist = this.getSoloist(this.recording as RecType);
+            const rec = this.recording as RecType;
+            const soloist = this.getSoloist(rec);
             const soloInstrument = soloist ? 
-              (this.recording as RecType).musicians[soloist].instrument : 
+              rec.musicians[soloist].instrument : 
               undefined;
             newPieceInfo = {
               title: this.title,
@@ -707,9 +733,10 @@ export default defineComponent({
               explicitPermissions: this.explicitPermissions,
               clone: false,
               instrumentation: this.instrumentation,
-              audioID: (this.recording as RecType)._id,
+              audioID: rec._id,
               soloist: soloist,
-              soloInstrument: soloInstrument
+              soloInstrument: soloInstrument,
+              fundamental: 2 * rec.saEstimate * 2 ** rec.octOffset
             }
           }
         } else {
@@ -727,19 +754,18 @@ export default defineComponent({
             clone: false,
             instrumentation: this.instrumentation,
             soloist: soloist,
-            soloInstrument: soloInstrument
+            soloInstrument: soloInstrument,
           };
           if (this.aeIdx !== undefined && this.recording !== undefined) {
-            const ae = this.allEvents[this.aeIdx];
-            const recNum = this.recording as number;
-            newPieceInfo.audioID = ae.recordings[recNum].audioFileId;
+            newPieceInfo.audioID = rec.audioFileId;
+            newPieceInfo.fundamental = 2 * rec.saEstimate * 2 ** rec.octOffset
           }
         }
         this.$emit('newPieceInfoEmit', newPieceInfo)
       }
     },
 
-    getInstrumentation() {
+    getInstrumentation(): Instrument[] {
       let rec: RecType;
       if (!this.noAE) {
         const recNum = Number(this.recording);
@@ -748,10 +774,10 @@ export default defineComponent({
         rec = this.recording as RecType;
       }
       const musicians = Object.keys(rec.musicians);
-      const instrumentation: string[] = [];
+      const instrumentation: Instrument[] = [];
       musicians.forEach(m => {
         if (rec.musicians[m].role === 'Soloist') {
-          instrumentation.push(rec.musicians[m].instrument!)
+          instrumentation.push(rec.musicians[m].instrument! as Instrument)
         }
       })
       return instrumentation
