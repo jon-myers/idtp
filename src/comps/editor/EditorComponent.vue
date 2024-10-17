@@ -1825,7 +1825,8 @@ export default defineComponent({
     },
 
     toggleInstructions() {
-      this.showInstructions = !this.showInstructions;
+      const routeData = this.$router.resolve({ name: 'Editor Instructions' });
+      window.open(routeData.href, '_blank');
     },
 
     extendDurTot(dur=10) {
