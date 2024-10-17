@@ -1,7 +1,7 @@
 <template>
   <div class='outerBox'>
     <div class='hierarchyPicker'>
-      <label>Track {{ `Track ${editingInstIdx + 1}: ${piece.instrumentation[editingInstIdx]}`}}</label>
+      <label>{{ `Track ${editingInstIdx + 1}: ${piece.instrumentation[editingInstIdx]}`}}</label>
       <label>
         <input type='radio' value='Section' v-model='selectedHierarchy'/>
         Section
