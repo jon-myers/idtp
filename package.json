@@ -63,6 +63,7 @@
     "regenerator-runtime": "^0.13.11",
     "rubberband-web": "^0.2.1",
     "soundtouchjs": "^0.1.30",
+    "static-module": "^3.0.4",
     "stream-browserify": "^3.0.0",
     "uuid": "^9.0.0",
     "vue": "^3.4.38",
