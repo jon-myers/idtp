@@ -423,6 +423,8 @@ const getStarts = (durArray: number[]) => {
   return [0].concat(durArray.slice(0, durArray.length - 1)).map(cumsum)
 }
 
+
+
 import { 
   select as d3Select, 
   selectAll as d3SelectAll,
@@ -452,6 +454,7 @@ import {
 } from 'd3';
 
 import { useTitle } from '@vueuse/core';
+import { useRoute, useRouter } from 'vue-router';
 
 const  findClosestStartTime = (startTimes: number[], timepoint: number) => {
   let closestIndex = -1;
@@ -863,6 +866,11 @@ export default defineComponent({
       throttledRenderMeter: undefined,
     }
   },
+  setup() {
+    const route = useRoute();
+    const router = useRouter();
+    return { route, router }
+  },
   components: {
     EditorAudioPlayer,
     TrajSelectPanel,
@@ -883,15 +891,15 @@ export default defineComponent({
     this.editorHeight = window.innerHeight - offset  ;
     if (this.$store.state.userID === undefined) {
       if (this.$cookies.get('userID') === undefined) {
-        if (this.$route.query) {
-          this.$store.commit('update_query', this.$route.query)
+        if (this.route.query) {
+          this.$store.commit('update_query', this.route.query)
         }
-        this.$router.push('/')
+        this.router.push('/')
       }
     }
   },
 
-  beforeRouteLeave(to, from) {
+  beforeRouteLeave() {
     if (this.unsavedChanges) {
       const txt = 'You have unsaved changes. Are you sure you want to leave ' +
                   'the transcription editor?'
@@ -922,14 +930,14 @@ export default defineComponent({
       // push the id to router. 
       
       let piece, pieceDoesExist;
-      const queryId = this.$route.query.id! as string;
+      const queryId = this.route.query.id! as string;
       if (queryId) {
         pieceDoesExist = await pieceExists(queryId);
         if (pieceDoesExist) {
           piece = await getPiece(queryId);
 
         } else {
-          await this.$router.push({ name: 'Files' });
+          await this.router.push({ name: 'Files' });
           throw 'IDTP logger: Piece does not exist, or you do not have \
           permission to view.'
         }
@@ -937,7 +945,7 @@ export default defineComponent({
         const storedId = this.$store.state._id;
         pieceDoesExist = await pieceExists(storedId);
         const id = pieceDoesExist ? storedId : '63445d13dc8b9023a09747a6';
-        this.$router.push({ 
+        this.router.push({ 
           name: 'EditorComponent',
           query: { 'id': id }
         })
@@ -969,7 +977,7 @@ export default defineComponent({
 
       this.editable = this.permissionToEdit(this.piece); // necessary
       if (!this.permissionToView(this.piece)) {
-        await this.$router.push({ name: 'Files' });
+        await this.router.push({ name: 'Files' });
           throw 'IDTP logger: Piece does not exist, or you do not have \
           permission to view.'
       }
@@ -996,10 +1004,10 @@ export default defineComponent({
         })
       });
 
-      const q = this.$route.query;
+      const q = this.route.query;
       if (q.pIdx) {
       } else {
-        this.$router.push({ query: { id: q.id} });
+        this.router.push({ query: { id: q.id} });
       }
       const silentDur = this.durTot - piece.durTot!;
       if (silentDur >= 0.00001) {
@@ -1825,7 +1833,7 @@ export default defineComponent({
     },
 
     toggleInstructions() {
-      const routeData = this.$router.resolve({ name: 'Editor Instructions' });
+      const routeData = this.router.resolve({ name: 'Editor Instructions' });
       window.open(routeData.href, '_blank');
     },
 

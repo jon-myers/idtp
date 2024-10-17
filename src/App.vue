@@ -8,6 +8,8 @@
 <script lang='ts'>
 import { defineComponent } from 'vue';
 import NavBar from '@/comps/NavBar.vue';
+import { useRoute } from 'vue-router';
+
 type AppDataType = {
   navHeight: number,
 }
@@ -17,25 +19,22 @@ export default defineComponent({
   components: {
     NavBar
   },
+  setup() {
+    const route = useRoute();
+    return { route }
+  },
   data(): AppDataType {
     return {
       navHeight: 40,
     }
   },
-
-  // mounted() {
-  //   this.path = this.$route.path;
-  // },
-
   computed: {
     path() {
-      return this.$route.path;
+      return this.route.path;
     }
   },
-  
 })
 </script>
-
 <style>
 
 body {

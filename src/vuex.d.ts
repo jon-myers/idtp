@@ -1,4 +1,5 @@
 import { Store } from 'vuex'
+import { VueCookies } from 'vue-cookies'
 
 declare module '@vue/runtime-core' {
   // declare your own store states
@@ -15,6 +16,7 @@ declare module '@vue/runtime-core' {
 
   // provide typings for `this.$store`
   interface ComponentCustomProperties {
-    $store: Store<State>
+    $store: Store<State>,
+    $cookies: VueCookies;
   }
 }

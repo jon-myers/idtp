@@ -1,6 +1,7 @@
-import { createWebHistory, createRouter } from 'vue-router';
-import {store, VueCookies } from '@/main.ts'
-const routes = [
+import { createWebHistory, createRouter, RouteRecordRaw } from 'vue-router';
+// import {store, VueCookies } from '@/main.ts'
+import { VueCookies } from 'vue-cookies'
+const routes: Array<RouteRecordRaw> = [
   {
     path: '/transcriptions',
     name: 'Transcriptions',
@@ -64,7 +65,9 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const userID = window.$cookies.get('userID')
   if (
-    to.name !== 'LandingPage' && to.name !== 'LogIn' && userID === 'undefined'
+    to.name !== 'LandingPage' && 
+    to.name !== 'LogIn' && 
+    (userID === 'undefined' || userID === null || userID === undefined)
   ) {
     console.log('redirecting to login')
       next({ name: 'LogIn' })
