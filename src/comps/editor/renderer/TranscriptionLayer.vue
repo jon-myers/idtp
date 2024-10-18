@@ -3587,6 +3587,7 @@ export default defineComponent({
         return saFilter(s) || paFilter(idx) ? 2 : 1
       }
       const sargamLinesG = svg.select('.sargamLinesG');
+      sargamLinesG.selectAll('.sargamLine').remove();
       logSargamVals.value.forEach((s, idx) => {
         sargamLinesG.append('line')
           .classed('sargamLine', true)
@@ -5093,6 +5094,7 @@ export default defineComponent({
       autoWindowWidth,
       isBlock,
       curPlayheadPxl,
+      refreshSargamLines
     }
   }
 })
