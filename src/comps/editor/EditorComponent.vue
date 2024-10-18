@@ -563,43 +563,13 @@ type EditorDataType = {
   contextMenuY: number,
   contextMenuClosed: boolean,
   contextMenuChoices: ContextMenuOptionType[],
-  selBoxStartX?: number,
-  selBoxStartY?: number,
   fullWidth: number,
   initLogFreq?: number,
   uniformVowel: boolean,
-  tx?: () => ZoomTransform,
-  ty?: () => ZoomTransform,
   x?: d3.ScaleLinear<number, number>,
   y?: d3.ScaleLinear<number, number>,
-  codifiedXR?: d3.ScaleLinear<number, number>,
-  codifiedYR?: d3.ScaleLinear<number, number>,
   requestId?: number,
-  // stretchedAnimationStart?: number,
-  gx: d3.Selection<SVGGElement, undefined, any, any>,
-  gy: d3.Selection<SVGGElement, undefined, any, any>,
-  zoomX?: d3.ZoomBehavior<Element, unknown>,
-  zoomY?: d3.ZoomBehavior<Element, unknown>,
-  // animationStart: number,
-  visPitches: Pitch[],
-  svg: Selection<SVGSVGElement, undefined, null, undefined>,
-  z?: ZoomTransform,
-  defs: Selection<SVGDefsElement, undefined, null, undefined>,
-  phraseG: Selection<SVGGElement, undefined, null, undefined>,
   selectedTrajID?: string,
-  codifiedXOffset: number,
-  codifiedYOffset: number,
-  codifiedXScale: number,
-  codifiedYScale: number,
-  visibleSargam: number[],
-  yAxis?: (
-    g: Selection<SVGGElement, any, HTMLElement, any>,
-    scale: d3.ScaleLinear<number, number>
-    ) => Selection<SVGGElement, any, HTMLElement, any>,
-  xAxis?: (
-    g: Selection<SVGGElement, any, HTMLElement, any>,
-    scale: d3.ScaleLinear<number, number>
-    ) => Selection<SVGGElement, any, HTMLElement, any>,
   selectedPhraseDivIdx?: number,
   clipG: Selection<SVGGElement, undefined, null, undefined>,
   scrollXWidth: number,
@@ -642,8 +612,6 @@ type EditorDataType = {
   autoWindowY: number,
   autoTrajs: Trajectory[],
   autoWindowWidth: number,
-  sarangi: boolean,
-  sitar: boolean,
   d3ZoomEvent?: D3ZoomEvent<Element, unknown>,
   maxMetricLayer: number,
   visibilityTab: boolean,
@@ -684,6 +652,7 @@ type EditorDataType = {
   highlightTrajs: boolean,
   playheadAnimation: PlayheadAnimations,
   throttledRenderMeter: ReturnType<typeof throttle> | undefined,
+  throttledRefreshSargamLines: ReturnType<typeof throttle> | undefined,
 }
 
 export { findClosestStartTime }
@@ -759,31 +728,12 @@ export default defineComponent({
       contextMenuY: 0,
       contextMenuClosed: true,
       contextMenuChoices: [],
-      selBoxStartX: undefined,
-      selBoxStartY: undefined,
       fullWidth: 0,
       initLogFreq: undefined,
       uniformVowel: false,
       x: undefined,
       y: undefined,
       requestId: undefined,
-      tx: undefined,
-      ty: undefined,
-      // animationStart: 0,
-      visPitches: [],
-      svg: d3Create('svg'),
-      z: undefined,
-      defs: d3Create('defs'),
-      phraseG: d3Create('g'),
-      gx: d3Create('g'),
-      gy: d3Create('g'),
-      codifiedXOffset: 0,
-      codifiedYOffset: 0,
-      codifiedXScale: 1,
-      codifiedYScale: 1,
-      visibleSargam: [],
-      yAxis: undefined,
-      xAxis: undefined,
       clipG: d3Create('g'),
       scrollXWidth: 0,
       initXOffset: 0,
@@ -822,8 +772,6 @@ export default defineComponent({
       autoWindowY: 500,
       autoTrajs: [],
       autoWindowWidth: 300,
-      sarangi: false,
-      sitar: false,
       d3ZoomEvent: undefined,
       maxMetricLayer: 3,
       visibilityTab: false,
@@ -864,6 +812,7 @@ export default defineComponent({
       highlightTrajs: false,
       playheadAnimation: PlayheadAnimations.Block,
       throttledRenderMeter: undefined,
+      throttledRefreshSargamLines: undefined,
     }
   },
   setup() {
@@ -880,9 +829,7 @@ export default defineComponent({
     Tooltip
   },
   created() {
-    // this.throttledRedraw = throttle(this.redraw.bind(this), this.transitionTime);
     window.addEventListener('keydown', this.handleKeydown);
-    // window.addEventListener('keyup', this.handleKeyup);
     let offset = this.navHeight + this.playerHeight + this.controlsHeight + 1;
     if (window.innerHeight < 800) {
       offset = this.navHeight + this.playerHeight + 1;
@@ -921,6 +868,7 @@ export default defineComponent({
     this.throttledAlterSlope = throttle(this.alterSlope, 16);
     this.throttledAlterVibObj = throttle(this.alterVibObj, 16);
     this.throttledRenderMeter = throttle(this.renderMeter, 100);
+    this.throttledRefreshSargamLines = throttle(this.refreshSargamLines, 100);
 
     try {
       // if there's a query id, 1. check if exists, 2. if so, load it, else:
@@ -967,10 +915,6 @@ export default defineComponent({
         this.durTot = piece.durTot!;
       }
       this.initXScale = this.durTot / this.initViewDur;
-      // let fund = 246;
-      // if (this.audioDBDoc && this.audioDBDoc.saEstimate) {
-      //   fund = 2 * this.audioDBDoc.saEstimate * 2 ** this.audioDBDoc.octOffset;
-      // }
       await this.getPieceFromJson(piece);
       useTitle(this.piece.title);
 
@@ -982,10 +926,6 @@ export default defineComponent({
           permission to view.'
       }
       this.oldHeight = window.innerHeight;
-      const vox = ['Vocal (M)', 'Vocal (F)'];
-      this.sitar = this.piece.instrumentation[0] === 'Sitar';
-      this.sarangi = this.piece.instrumentation[0] === 'Sarangi';
-      const leftTime = this.leftTime;
       const ap = this.$refs.audioPlayer as APType;
       ap.parentLoaded();
       const colors = ['#204580', '#802030', '#532080', '#428020'];
@@ -2306,15 +2246,8 @@ export default defineComponent({
         scalingParam?: number, 
         yProp?: number,
         ) {
-      // this.removeEditor();
-      this.visibleSargam = this.piece.raga.getFrequencies({
-        low: this.freqMin,
-        high: this.freqMax
-      })
-      this.visPitches = this.piece.raga.getPitches({
-        low: this.freqMin,
-        high: this.freqMax
-      })
+
+
 
     },
 
@@ -2443,14 +2376,15 @@ export default defineComponent({
     },
 
     updateSargamLines() {
-      this.visibleSargam = this.piece.raga.getFrequencies({
-        low: this.freqMin,
-        high: this.freqMax
-      })
-      this.visPitches = this.piece.raga.getPitches({
-        low: this.freqMin,
-        high: this.freqMax
-      })
+      this.throttledRefreshSargamLines!();
+    },
+
+    refreshSargamLines() {
+      const r = this.$refs.renderer as RendererType;
+      const tLayer = r.transcriptionLayer as TLayerType;
+      tLayer.refreshSargamLines();
+      const yAxis = r.yAxis as YAxisType;
+      yAxis.resetAxis();
     },
 
     resetAudio(e: MouseEvent) {
@@ -2606,36 +2540,6 @@ export default defineComponent({
   background-color: white;
   display: flex;
   flex-direction: row;
-}
-
-.leftNotch {
-  width: v-bind(yAxWidth - 0.5 + 'px');
-  min-width: v-bind(yAxWidth - 0.5 + 'px');
-  border-right: 1px solid black;
-  background-color: grey;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-evenly;
-}
-
-.leftNotchZoomer {
-  width: v-bind((yAxWidth - 1.5)/2 + 'px');
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background-color: v-bind(scrollDragColor);
-}
-
-.leftNotchZoomer.left {
-  border-right: 1px solid black;
-}
-
-.leftNotchZoomer:hover {
-  background-color: v-bind(scrollDragColorHover);
-  cursor: pointer;
 }
 
 .scrollX {
@@ -2824,9 +2728,6 @@ input[type='checkbox'] {
   line-height: 1.2;
 }
 
-svg {
-  touch-action: pan-y pan-x pinch-zoom;
-}
 
 .lineBreak {
   border-top: 1px solid black;
