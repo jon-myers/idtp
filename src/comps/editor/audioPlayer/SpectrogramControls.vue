@@ -483,7 +483,7 @@ export default defineComponent({
               type: 'crop',
               logMin: logSaFreq.value - lowOctOffset.value,
               logMax: logSaFreq.value + highOctOffset.value,
-              newVerbose: true
+              newVerbose: true,
             };
             spectrogramWorker!.postMessage({
               msg: 'process',
@@ -527,7 +527,7 @@ export default defineComponent({
     })
     const minPitchOptions = computed(() => {
       const pitches = props.raga.getPitches({
-        low: 75, // in the spec data generation, this is the min freq
+        low: 40, // in the spec data generation, this is the min freq
         high: saFreq.value
       }).reverse();
       return pitches;
@@ -616,19 +616,22 @@ export default defineComponent({
     let spectrogramWorker: Worker | undefined = undefined;
     if (props.audioID !== undefined && props.saFreq !== undefined) {
       spectrogramWorker = getWorker();
+    }
+    const sendInitWorkerMsg = () => {
       const logSa = Math.log2(props.saFreq);
       const low = logSa - lowOctOffset.value;
       const high = logSa + highOctOffset.value;
-  
       const processOptions = {
         type: 'initial',
         logMin: low,
         logMax: high,
         newScaledShape: [props.scaledHeight, props.scaledWidth],
         audioID: props.audioID,
-        newVerbose: false
+        newVerbose: false,
+        newPower: intensityPower.value,
+        newCMap: cMapName.value
       }
-  
+      if (spectrogramWorker === undefined) return;
       spectrogramWorker.postMessage({
         msg: 'process',
         payload: processOptions
@@ -843,6 +846,7 @@ export default defineComponent({
           return setting.uniqueId === defaultID
         }) || defaultSetting;
         loadSetting();
+        sendInitWorkerMsg();
       } catch (e) {
         console.error(e);
       }

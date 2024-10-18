@@ -56,9 +56,10 @@ const crop = (logMin: number, logMax: number) => {
   let yMax = (logMax - initLogMin) / (initLogMax - initLogMin) * initHeight;
   yMin = Math.floor(yMin);
   yMax = Math.ceil(yMax);
+
   const newHeight = yMax - yMin;
   croppedData = initData
-    .lo(initHeight - yMax, logMax)
+    .lo(initHeight - yMax, 0)
     .hi(newHeight, initData.shape[1]);
   // set max val
   maxVal = ops.sup(croppedData);
@@ -66,7 +67,8 @@ const crop = (logMin: number, logMax: number) => {
     const dur = performance.now() - now!;
     self.postMessage(`crop time: ${(dur / 1000).toFixed()}`);
   }
-  scale();
+  // test if we just need to add a little time here
+    scale();
 };
 const scale = () => {
   if (scaledShape === undefined) {
@@ -95,23 +97,26 @@ const scale = () => {
       const x2 = Math.min(Math.ceil(x), oldWidth - 1);
       const a = y - y1;
       const b = x - x1;
-      let val = (1 - a) * (1 - b) * croppedData.get(y1, x1) +
-        (1 - a) * b * croppedData.get(y1, x2) +
-        a * (1 - b) * croppedData.get(y2, x1) +
-        a * b * croppedData.get(y2, x2);
-      // round val
+      let y1x1 = croppedData.get(y1, x1);
+      let y1x2 = croppedData.get(y1, x2);
+      let y2x1 = croppedData.get(y2, x1);
+      let y2x2 = croppedData.get(y2, x2);
+      if (y1x1 === undefined) y1x1 = 0;
+      if (y1x2 === undefined) y1x2 = 0;
+      if (y2x1 === undefined) y2x1 = 0;
+      if (y2x2 === undefined) y2x2 = 0;
+      let val = (1 - a) * (1 - b) * y1x1 +
+        (1 - a) * b * y1x2 +
+        a * (1 - b) * y2x1 +
+        a * b * y2x2;
       val = Math.round(val);
-      
       if (Number.isNaN(val)) {
-        // breakpoint
+        console.log(x, y, x1, x2, y1, y2);
+        debugger;
         trigger = true;
-        // console.log('nan', i, j);
-        // console.log(Math.ceil(x), oldWidth - 1)
       }
       try {
-        // console.log(`Attempting to set value at [${i}, ${j}] with val=${val}`);
         scaledData.set(i, j, val);
-        // console.log(`Successfully set value at [${i}, ${j}] with val=${val}`);
       } catch (err) {
         console.log('Error details:', {
           i,
@@ -126,6 +131,7 @@ const scale = () => {
     }
   }
   if (trigger) {
+    console.log(croppedData.shape)
     throw new Error('NaN value found');
   }
   const emptyImgData = new Uint8ClampedArray(newWidth * newHeight * 4);
@@ -204,11 +210,6 @@ const colorize = () => {
   for (let i = 0; i < imgDataHeight; i++) {
     for (let j = 0; j < imgDataWidth; j++) {
       const dataVal = intensifiedData.get(i, j);
-      if (Number.isNaN(dataVal)) {
-        console.log(imgDataHeight, imgDataWidth);
-        console.log('nan', i, j);
-
-      }
       const colorObj = lut[dataVal];
       const idx = (i * imgDataWidth + j) * 4;
       imgDataData[idx] = colorObj.r;
@@ -312,14 +313,13 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
       if (extData === undefined || extDataShape === undefined) {
         throw new Error('Data and shape must be provided');
       }
-      initData = ndarray(extData, extDataShape);
+      const altArr = new Float32Array(extData);
+      initData = ndarray(altArr, extDataShape);
       scaledShape = newScaledShape;
       crop(logMin, logMax);
     } else {
       self.postMessage('updateObserver');
       if (type === 'crop') {
-        
-
         if (logMin === undefined || logMax === undefined) {
           throw new Error('Log min and max must be provided');
         }

@@ -11,9 +11,11 @@ audioRecordings = client['swara']['audioRecordings']
 projection = { '_id': 1 }
 result = audioRecordings.find({ }, projection)
 for recording in result:
-    print('doing recording ' + str(recording['_id']))
-    file_path = './audio/wav/' + str(recording['_id']) + '.wav'
-    out_dir = './spec_data/' + str(recording['_id'])
-    if not os.path.exists(out_dir):
-        os.mkdir(out_dir)
-    make_spec_data(file_path, './spec_data/' + str(recording['_id']))
+      print('doing recording ' + str(recording['_id']))
+      file_path = './audio/wav/' + str(recording['_id']) + '.wav'
+      out_dir = './spec_data/' + str(recording['_id'])
+      if not os.path.exists(out_dir):
+          os.mkdir(out_dir)
+      make_spec_data(file_path, './spec_data/' + str(recording['_id']))
+      
+      

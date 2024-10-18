@@ -1748,8 +1748,10 @@ export default defineComponent({
         this.sourceNode.stop(this.now());
         this.sourceNode = null;
       }
-      const s = this.$refs.synths as InstanceType<typeof Synths>;
-      s.stopRecordingSynths();
+      if (this.loop) {
+        const s = this.$refs.synths as InstanceType<typeof Synths>;
+        s.stopRecordingSynths();
+      }
       this.pausedAt = 0;
       this.startedAt = 0;
       this.playing = false;

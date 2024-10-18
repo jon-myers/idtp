@@ -2421,6 +2421,10 @@ class Piece {
     })
     if (sectionCatGrid !== undefined) {
       this.sectionCatGrid = sectionCatGrid;
+      if (this.sectionCatGrid.length === 0) {
+        const ss = this.sectionStartsGrid[0];
+        this.sectionCatGrid.push(ss.map(() => initSecCategorization()));
+      }
       for (let i = 1; i < instrumentation.length; i++) {
         const ss = this.sectionStartsGrid[i];
         this.sectionCatGrid.push(ss.map(() => initSecCategorization()))
@@ -2439,6 +2443,9 @@ class Piece {
         return ss.map(() => initSecCategorization())
       })
     }
+    const err = new Error();
+    // get a call trace here?
+
 
 
 
@@ -2494,6 +2501,9 @@ class Piece {
     }
 
     this.sectionStartsGrid.forEach((ss, ssIdx) => {
+      if (this.sectionCatGrid[ssIdx] === undefined) {
+        debugger;
+      }
       if (ss.length > this.sectionCatGrid[ssIdx].length) {
         const dif = ss.length - this.sectionCatGrid[ssIdx].length;
         for (let i = 0; i < dif; i++) {
