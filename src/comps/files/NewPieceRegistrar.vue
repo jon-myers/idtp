@@ -296,6 +296,7 @@ type NewPieceRegistrarDataType = {
   aeDisabled: boolean;
   recDisabled: boolean;
 }
+import cloneDeep from 'lodash/cloneDeep';
 
 export default defineComponent({
   name: 'NewPieceRegistrar',
@@ -440,7 +441,7 @@ export default defineComponent({
         else if (a.given_name > b.given_name) return 1;
         else return 0
       })
-      this.rules = this.rulesTemplate;
+      this.rules = cloneDeep(this.rulesTemplate);
       if (this.dataObj) { // this is exclusively for cloning
         this.clonePiece()
       }
@@ -530,7 +531,7 @@ export default defineComponent({
           this.savedMsg = 'Saved: ' + date.toLocaleString();
           this.ragaExists = true;
         } else {
-          this.rules = this.rulesTemplate;
+          this.rules = cloneDeep(this.rulesTemplate);
           this.savedMsg = 'unsaved';
           this.ragaExists = false;
         }

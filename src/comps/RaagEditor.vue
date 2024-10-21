@@ -112,6 +112,7 @@
  
 import { getRagaNames, getRaagRule, saveRaagRules } from '@/js/serverCalls.ts';
 import { RuleProfileType } from '@/ts/types.ts';
+import cloneDeep from 'lodash/cloneDeep';
 
 
 type RaagEditorDataType = {
@@ -198,6 +199,7 @@ export default {
   
   watch: {
     async selectedRaag(newVal) {
+      console.log(newVal)
       try {
         const rules = await getRaagRule(newVal);
         if (rules.rules) {
@@ -205,7 +207,8 @@ export default {
           const date = new Date(rules.updatedDate);
           this.savedMsg = 'Saved: ' + date.toLocaleString();
         } else {
-          this.rules = this.rulesTemplate;
+          console.log('resetting rules')
+          this.rules = cloneDeep(this.rulesTemplate);
           this.savedMsg = 'unsaved'
         }
       } catch (err) {
