@@ -356,7 +356,6 @@ export default defineComponent({
     let everyOther = true;
     let looping = false;
     let smoothPositionX = 0;
-    let everyTenth = 0;
 
     const isBlock = computed(() => {
       return props.playheadAnimation === PlayheadAnimations.Block;
@@ -1050,6 +1049,38 @@ export default defineComponent({
       }
     }
 
+    const replaceSilenceWithConnection = (
+        silentTraj: Trajectory, 
+        track: number
+      ) => {
+      if (silentTraj.id !== 12) {
+        throw new Error('Trajectory is not silent');
+      }
+      const phrase = props.piece.phraseGrid[track][silentTraj.phraseIdx!];
+      if (silentTraj.num === 0 || silentTraj.num === phrase.trajectories.length - 1) {
+        throw new Error('Silent trajectory is at the beginning or end of phrase');
+      }
+      const prevTraj = phrase.trajectories[silentTraj.num! - 1];
+      const nextTraj = phrase.trajectories[silentTraj.num! + 1];
+      if (prevTraj.id === 12 || nextTraj.id === 12) {
+        throw new Error('Adjacent trajectory is silent');
+      }
+      const p1 = new Pitch(prevTraj.pitches[prevTraj.pitches.length - 1]);
+      const p2 = new Pitch(nextTraj.pitches[0]);
+      const newTrajId = p1.logFreq === p2.logFreq ? 0 : 1;
+      const newTraj = new Trajectory({
+        id: newTrajId,
+        pitches: [p1, p2],
+        durTot: silentTraj.durTot,
+        instrumentation: props.piece.instrumentation[track],
+      });
+      removeTraj(silentTraj)
+      phrase.trajectories[silentTraj.num!] = newTraj;
+      phrase.reset();
+      resetTrajRenderStatus()
+      renderTraj(newTraj);
+    }
+
     const startPlayingTransition = () => {
       movingPlayhead = true;
       playheadMusicStartTime = props.currentTime;
@@ -1162,22 +1193,7 @@ export default defineComponent({
         smoothPositionX = pxlX;
 
       } else {
-        // const startPxl = props.xScale(time);
-        // const endPxl = props.xScale(props.piece.durTot!);
-        // if (playheadAnimation) {
-        //   playheadAnimation.cancel();
-        // }
-        // playheadAnimation = playhead.value?.animate([
-        //   { transform: `translateX(${startPxl}px)` },
-        //   { transform: `translateX(${endPxl}px)` }
-        // ], {
-        //   duration: (props.piece.durTot! - time) * 1000,
-        //   easing: 'linear',
-        //   fill: 'forwards'
-        // });
-        // playheadAnimation!.onfinish = () => {
-        //   playheadAnimation = undefined;
-        // }
+        
         throw new Error('Playing transition not implemented');
       }
     }
@@ -2111,7 +2127,6 @@ export default defineComponent({
     }
 
     const deleteTrajs = (trajs: Trajectory[]) => {
-      console.log(trajs)
       const affectedPhrases: Phrase[] = [];
       trajs.forEach(traj => {
         removeTraj(traj);
@@ -2162,6 +2177,7 @@ export default defineComponent({
       })
       props.piece.durArrayFromPhrases();
       emit('unsavedChanges', true);
+      resetTrajRenderStatus()
     }
 
     const initializeTracks = () => {
@@ -2334,6 +2350,30 @@ export default defineComponent({
             text: 'Insert Fixed Pitch Right',
             action: () => {
               insertFixedTrajRight(traj, track);
+              contextMenuClosed.value = true;
+            },
+            enabled: true
+          })
+        };
+        if (canConnectToUpcomingTraj(traj, track)) {
+          contextMenuChoices.value.push({
+            text: 'Connect to next Traj',
+            action: () => {
+              const phrase = props.piece.phraseGrid[track][pIdx];
+              const silTraj = phrase.trajectories[tIdx + 1];
+              replaceSilenceWithConnection(silTraj, track);
+              contextMenuClosed.value = true;
+            },
+            enabled: true
+          })
+        };
+        if (canConnectToEarlierTraj(traj, track)) {
+          contextMenuChoices.value.push({
+            text: 'Connect to last Traj',
+            action: () => {
+              const phrase = props.piece.phraseGrid[track][pIdx];
+              const silTraj = phrase.trajectories[tIdx - 1];
+              replaceSilenceWithConnection(silTraj, track);
               contextMenuClosed.value = true;
             },
             enabled: true
@@ -2666,6 +2706,39 @@ export default defineComponent({
       refreshTraj(traj);
       emit('unsavedChanges', true);
     };
+
+    const canConnectToUpcomingTraj = (traj: Trajectory, track: number) => {
+      const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
+      if (traj.num! + 2 > phrase.trajectories.length) {
+        return false;
+      }
+      const nextTraj = phrase.trajectories[traj.num! + 1];
+      if (nextTraj.id !== 12) {
+        return false;
+      }
+      console.log(traj.num, phrase.trajectories.length)
+      const followingTraj = phrase.trajectories[traj.num! + 2];
+      if (followingTraj.id === 12) {
+        return false;
+      }
+      return true;
+    }
+
+    const canConnectToEarlierTraj = (traj: Trajectory, track: number) => {
+      const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
+      if (traj.num! < 2) {
+        return false;
+      }
+      const prevTraj = phrase.trajectories[traj.num! - 1];
+      if (prevTraj.id !== 12) {
+        return false;
+      }
+      const preceedingTraj = phrase.trajectories[traj.num! - 2];
+      if (preceedingTraj.id === 12) {
+        return false;
+      }
+      return true;
+    }
 
     const insertSilentTrajRight = (traj: Trajectory, track: number, dur = 0.1) => {
       if (traj.durTot < 0.2) dur = 0.1 * traj.durTot;

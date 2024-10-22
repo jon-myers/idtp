@@ -845,8 +845,6 @@ class Trajectory {
   endConsonantIpa: string | undefined;
   endConsonantEngTrans: string | undefined;
   groupId?: string;
-  // freqs: number[];
-  // logFreqs: number[];
   ids: TrajIdFunction[];
   structuredNames: object;
   cIpas: string[];
@@ -882,7 +880,7 @@ class Trajectory {
     name = undefined,
     fundID12 = undefined,
     vibObj = undefined,
-    instrumentation = 'Sitar',
+    instrumentation = Instrument.Sitar,
     vowel = undefined,
     vowelIpa = undefined,
     vowelHindi = undefined,
@@ -909,7 +907,7 @@ class Trajectory {
     name?: string,
     fundID12?: number,
     vibObj?: VibObjType,
-    instrumentation?: string,
+    instrumentation?: Instrument,
     vowel?: string,
     vowelIpa?: string,
     vowelHindi?: string,
@@ -981,20 +979,24 @@ class Trajectory {
     } else {
       this.vibObj = vibObj
     }
-
-    this.articulations = articulations === undefined ? {
-      '0.00': new Articulation({
-        name: 'pluck',
-        stroke: 'd'
-      })
-    } : articulations;
-
+    if (articulations === undefined) {
+      if (instrumentation === Instrument.Sitar) {
+        this.articulations = {
+          '0.00': new Articulation({
+            name: 'pluck',
+            stroke: 'd'
+          })
+        }
+      } else {
+        this.articulations = {}
+      }
+    } else {
+      this.articulations = articulations
+    }
     if (typeof(this.articulations) !== 'object') {
       throw new SyntaxError(`invalid articulations type, must be object: ` + 
         `${articulations}`)
     }
-    // this.freqs = this.pitches.map(p => p.frequency);
-    // this.logFreqs = this.freqs.map(f => Math.log2(f));
     this.num = num;
     this.name = name;
     this.name = this.name_;
