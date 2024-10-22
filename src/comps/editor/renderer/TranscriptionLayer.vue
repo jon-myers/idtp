@@ -338,7 +338,7 @@ export default defineComponent({
     const dragDotColor = 'purple';
     const selectedDragDotColor = '#d602d6';
     let dragDotIdx: number | undefined = undefined;
-    const minTrajDur = 0.05;
+    const minTrajDur = 0.1;
     let pulseDragEnabled = false;
     let meterHovering: Meter | undefined = undefined;
     let selMeterHovering = false;
