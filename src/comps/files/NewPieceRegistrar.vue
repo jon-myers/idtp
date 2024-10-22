@@ -726,6 +726,7 @@ export default defineComponent({
             const soloInstrument = soloist ? 
               rec.musicians[soloist].instrument : 
               undefined;
+            const oct = this.instrumentation[0] === Instrument.Vocal_M ? 1 : 2; 
             newPieceInfo = {
               title: this.title,
               transcriber: this.transcriber,
@@ -737,7 +738,7 @@ export default defineComponent({
               audioID: rec._id,
               soloist: soloist,
               soloInstrument: soloInstrument,
-              fundamental: 2 * rec.saEstimate * 2 ** rec.octOffset
+              fundamental: oct * rec.saEstimate * 2 ** rec.octOffset
             }
           }
         } else {
@@ -759,7 +760,8 @@ export default defineComponent({
           };
           if (this.aeIdx !== undefined && this.recording !== undefined) {
             newPieceInfo.audioID = rec.audioFileId;
-            newPieceInfo.fundamental = 2 * rec.saEstimate * 2 ** rec.octOffset
+            const oct = this.instrumentation[0] === Instrument.Vocal_M ? 1 : 2;
+            newPieceInfo.fundamental = oct * rec.saEstimate * 2 ** rec.octOffset
           }
         }
         this.$emit('newPieceInfoEmit', newPieceInfo)

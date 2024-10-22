@@ -43,8 +43,8 @@
           <input 
             type='range' 
             v-model='logSaFreq' 
-            :min='Math.log2(150)' 
-            :max='Math.log2(600)' 
+            :min='Math.log2(100)' 
+            :max='Math.log2(400)' 
             step=0.001
             @input='handleLogSaFreqChange'
           />
