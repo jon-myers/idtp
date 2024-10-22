@@ -675,6 +675,8 @@ export default defineComponent({
           .attr('fill', track.color)
         d3.selectAll(`.track${track.idx} .pluck`)
           .attr('stroke', track.color)
+        d3.selectAll(`.track${track.idx} .consonantSymbol`)
+          .attr('fill', track.color)
 
         // chikaris
         d3.selectAll(`.track${track.idx} .chikari`)
@@ -1318,6 +1320,9 @@ export default defineComponent({
           renderDampener(traj, track);
           renderKrintin(traj, track);
         }
+        if (inst === Instrument.Vocal_M || inst === Instrument.Vocal_F) {
+          renderConsonantSymbols(traj, track);
+        }
       };
       renderObj.renderStatus = true;
       if (props.piece.instrumentation[track] as Instrument === Instrument.Sitar) {
@@ -1357,6 +1362,51 @@ export default defineComponent({
           .on('mouseout', () => handleTrajMouseOut(traj, track))
           .on('click', () => handleClickTraj(traj, track))
           .on('contextmenu', (e: MouseEvent) => handleTrajContextMenu(traj, track, e))
+    };
+    const renderConsonantSymbols = (traj: Trajectory, track: number) => {
+      const arts = traj.articulations;
+      const a = arts['0.00'];
+      const c1 = a !== undefined && a.name === 'consonant';
+      const b = arts['1.00'];
+      const c2 = b !== undefined && b.name === 'consonant';
+      const g = tracks[track].select('.trajG');
+      const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
+      const sym = d3.symbol()
+        .type(d3.symbolDiamond)
+        .size(40);
+      if (c1) {
+        const x = phrase.startTime! + traj.startTime!;
+        const y = traj.compute(0, true);
+        const scaledX = props.xScale(x);
+        const scaledY = props.yScale(y);
+        g.append('path')
+          .classed('consonantSymbol', true)
+          .classed('traj', true)
+          .classed(`uId${traj.uniqueId}`, true)
+          .attr('d', sym)
+          .attr('fill', props.instTracks[track].color)
+          .attr('transform', `translate(${scaledX}, ${scaledY})`)
+          .on('mouseover', () => handleTrajMouseOver(traj, track))
+          .on('mouseout', () => handleTrajMouseOut(traj, track))
+          .on('click', () => handleClickTraj(traj, track))
+      }
+      if (c2) {
+        const x = phrase.startTime! + traj.startTime! + traj.durTot;
+        const y = traj.compute(1, true);
+        const scaledX = props.xScale(x);
+        const scaledY = props.yScale(y);
+        g.append('path')
+          .classed('consonantSymbol', true)
+          .classed('traj', true)
+          .classed(`uId${traj.uniqueId}`, true)
+          .attr('d', sym)
+          .attr('fill', props.instTracks[track].color)
+          .attr('transform', `translate(${scaledX}, ${scaledY})`)
+          .on('mouseover', () => handleTrajMouseOver(traj, track))
+          .on('mouseout', () => handleTrajMouseOut(traj, track))
+          .on('click', () => handleClickTraj(traj, track))
+      }
+
     };
     const renderPlucks = (traj: Trajectory, track: number) => {
       const trajUIds = props.piece.allTrajectories(track).map(t => t.uniqueId);
@@ -3460,6 +3510,9 @@ export default defineComponent({
         .attr('stroke', props.instTracks[track].selColor)
       d3.selectAll(selector + '.pluck')
         .attr('fill', props.instTracks[track].selColor)
+      d3.selectAll(selector + '.consonantSymbol')
+        .attr('fill', props.instTracks[track].selColor)
+      
       
       const cursorTrajSelector = `.trajShadow.uId${traj.uniqueId!}`
       d3.selectAll(cursorTrajSelector)
@@ -3493,10 +3546,14 @@ export default defineComponent({
           .attr('stroke', props.instTracks[track].color)
         d3.selectAll(selector + '.pluck')
           .attr('fill', props.instTracks[track].color)
+        d3.selectAll(selector + '.consonantSymbol')
+          .attr('fill', props.instTracks[track].color)
       } else {
         d3.selectAll(selector)
           .attr('stroke', props.instTracks[track].selColor)
         d3.selectAll(selector + '.pluck')
+          .attr('fill', props.instTracks[track].selColor)
+        d3.selectAll(selector + '.consonantSymbol')
           .attr('fill', props.instTracks[track].selColor)
       }
       const cursorSelector = `.trajShadow.uId${traj.uniqueId!}`
@@ -3647,6 +3704,8 @@ export default defineComponent({
         d3.selectAll(selector)
           .attr('stroke', props.instTracks[track].color)
         d3.selectAll(selector + '.pluck')
+          .attr('fill', props.instTracks[track].color)
+        d3.selectAll(selector + '.consonantSymbol')
           .attr('fill', props.instTracks[track].color)
         renderObj!.selectedStatus = false;
       });
@@ -4860,6 +4919,9 @@ export default defineComponent({
           renderVowel(obj);
         })
       }
+      const traj = props.piece.trajFromUId(trajUId, track);
+      removeTraj(traj);
+      renderTraj(traj);
     };
 
     const refreshEndingConsonant = (trajUId: string) => {
@@ -4870,6 +4932,10 @@ export default defineComponent({
       if (consonantDisplayObjs.length === 1) {
         renderEndingConsonant(consonantDisplayObjs[0]);
       }
+      const traj = props.piece.trajFromUId(trajUId, track);
+      removeTraj(traj);
+      renderTraj(traj);
+
     }
 
     const pasteTrajs = () => {
