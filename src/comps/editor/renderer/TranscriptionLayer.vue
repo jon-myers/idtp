@@ -836,24 +836,33 @@ export default defineComponent({
                     if (!selectedTrajs.value.includes(litTraj)) {
                       const litSelector = `.traj.uId${litTrajs.value[idx]!.uniqueId}`;
                       const litSelectorPluck = litSelector + '.pluck';
+                      const litSelectorDiamond = litSelector + '.consonantSymbol';
                       d3.selectAll(litSelector)
                         .attr('stroke', track.color)
                       d3.selectAll(litSelectorPluck)
                         .attr('fill', track.color)
+                      d3.selectAll(litSelectorDiamond)
+                        .attr('fill', track.color)
                     }
                     const selector = `.traj.uId${traj.uniqueId}`;
                     const selectorPluck = selector + '.pluck';
+                    const selectorDiamond = selector + '.consonantSymbol';
                     d3.selectAll(selector)
                       .attr('stroke', track.selColor)
                     d3.selectAll(selectorPluck)
+                      .attr('fill', track.selColor)
+                    d3.selectAll(selectorDiamond)
                       .attr('fill', track.selColor)
                   }
                 } else {
                   const selector = `.traj.uId${traj.uniqueId}`;
                   const selectorPluck = selector + '.pluck';
+                  const selectorDiamond = selector + '.consonantSymbol';
                   d3.selectAll(selector)
                     .attr('stroke', track.selColor)
                   d3.selectAll(selectorPluck)
+                    .attr('fill', track.selColor)
+                  d3.selectAll(selectorDiamond)
                     .attr('fill', track.selColor)
                 }
                 litTrajs.value[idx] = traj;
@@ -861,9 +870,12 @@ export default defineComponent({
                 if (litTraj !== undefined) {
                   const selector = `.traj.uId${litTrajs.value[idx]!.uniqueId}`;
                   const selectorPluck = selector + '.pluck';
+                  const selectorDiamond = selector + '.consonantSymbol';
                   d3.selectAll(selector)
                     .attr('stroke', track.color)
                   d3.selectAll(selectorPluck)
+                    .attr('fill', track.color)
+                  d3.selectAll(selectorDiamond)
                     .attr('fill', track.color)
                   litTrajs.value[idx] = undefined;
                 }

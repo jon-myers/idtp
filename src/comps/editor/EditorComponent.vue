@@ -2389,19 +2389,6 @@ export default defineComponent({
       }
     },
 
-    clearTrajSelectPanel() {
-      const tsp = this.$refs.trajSelectPanel as TSPType;
-      tsp.parentSelected = false;
-      tsp.selectedIdx = undefined;
-      tsp.showVibObj = false;
-      tsp.showSlope = false;
-      tsp.showTrajChecks = false;
-      tsp.showPhraseRadio = false;
-      tsp.startConsonant = undefined;
-      tsp.endConsonant = undefined;
-      tsp.vowel = 'a';
-    },
-
     updateSargamLines() {
       this.throttledRefreshSargamLines!();
     },
