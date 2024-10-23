@@ -3390,20 +3390,75 @@ export default defineComponent({
       emit('unsavedChanges', true);
       const idx = dragDotIdx!;
       const traj = selectedTrajs.value[0];
-
-      // const affectedIds = [7, 8, 9, 10, 11];
-      // if (affectedIds.includes(traj.id)) updateKrintinArticulations(traj)
-
-
       const track = props.piece.trackFromTraj(traj);
       const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
       const pIdx = traj.phraseIdx!;
       const tIdx = traj.num!;
       const initTime = props.xScale.invert(e.x);
-      const time = constrainTime(initTime, idx);
+      let newTime = constrainTime(initTime, idx);
       let logFreq = props.yScale.invert(e.y);
       if (props.sargamMagnetMode) {
         logFreq = getClosest(logSargamVals.value, logFreq);
+      } else {
+        // // if dragdot idx is 0 and the prev traj exists, and that prev traj is not
+        // // 12, then the logFreq should be the same as the prev traj's last logFreq
+        // if (idx === 0 && tIdx > 0) {
+        //   const prevTraj = phrase.trajectories[tIdx - 1];
+        //   if (prevTraj.id !== 12) {
+        //     logFreq = prevTraj.logFreqs[prevTraj.logFreqs.length - 1];
+        //   }
+        // }
+        // // if dragdot idx is the last one and the next traj exists, and that next
+        // // traj is not 12, then the logFreq should be the same as the next traj's
+        // // first logFreq
+        // if (idx === traj.durArray!.length && tIdx < phrase.trajectories.length - 1) {
+        //   const nextTraj = phrase.trajectories[tIdx + 1];
+        //   if (nextTraj.id !== 12) {
+        //     logFreq = nextTraj.logFreqs[0];
+        //   }
+        // }
+
+        if (idx === 0 && traj.num! > 1) {
+          const silTraj = phrase.trajectories[traj.num! - 1];
+          const prevTraj = phrase.trajectories[traj.num! - 2];
+          if (prevTraj.id !== 12 && silTraj.id === 12) {
+            const prevPitch = prevTraj.pitches[prevTraj.pitches.length - 1];
+            const diff = Math.abs(logFreq - prevPitch.logFreq);
+            const prevTime = phrase.startTime! + prevTraj.startTime! + prevTraj.durTot;
+            const timeDiff = Math.abs(newTime - prevTime);
+            if (diff < 0.05 && timeDiff < 0.1) {
+              logFreq = prevPitch.logFreq;
+              newTime = prevTime;
+            }
+          } else if (silTraj.id !== 12) {
+            const silPitch = silTraj.pitches[0];
+            const diff = Math.abs(logFreq - silPitch.logFreq);
+            if (diff < 0.05) {
+              logFreq = silPitch.logFreq;
+            }
+          }
+        }
+        if (idx === traj.pitches.length - 1 && traj.num! < phrase.trajectories.length - 2) {
+          const nextTraj = phrase.trajectories[traj.num! + 2];
+          const silTraj = phrase.trajectories[traj.num! + 1];
+          if (nextTraj.id !== 12 && silTraj.id === 12) {
+            const nextPitch = nextTraj.pitches[0];
+            const diff = Math.abs(logFreq - nextPitch.logFreq);
+            const nextTime = phrase.startTime! + nextTraj.startTime!;
+            const timeDiff = Math.abs(nextTime - newTime);
+            if (diff < 0.05 && timeDiff < 0.1) {
+              logFreq = nextPitch.logFreq;
+              newTime = nextTime;
+            }
+          } else if (silTraj.id !== 12) {
+            const silPitch = silTraj.pitches[0];
+            const diff = Math.abs(logFreq - silPitch.logFreq);
+            if (diff < 0.05) {
+              logFreq = silPitch.logFreq;
+            }
+          }
+        }
+
       }
       const y = props.yScale(logFreq);
       const selectedDragDot = d3.select(`#dragDot${idx}`);
@@ -4172,11 +4227,63 @@ export default defineComponent({
         const x = props.xScale(newTime);
         d3.select(`#dragDot${idx}`)
           .attr('cx', x);
+
+        // if idx is 0, and the diff between newTime and the previous traj's end (assuming
+        // that traj.id !== 12) is less than some min, and the logFreq of the new time is close to the 
+        // logFreq of the previous traj's last pitch, then set newTime to the previous
+        // traj's end time, and set newLogFreq to the previous traj's last pitch.logFreq
+        // idx is about the dot, traj index is traj.num
+        if (idx === 0) {
+          if (traj.num! > 1) {
+            const silTraj = phrase.trajectories[traj.num! - 1];
+            const prevTraj = phrase.trajectories[traj.num! - 2];
+            if (silTraj.id === 12 && prevTraj.id !== 12) {
+              const prevPitch = prevTraj.pitches[prevTraj.pitches.length - 1];
+              const diff = Math.abs(newLogFreq - prevPitch.logFreq);
+              const prevTime = phrase.startTime! + prevTraj.startTime! + prevTraj.durTot;
+              const timeDiff = Math.abs(newTime - prevTime);
+              if (diff < 0.05 && timeDiff < 0.1) {
+                newTime = prevTime;
+                newLogFreq = prevPitch.logFreq;
+                const x = props.xScale(newTime);
+                const y = props.yScale(newLogFreq);
+                d3.select(`#dragDot${idx}`)
+                  .attr('cx', x)
+                  .attr('cy', y);
+              }
+            }
+          }
+
+
+
+        }
       } else if (dir === 'right') {
         newTime = constrainTime(curTime + amt, idx);
         const x = props.xScale(newTime);
         d3.select(`#dragDot${idx}`)
           .attr('cx', x);
+
+        if (idx === traj.pitches.length - 1) {
+          if (traj.num! < phrase.trajectories.length - 2) {
+            const silTraj = phrase.trajectories[traj.num! + 1];
+            const nextTraj = phrase.trajectories[traj.num! + 2];
+            if (silTraj.id === 12 && nextTraj.id !== 12) {
+              const nextPitch = nextTraj.pitches[0];
+              const diff = Math.abs(newLogFreq - nextPitch.logFreq);
+              const nextTime = phrase.startTime! + nextTraj.startTime!;
+              const timeDiff = Math.abs(nextTime - newTime);
+              if (diff < 0.05 && timeDiff < 0.1) {
+                newTime = nextTime;
+                newLogFreq = nextPitch.logFreq;
+                const x = props.xScale(newTime);
+                const y = props.yScale(newLogFreq);
+                d3.select(`#dragDot${idx}`)
+                  .attr('cx', x)
+                  .attr('cy', y);
+              }
+            }
+          }
+        }
         
       } else if (dir === 'up') {
         if (props.sargamMagnetMode) {
@@ -4202,6 +4309,50 @@ export default defineComponent({
           newLogFreq = newPitch.logFreq;
         } else {
           newLogFreq = newLogFreq + logAmt;
+          // if there is a traj before this one, and that traj.id is not === 12, 
+          // and the difference between newLogFreq and the previous traj's last 
+          // pitch.logFreq is less than 0.05, then set newLogFreq to the previous
+          // traj's last pitch.logFreq
+          if (idx === 0 && traj.num! > 1) {
+            const silTraj = phrase.trajectories[traj.num! - 1];
+            const prevTraj = phrase.trajectories[traj.num! - 2];
+            if (prevTraj.id !== 12 && silTraj.id === 12) {
+              const prevPitch = prevTraj.pitches[prevTraj.pitches.length - 1];
+              const diff = Math.abs(newLogFreq - prevPitch.logFreq);
+              const prevTime = phrase.startTime! + prevTraj.startTime! + prevTraj.durTot;
+              const timeDiff = Math.abs(newTime - prevTime);
+              if (diff < 0.05 && timeDiff < 0.1) {
+                newLogFreq = prevPitch.logFreq;
+                newTime = prevTime;
+              }
+            } else if (silTraj.id !== 12) {
+              const silPitch = silTraj.pitches[0];
+              const diff = Math.abs(newLogFreq - silPitch.logFreq);
+              if (diff < 0.05) {
+                newLogFreq = silPitch.logFreq;
+              }
+            }
+          }
+          if (idx === traj.pitches.length - 1 && traj.num! < phrase.trajectories.length - 2) {
+            const nextTraj = phrase.trajectories[traj.num! + 2];
+            const silTraj = phrase.trajectories[traj.num! + 1];
+            if (nextTraj.id !== 12 && silTraj.id === 12) {
+              const nextPitch = nextTraj.pitches[0];
+              const diff = Math.abs(newLogFreq - nextPitch.logFreq);
+              const nextTime = phrase.startTime! + nextTraj.startTime!;
+              const timeDiff = Math.abs(nextTime - newTime);
+              if (diff < 0.05 && timeDiff < 0.1) {
+                newLogFreq = nextPitch.logFreq;
+                newTime = nextTime;
+              }
+            } else if (silTraj.id !== 12) {
+              const silPitch = silTraj.pitches[0];
+              const diff = Math.abs(newLogFreq - silPitch.logFreq);
+              if (diff < 0.05) {
+                newLogFreq = silPitch.logFreq;
+              }
+            }
+          }
         }
       } else if (dir === 'down') {
         if (props.sargamMagnetMode) {
@@ -4233,6 +4384,46 @@ export default defineComponent({
           newLogFreq = newPitch.logFreq;
         } else {
           newLogFreq = newLogFreq - logAmt;
+          if (idx === 0 && traj.num! > 1) {
+            const prevTraj = phrase.trajectories[traj.num! - 2];
+            const silTraj = phrase.trajectories[traj.num! - 1];
+            if (prevTraj.id !== 12 && silTraj.id === 12) {
+              const prevPitch = prevTraj.pitches[prevTraj.pitches.length - 1];
+              const diff = Math.abs(newLogFreq - prevPitch.logFreq);
+              const prevTime = phrase.startTime! + prevTraj.startTime! + prevTraj.durTot;
+              const timeDiff = Math.abs(newTime - prevTime);
+              if (diff < 0.05 && timeDiff < 0.1) {
+                newLogFreq = prevPitch.logFreq;
+                newTime = prevTime;
+              }
+            } else if (silTraj.id !== 12) {
+              const silPitch = silTraj.pitches[0];
+              const diff = Math.abs(newLogFreq - silPitch.logFreq);
+              if (diff < 0.05) {
+                newLogFreq = silPitch.logFreq;
+              }
+            }
+          }
+          if (idx === traj.pitches.length - 1 && traj.num! < phrase.trajectories.length - 2) {
+            const nextTraj = phrase.trajectories[traj.num! + 2];
+            const silTraj = phrase.trajectories[traj.num! + 1];
+            if (nextTraj.id !== 12 && silTraj.id === 12) {
+              const nextPitch = nextTraj.pitches[0];
+              const diff = Math.abs(newLogFreq - nextPitch.logFreq);
+              const nextTime = phrase.startTime! + nextTraj.startTime!;
+              const timeDiff = Math.abs(nextTime - newTime);
+              if (diff < 0.05 && timeDiff < 0.1) {
+                newLogFreq = nextPitch.logFreq;
+                newTime = nextTime;
+              }
+            } else if (silTraj.id !== 12) {
+              const silPitch = silTraj.pitches[0];
+              const diff = Math.abs(newLogFreq - silPitch.logFreq);
+              if (diff < 0.05) {
+                newLogFreq = silPitch.logFreq;
+              }
+            }
+          }
         }
       }
       const newPitch = () => {
@@ -4732,6 +4923,32 @@ export default defineComponent({
       const tIdx = phrase.trajIdxFromTime(time)!;
       const traj = phrase.trajectories[tIdx];
       if (traj.id === 12) {
+        // if close, attach to prev traj
+        if (tIdx > 0) {
+          const prevTraj = phrase.trajectories[tIdx - 1];
+          if (prevTraj.id !== 12) {
+            const lastPitch = prevTraj.pitches[prevTraj.pitches.length - 1];
+            const diff = Math.abs(lastPitch.logFreq - logFreq);
+            const lastTime = prevTraj.startTime! + prevTraj.durTot;
+            const timeDiff = Math.abs(time - lastTime);
+            if (diff < 0.05 && timeDiff < 0.1) {
+              logFreq = lastPitch.logFreq;
+            }
+          }
+        }
+        // if close, attach to next traj
+        if (tIdx < phrase.trajectories.length - 1) {
+          const nextTraj = phrase.trajectories[tIdx + 1];
+          if (nextTraj.id !== 12) {
+            const firstPitch = nextTraj.pitches[0];
+            const diff = Math.abs(firstPitch.logFreq - logFreq);
+            const lastTime = traj.startTime! + traj.durTot;
+            const timeDiff = Math.abs(lastTime - time);
+            if (diff < 0.05 && timeDiff < 0.1) {
+              logFreq = firstPitch.logFreq;
+            }
+          }
+        }
         let setIt = true;
         if (trajTimePts.value.length > 0) {
           const c1 = trajTimePts.value[0].tIdx === tIdx;
