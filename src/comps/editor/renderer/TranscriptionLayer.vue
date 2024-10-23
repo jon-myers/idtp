@@ -287,6 +287,7 @@ export default defineComponent({
     'savePiece',
     'update:selectedMeter',
     'deleteMeter',
+    'toggle:sargamMagnet'
   ],
   setup(props, { emit }) {
     const tranContainer = ref<HTMLDivElement | null>(null);
@@ -3820,10 +3821,12 @@ export default defineComponent({
         } else {
           handleEscape();
         }
-      } else if (e.key === 's') {
+      } else if (e.code === 'KeyS') {
         if (metad.value) {
           e.preventDefault();
           emit('savePiece');
+        } else if (alted.value) {
+          emit('toggle:sargamMagnet')
         } else {
           emit('update:selectedMode', EditorMode.Series);
         }
@@ -5234,7 +5237,8 @@ export default defineComponent({
       autoWindowWidth,
       isBlock,
       curPlayheadPxl,
-      refreshSargamLines
+      refreshSargamLines,
+      alted
     }
   }
 })

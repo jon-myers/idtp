@@ -72,6 +72,7 @@
       @savePiece='savePiece'
       @update:selectedMeter='selectMeter($event)'
       @deleteMeter='removeMeter($event)'
+      @toggle:sargamMagnet='sargamMagnetMode = !sargamMagnetMode'
       />
     <div class='controlBox'>
       <div class='scrollingControlBox'>

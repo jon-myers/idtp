@@ -149,6 +149,7 @@
               @savePiece='$emit("savePiece")'
               @update:selectedMeter='$emit("update:selectedMeter", $event)'
               @deleteMeter='$emit("deleteMeter", $event)'
+              @toggle:sargamMagnet='$emit("toggle:sargamMagnet")'
             />
           />
         </div>
@@ -410,6 +411,7 @@ export default defineComponent({
     'savePiece',
     'update:selectedMeter',
     'deleteMeter',
+    'toggle:sargamMagnet'
   ],
   setup(props, { emit }) {
     const layersContainer = ref<HTMLDivElement | null>(null);
