@@ -73,6 +73,7 @@
       @update:selectedMeter='selectMeter($event)'
       @deleteMeter='removeMeter($event)'
       @toggle:sargamMagnet='sargamMagnetMode = !sargamMagnetMode'
+      @clearTSP='clearTSP'
       />
     <div class='controlBox'>
       <div class='scrollingControlBox'>
@@ -1162,6 +1163,12 @@ export default defineComponent({
   },
 
   methods: {
+
+    clearTSP() {
+      const tsp = this.$refs.trajSelectPanel as TSPType;
+      tsp.startConsonant = undefined;
+      tsp.endConsonant = undefined;
+    },
 
     scrollBackForPlayhead() {
       const r = this.$refs.renderer as RendererType;

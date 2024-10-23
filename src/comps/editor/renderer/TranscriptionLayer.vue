@@ -287,7 +287,8 @@ export default defineComponent({
     'savePiece',
     'update:selectedMeter',
     'deleteMeter',
-    'toggle:sargamMagnet'
+    'toggle:sargamMagnet',
+    'clearTSP'
   ],
   setup(props, { emit }) {
     const tranContainer = ref<HTMLDivElement | null>(null);
@@ -1704,6 +1705,7 @@ export default defineComponent({
       const color = selTs.includes(v.uId) ? 
         props.instTracks[track].selColor : 
         'black';
+        
       g.append('text')
         .attr('text-anchor', 'middle')
         .attr('dominant-baseline', 'middle')
@@ -3459,6 +3461,7 @@ export default defineComponent({
       renderTraj(traj);
       refreshSargam(traj.uniqueId!);
       if (instrument === Instrument.Vocal_M || instrument === Instrument.Vocal_F) {
+
         refreshVowel(traj.uniqueId!);
         refreshEndingConsonant(traj.uniqueId!);
       }
@@ -3835,6 +3838,7 @@ export default defineComponent({
         emit('cancelRegionSpeed')
       }
       autoWindowOpen.value = false;
+      emit('clearTSP');
     }
 
     const clearDragDots = () => {
@@ -5025,9 +5029,6 @@ export default defineComponent({
           renderVowel(obj);
         })
       }
-      const traj = props.piece.trajFromUId(trajUId, track);
-      removeTraj(traj);
-      renderTraj(traj);
     };
 
     const refreshEndingConsonant = (trajUId: string) => {
@@ -5038,10 +5039,6 @@ export default defineComponent({
       if (consonantDisplayObjs.length === 1) {
         renderEndingConsonant(consonantDisplayObjs[0]);
       }
-      const traj = props.piece.trajFromUId(trajUId, track);
-      removeTraj(traj);
-      renderTraj(traj);
-
     }
 
     const pasteTrajs = () => {
