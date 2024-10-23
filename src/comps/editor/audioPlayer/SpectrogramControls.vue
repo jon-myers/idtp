@@ -763,14 +763,9 @@ export default defineComponent({
     const resyncToServerSettings = async (selectedId?: string) => {
       const userID = store.state.userID;
       savedSettings.value = await getSavedSettings(userID);
-      console.log(savedSettings.value.length)
       savedSettings.value.unshift(defaultSetting);
-      console.log(savedSettings.value.length)
-
       const defaultID = await getDefaultSettings(userID);
-      console.log(selectedId)
       selectedSetting.value = savedSettings.value.find(setting => {
-        console.log('inside: ', setting.uniqueId, selectedId)
         return setting.uniqueId === (selectedId ? selectedId : defaultID)
       }) || defaultSetting
         // loadSetting();
