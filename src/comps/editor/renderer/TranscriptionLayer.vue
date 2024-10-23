@@ -3548,6 +3548,7 @@ export default defineComponent({
             .style('fill', color)
             .attr('cursor', 'pointer')
             .on('click', handleClickDragDot)
+            .on('contextmenu', handleContextMenuDragDot)
         })
         if (props.editable) {
           (dragDotsG.selectAll('circle') as d3.Selection<
@@ -3571,6 +3572,34 @@ export default defineComponent({
         selectedDragDotIdx.value = idx;
       }
     }
+
+    const handleContextMenuDragDot = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      contextMenuX.value = e.offsetX;
+      contextMenuY.value = e.offsetY;
+      contextMenuClosed.value = false;
+      const target = e.target as SVGCircleElement;
+      const idx = Number(target.id.split('dragDot')[1]);
+      const traj = selectedTraj.value!;
+      contextMenuChoices.value = [];
+      contextMenuChoices.value.push({
+        text: 'Quantize to Sargam',
+        action: () => {
+          const logFreq = traj.logFreqs[idx] || traj.logFreqs[idx - 1];
+          const newLogFreq = getClosest(logSargamVals.value, logFreq);
+          const newPitch = props.piece.raga.pitchFromLogFreq(newLogFreq);
+          traj.pitches[idx] = newPitch;
+          const y = props.yScale(newLogFreq);
+          d3.select(`#dragDot${idx}`)
+            .attr('cy', y);
+          refreshTraj(traj);
+          emit('unsavedChanges', true);
+          contextMenuClosed.value = true;
+        },
+        enabled: true
+      })
+    };
 
     const handleTrajMouseOver = (traj: Trajectory, track: number) => {
       if (shifted.value && track !== props.editingInstIdx) {
