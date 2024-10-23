@@ -352,6 +352,14 @@ export default defineComponent({
     highlightTrajs: {
       type: Boolean,
       required: true
+    },
+    zoomXFactor: {
+      type: Number,
+      required: true
+    },
+    zoomYFactor: {
+      type: Number,
+      required: true
     }
   },
   emits: [
@@ -369,7 +377,8 @@ export default defineComponent({
     'update:maxPitch',
     'update:minPitch',
     'update:playheadAnimation',
-    'update:highlightTrajs'
+    'update:highlightTrajs',
+    'update:zoomFactors',
   ],
   setup(props, { emit }) {
 
@@ -746,7 +755,9 @@ export default defineComponent({
         pitchRange,
         uniqueId: uId, 
         playheadAnimationStyle: playheadAnimationProxy.value,
-        highlightTrajs: highlightTrajsProxy.value
+        highlightTrajs: highlightTrajsProxy.value,
+        zoomXFactor: props.zoomXFactor,
+        zoomYFactor: props.zoomYFactor
       }
     };
     const resyncToServerSettings = async (selectedId?: string) => {
@@ -806,6 +817,10 @@ export default defineComponent({
       if (s.highlightTrajs !== undefined) {
         highlightTrajsProxy.value = s.highlightTrajs;
       }
+      if (s.zoomXFactor !== undefined && s.zoomYFactor !== undefined) {
+        emit('update:zoomFactors', {x: s.zoomXFactor, y: s.zoomYFactor});
+      }
+      
     };
 
     const setAsDefaultSetting = () => {
@@ -846,6 +861,7 @@ export default defineComponent({
           return setting.uniqueId === defaultID
         }) || defaultSetting;
         loadSetting();
+        await nextTick();
         sendInitWorkerMsg();
       } catch (e) {
         console.error(e);

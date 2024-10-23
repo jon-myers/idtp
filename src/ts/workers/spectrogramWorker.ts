@@ -21,7 +21,7 @@ let scaledShape: [number, number] | undefined = undefined;
 let power = 1;
 let maxVal = 255;
 let cMapName = CMap.Viridis;
-let processing = false;
+let processing: number[] = [];
 let complete = false;
 
 let verbose = false;
@@ -42,6 +42,8 @@ const processChunk = async (
   await processChunk(reader, inflator);
 
 }
+
+
 
 const crop = (logMin: number, logMax: number) => {
   if (initData === undefined) {
@@ -70,7 +72,15 @@ const crop = (logMin: number, logMax: number) => {
   // test if we just need to add a little time here
     scale();
 };
+
+const waitForCroppedData = async () => {
+  while (croppedData === undefined) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+}
+
 const scale = () => {
+
   if (scaledShape === undefined) {
     throw new Error('Scaled shape must be provided');
   }
@@ -118,15 +128,17 @@ const scale = () => {
       try {
         scaledData.set(i, j, val);
       } catch (err) {
-        console.log('Error details:', {
-          i,
-          j,
-          val,
-          shape: scaledData.shape,
-          dataLength: scaledData.data.length,
-          error: err.message
-        });
-        throw err;
+        if (err instanceof Error) {
+          console.log('Error details:', {
+            i,
+            j,
+            val,
+            shape: scaledData.shape,
+            dataLength: scaledData.data.length,
+            error: err.message
+          });
+          throw err;
+        }
       }
     }
   }
@@ -141,6 +153,7 @@ const scale = () => {
     self.postMessage(`scale time: ${(dur / 1000).toFixed()}`);
   }
   intensify();
+  // })
 }
 
 const createIntensityLUT = (maxVal: number) => {
@@ -218,8 +231,8 @@ const colorize = () => {
       imgDataData[idx + 3] = 255;
     }
   }
-  processing = false;
-  complete = true;
+  processing.pop();
+  if (processing.length === 0) complete = true;
   if (verbose) {
     const dur = performance.now() - now!;
     self.postMessage(`colorize time: ${(dur / 1000).toFixed()}`);
@@ -273,7 +286,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
       if (newVerbose !== undefined) {
         verbose = newVerbose;
       }
-      processing = true;
+      processing.push(1)
       const dataUrl = 'https://swara.studio/spec_data/' + audioID + '/spec_data.gz';
       const shapeUrl = 'https://swara.studio/spec_data/' + audioID + '/spec_shape.json';
       const fetchArrayBuf = async () => {
@@ -323,27 +336,28 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
         if (logMin === undefined || logMax === undefined) {
           throw new Error('Log min and max must be provided');
         }
-        processing = true;
+        processing.push(1)
         crop(logMin, logMax);
       } else if (type === 'scale') {
         if (newScaledShape === undefined) {
           throw new Error('Scaled shape must be provided');
         }
-        processing = true;
+        await waitForCroppedData();
+        processing.push(1)
         scaledShape = newScaledShape;
         scale();
       } else if (type === 'power') {
         if (newPower === undefined) {
           throw new Error('Power must be provided');
         }
-        processing = true;
+        processing.push(1)
         power = newPower;
         intensify();
       } else if (type === 'color') {
         if (newCMap === undefined) {
           throw new Error('Color map must be provided');
         }
-        processing = true;
+        processing.push(1)
         cMapName = newCMap;
         colorize();
       }

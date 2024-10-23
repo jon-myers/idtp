@@ -283,6 +283,8 @@
   :playheadAnimation='playheadAnimation'
   :highlightTrajs='highlightTrajs'
   :selectedMeter='selMeter'
+  :zoomXFactor='zoomXFactor'
+  :zoomYFactor='zoomYFactor'
   @resizeHeightEmit='resizeHeight'
   @currentTimeEmit='setCurrentTime'
   @updateSargamLinesEmit='updateSargamLines'
@@ -314,6 +316,7 @@
   @rerenderMeter='rerenderMeter'
   @update:sonify='handleUpdateSonify'
   @scrollBackForPlayheadReturn='scrollBackForPlayhead'
+  @update:zoomFactors='updateZoomFactors'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -530,7 +533,6 @@ type EditorDataType = {
   showBols: boolean,
   scrollYWidth: number,
   scrollXHeight: number,
-  yScaleLims: [number, number],
   editorHeight: number,
   scrollYHeight: number,
   initYOffset: number,
@@ -653,6 +655,8 @@ type EditorDataType = {
   playheadAnimation: PlayheadAnimations,
   throttledRenderMeter: ReturnType<typeof throttle> | undefined,
   throttledRefreshSargamLines: ReturnType<typeof throttle> | undefined,
+  zoomYFactor: number,
+  zoomXFactor: number,
 }
 
 export { findClosestStartTime }
@@ -695,7 +699,6 @@ export default defineComponent({
       showBols: false,
       scrollYWidth: 20,
       scrollXHeight: 20,
-      yScaleLims: [1, 5],
       editorHeight: 400,
       scrollYHeight: 500 - 30 - 20, // this is bad, just a placeholder anyway
       initYOffset: 0,
@@ -813,6 +816,8 @@ export default defineComponent({
       playheadAnimation: PlayheadAnimations.Block,
       throttledRenderMeter: undefined,
       throttledRefreshSargamLines: undefined,
+      zoomYFactor: 1,
+      zoomXFactor: 1,
     }
   },
   setup() {
@@ -956,7 +961,7 @@ export default defineComponent({
           pitches: Pitch[],
           durTot: number,
           fundID12: number,
-          instrumentation?: string
+          instrumentation?: Instrument
         } = {
           id: 12,
           pitches: [],
@@ -989,6 +994,7 @@ export default defineComponent({
       const rendererHeight = this.editorHeight;
       const graphHeight = rendererHeight - this.scrollXHeight;
       this.transcriptionHeight = Math.round(2 * graphHeight);
+      this.assessZoomFactors();
     } catch (err) {
       console.error(err)
     }
@@ -1338,18 +1344,42 @@ export default defineComponent({
 
     zoomInY() {
       this.transcriptionHeight = Math.round(this.transcriptionHeight * 1.5);
+      const logRange = this.maxPitch.logFreq - this.minPitch.logFreq;
+      this.zoomYFactor = this.transcriptionHeight / logRange;
     },
 
     zoomOutY() {
       this.transcriptionHeight = Math.round(this.transcriptionHeight / 1.5);
+      const logRange = this.maxPitch.logFreq - this.minPitch.logFreq;
+      this.zoomYFactor = this.transcriptionHeight / logRange;
     },
 
     zoomInX() {
       this.transcriptionWidth = Math.round(this.transcriptionWidth * 1.5);
+      this.zoomXFactor = this.transcriptionWidth / this.durTot;
     },
 
     zoomOutX() {
       this.transcriptionWidth = Math.round(this.transcriptionWidth / 1.5);
+      this.zoomXFactor = this.transcriptionWidth / this.durTot;
+    },
+
+    resetZoom() {
+      this.transcriptionWidth = Math.round(this.zoomXFactor * this.durTot);
+      const logRange = this.maxPitch.logFreq - this.minPitch.logFreq;
+      this.transcriptionHeight = Math.round(this.zoomYFactor * logRange);
+    },
+
+    assessZoomFactors() {
+      const logRange = this.maxPitch.logFreq - this.minPitch.logFreq;
+      this.zoomYFactor = this.transcriptionHeight / logRange;
+      this.zoomXFactor = this.transcriptionWidth / this.durTot;
+    },
+
+    updateZoomFactors(obj: { x: number, y: number }) {
+      this.zoomXFactor = obj.x;
+      this.zoomYFactor = obj.y;
+      this.resetZoom();
     },
 
     updateTranscriptionVisibility() {
@@ -1595,7 +1625,7 @@ export default defineComponent({
         vowel?: string,
         startConsonant?: string,
         endConsonant?: string,
-        instrumentation?: string
+        instrumentation?: Instrument
       } = {
         id: idx,
         pitches: pitches,
@@ -1639,7 +1669,7 @@ export default defineComponent({
           pitches: Pitch[],
           durTot: number,
           fundID12: number,
-          instrumentation?: string
+          instrumentation?: Instrument
         } = {
           id: 12,
           pitches: [],
@@ -1808,7 +1838,7 @@ export default defineComponent({
             pitches: Pitch[],
             durTot: number,
             fundID12: number,
-            instrumentation?: string
+            instrumentation?: Instrument
           } = {
             id: 12,
             pitches: [],
@@ -2238,17 +2268,6 @@ export default defineComponent({
         return a && b
       });
       return filtered[0].pieceIdx
-    },
-
-    async initializePiece(
-        leftTime?: number, 
-        currentXK?: number,
-        scalingParam?: number, 
-        yProp?: number,
-        ) {
-
-
-
     },
 
     trajIdxFromTime(phrase: Phrase, time: number) {

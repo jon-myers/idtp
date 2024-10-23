@@ -892,6 +892,8 @@ type DisplaySettings = {
       oct: number
     }
   },
+  zoomXFactor: number,
+  zoomYFactor: number,
   playheadAnimationStyle: PlayheadAnimations,
   highlightTrajs: boolean,
   uniqueId: string,

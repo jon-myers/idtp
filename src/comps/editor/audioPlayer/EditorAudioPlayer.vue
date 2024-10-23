@@ -277,6 +277,8 @@
       :playheadColor='playheadColor'
       :playheadAnimation='playheadAnimation'
       :highlightTrajs='highlightTrajs'
+      :zoomXFactor='zoomXFactor'
+      :zoomYFactor='zoomYFactor'
       @specCanvas='handleSpecCanvas'
       @update:backgroundColor='$emit("update:backgroundColor", $event)'
       @update:axisColor='$emit("update:axisColor", $event)'
@@ -291,6 +293,7 @@
       @update:playheadColor='$emit("update:playheadColor", $event)'
       @update:playheadAnimation='$emit("update:playheadAnimation", $event)'
       @update:highlightTrajs='$emit("update:highlightTrajs", $event)'
+      @update:zoomFactors='$emit("update:zoomFactors", $event)'
       />
       <Synths
         ref='synths'
@@ -901,6 +904,14 @@ export default defineComponent({
     selectedMeter: {
       type: Object as PropType<Meter>,
       required: false
+    },
+    zoomXFactor: {
+      type: Number,
+      required: true
+    },
+    zoomYFactor: {
+      type: Number,
+      required: true
     },
   },
 
