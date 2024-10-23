@@ -831,7 +831,7 @@ class Trajectory {
   name: string | undefined;
   fundID12: number | undefined;
   vibObj: VibObjType;
-  instrumentation: string;
+  instrumentation: Instrument;
   vowel: string | undefined;
   vowelIpa: string | undefined;
   vowelHindi: string | undefined;

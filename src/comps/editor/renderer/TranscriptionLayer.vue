@@ -2052,9 +2052,9 @@ export default defineComponent({
       if (renderObj === undefined) {
         throw new Error('Trajectory not found in render status array');
       }
+      // const trajG = tracks[track].select('.trajG');
+      d3.selectAll(`.uId${traj.uniqueId}`).remove();
       if (renderObj.renderStatus === false) return;
-      const trajG = tracks[track].select('.trajG');
-      trajG.selectAll(`.uId${traj.uniqueId}`).remove();
       renderObj.renderStatus = false;
     };
     const clearSargam = (uId: string) => {
@@ -2131,7 +2131,6 @@ export default defineComponent({
       trajs.forEach(traj => {
         removeTraj(traj);
         clearSargam(traj.uniqueId!)
-
         const track = props.piece.trackFromTraj(traj);
         const inst = props.piece.instrumentation[track] as Instrument;
         if (inst === Instrument.Vocal_M || inst === Instrument.Vocal_F) {
@@ -2153,7 +2152,6 @@ export default defineComponent({
           instrumentation: props.piece.instrumentation[track],
           num: traj.num,
         });
-        
         phrase.trajectories.splice(traj.num!, 1, silentTraj);
         if (phrase.trajectories.length > traj.num! + 1) {
           const nextTraj = phrase.trajectories[traj.num! + 1];
@@ -3614,6 +3612,9 @@ export default defineComponent({
       const renderObj = trajRenderStatus.value[track].find(obj => {
         return obj.uniqueId === traj.uniqueId
       });
+      if (renderObj === undefined) {
+        return
+      }
       if (renderObj!.selectedStatus === false) {
         d3.selectAll(selector)
           .attr('stroke', props.instTracks[track].color)
@@ -3866,7 +3867,7 @@ export default defineComponent({
           deletePhraseDiv(selectedPhraseDivUid.value);
         } else if (selectedTrajs.value.length > 0) {
           deleteTrajs(selectedTrajs.value);
-        } else if (selectedMeter.value !== undefined) {
+        } else if (selectedMeter.value  !== undefined) {
           emit('deleteMeter', selectedMeter.value);
         }
       } else if (e.key === 'ArrowLeft') {
@@ -4768,7 +4769,7 @@ export default defineComponent({
           durTot: number,
           pitches: Pitch[],
           fundID12: number,
-          instrumentation?: string
+          instrumentation?: Instrument
         } = {
           id: 12,
           durTot: secondTrajDur,
