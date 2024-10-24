@@ -793,6 +793,8 @@ export default defineComponent({
       synth.node.extGain!.setValueAtTime(curGain, n);
       synth.node.extGain!.linearRampToValueAtTime(0, n + 0.01);
       synth.intGain.gain.cancelScheduledValues(n);
+      synth.extGain.gain.cancelScheduledValues(n);
+      synth.envGain.gain.cancelScheduledValues(n);
       const kmCurGain = synth.intGain.gain.value;
       synth.intGain.gain.setValueAtTime(kmCurGain, n);
       synth.intGain.gain.linearRampToValueAtTime(0, n + 0.01);
