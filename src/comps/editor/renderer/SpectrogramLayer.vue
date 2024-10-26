@@ -33,7 +33,8 @@ export default defineComponent({
     }
   },
   setup(props) {
-    const maxCanvasWidth = 1000;
+    const maxCanvasWidth = 1000; // this is a hard-coded value. If you change it
+    // you must also change this value in the spectrogramWorker
     const container = ref<HTMLDivElement | null>(null);
     const canvases = ref<HTMLCanvasElement[]>([]);
     const ctxs = ref<CanvasRenderingContext2D[]>([]);
@@ -46,7 +47,7 @@ export default defineComponent({
       entries.forEach((entry) => {
         const canvas = entry.target as HTMLCanvasElement;
         const idx = canvasIdxMap.get(canvas)!;
-        if (entry.isIntersecting) {
+        if (entry.isIntersecting)  {
           const startX = maxCanvasWidth * idx;
           const width = Math.min(maxCanvasWidth, props.width - startX);
           const renderCall = { canvasIdx: idx, startX, width } as RenderCall;

@@ -757,7 +757,7 @@ interface ProcessMessage {
 
 interface WorkerMessage {
   msg: 'process' | 'requestRenderData';
-  payload: ProcessMessage | { startX: number, width: number };
+  payload: ProcessMessage | { startX: number, width: number, canvasIdx: number };
 }
 
 type MelographData = {
