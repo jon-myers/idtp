@@ -16,7 +16,7 @@ let scaledData: NdArray | undefined = undefined;
 let intensifiedData: NdArray | undefined = undefined;
 let imgData: ImageData | undefined = undefined;
 let dispatcher: Dispatcher | undefined = undefined;
-let intensityLUT: number[] | undefined = undefined;
+let intensityLUT: Uint8Array | undefined = undefined;
 let cmapLUT: RGBColor[] | undefined = undefined;
 
 let initLogMin = Math.log2(75);
@@ -241,7 +241,7 @@ const fetchShape = async (shapeUrl: string) => {
 
 const createIntensityLUT = (maxVal: number) => {
   const maxPowVal = Math.pow(maxVal, power);
-  const lut = new Array(256);
+  const lut = new Uint8Array(256);
   for (let i = 0; i < 256; i++) {
     lut[i] = Math.floor(Math.pow(i, power) / maxPowVal * 255);
   }
@@ -359,7 +359,6 @@ const intensifyCol = (startX: number, width: number) => {
     for (let i = 0; i < scaledShape[0]; i++) {
       for (let j = startX; j < startX + width; j++) {
         let val = scaledData.get(i, j)
-        // val = Math.pow(val / maxVal, power) * maxVal;
         val = intensityLUT[val];
         intensifiedData.set(i, j, val);
       }
