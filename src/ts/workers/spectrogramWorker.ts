@@ -1,257 +1,431 @@
 import * as d3CMap from 'd3-scale-chromatic';
-import { CMap } from '../types.ts';
-import { rgb } from 'd3-color';
+import { CMap } from '../types';
+import { rgb, RGBColor } from 'd3-color';
 import ndarray, { NdArray } from 'ndarray';
 import ops from 'ndarray-ops';
-import pako from 'pako';
+import pako from  'pako';
+import { ProcessMessage, WorkerMessage } from '@/ts/types';
 
-import { MessageType, ProcessMessage, WorkerMessage } from '@/ts/types.ts';
-
+let extData: Uint8Array | undefined = undefined;
+let extDataShape: [number, number] | undefined = undefined;
 let initData: NdArray | undefined = undefined;
 let croppedData: NdArray | undefined = undefined;
+let verbose = false;
+let scaledShape: [number, number] | undefined = undefined;
 let scaledData: NdArray | undefined = undefined;
 let intensifiedData: NdArray | undefined = undefined;
 let imgData: ImageData | undefined = undefined;
-let extData: Uint8Array | undefined = undefined;
-let extDataShape: [number, number] | undefined = undefined;
+let dispatcher: Dispatcher | undefined = undefined;
+let intensityLUT: number[] | undefined = undefined;
+let cmapLUT: RGBColor[] | undefined = undefined;
 
 let initLogMin = Math.log2(75);
 let initLogMax = Math.log2(2400);
-let scaledShape: [number, number] | undefined = undefined;
-let power = 1;
 let maxVal = 255;
-let cMapName = CMap.Viridis;
-let processing: number[] = [];
-let complete = false;
+const maxCanvasWidth = 1000; // this needs to align with maxCanvasWidth in
+let power = 1;
+let cmap: CMap = CMap.Viridis;
 
-let verbose = false;
-
-const processChunk = async (
-  reader: ReadableStreamDefaultReader,
-  inflator: pako.Inflate
-) => {
-  const { done, value } = await reader.read();
-  if (done) {
-    inflator.push(new Uint8Array(), true);
-    return;
-  }
-  inflator.push(value, false);
-  if (inflator.err) {
-    throw new Error(`pakeo error: ${inflator.err}`);
-  }
-  await processChunk(reader, inflator);
-
+enum TaskName {
+  Scale = 'scale',
+  Intensify = 'intensify',
+  Colorize = 'colorize'
 }
 
+class Dispatcher {
+  taskMatrix: {
+    scaled: boolean,
+    intensified: boolean,
+    colorized: boolean,
+    width: number,
+    startX: number,
+  }[];
+  priorityQueue: number[] = [];
+  backgroundQueue: { 
+    canvasIdx: number;
+    taskName: TaskName;
+  }[] = [];
+  queueRunning: boolean = false;
+
+  constructor(scaledShape: [number, number]) {
+    const width = scaledShape[1];
+    const normalColumns = Math.floor(width / maxCanvasWidth);
+    const extraColWidth = width % maxCanvasWidth;
+    this.taskMatrix = [];
+    for (let i = 0; i < normalColumns; i++) {
+      this.taskMatrix.push({ 
+        scaled: false, 
+        intensified: false, 
+        colorized: false,
+        width: maxCanvasWidth,
+        startX: i * maxCanvasWidth
+      });
+    }
+    if (extraColWidth > 0) {
+      this.taskMatrix.push({
+        scaled: false,
+        intensified: false,
+        colorized: false,
+        width: extraColWidth,
+        startX: normalColumns * maxCanvasWidth
+      });
+    }
+    this.resetBackgroundQueue(TaskName.Scale, true);
+  }
+
+  respawnTaskMatrix = () => {
+    if (scaledShape === undefined) {
+      throw new Error('scaledShape is not initialized')
+    }
+    const width = scaledShape[1];
+    const normalColumns = Math.floor(width / maxCanvasWidth);
+    const extraColWidth = width % maxCanvasWidth;
+    this.taskMatrix = [];
+    for (let i = 0; i < normalColumns; i++) {
+      this.taskMatrix.push({ 
+        scaled: false, 
+        intensified: false, 
+        colorized: false,
+        width: maxCanvasWidth,
+        startX: i * maxCanvasWidth
+      });
+    }
+    if (extraColWidth > 0) {
+      this.taskMatrix.push({
+        scaled: false,
+        intensified: false,
+        colorized: false,
+        width: extraColWidth,
+        startX: normalColumns * maxCanvasWidth
+      });
+    }
+  }
 
 
-const crop = (logMin: number, logMax: number) => {
-  if (initData === undefined) {
-    throw new Error('Initial data must be provided');
-  }
-  let now: number | undefined = undefined;
-  if (verbose) {
-    now = performance.now() as number;
-  }
-  const initHeight = initData.shape[0];
-  let yMin = (logMin - initLogMin) / (initLogMax - initLogMin) * initHeight;
-  let yMax = (logMax - initLogMin) / (initLogMax - initLogMin) * initHeight;
-  yMin = Math.floor(yMin);
-  yMax = Math.ceil(yMax);
-
-  const newHeight = yMax - yMin;
-  croppedData = initData
-    .lo(initHeight - yMax, 0)
-    .hi(newHeight, initData.shape[1]);
-  // set max val
-  maxVal = ops.sup(croppedData);
-  if (verbose) {
-    const dur = performance.now() - now!;
-    self.postMessage(`crop time: ${(dur / 1000).toFixed()}`);
-  }
-  // test if we just need to add a little time here
-    scale();
-};
-
-const waitForCroppedData = async () => {
-  while (croppedData === undefined) {
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-}
-
-const scale = () => {
-
-  if (scaledShape === undefined) {
-    throw new Error('Scaled shape must be provided');
-  }
-  if (croppedData === undefined) {
-    throw new Error('Cropped data must be provided');
-  }
-  let now: number | undefined = undefined;
-  if (verbose) {
-    now = performance.now() as number;
-  }
-  const [newHeight, newWidth] = scaledShape as [number, number];
-  const [oldHeight, oldWidth] = croppedData.shape;
-  scaledData = ndarray(new Float32Array(newHeight * newWidth), scaledShape);
-  const yScale = oldHeight / newHeight;
-  const xScale = oldWidth / newWidth;
-  let trigger = false;
-  for (let i = 0; i < newHeight; i++) {
-    for (let j = 0; j < newWidth; j++) {
-      const y = i * yScale;
-      const x = j * xScale;
-      const y1 = Math.floor(y);
-      const y2 = Math.min(Math.ceil(y), oldHeight - 1);
-      const x1 = Math.floor(x);
-      const x2 = Math.min(Math.ceil(x), oldWidth - 1);
-      const a = y - y1;
-      const b = x - x1;
-      let y1x1 = croppedData.get(y1, x1);
-      let y1x2 = croppedData.get(y1, x2);
-      let y2x1 = croppedData.get(y2, x1);
-      let y2x2 = croppedData.get(y2, x2);
-      if (y1x1 === undefined) y1x1 = 0;
-      if (y1x2 === undefined) y1x2 = 0;
-      if (y2x1 === undefined) y2x1 = 0;
-      if (y2x2 === undefined) y2x2 = 0;
-      let val = (1 - a) * (1 - b) * y1x1 +
-        (1 - a) * b * y1x2 +
-        a * (1 - b) * y2x1 +
-        a * b * y2x2;
-      val = Math.round(val);
-      if (Number.isNaN(val)) {
-        console.log(x, y, x1, x2, y1, y2);
-        debugger;
-        trigger = true;
+  startQueue = () => {
+    while (this.backgroundQueue.length > 0 || this.priorityQueue.length > 0) {
+      if (this.priorityQueue.length > 0) {
+        const canvasIdx = this.priorityQueue.shift()!;
+        this.processCol(canvasIdx);
+      } else if (this.backgroundQueue.length > 0) {
+        const { canvasIdx, taskName } = this.backgroundQueue.shift()!;
+        this.processTaskForCol(canvasIdx, taskName);
       }
-      try {
-        scaledData.set(i, j, val);
-      } catch (err) {
-        if (err instanceof Error) {
-          console.log('Error details:', {
-            i,
-            j,
-            val,
-            shape: scaledData.shape,
-            dataLength: scaledData.data.length,
-            error: err.message
-          });
-          throw err;
-        }
+    }
+    this.queueRunning = false;
+  }
+
+  addToPriorityQueue = (canvasIdx: number) => {
+    this.priorityQueue = this.priorityQueue.filter(idx => idx !== canvasIdx);
+    this.priorityQueue.push(canvasIdx);
+    if (!this.queueRunning) {
+      this.queueRunning = true;
+      this.startQueue();
+    }
+  }
+
+  resetBackgroundQueue = (taskName: TaskName, init: boolean = false) => {
+    if (taskName === TaskName.Scale) {
+      this.respawnTaskMatrix();
+    } else if (taskName === TaskName.Intensify) {
+      this.taskMatrix.forEach(task => {
+        task.intensified = false;
+        task.colorized = false;
+      });
+    } else if (taskName === TaskName.Colorize) {
+      this.taskMatrix.forEach(task => {
+        task.colorized = false;
+      });
+    }
+    this.backgroundQueue = [];
+    if (taskName === TaskName.Scale) {
+      this.taskMatrix.forEach((_, i) => {
+        this.backgroundQueue.push({ canvasIdx: i, taskName: TaskName.Scale });
+      });
+    }
+    if (taskName === TaskName.Intensify || taskName === TaskName.Scale) {
+      this.taskMatrix.forEach((_, i) => {
+        this.backgroundQueue.push({ 
+          canvasIdx: i, 
+          taskName: TaskName.Intensify 
+        });
+      });
+    }
+    if (
+      taskName === TaskName.Colorize || 
+      taskName === TaskName.Intensify || 
+      taskName === TaskName.Scale
+    ) {
+      this.taskMatrix.forEach((_, i) => {
+        this.backgroundQueue.push({ 
+          canvasIdx: i, 
+          taskName: TaskName.Colorize 
+        });
+      });
+    }
+    if (!this.queueRunning && !init) {
+      this.queueRunning = true;
+      this.startQueue();
+    }
+  }
+
+  processCol = (canvasIdx: number) => {
+    if (canvasIdx >= this.taskMatrix.length) {
+      throw new Error('canvasIdx out of bounds');
+    }
+    const task = this.taskMatrix[canvasIdx];
+    if (!task.scaled) {
+      scaleCol(task.startX, task.width);
+      task.scaled = true;
+    }
+    if (!task.intensified) {
+      intensifyCol(task.startX, task.width);
+      task.intensified = true;
+    }
+    if (!task.colorized) {
+      colorizeCol(task.startX, task.width);
+      task.colorized = true;
+    }
+    sendImgSlice(task.startX, task.width, canvasIdx);
+  }
+
+  processTaskForCol = (
+    canvasIdx: number, 
+    taskName: TaskName
+  ) => {
+    const task = this.taskMatrix[canvasIdx];
+    if (taskName === TaskName.Scale) {
+      if (!task.scaled) {
+        scaleCol(task.startX, task.width);
+        task.scaled = true;
+      }
+    } else if (taskName === TaskName.Intensify) {
+      if (!task.intensified) {
+        intensifyCol(task.startX, task.width);
+        task.intensified = true;
+      }
+    } else if (taskName === TaskName.Colorize) {
+      if (!task.colorized) {
+        colorizeCol(task.startX, task.width);
+        task.colorized = true;
       }
     }
   }
-  if (trigger) {
-    console.log(croppedData.shape)
-    throw new Error('NaN value found');
+}
+
+const fetchArrayBuf = async (dataUrl: string) => {
+  let now: number | undefined = undefined;
+  if (verbose) {
+    now = performance.now() as number;
   }
-  const emptyImgData = new Uint8ClampedArray(newWidth * newHeight * 4);
-  imgData = new ImageData(emptyImgData, newWidth, newHeight);
+  const res = await fetch(dataUrl);
   if (verbose) {
     const dur = performance.now() - now!;
-    self.postMessage(`scale time: ${(dur / 1000).toFixed()}`);
+    self.postMessage(`fetch time: ${(dur / 1000).toFixed()}`);
+    now = performance.now() as number;
   }
-  intensify();
-  // })
+  const arrayBuf = await res.arrayBuffer();
+  const data = pako.inflate(new Uint8Array(arrayBuf))
+  if (verbose) {
+    const dur = performance.now() - now!;
+    self.postMessage(`array buffer time: ${(dur / 1000).toFixed()}`);
+  }
+  return data;
+};
+
+const fetchShape = async (shapeUrl: string) => {
+  const res = await fetch(shapeUrl);
+  const shape = await res.json() as { shape: [number, number] };
+  return shape.shape;
 }
 
 const createIntensityLUT = (maxVal: number) => {
+  const maxPowVal = Math.pow(maxVal, power);
   const lut = new Array(256);
   for (let i = 0; i < 256; i++) {
-    lut[i] = Math.floor(Math.pow(i, power) / maxVal * 255);
+    lut[i] = Math.floor(Math.pow(i, power) / maxPowVal * 255);
   }
   return lut;
 }
 
-const intensify = () => {
-  if (scaledData === undefined) {
-    throw new Error('Scaled data must be provided');
-  }
-  let now: number | undefined = undefined;
-  if (verbose) {
-    now = performance.now() as number;
-  }
-  intensifiedData = ndarray(new Float32Array(scaledData.size), scaledData.shape);
-  if (power !== 1) {
-    const scData = scaledData.data as Uint8Array;
-    maxVal = scData.reduce((acc, val) => Math.max(acc, val), 0);
-    maxVal = Math.pow(maxVal, power);
-    const lut = createIntensityLUT(maxVal);
-    const lutData = new Uint8Array(scData);
-    for (let i = 0; i < lutData.length; i++) {
-      lutData[i] = lut[lutData[i]];
-    }
-    intensifiedData.data = lutData;
-  } else {
-    ops.assign(intensifiedData, scaledData);
-  }
-  if (verbose) {
-    const dur = performance.now() - now!;
-    self.postMessage(`intensify time: ${(dur / 1000).toFixed(2)}`);
-  }
-  colorize();
-}
-
 const createColorMapLUT = (cMapObj: any) => {
-  const lut = new Array(256);
+  const lut: RGBColor[] = new Array(256);
   for (let i = 0; i < 256; i++) {
     lut[i] = rgb(cMapObj(i / 255));
   }
   return lut;
 }
 
-const colorize = () => {
-  if (imgData === undefined) {
-    throw new Error('Image data must be provided');
+const initialize = async (
+    audioID: string, 
+    logMin: number, 
+    logMax: number,
+  ) => {
+  const dir = 'https://swara.studio/spec_data/';
+  const dataUrl = dir + audioID + '/spec_data.gz';
+  const shapeUrl = dir + audioID + '/spec_shape.json';
+  try {
+    const dataPromise = fetchArrayBuf(dataUrl);
+    const shapePromise = fetchShape(shapeUrl);
+    [extData, extDataShape] = await Promise.all([dataPromise, shapePromise]);
+  } catch (e) {
+    console.error(e); 
+  }
+  const f32ExtData = new Float32Array(extData!);
+  initData = ndarray(f32ExtData, extDataShape!);
+  crop(logMin, logMax);
+  if (scaledShape === undefined) {
+    throw new Error('scaledShape is not initialized')
+  }
+  let [height, width] = scaledShape;
+  const scaledArr = new Float32Array(width *  height);
+  scaledData = ndarray(scaledArr, scaledShape);
+  const intensifiedArr = new Float32Array(width * height);
+  intensifiedData = ndarray(intensifiedArr, scaledShape);
+  const imgDataArr = new Uint8ClampedArray(width * height * 4);
+  imgData = new ImageData(imgDataArr, width, height);
+  cmapLUT = createColorMapLUT(d3CMap[cmap]);
+  dispatcher = new Dispatcher(scaledShape);
+  dispatcher.startQueue();
+};
+
+const crop = (logMin: number, logMax: number) => {
+  if (!initData) throw new Error('initData is not initialized');
+  const initHeight = initData.shape[0];
+  let yMin = (logMin - initLogMin) / (initLogMax - initLogMin) * initHeight;
+  let yMax = (logMax - initLogMin) / (initLogMax - initLogMin) * initHeight;
+  yMin = Math.floor(yMin);
+  yMax = Math.ceil(yMax);
+  const newHeight = yMax - yMin;
+  croppedData = initData
+    .lo(initHeight - yMax, 0)
+    .hi(newHeight, initData.shape[1]);
+  maxVal = ops.sup(croppedData);
+  intensityLUT = createIntensityLUT(maxVal);
+}
+
+const scaleCol = (startX: number, width: number) => {
+  if (scaledShape === undefined) {
+    throw new Error('scaledShape is not initialized')
+  }
+  if (croppedData === undefined) {
+    throw new Error('croppedData is not initialized')
+  }
+  if (scaledData === undefined) {
+    throw new Error('scaledData is not initialized')
+  }
+  const scaledHeight = scaledShape[0];
+  const scaledWidth = scaledShape[1];
+  const croppedHeight = croppedData.shape[0];
+  const croppedWidth = croppedData.shape[1];
+  const xScale = croppedWidth / scaledWidth;
+  const yScale = croppedHeight / scaledHeight;
+  for (let i = 0; i < scaledHeight; i++) {
+    for (let j = startX; j < startX + width; j++) {
+      const y = i * yScale;
+      const x = j * xScale;
+      const y1 = Math.floor(y);
+      const y2 = Math.min(Math.ceil(y), croppedHeight - 1);
+      const x1 = Math.floor(x);
+      const x2 = Math.min(Math.ceil(x), croppedWidth - 1);
+      const a = y - y1;
+      const b = x - x1;
+      let y2x1 = croppedData.get(y2, x1) ?? 0;
+      let y1x1 = croppedData.get(y1, x1) ?? 0;
+      let y1x2 = croppedData.get(y1, x2) ?? 0;
+      let y2x2 = croppedData.get(y2, x2) ?? 0;
+      let val = (1 - a) * ((1 - b) * y1x1 + b * y1x2) + 
+        a * ((1 - b) * y2x1 + b * y2x2);
+      val = Math.round(val);
+      scaledData.set(i, j, val);
+    }
+  }
+}
+
+const intensifyCol = (startX: number, width: number) => {
+  if (scaledData === undefined) {
+    throw new Error('scaledData is not initialized')
+  }
+  if (scaledShape === undefined) {
+    throw new Error('scaledShape is not initialized')
   }
   if (intensifiedData === undefined) {
-    throw new Error('Intensified data must be provided');
+    throw new Error('intensifiedData is not initialized')
   }
-  let now: number | undefined = undefined;
-  if (verbose) {
-    now = performance.now()
+  if (intensityLUT === undefined) {
+    throw new Error('intensityLUT is not initialized')
   }
+  if (power !== 1) {
+    for (let i = 0; i < scaledShape[0]; i++) {
+      for (let j = startX; j < startX + width; j++) {
+        let val = scaledData.get(i, j)
+        // val = Math.pow(val / maxVal, power) * maxVal;
+        val = intensityLUT[val];
+        intensifiedData.set(i, j, val);
+      }
+    }
+  } else {
+    for (let i = 0; i < scaledShape[0]; i++) {
+      for (let j = startX; j < startX + width; j++) {
+        intensifiedData.set(i, j, scaledData.get(i, j));
+      }
+    }
+  }
+}
 
-  // console.log(intensifiedData.data)
-  const cMapObj = d3CMap[cMapName];
+const colorizeCol = (startX: number, width: number) => {
+  if (imgData === undefined) {
+    throw new Error('imgData is not initialized')
+  }
+  if (intensifiedData === undefined) {
+    throw new Error('intensifiedData is not initialized')
+  }
+  if (cmapLUT === undefined) {
+    throw new Error('cmapLUT is not initialized')
+  }
+  // console.log(cmapLUT)
   const imgDataHeight = imgData.height;
   const imgDataWidth = imgData.width;
   const imgDataData = imgData.data;
-  // console.log(imgDataData)
-  const lut = createColorMapLUT(cMapObj);
   for (let i = 0; i < imgDataHeight; i++) {
-    for (let j = 0; j < imgDataWidth; j++) {
-      const dataVal = intensifiedData.get(i, j);
-      const colorObj = lut[dataVal];
+    for (let j = startX; j < startX + width; j++) {
+      const val = intensifiedData.get(i, j);
       const idx = (i * imgDataWidth + j) * 4;
-      imgDataData[idx] = colorObj.r;
-      imgDataData[idx + 1] = colorObj.g;
-      imgDataData[idx + 2] = colorObj.b;
+      const color = cmapLUT[val];
+      if (color === undefined) {
+        debugger;
+      }
+      imgDataData[idx] = color.r;
+      imgDataData[idx + 1] = color.g;
+      imgDataData[idx + 2] = color.b;
       imgDataData[idx + 3] = 255;
     }
   }
-  processing.pop();
-  if (processing.length === 0) complete = true;
-  if (verbose) {
-    const dur = performance.now() - now!;
-    self.postMessage(`colorize time: ${(dur / 1000).toFixed()}`);
-  }
-  if (verbose) {
-    console.log('done processing');
-  }
-};
+}
 
-
-const waitUntilComplete = async () => {
-  while (!complete) {
-    await new Promise(resolve => setTimeout(resolve, 100));
+const sendImgSlice = (startX: number, width: number, canvasIdx: number) => {
+  if (imgData === undefined) {
+    throw new Error('imgData is not initialized')
   }
+  const slice = new Uint8ClampedArray(width * imgData.height * 4);
+  for (let y = 0; y < imgData.height; y++) {
+    for (let x = 0; x < width; x++) {
+      const srcIdx = (y * imgData.width + x + startX) * 4;
+      const destIdx = (y * width + x) * 4;
+      [0, 1, 2, 3].forEach(i => slice[destIdx + i] = imgData!.data[srcIdx + i]);
+    }
+  }
+  const sliceImgData = new ImageData(slice, width, imgData.height);
+  const msg = {
+    msg: 'render',
+    payload: sliceImgData,
+    canvasIdx
+  };
+  self.postMessage(msg, [slice.buffer])
 }
 
 self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
   if (e.data.msg === 'process') {
-    complete = false;
     const data = e.data.payload as ProcessMessage;
     const {
       type,
@@ -263,136 +437,83 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
       audioID,
       newVerbose
     } = data;
-
-    
-
     if (type === 'initial') {
       if (audioID === undefined) {
-        throw new Error('Audio ID must be provided');
+        throw new Error('audioID is undefined');
       }
-
       if (logMin === undefined || logMax === undefined) {
-        throw new Error('Log min and max must be provided');
+        throw new Error('logMin or logMax is undefined');
       }
       if (newScaledShape === undefined) {
-        throw new Error('Scaled shape must be provided');
+        throw new Error('newScaledShape is undefined');
       }
       if (newPower !== undefined) {
-        power = newPower;
+        power = newPower 
       }
       if (newCMap !== undefined) {
-        cMapName = newCMap;
+        cmap = newCMap;
       }
       if (newVerbose !== undefined) {
         verbose = newVerbose;
       }
-      processing.push(1)
-      const dataUrl = 'https://swara.studio/spec_data/' + audioID + '/spec_data.gz';
-      const shapeUrl = 'https://swara.studio/spec_data/' + audioID + '/spec_shape.json';
-      const fetchArrayBuf = async () => {
-        let now: number | undefined = undefined;
-        if (verbose) {
-          now = performance.now() as number;
-        }
-        const res = await fetch(dataUrl);
-        if (verbose) {
-          const dur = performance.now() - now!;
-          self.postMessage(`fetch time: ${(dur / 1000).toFixed()}`);
-          now = performance.now() as number;
-        }
-        const arrayBuf = await res.arrayBuffer();
-        const data = pako.inflate(new Uint8Array(arrayBuf))
-        if (verbose) {
-          const dur = performance.now() - now!;
-          self.postMessage(`array buffer time: ${(dur / 1000).toFixed()}`);
-        }
-        return data;
-      }
-      const fetchShape = async () => {
-        const res = await fetch(shapeUrl);
-        const shape = await res.json() as { shape: [number, number] };
-        return shape.shape;
-      }
-      try {
-        const dataPromise = fetchArrayBuf();
-        const shapePromise = fetchShape();
-        [extData, extDataShape] = await Promise.all([
-          dataPromise,
-          shapePromise
-        ])
-      } catch (err) {
-        console.error(err);
-      }
-      if (extData === undefined || extDataShape === undefined) {
-        throw new Error('Data and shape must be provided');
-      }
-      const altArr = new Float32Array(extData);
-      initData = ndarray(altArr, extDataShape);
       scaledShape = newScaledShape;
-      crop(logMin, logMax);
+      try {
+        await initialize(audioID, logMin, logMax);
+      } catch (e) {
+        console.error(e);
+      }
     } else {
-      self.postMessage('updateObserver');
+      while (dispatcher === undefined) {
+        await new Promise(r => setTimeout(r, 100));
+      }
       if (type === 'crop') {
         if (logMin === undefined || logMax === undefined) {
-          throw new Error('Log min and max must be provided');
+          throw new Error('logMin or logMax is undefined');
         }
-        processing.push(1)
         crop(logMin, logMax);
+        dispatcher!.resetBackgroundQueue(TaskName.Scale);
       } else if (type === 'scale') {
         if (newScaledShape === undefined) {
-          throw new Error('Scaled shape must be provided');
+          throw new Error('newScaledShape is undefined');
         }
-        await waitForCroppedData();
-        processing.push(1)
         scaledShape = newScaledShape;
-        scale();
+        let [height, width] = scaledShape;
+        const scaledArr = new Float32Array(width * height);
+        scaledData = ndarray(scaledArr, scaledShape);
+        const intensifiedArr = new Float32Array(width * height);
+        intensifiedData = ndarray(intensifiedArr, scaledShape);
+        const imgDataArr = new Uint8ClampedArray(width * height * 4);
+        imgData = new ImageData(imgDataArr, width, height);
+        cmapLUT = createColorMapLUT(d3CMap[cmap]);
+        intensityLUT = createIntensityLUT(maxVal);
+        dispatcher!.resetBackgroundQueue(TaskName.Scale);
       } else if (type === 'power') {
         if (newPower === undefined) {
-          throw new Error('Power must be provided');
+          throw new Error('newPower is undefined');
         }
-        processing.push(1)
         power = newPower;
-        intensify();
+        dispatcher!.resetBackgroundQueue(TaskName.Intensify);
+        self.postMessage('updateObserver');
       } else if (type === 'color') {
         if (newCMap === undefined) {
-          throw new Error('Color map must be provided');
+          throw new Error('newCMap is undefined');
         }
-        processing.push(1)
-        cMapName = newCMap;
-        colorize();
-      }
+        cmap = newCMap;
+        cmapLUT = createColorMapLUT(d3CMap[cmap]);
+        dispatcher!.resetBackgroundQueue(TaskName.Colorize);
+        self.postMessage('updateObserver');
+      } 
     }
   } else if (e.data.msg === 'requestRenderData') {
-    // first, wait until processing is done, how to do this like a promise?
-    if (!complete) {
-      await waitUntilComplete();
+    while (dispatcher === undefined) {
+      await new Promise(r => setTimeout(r, 100));
     }
-
-    // grab the slice of image data and send it back
-    if (imgData === undefined) {
-      throw new Error('Image data must be provided');
-    }
-    const { canvasIdx, startX, width } = e.data.payload as { 
-      canvasIdx: number, 
-      startX: number, 
-      width: number 
+    const { canvasIdx, startX, width } = e.data.payload as {
+      canvasIdx: number,
+      startX: number,
+      width: number
     };
-    const slice = new Uint8ClampedArray(width * imgData.height * 4);
-    for (let y = 0; y < imgData.height; y++) {
-      for (let x = 0; x < width; x++) {
-        const srcIdx = (y * imgData.width + x + startX) * 4;
-        const destIdx = (y * width + x) * 4;
-        [0, 1, 2, 3].forEach(i => {
-          slice[destIdx + i] = imgData!.data[srcIdx + i];
-        });
-      }
-    };
-    const sliceImgData = new ImageData(slice, width, imgData.height);
-    const msg = {
-      msg: 'render',
-      payload: sliceImgData,
-      canvasIdx: canvasIdx,
-    }
-    self.postMessage(msg, [slice.buffer]);
+    // const canvasIdx = e.data.payload.canvasIdx!;
+    dispatcher.addToPriorityQueue(canvasIdx);
   }
-} 
+}
