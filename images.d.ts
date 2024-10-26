@@ -22,3 +22,10 @@ declare module '*.jpg' {
   const content: any;
   export default content;
 }
+
+declare module '*?worker' {
+  class WebWorker extends Worker {
+    constructor();
+  }
+  export default WebWorker;
+}
