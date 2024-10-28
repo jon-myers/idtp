@@ -699,7 +699,7 @@ export default defineComponent({
         this.initUp = true;
         this.offset = 0;
         this.periods = 8;
-        this.vowel = 'a';
+        // this.vowel = 'a';
       }
     },
 
