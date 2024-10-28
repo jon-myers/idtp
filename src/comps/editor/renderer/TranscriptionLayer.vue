@@ -1400,7 +1400,6 @@ export default defineComponent({
     // };
 
     const renderConsonantSymbols = (traj: Trajectory, track: number) => {
-      console.log('getting called')
       const g = tracks[track].select('.trajG');
       g.selectAll(`.uId${traj.uniqueId}.consonantSymbol`).remove();
       const arts = traj.articulations;

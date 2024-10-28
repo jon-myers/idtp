@@ -22,8 +22,9 @@ import {
   durationsOfFixedPitches,  
 } from '@/js/classes.ts';
 import { 
-  PhraseCatType
+  PhraseCatType,
 } from '@/ts/types.ts'
+import { Instrument } from '@/ts/enums.ts';
 import * as d3 from 'd3';
 import { 
   segmentByDuration,
@@ -112,12 +113,10 @@ export default defineComponent({
       }>,
        required: true
     },
-    vocal: {
-      type: Boolean,
+    instIdx: {
+      type: Number,
       required: true
     }
-
-
   },
   data(): PitchPrevalenceDataType {
     return {
@@ -158,7 +157,9 @@ export default defineComponent({
       const tog = this.topOfGraph;
       d3.select('.axisSVG').remove();
       d3.select('.gS').remove();
-      let segments = this.piece.sections.map(s => s.trajectories);
+      let segments = this.piece.sectionsGrid[this.instIdx].map(s => {
+        return s.trajectories
+      });
       const func = this.pitchRepresentation === 'Fixed Pitch' ?
         durationsOfFixedPitches :
         durationsOfPitchOnsets;
@@ -180,7 +181,7 @@ export default defineComponent({
         }
         let bool2 = false;
         this.secTopLevels.forEach(sec => {
-          const section = this.piece.sections[sIdx];
+          const section = this.piece.sectionsGrid[this.instIdx][sIdx];
           const sCat = section.categorization;
           if (sec.name === sCat['Top Level'] && sec['bool'] === true) {
             bool2 = true;
@@ -246,7 +247,7 @@ export default defineComponent({
         });
       yAxisNode.call(d3.axisLeft(y)
           .tickValues(pitchNumbers)
-          .tickFormat((d, i) => tickLabels[i])
+          .tickFormat((d, i) => tickLabels[i] || '')
           .tickSize(0)
           .tickPadding(15))
         .style('color', 'black')
@@ -611,7 +612,9 @@ export default defineComponent({
     generatePhraseGraph() {
       d3.select('.axisSVG').remove();
       d3.select('.gS').remove();
-      let segments = this.piece.phrases.map(p => p.trajectories);
+      let segments = this.piece.phraseGrid[this.instIdx].map(p => {
+        return p.trajectories
+      });
       const func = this.pitchRepresentation === 'Fixed Pitch' ?
         durationsOfFixedPitches :
         durationsOfPitchOnsets;
@@ -634,15 +637,15 @@ export default defineComponent({
         }
         let bool2 = false; //part of section that is not allowed to be shown
         this.secTopLevels.forEach(sec => {
-          const sIdx = this.piece.sIdxFromPIdx(pIdx);
-          const section = this.piece.sections[sIdx];
+          const sIdx = this.piece.sIdxFromPIdx(pIdx, this.instIdx);
+          const section = this.piece.sectionsGrid[this.instIdx][sIdx];
           const sCat = section.categorization;
           if (sec.name === sCat['Top Level'] && sec['bool'] === true) {
             bool2 = true;
           }
         });
         
-        const phrase = this.piece.phrases[pIdx];
+        const phrase = this.piece.phraseGrid[this.instIdx][pIdx];
         const pCat = phrase.categorizationGrid[0];
 
         // check if phrase type is allowed
@@ -711,7 +714,9 @@ export default defineComponent({
         // if vocal, check if vocal articulation is allowed, else check if 
         // instrumental articulation is allowed
         let artBool = false;
-        if (this.vocal) {
+        const inst = this.piece.instrumentation[this.instIdx];
+        const vox = [Instrument.Vocal_M, Instrument.Vocal_F];
+        if (vox.includes(inst)) {
           const artKeys = Object.keys(pCat['Vocal Articulation']) as 
             (keyof typeof pCat['Vocal Articulation'])[];
           const theseArts = artKeys.filter(art => {
@@ -862,7 +867,7 @@ export default defineComponent({
       const xVal = this.yAxisWidth;
       yAxisNode.call(d3.axisLeft(y)
           .tickValues(pitchNumbers)
-          .tickFormat((d, i) => tickLabels[i])
+          .tickFormat((d, i) => tickLabels[i] || '')
           .tickSize(0)
           .tickPadding(15))
         .style('color', 'black')
@@ -1216,11 +1221,11 @@ export default defineComponent({
             el: gS 
           })
         })
-        let currentSIdx = this.piece.sIdxFromPIdx(durIdxs[0]);
+        let currentSIdx = this.piece.sIdxFromPIdx(durIdxs[0], this.instIdx);
         let csidxTrig = true;
         durs.forEach((dur, dIdx) => {
           const pIdx = durIdxs[dIdx];
-          const phrase = this.piece.phrases[pIdx];
+          const phrase = this.piece.phraseGrid[this.instIdx][pIdx];
           const pCat = phrase.categorizationGrid[0];
           const pStart = phrase.startTime!;
           const pDur = phrase.durTot!;
@@ -1234,7 +1239,9 @@ export default defineComponent({
             ).filter(elab => {
               return pCat.Elaboration[elab] === true;
             });
-          const pArts = this.vocal ?
+          const vox = [Instrument.Vocal_M, Instrument.Vocal_F];
+          const inst = this.piece.instrumentation[this.instIdx];
+          const pArts = vox.includes(inst) ?
             (Object.keys(pCat['Vocal Articulation']) as
               (keyof typeof pCat['Vocal Articulation'])[]
               ).filter(art => {
@@ -1320,7 +1327,7 @@ export default defineComponent({
             el: gS 
           })
           
-          const sIdx = this.piece.sIdxFromPIdx(pIdx);
+          const sIdx = this.piece.sIdxFromPIdx(pIdx, this.instIdx);
           
           if (sIdx !== currentSIdx) {
             // draw vertical line at left
@@ -1337,7 +1344,7 @@ export default defineComponent({
               el: gS 
             })
             const sIdxOfEachDurIdx = durIdxs.map(pIdx => {
-              return this.piece.sIdxFromPIdx(pIdx);
+              return this.piece.sIdxFromPIdx(pIdx, this.instIdx);
             });
             const size = sIdxOfEachDurIdx.filter(sIdx_ => {
               return sIdx_ === sIdx;
@@ -1345,7 +1352,7 @@ export default defineComponent({
             if (csidxTrig) {
               const prevDIdx = dIdx - 1;
               const prevPIdx = durIdxs[prevDIdx];
-              const pSIdx = this.piece.sIdxFromPIdx(prevPIdx);
+              const pSIdx = this.piece.sIdxFromPIdx(prevPIdx, this.instIdx);
               const prev_size = sIdxOfEachDurIdx.filter(sIdx_ => {
                 return sIdx_ === pSIdx;
               }).length;
@@ -1358,7 +1365,7 @@ export default defineComponent({
                 el: gS 
               });
               //add section type
-              let psTxt = this.piece.sectionCategorization[pSIdx]['Top Level'];
+              let psTxt = this.piece.sectionCatGrid[this.instIdx][pSIdx]['Top Level'];
               this.addText({ 
                 x: prev_x, 
                 y: prev_y + 20, 
@@ -1375,7 +1382,7 @@ export default defineComponent({
               el: gS 
             });
             // add section type
-            const secType = this.piece.sectionCategorization[sIdx]['Top Level'];
+            const secType = this.piece.sectionCatGrid[this.instIdx][sIdx]['Top Level'];
             this.addText({ 
               x: x_ + widthPerSeg * size / 2, 
               y: sNum_y + 20, 
@@ -1469,7 +1476,7 @@ export default defineComponent({
       const xVal = this.yAxisWidth;
       yAxisNode.call(d3.axisLeft(y)
           .tickValues(pitchNumbers)
-          .tickFormat((d, i) => tickLabels[i])
+          .tickFormat((d, i) => tickLabels[i] || '')
           .tickSize(0)
           .tickPadding(15))
         .style('color', 'black')
@@ -1812,7 +1819,7 @@ export default defineComponent({
       fWeight?: string,
       fill?: string,
       anchor?: string,
-      el?: d3.Selection<SVgSElement, unknown, HTMLElement | null, any>,
+      el?: d3.Selection<SVGSVGElement, unknown, HTMLElement | null, any>,
       class_?: string
     } = {}) {
       if (x === undefined || y === undefined || text === undefined) {
@@ -1850,7 +1857,7 @@ export default defineComponent({
       h?: number,
       fill?: string,
       stroke?: string,
-      el?: d3.Selection<SVgSElement, unknown, HTMLElement | null, any>
+      el?: d3.Selection<SVGSVGElement, unknown, HTMLElement | null, any>
     } = {}) {
       if (
         x === undefined || 
@@ -1886,7 +1893,7 @@ export default defineComponent({
       x2?: number,
       y2?: number,
       stroke?: string,
-      el?: d3.Selection<SVgSElement, unknown, HTMLElement | null, any>,
+      el?: d3.Selection<SVGSVGElement, unknown, HTMLElement | null, any>,
       class_?: string
     } = {}) {
       if (

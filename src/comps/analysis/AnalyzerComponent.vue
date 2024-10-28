@@ -10,6 +10,18 @@
           >
           {{ at }}
         </div>
+        <ModeSelector
+        v-if='piece'
+          class='modeSelector'
+          :height='typeRowHeight'
+          :selectedMode='instIdx'
+          :enum='instTracksEnum'
+          :noneEnumItem='-1'
+          :tooltipTexts='instTrackTexts'
+          @update:selectedMode='instIdx = $event'
+          @showTooltip='showTooltip($event)'
+          @hideTooltip='hideTooltip'
+        />
       </div>
       <div class='controls' v-if='selectedATIdx === 0'>
         <div class='scrollingCBHolder' :style="{
@@ -348,9 +360,15 @@
       :phraseInfo='phraseInfo!'
       :horizontalProportionalDisplay='horizontalProportionalDisplay'
       v-if='selectedATIdx === 0 && piece'
-      :vocal='vocal'
+      :instIdx='instIdx'
     />
   </div>
+  <Tooltip
+    :x='tooltipX'
+    :y='tooltipY'
+    :text='tooltipText'
+    :open='tooltipOpen'
+    />
 </template>
 
 <script lang='ts'>
@@ -381,10 +399,6 @@ import {
   Trajectory,
   Piece,
 } from '@/js/classes.ts';
-
-import  { 
-  PhraseCatType
-} from '@/ts/types.ts';
 import { pieceExists } from '@/js/serverCalls.ts';
 import Gradient from 'javascript-color-gradient';
 import * as d3 from 'd3';
@@ -417,12 +431,16 @@ import  {
   MultipleOptionType, 
   QueryAnswerType,
   SecCatType,
-  PCountType
+  PCountType,
+  PhraseCatType,
+  TooltipData,
 } from '@/ts/types.ts'
+import {
+  Instrument
+} from '@/ts/enums.ts';
 
-
-
-
+import ModeSelector from '@/comps/editor/renderer/ModeSelector.vue';
+import Tooltip from '@/comps/Tooltip.vue';
 
 const shouldTextBeBlack = (backgroundcolor: string) => {
   return computeLuminence(backgroundcolor) > 0.179;
@@ -525,9 +543,12 @@ type AnalyzerComponentDataType = {
       bool: boolean 
     }[],
     incidentals: { name: keyof PhraseCatType['Incidental'], bool: boolean }[],
-  }
-
-
+  },
+  instIdx: number,
+  tooltipX: number,
+  tooltipY: number,
+  tooltipOpen: boolean,
+  tooltipText: string,
 }
 
 import { useTitle } from '@vueuse/core';
@@ -610,7 +631,12 @@ export default defineComponent({
           return { name: ia, bool: true } 
         }),
         incidentals: incidentals.map(i => ({ name: i, bool: true })),
-      }
+      },
+      instIdx: 0,
+      tooltipX: 0,
+      tooltipY: 0,
+      tooltipOpen: false,
+      tooltipText: '',
     }
   },
 
@@ -625,6 +651,8 @@ export default defineComponent({
     SegmentDisplay,
     QueryControls,
     PitchPrevalence,
+    ModeSelector,
+    Tooltip,
   },
 
   watch: {
@@ -643,7 +671,6 @@ export default defineComponent({
           this.targetPitchChoices = raga.getPitchNumbers(low, high).reverse();
           this.targetPitchIdx = this.targetPitchChoices.indexOf(0);
         }
-        
       } else if (newVal === 'Sargam') {
         if (this.pitchChroma) {
           const pitchChoices = raga.getPitchNumbers(0, 11).reverse();
@@ -675,12 +702,55 @@ export default defineComponent({
       } else {
         return false;
       }
+    },
+
+    instTracksEnum() {
+      const enumObj: Record<string, number> = {};
+      const duplicateNames: Instrument[] = [];
+      if (this.piece === undefined) {
+        throw new Error('Piece is undefined');
+      }
+      this.piece.instrumentation.forEach(inst => {
+        if (!duplicateNames.includes(inst)) {
+          duplicateNames.push(inst);
+        }
+      })
+      const allNames: string[] = [...this.piece.instrumentation];
+      duplicateNames.forEach(n => {
+        let ctr = 1;
+        allNames.forEach((name, nIdx) => {
+          if (name === n) {
+            allNames[nIdx] = `${name}_${ctr}`;
+          }
+          ctr += 1;
+        }) 
+      })
+      this.piece.instrumentation.forEach((_, i) => {
+        enumObj[allNames[i]] = i;
+      });
+      enumObj['None'] = -1;
+      return enumObj;
+    },
+
+    instTrackTexts() {
+      return this.piece?.instrumentation.map((inst, idx) => {
+        return `Track ${idx + 1}: ${inst}`;
+      }) ?? [];
     }
   },
 
   methods: {
+    hideTooltip() {
+      this.tooltipOpen = false;
+      this.tooltipText = '';
+    },
 
-
+    showTooltip(data: TooltipData) {
+      this.tooltipText = data.text;
+      this.tooltipOpen = true;
+      this.tooltipX = data.x;
+      this.tooltipY = data.y;
+    },
 
     async handleRunQuery(queries: QueryType[], options: MultipleOptionType) {
       options.piece = this.piece;
@@ -863,6 +933,7 @@ export default defineComponent({
       heatmap = false,
       pitchRepresentation = 'Fixed Pitch',
     } = {}) {
+      console.log('Creating pitch frequency graph');
       if (this.piece === undefined) {
         throw new Error('Piece is undefined');
       }
@@ -871,11 +942,14 @@ export default defineComponent({
         throw new Error('Piece is undefined');
       }
       if (segmentation === 'Duration') {
-        segments = segmentByDuration(this.piece, { duration: duration });
+        segments = segmentByDuration(this.piece, { 
+          duration: duration,
+          inst: this.instIdx, 
+        });
       } else if (segmentation === 'Phrase') {
-        segments = this.piece.phrases.map(p => p.trajectories);
+        segments = this.piece.phraseGrid[this.instIdx].map(p => p.trajectories);
       } else if (segmentation === 'Section') {
-        segments = this.piece.sections.map(s => s.trajectories);
+        segments = this.piece.sectionsGrid[this.instIdx].map(s => s.trajectories);
       } else {
         throw new Error('Invalid segmentation');
       }
@@ -936,7 +1010,7 @@ export default defineComponent({
         .attr('height', totalHeight)
         .style('background-color', 'white')
       this.svg = this.topSvg
-        .append('g')
+        .append<SVGSVGElement>('g')
         .attr('transform', `translate(${margin.left}, ${margin.top})`);
       let y = d3.scaleLinear()
         .domain([lowestKey-1, highestKey+1])
@@ -958,7 +1032,7 @@ export default defineComponent({
       axisNode
         .call(d3.axisLeft(y)
           .tickValues(pitchNumbers)
-          .tickFormat((_, i) => tickLabels[i])
+          .tickFormat((_, i) => tickLabels[i] || '')
           .tickSize(0)
           .tickPadding(10))
         .style('color', 'black')
@@ -1309,7 +1383,7 @@ export default defineComponent({
 
     createGraph() {
       if (this.selectedATIdx === 0) {
-        const pp = this.$refs['pitchPrevalence'] as typeof PitchPrevalence;
+        const pp = this.$refs['pitchPrevalence'] as InstanceType<typeof PitchPrevalence>;
         if (pp !== undefined) pp.generateGraph();
       } else {
         if (this.piece === undefined) {
@@ -1324,16 +1398,7 @@ export default defineComponent({
           }
           this.svg = undefined;
         }
-        if (this.selectedATIdx === 0) {
-          this.createPitchFrequencyGraph({ 
-            segmentation: this.segmentationType,
-            duration: this.duration,
-            pitchChroma: this.pitchChroma,
-            condensed: this.condensed,
-            heatmap: this.heatmap,
-            pitchRepresentation: this.pitchRepresentation,
-          })
-        } else if (this.selectedATIdx === 1) {
+        if (this.selectedATIdx === 1) {
           const sargam = this.pitchType === 'Sargam';
           let tpChoices;
           if (sargam) {
@@ -1391,7 +1456,10 @@ export default defineComponent({
           .filter((_, idx) => this.selectedPatternSizes[idx]);
       let segments, title;
       if (segmentation === 'Duration') {
-        segments = segmentByDuration(this.piece, { duration: duration });
+        segments = segmentByDuration(this.piece, { 
+          duration: duration,
+          inst: this.instIdx,
+        });
         title = `Patterns of Size ${pSizes.join(', ')}, ` + 
           `Segmented into ${duration}s Durations`;
       } else if (segmentation === 'Phrase') {
@@ -1439,7 +1507,7 @@ export default defineComponent({
         .attr('height', totalHeight)
         .style('background-color', 'white')
       this.svg = this.topSvg
-        .append('g')
+        .append<SVGSVGElement>('g')
         .attr('transform', `translate(${margin.left}, ${margin.top})`)
 
       // add title
@@ -1561,7 +1629,7 @@ export default defineComponent({
               const yScale = d3.scaleLinear()
                 .domain([0, 1])
                 .range([y + 40, y])     
-              const line = d3.line()
+              const line = d3.line<number>()
                 .x((d, i) => xScale(pts[i]))
                 .y((d) => yScale(d))
               if (min !== initMax) {
@@ -1575,10 +1643,10 @@ export default defineComponent({
                 })
                 
                 lines.forEach(l => {
-                  this.svg.append('line')
+                  this.svg!.append('line')
                     .attr('x1', x_)
                     .attr('y1', yScale(l))
-                    .attr('x2', x_ + 20 * size)
+                    .attr('x2', x_ + 20 * Number(size))
                     .attr('y2', yScale(l))
                     .attr('stroke', 'lightgrey')
                     .attr('stroke-width', 1)
