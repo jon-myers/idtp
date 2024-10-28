@@ -1463,13 +1463,15 @@ export default defineComponent({
         title = `Patterns of Size ${pSizes.join(', ')}, ` + 
           `Segmented into ${duration}s Durations`;
       } else if (segmentation === 'Phrase') {
-        segments = this.piece.phrases.map(p => p.trajectories);
+        segments = this.piece.phraseGrid[this.instIdx].map(p => p.trajectories);
         title = `Patterns of Size ${pSizes.join(', ')}, Segmented by Phrase`;
       } else if (segmentation === 'Section') {
-        segments = this.piece.sections.map(s => s.trajectories);
+        segments = this.piece.sectionsGrid[this.instIdx].map(s => {
+          return s.trajectories
+        });
         title = `Patterns of Size ${pSizes.join(', ')}, Segmented by Section`;
       } else if (segmentation === 'Transcription') {
-        segments = [this.piece.allTrajectories()];
+        segments = [this.piece.allTrajectories(this.instIdx)];
         title = `Patterns of Size ${pSizes.join(', ')} in Full Transcription`;
       } else {
         throw new Error('Invalid segmentation type');
@@ -1679,9 +1681,9 @@ export default defineComponent({
       if (this.horizontalProportionalDisplay) {
         this.durAvg = this.displayTrajs
           .map(t => {
-            const initP = this.piece!.phrases[t[0].phraseIdx!];
+            const initP = this.piece!.phraseGrid[this.instIdx][t[0].phraseIdx!];
             const initStart = initP.startTime! + t[0].startTime!;
-            const lastP = this.piece!.phrases[t[t.length - 1].phraseIdx!];
+            const lastP = this.piece!.phraseGrid[this.instIdx][t[t.length - 1].phraseIdx!];
             const lastStart = lastP.startTime! + t[t.length - 1].startTime!;
             const lastEnd = lastStart + t[t.length - 1].durTot!;
             return lastEnd - initStart;
@@ -1689,9 +1691,9 @@ export default defineComponent({
           .reduce((acc, v) => acc + v, 0)
         this.durAvg /= this.displayTrajs.length;
         this.segmentDisplayWidths = this.displayTrajs.map(t => {
-          const initP = this.piece!.phrases[t[0].phraseIdx!];
+          const initP = this.piece!.phraseGrid[this.instIdx][t[0].phraseIdx!];
           const initStart = initP.startTime! + t[0].startTime!;
-          const lastP = this.piece!.phrases[t[t.length - 1].phraseIdx!];
+          const lastP = this.piece!.phraseGrid[this.instIdx][t[t.length - 1].phraseIdx!];
           const lastStart = lastP.startTime! + t[t.length - 1].startTime!;
           const lastEnd = lastStart + t[t.length - 1].durTot!;
           const dur = lastEnd - initStart;
