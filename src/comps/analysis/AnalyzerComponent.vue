@@ -308,12 +308,13 @@
         v-if='piece && selectedATIdx === 2' 
         @runQuery='handleRunQuery'
         @updateProportionalVertical='verticalProportionalDisplay = $event'
-        :vocal='vocal'
         :raga='piece.raga'
         :trajIdxs='piece.trajIdxs'
         :piece='piece'
         :navHeight='navHeight'
         :resultsSize='displayTrajs?.length'
+        :instIdx='instIdx'
+        @update:instIdx='instIdx = $event'
         />
     </div>
     <div 
@@ -696,7 +697,7 @@ export default defineComponent({
   computed: {
 
     vocal() {
-      const inst = this.piece?.instrumentation[0];
+      const inst = this.piece?.instrumentation[this.instIdx];
       if (inst == 'Vocal (M)' || inst == 'Vocal (F)') {
         return true;
       } else {
@@ -1682,6 +1683,9 @@ export default defineComponent({
         this.durAvg = this.displayTrajs
           .map(t => {
             const initP = this.piece!.phraseGrid[this.instIdx][t[0].phraseIdx!];
+            if (initP === undefined) {
+              debugger;
+            }
             const initStart = initP.startTime! + t[0].startTime!;
             const lastP = this.piece!.phraseGrid[this.instIdx][t[t.length - 1].phraseIdx!];
             const lastStart = lastP.startTime! + t[t.length - 1].startTime!;

@@ -329,6 +329,7 @@ import {
 import {
   saveMultiQuery
 } from '@/js/serverCalls.ts';
+import { Instrument } from '@/ts/enums.ts';
 import LoadQueryModal from '@/comps/analysis/LoadQueryModal.vue';
 type QueryControlsDataType = {
   segmentation: SegmentationType,
@@ -460,11 +461,6 @@ export default defineComponent({
   },
 
   props: {
-    vocal: {
-      type: Boolean,
-      required: true,
-    },
-
     raga: {
       type: Object as PropType<Raga>,
       required: true,
@@ -486,6 +482,10 @@ export default defineComponent({
       type: Number,
       required: false,
     },
+    instIdx: {
+      type: Number,
+      required: true,
+    }
   },
 
   watch: {
@@ -552,6 +552,12 @@ export default defineComponent({
 
   computed: {
 
+    vocal() {
+      const vox = [Instrument.Vocal_M, Instrument.Vocal_F];
+      const inst = this.piece.instrumentation[this.instIdx];
+      return vox.includes(inst);
+    },
+
     selectRowData() {
       const out: {
         label: string,
@@ -617,6 +623,8 @@ export default defineComponent({
           category: 'incidental',
         },
       ];
+      
+
       if (this.vocal) {
         out.push({
           label: 'Articulation Type: ',
@@ -660,6 +668,7 @@ export default defineComponent({
         let query: QueryType = {
           category: category.value,
           designator: this.designators[i].value,
+          instrumentIdx: this.instIdx
         }
         if (
           category.value === 'startingConsonant' || 
@@ -712,6 +721,7 @@ export default defineComponent({
         minDur: this.minDur,
         maxDur: this.maxDur,
         every: this.all,
+        instrumentIdx: this.instIdx
       }
     },
 
@@ -831,6 +841,9 @@ export default defineComponent({
       this.numQueries = queries.length;
       await this.$nextTick();
       queries.forEach((q, qIdx) => {
+        if (qIdx === 0) {
+          this.$emit('update:instIdx', q.instrumentIdx);
+        }
         this.categories[qIdx] = { value: q.category, text: q.category }
         this.designators[qIdx] = { value: q.designator, text: q.designator }
         if (q.consonant) {

@@ -212,6 +212,7 @@ type QueryType = {
   vocalArtType?: keyof PhraseCatType['Vocal Articulation'],
   instArtType?: keyof PhraseCatType['Instrumental Articulation'],
   incidental?: keyof PhraseCatType['Incidental'],
+  instrumentIdx: number,
 }
 
 type MultipleReturnType = [
@@ -239,6 +240,7 @@ type MultipleOptionType = {
   minDur?: number,
   maxDur?: number,
   every?: boolean,
+  instrumentIdx?: number,
 }
 
 type PhraseCatType = {
