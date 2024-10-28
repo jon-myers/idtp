@@ -1524,6 +1524,7 @@ export default defineComponent({
         selT.changeConsonant(endConsonant, false)
       }
       tLayer.refreshEndingConsonant(selT.uniqueId!);
+      tLayer.renderConsonantSymbols(selT, this.editingInstIdx)
       if (phrase.trajectories.length > tIdx + 1) {
         const nextTraj = phrase.trajectories[tIdx + 1];
         tLayer.refreshVowel(nextTraj.uniqueId!);
@@ -1546,6 +1547,8 @@ export default defineComponent({
         selT.changeConsonant(startConsonant)
       }
       tLayer.refreshVowel(selT.uniqueId!);
+      tLayer.renderConsonantSymbols(selT, this.editingInstIdx)
+      // const track = this.editingInstIdx
       if (phrase.trajectories.length > tIdx + 1) {
         const nextTraj = phrase.trajectories[tIdx + 1];
         tLayer.refreshVowel(nextTraj.uniqueId!);

@@ -1393,13 +1393,22 @@ export default defineComponent({
           .on('click', () => handleClickTraj(traj, track))
           .on('contextmenu', (e: MouseEvent) => handleTrajContextMenu(traj, track, e))
     };
+
+    // const clearConsonantSymbols = (traj: Trajectory, track: number) => {
+    //   const g = tracks[track].select('.trajG');
+    //   g.selectAll(`.uId${traj.uniqueId}.consonantSymbol`).remove();
+    // };
+
     const renderConsonantSymbols = (traj: Trajectory, track: number) => {
+      console.log('getting called')
+      const g = tracks[track].select('.trajG');
+      g.selectAll(`.uId${traj.uniqueId}.consonantSymbol`).remove();
       const arts = traj.articulations;
       const a = arts['0.00'];
       const c1 = a !== undefined && a.name === 'consonant';
       const b = arts['1.00'];
       const c2 = b !== undefined && b.name === 'consonant';
-      const g = tracks[track].select('.trajG');
+      // const g = tracks[track].select('.trajG');
       const phrase = props.piece.phraseGrid[track][traj.phraseIdx!];
       const sym = d3.symbol()
         .type(d3.symbolDiamond)
@@ -5493,7 +5502,8 @@ export default defineComponent({
       isBlock,
       curPlayheadPxl,
       refreshSargamLines,
-      alted
+      alted,
+      renderConsonantSymbols,
     }
   }
 })
