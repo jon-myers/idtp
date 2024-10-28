@@ -20,11 +20,12 @@
 import { defineComponent, PropType } from 'vue';
 import { Trajectory, Piece, Phrase, Pitch, linSpace } from '@/js/classes.ts';
 import { QueryAnswerType, ContextMenuOptionType } from '@/ts/types.ts';
+import { Instrument } from '@/ts/enums.ts';
 
 import * as d3 from 'd3';
 
 type SegmentDisplayDataType = {
-  svg?: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>,
+  svg?: d3.Selection<SVGSVGElement, unknown, null, any>,
   verticalPadding: number,
   horizontalPadding: number,
   titleMargin: number,
@@ -47,7 +48,7 @@ type SegmentDisplayDataType = {
   visibleSargam?: number[],
   visiblePitches?: Pitch[],
   divsPerPxl: number,
-  defs?: d3.Selection<SVGDefsElement, unknown, HTMLElement, any>,
+  defs?: d3.Selection<SVGDefsElement, unknown, null, any>,
   phonemeRepresentation: 'IPA' | 'Devanagari' | 'English',
   contextMenuX: number,
   contextMenuY: number,
@@ -101,8 +102,8 @@ export default defineComponent({
     const horizontalMargin = this.outerMargin.left + this.outerMargin.right;
     const VertMargin = this.outerMargin.top + this.outerMargin.bottom;
     this
-    this.svg = d3.select(this.$refs.graph)
-      .append('svg')
+    this.svg = d3.select(this.$refs.graph as HTMLElement).append('svg') as d3.Selection<SVGSVGElement, unknown, null, any>;
+    this.svg
       .classed('svg', true)
       .attr('width', this.displayWidth - horizontalMargin + 'px')
       .attr('height', this.displayHeight - VertMargin + 'px')
@@ -155,7 +156,7 @@ export default defineComponent({
     } else {
       numTicks = 3
     }
-    const xTickVals = this.xAxis.scale().ticks(numTicks)! as number[];
+    const xTickVals = this.xScale!.ticks(numTicks) as number[];
     const xTickTexts = xTickVals.map(x => {
       const date = d3.timeSecond.offset(new Date(0), x);
       const minutes = date.getUTCMinutes();
@@ -207,6 +208,7 @@ export default defineComponent({
       .forEach(traj => this.addTrajectory(traj));
     
     if (this.vocal) {
+      console.log('getting vocal?')
       const vowelIdxs = this.firstTrajIdxs();  
       this.trajectories.forEach((traj, idx) => {
         if (vowelIdxs.includes(idx)) {
@@ -577,27 +579,31 @@ export default defineComponent({
             .attr('stroke-linejoin', 'round')
             .attr('transform', `translate(${tX}, ${tY})`)            
         } else if (art.name === 'consonant') {
-          const artX = this.xScale!(artTime);
-          const artY = this.yScale!(traj.compute(Number(artKey), true));
-          const sym = d3.symbol().type(d3.symbolDiamond).size(25);
-          const tX = this.innerMargin.left + artX;
-          const tY = this.innerMargin.top + this.titleMargin + artY;
-          this.svg!.append('path')
-            .attr('d', sym)
-            .attr('fill', 'black')
-            .attr('transform', `translate(${tX}, ${tY})`)
+          const vox = [Instrument.Vocal_M, Instrument.Vocal_F];
+          if (vox.includes(traj.instrumentation)) {
+
+            const artX = this.xScale!(artTime);
+            const artY = this.yScale!(traj.compute(Number(artKey), true));
+            const sym = d3.symbol().type(d3.symbolDiamond).size(25);
+            const tX = this.innerMargin.left + artX;
+            const tY = this.innerMargin.top + this.titleMargin + artY;
+            this.svg!.append('path')
+              .attr('d', sym)
+              .attr('fill', 'black')
+              .attr('transform', `translate(${tX}, ${tY})`)
+          }
 
         }
       })
     },
 
     addMarkers() {
-      this.defs = this.svg?.append('defs')
+      this.defs = this.svg!.append('defs') as d3.Selection<SVGDefsElement, unknown, null, any>;
       const markerBoxWidth = 4;
       const markerBoxHeight = 4;
       const refX = markerBoxWidth / 2;
       const refY = markerBoxHeight / 2;
-      const arrowPoints = [
+      const arrowPoints: [number, number][] = [
         [0, 0],
         [0, 4],
         [4, 2]
