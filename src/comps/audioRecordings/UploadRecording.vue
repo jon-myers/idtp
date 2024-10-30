@@ -377,23 +377,12 @@
           </div>
         </div>
 
-        <div class='editingSubFrame' v-if='editRecIdx === 4'>
-          <SaTuner v-if='editingRec'
-            :rec='editingRec'
-            v-model:sa-estimate='saEstimate'
-            v-model:sa-verified='saVerified'
-            v-model:oct-offset='octOffset'
-            :spectrogramExists='spectrogramExists'
-            :melographExists='melographExists'
-          />
-        </div>
-
         <div class='modalRow centered short'>
           <button @click='editRecIdx--' :disabled='editRecIdx===0'>
             {{ "<" }}
           </button>
           <button @click='saveUpdates'>Save Updates</button>
-          <button @click='editRecIdx++' :disabled='editRecIdx>3'>
+          <button @click='editRecIdx++' :disabled='editRecIdx>2'>
             {{ ">" }}
           </button>
         </div>
