@@ -70,6 +70,8 @@ import {
   CollectionType, 
   ContextMenuOptionType,
   TransMetadataType, 
+  RecType,
+  AudioEventType
 } from '@/ts/types.ts';
 import { getContrastingTextColor } from '@/ts/utils';
 import GenericAudioPlayer from '@/comps/GenericAudioPlayer.vue';
@@ -84,8 +86,6 @@ import MiniAudioRecordings from '@/comps/collections/MiniAudioRecordings.vue';
 import MiniAudioEvents from '@/comps/collections/MiniAudioEvents.vue';
 import MiniTranscriptions from '@/comps/collections/MiniTranscriptions.vue';
 import ContextMenu from '@/comps/ContextMenu.vue';
-import { RecType } from '@/comps/audioEvents/AddAudioEvent.vue';
-import { AudioEventType } from '@/comps/audioEvents/AddAudioEvent.vue';
 
 type CollectionViewerDataType = {
   audioSource: string | undefined,

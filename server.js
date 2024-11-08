@@ -1845,84 +1845,84 @@ const runServer = async () => {
       }
     })
     
-    app.post('/upload-avatar', async (req, res) => {
-    // upload files, and send back progress, via axios (doesn't work with fetch)
-      try {
-        if (!req.files) {
-          res.send({ status: false, message: 'No file uploaded' });
-        } else {
-          const parentId = req.body.parentID;
-          const idx = req.body.idx;
-          const avatar = req.files.avatar;
-          const tempString = `recordings.${idx}.audioFileId`;
-          const newId = await ObjectId();
-          const query = { _id: ObjectId(parentId) };
-          const update = { $set: { [tempString]: newId } };
-          const options = { upsert: true };
-          // first, find the existing audio event.
-          // if there is another audio file already, use that id to search
-          // the transcriptions db via the audioID field. For each transcription
-          // found, update the audioID field to the new id. Then, delete any 
-          // audio, spectrograms, melographs, and peaks files associated with 
-          // the old id.
-          // Then, delete the old id from the audioRecordings db.
-          const ae = await audioEvents.findOne(query);
-          if (ae.recordings && ae.recordings[idx]) {
-            const oldId = ae.recordings[idx].audioFileId.toString();
-            const tQuery = { audioID: oldId };
-            const tUpdate = { $set: { audioID: newId } };
-            const tOptions = { upsert: true };
-            await transcriptions.updateMany(tQuery, tUpdate, tOptions);
-            await deleteFiles(oldId);
-            const arQuery = { _id: oldId };
-            audioRecordings.deleteOne(arQuery);
-          }
-          await audioEvents.updateOne(query, update, options)
-          const suffix = getSuffix(avatar.mimetype);
-          let fn = newId + suffix;
-          avatar.mv('./uploads/' + fn);
-          if (suffix === '.opus') {
-            const newFN = newId + '.wav';
-            const spawnArgs = ['-i', './uploads/' + fn, './uploads/' + newFN];
-            const convertToOpus = spawn('ffmpeg', spawnArgs)
-            fn = newFN;
-            convertToOpus.stderr.on('data', data => {
-              console.error(`stderr: ${data}`)
-            });
-            convertToOpus.on('close', () => {
-              console.log('opus conversion finished')
-            })
-          }
-          const spawnArr = ['process_audio.py', fn, parentId, idx];
-          const processAudio = spawn('python3', spawnArr);
-          processAudio.stderr.on('data', data => {
-            console.error(`stderr: ${data}`)
-          });
-          processAudio.on('close', () => {
-            console.log('python closed, finally')
-            res.send({
-              status: true,
-              message: 'File is uploaded',
-              data: {
-                name: avatar.name,
-                mimetype: avatar.mimetype,
-                size: avatar.size,
-                audioFileId: newId
-              }
-            });
-          });
-          const script1 = './visualization_scripts/generate_melograph.py';
-          const script2 = './visualization_scripts/make_spec_data.py';
-          await Promise.all([
-            runPythonScript(script1, [newId]),
-            runPythonScript(script2, [newId])
-          ])
-        }
-      } catch (err) {
-        console.error(err)
-        res.status(500).send(err);
-      }
-    });
+    // app.post('/upload-avatar', async (req, res) => {
+    // // upload files, and send back progress, via axios (doesn't work with fetch)
+    //   try {
+    //     if (!req.files) {
+    //       res.send({ status: false, message: 'No file uploaded' });
+    //     } else {
+    //       const parentId = req.body.parentID;
+    //       const idx = req.body.idx;
+    //       const avatar = req.files.avatar;
+    //       const tempString = `recordings.${idx}.audioFileId`;
+    //       const newId = await ObjectId();
+    //       const query = { _id: ObjectId(parentId) };
+    //       const update = { $set: { [tempString]: newId } };
+    //       const options = { upsert: true };
+    //       // first, find the existing audio event.
+    //       // if there is another audio file already, use that id to search
+    //       // the transcriptions db via the audioID field. For each transcription
+    //       // found, update the audioID field to the new id. Then, delete any 
+    //       // audio, spectrograms, melographs, and peaks files associated with 
+    //       // the old id.
+    //       // Then, delete the old id from the audioRecordings db.
+    //       const ae = await audioEvents.findOne(query);
+    //       if (ae.recordings && ae.recordings[idx]) {
+    //         const oldId = ae.recordings[idx].audioFileId.toString();
+    //         const tQuery = { audioID: oldId };
+    //         const tUpdate = { $set: { audioID: newId } };
+    //         const tOptions = { upsert: true };
+    //         await transcriptions.updateMany(tQuery, tUpdate, tOptions);
+    //         await deleteFiles(oldId);
+    //         const arQuery = { _id: oldId };
+    //         audioRecordings.deleteOne(arQuery);
+    //       }
+    //       await audioEvents.updateOne(query, update, options)
+    //       const suffix = getSuffix(avatar.mimetype);
+    //       let fn = newId + suffix;
+    //       avatar.mv('./uploads/' + fn);
+    //       if (suffix === '.opus') {
+    //         const newFN = newId + '.wav';
+    //         const spawnArgs = ['-i', './uploads/' + fn, './uploads/' + newFN];
+    //         const convertToOpus = spawn('ffmpeg', spawnArgs)
+    //         fn = newFN;
+    //         convertToOpus.stderr.on('data', data => {
+    //           console.error(`stderr: ${data}`)
+    //         });
+    //         convertToOpus.on('close', () => {
+    //           console.log('opus conversion finished')
+    //         })
+    //       }
+    //       const spawnArr = ['process_audio.py', fn, parentId, idx];
+    //       const processAudio = spawn('python3', spawnArr);
+    //       processAudio.stderr.on('data', data => {
+    //         console.error(`stderr: ${data}`)
+    //       });
+    //       processAudio.on('close', () => {
+    //         console.log('python closed, finally')
+    //         res.send({
+    //           status: true,
+    //           message: 'File is uploaded',
+    //           data: {
+    //             name: avatar.name,
+    //             mimetype: avatar.mimetype,
+    //             size: avatar.size,
+    //             audioFileId: newId
+    //           }
+    //         });
+    //       });
+    //       const script1 = './visualization_scripts/generate_melograph.py';
+    //       const script2 = './visualization_scripts/make_spec_data.py';
+    //       await Promise.all([
+    //         runPythonScript(script1, [newId]),
+    //         runPythonScript(script2, [newId])
+    //       ])
+    //     }
+    //   } catch (err) {
+    //     console.error(err)
+    //     res.status(500).send(err);
+    //   }
+    // });
 
     app.get('/getSavedSettings', async (req, res) => {
       try {
