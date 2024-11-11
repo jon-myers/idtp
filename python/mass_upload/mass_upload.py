@@ -4,11 +4,9 @@ from typing import TypedDict
 from bson import ObjectId
 from mutagen import File
 from datetime import datetime
-from pprint import pprint
 import essentia.standard as ess
 from pymongo.server_api import ServerApi
-import pymongo
-import uuid
+import pymongo, uuid, shutil
 
 def datetime_to_seconds(time):
     return time.hour * 3600 + time.minute * 60 + time.second
@@ -438,3 +436,4 @@ if __name__ == "__main__":
         "root@swara.studio:mass_uploads/" + unique_id + '/'
     ]
     subprocess.run(rsync_blank_command, check=True)
+    shutil.rmtree(new_dir)
