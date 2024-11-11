@@ -69,13 +69,13 @@ def make_spec_data(file_path, output_dir):
         
 # if main
 if __name__ == '__main__':
-    rec_id = sys.argv[1]
-    path_to_audio = os.path.join(os.path.dirname(__file__), 'audio')
-    print(path_to_audio)
-    path_to_wav = os.path.join(path_to_audio, 'wav')
-    file_path = os.path.join(path_to_wav, rec_id + '.wav')
-    path_to_spec_data = os.path.join(os.path.dirname(__file__), 'spec_data')
-    out_dir = os.path.join(path_to_spec_data, rec_id)
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
-    make_spec_data(file_path, out_dir)
+  rec_id = sys.argv[1]
+  path_to_audio = os.path.join(os.path.dirname(__file__), 'audio')
+  print(path_to_audio)
+  path_to_wav = os.path.join(path_to_audio, 'wav')
+  file_path = os.path.join(path_to_wav, rec_id + '.wav')
+  path_to_spec_data = os.path.join(os.path.dirname(__file__), 'spec_data')
+  out_dir = os.path.join(path_to_spec_data, rec_id)
+  if not os.path.exists(out_dir):
+    os.makedirs(out_dir)
+  make_spec_data(file_path, out_dir)

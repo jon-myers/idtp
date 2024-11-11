@@ -5,7 +5,10 @@ from bson import ObjectId
 from mutagen import File
 from datetime import datetime
 from pprint import pprint
-
+import essentia.standard as ess
+from pymongo.server_api import ServerApi
+import pymongo
+import uuid
 
 def datetime_to_seconds(time):
     return time.hour * 3600 + time.minute * 60 + time.second
@@ -75,8 +78,10 @@ class Entry:
     duration: float
     dir: str
     oct_offset: int
+    sa_freq: float | None
     
     def __init__(self, df: pd.DataFrame, row_idx: int, dir: str):
+        self.sa_freq = None
         self.row_idx = row_idx
         self.row = df.iloc[row_idx]
         self.musicians = []
@@ -244,6 +249,8 @@ class Entry:
         ae_mongo_json["explicityPermissions"] = mongo_json["explicitPermissions"]
         ae_mongo_json["userID"] = mongo_json["userID"]
         ae_mongo_json["media"] = self.media
+        if "saEstimate" in mongo_json:
+            ae_mongo_json["saEstimate"] = mongo_json["saEstimate"]
         return ae_mongo_json
         
     def get_mongo_json(self):
@@ -327,12 +334,17 @@ class Entry:
             output_obj["parentTitle"] = None
             output_obj["aeUserID"] = None
             output_obj["parentTrackNumber"] = None
+        if self.sa_freq is not None:
+            output_obj["saEstimate"] = self.sa_freq
         return output_obj
         
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         raise ValueError("Please provide the directory path")
     dir = sys.argv[1]
+    unique_id = str(uuid.uuid4())
+    new_dir = os.path.join(dir, unique_id)
+    os.mkdir(new_dir)
     path = os.path.join(dir, 'test_entry.xlsx')
     df = pd.read_excel(path, header=1)
     entries: list[Entry] = []
@@ -358,14 +370,11 @@ if __name__ == "__main__":
             # ae.rec_entries.append(e)
             ae.add_recording(e)
         entries.append(e)
-    breakpoint()
     for e_idx, entry in enumerate(entries):
-        pprint(entry.get_mongo_json())
-        # breakpoint()
         file_path = os.path.join(dir, entry.file_name)
         abs_file_path = os.path.abspath(file_path)
         extension = file_path.split('.')[-1]
-        output_file = os.path.join(dir, f"entry_{e_idx}.{extension}")
+        output_file = os.path.join(new_dir, f"{entry._id}.{extension}")
         abs_output_file = os.path.abspath(output_file)
         
         if entry.start_time is None:
@@ -387,3 +396,45 @@ if __name__ == "__main__":
                 abs_output_file
             ]
         subprocess.run(command, check=True)
+        
+        loader = ess.EasyLoader(filename = output_file)
+        audio = loader()
+        entry.sa_freq = ess.TonicIndianArtMusic(maxTonicFrequency=200)(audio)
+        
+    username = os.environ.get('USER_NAME')
+    password = os.environ.get('PASSWORD')
+    query = "mongodb+srv://" + username + ":" + password + "@swara.f5cuf.mongodb.net/?retryWrites=true&w=majority"
+    client = pymongo.MongoClient(query, server_api=ServerApi('1'))
+    db = client.swara
+    db_audio_events = db.audioEvents
+    db_audio_recordings = db.audioRecordings
+    for e in entries:
+        db_audio_recordings.insert_one(e.get_mongo_json())
+    for ae in audio_events:
+        db_audio_events.insert_one(ae.get_mongo_json())
+        
+    blank_file_path = os.path.join(new_dir, 'blank.txt')
+    with open(blank_file_path, 'w') as f:
+        f.write('')
+ 
+    rsync_command = [
+        "rsync",
+        "-avz",
+        "--exclude=blank.txt",
+        "--partial",
+        "--progress",
+        new_dir + '/',
+        "root@swara.studio:mass_uploads/" + unique_id + '/'  # Ensure the trailing '/'
+    ]
+    subprocess.run(rsync_command, check=True)
+
+    # Then rsync 'blank.txt' to ensure it's uploaded last
+    rsync_blank_command = [
+        "rsync",
+        "-avz",
+        "--partial",
+        "--progress",
+        blank_file_path,
+        "root@swara.studio:mass_uploads/" + unique_id + '/'
+    ]
+    subprocess.run(rsync_blank_command, check=True)
