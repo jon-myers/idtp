@@ -8,11 +8,6 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@/comps/files/FileManager.vue')
   },
   {
-    path: '/audioEvents',
-    name: 'AudioEvents',
-    component: () => import('@/comps/audioEvents/AudioEvents.vue')
-  },
-  {
     path: '/audioRecordings',
     name: 'AudioRecordings',
     component: () => import('@/comps/audioRecordings/AudioRecordings.vue')

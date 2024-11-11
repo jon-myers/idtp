@@ -24,6 +24,8 @@
     "deployGenerateMelograph": "rsync -a ./python/visualization_scripts/generate_melograph.py root@swara.studio:generate_melograph.py",
     "deployTempBackupRestore": "rsync -a ./python/backup_scripts/to_temp_db.py root@swara.studio:to_temp_db.py",
     "deployVisualizationScripts": "rsync -a ./python/visualization_scripts/ root@swara.studio:visualization_scripts",
+    "deployMassUploadProcessAudio": "rsync -a ./python/mass_upload/process_mass_uploaded_audio.py root@swara.studio:process_mass_uploaded_audio.py",
+    "deployDirectoryWatcher": "rsync -a ./python/mass_upload/directory_watcher.py root@swara.studio:directory_watcher.py",
     "test": "vitest"
   },
   "main": "background.js",

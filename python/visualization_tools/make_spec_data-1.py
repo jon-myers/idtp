@@ -16,11 +16,6 @@ class NumpyEncoder(json.JSONEncoder):
 
 def make_spec_data(file_path, output_dir):
     loader = ess.EasyLoader(filename = file_path, replayGain=0, startTime=0)
-    # check if there is even a file at the file_path, and if not, print something
-    # and return
-    if not os.path.exists(file_path):
-        print("File not found: " + file_path)
-        return
     audio = loader()
     params = {
               'inputSize': audio.size,
@@ -57,7 +52,7 @@ def make_spec_data(file_path, output_dir):
     offset = 10
     # Take the last 10 columns of the spectrogram
     # and put them at the beginning
-    # arr = np.hstack((arr[:, -offset:], arr[:, :-offset]))    
+    arr = np.hstack((arr[:, -offset:], arr[:, :-offset]))    
     arr_bytes = arr.tobytes()
 
     compressed_data = gzip.compress(arr_bytes)
@@ -69,13 +64,12 @@ def make_spec_data(file_path, output_dir):
         
 # if main
 if __name__ == '__main__':
-    rec_id = sys.argv[1]
-    path_to_audio = os.path.join(os.path.dirname(__file__), 'audio')
-    print(path_to_audio)
-    path_to_wav = os.path.join(path_to_audio, 'wav')
-    file_path = os.path.join(path_to_wav, rec_id + '.wav')
-    path_to_spec_data = os.path.join(os.path.dirname(__file__), 'spec_data')
-    out_dir = os.path.join(path_to_spec_data, rec_id)
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
-    make_spec_data(file_path, out_dir)
+  rec_id = sys.argv[1]
+  path_to_audio = os.path.join(os.path.dirname(__file__), '..', 'audio')
+  path_to_wav = os.path.join(path_to_audio, 'wav')
+  file_path = os.path.join(path_to_wav, rec_id + '.wav')
+  path_to_spec_data = os.path.join(os.path.dirname(__file__), '..', 'spec_data')
+  out_dir = os.path.join(path_to_spec_data, rec_id)
+  if not os.path.exists(out_dir):
+    os.makedirs(out_dir)
+  make_spec_data(file_path, out_dir)

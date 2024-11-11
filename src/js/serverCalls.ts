@@ -1134,37 +1134,6 @@ const getAllGharanas = async (): Promise<GharanaType[]> => {
     console.error(err)
   }
   return out
-
-}
-
-const uploadFile = async (
-  file: File, 
-  onProgress: OnProgressType, 
-  parentID: string, 
-  idx: number) => {
-  const formData = new FormData();
-  formData.append('avatar', file);
-  formData.append('parentID', parentID);
-  formData.append('idx', String(idx));
-  const config = {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    },
-    onUploadProgress: (progressEvent: AxiosProgressEvent) => {
-      const progressPercent = 100 * progressEvent.loaded / progressEvent.total!;
-      if (onProgress) onProgress(progressPercent);
-      return progressPercent
-    }
-  };
-  try {
-    const response = await axios.post(url+'upload-avatar', formData, config)
-    if (response.statusText !== 'OK') {
-      throw new Error(`Error! status: ${response.status}`)
-    }
-    return response.data;
-  } catch (err) {
-    console.log(err)
-  }
 }
 
 const newUploadFile = async (file: File, onProgress: OnProgressType, {
@@ -2084,7 +2053,6 @@ export {
   deleteAudioEvent,
   getAudioDBEntry,
   getAllAudioRecordingMetadata,
-  uploadFile,
   newUploadFile,
   getSortedMusicians,
   getEventTypes,
