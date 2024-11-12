@@ -1543,7 +1543,6 @@ export default defineComponent({
     updateStretchBuf() {
       const start = this.regionStartTime!;
       const end = this.regionEndTime!;
-      console.log('start: ', start, 'end: ', end)
       const startSample = Math.round(start * this.ac!.sampleRate);
       const endSample = Math.round(end * this.ac!.sampleRate);
       // make new audio buffer

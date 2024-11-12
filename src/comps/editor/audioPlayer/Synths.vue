@@ -438,7 +438,6 @@ export default defineComponent({
       synth.intSitarGainNode.connect(synth.capture, 0, 0);
       synth.intChikariGainNode.connect(synth.capture, 0, 1);
       synth.capture.port.onmessage = e => {
-        console.log('received message for instrument', synth.idx);
         const sitarArr = new Float32Array(e.data[0]);
           const sr = props.ac.sampleRate;
           const sitarBuffer = props.ac.createBuffer(1, sitarArr.length, sr);
@@ -881,7 +880,6 @@ export default defineComponent({
 
         // disconnect, reset, and reconnect
         sBufNode.onended = () => {
-          console.log('buf ended')
           sBufNode.disconnect();
           synth.sitarLoopSourceNode = props.ac.createBufferSource();
           synth.sitarLoopSourceNode.loop = true;
