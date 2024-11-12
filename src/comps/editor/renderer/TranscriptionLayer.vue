@@ -340,7 +340,7 @@ export default defineComponent({
     const dragDotColor = 'purple';
     const selectedDragDotColor = '#d602d6';
     let dragDotIdx: number | undefined = undefined;
-    const minTrajDur = 0.1;
+    const minTrajDur = 0.025;
     let pulseDragEnabled = false;
     let meterHovering: Meter | undefined = undefined;
     let selMeterHovering = false;
@@ -2739,7 +2739,7 @@ export default defineComponent({
       }
       console.log(traj.num, phrase.trajectories.length)
       const followingTraj = phrase.trajectories[traj.num! + 2];
-      if (followingTraj.id === 12) {
+      if (followingTraj && followingTraj.id === 12) {
         return false;
       }
       return true;
