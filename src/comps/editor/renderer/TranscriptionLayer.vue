@@ -340,7 +340,7 @@ export default defineComponent({
     const dragDotColor = 'purple';
     const selectedDragDotColor = '#d602d6';
     let dragDotIdx: number | undefined = undefined;
-    const minTrajDur = 0.025;
+    const minTrajDur = 0.05;
     let pulseDragEnabled = false;
     let meterHovering: Meter | undefined = undefined;
     let selMeterHovering = false;
@@ -1087,6 +1087,7 @@ export default defineComponent({
         pitches: [p1, p2],
         durTot: silentTraj.durTot,
         instrumentation: props.piece.instrumentation[track],
+        articulations: {},
       });
       removeTraj(silentTraj)
       phrase.trajectories[silentTraj.num!] = newTraj;
