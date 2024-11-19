@@ -41,3 +41,7 @@ docs
 idtp_env
 
 __pycache__
+
+python/auto_transcribe/extraction/clips/
+python/auto_transcribe/clips/
+python/auto_transcribe/beeps/
