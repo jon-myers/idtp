@@ -1,20 +1,17 @@
 from pymongo.server_api import ServerApi
 from bson.objectid import ObjectId
 from pymongo import MongoClient
-import os, requests
+import os, requests, shutil
 import essentia.standard as ess
 import numpy as np
 
-transcription_id = "63445d13dc8b9023a09747a6"
-
-username = os.environ.get('USER_NAME')
-password = os.environ.get('PASSWORD')
-query = "mongodb+srv://" + username + ":" + password + "@swara.f5cuf.mongodb.net/?retryWrites=true&w=majority"
-client = MongoClient(query, server_api=ServerApi('1'))
-db = client.swara
-transcriptions = db.transcriptions
-
 def get_articulations(transcription_id: str):
+    username = os.environ.get('USER_NAME')
+    password = os.environ.get('PASSWORD')
+    query = "mongodb+srv://" + username + ":" + password + "@swara.f5cuf.mongodb.net/?retryWrites=true&w=majority"
+    client = MongoClient(query, server_api=ServerApi('1'))
+    db = client.swara
+    transcriptions = db.transcriptions
     pluck_times = []
     chikari_times = []
     t = transcriptions.find_one({'_id': ObjectId(transcription_id)})
@@ -38,9 +35,9 @@ def get_articulations(transcription_id: str):
         f.write(response.content)
     loader = ess.EasyLoader(filename = temp_file)
     audio = loader()
-    segment_duration = 0.5
+    segment_duration = 0.15
     sample_rate = 44100
-    offset = 0.1
+    offset = 0.02
     plucks_folder = './python/auto_transcribe/extraction/clips/plucks'
     chikaris_folder = './python/auto_transcribe/extraction/clips/chikaris'
     for p_idx, p_time in enumerate(pluck_times):
@@ -62,7 +59,47 @@ def get_articulations(transcription_id: str):
         segment = audio[start_sample:end_sample]
         seg_path = os.path.join(chikaris_folder, f'chikari_{c_idx}.wav')
         ess.MonoWriter(filename=seg_path)(segment)
-            
-    
-get_articulations(transcription_id)
+
+def download_file(audio_id):
+    audio_url = f"https://swara.studio/audio/mp3/{audio_id}.mp3"
+    response = requests.get(audio_url)
+    temp_dir = f'./python/auto_transcribe/extraction/clips/tmp/{audio_id}'
+    if os.path.exists(temp_dir):
+        shutil.rmtree(temp_dir)
+    os.makedirs(temp_dir, exist_ok=True)
+    temp_file = f"{temp_dir}/{audio_id}.mp3"
+    with open(temp_file, 'wb') as f:
+        f.write(response.content)
+    return temp_file
+
+def download_samples(times, audio_id):
+    audio_url = f"https://swara.studio/audio/mp3/{audio_id}.mp3"
+    response = requests.get(audio_url)
+    temp_dir = f'./python/auto_transcribe/extraction/clips/tmp/{audio_id}'
+    if os.path.exists(temp_dir):
+        shutil.rmtree(temp_dir)
+    os.makedirs(temp_dir, exist_ok=True)
+    temp_file = f"{temp_dir}/{audio_id}.mp3"
+    with open(temp_file, 'wb') as f:
+        f.write(response.content)
+    loader = ess.EasyLoader(filename = temp_file)
+    audio = loader()
+    sample_rate = 44100
+    offset = 0.01
+    segment_duration = 0.15
+    for idx, time in enumerate(times):
+        start_sample = int((time - offset) * sample_rate)
+        if start_sample < 0:
+            start_sample = 0
+        end_sample = int(start_sample + segment_duration * sample_rate)
+        segment = audio[start_sample:end_sample]
+        seg_path = os.path.join(temp_dir, f'segment_{idx}.wav')
+        ess.MonoWriter(filename=seg_path)(segment)
+    return temp_dir
+
+if __name__ == '__main__':
+    transcription_id = "63445d13dc8b9023a09747a6"
+    audio_id = '62fa903990b9ba8cdae9d251'
+    get_articulations(transcription_id)
+    # download_samples([15, 200, 205], audio_id)
 
