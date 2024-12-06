@@ -49,12 +49,12 @@ file_path = download_file(audio_id)
 
 dir = os.path.dirname(__file__)
 clips = [
-    { 'start': 10, 'end': 20 },
-    { 'start': 40, 'end': 50 },
-    { 'start': 60, 'end': 70 },
-    { 'start': 80, 'end': 90 },
-    { 'start': 310, 'end': 320 },
-    { 'start': 400, 'end': 410 },
+    { 'start': 0, 'end': 20 },
+    { 'start': 20, 'end': 40 },
+    { 'start': 40, 'end': 60 },
+    { 'start': 60, 'end': 80 },
+    { 'start': 80, 'end': 100 },
+    { 'start': 100, 'end': 120 },
 ]
 
 for i, clip in enumerate(clips):
