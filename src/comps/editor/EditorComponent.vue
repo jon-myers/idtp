@@ -815,7 +815,7 @@ export default defineComponent({
       stretchedFactor: 1,
       playheadMotion: false,
       highlightTrajs: false,
-      playheadAnimation: PlayheadAnimations.Block,
+      playheadAnimation: PlayheadAnimations.Animated,
       throttledRenderMeter: undefined,
       throttledRefreshSargamLines: undefined,
       zoomYFactor: 1,
@@ -876,6 +876,10 @@ export default defineComponent({
     this.throttledAlterVibObj = throttle(this.alterVibObj, 16);
     this.throttledRenderMeter = throttle(this.renderMeter, 100);
     this.throttledRefreshSargamLines = throttle(this.refreshSargamLines, 100);
+    console.log(this.$store.state.userID)
+    if (this.$store.state.userID === '634d9506a6a3647e543b7641') {
+      this.playheadAnimation = PlayheadAnimations.Block;
+    }
 
     try {
       // if there's a query id, 1. check if exists, 2. if so, load it, else:

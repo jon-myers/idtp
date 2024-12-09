@@ -714,8 +714,8 @@ export default defineComponent({
     },
 
     selectedMode(newVal) {
-      if (newVal === EditorMode.Series) {
-        this.internalPluckBool = false;
+      if (newVal === EditorMode.Series && this.instrument === Instrument.Sitar) {
+        this.internalPluckBool = true;
       }
     }
   },

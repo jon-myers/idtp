@@ -2923,6 +2923,8 @@ export default defineComponent({
 
     const handleClickTraj = (traj: Trajectory, track: number) => {
       if (props.selectedMode === EditorMode.Meter) return;
+      if (props.selectedMode === EditorMode.Trajectory) return;
+      if (props.selectedMode === EditorMode.Series) return;
       emit('update:selectedMode', EditorMode.None);
       nextTick(() => {
         selectedPhraseDivUid.value = undefined;
@@ -3672,6 +3674,20 @@ export default defineComponent({
           const y = props.yScale(newLogFreq);
           d3.select(`#dragDot${idx}`)
             .attr('cy', y);
+          if (traj.id === 0) {
+            const otherNewPitch = props.piece.raga.pitchFromLogFreq(newLogFreq);
+            if (idx === 0) {
+              traj.pitches[1] = otherNewPitch;
+              d3.select(`#dragDot1`)
+                .attr('cy', y);
+            } else if (idx === 1) {
+              traj.pitches[0] = otherNewPitch;
+              d3.select(`#dragDot0`)
+                .attr('cy', y);
+            }
+          }
+
+          
           refreshTraj(traj);
           emit('unsavedChanges', true);
           contextMenuClosed.value = true;
@@ -3685,6 +3701,8 @@ export default defineComponent({
         return
       }
       if (props.selectedMode === EditorMode.Meter) return;
+      if (props.selectedMode === EditorMode.Trajectory) return;
+      if (props.selectedMode === EditorMode.Series) return;
       const selector = `.traj.uId${traj.uniqueId!}`
       d3.selectAll(selector)
         .attr('stroke', props.instTracks[track].selColor)
