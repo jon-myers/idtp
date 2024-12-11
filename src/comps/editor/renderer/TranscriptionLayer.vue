@@ -30,11 +30,18 @@
     :closed='contextMenuClosed' 
     :choices='contextMenuChoices'
     />
-    
+  <div class='timeModalOuter'>
+    <div v-if="goToTimeModal" class="time-entry-modal">
+      <div class="time-entry-container">
+        <input type="text" v-model="goToHours" placeholder="HH" class="time-entry-input" />
+        <span>:</span>
+        <input type="text" v-model="goToMinutes" placeholder="MM" class="time-entry-input" />
+      </div>
+      <button @click="goToTime">Go</button>
+    </div>
+  </div>
 </template>
-
 <script lang='ts'>
-
 import { 
   defineComponent, 
   ref, 
@@ -334,6 +341,10 @@ export default defineComponent({
     const currentSec = ref<number>(0);
     const litTrajs = ref<(Trajectory | undefined)[]>(Array(props.instTracks.length).fill(undefined));
     const litChikaris = ref<(string)[]>([]);
+    const goToTimeModal = ref<boolean>(false);
+    const goToHours = ref<string>('0');
+    const goToMinutes = ref<string>('00');
+    const controlled = ref<boolean>(false);
     let gsapTween: gsap.core.Tween | undefined = undefined;
     let playheadLineIdx = 0;
     let justDeletedPhraseDiv = false;
@@ -1037,12 +1048,18 @@ export default defineComponent({
       }
     });
 
+    const goToTime = () => {
+      goToTimeModal.value = false;
+      const hours = parseInt(goToHours.value);
+      const minutes = parseInt(goToMinutes.value);
+      const time = minutes + hours * 60;
+      const x = props.xScale(time);
+      emit('moveToX', x);
+    }
     const smooth = (current: number, target: number, smoothing: number = 0.5) => {
       return current + (target - current) * smoothing;
     }
-
     let playheadAnimation: Animation | undefined = undefined;
-
     const movePlayhead = () => {
       const now = performance.now() / 1000;
       const elapsed = now - playheadRealStartTime;
@@ -3933,6 +3950,7 @@ export default defineComponent({
       }
       autoWindowOpen.value = false;
       emit('clearTSP');
+      goToTimeModal.value = false;
     }
 
     const clearDragDots = () => {
@@ -3983,6 +4001,10 @@ export default defineComponent({
         }
       } else if (e.key === 'r') {
         emit('update:selectedMode', EditorMode.Region);
+      } else if (e.code === 'KeyG') {
+        if (alted.value) {
+          goToTimeModal.value = true;
+        }
       } else if (e.key === 'Shift') {
         shifted.value = true;
       } else if (e.key === 'Backspace') {
@@ -4058,6 +4080,7 @@ export default defineComponent({
           moveToNextPhrase();
         }
       } else if (e.key === 'Alt') {
+        console.log('turning on alt')
         alted.value = true;
       } else if (e.key === '[') {
         e.preventDefault();
@@ -4066,6 +4089,7 @@ export default defineComponent({
         e.preventDefault();
         horizontalMoveGraph(0.5);
       } else if (e.key === 'Meta' && props.browser.os!.includes('Mac OS')) {
+        console.log('mac meta')
         metad.value = true;
       } else if (e.key === 'Control' && props.browser.os!.includes('Windows')) {
         metad.value = true
@@ -5522,6 +5546,11 @@ export default defineComponent({
       refreshSargamLines,
       alted,
       renderConsonantSymbols,
+      goToTimeModal,
+      goToHours,
+      goToMinutes,
+      goToTime,
+      controlled,
     }
   }
 })
@@ -5552,6 +5581,41 @@ export default defineComponent({
 
 .playhead {
   will-change: transform;
+}
+
+.time-entry-modal {
+  position: fixed;
+  top: 25%;
+  left: 25%;
+  transform: translate(-50%, -50%);
+  background-color: lightgray;
+  border-radius: 5px;
+  border: 1px solid black;
+  width: 150px;
+  height: 70px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.time-entry-modal > * {
+  margin: 5px;
+}
+
+.time-entry-modal input {
+  width: 25px;
+}
+
+.timeModalOuter {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 100;
 }
 
 </style>

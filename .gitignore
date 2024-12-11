@@ -30,6 +30,7 @@ pnpm-debug.log*
 *.opus
 python/essentia/*.png
 python/visualization_tools/*.png
+python/auto_transcribe/melodic_contours/*.png
 credentials
 
 #Electron-builder output
@@ -41,3 +42,4 @@ docs
 idtp_env
 
 __pycache__
+
