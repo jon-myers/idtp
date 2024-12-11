@@ -5,7 +5,10 @@ from matplotlib.markers import MarkerStyle
 import numpy as np
 from mir_eval.sonify import pitch_contour
 
-def get_idx_groups(log_pitch: np.ndarray, discontinuity_threshold: float = 0.2):
+min_freq = 150
+max_freq = 500
+
+def get_idx_groups(log_pitch: np.ndarray, pluck_idxs: list[int], discontinuity_threshold: float = 0.2):
     # segmentation of the pitch contour
     idx_groups = []
     current_group = []
@@ -27,7 +30,20 @@ def get_idx_groups(log_pitch: np.ndarray, discontinuity_threshold: float = 0.2):
     if len(current_group) > 0:
         idx_groups.append(current_group)
     
-    return idx_groups
+     # Further segment the groups based on pluck_idxs
+    final_idx_groups = []
+    for group in idx_groups:
+        new_group = []
+        for idx in group:
+            if idx in pluck_idxs:
+                if new_group:
+                    final_idx_groups.append(new_group)
+                    new_group = []
+            new_group.append(idx)
+        if new_group:
+            final_idx_groups.append(new_group)
+    
+    return final_idx_groups
 
 def find_nearest_non_nan(arr: np.ndarray, idx: int) -> float:
     # Look backwards
@@ -90,7 +106,7 @@ def make_just_contour_plot(ax_0, x_vals, log_pitch, log_fund, start, end, colors
     ax_0.scatter(x_vals, log_pitch, c=colors, s=1)
     ax_0.set_ylabel('Pitch (Hz)')
     # ax_0.set_title('Melodic Contour')
-    ax_0.set_ylim([log_fund - 1, log_fund + 2])
+    ax_0.set_ylim([np.log2(min_freq), np.log2(max_freq)])
     y_ticks = ax_0.get_yticks()
     labels = [str(int(2**y)) for y in y_ticks]
     ax_0.set_yticklabels(labels)
@@ -101,7 +117,7 @@ def make_annotated_contour_plot(ax, log_pitch, log_fund, start, end, colors,
     x_vals = np.linspace(start, end, len(log_pitch))
     ax.scatter(x_vals, log_pitch, c=colors, s=1)
     ax.set_ylabel('Pitch (Hz)')
-    ax.set_ylim([log_fund - 1, log_fund + 2])
+    ax.set_ylim([np.log2(min_freq), np.log2(max_freq)])
     y_ticks = ax.get_yticks()
     labels = [str(int(2**y)) for y in y_ticks]
     ax.set_yticklabels(labels)
@@ -138,7 +154,7 @@ def make_filtered_contour_plot(ax1, log_pitch, log_fund, start, end,
                                filtered_index_groups):
     x_vals = np.linspace(start, end, len(log_pitch))
     ax1.set_ylabel('Pitch (Hz)')
-    ax1.set_ylim([log_fund - 1, log_fund + 2])
+    ax1.set_ylim([np.log2(min_freq), np.log2(max_freq)])
     y_ticks = ax1.get_yticks()
     labels = [str(int(2**y)) for y in y_ticks]
     ax1.set_yticklabels(labels)
@@ -153,8 +169,8 @@ def get_contour(audio: np.ndarray, idx: int, pluck_onsets: np.ndarray,
     # compute the melodic contour
     log_fund = np.log2(fund)
     voicing_tolerance = 0.7
-    min_freq = 124
-    max_freq = 500
+    # min_freq = 100
+    # max_freq = 400
     eq_loud_audio = ess.EqualLoudness()(audio)
     frame_size = 2048
     ppm = ess.PredominantPitchMelodia(minFrequency = min_freq, 
@@ -182,7 +198,7 @@ def get_contour(audio: np.ndarray, idx: int, pluck_onsets: np.ndarray,
     normed_pluck_onsets = pluck_onsets / (end - start)
     pluck_onset_idxs = (normed_pluck_onsets * len(log_pitch)).astype(int)
     
-    idx_groups = get_idx_groups(log_pitch, 0.1)
+    idx_groups = get_idx_groups(log_pitch, pluck_onset_idxs, 0.1)
     threshold = 0.05
     
     oct_above_fund = log_fund + 1
@@ -229,6 +245,4 @@ def get_contour(audio: np.ndarray, idx: int, pluck_onsets: np.ndarray,
     plt.savefig(f'./python/auto_transcribe/melodic_contours/contour_{idx}.png')
     plt.close()
     save_contour_synth(idx, log_pitch, filtered_index_groups, start, end, audio)
-    if idx == 5:
-        breakpoint()
 
