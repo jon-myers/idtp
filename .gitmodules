@@ -1,0 +1,3 @@
+[submodule "articulation_classification"]
+	path = articulation_classification
+	url = https://github.com/jon-myers/articulation_classification.git
