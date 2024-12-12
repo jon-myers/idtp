@@ -1,33 +1,65 @@
-import essentia.standard as ess
-import os
 import numpy as np
-import matplotlib.pyplot as plt
-import sys
-sys.path.append('articulation_classification')
-from articulation_classification import AudioClassifier
-import requests
-def get_melograph_json(rec_id: str):
-    url = f"https://swara.studio/melographs/{rec_id}/melograph.json"
-    try:
-        response = requests.get(url)
-        response.raise_for_status()  # Raise an exception for HTTP errors
-        return response.json()
-    except requests.exceptions.RequestException as err:
-        print(f"Error fetching data: {err}")
-        return None
+from raag import RaagName
+from typing import TypedDict
+from enum import Enum
+import os, sys
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.append(parent_dir)
 
-rec_id = "62fa903990b9ba8cdae9d251"
-melograph_data = get_melograph_json(rec_id)
-data_chunks_list = melograph_data['data_chunks']
-time_chunks_starts = melograph_data['time_chunk_starts']
-time_chunks_list = []
-increment = melograph_data['time_increment']
-for s_idx, start in enumerate(time_chunks_starts):
-    data_chunk = data_chunks_list[s_idx]
-    time_chunk = [start + i * increment for i, _ in enumerate(data_chunk)]
-    time_chunks_list.append(time_chunk)
-# filter to only include segments between 13:30 and 13:50
-filtered_start_idxs = [i for i, start in enumerate(time_chunks_starts) if start >= 810 and start <= 830]
-data_chunks_list = [data_chunks_list[i] for i in filtered_start_idxs]
-time_chunks_list = [time_chunks_list[i] for i in filtered_start_idxs]
+from api.classes.pitch import Pitch
+from api.classes.raga import Raga, RagaOptionsType
 
+
+
+
+class SegmentType(Enum):
+    Silent = 0
+    Fixed = 1
+    Variable = 2
+
+class Segment():
+    type: SegmentType
+    
+    def __init__(self, log_contour: np.ndarray, type: SegmentType):
+        self.log_contour = log_contour
+        self.type = type
+    
+
+class MelodicSegmentation:
+    log_contour: np.ndarray
+    fundamental: float
+    raga: Raga
+    # raag: Raag
+    log_threshold: float = 0.016 
+    min_freq: float
+    max_freq: float
+    # need to figure out what log_threshold should be, and perhaps
+    # should be adjustable. maybe 20 cents aka 0.016 in log2
+    
+    def __init__(self, log_contour: np.ndarray, fundamental: float, 
+                 raag_name: RaagName, min_freq: float = 150, 
+                 max_freq: float = 500):
+        self.log_contour = log_contour
+        self.fundamental = fundamental
+        raga_options = {
+            'name': raag_name.value,
+            'fundamental': fundamental,
+            'rule_set': raag_name.get_rules(),
+        }
+        self.raga = Raga(raga_options)
+        self.min_freq = min_freq
+        self.max_freq = max_freq
+    
+    # @property
+    # def log_centers(self):
+    #     return 2 ** self.raag.get_freqs(self.min_freq, self.max_freq)
+    
+    # isolate all segments where the log contour is within the threshold above
+    # and below a log center
+    
+    # def perform_segmentation():
+    
+    
+    
+        

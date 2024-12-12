@@ -4,7 +4,10 @@ import essentia
 import numpy as np
 import matplotlib.pyplot as plt
 from melodic_contour import get_contour
+from segment import MelodicSegmentation
 from extract import download_samples, download_file
+from segment import MelodicSegmentation
+from raag import RaagName
 submodule_path = os.path.abspath('articulation_classification')
 sys.path.append('articulation_classification')
 
@@ -93,9 +96,13 @@ for i, clip in enumerate(clips):
     beeps_audio = ess.StereoMuxer()(sig, sig)
     out_path = os.path.join(dir, f'beeps/beeps_{i}.wav')
     ess.AudioWriter(filename=out_path, format='wav')(beeps_audio)
-    get_contour(audio, i, pluck_onsets, chikari_onsets, clip['start'], clip['end'], fund)
+    mel_contour = get_contour(audio, i, pluck_onsets, chikari_onsets, clip['start'], clip['end'], fund)
+    # breakpoint()
+    min_req = 150
+    max_freq = 500
+    mel_seg = MelodicSegmentation(mel_contour, fund, RaagName.Yaman, min_req, max_freq)
     
-        
+    
  
 
     

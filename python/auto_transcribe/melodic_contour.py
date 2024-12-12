@@ -246,3 +246,8 @@ def get_contour(audio: np.ndarray, idx: int, pluck_onsets: np.ndarray,
     plt.close()
     save_contour_synth(idx, log_pitch, filtered_index_groups, start, end, audio)
 
+    processed_melodic_contour = np.zeros(len(log_pitch))
+    for g in filtered_index_groups:
+        processed_melodic_contour[g] = log_pitch[g]
+    processed_melodic_contour[processed_melodic_contour == 0] = np.nan
+    return processed_melodic_contour
