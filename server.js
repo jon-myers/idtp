@@ -24,6 +24,30 @@ async function exists (path) {
   }
 }
 
+// Function to run a Python script and return a Promise
+function runPythonScript(scriptPath, args = []) {
+  return new Promise((resolve, reject) => {
+    const pythonProcess = spawn('python3', [scriptPath, ...args]);
+
+    pythonProcess.stdout.on('data', (data) => {
+      console.log(`stdout from ${scriptPath}: ${data}`);
+    });
+
+    pythonProcess.stderr.on('data', (data) => {
+      console.error(`stderr from ${scriptPath}: ${data}`);
+    });
+
+    pythonProcess.on('close', (code) => {
+      console.log(`${scriptPath} process exited with code ${code}`);
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`${scriptPath} process exited with code ${code}`));
+      }
+    });
+  });
+}
+
 const deleteFiles = async (audioID) => {
   const peaksPath = 'peaks/' + audioID + '.json';
   const spectrogramsPath = 'spectrograms/' + audioID;
@@ -242,7 +266,9 @@ const runServer = async () => {
           given_name: 1,
           audioID: 1,
           instrumentation: 1,
-          explicitPermissions: 1
+          explicitPermissions: 1,
+          soloist: 1,
+          soloInstrument: 1
         }
         let query;
         if (!newPermissions) {
@@ -365,6 +391,48 @@ const runServer = async () => {
       try {
         const out = await audioRecordings.find().project(projection).toArray();
         res.json(out)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
+
+    app.post('/saveMultiQuery', async (req, res) => {
+      const userID = req.body.userID;
+      if (!userID || userID.length !== 24) {
+        console.log(userID)
+        return res.status(400).send('Invalid userID: ' + userID);
+      }
+      const query = { _id: ObjectId(userID) };
+      const multiQueryObj = {};
+      multiQueryObj['queries'] = req.body.queries;
+      multiQueryObj['dateCreated'] = new Date();
+      multiQueryObj['options'] = req.body.options;
+      multiQueryObj['transcriptionID'] = req.body.transcriptionID;
+      multiQueryObj['title'] = req.body.title;
+      const uniqueID = new ObjectId();
+      multiQueryObj['_id'] = uniqueID;
+      try {
+        const result = await users.updateOne(query, { $push: { 
+          multiQueries: multiQueryObj 
+        } });
+        res.json(result)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+
+    });
+
+    app.delete('/deleteQuery', async (req, res) => {
+      const query = { _id: ObjectId(req.body.userID) };
+      const mQueryID = ObjectId(req.body.queryID);
+
+      try {
+        const result = await users.updateOne(query, {
+          $pull: { multiQueries: { _id: mQueryID } }
+        });
+        res.json(result)
       } catch (err) {
         console.error(err);
         res.status(500).send(err);
@@ -847,6 +915,21 @@ const runServer = async () => {
       }
 
     });
+
+    // app.post('/makeVisualizationData', async (req, res) => {
+    //   // generate visualization data for the given recording ID
+    //   const script1 = './visualization_scripts/generate_melograph.py';
+    //   const script2 = './visualization_scripts/make_spec_data.py';
+    //   try {
+    //     await Promise.all([
+    //       runPythonScript(script1, [req.body.recId]),
+    //       runPythonScript(script2, [req.body.recId])
+    //     ])
+    //   } catch (err) {
+    //     console.error(err);
+    //     res.status(500).send(err);
+    //   }
+    // })
     
     app.post('/makeSpectrograms', async (req, res) => {
       // generate spectrograms for the given recording ID and tonic estimate  
@@ -1179,6 +1262,24 @@ const runServer = async () => {
       }
     })
 
+    app.get('/loadQueries', async (req, res) => {
+      try {
+        const userID = req.query.userID;
+        const transcriptionID = req.query.transcriptionID;
+        const query = { _id: ObjectId(userID) };
+        const projection = { projection: { multiQueries: 1, _id: 0 } };
+        let user = await users.findOne(query, projection);
+        let multiQueries = user.multiQueries;
+        multiQueries = multiQueries.filter(q => {
+          return q.transcriptionID === transcriptionID
+        });
+        res.json(multiQueries)
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
     app.get('/getVerifiedStatus', async (req, res) => {
       try {
         const query = { _id: ObjectId(req.query.aeID) };
@@ -1227,13 +1328,13 @@ const runServer = async () => {
     app.post('/addRecordingToCollection', async (req, res) => {
       try {
         // add recordingID to collections collection
-        const query = { _id: ObjectId(req.body.collectionID) };
+        const query = { _id: ObjectId(req.body.colID) };
 
         const update = { $push: { audioRecordings: req.body.recordingID } };
         const result = await collections.updateOne(query, update);
-        // add collectionId to audioRecordings collection
+        // add colID to audioRecordings collection
         const query2 = { _id: ObjectId(req.body.recordingID) };
-        const update2 = { $push: { collections: req.body.collectionID } };
+        const update2 = { $push: { collections: req.body.colID } };
         const result2 = await audioRecordings.updateOne(query2, update2);
         res.json({ result, result2 })
       } catch (err) {
@@ -1245,12 +1346,12 @@ const runServer = async () => {
     app.post('/addTranscriptionToCollection', async (req, res) => {
       try {
         // add recordingID to collections collection
-        const query = { _id: ObjectId(req.body.collectionID) };
+        const query = { _id: ObjectId(req.body.colID) };
         const update = { $push: { transcriptions: req.body.transcriptionID } };
         const result = await collections.updateOne(query, update);
-        // add collectionId to audioRecordings collection
+        // add colID to audioRecordings collection
         const query2 = { _id: ObjectId(req.body.transcriptionID) };
-        const update2 = { $push: { collections: req.body.collectionID } };
+        const update2 = { $push: { collections: req.body.colID } };
         const result2 = await transcriptions.updateOne(query2, update2);
         res.json({ result, result2 })
       } catch (err) {
@@ -1262,12 +1363,12 @@ const runServer = async () => {
     app.post('/addAudioEventToCollection', async (req, res) => {
       try {
         // add recordingID to collections collection
-        const query = { _id: ObjectId(req.body.collectionID) };
+        const query = { _id: ObjectId(req.body.colID) };
         const update = { $push: { audioEvents: req.body.audioEventID } };
         const result = await collections.updateOne(query, update);
-        // add collectionId to audioRecordings collection
+        // add colID to audioRecordings collection
         const query2 = { _id: ObjectId(req.body.audioEventID) };
-        const update2 = { $push: { collections: req.body.collectionID } };
+        const update2 = { $push: { collections: req.body.colID } };
         const result2 = await audioEvents.updateOne(query2, update2);
         res.json({ result, result2 })
       } catch (err) {
@@ -1279,12 +1380,12 @@ const runServer = async () => {
     app.post('/removeRecordingFromCollection', async (req, res) => {
       try {
         // remove recordingID from collections collection
-        const query = { _id: ObjectId(req.body.collectionID) };
+        const query = { _id: ObjectId(req.body.colID) };
         const update = { $pull: { audioRecordings: req.body.recordingID } };
         const result = await collections.updateOne(query, update);
-        // remove collectionId from audioRecordings collection
+        // remove colID from audioRecordings collection
         const query2 = { _id: ObjectId(req.body.recordingID) };
-        const update2 = { $pull: { collections: req.body.collectionID } };
+        const update2 = { $pull: { collections: req.body.colID } };
         const result2 = await audioRecordings.updateOne(query2, update2);
         res.json({ result, result2 })
       } catch (err) {
@@ -1296,12 +1397,12 @@ const runServer = async () => {
     app.post('/removeTranscriptionFromCollection', async (req, res) => {
       try { 
         console.log(req.body)
-        const query = { _id: ObjectId(req.body.collectionID) };
+        const query = { _id: ObjectId(req.body.colID) };
         const update = { $pull: { transcriptions: req.body.transcriptionID } };
         const result = await collections.updateOne(query, update);
 
         const query2 = { _id: ObjectId(req.body.transcriptionID) };
-        const update2 = { $pull: { collections: req.body.collectionID } };
+        const update2 = { $pull: { collections: req.body.colID } };
         const result2 = await transcriptions.updateOne(query2, update2);
         console.log(result, result2)
         res.json({ result, result2 })
@@ -1313,12 +1414,12 @@ const runServer = async () => {
 
     app.post('/removeAudioEventFromCollection', async (req, res) => {
       try {
-        const query = { _id: ObjectId(req.body.collectionID) };
+        const query = { _id: ObjectId(req.body.colID) };
         const update = { $pull: { audioEvents: req.body.audioEventID } };
         const result = await collections.updateOne(query, update);
 
         const query2 = { _id: ObjectId(req.body.audioEventID) };
-        const update2 = { $pull: { collections: req.body.collectionID } };
+        const update2 = { $pull: { collections: req.body.colID } };
         const result2 = await audioEvents.updateOne(query2, update2);
         res.json({ result, result2 })
       } catch (err) {
@@ -1560,6 +1661,7 @@ const runServer = async () => {
     })
 
     app.get('/getInstrumentation', async (req, res) => {
+      // from the audio recording.
       try {
         const audioID = ObjectId(JSON.parse(req.query.audioID));
         const query = { _id: audioID };
@@ -1578,6 +1680,21 @@ const runServer = async () => {
         musiciansArr.sort((a, b) => ordering[a.role] - ordering[b.role]);
         const instrumentation = musiciansArr.map(m => m.instrument);
         res.json(instrumentation);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
+    app.get('/getTranscriptionInstrumentation', async (req, res) => {
+      // from the transcription.
+      try {
+        const transcriptionID = ObjectId(req.query.transcriptionID);
+        const query = { _id: transcriptionID };
+        console.log(query)
+        const projection = { projection: { instrumentation: 1, _id: 0 } };
+        const result = await transcriptions.findOne(query, projection);
+        res.json(result.instrumentation);
       } catch (err) {
         console.error(err);
         res.status(500).send(err);
@@ -1678,19 +1795,36 @@ const runServer = async () => {
           processAudio.stderr.on('data', data => {
             console.error(`stderr: ${data}`)
           });
-          processAudio.on('close', () => {
+          processAudio.on('close', async () => {
             console.log('audio processing finished')
-            res.send({
-              status: true,
-              message: 'File is uploaded',
-              data: {
-                name: audioFile.name,
-                mimetype: audioFile.mimetype,
-                size: audioFile.size,
-                audioFileId: newId
-              }
-            });
+            const script1 = './visualization_scripts/generate_melograph.py';
+            const script2 = './visualization_scripts/make_spec_data.py';
+            try {
+              await Promise.all([
+                runPythonScript(script1, [newId]),
+                runPythonScript(script2, [newId])
+              ])
+              res.send({
+                status: true,
+                message: 'File is uploaded',
+                data: {
+                  name: audioFile.name,
+                  mimetype: audioFile.mimetype,
+                  size: audioFile.size,
+                  audioFileId: newId
+                }
+              });
+            } catch (err) {
+              console.error(err);
+              res.status(500).send(err)
+            }
           });
+          // const script1 = './visualization_scripts/generate_melograph.py';
+          // const script2 = './visualization_scripts/make_spec_data.py';
+          // await Promise.all([
+          //   runPythonScript(script1, [newId]),
+          //   runPythonScript(script2, [newId])
+          // ])
         }
       } catch (err) {
         console.error(err);
@@ -1711,76 +1845,229 @@ const runServer = async () => {
       }
     })
     
-    app.post('/upload-avatar', async (req, res) => {
-    // upload files, and send back progress, via axios (doesn't work with fetch)
+    // app.post('/upload-avatar', async (req, res) => {
+    // // upload files, and send back progress, via axios (doesn't work with fetch)
+    //   try {
+    //     if (!req.files) {
+    //       res.send({ status: false, message: 'No file uploaded' });
+    //     } else {
+    //       const parentId = req.body.parentID;
+    //       const idx = req.body.idx;
+    //       const avatar = req.files.avatar;
+    //       const tempString = `recordings.${idx}.audioFileId`;
+    //       const newId = await ObjectId();
+    //       const query = { _id: ObjectId(parentId) };
+    //       const update = { $set: { [tempString]: newId } };
+    //       const options = { upsert: true };
+    //       // first, find the existing audio event.
+    //       // if there is another audio file already, use that id to search
+    //       // the transcriptions db via the audioID field. For each transcription
+    //       // found, update the audioID field to the new id. Then, delete any 
+    //       // audio, spectrograms, melographs, and peaks files associated with 
+    //       // the old id.
+    //       // Then, delete the old id from the audioRecordings db.
+    //       const ae = await audioEvents.findOne(query);
+    //       if (ae.recordings && ae.recordings[idx]) {
+    //         const oldId = ae.recordings[idx].audioFileId.toString();
+    //         const tQuery = { audioID: oldId };
+    //         const tUpdate = { $set: { audioID: newId } };
+    //         const tOptions = { upsert: true };
+    //         await transcriptions.updateMany(tQuery, tUpdate, tOptions);
+    //         await deleteFiles(oldId);
+    //         const arQuery = { _id: oldId };
+    //         audioRecordings.deleteOne(arQuery);
+    //       }
+    //       await audioEvents.updateOne(query, update, options)
+    //       const suffix = getSuffix(avatar.mimetype);
+    //       let fn = newId + suffix;
+    //       avatar.mv('./uploads/' + fn);
+    //       if (suffix === '.opus') {
+    //         const newFN = newId + '.wav';
+    //         const spawnArgs = ['-i', './uploads/' + fn, './uploads/' + newFN];
+    //         const convertToOpus = spawn('ffmpeg', spawnArgs)
+    //         fn = newFN;
+    //         convertToOpus.stderr.on('data', data => {
+    //           console.error(`stderr: ${data}`)
+    //         });
+    //         convertToOpus.on('close', () => {
+    //           console.log('opus conversion finished')
+    //         })
+    //       }
+    //       const spawnArr = ['process_audio.py', fn, parentId, idx];
+    //       const processAudio = spawn('python3', spawnArr);
+    //       processAudio.stderr.on('data', data => {
+    //         console.error(`stderr: ${data}`)
+    //       });
+    //       processAudio.on('close', () => {
+    //         console.log('python closed, finally')
+    //         res.send({
+    //           status: true,
+    //           message: 'File is uploaded',
+    //           data: {
+    //             name: avatar.name,
+    //             mimetype: avatar.mimetype,
+    //             size: avatar.size,
+    //             audioFileId: newId
+    //           }
+    //         });
+    //       });
+    //       const script1 = './visualization_scripts/generate_melograph.py';
+    //       const script2 = './visualization_scripts/make_spec_data.py';
+    //       await Promise.all([
+    //         runPythonScript(script1, [newId]),
+    //         runPythonScript(script2, [newId])
+    //       ])
+    //     }
+    //   } catch (err) {
+    //     console.error(err)
+    //     res.status(500).send(err);
+    //   }
+    // });
+
+    app.get('/getSavedSettings', async (req, res) => {
       try {
-        if (!req.files) {
-          res.send({ status: false, message: 'No file uploaded' });
+        const query = { _id: ObjectId(req.query.userID) };
+        const projection = { savedSettings: 1, _id: 0 };
+        const result = await users.findOne(query, projection);
+        if (result && result.savedSettings) {
+          res.json(result.savedSettings)
         } else {
-          const parentId = req.body.parentID;
-          const idx = req.body.idx;
-          const avatar = req.files.avatar;
-          const tempString = `recordings.${idx}.audioFileId`;
-          const newId = await ObjectId();
-          const query = { _id: ObjectId(parentId) };
-          const update = { $set: { [tempString]: newId } };
-          const options = { upsert: true };
-          // first, find the existing audio event.
-          // if there is another audio file already, use that id to search
-          // the transcriptions db via the audioID field. For each transcription
-          // found, update the audioID field to the new id. Then, delete any 
-          // audio, spectrograms, melographs, and peaks files associated with 
-          // the old id.
-          // Then, delete the old id from the audioRecordings db.
-          const ae = await audioEvents.findOne(query);
-          if (ae.recordings && ae.recordings[idx]) {
-            const oldId = ae.recordings[idx].audioFileId.toString();
-            const tQuery = { audioID: oldId };
-            const tUpdate = { $set: { audioID: newId } };
-            const tOptions = { upsert: true };
-            await transcriptions.updateMany(tQuery, tUpdate, tOptions);
-            await deleteFiles(oldId);
-            const arQuery = { _id: oldId };
-            audioRecordings.deleteOne(arQuery);
-          }
-          await audioEvents.updateOne(query, update, options)
-          const suffix = getSuffix(avatar.mimetype);
-          let fn = newId + suffix;
-          avatar.mv('./uploads/' + fn);
-          if (suffix === '.opus') {
-            const newFN = newId + '.wav';
-            const spawnArgs = ['-i', './uploads/' + fn, './uploads/' + newFN];
-            const convertToOpus = spawn('ffmpeg', spawnArgs)
-            fn = newFN;
-            convertToOpus.stderr.on('data', data => {
-              console.error(`stderr: ${data}`)
-            });
-            await convertToOpus.on('close', () => {
-              console.log('opus conversion finished')
-            })
-          }
-          const spawnArr = ['process_audio.py', fn, parentId, idx];
-          const processAudio = spawn('python3', spawnArr);
-          processAudio.stderr.on('data', data => {
-            console.error(`stderr: ${data}`)
-          });
-          await processAudio.on('close', () => {
-            console.log('python closed, finally')
-            res.send({
-              status: true,
-              message: 'File is uploaded',
-              data: {
-                name: avatar.name,
-                mimetype: avatar.mimetype,
-                size: avatar.size,
-                audioFileId: newId
-              }
-            });
-          });
-          spawn('python3', ['make_images.py', newId.toString()])
+          res.json([])
         }
       } catch (err) {
-        console.error(err)
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
+
+    app.post('/saveDisplaySettings', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.body.userID) };
+        const user = await users.findOne(query);
+        if (user) {
+          if (user.savedSettings) {
+            const update = { $push: { savedSettings: req.body.settings } };
+            const result = await users.updateOne(query, update);
+            res.json(result);
+          } else {
+            const update = { $set: { savedSettings: [req.body.settings] } };
+            const result = await users.updateOne(query, update);
+            res.json(result);
+          }
+        } else {
+          res.status(404).send('User not found');
+        }
+        
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
+
+    app.post('/updateDisplaySettings', async (req, res) => {
+      try {
+        const { userId, uniqueId, settings } = req.body;
+        const query = { _id: ObjectId(userId), 'savedSettings.uniqueId': uniqueId };
+        const update = { $set: { 'savedSettings.$': settings } };
+        const result = await users.updateOne(query, update);
+        // console.log(userID, uniqueId, settings)
+        if (result.matchedCount === 0) {
+          res.status(404).send('User or display settings not found');
+        } else {
+          res.json(result);
+        }
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
+
+    app.get('/getDefaultSettings', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.query.userID) };
+        const projection = { defaultSettingsID: 1, _id: 0 };
+        const result = await users.findOne(query, projection);
+        if (result && result.defaultSettingsID) {
+          res.json(result.defaultSettingsID)
+        } else {
+          res.json('ffa38001-f592-4778-a91e-c4ef5c99b081')
+        }
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
+    app.post('/setDefaultSettings', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.body.userID) };
+        const update = { $set: { defaultSettingsID: req.body.settingsID } };
+        const result = await users.updateOne(query, update);
+        res.json(result);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
+    app.delete('/deleteDisplaySettings', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.body.userId) };
+        const savedSettings = { uniqueId: req.body.uniqueId };
+        const update = { $pull: { savedSettings } };
+        const result = await users.updateOne(query, update);
+        res.json(result);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
+    app.post('/updateInstrumentation', async (req, res) => {
+      try {
+        // first get the transcription included in the query under 
+        // the transcriptionID key.
+        // then, update the instrumentation field of the transcription.
+        // If the new length of instrumentation is less than the original,
+        // delete the corresponding idxs from the following fields: 
+        // instrumentation, phrases, phraseGrid, durArrayGrid, sectionCatGrid, 
+        // and sectionStartsGrid.
+
+        // If the new length of instrumentation is greater than the original,
+        // add the new instrument name to the end of the instrumentation array.
+        const { transcriptionID, instrumentation } = req.body;
+        if (!transcriptionID || !instrumentation) {
+          res.status(400).send('TranscriptionID and instrumentation are required');
+        };
+        const query = { _id: ObjectId(transcriptionID) };
+        const transcription = await transcriptions.findOne(query);
+        if (!transcription) {
+          res.status(404).send('Transcription not found');
+        }
+        const originalInstrumentation = transcription.instrumentation;
+        const originalLength = originalInstrumentation.length;
+        const newLength = instrumentation.length;
+
+        await transcriptions.updateOne(query, { $set: { instrumentation } });
+        if (newLength < originalLength) {
+          const fieldsToUpdate = [
+            'instrumentation', 
+            'phraseGrid', 
+            'durArrayGrid', 
+            'sectionCatGrid', 
+            'sectionStartsGrid'
+          ];
+          const updateOps = fieldsToUpdate.map(field => ({
+            [field]: transcription[field].slice(0, newLength)
+          }));
+          await transcriptions.updateOne(query, { 
+            $set: Object.assign({}, ...updateOps) 
+          });
+        }
+        // res.status(200).send('Instrumentation updated');
+        res.json({ status: 200, message: 'Instrumentation updated' });
+      } catch (err) {
+        console.error(err);
         res.status(500).send(err);
       }
     });
@@ -1792,8 +2079,12 @@ const runServer = async () => {
     };
     app.use('/audio', express.static('audio', { setHeaders: setNoCache }));
     app.use('/peaks', express.static('peaks', { setHeaders: setNoCache }));
+    app.use('/test', express.static('test', { setHeaders: setNoCache }));
     app.use('/spectrograms', express.static('spectrograms', { 
       setHeaders: setNoCache 
+    }))
+    app.use('/spec_data', express.static('spec_data', {
+      setHeaders: setNoCache
     }))
     app.use('/melographs', express.static('melographs', { 
       setHeaders: setNoCache 

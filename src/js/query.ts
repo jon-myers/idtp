@@ -3,80 +3,23 @@ import {
   Piece, 
   Pitch, 
   Trajectory, 
-  SecCatType,
-  PhraseCatType
 } from './classes.ts';
 
-
-type CategoryType = (
-  'trajectoryID' |
-  'pitch' |
-  'vowel' |
-  'startingConsonant' |
-  'endingConsonant' |
-  'anyConsonant' |
-  'pitchSequenceStrict' |
-  'pitchSequenceLoose' |
-  'trajSequenceStrict' | 
-  'trajSequenceLoose' |
-  'sectionTopLevel' |
-  'alapSection' |
-  'compType' | 
-  'compSecTempo' |
-  'tala' | 
-  'phraseType' |
-  'elaborationType' |
-  'vocalArtType' | 
-  'instArtType' |
-  'incidental'
-)
-
-type DesignatorType = 'includes' | 'excludes' | 'startsWith' | 'endsWith';
-
-type SegmentationType = (
-  'phrase' |
-  'group' |
-  'sequenceOfTrajectories' |
-  'connectedSequenceOfTrajectories'
-)
-
-type QueryType = {
-  category: CategoryType,
-  designator: DesignatorType,
-  pitch?: Pitch,
-  trajectoryID?: number,
-  vowel?: string,
-  consonant?: string,
-  pitchSequence?: Pitch[],
-  trajIdSequence?: number[],
-  sectionTopLevel?: SecCatType['Top Level'],
-  alapSection?:  keyof SecCatType['Alap'],
-  compType?: keyof SecCatType['Composition Type'],
-  compSecTempo?: keyof SecCatType['Comp.-section/Tempo'],
-  tala?: keyof SecCatType['Tala'],
-  phraseType?: keyof PhraseCatType['Phrase'],
-  elaborationType?: keyof PhraseCatType['Elaboration'],
-  vocalArtType?: keyof PhraseCatType['Vocal Articulation'],
-  instArtType?: keyof PhraseCatType['Instrumental Articulation'],
-  incidental?: keyof PhraseCatType['Incidental'],
-}
-
-type MultipleReturnType = [
-  Trajectory[][], 
-  (number | string | { phraseIdx: number, trajIdx: number })[],
-  QueryAnswerType[],
-];
+import { 
+  CategoryType,
+  DesignatorType,
+  SegmentationType,
+  QueryType,
+  MultipleReturnType,
+  QueryAnswerType,
+  MultipleOptionType,
+  SecCatType,
+  PhraseCatType
 
 
-type QueryAnswerType = {
-  trajectories: Trajectory[],
-  identifier: (number | string | { phraseIdx: number, trajIdx: number }),
-  title: string,
-  startTime: number,
-  endTime: number,
-  duration: number,
-  segmentation: SegmentationType,
-}
+} from '@/ts/types.ts';
+
+
 
 const findSequenceIndexes = (sequence: number[], longerSequence: number[]) => {
   const indexes: number[] = [];
@@ -190,6 +133,7 @@ class Query {
     vocalArtType = undefined,
     instArtType = undefined,
     incidental = undefined,
+    instrumentIdx = 0,
   }: {
     segmentation?: SegmentationType,
     designator?: DesignatorType,
@@ -213,6 +157,7 @@ class Query {
     vocalArtType?: keyof PhraseCatType['Vocal Articulation'],
     instArtType?: keyof PhraseCatType['Instrumental Articulation'],
     incidental?: keyof PhraseCatType['Incidental'],
+    instrumentIdx?: number,
 
   } = {}) {
     this.category = category;
@@ -224,7 +169,7 @@ class Query {
     this.piece = piece;
     this.identifier = [];
     this.trajectories = [];
-    this.instrumentIdx = 0;
+    this.instrumentIdx = instrumentIdx;
     this.repetition = false;
     this.sequenceLength = sequenceLength;
     this.segmentation = segmentation;
@@ -242,6 +187,7 @@ class Query {
     this.vocalArtType = vocalArtType;
     this.instArtType = instArtType;
     this.incidental = incidental;
+    this.instrumentIdx = instrumentIdx;
     if (segmentation === 'sequenceOfTrajectories') {
       if (sequenceLength === undefined) {
         throw new Error('sequenceLength is required when type is ' + 
@@ -334,13 +280,13 @@ class Query {
     this.filterByDuration();
     this.stringifiedIdentifier = this.identifier.map(id => JSON.stringify(id));
     this.startTimes = this.trajectories.map(traj => {
-      const phrase = this.piece.phrases[traj[0].phraseIdx!];
+      const phrase = this.piece.phraseGrid[this.instrumentIdx][traj[0].phraseIdx!];
       return traj[0].startTime! + phrase.startTime!;
     });
   }
 
   private phraseFilter() {
-    const phrases = this.piece.phrases;
+    const phrases = this.piece.phraseGrid[this.instrumentIdx];
     const filteredPhrases = phrases.filter(phrase => {
       if (this.category === 'pitch') {
         const trialArr = phrase.allPitches(this.repetition)
@@ -409,7 +355,7 @@ class Query {
     this.identifier = filteredPhrases.map(phrase => phrase.pieceIdx!);
   }
 
-  private groupFilter() {
+  private groupFilter() { //TODO
     const groups = this.piece.allGroups({ instrumentIdx: this.instrumentIdx });
     const filteredGroups = groups.filter(group => {
       let bool = false;
@@ -485,9 +431,9 @@ class Query {
 
   public get queryAnswers() {
     return this.trajectories.map((trajs, tIdx) => {
-      const startPhrase = this.piece.phrases[trajs[0].phraseIdx!];
+      const startPhrase = this.piece.phraseGrid[this.instrumentIdx][trajs[0].phraseIdx!];
       const startTime = trajs[0].startTime! + startPhrase.startTime!;
-      const endPhrase = this.piece.phrases[trajs[trajs.length - 1].phraseIdx!];
+      const endPhrase = this.piece.phraseGrid[this.instrumentIdx][trajs[trajs.length - 1].phraseIdx!];
       const endTime = trajs[trajs.length - 1].endTime! + endPhrase.startTime!;
       const duration = endTime - startTime;
       let title: string = '';
@@ -862,7 +808,7 @@ class Query {
 
   private secTopLevelDiff(pIdx: number) {
     let boolean: boolean = false;
-    const sIdx = this.piece.sIdxFromPIdx(pIdx);
+    const sIdx = this.piece.sIdxFromPIdx(pIdx, this.instrumentIdx);
     const section = this.piece.sections![sIdx];
     if (this.designator === 'includes') {
       boolean = section.categorization['Top Level'] === this.sectionTopLevel;
@@ -977,6 +923,7 @@ class Query {
     trajectoryID = undefined,
     vowel = undefined,
     consonant = undefined,
+    instrumentIdx = 0,
   }: {
     segmentation?: SegmentationType,
     transcriptionID?: string,
@@ -987,6 +934,7 @@ class Query {
     trajectoryID?: number,
     vowel?: string,
     consonant?: string,
+    instrumentIdx?: number,
   } = {}) {
     const piece = await instantiatePiece(transcriptionID);
     const queryObj = { 
@@ -998,6 +946,7 @@ class Query {
       trajectoryID,
       vowel,
       consonant,
+      instrumentIdx,
     };
     return new Query(piece, queryObj);
   }
@@ -1009,7 +958,8 @@ class Query {
     sequenceLength = undefined,
     minDur = 0,
     maxDur = 60,
-    every = true // if false, then any (in other words, all vs. any)
+    every = true, // if false, then any (in other words, all vs. any)
+    instrumentIdx = 0,
   }: MultipleOptionType = {}): Promise<MultipleReturnType> {
     if (queries.length === 0) {
       throw new Error('No queries provided');
@@ -1048,6 +998,7 @@ class Query {
           incidental: query.incidental,
           minDur,
           maxDur,
+          instrumentIdx,
         };
       });
       const answers = queryObjs.map((queryObj: QueryType ) => {
@@ -1089,30 +1040,11 @@ class Query {
         });
         queryAnswers = sortIdxs.map(idx => queryAnswers[idx]);
       }   
-    } catch (err) {
+    } catch (err: any) {
       throw new Error(err);
     }
     return [outputTrajectories, nonStringifiedOutputIdentifiers, queryAnswers];
   }
 }
 
-type MultipleOptionType = {
-  transcriptionID?: string,
-  segmentation?: SegmentationType,
-  sequenceLength?: number,
-  piece?: Piece,
-  minDur?: number,
-  maxDur?: number,
-  every?: boolean,
-}
-
 export { Query }
-
-export type { 
-  QueryType, 
-  MultipleOptionType, 
-  SegmentationType,
-  CategoryType,
-  DesignatorType,
-  QueryAnswerType
-}

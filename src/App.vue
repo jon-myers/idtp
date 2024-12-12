@@ -8,6 +8,8 @@
 <script lang='ts'>
 import { defineComponent } from 'vue';
 import NavBar from '@/comps/NavBar.vue';
+import { useRoute } from 'vue-router';
+
 type AppDataType = {
   navHeight: number,
 }
@@ -17,27 +19,43 @@ export default defineComponent({
   components: {
     NavBar
   },
+  setup() {
+    const route = useRoute();
+    return { route }
+  },
   data(): AppDataType {
     return {
       navHeight: 40,
     }
   },
-
-  mounted() {
-    this.path = this.$route.path;
-  },
-
   computed: {
     path() {
-      return this.$route.path;
+      return this.route.path;
     }
   },
-  
-  methods: {
-  }
 })
 </script>
-
 <style>
 
+body {
+  overscroll-behavior: none;
+}
+
+body, html {
+  overscroll-behavior-x: none;
+}
+
+/* this is just for hiding something wierd about the new devtools installed */
+
+#vue-inspector-container {
+  width: 0%;
+}
+
+#__vue-devtools-container__ {
+  width: 0%;
+}
+
+.routerViewContainer {
+  background-color: #202621
+}
 </style>

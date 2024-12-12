@@ -50,8 +50,10 @@ import {
 import { 
   userLoginGoogle, 
   handleGoogleAuthCode, 
-  UserDataType 
 } from '@/js/serverCalls.ts';
+import  { 
+  UserDataType
+} from '@/ts/types.ts';
 import { defineComponent } from 'vue';
 import defaultUsrImgUrl from '@/assets/icons/user_head.svg';
 import { LocationQueryRaw } from 'vue-router';
@@ -86,9 +88,9 @@ export default defineComponent({
       lastName: undefined,
       name: undefined,
       navChoices: [
-        { name: 'Transcriptions', path: '/files' },
+        { name: 'Transcriptions', path: '/transcriptions' },
         { name: 'Editor', path: '/editor' },
-        { name: 'Audio Events', path: '/audioEvents' },
+        // { name: 'Audio Events', path: '/audioEvents' },
         { name: 'Recordings', path: '/audioRecordings'},
         { name: 'Raag Editor', path: '/raagEditor' },
         { name: 'Analyzer', path: '/analyzer' },
@@ -120,28 +122,32 @@ export default defineComponent({
       this.$store.commit('update_firstName', this.firstName);
       this.$store.commit('update_lastName', this.lastName);
       this.$store.commit('update_name', this.name);
-      const pieceId = this.$cookies.get('currentPieceId');
+      let pieceId = this.$cookies.get('currentPieceId');
+      if (this.$route.query.id !== undefined) {
+        pieceId = this.$route.query.id as string
+      };
       if (pieceId !== null) this.$store.commit('update_id', pieceId); 
         //just for now
     } else {
       try {
         console.log('trying this first')
-        const response = await googleOneTap({ autoLogin: false });
-          const userData = decodeCredential(response.credential);
+        const res = await googleOneTap({ autoLogin: false });
+          const userData = decodeCredential(res.credential) as UserDataType;
           await this.loggedIn(userData);     
       } catch (err) {
         console.error(err);
-        try {
-          console.log('trying this second')
-          const response = await googleAuthCodeLogin();
-          const redirURL = window.location.href;
-          console.log(redirURL)
-          const userData = await handleGoogleAuthCode(response.code, redirURL);
-          await this.loggedIn(userData);
-        } catch (error) {
-          console.error();
-        }
       }
+      //   try {
+      //     console.log('trying this second')
+      //     const response = await googleAuthCodeLogin();
+      //     const redirURL = window.location.href;
+      //     console.log(redirURL)
+      //     const userData = await handleGoogleAuthCode(response.code, redirURL);
+      //     await this.loggedIn(userData);
+      //   } catch (error) {
+      //     console.error();
+      //   }
+      // }
     }
   },
 
@@ -172,27 +178,34 @@ export default defineComponent({
         this.returning = true
         this.$store.commit('update_returning', this.returning);
         if (this.$store.state.query) {
+          const q = this.$store.state.query as unknown as LocationQueryRaw;
           this.$router.push({
             name: 'EditorComponent',
-            query: this.$store.state.query
+            query: q
           })
         }
       }
     },
 
     clickLink(category: string) {
-      if (category === '/files') {
-        useTitle('File Manager')
-      } else if (category === '/audioEvents') {
-        useTitle('Audio Events')
-      } else if (category === '/audioRecordings') {
-        useTitle('Audio Recordings')
-      } else if (category === '/raagEditor') {
-        useTitle('Raag Editor')
+      if (this.$store.state.userID === undefined) {
+        // this.$store.commit('update_query', this.$route.query);
+        this.$router.push('/logIn');
+      } else {
+        if (category === '/transcriptoins') {
+          useTitle('Transcriptions')
+        } else if (category === '/audioEvents') {
+          useTitle('Audio Events')
+        } else if (category === '/audioRecordings') {
+          useTitle('Audio Recordings')
+        } else if (category === '/raagEditor') {
+          useTitle('Raag Editor')
+        }
       }
+      
     },
 
-    handleUsrImgClick(e) {
+    handleUsrImgClick(e: Event) {
       this.showUserMenu = !this.showUserMenu;
       e.stopPropagation();
     },
@@ -218,20 +231,28 @@ export default defineComponent({
     async logIn() {
       this.showUserMenu = false;
       if (this.$store.state.userID === undefined) {
+        // try {
+        //   const res = await googleOneTap({ autoLogin: false });
+        //   const userData = decodeCredential(res.credential) as UserDataType;
+        //   await this.loggedIn(userData);     
+        // } catch (err) { 
+        //   console.error(err);
+        //   try {
+        //     const response = await googleAuthCodeLogin();
+        //     const reURL = window.location.href;
+        //     const userData = await handleGoogleAuthCode(response.code, reURL);
+        //     await this.loggedIn(userData);
+        //   } catch (err) {
+        //     console.error(err)
+        //   }
+        // }
         try {
-          const response = await googleOneTap({ autoLogin: false });
-          const userData = decodeCredential(response.credential);
-          await this.loggedIn(userData);     
+          const response = await googleAuthCodeLogin();
+          const reURL = window.location.href;
+          const userData = await handleGoogleAuthCode(response.code, reURL);
+          await this.loggedIn(userData);
         } catch (err) {
-          console.error(err);
-          try {
-            const response = await googleAuthCodeLogin();
-            const reURL = window.location.href;
-            const userData = await handleGoogleAuthCode(response.code, reURL);
-            await this.loggedIn(userData);
-          } catch (err) {
-            console.error(err)
-          }
+          console.error(err)
         }
       }
     },

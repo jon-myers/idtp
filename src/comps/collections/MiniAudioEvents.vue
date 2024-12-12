@@ -146,10 +146,10 @@
 
 import { defineComponent, PropType } from 'vue';
 import { displayTime } from '@/ts/utils';
-import type { 
+import { 
   RecType, 
   AudioEventType 
-} from '@/comps/audioEvents/AddAudioEvent.vue';
+} from '@/ts/types';
 import { getAEsFromIds } from '@/js/serverCalls';
 
 type MiniAudioEventsDataType = {
@@ -980,6 +980,11 @@ span.field {
   user-select: none;
 }
 
+span.field::-webkit-scrollbar {
+  display: none;
+
+}
+
 .sortTriangle.down {
   transform: rotate(90deg);
 }
@@ -1016,6 +1021,10 @@ span.field {
   overflow-y: scroll;
   overflow-x: hidden;
   /* border-bottom: 1px solid grey; */
+}
+
+.fileContainer::-webkit-scrollbar {
+  display: none;
 }
 
 .aeRow {

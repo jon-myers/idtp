@@ -116,7 +116,7 @@ import {
   createCollection, 
   updateCollection 
 } from '@/js/serverCalls.ts';
-import type { PropType } from 'vue';
+import { PropType } from 'vue';
 type NewCollectionModalDataType = {
   purposeChoices: CollectionType['purpose'][],
   title: string,

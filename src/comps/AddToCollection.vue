@@ -26,7 +26,7 @@
 </template>
 <script lang="ts">
 import { defineComponent, PropType } from 'vue';
-import type { CollectionType } from '@/ts/types.ts';
+import { CollectionType } from '@/ts/types.ts';
 import { 
   addRecordingToCollection,
   addAEToCollection,

@@ -1,6 +1,6 @@
 <template>
   <div 
-    :class='`dropDown + ${ closed ? "closed" : "" }`' 
+    :class='`dropDown ${ closed ? "closed" : "" }`' 
     :style='{ top: y + "px", left: x + "px" }'
     >
     <div 
@@ -20,7 +20,7 @@
 
 <script lang='ts'>
 import { defineComponent } from 'vue';
-import type { PropType } from 'vue';
+import { PropType } from 'vue';
 
 import { ContextMenuOptionType } from '@/ts/types.ts';
 
@@ -97,6 +97,7 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   user-select: none;
+  z-index: 2;
 }
 
 .dropDown.closed {

@@ -72,11 +72,6 @@
 import { defineComponent, PropType } from 'vue';
 import { UserType } from '@/ts/types';
 import { updateVisibility, getAllUsers } from '@/js/serverCalls';
-import { 
-  AudioEventType, 
-  RecType 
-} from '@/comps/audioEvents/AddAudioEvent.vue';
-
 
 type PermissionsModalDataType = {
   visible: boolean,

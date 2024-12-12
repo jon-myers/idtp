@@ -111,19 +111,9 @@
 <script lang='ts'>
  
 import { getRagaNames, getRaagRule, saveRaagRules } from '@/js/serverCalls.ts';
-type RaisedLoweredType = {
-  lowered: boolean,
-  raised: boolean
-}
-type RuleProfileType = {
-  sa: boolean,
-  re: RaisedLoweredType,
-  ga: RaisedLoweredType,
-  ma: RaisedLoweredType,
-  pa: boolean,
-  dha: RaisedLoweredType,
-  ni: RaisedLoweredType
-}
+import { RuleProfileType } from '@/ts/types.ts';
+import cloneDeep from 'lodash/cloneDeep';
+
 
 type RaagEditorDataType = {
   raagNames: string[],
@@ -209,6 +199,7 @@ export default {
   
   watch: {
     async selectedRaag(newVal) {
+      console.log(newVal)
       try {
         const rules = await getRaagRule(newVal);
         if (rules.rules) {
@@ -216,7 +207,8 @@ export default {
           const date = new Date(rules.updatedDate);
           this.savedMsg = 'Saved: ' + date.toLocaleString();
         } else {
-          this.rules = this.rulesTemplate;
+          console.log('resetting rules')
+          this.rules = cloneDeep(this.rulesTemplate);
           this.savedMsg = 'unsaved'
         }
       } catch (err) {

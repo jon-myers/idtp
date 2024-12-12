@@ -19,16 +19,15 @@
 
 import { defineComponent, PropType } from 'vue';
 import { Trajectory, Piece, Phrase, Pitch, linSpace } from '@/js/classes.ts';
-import { QueryAnswerType } from '@/js/query.ts';
+import { QueryAnswerType, ContextMenuOptionType } from '@/ts/types.ts';
+import { Instrument } from '@/ts/enums.ts';
 
 import * as d3 from 'd3';
 
 type SegmentDisplayDataType = {
-  svg?: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>,
+  svg?: d3.Selection<SVGSVGElement, unknown, null, any>,
   verticalPadding: number,
   horizontalPadding: number,
-  // VertMargin: number,
-  // horizontalMargin: number,
   titleMargin: number,
   outerMargin: {
     top: number,
@@ -49,12 +48,12 @@ type SegmentDisplayDataType = {
   visibleSargam?: number[],
   visiblePitches?: Pitch[],
   divsPerPxl: number,
-  defs?: d3.Selection<SVGDefsElement, unknown, HTMLElement, any>,
+  defs?: d3.Selection<SVGDefsElement, unknown, null, any>,
   phonemeRepresentation: 'IPA' | 'Devanagari' | 'English',
   contextMenuX: number,
   contextMenuY: number,
   contextMenuClosed: boolean,
-  contextMenuChoices: { text: string, action: (e) => void }[],
+  contextMenuChoices: ContextMenuOptionType[],
 };
 
 import ContextMenu from '@/comps/ContextMenu.vue';
@@ -103,8 +102,8 @@ export default defineComponent({
     const horizontalMargin = this.outerMargin.left + this.outerMargin.right;
     const VertMargin = this.outerMargin.top + this.outerMargin.bottom;
     this
-    this.svg = d3.select(this.$refs.graph)
-      .append('svg')
+    this.svg = d3.select(this.$refs.graph as HTMLElement).append('svg') as d3.Selection<SVGSVGElement, unknown, null, any>;
+    this.svg
       .classed('svg', true)
       .attr('width', this.displayWidth - horizontalMargin + 'px')
       .attr('height', this.displayHeight - VertMargin + 'px')
@@ -157,7 +156,7 @@ export default defineComponent({
     } else {
       numTicks = 3
     }
-    const xTickVals = this.xAxis.scale().ticks(numTicks)! as number[];
+    const xTickVals = this.xScale!.ticks(numTicks) as number[];
     const xTickTexts = xTickVals.map(x => {
       const date = d3.timeSecond.offset(new Date(0), x);
       const minutes = date.getUTCMinutes();
@@ -209,6 +208,7 @@ export default defineComponent({
       .forEach(traj => this.addTrajectory(traj));
     
     if (this.vocal) {
+      console.log('getting vocal?')
       const vowelIdxs = this.firstTrajIdxs();  
       this.trajectories.forEach((traj, idx) => {
         if (vowelIdxs.includes(idx)) {
@@ -376,6 +376,47 @@ export default defineComponent({
 
   methods: {
 
+    downloadImage() {
+      // Step 1: Convert SVG to Canvas
+      const svgElement = this.$el.querySelector('svg'); // Adjust selector as needed
+      const serializer = new XMLSerializer();
+      const svgString = serializer.serializeToString(svgElement);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const DOMURL = window.URL || window.webkitURL || window;
+      const img = new Image();
+      const svg = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
+      const url = DOMURL.createObjectURL(svg);
+
+      img.onload = () => {
+        const scaleFactor = 2;
+        const borderSize = 10;
+        canvas.width = (img.width + 2 * borderSize) * scaleFactor;
+        canvas.height = (img.height + 2 * borderSize) * scaleFactor;
+        ctx!.fillStyle = 'white';
+        ctx!.fillRect(0, 0, canvas.width, canvas.height);
+        ctx!.scale(scaleFactor, scaleFactor);
+        ctx!.drawImage(img, borderSize, borderSize);
+        DOMURL.revokeObjectURL(url);
+
+        ctx?.scale(1/scaleFactor, 1/scaleFactor)
+
+        // Step 2: Convert Canvas to Image and Download
+        const imgURI = canvas
+            .toDataURL('image/png') // or 'image/jpeg' for JPEG format
+            .replace('image/png', 'image/octet-stream'); // This prompts the user to save the file
+
+        // Create a link and trigger the download
+        const link = document.createElement('a');
+        link.download = 'segment-display.png'; // Name of the file
+        link.href = imgURI;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      img.src = url
+    },
+
     handleKeydown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         this.contextMenuClosed = true;
@@ -405,7 +446,8 @@ export default defineComponent({
               regionEnd: this.queryAnswer.endTime
             }
           })
-        }
+        },
+        enabled: true
       });
       this.contextMenuChoices.push({
         text: 'Open in new tab',
@@ -421,7 +463,16 @@ export default defineComponent({
             }
           });
           window.open(routeData.href, '_blank');
-        }
+        },
+        enabled: true
+      });
+      this.contextMenuChoices.push({
+        text: 'Download Image',
+        action: () => {
+          this.contextMenuClosed = true;
+          this.downloadImage();
+        },
+        enabled: true
       })
     },
 
@@ -528,27 +579,31 @@ export default defineComponent({
             .attr('stroke-linejoin', 'round')
             .attr('transform', `translate(${tX}, ${tY})`)            
         } else if (art.name === 'consonant') {
-          const artX = this.xScale!(artTime);
-          const artY = this.yScale!(traj.compute(Number(artKey), true));
-          const sym = d3.symbol().type(d3.symbolDiamond).size(25);
-          const tX = this.innerMargin.left + artX;
-          const tY = this.innerMargin.top + this.titleMargin + artY;
-          this.svg!.append('path')
-            .attr('d', sym)
-            .attr('fill', 'black')
-            .attr('transform', `translate(${tX}, ${tY})`)
+          const vox = [Instrument.Vocal_M, Instrument.Vocal_F];
+          if (vox.includes(traj.instrumentation)) {
+
+            const artX = this.xScale!(artTime);
+            const artY = this.yScale!(traj.compute(Number(artKey), true));
+            const sym = d3.symbol().type(d3.symbolDiamond).size(25);
+            const tX = this.innerMargin.left + artX;
+            const tY = this.innerMargin.top + this.titleMargin + artY;
+            this.svg!.append('path')
+              .attr('d', sym)
+              .attr('fill', 'black')
+              .attr('transform', `translate(${tX}, ${tY})`)
+          }
 
         }
       })
     },
 
     addMarkers() {
-      this.defs = this.svg?.append('defs')
+      this.defs = this.svg!.append('defs') as d3.Selection<SVGDefsElement, unknown, null, any>;
       const markerBoxWidth = 4;
       const markerBoxHeight = 4;
       const refX = markerBoxWidth / 2;
       const refY = markerBoxHeight / 2;
-      const arrowPoints = [
+      const arrowPoints: [number, number][] = [
         [0, 0],
         [0, 4],
         [4, 2]

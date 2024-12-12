@@ -1,15 +1,11 @@
-import { createWebHistory, createRouter } from 'vue-router';
-
-const routes = [
+import { createWebHistory, createRouter, RouteRecordRaw } from 'vue-router';
+// import {store, VueCookies } from '@/main.ts'
+import { VueCookies } from 'vue-cookies'
+const routes: Array<RouteRecordRaw> = [
   {
-    path: '/files',
-    name: 'Files',
+    path: '/transcriptions',
+    name: 'Transcriptions',
     component: () => import('@/comps/files/FileManager.vue')
-  },
-  {
-    path: '/audioEvents',
-    name: 'AudioEvents',
-    component: () => import('@/comps/audioEvents/AudioEvents.vue')
   },
   {
     path: '/audioRecordings',
@@ -46,6 +42,11 @@ const routes = [
     path: '/collections',
     name: 'Collections',
     component: () => import('@/comps/collections/CollectionsComponent.vue')
+  },
+  {
+    path:'/editorInstructions',
+    name: 'Editor Instructions',
+    component: () => import('@/comps/EditorInstructions.vue')
   }
 ];
 
@@ -54,6 +55,20 @@ const router = createRouter({
   routes,
   linkActiveClass: 'active',
   linkExactActiveClass: 'active'
+})
+
+router.beforeEach((to, from, next) => {
+  const userID = window.$cookies.get('userID')
+  if (
+    to.name !== 'LandingPage' && 
+    to.name !== 'LogIn' && 
+    (userID === 'undefined' || userID === null || userID === undefined)
+  ) {
+    console.log('redirecting to login')
+      next({ name: 'LogIn' })
+  } else {
+      next()
+  }
 })
 
 export default router; 

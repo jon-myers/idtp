@@ -76,7 +76,7 @@
 </template>
 <script lang="ts">
 import { defineComponent, PropType } from 'vue';
-import type { RecType } from '@/comps/audioEvents/AddAudioEvent.vue';
+import { RecType } from '@/ts/types.ts';
 import { 
   getRecsFromIds,
   getSortedMusicians, 
@@ -786,6 +786,10 @@ span.field {
   user-select: none;
 }
 
+span.field::-webkit-scrollbar {
+  display: none;
+}
+
 .sortTriangle.down {
   transform: rotate(90deg);
 }
@@ -822,6 +826,10 @@ span.field {
   overflow-y: scroll;
   overflow-x: hidden;
   border-top: 1px solid grey;
+}
+
+.fileContainer::-webkit-scrollbar {
+  display: none;
 }
 
 .recordingRow {

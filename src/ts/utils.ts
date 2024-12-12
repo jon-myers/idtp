@@ -28,5 +28,75 @@ const displayTime = (dur: number) => {
   }
 }
 
+const closeTo = (a: number, b: number) => Math.abs(a - b) < 0.000001;
 
-export { getContrastingTextColor, displayTime }
+const linSpace = (startVal: number, stopVal: number, cardinality: number) => {
+  var arr = [];
+  var step = (stopVal - startVal) / (cardinality - 1);
+  for (var i = 0; i < cardinality; i++) {
+    arr.push(startVal + (step * i));
+  }
+  return arr;
+};
+
+const escCssClass = (str: string) => {
+  return str.replace(/([!"#$%&'()*+,.\/:;<=>?@[\\\]^`{|}~])/g, '\\$1');
+}
+
+const cumsum = (sum: number = 0) => (sum = 0, (n: number) => sum += n);
+
+const getClosest = (counts: number[], goal: number) => {
+  return counts.reduce((prev, curr) => {
+    return Math.abs(curr - goal) < Math.abs(prev - goal) ? curr : prev
+  })
+};
+
+const isUpperCase = (str: string) => str === str.toUpperCase();
+
+const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
+
+const findClosestStartTimeAfter = (startTimes: number[], timepoint: number) => {
+  let closestIndex = -1;
+  let closestDiff = Infinity;
+  for (let i = 0; i < startTimes.length; i++) {
+    if (startTimes[i] <= timepoint) continue; // Skip start times <= timepoint
+
+    const diff = startTimes[i] - timepoint;
+    if (diff < closestDiff) {
+      closestDiff = diff;
+      closestIndex = i;
+    }
+  }
+  return closestIndex;
+}
+
+const  findClosestStartTime = (startTimes: number[], timepoint: number) => {
+  let closestIndex = -1;
+  let closestDiff = Infinity;
+
+  for (let i = 0; i < startTimes.length; i++) {
+    if (startTimes[i] > timepoint) continue; // Skip start times after timepoint
+
+    const diff = timepoint - startTimes[i];
+    if (diff < closestDiff) {
+      closestDiff = diff;
+      closestIndex = i;
+    }
+  }
+  return closestIndex;
+}
+
+
+export { 
+  getContrastingTextColor, 
+  displayTime, 
+  closeTo, 
+  linSpace, 
+  escCssClass,
+  cumsum,
+  getClosest,
+  isUpperCase,
+  sum,
+  findClosestStartTime,
+  findClosestStartTimeAfter
+};

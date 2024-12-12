@@ -1,6 +1,27 @@
 import { findLastIndex } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 import { Meter } from './meter.ts';
+import { 
+  SecCatType,
+  PhraseCatType,
+  VibObjType,
+  IdType,
+  TrajIdFunction,
+  OutputType,
+  StrokeNicknameType,
+  ArtNameType,
+  SargamDisplayType,
+  VowelDisplayType,
+  ConsonantDisplayType,
+  PhraseDivDisplayType,
+  ChikariDisplayType,
+  BolDisplayType,
+  RuleSetType,
+  BoolObj,
+} from '@/ts/types.ts';
+import { Instrument } from '@/ts/enums.ts';
+import { closeTo, getClosest, isUpperCase } from '@/ts/utils.ts';
+
 
 const initSecCategorization = (): SecCatType => {
   return {
@@ -179,7 +200,7 @@ const linSpace = (startVal: number, stopVal: number, cardinality: number) => {
   return arr;
 };
 
-type OutputType = 'pitchNumber' | 'chroma' | 'pitch' | 'pitchClass';
+// type OutputType = 'pitchNumber' | 'chroma' | 'pitch' | 'pitchClass';
 
 /**
  * Calculates the durations of fixed pitches in a set of trajectories.
@@ -484,6 +505,8 @@ class Pitch {
       s = s + '\u0307'
     } else if (this.oct === 2) {
       s = s + '\u0308'
+    } else if (this.oct === -3) {
+      s = s + '\u20E8'
     }
     return s
   }
@@ -536,9 +559,10 @@ class Pitch {
   }
 }
 
-type ArtNameType = (
-  'pluck' | 'hammer-off' | 'hammer-on' | 'slide' | 'dampen' | 'consonant'
-)
+// type ArtNameType = (
+//   'pluck' | 'hammer-off' | 'hammer-on' | 'slide' | 'dampen' | 'consonant'
+// )
+// type StrokeNicknameType = "d" | "r" | "da" | "ra" | "di" | "ri"
 
 class Articulation {
   name: ArtNameType;
@@ -546,6 +570,7 @@ class Articulation {
   hindi: string | undefined;
   ipa: string | undefined;
   engTrans: string | undefined;
+  strokeNickname: StrokeNicknameType | undefined;
 
   // pluck, hammer-off, hammer-on, slide, pluck, dampen
   constructor({
@@ -554,24 +579,33 @@ class Articulation {
     hindi = undefined,
     ipa = undefined,
     engTrans = undefined,
+    strokeNickname = undefined,
   }: {
     name?: ArtNameType,
     stroke?: string,
     hindi?: string,
     ipa?: string,
     engTrans?: string,
+    strokeNickname?: StrokeNicknameType
   } = {}) {
     this.name = name
     if (stroke !== undefined) this.stroke = stroke;
     if (hindi !== undefined) this.hindi = hindi;
     if (ipa !== undefined) this.ipa = ipa;
     if (engTrans !== undefined) this.engTrans = engTrans;
+    if (strokeNickname !== undefined) this.strokeNickname = strokeNickname;
+    if (this.stroke === 'd' && this.strokeNickname === undefined) {
+      this.strokeNickname = 'da'
+    } else if (this.stroke === 'r' && this.strokeNickname === undefined) {
+      this.strokeNickname = 'ra'
+    }
   }
 }
 
 class Chikari {
   fundamental: number;
   pitches: Pitch[];
+  uniqueId: string;
   constructor({
     pitches = [
       new Pitch({
@@ -591,33 +625,204 @@ class Chikari {
         'oct': 0
       })
     ],
-    fundamental = new Pitch().fundamental
+    fundamental = new Pitch().fundamental,
+    uniqueId = undefined
 
+  }: {
+    pitches?: Pitch[],
+    fundamental?: number,
+    uniqueId?: string
   } = {}) {
+    if (uniqueId === undefined) {
+      this.uniqueId = uuidv4()
+    } else {
+      this.uniqueId = uniqueId
+    }
     this.fundamental = fundamental;
     this.pitches = pitches.map(pitch => {
       pitch.fundamental = this.fundamental;
       return pitch
     })
   }
+
+  toJSON() {
+    return {
+      fundamental: this.fundamental,
+      pitches: this.pitches.map(p => p.toJSON()),
+      uniqueId: this.uniqueId
+    }
+  }
 }
 
-type VibObjType = {
-  periods: number;
-  vertOffset: number;
-  initUp: boolean;
-  extent: number;
+// type VibObjType = {
+//   periods: number;
+//   vertOffset: number;
+//   initUp: boolean;
+//   extent: number;
+// }
+
+// type IdType = 'id0' | 'id1' | 'id2' | 'id3' | 'id4' | 'id5' | 'id6' | 'id7' |
+//   'id8' | 'id9' | 'id10' | 'id12' | 'id13';
+
+// type TrajIdFunction =
+//   ((x: number, lf?: number[], sl?: number, da?: number[]) => number) |
+//   ((x: number, lf?: number[], da?: number[]) => number) |
+//   ((x: number, lf?: number[], sl?: number) => number) |
+//   ((x: number, lf?: number[]) => number) |
+//   ((x: number) => number);
+
+class Automation {
+  // like an automation lane in a DAW, but in our case, applied to a particular
+  // trajectory. Will be used for volume, but maybe something else would be 
+  // useful too.
+  values: { normTime: number, value: number }[]; // normalized time, from 0 - 1
+
+  constructor({
+    values = []
+  }: {
+    values?: { normTime: number, value: number }[]
+  } = {}) {
+    this.values = values;
+    if (values.length == 0) {
+      this.values.push({ normTime: 0, value: 1 });
+      this.values.push({ normTime: 1, value: 1 });
+    }
+  }
+
+  addValue(normTime: number, value: number) {
+    if (normTime < 0 || normTime > 1) {
+      throw new SyntaxError(`invalid normTime, must be between 0 and 1: ` + 
+        `${normTime}`)
+    }
+    if (value < 0 || value > 1) {
+      throw new SyntaxError(`invalid value, must be between 0 and 1: ` + 
+        `${value}`)
+    }
+    // if the normTime is already in the values, then replace the value
+    const idx = this.values.findIndex(v => v.normTime === normTime);
+    if (idx !== -1) {
+      this.values[idx].value = value;
+    } else {
+      this.values.push({ normTime, value });
+      this.values.sort((a, b) => a.normTime - b.normTime);
+    }
+  }
+
+  removeValue(idx: number) {
+    if (idx < 0 || idx > this.values.length - 1) {
+      throw new SyntaxError(`invalid idx, must be between 0 and ` + 
+        `${this.values.length - 1}: ${idx}`)
+    }
+    if (idx === 0 || idx === this.values.length - 1) {
+      throw new SyntaxError(`cannot remove first or last value`)
+    }
+    this.values.splice(idx, 1);
+  }
+
+  valueAtX(x: number) {
+    if (x < 0 || x > 1) {
+      throw new SyntaxError(`invalid x, must be between 0 and 1: ${x}`)
+    }
+    const idx = findLastIndex(this.values, v => v.normTime <= x);
+    if (idx === -1) {
+      throw new SyntaxError(`invalid x, must be between 0 and 1: ${x}`)
+    } else if (idx === this.values.length - 1) {
+      return this.values[idx].value;
+    } else {
+      const start = this.values[idx];
+      const end = this.values[idx + 1];
+      const slope = (end.value - start.value) / (end.normTime - start.normTime);
+      return start.value + slope * (x - start.normTime);
+    }
+  }
+
+  generateValueCurve(valueDur: number, duration: number, max: number = 1) {
+    const valueCt = Math.round(duration / valueDur);
+    let envelope = new Float32Array(valueCt+1);
+    // sort values by normTime
+    this.values.sort((a, b) => a.normTime - b.normTime);
+    const normTimes = envelope.map((_, i) => i / valueCt);
+    envelope = envelope.map((_, i) => max * this.valueAtX(normTimes[i]))
+    return envelope;
+  }
+
+  partition(durArray: number[]) {
+    // takes the current Automation, and partitions it into an array of 
+    // Automations, splitting it up proportionally to the durArray
+
+    // do so by getting the starting point and ending point of every durArray
+    // chunk, using those time points to figure out some of the start and end
+    // values for the new automations. Then, go through each value in the larger
+    // automation, and if it falls within the range of the current durArray
+    // chunk, then add it to the new automation. 
+    const starts = getStarts(durArray);
+    const ends = getEnds(durArray);
+    const newAutomations: Automation[] = [];
+    for (let i = 0; i < starts.length; i++) {
+      const start = starts[i];
+      const startVal = this.valueAtX(start);
+      const end = ends[i];
+      const endVal = this.valueAtX(end);
+      const newAutomation = new Automation({ values: [
+        { normTime: 0, value: startVal },
+        { normTime: 1, value: endVal }
+      ]});
+      newAutomations.push(newAutomation);
+    }
+    this.values.forEach(v => {
+      if (!starts.includes(v.normTime) && !ends.includes(v.normTime)) {
+        for (let i = 0; i < starts.length; i++) {
+          if (v.normTime > starts[i] && v.normTime < ends[i]) {
+            const dur = ends[i] - starts[i];
+            const relNormTime = (v.normTime - starts[i]) / dur;
+            newAutomations[i].addValue(relNormTime, v.value);
+          }
+        } 
+      }
+    })
+    return newAutomations;
+  }
+
+  static compress(automations: Automation[], durArray: number[]) {
+    // take a sequence of automations, and compress them into a single one
+    // that represents the entire sequence.
+    let allValues: { normTime: number, value: number }[] = [];
+    let durAccumulator = 0;
+    automations.forEach((a, i) => {
+      const dur = durArray[i];
+      const relValues = a.values.map(v => {
+        return { normTime: v.normTime * dur + durAccumulator, value: v.value }
+      })
+      allValues.push(...relValues);
+      durAccumulator += dur;
+    })
+    // get rid of any duplicate normTimes
+    allValues = allValues.filter((v, i, a) => {
+      return a.findIndex(av => av.normTime === v.normTime) === i
+    });
+    // go through every set of three consective values, and if the slope from 
+    // the first to middle is the same as from the middle to last one, get rid 
+    // of the middle one. Each time you do this, you have to start over, because
+    // the array has changed.
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (let i = 0; i < allValues.length - 2; i++) {
+        const a = allValues[i];
+        const b = allValues[i + 1];
+        const c = allValues[i + 2];
+        const slope1 = (b.value - a.value) / (b.normTime - a.normTime);
+        const slope2 = (c.value - b.value) / (c.normTime - b.normTime);
+        if (closeTo(slope1, slope2)) {
+          allValues.splice(i + 1, 1);
+          changed = true;
+          break;
+        }
+      }
+    }
+    return new Automation({ values: allValues })
+  }
 }
-
-type IdType = 'id0' | 'id1' | 'id2' | 'id3' | 'id4' | 'id5' | 'id6' | 'id7' |
-  'id8' | 'id9' | 'id10' | 'id12' | 'id13';
-
-type IdFunction =
-  ((x: number, lf?: number[], sl?: number, da?: number[]) => number) |
-  ((x: number, lf?: number[], da?: number[]) => number) |
-  ((x: number, lf?: number[], sl?: number) => number) |
-  ((x: number, lf?: number[]) => number) |
-  ((x: number) => number);
 
 class Trajectory {
   // archetypal motion from pitch to pitch, or through series of pitches
@@ -631,7 +836,7 @@ class Trajectory {
   name: string | undefined;
   fundID12: number | undefined;
   vibObj: VibObjType;
-  instrumentation: string;
+  instrumentation: Instrument;
   vowel: string | undefined;
   vowelIpa: string | undefined;
   vowelHindi: string | undefined;
@@ -645,9 +850,7 @@ class Trajectory {
   endConsonantIpa: string | undefined;
   endConsonantEngTrans: string | undefined;
   groupId?: string;
-  // freqs: number[];
-  // logFreqs: number[];
-  ids: IdFunction[];
+  ids: TrajIdFunction[];
   structuredNames: object;
   cIpas: string[];
   cIsos: string[];
@@ -660,6 +863,8 @@ class Trajectory {
   startTime: number | undefined;
   phraseIdx: number | undefined;
   names: string[];
+  automation: Automation | undefined;
+  uniqueId: string | undefined;
 
   get freqs() {
     return this.pitches.map(p => p.frequency)
@@ -680,7 +885,7 @@ class Trajectory {
     name = undefined,
     fundID12 = undefined,
     vibObj = undefined,
-    instrumentation = 'Sitar',
+    instrumentation = Instrument.Sitar,
     vowel = undefined,
     vowelIpa = undefined,
     vowelHindi = undefined,
@@ -694,6 +899,8 @@ class Trajectory {
     endConsonantIpa = undefined,
     endConsonantEngTrans = undefined,
     groupId = undefined,
+    automation = undefined,
+    uniqueId = undefined
   }: {
     id?: number,
     pitches?: Pitch[],
@@ -705,7 +912,7 @@ class Trajectory {
     name?: string,
     fundID12?: number,
     vibObj?: VibObjType,
-    instrumentation?: string,
+    instrumentation?: Instrument,
     vowel?: string,
     vowelIpa?: string,
     vowelHindi?: string,
@@ -719,6 +926,8 @@ class Trajectory {
     endConsonantIpa?: string,
     endConsonantEngTrans?: string,
     groupId?: string,
+    automation?: Automation,
+    uniqueId?: string
   } = {}) {
     this.names = [
       'Fixed',
@@ -775,20 +984,24 @@ class Trajectory {
     } else {
       this.vibObj = vibObj
     }
-
-    this.articulations = articulations === undefined ? {
-      '0.00': new Articulation({
-        name: 'pluck',
-        stroke: 'd'
-      })
-    } : articulations;
-
+    if (articulations === undefined) {
+      if (instrumentation === Instrument.Sitar) {
+        this.articulations = {
+          '0.00': new Articulation({
+            name: 'pluck',
+            stroke: 'd'
+          })
+        }
+      } else {
+        this.articulations = {}
+      }
+    } else {
+      this.articulations = articulations
+    }
     if (typeof(this.articulations) !== 'object') {
       throw new SyntaxError(`invalid articulations type, must be object: ` + 
         `${articulations}`)
     }
-    // this.freqs = this.pitches.map(p => p.frequency);
-    // this.logFreqs = this.freqs.map(f => Math.log2(f));
     this.num = num;
     this.name = name;
     this.name = this.name_;
@@ -836,6 +1049,13 @@ class Trajectory {
     this.endConsonantIpa = endConsonantIpa;
     this.endConsonantEngTrans = endConsonantEngTrans;
     this.groupId = groupId;
+    if (automation !== undefined) {
+      this.automation = new Automation(automation);
+    } else if (this.id === 12) {
+      this.automation = undefined
+    } else {
+      this.automation = new Automation();
+    }
     
 
     if (this.startConsonant !== undefined) {
@@ -960,12 +1180,28 @@ class Trajectory {
     this.cEngTrans = ['k', 'kh', 'g', 'gh', 'ṅ', 'c', 'ch', 'j', 'jh', 'ñ', 'ṭ', 
       'ṭh', 'ḍ', 'ḍh', 'n', 't', 'th', 'd', 'dh', 'n', 'p', 'ph', 'b', 'bh', 
       'm', 'y', 'r', 'l', 'v', 'ś', 'ṣ', 's', 'h'];
-    this.vIpas = ['ə', 'aː', 'ɪ', 'iː', 'ʊ', 'uː', 'eː', 'ɛː', 'oː', 'ɔː'];
-    this.vIsos = ['a', 'ā', 'i', 'ī', 'u', 'ū', 'ē', 'ai', 'ō', 'au'];
-    this.vHindis = ['अ', 'आ', 'इ', 'ई', 'उ', 'ऊ', 'ए', 'ऐ', 'ओ', 'औ'];
-    this.vEngTrans = ['a', 'ā', 'i', 'ī', 'u', 'ū', 'ē', 'ai', 'ō', 'au'];
+    this.vIpas = ['ə', 'aː', 'ɪ', 'iː', 'ʊ', 'uː', 'eː', 'ɛː', 'oː', 'ɔː', '_'];
+    this.vIsos = ['a', 'ā', 'i', 'ī', 'u', 'ū', 'ē', 'ai', 'ō', 'au', '_'];
+    this.vHindis = ['अ', 'आ', 'इ', 'ई', 'उ', 'ऊ', 'ए', 'ऐ', 'ओ', 'औ', '_'];
+    this.vEngTrans = ['a', 'ā', 'i', 'ī', 'u', 'ū', 'ē', 'ai', 'ō', 'au', '_'];
+    this.uniqueId = uniqueId;
+    if (this.uniqueId === undefined) {
+      this.uniqueId = uuidv4();
+    }
 
     this.convertCIsoToHindiAndIpa()
+
+    const artKeys = Object.keys(this.articulations);
+    artKeys.forEach(k => {
+      if (k === '0') {
+        this.articulations['0.00'] = this.articulations[k];
+        delete this.articulations[k];
+      }
+    })
+  }
+
+  updateFundamental(fundamental: number) {
+    this.pitches.forEach(p => p.fundamental = fundamental)
   }
 
   get minFreq() {
@@ -974,6 +1210,14 @@ class Trajectory {
 
   get maxFreq() {
     return Math.max(...this.freqs)
+  }
+
+  get minLogFreq() {
+    return Math.min(...this.logFreqs)
+  }
+
+  get maxLogFreq() {
+    return Math.max(...this.logFreqs)
   }
 
   get endTime() {
@@ -1435,7 +1679,9 @@ class Trajectory {
       endConsonantHindi: this.endConsonantHindi,
       endConsonantIpa: this.endConsonantIpa,
       endConsonantEngTrans: this.endConsonantEngTrans,
-      groupId: this.groupId
+      groupId: this.groupId,
+      automation: this.automation,
+      uniqueId: this.uniqueId,
     }
   }
 
@@ -1568,116 +1814,20 @@ class Group {
   }
 }
 
-type PhraseCatType = {
-  "Phrase": {
-    "Mohra": boolean,
-    "Mukra": boolean,
-    "Asthai": boolean,
-    "Antara": boolean,
-    "Manjha": boolean,
-    "Abhog": boolean,
-    "Sanchari": boolean,
-    "Jhala": boolean
-  },
-  "Elaboration": {
-    "Vistar": boolean,
-    "Barhat": boolean,
-    "Prastar": boolean,
-    "Bol Banao": boolean,
-    "Bol Alap": boolean,
-    "Bol Bandt": boolean,
-    "Behlava": boolean,
-    "Gat-kari": boolean,
-    "Tan (Sapat)": boolean,
-    "Tan (Gamak)": boolean,
-    "Laykari": boolean,
-    "Tihai": boolean,
-    "Chakradar": boolean,
-  },
-  "Vocal Articulation": {
-    "Bol": boolean,
-    "Non-Tom": boolean,
-    "Tarana": boolean,
-    "Aakar": boolean,
-    "Sargam": boolean
-  },
-  "Instrumental Articulation": {
-    "Bol": boolean,
-    "Non-Bol": boolean
-  },
-  "Incidental": {
-    "Talk/Conversation": boolean,
-      "Praise ('Vah')": boolean,
-      "Tuning": boolean,
-      "Pause": boolean,
-  }
-}
-
-type SecCatType = {
-  "Pre-Chiz Alap": {
-    "Pre-Chiz Alap": boolean,
-  },
-  "Alap": {
-    "Alap": boolean,
-    "Jor": boolean,
-    "Alap-Jhala": boolean,
-  },
-  "Composition Type": {
-    "Dhrupad": boolean,
-    "Bandish": boolean,
-    "Thumri": boolean,
-    "Ghazal": boolean,
-    "Qawwali": boolean,
-    "Dhun": boolean,
-    "Tappa": boolean,
-    "Bhajan": boolean,
-    "Kirtan": boolean,
-    "Kriti": boolean,
-    "Masitkhani Gat": boolean,
-    "Razakhani Gat": boolean,
-    "Ferozkhani Gat": boolean,
-  },
-  "Comp.-section/Tempo": {
-    "Ati Vilambit": boolean,
-    "Vilambit": boolean,
-    "Madhya": boolean,
-    "Drut": boolean,
-    "Ati Drut": boolean,
-    "Jhala": boolean,
-  },
-  "Tala": {
-    "Ektal": boolean,
-    "Tintal": boolean,
-    "Rupak": boolean
-  },
-  "Improvisation": {
-    "Improvisation": boolean,
-  },
-  "Other": {
-    "Other": boolean,
-  },
-  "Top Level": (
-    "Pre-Chiz Alap" | 
-    "Alap" | 
-    "Composition" | 
-    "Improvisation" | 
-    "Other" |
-    "None"
-  )
-}
-
 
 class Phrase {
   startTime?: number;
   raga?: Raga;
   trajectoryGrid: Trajectory[][];
+  chikariGrid: { [key: string]: Chikari }[];
   instrumentation: string[];
   groupsGrid: Group[][];
   durTot?: number;
   durArray?: number[];
-  chikaris: { [key: string]: Chikari };
+  // chikaris: { [key: string]: Chikari };
   pieceIdx?: number;
   categorizationGrid: PhraseCatType[];
+  uniqueId: string;
   
   constructor({
     trajectories = [],
@@ -1687,9 +1837,11 @@ class Phrase {
     raga = undefined,
     startTime = undefined,
     trajectoryGrid = undefined,
+    chikariGrid = undefined,
     instrumentation = ['Sitar'],
     groupsGrid = undefined,
     categorizationGrid = undefined,
+    uniqueId = undefined,
   }: {
     trajectories?: Trajectory[],
     durTot?: number,
@@ -1698,17 +1850,42 @@ class Phrase {
     raga?: Raga,
     startTime?: number,
     trajectoryGrid?: Trajectory[][],
+    chikariGrid?: { [key: string]: Chikari }[],
     instrumentation?: string[],
     groupsGrid?: Group[][],
     categorizationGrid?: PhraseCatType[],
+    uniqueId?: string,
   } = {}) {
-
+    if (uniqueId === undefined) {
+      this.uniqueId = uuidv4();
+    } else {
+      this.uniqueId = uniqueId;
+    }
     this.startTime = startTime;
     this.raga = raga;
     if (trajectoryGrid !== undefined) {
       this.trajectoryGrid = trajectoryGrid;
+      for (let i = trajectoryGrid.length; i < instrumentation.length; i++) {
+        this.trajectoryGrid.push([])
+      }
+      this.trajectoryGrid.length = instrumentation.length;
     } else {
       this.trajectoryGrid = [trajectories];
+      for (let i = 1; i < instrumentation.length; i++) {
+        this.trajectoryGrid.push([])
+      }
+    }
+    if (chikariGrid !== undefined) {
+      this.chikariGrid = chikariGrid;
+      for (let i = chikariGrid.length; i < instrumentation.length; i++) {
+        this.chikariGrid.push({})
+      }
+      this.chikariGrid.length = instrumentation.length;
+    } else {
+      this.chikariGrid = [chikaris];
+      for (let i = 1; i < instrumentation.length; i++) {
+        this.chikariGrid.push({})
+      }
     }
     if (this.trajectories.length === 0) {
       if (durTot === undefined) {
@@ -1735,7 +1912,6 @@ class Phrase {
         this.durTotFromTrajectories()
       }
     }
-    this.chikaris = chikaris;
     this.assignStartTimes();
     this.assignTrajNums();
     this.instrumentation = instrumentation;
@@ -1755,6 +1931,10 @@ class Phrase {
         cat.Elaboration['Bol Alap'] = false;
       })
     }
+  }
+
+  updateFundamental(fundamental: number) {
+    this.trajectories.forEach(traj => traj.updateFundamental(fundamental))
   }
 
   getGroups(idx = 0) {
@@ -1898,6 +2078,7 @@ class Phrase {
     });
     const newTs = this.trajectories.filter(traj => {
       if (traj.num === undefined) {
+        console.log(traj)
         throw new Error('traj.num is undefined')
       }
       return !delIdxs.includes(traj.num)
@@ -1907,10 +2088,43 @@ class Phrase {
     this.durArrayFromTrajectories();
     this.assignStartTimes();
     this.assignTrajNums();
+    this.assignPhraseIdx();
+  }
+
+  chikarisDuringTraj(traj: Trajectory, track: number) {
+    const start = traj.startTime!;
+    const dur = traj.durTot;
+    const end = start + dur;
+    const chikaris = this.chikariGrid[0];
+    const chikarisDuring = Object.keys(chikaris).filter(k => {
+      const chikari = chikaris[k];
+      const time = Number(k);
+      return time >= start && time <= end
+    }).map(k => {
+      const realTime = Number(k) + this.startTime!;
+      const cd: ChikariDisplayType = {
+        time: realTime,
+        phraseTimeKey: k,
+        phraseIdx: this.pieceIdx!,
+        track: track,
+        chikari: chikaris[k],
+        uId: chikaris[k].uniqueId
+      }
+      return cd
+  });
+    return chikarisDuring
   }
 
   get trajectories() {
     return this.trajectoryGrid[0]
+  }
+
+  get chikaris() {
+    return this.chikariGrid[0]
+  }
+
+  set chikaris(chikaris: { [key: string]: Chikari }) {
+    this.chikariGrid[0] = chikaris
   }
 
   get swara() {
@@ -2000,6 +2214,21 @@ class Phrase {
     return idxs
   }
 
+  trajIdxFromTime(time: number) {
+    const phraseTime = time - this.startTime!;
+    const trajs = this.trajectories.filter(traj => {
+      const smallOffset = 1e-10;
+      const a = phraseTime >= traj.startTime! - smallOffset;
+      const b = phraseTime < traj.startTime! + traj.durTot;
+      return a && b
+    })
+    if (trajs.length === 0) {
+      // breakpoint
+      throw new Error('No trajectory found')
+    }
+    return trajs[0].num
+  }
+
   toJSON() {
     return {
       durTot: this.durTot,
@@ -2011,6 +2240,7 @@ class Phrase {
       instrumentation: this.instrumentation,
       groupsGrid: this.groupsGrid,
       categorizationGrid: this.categorizationGrid,
+      uniqueId: this.uniqueId,
     }
   }
 
@@ -2065,9 +2295,9 @@ class NoteViewPhrase {
 }
 
 class Piece {
-  phrases: Phrase[];
+  // phrases: Phrase[];
   durTot?: number;
-  durArray?: number[];
+  // durArray?: number[];
   raga: Raga;
   title: string;
   dateCreated: Date;
@@ -2081,16 +2311,22 @@ class Piece {
   family_name?: string;
   given_name?: string;
   permissions?: string;
-  sectionStarts?: number[];
-  instrumentation: string[];
+  instrumentation: Instrument[];
   possibleTrajs: { [key: string]: number[] };
   meters: Meter[];
-  sectionCategorization: SecCatType[];
+  // sectionCategorization: SecCatType[];
   explicitPermissions: {
     edit: string[],
     view: string[],
     publicView: boolean
-  }
+  };
+  soloist?: string;
+  soloInstrument?: string;
+  phraseGrid: Phrase[][];
+  durArrayGrid: number[][];
+  sectionStartsGrid: number[][];
+  sectionCatGrid: SecCatType[][];
+
 
 
   constructor({
@@ -2111,10 +2347,17 @@ class Piece {
     given_name = undefined,
     permissions = undefined,
     sectionStarts = undefined,
-    instrumentation = ['Sitar'],
+    instrumentation = [Instrument.Sitar],
     meters = [],
     sectionCategorization = undefined,
     explicitPermissions = undefined,
+    soloist = undefined,
+    soloInstrument = undefined,
+    phraseGrid = undefined,
+    durArrayGrid = undefined,
+    sectionStartsGrid = undefined,
+    sectionCatGrid = undefined,
+
   }: {
     phrases?: Phrase[],
     durTot?: number,
@@ -2133,17 +2376,86 @@ class Piece {
     given_name?: string,
     permissions?: string,
     sectionStarts?: number[],
-    instrumentation?: string[],
+    instrumentation?: Instrument[],
     meters?: Meter[],
     sectionCategorization?: SecCatType[],
     explicitPermissions?: {
       edit: string[],
       view: string[],
       publicView: boolean
-    }
+    },
+    soloist?: string,
+    soloInstrument?: string,
+    phraseGrid?: Phrase[][],
+    durArrayGrid?: number[][],
+    sectionStartsGrid?: number[][],
+    sectionCatGrid?: SecCatType[][],
   } = {}) {
     this.meters = meters;
-    this.phrases = phrases;
+
+    // setting up grids so they can transform from non-grid specs
+    if (phraseGrid !== undefined) {
+      this.phraseGrid = phraseGrid;
+    } else {
+      this.phraseGrid = [phrases];
+    }
+    for (let i = 1; i < instrumentation.length; i++) {
+      this.phraseGrid.push([])
+    }
+    this.phraseGrid.length = instrumentation.length;
+    if (durArrayGrid !== undefined) {
+      this.durArrayGrid = durArrayGrid;
+    } else {
+      this.durArrayGrid = durArray === undefined ? [[]] : [durArray];
+    }
+    for (let i = 1; i < instrumentation.length; i++) {
+      this.durArrayGrid.push([])
+    }
+    this.durArrayGrid.length = instrumentation.length;
+    if (sectionStartsGrid !== undefined) {
+      this.sectionStartsGrid = sectionStartsGrid;
+    } else {
+      this.sectionStartsGrid = sectionStarts === undefined ? 
+        [[0]] : 
+        [sectionStarts];
+    }
+    for (let i = 1; i < instrumentation.length; i++) {
+      this.sectionStartsGrid.push([0])
+    }
+    this.sectionStartsGrid.length = instrumentation.length;
+    this.sectionStartsGrid.forEach((ss, i) => {
+      ss.sort((a, b) => a - b);
+    })
+    if (sectionCatGrid !== undefined) {
+      this.sectionCatGrid = sectionCatGrid;
+      if (this.sectionCatGrid.length === 0) {
+        const ss = this.sectionStartsGrid[0];
+        this.sectionCatGrid.push(ss.map(() => initSecCategorization()));
+      }
+      for (let i = 1; i < instrumentation.length; i++) {
+        const ss = this.sectionStartsGrid[i];
+        this.sectionCatGrid.push(ss.map(() => initSecCategorization()))
+      }
+    } else {
+      this.sectionCatGrid = this.sectionStartsGrid.map((ss, ssIdx) => {
+        if (ssIdx === 0) {
+          if (sectionCategorization !== undefined) {
+            const sc = sectionCategorization;
+            sc.forEach(this.cleanUpSectionCategorization);
+            return sc;
+          } else {
+            return ss.map(() => initSecCategorization())
+          }
+        }
+        return ss.map(() => initSecCategorization())
+      })
+    }
+    const err = new Error();
+    // get a call trace here?
+
+
+
+
     this.raga = raga;
     if (this.phrases.length === 0) {
       if (durTot === undefined) {
@@ -2156,26 +2468,6 @@ class Piece {
     } else {
       this.durTotFromPhrases();
       this.durArrayFromPhrases();
-      if (durTot !== undefined && this.durTot !== durTot) {
-        this.phrases.forEach(p => {
-          if (p.durTot === undefined) {
-            throw new Error('p.durTot is undefined')
-          }
-          p.durTot = p.durTot * durTot / this.durTot!
-        });
-        this.durTot = durTot;
-      }
-      if (durArray !== undefined && this.durArray !== durArray) {
-        this.phrases.forEach((p, i) => {
-          if (p.durTot === undefined) {
-            throw new Error('p.durTot is undefined')
-          }
-          p.durTot = p.durTot * durArray[i] / this.durArray![i]
-        })
-        this.durArray = durArray;
-        this.durTotFromPhrases();
-      }
-
       this.updateStartTimes()
     }
     this.putRagaInPhrase();
@@ -2191,83 +2483,41 @@ class Piece {
     this.name = name;
     this.family_name = family_name;
     this.given_name = given_name;
-    if (sectionStarts === undefined) {
-      this.sectionStarts = [0];
-    } else {
-      this.sectionStarts = sectionStarts.sort((a, b) => a - b);
-    }
+    this.soloist = soloist;
+    this.soloInstrument = soloInstrument;
     this.instrumentation = instrumentation;
     // this is really confusing becuase id12 is silent. The current solution 
     // is to just skip that number; so 12 listed below is really id13
     this.possibleTrajs = {
-      'Sitar': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 
-      'Vocal (M)': [0, 1, 2, 3, 4, 5, 6, 12, 13],
-      'Vocal (F)': [0, 1, 2, 3, 4, 5, 6, 12, 13],
-      'Bansuri': [0, 1, 2, 3, 4, 5, 6, 12, 13],
-      'Esraj': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      'Sarangi': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      'Rabab': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      'Santoor': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      'Sarod': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      'Shehnai': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      'Surbahar': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      'Veena (Saraswati)': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      'Veena (Vichitra)': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      'Veena, Rudra (Bin)': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      'Violin': [0, 1, 2, 3, 4, 5, 6, 12, 13],
-      'Harmonium': [0, 12, 13],
+      [Instrument.Sitar]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 
+      [Instrument.Vocal_M]: [0, 1, 2, 3, 4, 5, 6, 12, 13],
+      [Instrument.Vocal_F]: [0, 1, 2, 3, 4, 5, 6, 12, 13],
+      [Instrument.Bansuri]: [0, 1, 2, 3, 4, 5, 6, 12, 13],
+      [Instrument.Esraj]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      [Instrument.Sarangi]: [0, 1, 2, 3, 4, 5, 6, 12, 13],
+      [Instrument.Rabab]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      [Instrument.Santoor]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      [Instrument.Sarod]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      [Instrument.Shehnai]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      [Instrument.Surbahar]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      [Instrument.Veena_Saraswati]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      [Instrument.Veena_Vichitra]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      [Instrument.Veena_Rudra_Bin]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      [Instrument.Violin]: [0, 1, 2, 3, 4, 5, 6, 12, 13],
+      [Instrument.Harmonium]: [0, 12, 13],
     }
-    if (sectionCategorization !== undefined) {
-      this.sectionCategorization = sectionCategorization;
-      this.sectionCategorization.forEach(c => {
-        if (c['Improvisation'] === undefined) {
-          c['Improvisation'] = { "Improvisation": false }
-        }
-        if (c['Other'] === undefined) {
-          c['Other'] = { "Other": false }
-        }
-        if (c['Top Level'] === undefined) {
-          const com = c['Composition Type'];
-          let comSecTemp = c['Comp.-section/Tempo'];
-          if (comSecTemp === undefined) {
-            comSecTemp = c['Composition-section/Tempo']
-          }
-          const tala = c['Tala'];
-          const improv = c['Improvisation'];
-          const other = c['Other'];
-          const someTrue = (obj: object) => {
-            return Object.values(obj).some(v => v)
-          };
-          if (c['Pre-Chiz Alap']['Pre-Chiz Alap']) {
-            c['Top Level'] = 'Pre-Chiz Alap'
-          } else if (someTrue(c['Alap'])) {
-            c['Top Level'] = 'Alap'
-          } else if (someTrue(com) || someTrue(comSecTemp) || someTrue(tala)) {
-            c['Top Level'] = 'Composition'
-          } else if (improv['Improvisation']) {
-            c['Top Level'] = 'Improvisation'
-          } else if (other['Other']) {
-            c['Top Level'] = 'Other'
-          } else {
-            c['Top Level'] = 'None'
-          }
-        }
-        if (c['Comp.-section/Tempo'] === undefined) {
-          c['Comp.-section/Tempo'] = c['Composition-section/Tempo'];
-          delete c['Composition-section/Tempo']
-        }
-      })
-    } else {
-      this.sectionCategorization = this.sectionStarts.map(() => {
-        return initSecCategorization()
-      })
-    }
-    if (this.sectionStarts.length > this.sectionCategorization.length) {
-      const dif = this.sectionStarts.length - this.sectionCategorization.length;
-      for (let i = 0; i < dif; i++) {
-        this.sectionCategorization.push(initSecCategorization())
+
+    this.sectionStartsGrid.forEach((ss, ssIdx) => {
+      if (this.sectionCatGrid[ssIdx] === undefined) {
+        debugger;
       }
-    }
+      if (ss.length > this.sectionCatGrid[ssIdx].length) {
+        const dif = ss.length - this.sectionCatGrid[ssIdx].length;
+        for (let i = 0; i < dif; i++) {
+          this.sectionCatGrid[ssIdx].push(initSecCategorization())
+        }
+      }
+    })
     if (explicitPermissions === undefined) {
       this.explicitPermissions = {
         edit: [],
@@ -2279,8 +2529,103 @@ class Piece {
     }
   }
 
+  get phrases() {
+    return this.phraseGrid[0]
+  }
+
+  set phrases(arr) {
+    this.phraseGrid[0] = arr
+  }
+
+  get durArray() {
+    return this.durArrayGrid[0]
+  }
+
+  set durArray(arr) {
+    this.durArrayGrid[0] = arr
+  }
+
+  get sectionStarts() {
+    return this.sectionStartsGrid[0]
+  }
+
+  set sectionStarts(arr) {
+    this.sectionStartsGrid[0] = arr
+  }
+
+  get sectionCategorization() {
+    return this.sectionCatGrid[0]
+  }
+
+  set sectionCategorization(arr) { 
+    this.sectionCatGrid[0] = arr
+  }
+
+  chikariFreqs(instIdx: number) {
+    const allChikaris: Chikari[] = [];
+    this.phraseGrid[instIdx].forEach(p => {
+      const chikaris = Object.values(p.chikaris);
+      allChikaris.push(...chikaris)
+    });
+    if (allChikaris.length === 0) {
+      return [this.raga.fundamental * 2, this.raga.fundamental * 4]
+    } else {
+      // console.log(allChikaris[0].pitches)
+      return allChikaris[0].pitches.slice(0, 2).map(p => p.frequency);
+    }
+  }
+
+  updateFundamental(fundamental: number) {
+    this.raga.fundamental = fundamental;
+    this.phraseGrid.forEach(phrases => {
+      phrases.forEach(phrase => phrase.updateFundamental(fundamental))
+    })
+  }
+
+  cleanUpSectionCategorization(c: SecCatType) {
+    if (c['Improvisation'] === undefined) {
+      c['Improvisation'] = { "Improvisation": false }
+    }
+    if (c['Other'] === undefined) {
+      c['Other'] = { "Other": false }
+    }
+    if (c['Top Level'] === undefined) {
+      const com = c['Composition Type'];
+      let comSecTemp = c['Comp.-section/Tempo'];
+      if (comSecTemp === undefined) {
+      // @ts-ignore
+      comSecTemp = c['Composition-section/Tempo']
+      }
+      const tala = c['Tala'];
+      const improv = c['Improvisation'];
+      const other = c['Other'];
+      const someTrue = (obj: object) => {
+        return Object.values(obj).some(v => v)
+      };
+      if (c['Pre-Chiz Alap']['Pre-Chiz Alap']) {
+        c['Top Level'] = 'Pre-Chiz Alap'
+      } else if (someTrue(c['Alap'])) {
+        c['Top Level'] = 'Alap'
+      } else if (someTrue(com) || someTrue(comSecTemp) || someTrue(tala)) {
+        c['Top Level'] = 'Composition'
+      } else if (improv['Improvisation']) {
+        c['Top Level'] = 'Improvisation'
+      } else if (other['Other']) {
+        c['Top Level'] = 'Other'
+      } else {
+        c['Top Level'] = 'None'
+      }
+    }
+    if (c['Comp.-section/Tempo'] === undefined) {
+      // @ts-ignore
+      c['Comp.-section/Tempo'] = c['Composition-section/Tempo'];
+      // @ts-ignore
+      delete c['Composition-section/Tempo']
+    }
+  }
+
   putRagaInPhrase() {
-    this.phrases.forEach(p => p.raga = this.raga)
+    this.phraseGrid.forEach(ps => ps.forEach(p => p.raga = this.raga))
   }
 
   addMeter(meter: Meter) {
@@ -2306,19 +2651,24 @@ class Piece {
     this.meters.splice(idx, 1);
   }
 
-  get durStarts() {
+  durStarts(track=0) {
     if (this.durArray === undefined) {
       throw new Error('durArray is undefined')
     }
     if (this.durTot === undefined) {
       throw new Error('durTot is undefined')
     }
-    const starts = getStarts(this.durArray.map(d => d * this.durTot!));
+    const starts = getStarts(this.durArrayGrid[track]
+        .map(d => d * this.durTot!));
     return starts
   }
 
   get trajIdxs() {
     return this.possibleTrajs[this.instrumentation[0]]
+  }
+ 
+  get trajIdxsGrid() {
+    return this.instrumentation.map(i => this.possibleTrajs[i])
   }
 
   allGroups({ instrumentIdx = 0 }: { instrumentIdx?: number } = {}) {
@@ -2331,67 +2681,169 @@ class Piece {
   }
 
   updateStartTimes() {
-    this.phrases.forEach((p, i) => {
-      p.startTime = this.durStarts[i];
-      p.pieceIdx = i;
-      p.assignPhraseIdx();
+    this.phraseGrid.forEach((phrases, idx) => {
+      phrases.forEach((p, i) => {
+        p.startTime = this.durStarts(idx)[i];
+        p.pieceIdx = i;
+        p.assignPhraseIdx();
+      })
     })
   }
 
   durTotFromPhrases() {
-    this.durTot = this.phrases.map(p => p.durTot as number).reduce((a, b) => {
-      if (a === undefined || b === undefined) {
-        throw new Error('a or b is undefined')
+    const durTots = this.phraseGrid.map(ps => {
+      return ps
+        .map(p => p.durTot as number)
+        .reduce((a, b) => a + b, 0)
+    });
+    const maxDurTot = Math.max(...durTots);
+    this.durTot = maxDurTot;
+    durTots.forEach((d, t) => {
+      if (d !== maxDurTot) {
+        const extra = maxDurTot - d;
+        const phrases = this.phraseGrid[t];
+        const extraSilent = new Trajectory({
+          id: 12,
+          durTot: extra,
+          fundID12: this.raga!.fundamental,
+        });
+        if (phrases.length === 0) {
+          phrases.push(new Phrase({
+            trajectories: [extraSilent],
+            durTot: extra,
+            raga: this.raga,
+            instrumentation: this.instrumentation
+          }));
+          phrases[0].reset();
+        } else {
+          const lastPhrase = phrases[phrases.length - 1];
+          lastPhrase.trajectories.push(extraSilent);
+          lastPhrase.reset();
+        }
       }
-      return a + b
-    }, 0)
+    })
   }
 
   durArrayFromPhrases() {
     this.durTotFromPhrases();
-    this.durArray = this.phrases.map(p => {
-      if (p.durTot === undefined) {
-        throw new Error('p.durTot is undefined')
-      } else if (isNaN(p.durTot)) {
-        const removes = p.trajectories.filter(t => isNaN(t.durTot))
-        removes.forEach(r => {
-          const idx = p.trajectories.indexOf(r);
-          p.trajectories.splice(idx, 1)
-        })
-        p.durTot = p.trajectories.map(t => {
-          return t.durTot
-        }).reduce((a, b) => a + b, 0)
-      }
-      return p.durTot / this.durTot!
-    });
-    this.updateStartTimes();
+    this.phraseGrid.forEach((phrases, idx) => {
+      this.durArrayGrid[idx] = phrases.map(p => {
+        if (p.durTot === undefined) {
+          throw new Error('p.durTot is undefined')
+        } else if (isNaN(p.durTot)) {
+          const removes = p.trajectories.filter(t => isNaN(t.durTot))
+          removes.forEach(r => {
+            const rIdx = p.trajectories.indexOf(r);
+            p.trajectories.splice(rIdx, 1)
+          })
+          p.durTot = p.trajectories.map(t => {
+            return t.durTot
+          }).reduce((a, b) => a + b, 0)
+        }
+        return p.durTot / this.durTot!
+      })
+      this.updateStartTimes();
+    })
   }
 
   realignPitches() {
-    this.phrases.forEach(p => p.realignPitches())
+    this.phraseGrid.forEach(ps => ps.forEach(p => p.realignPitches()))
   }
 
+
+  // set up for one instrumnet, shoudl still work as is.
   get sections() {
-    const sections: Section[] = [];
-    this.sectionStarts!.sort((a, b) => a - b)
-    this.sectionStarts!.forEach((s, i) => {
-      let slice;
-      if (i === this.sectionStarts!.length - 1) {
-        slice = this.phrases.slice(s)
-      } else {
-        slice = this.phrases.slice(s, this.sectionStarts![i + 1])
-      }
-      sections.push(new Section({ 
-        phrases: slice, 
-        categorization: this.sectionCategorization[i] 
-      }))
-    });
-    return sections
+
+    return this.sectionsGrid[0]
   }
 
-  allPitches({ repetition=true, pitchNumber=false } = {}) {
+  get sectionsGrid() {
+    return this.sectionStartsGrid.map((ss, i) => {
+      const sections: Section[] = [];
+      ss.forEach((s, j) => {
+        let slice;
+        if (j === ss.length - 1) {
+          slice = this.phraseGrid[i].slice(s)
+        } else {
+          slice = this.phraseGrid[i].slice(s, ss[j + 1])
+        }
+        sections.push(new Section({
+          phrases: slice,
+          categorization: this.sectionCatGrid[i][j]
+        }))
+      });
+      return sections
+    })
+  }
+
+  trackFromTraj(traj: Trajectory) {
+    let track: number | undefined = undefined;
+    for (let i = 0; i < this.instrumentation.length; i++) {
+      const trajs = this.allTrajectories(i);
+      const trajUIds = trajs.map(t => t.uniqueId);
+      if (trajUIds.includes(traj.uniqueId)) {
+        track = i;
+        break
+      }
+    }
+    if (track === undefined) {
+      throw new Error('Trajectory not found')
+    }
+    return track
+  }
+
+  trackFromTrajUId(trajUId: string) {
+    let track: number | undefined = undefined;
+    for (let i = 0; i < this.instrumentation.length; i++) {
+      const trajs = this.allTrajectories(i);
+      const trajUIds = trajs.map(t => t.uniqueId);
+      if (trajUIds.includes(trajUId)) {
+        track = i;
+        break
+      }
+    }
+    if (track === undefined) {
+      throw new Error('Trajectory not found')
+    }  
+    return track
+  }
+
+  phraseFromUId(uId: string): Phrase {
+    let phrase: Phrase | undefined = undefined;
+    this.phraseGrid.forEach(ps => {
+      ps.forEach(p => {
+        if (p.uniqueId === uId) {
+          phrase = p
+        }
+      })
+    });
+    if (phrase === undefined) {
+      throw new Error('Phrase not found')
+    }
+    return phrase
+  }
+
+  trackFromPhraseUId(phraseUId: string) {
+    let track: number | undefined = undefined;
+    for (let i = 0; i < this.instrumentation.length; i++) {
+      const phrases = this.phraseGrid[i];
+      const phraseUIds = phrases.map(p => p.uniqueId);
+      if (phraseUIds.includes(phraseUId)) {
+        track = i;
+        break
+      }
+    }
+    if (track === undefined) {
+      console.log('here')
+      throw new Error('Phrase not found')
+    }
+    return track
+  }
+
+  allPitches({ repetition=true, pitchNumber=false } = {}, track=0) {
     let allPitches: Pitch[] = [];
-    this.phrases.forEach(p => allPitches.push(...p.allPitches()));
+    const phrases = this.phraseGrid[track];
+    phrases.forEach(p => allPitches.push(...p.allPitches()));
     if (!repetition) {
       allPitches = allPitches.filter((pitch, i) => {
         if (typeof pitch === 'number') {
@@ -2431,8 +2883,384 @@ class Piece {
 
   allTrajectories(inst = 0) {
     const allTrajectories: Trajectory[] = [];
-    this.phrases.forEach(p => allTrajectories.push(...p.trajectoryGrid[inst]));
+    this.phraseGrid[inst].forEach(p => allTrajectories.push(...p.trajectories));
     return allTrajectories
+  }
+
+  trajFromTime(time: number, track: number) {
+    const trajs = this.allTrajectories(track);
+    const starts = this.trajStartTimes(track);
+    const endTimes = starts.map((s, i) => s + trajs[i].durTot);
+    const idx = findLastIndex(starts, s => time >= s);
+    if (idx === -1) {
+      return trajs[0]
+    } else {
+      const eT = endTimes[idx];
+      if (time < eT) {
+        return trajs[idx]
+      } else {
+        return trajs[idx + 1]
+      }
+    }
+  }
+
+  trajFromUId(uId: string, track: number) {
+    const traj = this.allTrajectories(track).find(t => t.uniqueId === uId);
+    if (traj === undefined) {
+      throw new Error('Trajectory not found')
+    }
+    return traj
+  }
+
+  phraseFromTime(time: number, track: number) {
+    const starts = this.durStarts(track);
+    const idx = findLastIndex(starts, s => time >= s);
+    return this.phraseGrid[track][idx]
+  }
+
+  phraseIdxFromTime(time: number, track: number) {
+    const starts = this.durStarts(track);
+    const idx = findLastIndex(starts, s => time >= s);
+    return idx
+  }
+
+  trajStartTimes(inst = 0) {
+    const trajs = this.allTrajectories(inst);
+    const durs = trajs.map(t => t.durTot);
+    return durs.reduce((acc, dur, idx) => {
+      if (idx < durs.length - 1) {
+        acc.push(acc[acc.length - 1] + dur);
+      }
+      return acc
+    }, [0]);
+  }
+
+
+  chunkedTrajs(inst = 0, duration = 30) {
+    // for all trajs in the piece, return an array of arrays of trajs, each
+    // containing trajs that overlap with a chunk of the given duration
+    const trajs = this.allTrajectories(inst);
+    const durs = trajs.map(t => t.durTot);
+    const starts = getStarts(durs);
+    const endTimes = getEnds(durs);
+    const chunks: Trajectory[][] = [];
+    for (let i = 0; i < this.durTot!; i += duration) {
+      const f1 = (startTime: number) => {
+        return startTime >= i && startTime < i + duration
+      };
+      const f2 = (endTime: number) => {
+        return endTime > i && endTime <= i + duration
+      };
+      const f3 = (startTime: number, endTime: number) => {
+        return startTime < i && endTime > i + duration
+      };
+      const chunk = trajs.filter((_, j) => {
+        return f1(starts[j]) || f2(endTimes[j]) || f3(starts[j], endTimes[j])
+      });
+      chunks.push(chunk)
+    }
+    const lastChunk = trajs.filter((_, j) => {
+      return starts[j] >= this.durTot! - duration
+    });
+    return chunks
+  }
+
+  allDisplayBols(inst = 0) {
+    const trajs = this.allTrajectories(inst);
+    const starts = this.trajStartTimes(inst);
+    const idxs: number[] = [];
+    const bols: BolDisplayType[] = trajs
+      .filter((t, tIdx) => {
+        const c = t.articulations['0.00'] && t.articulations['0.00'].name === 'pluck';
+        if (c) {
+          idxs.push(tIdx)
+        }
+        return c
+      })
+      .map((t, tIdx) => {
+        const time = starts[idxs[tIdx]];
+        const bol = t.articulations['0.00'].strokeNickname!;
+        const uId = t.uniqueId!;
+        const logFreq = t.logFreqs[0];
+        return { time, bol, uId, logFreq, track: inst }
+      })
+    return bols
+  }
+
+  allDisplaySargam(inst = 0){
+    const trajs = this.allTrajectories(inst);
+    const starts = this.trajStartTimes(inst);
+    const sargams: SargamDisplayType[] = [];
+    let lastPitch: { logFreq?: number, time?: number } = {
+      logFreq: undefined,
+      time: undefined
+    };
+    trajs.forEach((t, i) => {
+      if (t.id !== 12) {
+        const subDurs = t.durArray!.map(d => d * t.durTot);
+        let timePts = getStarts(subDurs);
+        timePts.push(t.durTot);
+        timePts = timePts.map(d => d + starts[i]);
+        timePts.forEach((tp, tpIdx) => {
+          const logFreq = t.logFreqs[tpIdx] ? 
+            t.logFreqs[tpIdx] : 
+            t.logFreqs[tpIdx - 1];
+          const cLF = lastPitch.logFreq === logFreq;
+          const cT = lastPitch.time === tp;
+          if (!(cLF || (cLF && cT))) {
+            sargams.push({
+              logFreq: logFreq!,
+              sargam: t.pitches[tpIdx].sargamLetter,
+              time: tp,
+              uId: t.uniqueId!,
+              track: inst
+            })
+          };
+          lastPitch = {
+            logFreq: logFreq,
+            time: tp
+          }
+        })
+      }
+    });
+    const phraseDivs = (this.phraseGrid[inst].map(p => p.startTime! + p.durTot!));
+    const pwr = 10 ** 5;
+    const roundedPDS = phraseDivs.map(pd => Math.round(pd * pwr) / pwr);
+    
+    sargams.forEach((s, sIdx) => {
+      let pos: number = 1;
+      let lastHigher = true;
+      let nextHigher = true;
+      if (sIdx !== 0 && sIdx !== sargams.length - 1) {
+        const lastS = sargams[sIdx - 1];
+        const nextS = sargams[sIdx + 1];
+        lastHigher = lastS.logFreq! > s.logFreq!;
+        nextHigher = nextS.logFreq! > s.logFreq!;
+      }
+      if (lastHigher && nextHigher) {
+        pos = 0
+      } else if (!lastHigher && !nextHigher) {
+        pos = 1
+      } else if (lastHigher && !nextHigher) {
+        pos = 3
+      } else if (!lastHigher && nextHigher) {
+        pos = 2
+      }
+      if (roundedPDS.includes(Math.round(s.time * pwr) / pwr)) {
+        if (nextHigher) {
+          pos = 5
+        } else {
+          pos = 4
+        }
+      }
+      s.pos = pos
+    })
+
+    return sargams
+  }
+
+  allPhraseDivs(inst = 0) {
+    const phraseDivObjs: PhraseDivDisplayType[] = [];
+    this.phraseGrid[inst].forEach((p, pIdx) => {
+      if (pIdx !== 0) {
+        phraseDivObjs.push({
+          time: p.startTime!,
+          type: this.sectionStartsGrid[inst].includes(pIdx) ? 
+            'section' : 
+            'phrase',
+          idx: pIdx,
+          track: inst,
+          uId: p.uniqueId
+        })
+      }
+    });
+    return phraseDivObjs
+  }
+
+  allDisplayVowels(inst = 0) {
+    const vocalInsts = [Instrument.Vocal_M, Instrument.Vocal_F];
+    const displayVowels: VowelDisplayType[] = []
+    if (vocalInsts.includes(this.instrumentation[inst])) {
+      this.phraseGrid[inst].forEach(phrase => {
+        const firstTrajIdxs = phrase.firstTrajIdxs();
+        const phraseStart = phrase.startTime!;
+        firstTrajIdxs.forEach(tIdx => {
+          const traj = phrase.trajectories[tIdx];
+          const time = phraseStart + traj.startTime!;
+          const logFreq = traj.logFreqs[0];
+          const withC = traj.startConsonant !== undefined;
+          const art = withC ? traj.articulations['0.00'] : undefined;
+          let text: string = '';
+          const ipaText = withC ? art!.ipa + traj.vowelIpa! : traj.vowelIpa!;
+          const devanagariText = withC ? 
+            art!.hindi + traj.vowelHindi! :
+            traj.vowelHindi!;
+          const englishText = withC ?
+            art!.engTrans + traj.vowelEngTrans! :
+            traj.vowelEngTrans!;
+          const uId = traj.uniqueId!;
+          displayVowels.push({
+            time, 
+            logFreq, 
+            ipaText, 
+            devanagariText, 
+            englishText,
+            uId
+          })
+        })
+      })
+    } else {
+      throw new Error('instrumentation is not vocal')
+    }
+    return displayVowels
+  }
+
+  allDisplayEndingConsonants(inst = 0) {
+    const vocalInsts = ['Vocal (M)', 'Vocal (F)'];
+    const displayEndingConsonants: ConsonantDisplayType[] = [];
+    const trajs = this.allTrajectories(inst);
+    trajs.forEach((t, i) => {
+      if (t.endConsonant !== undefined) {
+        const phrase = this.phraseGrid[inst].find(p => p.trajectories.includes(t));
+        const phraseStart = phrase?.startTime;
+        const time = phraseStart! + t.startTime! + t.durTot!;
+        const logFreq = t.logFreqs[t.logFreqs.length - 1];
+        const art = t.articulations['1.00'];
+        const ipaText = art!.ipa!;
+        const devanagariText = art!.hindi!;
+        const englishText = art!.engTrans!;
+        const uId = t.uniqueId!;
+        displayEndingConsonants.push({
+          time,
+          logFreq,
+          ipaText,
+          devanagariText,
+          englishText,
+          uId
+        })
+      }
+    });
+    return displayEndingConsonants
+  }
+
+  allDisplayChikaris(inst = 0) {
+    const chikaris: ChikariDisplayType[] = [];
+    this.phraseGrid[inst].forEach(p => {
+      const keys = Object.keys(p.chikaris);
+      keys.forEach(k => {
+        const chikari = p.chikaris[k];
+        const time = p.startTime! + Number(k);
+        chikaris.push({
+          time,
+          phraseTimeKey: k,
+          phraseIdx: p.pieceIdx!,
+          track: inst,
+          chikari: chikari,
+          uId: chikari.uniqueId
+        })
+      })
+    })
+    return chikaris
+  }
+
+  chunkedDisplayChikaris(inst = 0, duration = 30) {
+    const displayChikaris = this.allDisplayChikaris(inst);
+    const chunks: ChikariDisplayType[][] = [];
+    for (let i = 0; i < this.durTot!; i += duration) {
+      const chunk = displayChikaris.filter(c => {
+        return c.time >= i && c.time < i + duration
+      });
+      chunks.push(chunk)
+    }
+    return chunks
+  }
+
+  chunkedDisplayConsonants(inst = 0, duration = 30) {
+    const displayEndingConsonants = this.allDisplayEndingConsonants(inst);
+    const chunks: ConsonantDisplayType[][] = [];
+    for (let i = 0; i < this.durTot!; i += duration) {
+      const chunk = displayEndingConsonants.filter(c => {
+        return c.time >= i && c.time < i + duration
+      });
+      chunks.push(chunk)
+    }
+    return chunks
+  }
+
+  chunkedDisplayVowels(inst = 0, duration = 30) {
+    const displayVowels = this.allDisplayVowels(inst);
+    const chunks: VowelDisplayType[][] = [];
+    for (let i = 0; i < this.durTot!; i += duration) {
+      const chunk = displayVowels.filter(v => {
+        return v.time >= i && v.time < i + duration
+      });
+      chunks.push(chunk)
+    }
+    return chunks
+  }
+
+  chunkedDisplaySargam(inst = 0, duration = 30) {
+    const displaySargam = this.allDisplaySargam(inst);
+    const chunks: SargamDisplayType[][] = [];
+    for (let i = 0; i < this.durTot!; i += duration) {
+      const chunk = displaySargam.filter(s => {
+        return s.time >= i && s.time < i + duration
+      });
+      chunks.push(chunk)
+    }
+    return chunks
+  }
+
+  chunkedDisplayBols(inst = 0, duration = 30) {
+    const displayBols = this.allDisplayBols(inst);
+    const chunks: BolDisplayType[][] = [];
+    for (let i = 0; i < this.durTot!; i += duration) {
+      const chunk = displayBols.filter(b => {
+        return b.time >= i && b.time < i + duration
+      });
+      chunks.push(chunk)
+    }
+    return chunks
+  }
+
+  chunkedPhraseDivs(inst = 0, duration = 30) {
+    const phraseDivs = this.allPhraseDivs(inst);
+    const chunks: PhraseDivDisplayType[][] = [];
+    for (let i = 0; i < this.durTot!; i += duration) {
+      const chunk = phraseDivs.filter(pd => {
+        return pd.time >= i && pd.time < i + duration
+      });
+      chunks.push(chunk)
+    }
+    return chunks
+  }
+
+  chunkedMeters(duration = 30) {
+    const meters = this.meters;
+    const chunks: Meter[][] = [];
+    for (let i = 0; i < this.durTot!; i += duration) {
+      const chunk = meters.filter(m => {
+        return m.startTime >= i && m.startTime < i + duration
+      });
+      chunks.push(chunk)
+    }
+    return chunks
+  }
+
+  mostRecentTraj(time: number, inst: number = 0) {
+    const trajs = this.allTrajectories(inst);
+    const endTimes = trajs.map(t => {
+      const phrase = this.phraseGrid[inst].find(p => p.trajectories.includes(t));
+      const phraseStart = phrase?.startTime;
+      return phraseStart! + t.startTime! + t.durTot!
+    })
+    // find the latest endTime that is less than time
+    const latestTime = endTimes
+      .filter(t => t <= time)
+      .reduce((max, t) => t > max ? t : max, -Infinity);
+    const idx = endTimes.indexOf(latestTime);
+    return trajs[idx]
+
   }
 
   durationsOfFixedPitches({ 
@@ -2470,29 +3298,27 @@ class Piece {
     return pitchProps
   }
 
-  get phraseStarts() {
-    return this.phrases.map(p => p.startTime)
-  }
-
   setDurTot(durTot: number) {
-    let lastPhrase: Phrase = this.phrases[this.phrases.length - 1];
-    while (lastPhrase.durTot === 0) {
-      this.phrases.pop();
-      this.durTotFromPhrases();
-      this.durArrayFromPhrases();
-      lastPhrase = this.phrases[this.phrases.length - 1];
-    }
-    const trajs = lastPhrase.trajectories;
-    const lastTraj: Trajectory = trajs[trajs.length - 1];
-    if (lastTraj.id !== 12) {
-      throw new Error('lastTraj is not silent')
-    } else {
-      const extraDur = durTot - this.durTot!;
-      lastTraj.durTot += extraDur;
-      lastPhrase.durTotFromTrajectories();
-      lastPhrase.durArrayFromTrajectories();
-      this.durArrayFromPhrases();
-      this.updateStartTimes();
+    for (let inst = 0; inst < this.instrumentation.length; inst++) {
+      const phrases = this.phraseGrid[inst];
+
+      let lastPhrase: Phrase = phrases[phrases.length - 1];
+      while (lastPhrase.durTot === 0) {
+        phrases.pop();
+        this.durTotFromPhrases();
+        this.durArrayFromPhrases();
+        lastPhrase = phrases[phrases.length - 1];
+      }
+      const trajs = lastPhrase.trajectories;
+      const lastTraj: Trajectory = trajs[trajs.length - 1];
+      if (lastTraj.id === 12) {
+        const extraDur = durTot - this.durTot!;
+        lastTraj.durTot += extraDur;
+        lastPhrase.durTotFromTrajectories();
+        lastPhrase.durArrayFromTrajectories();
+        this.durArrayFromPhrases();
+        this.updateStartTimes();
+      }
     }
   }
 
@@ -2502,15 +3328,16 @@ class Piece {
     return pulse
   }
 
-  sIdxFromPIdx(pIdx: number) {
+  sIdxFromPIdx(pIdx: number, inst = 0) {
     // section index from phrase index
-    const ss = this.sectionStarts!;
+    // const ss = this.sectionStarts!;
+    const ss = this.sectionStartsGrid[inst];
     const sIdx = ss.length - 1 - ss.slice().reverse().findIndex(s => pIdx >= s);
     return sIdx
   }
 
   pIdxFromGroup(g: Group) {
-    const pIdx = this.phrases.findIndex(p => {
+    const pIdx = this.phrases.findIndex(p => { // this `phrases` needs addressing, mostly in query.ts
       let bool = false;
       p.groupsGrid.forEach(gg => {
         if (gg.includes(g)) {
@@ -2522,15 +3349,8 @@ class Piece {
     return pIdx
   }
 
-  sIdxFromGroup(g: Group) {
-    const pIdx = this.pIdxFromGroup(g);
-    const sIdx = this.sIdxFromPIdx(pIdx);
-    return sIdx
-  }
-
   toJSON() {
     return {
-      phrases: this.phrases,
       raga: this.raga,
       durTot: this.durTot,
       durArray: this.durArray,
@@ -2549,7 +3369,13 @@ class Piece {
       instrumentation: this.instrumentation,
       meters: this.meters,
       sectionCategorization: this.sectionCategorization,
-      explicitPermissions: this.explicitPermissions
+      explicitPermissions: this.explicitPermissions,
+      soloist: this.soloist,
+      soloInstrument: this.soloInstrument,
+      phraseGrid: this.phraseGrid,
+      durArrayGrid: this.durArrayGrid,
+      sectionStartsGrid: this.sectionStartsGrid,
+      sectionCatGrid: this.sectionCatGrid,
     }
   }
 }
@@ -2620,9 +3446,7 @@ class Section {
   }
 }
 
-type BoolObj = { [key: string]: boolean };
 type NumObj = { [key: string]: number };
-type RuleSetType = {[key: string]: (boolean | BoolObj) };
 type TuningType = { [key: string]: number | NumObj };
 
 
@@ -2913,12 +3737,12 @@ class Raga {
     sargam.forEach(s => {
       if (typeof(this.ruleSet[s]) === 'object') {
         const obj = this.ruleSet[s] as BoolObj;
-        if (obj.raised) {
-          const str = s.charAt(0).toUpperCase() + s.slice(1);
-          names.push(str)
-        }
         if (obj.lowered) {
           const str = s.charAt(0).toLowerCase() + s.slice(1);
+          names.push(str)
+        }
+        if (obj.raised) {
+          const str = s.charAt(0).toUpperCase() + s.slice(1);
           names.push(str)
         }
       } else {
@@ -2929,6 +3753,52 @@ class Raga {
       }
     });
     return names
+  }
+
+  get swaraObjects() {
+    const swaraObjs: { swara: number, raised: boolean }[] = [];
+    const sargam = Object.keys(this.ruleSet);
+    let idx = 0;
+    sargam.forEach(s => {
+      if (typeof(this.ruleSet[s]) === 'object') {
+        const obj = this.ruleSet[s] as BoolObj;
+        if (obj.lowered) {
+          swaraObjs.push({ swara: idx, raised: false });
+        }
+        if (obj.raised) {
+          swaraObjs.push({ swara: idx, raised: true });
+        }
+        idx++;
+      } else {
+        if (this.ruleSet[s]) {
+          swaraObjs.push({ swara: idx, raised: true });
+        }
+        idx++;
+      }
+    });
+    return swaraObjs
+  }
+
+
+  pitchFromLogFreq(logFreq: number) {
+    const options = this.getFrequencies({ low: 75, high: 2400 })
+      .map(f => Math.log2(f));
+    const quantizedLogFreq = getClosest(options, logFreq);
+    const logOffset = logFreq - quantizedLogFreq;
+    let logDiff = quantizedLogFreq - Math.log2(this.fundamental);
+    const octOffset = Math.floor(logDiff);
+    logDiff -= octOffset;
+    const rIdx = this.ratios.findIndex(r => closeTo(r, 2 ** logDiff));
+    const swara = this.sargamLetters[rIdx];
+    const raised = isUpperCase(swara);
+    return new Pitch({ 
+      swara: swara, 
+      oct: octOffset, 
+      fundamental: this.fundamental,
+      ratios: this.stratifiedRatios,
+      logOffset: logOffset,
+      raised
+    })
   }
 
   toJSON() {
@@ -2955,12 +3825,11 @@ export {
   durationsOfFixedPitches,
   pitchNumberToChroma,
   linSpace,
-  initSecCategorization
+  initSecCategorization,
+  Automation
 }
 
 export type {
   RuleSetType,
   VibObjType,
-  PhraseCatType,
-  SecCatType
 }

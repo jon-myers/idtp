@@ -48,32 +48,13 @@
         @input='handleGainInput'
         >
     </div>
-    <div class='dataRow'>
-      <button 
-        class='processing' 
-        :disabled='recDisabled'
-        @click='handleGenerateSpectrogram'>
-        Generate Spectrogram
-      </button>
-      <div class='processingLight spectrogram'></div>
-    </div>
-    <div class='dataRow'>
-      <button 
-        class='processing' 
-        :disabled='recDisabled'
-        @click='handleGenerateMelograph'>
-        Generate Melograph
-      </button>
-      <div class='processingLight melograph' ref='melographLight'></div>
-    </div>
-
   </div>
 </template>
 
 <script lang='ts'>
 
 import { defineComponent, PropType } from 'vue';
-import { RecType } from '@/comps/audioEvents/AddAudioEvent.vue';
+import { RecType } from '@/ts/types.ts';
 import { makeSpectrograms, makeMelograph } from '@/js/serverCalls.ts';
 
 type SaTunerDataType = {

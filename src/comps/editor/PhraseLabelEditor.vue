@@ -1,7 +1,7 @@
 <template>
   <div class='outerPhraseLabel'>
     <div class='topRow'>
-      {{`Phrase ${phraseNum}`  }}
+      {{`Phrase ${phraseNum + 1}`  }}
     </div>
     <div class='bottomContainer'>
       <div class='checkColumn'>
@@ -116,8 +116,8 @@
 <script lang='ts'>
 
 import { defineComponent, PropType } from 'vue';
-import { Piece, Phrase, PhraseCatType } from '@/js/classes.ts';
-
+import { Piece, Phrase } from '@/js/classes.ts';
+import { PhraseCatType } from '@/ts/types.ts';
 import categoryData from '@/assets/json/categorization.json';
 const phraseData = categoryData['Phrase'];
 const articulationTypes = phraseData['Articulation Type'];
@@ -128,7 +128,7 @@ type PhraseLabelEditorDataType = {
   vocalArtTypes: PVArtType[],
   instrumentalArtTypes: PIArtType[],
   incidentalTypes: PIncidentalType[],
-  phrase: Phrase
+  // phrase: Phrase
 }
 
 type PPhraseType = keyof PhraseCatType['Phrase'];
@@ -146,6 +146,9 @@ export default defineComponent({
       const cat = this.phrase.categorizationGrid[0];
       return cat['Instrumental Articulation'];
     },
+    phrase() {
+      return this.piece.phraseGrid[this.editingInstIdx][this.phraseNum];
+    }
   },
   data(): PhraseLabelEditorDataType {
     return {
@@ -154,7 +157,7 @@ export default defineComponent({
       vocalArtTypes: articulationTypes['Vocal'] as PVArtType[],
       instrumentalArtTypes: articulationTypes['Instrumental'] as PIArtType[],
       incidentalTypes: phraseData['Incidental'] as PIncidentalType[],
-      phrase: this.piece.phrases[this.phraseNum]
+      // phrase: this.piece.phrases[this.phraseNum]
     }
   },
   props: {
@@ -172,6 +175,10 @@ export default defineComponent({
     },
     editable: {
       type: Boolean,
+      required: true
+    },
+    editingInstIdx: {
+      type: Number,
       required: true
     }
   },

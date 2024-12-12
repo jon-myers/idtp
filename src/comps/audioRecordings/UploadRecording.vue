@@ -125,10 +125,13 @@
               <div class='modalColRow'>
                 <label>Name</label>
                 <div class='selHolder'>
-                  <select v-model='mus.name'>
+                  <select 
+                    v-model='mus.name' 
+                    @change='mus.name ? handleSelMusChange(mus.name, i) : ""'
+                    >
                     <option 
                       v-for='(aMus, amIdx) in allMusicians' 
-                      :key='i'
+                      :key='amIdx'
                       :value='aMus["Full Name"]'
                       >
                       {{aMus["Full Name"]}}
@@ -374,23 +377,12 @@
           </div>
         </div>
 
-        <div class='editingSubFrame' v-if='editRecIdx === 4'>
-          <SaTuner v-if='editingRec'
-            :rec='editingRec'
-            v-model:sa-estimate='saEstimate'
-            v-model:sa-verified='saVerified'
-            v-model:oct-offset='octOffset'
-            :spectrogramExists='spectrogramExists'
-            :melographExists='melographExists'
-          />
-        </div>
-
         <div class='modalRow centered short'>
           <button @click='editRecIdx--' :disabled='editRecIdx===0'>
             {{ "<" }}
           </button>
           <button @click='saveUpdates'>Save Updates</button>
-          <button @click='editRecIdx++' :disabled='editRecIdx>3'>
+          <button @click='editRecIdx++' :disabled='editRecIdx>2'>
             {{ ">" }}
           </button>
         </div>
@@ -408,7 +400,6 @@
 import { defineComponent, PropType } from 'vue';
 import { 
   getAllAEMetadata, 
-  AudioEventMetadataType,
   newUploadFile,
   getAudioRecording,
   getAllMusicians,
@@ -430,11 +421,16 @@ import {
 } from '@/js/serverCalls.ts';
 import SaTuner from '@/comps/audioRecordings/SaTuner.vue';
 import { 
+  MusicianDBType, 
+  GharanaType, 
+  UserType,
   RecType, 
   PSecType, 
-  MusicianType 
-} from '@/comps/audioEvents/AddAudioEvent.vue';
-import { MusicianDBType, GharanaType, UserType } from '@/ts/types.ts';
+  MusicianType,
+  RecUpdateType,
+  EditingSecType,
+  AudioEventMetadataType,
+} from '@/ts/types.ts';
 type UploadRecordingDataType = {
   progressWidth: number;
   file: File | null;
@@ -488,49 +484,6 @@ type UploadRecordingDataType = {
   startedUpload: boolean,
   visible: boolean,
   allUsers: UserType[],
-}
-
-type RecUpdateType = {
-    musicians: { [name: string]: MusicianType },
-    location: {
-      continent?: string,
-      country?: string,
-      city?: string,
-    },
-    date: {
-      year?: string,
-      month?: string,
-      day?: string,
-    },
-    raags: {
-      [name: string]: {
-        'performance sections': {
-          [name: string]: PSecType
-        }
-      }
-    },
-    saEstimate: number,
-    saVerified: boolean,
-    octOffset: -1 | 0,
-    explicitPermissions: {
-      publicView: boolean,
-      edit: string[],
-      view: string[]
-    }
-  };
-
-export type { RecUpdateType };
-
-type EditingSecType = {
-  name?: string,
-  start: number, 
-  end: number, 
-  startSecs: string, 
-  startMins: string, 
-  startHours: string,
-  endSecs: string,
-  endMins: string,
-  endHours: string,
 }
 export default defineComponent({
   data(): UploadRecordingDataType {
@@ -738,6 +691,24 @@ export default defineComponent({
   },
 
   methods: {
+
+    handleSelMusChange(name: string, selIdx: number) {
+      const mus = this.allMusicians.find(m => {
+        return m['Full Name'] === name
+      });
+      if (mus) {
+        if (mus.Instrument === 'Vocal') {
+          if (mus.Gender === 'M') {
+            this.editMus[selIdx].instrument = "Vocal (M)"
+          } else {
+            this.editMus[selIdx].instrument = "Vocal (F)"
+          }
+        } else {
+          this.editMus[selIdx].instrument = mus.Instrument;
+        }
+        this.editMus[selIdx].gharana = mus.Gharana;
+      }
+    },
 
     permissionToViewAE(audioEvent: AudioEventMetadataType) {
       const ep = audioEvent.explicitPermissions!;

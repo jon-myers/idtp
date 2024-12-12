@@ -3,17 +3,21 @@ import axios from 'axios';
 import { AxiosProgressEvent } from 'axios';
 import fetch from 'cross-fetch';
 import { Piece } from './classes.ts';
-import { RecType } from '@/comps/audioEvents/AddAudioEvent.vue';
-import { UserType } from '@/ts/types.ts';
-import { CollectionType } from '@/ts/types.ts';
-
 import { 
   MusicianDBType, 
   GharanaType,
-  TransMetadataType
+  TransMetadataType,
+  RecUpdateType,
+  UserType,
+  RecType,
+  CollectionType,
+  QueryType,
+  MultipleOptionType,
+  MelographData
 } from '@/ts/types.ts';
-import { RecUpdateType } from '@/comps/audioRecordings/UploadRecording.vue';
-// import { URLSearchParams } from 'url';
+import {
+  Instrument
+} from '@/ts/enums.ts';
 const getPiece = async (id: string): Promise<Piece> => {
   let piece;
   const request = {
@@ -107,6 +111,7 @@ const getAudioDBEntry = async (_id: string): Promise<RecType> => {
 
 
 const savePiece = async (piece: Piece) => {
+  console.log(piece)
   const data = JSON.stringify(piece);
   let result;
   let request = {
@@ -218,14 +223,14 @@ const createCollection = async (collection: CollectionType) => {
   return result
 }
 
-const deleteCollection = async (collectionID: string) => {
+const deleteCollection = async (colID: string) => {
   let result: undefined | { acknowledged: boolean, deletedCount: number };
   const request = {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ _id: collectionID })
+    body: JSON.stringify({ _id: colID })
   };
   try {
     const res = await fetch(url + 'deleteCollection', request);
@@ -285,19 +290,7 @@ const getAllAudioRecordingMetadata = async (): Promise<RecType[]> => {
   return allAudio
 }
 
-type AudioEventMetadataType = {
-  _id: string,
-  userID: string,
-  permissions: string,
-  "event type": string,
-  name: string,
-  recordings: RecType[],
-  explicitPermissions?: {
-    edit: string[],
-    view: string[]
-    publicView: boolean
-  }
-}
+
 
 const getAllAEMetadata = async (): Promise<AudioEventMetadataType[]> => {
   let allAudioEvents;
@@ -407,13 +400,8 @@ const getAllMusicians = async (): Promise<MusicianDBType[]> => {
   return allMusicians
 }
 
-const getSortedMusicians = async (verbose=false): Promise<(string | {
-  'First Name'?: string,
-  'Last Name'?: string,
-  'Initial Name': string,
-  'Middle Name'?: string,
-})[]> => {
-  let allMusicians: string[] = [];
+const getSortedMusicians = async (verbose=false): Promise<MusicianNameType[]> => {
+  let allMusicians: MusicianNameType[] = [];
   let request = {
     method: 'GET',
     headers: {
@@ -806,18 +794,7 @@ const getRaagRule = async (name: string) => {
   } catch (err) {
     console.error(err)
   }
-  
 }
-
-type LocationType = {
-  _id: string,
-} & {
-  [key: string]: {
-    [key: string]: string[]
-  }
-}
-
-export type { LocationType, AudioEventMetadataType, UserDataType };
 
 const getLocationObject = async (): Promise<LocationType> => {
   // gets location object
@@ -859,12 +836,6 @@ const getPerformanceSections = async (): Promise<string[]> => {
   return performanceSections
 };
 
-type NewPieceDataType = {
-  acknowledged: boolean,
-  insertedId: string
-}
-
-
 const createNewPiece = async (obj: Piece): Promise<
   (NewPieceDataType | undefined)
   > => {
@@ -890,7 +861,7 @@ const createNewPiece = async (obj: Piece): Promise<
   return out
 };
 
-const deletePiece = async (piece: Piece) => {
+const deletePiece = async (piece: TransMetadataType) => {
   let out;
   let request = {
     method: 'DELETE',
@@ -1163,39 +1134,6 @@ const getAllGharanas = async (): Promise<GharanaType[]> => {
     console.error(err)
   }
   return out
-
-}
-
-type OnProgressType = (percent: number) => void;
-
-const uploadFile = async (
-  file: File, 
-  onProgress: OnProgressType, 
-  parentID: string, 
-  idx: number) => {
-  const formData = new FormData();
-  formData.append('avatar', file);
-  formData.append('parentID', parentID);
-  formData.append('idx', String(idx));
-  const config = {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    },
-    onUploadProgress: (progressEvent: AxiosProgressEvent) => {
-      const progressPercent = 100 * progressEvent.loaded / progressEvent.total!;
-      if (onProgress) onProgress(progressPercent);
-      return progressPercent
-    }
-  };
-  try {
-    const response = await axios.post(url+'upload-avatar', formData, config)
-    if (response.statusText !== 'OK') {
-      throw new Error(`Error! status: ${response.status}`)
-    }
-    return response.data;
-  } catch (err) {
-    console.log(err)
-  }
 }
 
 const newUploadFile = async (file: File, onProgress: OnProgressType, {
@@ -1389,14 +1327,14 @@ const addTransToCollection = async (transcriptionID: string, colID: string) => {
   return out
 }
 
-const removeRecFromColl = async (recordingID: string, collectionID: string) => {
+const removeRecFromColl = async (recordingID: string, colID: string) => {
   let out;
   const request = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ recordingID, collectionID })
+    body: JSON.stringify({ recordingID, colID })
   };
   try {
     const res = await fetch(url + 'removeRecordingFromCollection', request);
@@ -1409,14 +1347,14 @@ const removeRecFromColl = async (recordingID: string, collectionID: string) => {
   return out
 }
 
-const removeAEfromColl = async (audioEventID: string, collectionID: string) => {
+const removeAEfromColl = async (audioEventID: string, colID: string) => {
   let out;
   const request = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ audioEventID, collectionID })
+    body: JSON.stringify({ audioEventID, colID })
   };
   try {
     const res = await fetch(url + 'removeAudioEventFromCollection', request);
@@ -1449,14 +1387,17 @@ const removeTFromColl = async (transcriptionID: string, colID: string) => {
   return out
 }
 
-type UserDataType = {
-  sub: string,
-  picture: string,
-  email: string,
-  name: string,
-  given_name: string,
-  family_name: string
-}
+import { 
+  UserDataType,
+  AudioEventMetadataType,
+  IpaVowelType,
+  IPAConsonantType,
+  LocationType,
+  NewPieceDataType,
+  OnProgressType,
+  MusicianNameType,
+  DisplaySettings
+} from '@/ts/types.ts'
 
 const userLoginGoogle = async (userData: UserDataType) => {
   const data = JSON.stringify({
@@ -1468,6 +1409,7 @@ const userLoginGoogle = async (userData: UserDataType) => {
     family_name: userData.family_name,
     collections: [],
     transcriptions: [],
+    savedQueries: [],
   });
   let out;
   let request = {
@@ -1596,6 +1538,80 @@ const updateTranscriptionPermissions = async (id: string, perm: string) => {
   }
 }
 
+const saveMultiQuery = async (
+  title: string,
+  userID: string,
+  transcriptionID: string,
+  queries: QueryType[], 
+  options: MultipleOptionType
+) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ title, userID, transcriptionID, queries, options })
+  };
+  try {
+    const response = await fetch(url + 'saveMultiQuery', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const loadQueries = async (userID: string, transcriptionID: string): Promise<
+  {
+    title: string,
+    queries: QueryType[],
+    options: MultipleOptionType,
+    _id: string,
+  }[]
+  > => {
+  let out;
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const params = new URLSearchParams({ userID, transcriptionID });
+    const response = await fetch(url + 'loadQueries?' + params, request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const deleteQuery = async (userID: string, queryID: string) => {
+  let out;
+  const request = {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userID, queryID })
+  };
+  try {
+    const response = await fetch(url + 'deleteQuery', request);
+    if (response.ok) {
+      out = await response.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
 const updateTranscriptionOwner = async (
     id: string, ownerObj: UserType, originalOwnerID: string
     ) => {
@@ -1638,6 +1654,8 @@ const cloneTranscription = async ({
     view: [],
     publicView: false
   },
+  soloist = undefined,
+  soloInstrument = undefined,
 }: {
   id?: string,
   title?: string,
@@ -1650,7 +1668,9 @@ const cloneTranscription = async ({
     edit: string[],
     view: string[]
     publicView: boolean
-  }
+  },
+  soloist?: string,
+  soloInstrument?: string
 } = {}) => {
   let out;
   const request = {
@@ -1666,7 +1686,9 @@ const cloneTranscription = async ({
       name: name,
       family_name: family_name,
       given_name: given_name,
-      explicitPermissions: explicitPermissions
+      explicitPermissions: explicitPermissions,
+      soloist: soloist,
+      soloInstrument: soloInstrument
     })
   };
   try {
@@ -1700,16 +1722,6 @@ const getInstrumentation = async (audioID: string) => {
   }
 }
 
-type IpaVowelType = {
-  eng_trans: string,
-  english: string,
-  hindi: { initial: string, final: string | null },
-  ipa: string,
-  iso_15919: string,
-  type: string
-  urdu: { initial: string, final: string, medial?: string }
-}
-
 const getIpaVowels = async (): Promise<IpaVowelType[]> => {
   let out;
   const request = {
@@ -1727,15 +1739,6 @@ const getIpaVowels = async (): Promise<IpaVowelType[]> => {
     console.error(err)
   }
   return out
-}
-
-type IPAConsonantType = {
-  eng_trans: string,
-  example: string,
-  hindi: string,
-  ipa: string,
-  iso_15919: string,
-  type: string,
 }
 
 const getConsonants = async (): Promise<IPAConsonantType[]> => {
@@ -1777,7 +1780,7 @@ const getAllUsers = async () => {
   }
 }
 
-const getMelographJSON = async (recID: string) => {
+const getMelographJSON = async (recID: string): Promise<MelographData> => {
   let out;
   try {
     const url = `https://swara.studio/melographs/${recID}/melograph.json`;
@@ -1785,10 +1788,11 @@ const getMelographJSON = async (recID: string) => {
     if (response.ok) {
       out = await response.json()
     }
-    return out
+    
   } catch (err) {
     console.error(err)
   }
+  return out
 }
 
 const getRecsFromIds = async (recIDs: string[]) => {
@@ -1879,6 +1883,166 @@ const getEditableCollections = async (userID: string): Promise<CollectionType[]>
   return out
 }
 
+const getSavedSettings = async (userID: string) => {
+  let out: DisplaySettings[] = [];
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const params = new URLSearchParams({ userID: userID });
+    const res = await fetch(url + 'getSavedSettings?' + params, request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const saveDisplaySettings = async (userID: string, settings: DisplaySettings) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userID, settings })
+  };
+  try {
+    const res = await fetch(url + 'saveDisplaySettings', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+    return out
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const getDefaultSettings = async (userID: string) => {
+  let out: string = '';
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const params = new URLSearchParams({ userID: userID });
+    const res = await fetch(url + 'getDefaultSettings?' + params, request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const setDefaultSettings = async (userID: string, settingsID: string) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userID, settingsID })
+  };
+  try {
+    const res = await fetch(url + 'setDefaultSettings', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+};
+
+const updateSavedDisplaySettings = async (userId: string, uniqueId: string, settings: DisplaySettings) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userId, uniqueId, settings })
+  };
+  try {
+    const res = await fetch(url + 'updateDisplaySettings', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const deleteSavedDisplaySettings = async (userId: string, uniqueId: string) => {
+  let out;
+  const request = {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userId, uniqueId })
+  };
+  try {
+    const res = await fetch(url + 'deleteDisplaySettings', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const getTranscriptionInstrumentation = async (transcriptionID: string) => {
+  let out: Instrument[] = [];
+  const request = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  try {
+    const params = new URLSearchParams({ transcriptionID: transcriptionID });
+    const res = await fetch(url + 'getTranscriptionInstrumentation?' + params, request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const updateInstrumentation = async (transcriptionID: string, instrumentation: Instrument[]) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ transcriptionID, instrumentation })
+  };
+  try {
+    const res = await fetch(url + 'updateInstrumentation', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
 
 export { 
   getPiece,
@@ -1889,7 +2053,6 @@ export {
   deleteAudioEvent,
   getAudioDBEntry,
   getAllAudioRecordingMetadata,
-  uploadFile,
   newUploadFile,
   getSortedMusicians,
   getEventTypes,
@@ -1954,5 +2117,16 @@ export {
   verifySpectrogram,
   verifyMelograph,
   updateVisibility,
-  getLooseRecordings
+  getLooseRecordings,
+  saveMultiQuery,
+  loadQueries,
+  deleteQuery,
+  getSavedSettings,
+  saveDisplaySettings,
+  getDefaultSettings,
+  setDefaultSettings,
+  updateSavedDisplaySettings,
+  deleteSavedDisplaySettings,
+  getTranscriptionInstrumentation,
+  updateInstrumentation
 }
