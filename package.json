@@ -23,7 +23,6 @@
     "deployFixDurations": "rsync -a ./python/dataManagement/aggregations/fix_durations.py root@137.184.90.119:fix_durations.py",
     "deployGenerateMelograph": "rsync -a ./python/visualization_scripts/generate_melograph.py root@swara.studio:generate_melograph.py",
     "deployTempBackupRestore": "rsync -a ./python/backup_scripts/to_temp_db.py root@swara.studio:to_temp_db.py",
-    "testPython": "python -m pytest python/api/tests"
     "deployVisualizationScripts": "rsync -a ./python/visualization_scripts/ root@swara.studio:visualization_scripts",
     "deployMassUploadProcessAudio": "rsync -a ./python/mass_upload/process_mass_uploaded_audio.py root@swara.studio:process_mass_uploaded_audio.py",
     "deployDirectoryWatcher": "rsync -a ./python/mass_upload/directory_watcher.py root@swara.studio:directory_watcher.py",

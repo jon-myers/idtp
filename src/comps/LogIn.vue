@@ -37,9 +37,9 @@ export default {
     return {
       firstTime: false,
       returning: false,
-      waiver: 'I agree to only use the IDTP for scholarly and \
+      waiver: 'I agree to only use the IDTAP for scholarly and \
         / or pedagogical purposes. I understand that any copywrited materials \
-        that I upload to the IDTP are liable to be taken down in response to \
+        that I upload to the IDTAP are liable to be taken down in response to \
         a DMCA takedown notice.',
       agreeBool: false,
       firstName: undefined,
