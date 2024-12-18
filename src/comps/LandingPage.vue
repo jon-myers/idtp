@@ -4,7 +4,7 @@
       <span class='title'>Swara.Studio</span>
       <span class='subtitle'>{{ subtitleText }}</span>
       <div class='buttonRow'>
-        <div class='enterButton' @click='goToLogin'>Enter IDTP</div>
+        <div class='enterButton' @click='goToLogin'>Enter IDTAP</div>
         <div class='demosButton'>
           <a href='https://www.youtube.com/channel/UCSsnBpY5Hh8mvZu-63lpmaQ'>
             Demos
@@ -90,7 +90,7 @@ export default {
       layerColors: [
         '#50945c'
       ],
-      subtitleText: "An Interactive Digital Transcription Platform (IDTP) that \
+      subtitleText: "An Interactive Digital Transcription and Analysis Platform (IDTAP) that \
         enables transcription, archiving, sharing, and analysis of audio \
         recordings of oral melodic and improvisation traditions, with a first \
         focus on Hindustani music.",
@@ -105,7 +105,7 @@ export default {
         },
         {
           heading: 'Theoretical Identity',
-          text: 'The IDTP is organized around a succession of “trajectories”: \
+          text: 'The IDTAP is organized around a succession of “trajectories”: \
             formally specified, flexible basic units of musical continuity \
             that follow archetypal paths or curves from one pitch to another, \
             or among a series of pitches. Trajectories can be marked and \
@@ -115,14 +115,14 @@ export default {
         },
         {
           heading: 'Synthesis',
-          text: 'The IDTP Editor includes custom synthesis engines associated \
+          text: 'The IDTAP Editor includes custom synthesis engines associated \
             with each supported instrument, allowing the user to aurally \
             verify the accuracy of their transcription as measured up against \
             the original recording.'
         },
         {
           heading: 'Analysis',
-          text: 'The IDTP includes a suite of analysis tools that allow users \
+          text: 'The IDTAP includes a suite of analysis tools that allow users \
             to analyze their transcriptions quantitatively and \
             computationally, at a large scale across a range of performances \
             (diachronically or synchronically), or at a small scale through \
