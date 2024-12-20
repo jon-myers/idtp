@@ -102,33 +102,28 @@ def make_amplitude_plot(ax_amp, normed_amp, start, end):
 
 def make_just_contour_plot(ax_0, x_vals, log_pitch, log_fund, start, end, colors):
     x_vals = np.linspace(start, end, len(log_pitch))
-    # ax_0.plot(np.arange(len(normed_amp)), normed_amp, color='black')
-    ax_0.scatter(x_vals, log_pitch, c=colors, s=1)
+    ax_0.scatter(x_vals, log_pitch, c="red", s=0.1)
     ax_0.set_ylabel('Pitch (Hz)')
-    # ax_0.set_title('Melodic Contour')
     ax_0.set_ylim([np.log2(min_freq), np.log2(max_freq)])
     y_ticks = ax_0.get_yticks()
     labels = [str(int(2**y)) for y in y_ticks]
     ax_0.set_yticklabels(labels)
     ax_0.set_xlim([start, end])
-
-def make_annotated_contour_plot(ax, log_pitch, log_fund, start, end, colors, 
-                                pluck_onset_idxs, chikari_onset_idxs, idx_groups):
+    ax_0.set_title("Initial Pitch Trace")
+    
+def make_contour_plot_with_onsets(ax, log_pitch, log_fund, start, end, colors,
+                                  pluck_onset_idxs, chikari_onset_idxs, idx_groups):
     x_vals = np.linspace(start, end, len(log_pitch))
-    ax.scatter(x_vals, log_pitch, c=colors, s=1)
+    ax.scatter(x_vals, log_pitch, c="red", s=0.1)
     ax.set_ylabel('Pitch (Hz)')
     ax.set_ylim([np.log2(min_freq), np.log2(max_freq)])
     y_ticks = ax.get_yticks()
     labels = [str(int(2**y)) for y in y_ticks]
     ax.set_yticklabels(labels)
-    # normed_pluck_onsets = pluck_onsets / (end - start)
-    # pluck_onset_idxs = (normed_pluck_onsets * len(log_pitch)).astype(int)
     pluck_onset_vals = log_pitch[pluck_onset_idxs]
     for i in range(len(pluck_onset_idxs)):
         if np.isnan(pluck_onset_vals[i]):
             pluck_onset_vals[i] = find_nearest_non_nan(log_pitch, pluck_onset_idxs[i])
-    # normed_chikari_onsets = chikari_onsets / (end - start)
-    # chikari_onset_idxs = (normed_chikari_onsets * len(log_pitch)).astype(int)
     chikari_onset_vals = log_pitch[chikari_onset_idxs]
     for i in range(len(chikari_onset_idxs)):
         if np.isnan(chikari_onset_vals[i]):
@@ -140,18 +135,31 @@ def make_annotated_contour_plot(ax, log_pitch, log_fund, start, end, colors,
     for i, (x, y) in enumerate(zip(x_vals[pluck_onset_idxs], pluck_onset_vals)):
         ax.text(x + 0.01, y + 0.1, str(i), color='blue', fontsize=8)
     ax.scatter(x_vals[pluck_onset_idxs], pluck_onset_vals, 
-              marker=triangle_marker, color='blue', s=60, 
+              marker=triangle_marker, color='blue', s=30, 
               label='Pluck Onsets')
     ax.scatter(x_vals[chikari_onset_idxs], chikari_onset_vals, 
-              marker='x', color='black', s=60, 
+              marker='x', color='black', s=30, 
               label='Chikari Onsets')
+    ax.set_xlim([start, end])
+    ax.set_title("Classified Articulation with Pitch Trace")
+
+def make_segmented_contour_plot(ax, log_pitch, log_fund, start, end, colors, 
+                                pluck_onset_idxs, chikari_onset_idxs, idx_groups):
+    x_vals = np.linspace(start, end, len(log_pitch))
+    ax.scatter(x_vals, log_pitch, c="red", s=0.1)
+    ax.set_ylabel('Pitch (Hz)')
+    ax.set_ylim([np.log2(min_freq), np.log2(max_freq)])
+    y_ticks = ax.get_yticks()
+    labels = [str(int(2**y)) for y in y_ticks]
+    ax.set_yticklabels(labels)
     ax.set_xlim([start, end])
     ig_starts = [g[0] for g in idx_groups]
     for igs in ig_starts:
         ax.axvline(x=x_vals[igs], color='black', linestyle='--')
+    ax.set_title('Segmented Pitch Trace')
     
 def make_filtered_contour_plot(ax1, log_pitch, log_fund, start, end, 
-                               filtered_index_groups):
+                               filtered_index_groups, pluck_onset_idxs):
     x_vals = np.linspace(start, end, len(log_pitch))
     ax1.set_ylabel('Pitch (Hz)')
     ax1.set_ylim([np.log2(min_freq), np.log2(max_freq)])
@@ -161,16 +169,30 @@ def make_filtered_contour_plot(ax1, log_pitch, log_fund, start, end,
     ax1.set_xlim([start, end])
     ax1.set_xlabel('Time')
     for g in filtered_index_groups:
-        ax1.scatter(x_vals[g], log_pitch[g], c='red', s=1) 
+        ax1.scatter(x_vals[g], log_pitch[g], c='green', s=0.1)
+    ax1.set_title("Pitch Trace with Plucks (Chikaris Removed)")
+    
+    
+    pluck_onset_vals = log_pitch[pluck_onset_idxs]
+    for i in range(len(pluck_onset_idxs)):
+        if np.isnan(pluck_onset_vals[i]):
+            pluck_onset_vals[i] = find_nearest_non_nan(log_pitch, pluck_onset_idxs[i])
+    
+    triangle_marker = MarkerStyle(marker='^')
+    triangle_marker._transform = triangle_marker.get_transform().rotate_deg(270)
+    triangle_marker._transform = triangle_marker._transform.translate(0.5, 0)
+
+    ax1.scatter(x_vals[pluck_onset_idxs], pluck_onset_vals, 
+              marker=triangle_marker, color='blue', s=30, 
+              label='Pluck Onsets')
+    
+    
 
 def get_contour(audio: np.ndarray, idx: int, pluck_onsets: np.ndarray, 
                 chikari_onsets: np.ndarray, start: float, end: float, 
                 fund: float):
-    # compute the melodic contour
     log_fund = np.log2(fund)
     voicing_tolerance = 0.7
-    # min_freq = 100
-    # max_freq = 400
     eq_loud_audio = ess.EqualLoudness()(audio)
     frame_size = 2048
     ppm = ess.PredominantPitchMelodia(minFrequency = min_freq, 
@@ -199,7 +221,7 @@ def get_contour(audio: np.ndarray, idx: int, pluck_onsets: np.ndarray,
     pluck_onset_idxs = (normed_pluck_onsets * len(log_pitch)).astype(int)
     
     idx_groups = get_idx_groups(log_pitch, pluck_onset_idxs, 0.1)
-    threshold = 0.05
+    threshold = 0.1
     
     oct_above_fund = log_fund + 1
     on_fund = [
@@ -211,9 +233,16 @@ def get_contour(audio: np.ndarray, idx: int, pluck_onsets: np.ndarray,
     viridis = cm.get_cmap('viridis', 256)
     colors = viridis(norm_confidence)
     fig, axes = plt.subplots(4, 1, figsize=(6, 8))
-    make_amplitude_plot(axes[0], normed_amp, start, end)
-    make_just_contour_plot(axes[1], np.linspace(start, end, len(log_pitch)), log_pitch, log_fund, start, end, colors)
-    make_annotated_contour_plot(axes[2], log_pitch, log_fund, start, end, 
+    plt.subplots_adjust(hspace=0.5)
+    # make_amplitude_plot(axes[0], normed_amp, start, end)
+    
+    make_just_contour_plot(axes[0], np.linspace(start, end, len(log_pitch)), 
+                           log_pitch, log_fund, start, end, colors)
+    make_contour_plot_with_onsets(axes[1], log_pitch, log_fund, start, end, 
+                                  colors, pluck_onset_idxs, chikari_onset_idxs, 
+                                  idx_groups)
+    
+    make_segmented_contour_plot(axes[2], log_pitch, log_fund, start, end, 
                                 colors, pluck_onset_idxs, chikari_onset_idxs,
                                 idx_groups)
     
@@ -221,7 +250,7 @@ def get_contour(audio: np.ndarray, idx: int, pluck_onsets: np.ndarray,
     
     #TODO turn this part into a `make_filtered_contour` function
     ig_starts = [g[0] for g in idx_groups]   
-    chik_starts = within_threshold(chikari_onset_idxs, ig_starts, 20)
+    chik_starts = within_threshold(chikari_onset_idxs, ig_starts, 40)
     pluck_starts = within_threshold(pluck_onset_idxs, ig_starts, 20)
     
     removable_chik_seg = chik_starts & np.array(on_fund)
@@ -233,11 +262,11 @@ def get_contour(audio: np.ndarray, idx: int, pluck_onsets: np.ndarray,
         if i in removable_chik_seg_idxs or i in removable_pluck_seg_idxs:
             continue
         filtered_index_groups.append(g)    
-    x_vals = np.linspace(start, end, len(log_pitch))
+    # x_vals = np.linspace(start, end, len(log_pitch))
     log_fund = np.log2(fund)
     
     make_filtered_contour_plot(axes[3], log_pitch, log_fund, start, end, 
-                               filtered_index_groups)
+                               filtered_index_groups, pluck_onset_idxs)
     
 
         
