@@ -47,6 +47,7 @@
       :hasRecording='hasRecording'
       :highlightTrajs='highlightTrajs'
       :playheadAnimation='playheadAnimation'
+      :queryTime='queryTime'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
@@ -659,6 +660,7 @@ type EditorDataType = {
   throttledRefreshSargamLines: ReturnType<typeof throttle> | undefined,
   zoomYFactor: number,
   zoomXFactor: number,
+  queryTime: number
 }
 
 export { findClosestStartTime }
@@ -820,6 +822,7 @@ export default defineComponent({
       throttledRefreshSargamLines: undefined,
       zoomYFactor: 1,
       zoomXFactor: 1,
+      queryTime: 0
     }
   },
   setup() {
@@ -876,7 +879,6 @@ export default defineComponent({
     this.throttledAlterVibObj = throttle(this.alterVibObj, 16);
     this.throttledRenderMeter = throttle(this.renderMeter, 100);
     this.throttledRefreshSargamLines = throttle(this.refreshSargamLines, 100);
-    console.log(this.$store.state.userID)
     if (this.$store.state.userID === '634d9506a6a3647e543b7641') {
       this.playheadAnimation = PlayheadAnimations.Block;
     }
@@ -890,6 +892,7 @@ export default defineComponent({
       
       let piece, pieceDoesExist;
       const queryId = this.route.query.id! as string;
+      this.queryTime = this.route.query.t ? Number(this.route.query.t) : 0;
       if (queryId) {
         pieceDoesExist = await pieceExists(queryId);
         if (pieceDoesExist) {
@@ -911,9 +914,7 @@ export default defineComponent({
         piece = await getPiece(id);
       }
       this.browser = detect() as BrowserInfo;
-      
       if (piece.audioID) {
-        
         this.audioSource = this.browser.name === 'safari' ?
           `https://swara.studio/audio/mp3/${piece.audioID}.mp3` :
           `https://swara.studio/audio/opus/${piece.audioID}.opus`;        
@@ -928,8 +929,6 @@ export default defineComponent({
       this.initXScale = this.durTot / this.initViewDur;
       await this.getPieceFromJson(piece);
       useTitle(this.piece.title);
-
-
       this.editable = this.permissionToEdit(this.piece); // necessary
       if (!this.permissionToView(this.piece)) {
         await this.router.push({ name: 'Files' });
@@ -956,10 +955,15 @@ export default defineComponent({
       });
 
       const q = this.route.query;
-      if (q.pIdx) {
-      } else {
-        this.router.push({ query: { id: q.id} });
+      const routerObj: {
+        id: string,
+        t?: number
+      } = { id: String(q.id) };
+      if (q.t) {
+        routerObj['t'] = Number(q.t);
       }
+      this.router.push({ query: routerObj });
+      
       const silentDur = this.durTot - piece.durTot!;
       if (silentDur >= 0.00001) {
         const stTrajObj: {
@@ -1001,6 +1005,10 @@ export default defineComponent({
       const graphHeight = rendererHeight - this.scrollXHeight;
       this.transcriptionHeight = Math.round(2 * graphHeight);
       this.assessZoomFactors();
+
+      if (this.queryTime !== 0) {
+        this.currentTime = this.queryTime;
+      }
     } catch (err) {
       console.error(err)
     }

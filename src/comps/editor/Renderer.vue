@@ -384,6 +384,10 @@ export default defineComponent({
     playheadAnimation: {
       type: String as PropType<PlayheadAnimations>,
       required: true
+    },
+    queryTime: {
+      type: Number,
+      required: true
     }
   },
   emits: [
@@ -728,6 +732,9 @@ export default defineComponent({
         .domain([logMax, logMin])
         .range([0, props.scaledHeight]);
       resetYScroll();
+      if (props.queryTime !== 0) {
+        moveToX(xScale.value(props.queryTime));
+      }
     });
 
     onBeforeUnmount(() => {

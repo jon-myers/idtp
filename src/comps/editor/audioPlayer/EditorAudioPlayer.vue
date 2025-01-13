@@ -83,6 +83,16 @@
               @mouseout='controlsMouseOut'
             />
           </div>
+          <div class='rulerBox'>
+            <img
+            :src='icons.share'
+            @click='toggleShare'
+            class='shareImg'
+            ref='shareImg'
+            @mouseover='controlsMouseOver'
+            @mouseout='controlsMouseOut'
+            />
+          </div>
           <div class="rulerBox">
             <img
               :src="icons.tuningFork"
@@ -161,6 +171,21 @@
         </div>
       </fieldset>
       <button @click='handleDownload'>Download</button>
+    </div>
+    <div class='share' v-if='showShare'>
+      <label>Share</label>
+      <label>
+        Start at current time
+        <input type="checkbox" v-model="startAtCurrentTime" />
+      </label>
+      <div class='shareRow'>
+        <input 
+          type='text' 
+          v-model='shareLink'
+          readonly
+        />
+        <button @click="copyShareLink">Copy</button>
+      </div>
     </div>
     <div class='tuningControls' v-if='showTuning'>
       <div class='buttons'>
@@ -337,6 +362,7 @@ import tuningForkIcon from '@/assets/icons/tuning_fork.png';
 import downloadIcon from '@/assets/icons/download.svg';
 import meterIcon from '@/assets/icons/meter.svg';
 import specControlIcon from '@/assets/icons/specControls.svg';
+import shareIcon from '@/assets/icons/share.svg';
 
 // URLs
 import caURL from '@/audioWorklets/captureAudio.worklet.js?url';
@@ -401,6 +427,7 @@ type EditorAudioPlayerData = {
     meter: string;
     tags: string;
     specControl: string;
+    share: string;
   };
   circleDragging: boolean;
   formattedCurrentTime: string;
@@ -426,6 +453,7 @@ type EditorAudioPlayerData = {
   raags: string[];
   showTuning: boolean;
   showDownloads: boolean;
+  showShare: boolean;
   showMeterControls: boolean;
   showLabelControls: boolean;
   showSpecControls: boolean;
@@ -508,6 +536,7 @@ type EditorAudioPlayerData = {
   initializedSynthControls: boolean,
   mixedGainVal: number,
   tempMixedGainVal: number,
+  startAtCurrentTime: boolean,
 }
 
 interface RubberBandNodeType extends AudioWorkletNode {
@@ -630,7 +659,8 @@ export default defineComponent({
         tuningFork: tuningForkIcon,
         meter: meterIcon,
         tags: tagsIcon,
-        specControl: specControlIcon
+        specControl: specControlIcon,
+        share: shareIcon,
       },
       circleDragging: false,
       formattedCurrentTime: '00:00',
@@ -656,6 +686,7 @@ export default defineComponent({
       raags: [],
       showTuning: false,
       showDownloads: false,
+      showShare: false,
       showMeterControls: false,
       showLabelControls: false,
       showSpecControls: false,
@@ -755,12 +786,14 @@ export default defineComponent({
         meterImg: 'Meter Controls',
         downloadImg: 'Download Data',
         tuningFork: 'Tuning Controls',
-        showControls: 'Synthesis Controls'
+        showControls: 'Synthesis Controls',
+        shareImg: 'Share Transcription',
       },
       synthControls: [],
       initializedSynthControls: false,
       mixedGainVal: 1,
       tempMixedGainVal: 1,
+      startAtCurrentTime: false,
     };
   },
   props: {
@@ -1037,6 +1070,8 @@ export default defineComponent({
       tagsImg.classList.remove('showLabelControls');
       const specImg = this.$refs.specImg as HTMLImageElement;
       specImg.classList.remove('showSpecControls');
+      const shareImg = this.$refs.shareImg as HTMLImageElement;
+      shareImg.classList.remove('showShare');
       if (mode === ControlsMode.Display) {
         this.showSpecControls = true;
         specImg.classList.add('showSpecControls');
@@ -1049,7 +1084,12 @@ export default defineComponent({
       } else if (mode === ControlsMode.Download) {
         this.showDownloads = true;
         downloadImg.classList.add('showDownloads');
-      } else if (mode === ControlsMode.Tuning) {
+      } else if (mode === ControlsMode.Share) {
+        this.showShare = true;
+        shareImg.classList.add('showShare');
+      }
+      
+      else if (mode === ControlsMode.Tuning) {
         this.showTuning = true;
         tuningImg.classList.add('showTuning');
       } else if (mode === ControlsMode.Synthesis) {
@@ -1094,9 +1134,22 @@ export default defineComponent({
       } else {
         return 0;
       }
+    },
+
+    shareLink() {
+      let link = `https://swara.studio/editor?id=${this.id}`;
+      if (this.startAtCurrentTime) {
+        let rounded = Math.round(this.getCurTime());
+        link += `&t=${rounded}`;
+      }
+      return link
     }
   },
   methods: {
+
+    copyShareLink() {
+      navigator.clipboard.writeText(this.shareLink);
+    },
 
     handleUpdateSonify(val: boolean) {
       this.$emit('update:sonify', val);
@@ -1934,6 +1987,15 @@ export default defineComponent({
         }
       }
     },
+    toggleShare(e: MouseEvent) {
+      if (!this.loading) {
+        if (this.selectedControlsMode === ControlsMode.Share) {
+          this.selectedControlsMode = ControlsMode.None;
+        } else {
+          this.selectedControlsMode = ControlsMode.Share;
+        }
+      }
+    },
 
     toggleMeterControls(e?: MouseEvent) {
       if (!this.loading) {
@@ -2431,6 +2493,33 @@ export default defineComponent({
   flex-direction: column;
   align-items: center;
   justify-content: space-evenly;
+}
+
+.share {
+  position: absolute;
+  right: 0px;
+  bottom: v-bind(playerHeight + 'px');
+  background-color: #202621;
+  width: 300px;
+  height: v-bind(controlsHeight + 'px');;
+  border-bottom: 1px solid black;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
+.shareRow > input {
+  min-width: 200px;
+}
+
+.shareRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-evenly;
+  width: 100%;
 }
 .spacer {
   display: flex;

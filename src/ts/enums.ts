@@ -37,6 +37,7 @@ enum ControlsMode {
   Tag = 'Tag',
   Meter = 'Meter',
   Download = 'Download',
+  Share = 'Share',
   Tuning = 'Tuning',
   Synthesis = 'Synthesis',
   None = 'None',
