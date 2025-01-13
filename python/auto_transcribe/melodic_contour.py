@@ -141,7 +141,7 @@ def make_contour_plot_with_onsets(ax, log_pitch, log_fund, start, end, colors,
               marker='x', color='black', s=30, 
               label='Chikari Onsets')
     ax.set_xlim([start, end])
-    ax.set_title("Classified Articulation with Pitch Trace")
+    ax.set_title("Classified Articulations with Pitch Trace")
 
 def make_segmented_contour_plot(ax, log_pitch, log_fund, start, end, colors, 
                                 pluck_onset_idxs, chikari_onset_idxs, idx_groups):
@@ -202,6 +202,7 @@ def get_contour(audio: np.ndarray, idx: int, pluck_onsets: np.ndarray,
     pitch, confidence = ppm(eq_loud_audio)
     pitch[pitch == 0] = np.nan
     num_frames = len(pitch)
+    print("Frames Per Second: ", num_frames / 20)
     amp_envelope = ess.Envelope()(eq_loud_audio)
     amp_frame_size = len(amp_envelope) // len(pitch)
     # max_amplitude = np.array([np.max(amp_envelope[i * frame_size:(i + 1) * frame_size]) for i in range(num_frames)])
@@ -270,7 +271,7 @@ def get_contour(audio: np.ndarray, idx: int, pluck_onsets: np.ndarray,
     
 
         
-        
+    plt.tight_layout()
     plt.savefig(f'./python/auto_transcribe/melodic_contours/contour_{idx}.png')
     plt.close()
     save_contour_synth(idx, log_pitch, filtered_index_groups, start, end, audio)
