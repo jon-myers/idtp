@@ -507,6 +507,8 @@ class Pitch {
       s = s + '\u0308'
     } else if (this.oct === -3) {
       s = s + '\u20E8'
+    } else if (this.oct === 3) {
+      s = s + '\u20DB'
     }
     return s
   }
