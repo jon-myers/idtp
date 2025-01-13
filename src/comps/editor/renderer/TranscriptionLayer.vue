@@ -3703,13 +3703,15 @@ export default defineComponent({
                 .attr('cy', y);
             }
           }
-
-          
           refreshTraj(traj);
           emit('unsavedChanges', true);
           contextMenuClosed.value = true;
         },
-        enabled: true
+        enabled: (() => {
+          const logFreq = traj.logFreqs[idx] || traj.logFreqs[idx - 1];
+          const closest = getClosest(logSargamVals.value, logFreq);
+          return closest !== logFreq;
+        })()
       })
     };
 
