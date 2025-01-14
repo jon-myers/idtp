@@ -19,24 +19,49 @@
 // 	  reverse: true, // Ensures commits are listed from newest to oldest
 // 	},
 //   };
+// export default {
+// 	writerOpts: {
+// 	  reverse: true,
+// 	  transform: (commit) => {
+// 		if (commit.committerDate) {
+// 		  commit.date = new Date(commit.committerDate).toISOString().split('T')[0];
+// 		}
+// 		return commit;
+// 	  },
+// 	  mainTemplate: `
+// 		# Changelog
+  
+// 		{{#each commits}}
+// 		- {{header}} ({{hash}}) - **{{author.name}}** on {{date}}
+// 		{{/each}}
+// 	  `,
+// 	},
+// 	gitRawCommitsOpts: {
+// 	  reverse: true,
+// 	},
+//   };
 export default {
 	writerOpts: {
-	  reverse: true,
-	  transform: (commit) => {
+		reverse: true,
+		transform: (commit) => {
 		if (commit.committerDate) {
-		  commit.date = new Date(commit.committerDate).toISOString().split('T')[0];
+			// Return a new object with additional properties
+			return {
+			...commit,
+			date: new Date(commit.committerDate).toISOString().split('T')[0],
+			};
 		}
 		return commit;
-	  },
-	  mainTemplate: `
+		},
+		mainTemplate: `
 		# Changelog
-  
+
 		{{#each commits}}
 		- {{header}} ({{hash}}) - **{{author.name}}** on {{date}}
 		{{/each}}
-	  `,
+		`,
 	},
 	gitRawCommitsOpts: {
-	  reverse: true,
+		reverse: true,
 	},
-  };
+};
