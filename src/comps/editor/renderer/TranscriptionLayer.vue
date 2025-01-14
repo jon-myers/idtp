@@ -2314,6 +2314,7 @@ export default defineComponent({
         let insertFixedLeft = false;
         let insertFixedRight = false;
         let transcribeTrajRight = false;
+        let transcribeTrajLeft = false;
         if (phrase.trajectories.length > tIdx + 1) {
           const nextTraj = phrase.trajectories[tIdx + 1];
           if (nextTraj.id !== 12) {
@@ -2348,6 +2349,9 @@ export default defineComponent({
           if (prevTraj.id !== 0 && traj.id !== 0) {
             insertFixedLeft = true;
           }
+          if (prevTraj.id === 12) {
+            transcribeTrajLeft = true;
+          }
         } else if (pIdx > 0) {
           const prevPhrase = props.piece.phraseGrid[track][pIdx - 1];
           if (prevPhrase.trajectories.length > 0) {
@@ -2357,6 +2361,9 @@ export default defineComponent({
             }
             if (prevTraj.id !== 0 && traj.id !== 0) {
               insertFixedLeft = true;
+            }
+            if (prevTraj.id === 12) {
+              transcribeTrajLeft = true;
             }
           }
         }
@@ -2406,10 +2413,9 @@ export default defineComponent({
           contextMenuChoices.value.push({
             text: 'Attach Trajectory Right',
             action: () => {
-              // editorMode.value = EditorMode.Trajectory;
               emit('update:selectedMode', EditorMode.Trajectory);
               nextTick(() => {
-                const time = phrase.startTime! + traj.startTime! + traj.durTot;
+                const time = phrase.startTime! + traj.startTime! + traj.durTot + 0.0000001;
                 const logFreq = traj.logFreqs[traj.logFreqs.length - 1];
                 const thisPIdx = traj.num === phrase.trajectories.length - 1 ? pIdx + 1 : pIdx;
                 insertNewTrajDot(time, logFreq, track, thisPIdx);
@@ -2419,6 +2425,22 @@ export default defineComponent({
             enabled: true
           })
         };
+        if (transcribeTrajLeft) {
+          contextMenuChoices.value.push({
+            text: 'Attach Trajectory Left',
+            action: () => {
+              emit('update:selectedMode', EditorMode.Trajectory);
+              nextTick(() => {
+                const time = phrase.startTime! + traj.startTime! - 0.000001;
+                const logFreq = traj.logFreqs[0];
+                const thisPIdx = traj.num === 0 ? pIdx - 1 : pIdx;
+                insertNewTrajDot(time, logFreq, track, thisPIdx, traj.num === 0);
+                contextMenuClosed.value = true;
+              })
+            },
+            enabled: true
+          })
+        }
         if (canConnectToUpcomingTraj(traj, track)) {
           contextMenuChoices.value.push({
             text: 'Connect to next Traj',
@@ -4983,11 +5005,21 @@ export default defineComponent({
       return outTime
     };
 
-    const insertNewTrajDot = (time: number, logFreq: number, track: number, pIdx: number) => {
+    const insertNewTrajDot = (
+      time: number, 
+      logFreq: number, 
+      track: number, 
+      pIdx: number, 
+      atPhraseDiv: boolean = false
+    ) => {
+      console.log('inserting: ', time, logFreq, track, pIdx)
       if (props.meterMagnetMode) {
         time = meterMagnetize(time)
       }
-      if (props.selectedMode === EditorMode.Series && trajTimePts.value.length === 1) {
+      if (
+        props.selectedMode === EditorMode.Series && 
+        trajTimePts.value.length === 1
+      ) {
         if (time < trajTimePts.value[0].time) {
           return;
         }
@@ -4998,8 +5030,14 @@ export default defineComponent({
         logFreq = pitch.logFreq;
       }
       const phrase = props.piece.phraseGrid[track][pIdx];
-      const tIdx = phrase.trajIdxFromTime(time)!;
-      const traj = phrase.trajectories[tIdx];
+      let tIdx: number;
+      if (atPhraseDiv) {
+        tIdx = phrase.trajectories.length - 1;
+      } else {
+        tIdx = phrase.trajIdxFromTime(time)!;
+      }
+      let traj = phrase.trajectories[tIdx];
+      console.log(traj.startTime! + phrase.startTime! + traj.durTot, time)
       if (traj.id === 12) {
         // if close, attach to prev traj
         if (tIdx > 0) {
@@ -5041,6 +5079,7 @@ export default defineComponent({
         });
         const minDiff = Math.min(...diffs);
         setIt = minDiff > 0.05;
+        console.log(setIt)
         if (setIt) {
           const startTime = phrase.startTime! + traj.startTime!;
           if (time - startTime < minTrajDur) {
