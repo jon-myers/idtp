@@ -1,6 +1,11 @@
 # Changelog
 
 
+* [bba282e] (2025-01-14 03:19 PM) fix: changelog formatting (Jon Myers)
+## January 2025
+
+
+
 * [ec5aa87] (2025-01-14 23:16:06 +0000) Merge pull request #537 from jon-myers/changelog (Jon Myers)
 * [32cfba0] (2025-01-14 23:15:42 +0000) updating (Jon Myers)
 * [f8e4599] (2025-01-14 23:12:57 +0000) Merge pull request #536 from jon-myers/changelog (Jon Myers)
