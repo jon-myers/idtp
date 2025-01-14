@@ -2367,7 +2367,6 @@ export default defineComponent({
             }
           }
         }
-
         contextMenuChoices.value = [];
         if (insertSilenceLeft) {
           contextMenuChoices.value.push({
