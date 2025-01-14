@@ -2313,6 +2313,7 @@ export default defineComponent({
         let insertSilenceRight = false;
         let insertFixedLeft = false;
         let insertFixedRight = false;
+        let transcribeTrajRight = false;
         if (phrase.trajectories.length > tIdx + 1) {
           const nextTraj = phrase.trajectories[tIdx + 1];
           if (nextTraj.id !== 12) {
@@ -2320,6 +2321,9 @@ export default defineComponent({
           } 
           if (nextTraj.id !== 0 && traj.id !== 0) {
             insertFixedRight = true;
+          }
+          if (nextTraj.id === 12) {
+            transcribeTrajRight = true;
           }
         } else if (props.piece.phraseGrid[track].length > pIdx + 1) {
           const nextPhrase = props.piece.phraseGrid[track][pIdx + 1];
@@ -2330,6 +2334,9 @@ export default defineComponent({
             }
             if (nextTraj.id !== 0 && traj.id !== 0) {
               insertFixedRight = true;
+            }
+            if (nextTraj.id === 12) {
+              transcribeTrajRight = true;
             }
           }
         }
@@ -2353,6 +2360,7 @@ export default defineComponent({
             }
           }
         }
+
         contextMenuChoices.value = [];
         if (insertSilenceLeft) {
           contextMenuChoices.value.push({
@@ -2390,6 +2398,23 @@ export default defineComponent({
             action: () => {
               insertFixedTrajRight(traj, track);
               contextMenuClosed.value = true;
+            },
+            enabled: true
+          })
+        };
+        if (transcribeTrajRight) {
+          contextMenuChoices.value.push({
+            text: 'Attach Trajectory Right',
+            action: () => {
+              // editorMode.value = EditorMode.Trajectory;
+              emit('update:selectedMode', EditorMode.Trajectory);
+              nextTick(() => {
+                const time = phrase.startTime! + traj.startTime! + traj.durTot;
+                const logFreq = traj.logFreqs[traj.logFreqs.length - 1];
+                const thisPIdx = traj.num === phrase.trajectories.length - 1 ? pIdx + 1 : pIdx;
+                insertNewTrajDot(time, logFreq, track, thisPIdx);
+                contextMenuClosed.value = true;
+              })
             },
             enabled: true
           })
