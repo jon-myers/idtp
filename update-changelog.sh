@@ -19,7 +19,6 @@ LAST_LOGGED_COMMIT_HASH=$(
     || true
 )
 
-
 # If we've never logged anything before, we take all commits since CUTOFF_DATE;
 # otherwise, we only take commits after the last logged hash (still respecting the cutoff).
 if [ -z "$LAST_LOGGED_COMMIT_HASH" ]; then
