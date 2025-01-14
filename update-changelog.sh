@@ -2,7 +2,7 @@
 set -euo pipefail
 
 CHANGELOG_FILE="CHANGELOG.md"
-CUTOFF_DATE="2025-01-14"  # Only include commits on or after this date
+CUTOFF_DATE="2025-01-13"  # Only include commits on or after this date
 
 # Ensure we have a changelog file (to avoid grep errors).
 [ -f "$CHANGELOG_FILE" ] || touch "$CHANGELOG_FILE"
