@@ -5024,6 +5024,7 @@ export default defineComponent({
           return;
         }
       }
+      
       if (props.sargamMagnetMode) {
         const pitch = props.piece.raga.pitchFromLogFreq(logFreq);
         pitch.logOffset = 0;
