@@ -21,6 +21,9 @@ jobs:
         with:
           node-version: 16
 
+      - name: Make script executable
+        run: chmod +x update-changelog.sh
+
       - name: Update Changelog
         run: |
           ./update-changelog.sh
