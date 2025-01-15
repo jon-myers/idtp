@@ -1,6 +1,7 @@
 import { createWebHistory, createRouter, RouteRecordRaw } from 'vue-router';
 // import {store, VueCookies } from '@/main.ts'
 import { VueCookies } from 'vue-cookies'
+import ChangelogView from '@/comps/ChangeLog.vue'
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/transcriptions',
@@ -47,7 +48,12 @@ const routes: Array<RouteRecordRaw> = [
     path:'/editorInstructions',
     name: 'Editor Instructions',
     component: () => import('@/comps/EditorInstructions.vue')
-  }
+  },
+  { 
+    path: '/changelog', 
+    name: 'Changelog', 
+    component: ChangelogView 
+  },
 ];
 
 const router = createRouter({

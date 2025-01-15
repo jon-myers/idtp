@@ -1,12 +1,12 @@
 <template>
-  <NavBar :navHeight='navHeight' v-if='path && path !== "/"'>
+  <NavBar :navHeight='navHeight' v-if='shouldShowNavBar'>
   </NavBar>
   <div class='routerViewContainer' >
     <router-view ref='routerView' :navHeight='navHeight'/>
   </div>
 </template>
 <script lang='ts'>
-import { defineComponent } from 'vue';
+import { defineComponent, computed } from 'vue';
 import NavBar from '@/comps/NavBar.vue';
 import { useRoute } from 'vue-router';
 
@@ -21,7 +21,12 @@ export default defineComponent({
   },
   setup() {
     const route = useRoute();
-    return { route }
+
+    const shouldShowNavBar = computed(() => {
+      const excludedPaths = ['/', '/changelog'];
+      return route.path && !excludedPaths.includes(route.path);
+    })
+    return { route, shouldShowNavBar }
   },
   data(): AppDataType {
     return {
