@@ -7,7 +7,7 @@ SCRIPT_DIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 # Then build a full absolute path to the changelog file, assuming
 # 'src/CHANGELOG.md' is relative to the script's directory.
 CHANGELOG_FILE="$SCRIPT_DIR/src/CHANGELOG.md"
-CUTOFF_DATE="2025-01-13"
+CUTOFF_DATE="2025-01-14T16:20:00-08:00"
 TIMEZONE="America/Los_Angeles"
 
 [ -f "$CHANGELOG_FILE" ] || touch "$CHANGELOG_FILE"
