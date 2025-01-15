@@ -1,3 +1,8 @@
 # Changelog
 
-_No commits found since 2025-01-14T16:20:00-08:00._
+
+* feat: adding changelog to site [66de273] (Jon Myers)
+### 2025-01-14
+
+## January 2025
+
