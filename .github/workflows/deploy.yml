@@ -1,4 +1,5 @@
-name: Generate Changelog, Build, and Deploy
+# .github/workflows/deploy.yml
+name: Build & Deploy
 
 on:
   push:
@@ -6,7 +7,7 @@ on:
       - main
 
 jobs:
-  generate-build-deploy:
+  build-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -17,29 +18,16 @@ jobs:
         with:
           node-version: 18
 
-      # 1) Generate/Update the changelog
-      - name: Generate changelog
-        run: |
-          chmod +x scripts/generate_changelog.sh
-          scripts/generate_changelog.sh
-          # If your script is in a different location, adjust accordingly
-
-      # 2) Install dependencies
       - name: Install dependencies
         run: npm install
 
-      # 3) Build the project
       - name: Build
-        run: npm run build  # e.g. "vite build"
+        run: npm run build
 
-      # 4) Deploy the project
-      - name: Deploy (password-based rsync)
+      - name: Deploy
         env:
-          PASSWORD: ${{ secrets.PASSWORD }}  # Store your password as a secret
+          RSYNC_PASSWORD: ${{ secrets.RSYNC_PASSWORD }}
         run: |
-          # Install sshpass so we can pass the password to rsync
           sudo apt-get update
           sudo apt-get install -y sshpass
-
-          # Run your deployDist script, which uses sshpass -p $PASSWORD rsync ...
           npm run deployDist
