@@ -1,6 +1,7 @@
 # Changelog
 
 
+* feat: auto build and deploy [c89ee19] (Jon Myers)
 * feat: adding changelog to site [66de273] (Jon Myers)
 ### 2025-01-14
 
