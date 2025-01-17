@@ -10,6 +10,7 @@
             Demos
           </a>
         </div>
+        <div class='enterButton' @click='goToChangelog'>Changelog</div>
       </div>
     </div>
       <div class='infoRowInner'>
@@ -135,6 +136,10 @@ export default {
   methods: {
     goToLogin() {
       this.$router.push('/logIn');
+    },
+
+    goToChangelog() {
+      this.$router.push('/changelog');
     }
   }
 }
