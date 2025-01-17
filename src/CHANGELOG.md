@@ -1,6 +1,7 @@
 # Changelog
 
 
+* fix: bug wherein certain pitches aren't allowing for trajectory orienting dots to be added [ebaa596] (Jon Myers)
 * feat: double-clicking on transcription label in collections now opens transcription in editor [ae629d8] (Jon Myers)
 ### 2025-01-17
 
