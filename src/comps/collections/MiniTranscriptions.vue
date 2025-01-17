@@ -44,6 +44,7 @@
         class='transcriptionRow'
         v-for='(transcription, rIdx) in trans'
         :id='`tRow${rIdx}`'
+        @dblclick='handleDblClick(transcription)'
         >
         <div 
           class='metadataLabels' 
@@ -184,6 +185,15 @@ export default defineComponent({
   },
 
   methods: {
+
+    handleDblClick(t: TransMetadataType) {
+      this.$store.commit('update_id', t._id);
+      this.$cookies.set('currentPieceId', t._id);
+      this.$router.push({
+        name: 'EditorComponent',
+        query: { id: t._id }
+      })
+    },
 
     canEdit(t: TransMetadataType) {
       const ep = t.explicitPermissions;
