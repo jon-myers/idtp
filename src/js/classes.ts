@@ -3783,15 +3783,23 @@ class Raga {
 
 
   pitchFromLogFreq(logFreq: number) {
+    const epsilon = 1e-6
     const options = this.getFrequencies({ low: 75, high: 2400 })
       .map(f => Math.log2(f));
     const quantizedLogFreq = getClosest(options, logFreq);
     const logOffset = logFreq - quantizedLogFreq;
     let logDiff = quantizedLogFreq - Math.log2(this.fundamental);
+    // for situations when logDiff is 0.99999999999991 or similar
+    const roundedLogDiff = Math.round(logDiff)
+    if (Math.abs(logDiff - roundedLogDiff) < epsilon) {
+      logDiff = roundedLogDiff
+    }
+
     const octOffset = Math.floor(logDiff);
     logDiff -= octOffset;
     const rIdx = this.ratios.findIndex(r => closeTo(r, 2 ** logDiff));
     const swara = this.sargamLetters[rIdx];
+    
     const raised = isUpperCase(swara);
     return new Pitch({ 
       swara: swara, 
