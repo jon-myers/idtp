@@ -521,6 +521,7 @@ export default defineComponent({
     });
     const playheadStyle = computed(() => {
       return {
+        zIndex: 1000,
         // filter: 'blur(2px) drop-shadow(0 0 10px rgba(0, 0, 0, 0.8))',
       }
     });
@@ -1218,6 +1219,7 @@ export default defineComponent({
         playhead.value!.style.transform = `translateX(${pxlX}px)`;
         smoothPositionX = pxlX;
         currentSec.value = Math.floor(time);
+        console.log(time, pxlX)
 
       } else if (props.playheadAnimation === PlayheadAnimations.Block) {
         const pxlX = props.xScale(time);
@@ -2375,7 +2377,7 @@ export default defineComponent({
               insertSilentTrajLeft(traj, track);
               contextMenuClosed.value = true;
             },
-            enabled: true
+            enabled: props.editable
           })
         };
         if (insertSilenceRight) {
@@ -2385,7 +2387,7 @@ export default defineComponent({
               insertSilentTrajRight(traj, track);
               contextMenuClosed.value = true;
             },
-            enabled: true
+            enabled: props.editable
           })
         };
         if (insertFixedLeft) {
@@ -2395,7 +2397,7 @@ export default defineComponent({
               insertFixedTrajLeft(traj, track);
               contextMenuClosed.value = true;
             },
-            enabled: true
+            enabled: props.editable
           })
         };
         if (insertFixedRight) {
@@ -2405,7 +2407,7 @@ export default defineComponent({
               insertFixedTrajRight(traj, track);
               contextMenuClosed.value = true;
             },
-            enabled: true
+            enabled: props.editable
           })
         };
         if (transcribeTrajRight) {
@@ -2421,7 +2423,7 @@ export default defineComponent({
                 contextMenuClosed.value = true;
               })
             },
-            enabled: true
+            enabled: props.editable
           })
         };
         if (transcribeTrajLeft) {
@@ -2437,7 +2439,7 @@ export default defineComponent({
                 contextMenuClosed.value = true;
               })
             },
-            enabled: true
+            enabled: props.editable
           })
         }
         if (canConnectToUpcomingTraj(traj, track)) {
@@ -2449,7 +2451,7 @@ export default defineComponent({
               replaceSilenceWithConnection(silTraj, track);
               contextMenuClosed.value = true;
             },
-            enabled: true
+            enabled: props.editable
           })
         };
         if (canConnectToEarlierTraj(traj, track)) {
@@ -2461,7 +2463,7 @@ export default defineComponent({
               replaceSilenceWithConnection(silTraj, track);
               contextMenuClosed.value = true;
             },
-            enabled: true
+            enabled: props.editable
           })
         };
         const sts = selectedTrajs.value;
@@ -2475,7 +2477,7 @@ export default defineComponent({
                 addTrajToSelectedGroup(traj, track);
                 contextMenuClosed.value = true;
               },
-              enabled: true
+              enabled: props.editable
             })
           }
         }
@@ -2488,7 +2490,7 @@ export default defineComponent({
                 addTrajToSelectedGroup(traj, track);
                 contextMenuClosed.value = true;
               },
-              enabled: true
+              enabled: props.editable
             })
           }
         }

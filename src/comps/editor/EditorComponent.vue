@@ -52,7 +52,7 @@
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
       @zoomOutX='zoomOutX'
-      @update:selectedMode='(mode: EditorMode) => selectedMode = mode'
+      @update:selectedMode='updateSelectedMode'
       @unsavedChanges='unsavedChanges = $event'
       @update:TrajSelStatus='trajSelStatus = $event'
       @update:selPhraseDivUid='updateSelPhraseDivUid($event)'
@@ -1175,6 +1175,17 @@ export default defineComponent({
   },
 
   methods: {
+
+    updateSelectedMode(mode: EditorMode) {
+      if (mode !== EditorMode.None && mode !== EditorMode.Region) {
+        if (!this.editable) {
+          return;
+        }
+      }
+      this.selectedMode = mode;
+    },
+
+    
 
     clearTSP() {
       const tsp = this.$refs.trajSelectPanel as TSPType;
