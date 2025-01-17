@@ -1,6 +1,9 @@
 # Changelog
 
 
+* feat: double-clicking on transcription label in collections now opens transcription in editor [ae629d8] (Jon Myers)
+### 2025-01-17
+
 * fix: corrected which github action is in use [f8a0453] (Jon Myers)
 * fix: saving auto-deploy for later [95027f3] (Jon Myers)
 * fix: update deploy script [df1022d] (Jon Myers)
