@@ -2790,6 +2790,7 @@ export default defineComponent({
       phrase.reset();
       refreshTraj(traj);
       emit('unsavedChanges', true);
+      resetTrajRenderStatus()
     };
 
     const canConnectToUpcomingTraj = (traj: Trajectory, track: number) => {
@@ -2866,6 +2867,8 @@ export default defineComponent({
       phrase.reset();
       refreshTraj(traj);
       emit('unsavedChanges', true);
+      resetTrajRenderStatus();
+
     }
 
     const insertFixedTrajLeft = (traj: Trajectory, track: number, dur = 0.1) => {
