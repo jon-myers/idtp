@@ -1056,6 +1056,7 @@ export default defineComponent({
       this.showMeterControls = false;
       this.showLabelControls = false;
       this.showDownloads = false;
+      this.showShare = false;
       this.showTuning = false;
       this.showControls = false;
       const controlsImg = this.$refs.controlsImg as HTMLImageElement;
