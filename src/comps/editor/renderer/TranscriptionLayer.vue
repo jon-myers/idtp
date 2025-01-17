@@ -5011,7 +5011,6 @@ export default defineComponent({
       pIdx: number, 
       atPhraseDiv: boolean = false
     ) => {
-      console.log('inserting: ', time, logFreq, track, pIdx)
       if (props.meterMagnetMode) {
         time = meterMagnetize(time)
       }
@@ -5036,7 +5035,6 @@ export default defineComponent({
         tIdx = phrase.trajIdxFromTime(time)!;
       }
       let traj = phrase.trajectories[tIdx];
-      console.log(traj.startTime! + phrase.startTime! + traj.durTot, time)
       if (traj.id === 12) {
         // if close, attach to prev traj
         if (tIdx > 0) {
@@ -5078,7 +5076,6 @@ export default defineComponent({
         });
         const minDiff = Math.min(...diffs);
         setIt = minDiff > 0.05;
-        console.log(setIt)
         if (setIt) {
           const startTime = phrase.startTime! + traj.startTime!;
           if (time - startTime < minTrajDur) {
