@@ -1,6 +1,7 @@
 # Changelog
 
 
+* fix: disallow ability to change transcription modes if user doesn't have editing permissions [4a705e0] (Jon Myers)
 * feat: added link to changelog from landing page [dbe45a5] (Jon Myers)
 * fix: bug wherein certain pitches aren't allowing for trajectory orienting dots to be added [ebaa596] (Jon Myers)
 * feat: double-clicking on transcription label in collections now opens transcription in editor [ae629d8] (Jon Myers)
