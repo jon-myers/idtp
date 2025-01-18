@@ -201,7 +201,8 @@ export default defineComponent({
         return row.map(cell => {
           const cellStr = String(cell);
           if (query && cellStr.toLowerCase().includes(query)) {
-            const highlighted = cellStr.replace(new RegExp(`(${query})`, 'gi'), '<mark class="highlight">$1</mark>');
+            const modifiedQuery = this.escapeRegExp(query);
+            const highlighted = cellStr.replace(new RegExp(`(${modifiedQuery})`, 'gi'), '<mark class="highlight">$1</mark>');
             return `<span class="preserve-space">${highlighted}</span>`;
           }
           return `<span class="preserve-space">${cellStr}</span>`;
@@ -209,6 +210,7 @@ export default defineComponent({
       });
     }
   },
+
 
   watch: {
     items() {
@@ -219,6 +221,10 @@ export default defineComponent({
   },
 
   methods: {
+
+    escapeRegExp(string: string): string {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+    },
 
     cancelSearch() {
       this.searchQuery = "";
