@@ -93,11 +93,9 @@
     v-if='permissionsModalOpen && selectedPiece !== undefined'
     :navHeight='navHeight'
     :explicitPermissions='selectedPiece.explicitPermissions'
-    @close='permissionsModalOpen = false'
+    @close='closePermissionsModal'
     artifactType='transcription'
     :artifactID='selectedPiece._id!'
-
-
   />
 </template>
 <script lang='ts'>
@@ -377,6 +375,15 @@ export default defineComponent({
 
   methods: {
 
+    async closePermissionsModal() {
+      this.permissionsModalOpen = false;
+      try {
+        this.allPieces = await getAllPieces(this.userID!, 'title', '1', true);
+      } catch (err) {
+        console.log(err);
+      }
+    },
+
     editInstrumentation() {
       this.showEditInstrumentation = true;
     },
@@ -469,7 +476,7 @@ export default defineComponent({
         });
         this.contextMenuChoices.push({
           text: 'Edit Instrumentation',
-          enabled: this.permissionToEdit(item),
+          enabled: this.owned(item),
           action: () => {
             this.editInstrumentation();
             this.contextMenuClosed = true;

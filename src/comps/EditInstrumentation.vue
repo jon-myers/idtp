@@ -1,5 +1,5 @@
 <template>
-  <div class='editInstrumentationOuter'>
+  <div class='modal'>
     <div class='editInstrumentation'>
       <div class='formRow'>
         <label>Number of Instruments</label>
@@ -50,7 +50,15 @@
   </div>
 </template>
 <script lang='ts'>
-import { defineComponent, onMounted, ref, computed, watch, PropType } from 'vue';
+import { 
+  defineComponent, 
+  onMounted, 
+  ref, 
+  computed, 
+  watch, 
+  PropType,
+  onUnmounted 
+} from 'vue';
 import { useStore } from 'vuex';
 import { 
   getTranscriptionInstrumentation, 
@@ -154,7 +162,21 @@ export default defineComponent({
     onMounted(async () => {
       initInstrumentation.value = await getTranscriptionInstrumentation(props.transMetadata._id);
       instrumentation.value = [...initInstrumentation.value];
+      window.addEventListener('click', (e) => {
+        if (e.target === document.querySelector('.modal')) {
+          emit('close');
+        }
+      });
     });
+
+    onUnmounted(() => {
+      window.removeEventListener('click', (e) => {
+        if (e.target === document.querySelector('.modal')) {
+          emit('close');
+        }
+      });
+    });
+    
     return {
       instrumentation,
       instrumentationLength,
@@ -184,7 +206,7 @@ export default defineComponent({
     margin-top: 20vh;
   }
 
-  .editInstrumentationOuter {
+  .modal {
     display: flex;
     justify-content: center;
     align-items: flex-start;
