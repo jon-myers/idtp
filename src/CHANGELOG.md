@@ -1,6 +1,7 @@
 # Changelog
 
 
+* feat: added soloist to transcriptions [8c276a5] (Jon Myers)
 * Fix: firefox x-axis placement is now offset correctly [24c9bf3] (Jon Myers)
 ### 2025-01-21
 
