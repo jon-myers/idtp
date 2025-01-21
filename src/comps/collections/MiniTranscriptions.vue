@@ -75,8 +75,11 @@
 
 <script lang='ts'>
 import { defineComponent, PropType } from 'vue';
-import { getTranscriptionsFromIds } from '@/js/serverCalls.ts';
-import { TransMetadataType } from '@/ts/types.ts';
+import { 
+  getTranscriptionsFromIds, 
+  getSortedMusicians 
+} from '@/js/serverCalls.ts';
+import { TransMetadataType, MusicianNameType } from '@/ts/types.ts';
 
 
 // title, transcriber, raga, created, modified, permissions
@@ -95,6 +98,7 @@ type MiniTranscriptionsDataType = {
   initialMouseX?: number,
   selectedSortIdx: number,
   labelRowHeight: number,
+  allMusicians?: MusicianNameType[],
 }
 export default defineComponent({
   name: 'MiniTranscriptions',
@@ -118,6 +122,15 @@ export default defineComponent({
           name: 'Transcriber',
           func: (t: TransMetadataType) => t.name,
           sortType: 'transcriber',
+          sortState: 'down'
+        },
+        {
+          name: 'Soloist',
+          func: (t: TransMetadataType) => {
+            console.log(t)
+            return t.soloist || ''
+          },
+          sortType: 'Soloist',
           sortState: 'down'
         },
         {
@@ -169,6 +182,7 @@ export default defineComponent({
     try {
       const userID = this.$store.state.userID!;
       this.trans = await getTranscriptionsFromIds(this.tIds, userID);
+      this.allMusicians = await getSortedMusicians(true)
     } catch (err) {
       console.error(err);
     }
@@ -185,6 +199,54 @@ export default defineComponent({
   },
 
   methods: {
+
+    soloistSorter(a: TransMetadataType, b: TransMetadataType) {
+      const aObj = this.allMusicians!.find(m => {
+        return m['Initial Name'] === a.soloist;
+      });
+      const bObj = this.allMusicians!.find(m => {
+        return m['Initial Name'] === b.soloist;
+      });
+      const aLastName = aObj ? aObj['Last Name'] : '';
+      const bLastName = bObj ? bObj['Last Name'] : '';
+      const aFirstName = aObj ? aObj['First Name'] : '';
+      const bFirstName = bObj ? bObj['First Name'] : '';
+      const aMidName = aObj ? aObj['Middle Name'] : '';
+      const bMidName = bObj ? bObj['Middle Name'] : '';
+
+      if (aLastName === undefined && bLastName === undefined) {
+        return 0;
+      } else if (aLastName === undefined) {
+        return -1;
+      } else if (bLastName === undefined) {
+        return 1;
+      } else if (aLastName < bLastName) {
+        return -1;
+      } else if (aLastName > bLastName) {
+        return 1;
+      } else if (aFirstName === undefined && bFirstName === undefined) {
+        return 0;
+      } else if (aFirstName === undefined) {
+        return -1;
+      } else if (bFirstName === undefined) {
+        return 1;
+      } else if (aFirstName < bFirstName) {
+        return -1;
+      } else if (aFirstName > bFirstName) {
+        return 1;
+      } else if (aMidName === undefined && bMidName === undefined) {
+        return 0;
+      } else if (aMidName === undefined) {
+        return -1;
+      } else if (bMidName === undefined) {
+        return 1;
+      } else if (aMidName < bMidName) {
+        return -1;
+      } else if (aMidName > bMidName) {
+        return 1;
+      }
+      return 0;
+    },
 
     handleDblClick(t: TransMetadataType) {
       this.$store.commit('update_id', t._id);
@@ -398,7 +460,9 @@ export default defineComponent({
         sorter = this.modifiedSorter;
       } else if (sort === 'permissions') {
         sorter = this.permissionsSorter;
-      } 
+      } else if (sort === 'Soloist') {
+        sorter = this.soloistSorter;
+      }
       this.trans.sort(sorter);
       if (!fromTop) {
         this.trans.reverse();
