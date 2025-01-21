@@ -1,6 +1,9 @@
 # Changelog
 
 
+* Fix: firefox x-axis placement is now offset correctly [24c9bf3] (Jon Myers)
+### 2025-01-21
+
 * fix: bug with regex characters not being properly escaped in filterableTable, was causing screen to turn black. [c64d192] (Jon Myers)
 * fix: disallow ability to change transcription modes if user doesn't have editing permissions [4a705e0] (Jon Myers)
 * feat: added link to changelog from landing page [dbe45a5] (Jon Myers)
