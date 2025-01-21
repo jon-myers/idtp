@@ -30,8 +30,8 @@
     :closed='contextMenuClosed' 
     :choices='contextMenuChoices'
     />
-  <div class='timeModalOuter'>
-    <div v-if="goToTimeModal" class="time-entry-modal">
+  <div class='timeModalOuter'v-if="goToTimeModal">
+    <div class="time-entry-modal">
       <div class="time-entry-container">
         <input type="text" v-model="goToHours" placeholder="HH" class="time-entry-input" />
         <span>:</span>
@@ -5681,7 +5681,7 @@ export default defineComponent({
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  /* background-color: rgba(0, 0, 0, 0.5); */
   z-index: 100;
 }
 
