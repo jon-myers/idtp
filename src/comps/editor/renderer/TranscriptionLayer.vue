@@ -1089,11 +1089,30 @@ export default defineComponent({
         throw new Error('Trajectory is not silent');
       }
       const phrase = props.piece.phraseGrid[track][silentTraj.phraseIdx!];
-      if (silentTraj.num === 0 || silentTraj.num === phrase.trajectories.length - 1) {
-        throw new Error('Silent trajectory is at the beginning or end of phrase');
+      // if (silentTraj.num === 0 || silentTraj.num === phrase.trajectories.length - 1) {
+      //   throw new Error('Silent trajectory is at the beginning or end of phrase');
+      // }
+      let prevTraj: Trajectory | undefined = undefined;
+      let nextTraj: Trajectory | undefined = undefined;
+
+      if (silentTraj.num === 0) {
+        if (silentTraj.phraseIdx === 0) {
+          throw new Error('Silent trajectory is at the beginning of the piece');
+        }
+        const prevPhrase = props.piece.phraseGrid[track][silentTraj.phraseIdx! - 1];
+        prevTraj = prevPhrase.trajectories[prevPhrase.trajectories.length - 1];
+        nextTraj = phrase.trajectories[1];
+      } else if (silentTraj.num === phrase.trajectories.length - 1) {
+        if (silentTraj.phraseIdx === props.piece.phraseGrid[track].length - 1) {
+          throw new Error('Silent trajectory is at the end of the piece');
+        }
+        prevTraj = phrase.trajectories[silentTraj.num! - 1];
+        const nextPhrase = props.piece.phraseGrid[track][silentTraj.phraseIdx! + 1];
+        nextTraj = nextPhrase.trajectories[0];
+      } else {
+        prevTraj = phrase.trajectories[silentTraj.num! - 1];
+        nextTraj = phrase.trajectories[silentTraj.num! + 1];
       }
-      const prevTraj = phrase.trajectories[silentTraj.num! - 1];
-      const nextTraj = phrase.trajectories[silentTraj.num! + 1];
       if (prevTraj.id === 12 || nextTraj.id === 12) {
         throw new Error('Adjacent trajectory is silent');
       }
@@ -1112,6 +1131,7 @@ export default defineComponent({
       phrase.reset();
       resetTrajRenderStatus()
       renderTraj(newTraj);
+      emit('unsavedChanges', true);
     }
 
     const startPlayingTransition = () => {
@@ -2446,10 +2466,10 @@ export default defineComponent({
           contextMenuChoices.value.push({
             text: 'Connect to next Traj',
             action: () => {
+              contextMenuClosed.value = true;
               const phrase = props.piece.phraseGrid[track][pIdx];
               const silTraj = phrase.trajectories[tIdx + 1];
               replaceSilenceWithConnection(silTraj, track);
-              contextMenuClosed.value = true;
             },
             enabled: props.editable
           })
@@ -2458,10 +2478,10 @@ export default defineComponent({
           contextMenuChoices.value.push({
             text: 'Connect to last Traj',
             action: () => {
+              contextMenuClosed.value = true;
               const phrase = props.piece.phraseGrid[track][pIdx];
               const silTraj = phrase.trajectories[tIdx - 1];
               replaceSilenceWithConnection(silTraj, track);
-              contextMenuClosed.value = true;
             },
             enabled: props.editable
           })
@@ -2804,7 +2824,6 @@ export default defineComponent({
       if (nextTraj.id !== 12) {
         return false;
       }
-      console.log(traj.num, phrase.trajectories.length)
       const followingTraj = phrase.trajectories[traj.num! + 2];
       if (followingTraj && followingTraj.id === 12) {
         return false;
