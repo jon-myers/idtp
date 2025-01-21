@@ -811,6 +811,8 @@ export default defineComponent({
   scrollbar-width: auto;
   scroll-behavior: auto;
   outline: none;
+
+  
 }
 
 .scrollingContainer::-webkit-scrollbar {
@@ -843,11 +845,12 @@ export default defineComponent({
 .xAxisContainer {
   position: sticky;
   top: 0;
-  left: var(--yAxWidth);
+  /* left: var(--yAxWidth); */
   width: calc(100% - var(--yAxWidth) - var(--scrollBarWidth));
   height: var(--xAxHeight);
   overflow-x: scroll;
   overflow-y: hidden;
+  margin-left: var(--yAxWidth);
 }
 
 .verticalZoomControls {
