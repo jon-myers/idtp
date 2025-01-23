@@ -164,9 +164,9 @@ export default defineComponent({
           sortState: 'down'
         },
       ],
-      colWidths: [80, 115, 75, 100, 100, 125],
-      mincolWidths: [80, 115, 75, 100, 100, 125],
-      initialWidths: [80, 115, 75, 100, 100, 125],
+      colWidths: [140, 90, 100, 75, 100, 100, 50],
+      mincolWidths: [140, 90, 100, 75, 100, 100, 50],
+      initialWidths: [140, 90, 100, 75, 100, 100, 50],
       initialMouseX: undefined,
       selectedSortIdx: 0,
       labelRowHeight: 40,
