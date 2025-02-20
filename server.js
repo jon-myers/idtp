@@ -1796,36 +1796,51 @@ const runServer = async () => {
           processAudio.stderr.on('data', data => {
             console.error(`stderr: ${data}`)
           });
-          processAudio.on('close', async () => {
-            console.log('audio processing finished')
+          // processAudio.on('close', async () => {
+          //   console.log('audio processing finished')
+          //   const script1 = './visualization_scripts/generate_melograph.py';
+          //   const script2 = './visualization_scripts/make_spec_data.py';
+          //   try {
+          //     await Promise.all([
+          //       runPythonScript(script1, [newId]),
+          //       runPythonScript(script2, [newId])
+          //     ])
+          //     res.send({
+          //       status: true,
+          //       message: 'File is uploaded',
+          //       data: {
+          //         name: audioFile.name,
+          //         mimetype: audioFile.mimetype,
+          //         size: audioFile.size,
+          //         audioFileId: newId
+          //       }
+          //     });
+          //   } catch (err) {
+          //     console.error(err);
+          //     res.status(500).send(err)
+          //   }
+          // });
+          processAudio.on('close', () => {
+            console.log('audio processing finished');
+            res.send({
+              status: true,
+              message: 'File is uploaded',
+              data: {
+                name: audioFile.name,
+                mimetype: audioFile.mimetype,
+                size: audioFile.size,
+                audioFileId: newId
+              }
+            });
             const script1 = './visualization_scripts/generate_melograph.py';
             const script2 = './visualization_scripts/make_spec_data.py';
-            try {
-              await Promise.all([
-                runPythonScript(script1, [newId]),
-                runPythonScript(script2, [newId])
-              ])
-              res.send({
-                status: true,
-                message: 'File is uploaded',
-                data: {
-                  name: audioFile.name,
-                  mimetype: audioFile.mimetype,
-                  size: audioFile.size,
-                  audioFileId: newId
-                }
-              });
-            } catch (err) {
-              console.error(err);
-              res.status(500).send(err)
-            }
+            runPythonScript(script1, [newId])
+              .then(() => console.log('Melograph generation finished'))
+              .catch(err => console.error('Error in melograph generation:', err));
+            runPythonScript(script2, [newId])
+              .then(() => console.log('Spectrogram data generation finished'))
+              .catch(err => console.error('Error in spectrogram data generation:', err));
           });
-          // const script1 = './visualization_scripts/generate_melograph.py';
-          // const script2 = './visualization_scripts/make_spec_data.py';
-          // await Promise.all([
-          //   runPythonScript(script1, [newId]),
-          //   runPythonScript(script2, [newId])
-          // ])
         }
       } catch (err) {
         console.error(err);
