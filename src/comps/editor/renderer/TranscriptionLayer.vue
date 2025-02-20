@@ -422,25 +422,52 @@ export default defineComponent({
       threshold: 0.0
     });
 
+    // const resetTrajRenderStatus = (persistingTrajUIds: string[] = [], redraw = true) => {
+    //   for (let i = 0; i < props.piece.instrumentation.length; i++) {
+    //     if (trajRenderStatus.value[i] === undefined) {
+    //       trajRenderStatus.value.push([])
+    //     }
+    //     trajRenderStatus.value[i] = props.piece.allTrajectories(i).map(t => {
+    //       const prev = trajRenderStatus.value[i].find(obj => {
+    //         return obj.uniqueId === t.uniqueId
+    //       });
+    //       let status = redraw ? false : prev ? prev.renderStatus : false;
+    //       return { 
+    //         uniqueId: t.uniqueId!, 
+    //         renderStatus: status,
+    //         selectedStatus: persistingTrajUIds.includes(t.uniqueId!),
+    //         track: i
+    //       }
+    //     })
+    //   }
+    // }
     const resetTrajRenderStatus = (persistingTrajUIds: string[] = [], redraw = true) => {
+      // Convert the persisting IDs into a Set for fast lookups.
+      const persistingSet = new Set(persistingTrajUIds);
+      
       for (let i = 0; i < props.piece.instrumentation.length; i++) {
-        if (trajRenderStatus.value[i] === undefined) {
-          trajRenderStatus.value.push([])
+        // Build a lookup for previous statuses for this track.
+        const prevStatusMap = new Map<string, boolean>();
+        if (trajRenderStatus.value[i] !== undefined) {
+          for (const obj of trajRenderStatus.value[i]) {
+            prevStatusMap.set(obj.uniqueId, obj.renderStatus);
+          }
         }
+        
+        // Update the status for all trajectories in one pass.
         trajRenderStatus.value[i] = props.piece.allTrajectories(i).map(t => {
-          const prev = trajRenderStatus.value[i].find(obj => {
-            return obj.uniqueId === t.uniqueId
-          });
-          let status = redraw ? false : prev ? prev.renderStatus : false;
+          const prev = prevStatusMap.get(t.uniqueId!);
+          // If redraw is true, force status to false, otherwise reuse previous status.
+          const status = redraw ? false : (prev ?? false);
           return { 
             uniqueId: t.uniqueId!, 
             renderStatus: status,
-            selectedStatus: persistingTrajUIds.includes(t.uniqueId!),
+            selectedStatus: persistingSet.has(t.uniqueId!),
             track: i
-          }
-        })
+          };
+        });
       }
-    }
+    };
 
     resetTrajRenderStatus();
 
