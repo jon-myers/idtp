@@ -79,7 +79,8 @@
     "vuex": "^4.1.0"
   },
   "overrides": {
-    "browserify-sign": "^4.2.2"
+    "browserify-sign": "^4.2.2",
+    "esbuild": "^0.25.0"
   },
   "devDependencies": {
     "@types/audioworklet": "^0.0.54",
