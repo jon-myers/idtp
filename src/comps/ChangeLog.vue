@@ -64,33 +64,35 @@ export default defineComponent({
 }
 
 /* Apply styles deep into the Markdown component */
-::v-deep .markdown-body {
+:deep(.markdown-body) {
   font-family: Arial, Helvetica, sans-serif;
   line-height: 1.6;
   color: #333;
   text-align: left; /* Ensure all markdown content is left-aligned */
 }
 
-/* Heading styles */
-::v-deep .markdown-body h1,
-::v-deep .markdown-body h2,
-::v-deep .markdown-body h3 {
+:deep(.markdown-body h1),
+:deep(.markdown-body h2),
+:deep(.markdown-body h3) {
   color: #2c3e50;
   margin-top: 1.5em;
   margin-bottom: 0.5em;
   font-weight: bold;
-  text-align: left; /* Ensure headings are left-aligned */
-}
+  text-align: left;
+} 
+
+
+
 
 /* Paragraph styles */
-::v-deep .markdown-body p {
+:deep(.markdown-body p) {
   margin-bottom: 1em;
   color: #555;
   text-align: left; /* Ensure paragraphs are left-aligned */
 }
 
 /* Unordered list styles */
-::v-deep .markdown-body ul {
+:deep(.markdown-body ul) {
   margin-left: 1.5em;
   list-style-type: disc;
   color: #555;
@@ -98,12 +100,12 @@ export default defineComponent({
 }
 
 /* List item styles */
-::v-deep .markdown-body li {
+:deep(.markdown-body li) {
   margin-bottom: 0.5em;
 }
 
 /* Inline code styles */
-::v-deep .markdown-body code {
+:deep(.markdown-body code) {
   background-color: #eef;
   padding: 2px 4px;
   border-radius: 4px;
@@ -112,7 +114,7 @@ export default defineComponent({
 }
 
 /* Blockquote styles */
-::v-deep .markdown-body blockquote {
+:deep(.markdown-body blockquote) {
   border-left: 4px solid #ccc;
   padding-left: 16px;
   color: #777;
@@ -121,39 +123,39 @@ export default defineComponent({
 }
 
 /* Link styles */
-::v-deep .markdown-body a {
+:deep(.markdown-body a) {
   color: #3498db;
   text-decoration: none;
   text-align: left; /* Ensure links are left-aligned */
 }
 
-::v-deep .markdown-body a:hover {
+:deep(.markdown-body a:hover) {
   text-decoration: underline;
 }
 
 /* Horizontal rule styles */
-::v-deep .markdown-body hr {
+:deep(.markdown-body hr) {
   border: none;
   border-top: 1px solid #eee;
   margin: 2em 0;
 }
 
 /* Table styles */
-::v-deep .markdown-body table {
+:deep(.markdown-body table) {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 1em;
   text-align: left; /* Ensure table content is left-aligned */
 }
 
-::v-deep .markdown-body th,
-::v-deep .markdown-body td {
+:deep(.markdown-body th),
+:deep(.markdown-body td) {
   border: 1px solid #ddd;
   padding: 8px;
 }
 
 /* Header cells */
-::v-deep .markdown-body th {
+:deep(.markdown-body th) {
   background-color: #f2f2f2;
   text-align: left; /* Ensure table headers are left-aligned */
 }
@@ -168,7 +170,7 @@ export default defineComponent({
     padding: 10px;
   }
 
-  ::v-deep .markdown-body h1 {
+  :deep(.markdown-body h1) {
     font-size: 1.5em;
   }
 }
