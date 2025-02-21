@@ -1266,8 +1266,6 @@ export default defineComponent({
         playhead.value!.style.transform = `translateX(${pxlX}px)`;
         smoothPositionX = pxlX;
         currentSec.value = Math.floor(time);
-        console.log(time, pxlX)
-
       } else if (props.playheadAnimation === PlayheadAnimations.Block) {
         const pxlX = props.xScale(time);
         playhead.value!.style.transform = `translateX(${pxlX}px)`;
@@ -3458,7 +3456,9 @@ export default defineComponent({
         const artKeys = Object.keys(traj.articulations).map(k => Number(k)).sort();
         if (traj.id === 7 || traj.id === 11) {
           traj.articulations[traj.durArray![0]] = traj.articulations[artKeys[offset]];
-          delete traj.articulations[artKeys[offset]];
+          if (traj.durArray![0] !== artKeys[offset]) {
+            delete traj.articulations[artKeys[offset]];
+          }
         } else if (traj.id === 8) {
           const key1 = traj.durArray![0];
           const key2 = sum(traj.durArray!.slice(0, 2));
@@ -4373,7 +4373,9 @@ export default defineComponent({
       let newLogFreq = traj.logFreqs.length > idx ? traj.logFreqs[idx] : 
         traj.logFreqs[idx - 1];
       if (dir === 'left') {
+        
         newTime = constrainTime(curTime - amt, idx);
+        // console.log(curTime, newTime)
         const x = props.xScale(newTime);
         d3.select(`#dragDot${idx}`)
           .attr('cx', x);
