@@ -41,5 +41,11 @@ declare module '*.md?raw' {
   export default content
 }
 
+declare module '*.md' {
+  import type { DefineComponent } from 'vue'
+  const component: DefineComponent<{}, {}, any>
+  export default component
+}
+
 
 declare module 'vue3-markdown-it';
