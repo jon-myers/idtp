@@ -1,6 +1,9 @@
 # Changelog
 
 
+* fix: error where krintin and slide middle articulations were disappearing when nudged too close to edges [a56f016] (Jon Myers)
+### 2025-02-21
+
 * fix: server error when uploading long recordings [52b3f54] (Jon Myers)
 ### 2025-02-20
 
