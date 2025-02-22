@@ -12,6 +12,7 @@ declare module '@vue/runtime-core' {
     name?: string,
     lastName?: string,
     query?: string,
+    incomingFullPath?: string
   }
 
   // provide typings for `this.$store`
