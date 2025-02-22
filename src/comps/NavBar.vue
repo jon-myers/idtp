@@ -192,7 +192,7 @@ export default defineComponent({
         // this.$store.commit('update_query', this.$route.query);
         this.$router.push('/logIn');
       } else {
-        if (category === '/transcriptoins') {
+        if (category === '/transcriptions') {
           useTitle('Transcriptions')
         } else if (category === '/audioEvents') {
           useTitle('Audio Events')
