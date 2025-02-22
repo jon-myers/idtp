@@ -31,6 +31,7 @@ type CollectionType = {
   dateCreated?: Date;
   dateModified?: Date;
   color?: string;
+  inviteCode?: string;
 }
 
 type AutoValue = {

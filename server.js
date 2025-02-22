@@ -2088,6 +2088,18 @@ const runServer = async () => {
       }
     });
 
+    app.post('/updateCollectionInviteCode', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.body.id) };
+        const update = { $set: { inviteCode: req.body.inviteCode } };
+        const result = await collections.updateOne(query, update);
+        res.json(result);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
+
     const setNoCache = res => {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');

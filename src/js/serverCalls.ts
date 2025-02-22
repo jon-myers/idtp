@@ -2043,6 +2043,26 @@ const updateInstrumentation = async (transcriptionID: string, instrumentation: I
   return out
 }
 
+const updateCollectionInviteCode = async (id: string, inviteCode: string) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ id, inviteCode })
+  };
+  try {
+    const res = await fetch(url + 'updateCollectionInviteCode', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
 
 export { 
   getPiece,
@@ -2128,5 +2148,6 @@ export {
   updateSavedDisplaySettings,
   deleteSavedDisplaySettings,
   getTranscriptionInstrumentation,
-  updateInstrumentation
+  updateInstrumentation,
+  updateCollectionInviteCode
 }

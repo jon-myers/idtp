@@ -145,6 +145,13 @@ export default defineComponent({
 
   async mounted() {
 
+    // get route
+    const queryParams = this.$route.query
+    if (queryParams.inviteCode !== undefined) {
+      // TODO add user to collection db via server call, and navigate them to collection
+    }
+
+
 
     window.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
@@ -152,6 +159,9 @@ export default defineComponent({
           this.contextMenuOpen = false;
         }
       }
+      
+
+
     });
     // gather all collections, filter to only show collections that the user 
     // has permission to view, split them up according to their creator, and 

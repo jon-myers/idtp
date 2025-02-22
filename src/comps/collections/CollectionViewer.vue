@@ -11,6 +11,7 @@
       <div class='button'>
         <button @click='closeCollection'>Close</button>
         <button v-if='owner' @click='editCollection'>Edit</button>
+        <button v-if='owner' @click='copyInviteLink' class='wide'>Copy Invite Link</button>
       </div>
     </div>
     <div class='descriptionRow'>
@@ -80,12 +81,14 @@ import {
   removeAEfromColl,
   removeRecFromColl,
   removeTFromColl,
-  getAllTransOfAudioFile
+  getAllTransOfAudioFile,
+  updateCollectionInviteCode
 } from '@/js/serverCalls';
 import MiniAudioRecordings from '@/comps/collections/MiniAudioRecordings.vue';
 import MiniAudioEvents from '@/comps/collections/MiniAudioEvents.vue';
 import MiniTranscriptions from '@/comps/collections/MiniTranscriptions.vue';
 import ContextMenu from '@/comps/ContextMenu.vue';
+import { v4 as uuidv4 } from 'uuid';
 
 type CollectionViewerDataType = {
   audioSource: string | undefined,
@@ -149,10 +152,22 @@ export default defineComponent({
 
     textColor() {
       return getContrastingTextColor(this.collection.color!);
+    },
+
+    showInvite() {
+      console.log(this.$store.state.userID, this.collection.userID)
+      return this.$store.state.userID === this.collection.userID;
     }
+
+
   },
 
   mounted() {
+    if (this.$props.collection.inviteCode === undefined) {
+      const inviteCode = uuidv4();
+      updateCollectionInviteCode(this.$props.collection._id!, inviteCode);
+      
+    }
     this.setContainerHeight();
     window.addEventListener('resize', this.setContainerHeight);
     // listen for escape key
@@ -174,6 +189,12 @@ export default defineComponent({
   },
 
   methods: {
+
+    copyInviteLink() {
+      const inviteCode = this.collection.inviteCode;
+      const url = `https://swara.studio/collections/?inviteCode=${ inviteCode }`;
+      navigator.clipboard.writeText(url);
+    },
 
     permissionToViewRec(rec: RecType) {
       const ep = rec.explicitPermissions!;
@@ -560,7 +581,7 @@ h2 {
 
 .button {
   margin-right: 20px;
-  width: 60px;
+  width: 120px;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -664,5 +685,12 @@ h2 {
 
 .contentContainer::-webkit-scrollbar {
   display: none
+}
+
+.button > * {
+  width: 60px;
+}
+.button > .wide {
+  width: 120px
 }
 </style>
