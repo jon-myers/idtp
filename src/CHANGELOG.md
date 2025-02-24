@@ -1,6 +1,7 @@
 # Changelog
 
 
+* fix: when linked to a file you don't have permission to view, you are now redirected away to the transcriptions tab [2ebbcba] (Jon Myers)
 * feat: Added invite code to collections so that collection owners can enroll anyone with invite link. [4c9f031] (Jon Myers)
 ### 2025-02-24
 
