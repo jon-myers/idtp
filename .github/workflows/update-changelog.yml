@@ -52,13 +52,16 @@ jobs:
         run: npm install
       - name: Build
         run: npm run build
-      - name: Deploy Distribution
-        env:
-          RSYNC_PASSWORD: ${{ secrets.RSYNC_PASSWORD }}
+        
+      - name: Set up SSH agent
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add remote host to known_hosts
         run: |
-          sudo apt-get update
-          sudo apt-get install -y sshpass
           mkdir -p ~/.ssh
           ssh-keyscan -H 137.184.90.119 >> ~/.ssh/known_hosts
-          sudo apt-get install -y sshpass
-          sshpass -e rsync -a ./dist/ root@137.184.90.119:dist
+
+      - name: Deploy Distribution
+        run: rsync -a ./dist/ root@137.184.90.119:dist
