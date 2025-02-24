@@ -366,7 +366,7 @@ import shareIcon from '@/assets/icons/share.svg';
 
 // URLs
 import caURL from '@/audioWorklets/captureAudio.worklet.js?url';
-import rubberBandUrl from '@/audioWorklets/rubberband-processor.js?url';
+import rubberBandUrl from '@/audioWorklets/rubberband-processor.worklet.js?url';
 import stretcherURL from '@/js/bundledStretcherWorker.js?url';
 
 // Classes and Types

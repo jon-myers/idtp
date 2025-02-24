@@ -11,7 +11,7 @@ export default defineConfig({
     }),
     vueDevTools(),
   ],
-  assetsInclude: ['**/*.worklet.js'],
+  assetsInclude: /src\/audioWorklets\/.*\.worklet\.js$/,
   build: {
     sourcemap: true
   },
