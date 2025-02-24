@@ -166,7 +166,7 @@ export default defineComponent({
     if (this.$props.collection.inviteCode === undefined) {
       const inviteCode = uuidv4();
       updateCollectionInviteCode(this.$props.collection._id!, inviteCode);
-      
+      this.collection.inviteCode = inviteCode
     }
     this.setContainerHeight();
     window.addEventListener('resize', this.setContainerHeight);
@@ -192,7 +192,9 @@ export default defineComponent({
 
     copyInviteLink() {
       const inviteCode = this.collection.inviteCode;
-      const url = `https://swara.studio/collections/?inviteCode=${ inviteCode }`;
+      let hostname = window.location.hostname;
+      if (hostname === 'localhost') hostname = 'localhost:3000'; 
+      const url = `${hostname}/collections?inviteCode=${ inviteCode }`;
       navigator.clipboard.writeText(url);
     },
 
