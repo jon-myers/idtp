@@ -11,6 +11,7 @@ export default defineConfig({
     }),
     vueDevTools(),
   ],
+  assetsInclude: ['**/*.worklet.js'],
   build: {
     sourcemap: true
   },
