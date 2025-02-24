@@ -2100,6 +2100,24 @@ const runServer = async () => {
       }
     });
 
+    app.post('/enrollUserInCollection', async (req, res) => {
+      try {
+        const query = { inviteCode: req.body.inviteCode };
+        const collection = await collections.findOne(query);
+        if (!collection) {
+          res.status(404).send('Collection not found');
+        }
+        const update = { $addToSet: { "permissions.view": req.body.userID } };
+        const result = await collections.updateOne(query, update);
+        res.json(result);
+
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+      
+
     const setNoCache = res => {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');

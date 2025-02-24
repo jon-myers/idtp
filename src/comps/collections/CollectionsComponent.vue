@@ -77,7 +77,8 @@
 import { CollectionType, ContextMenuOptionType } from '@/ts/types.ts';
 import { 
   deleteCollection, 
-  getAllCollections 
+  getAllCollections,
+  enrollUserInCollection 
 } from '@/js/serverCalls.ts';
 const collectionsDir = '@/comps/collections/';
 import NewCollectionModal from '@/comps/collections/NewCollectionModal.vue';
@@ -149,6 +150,14 @@ export default defineComponent({
     const queryParams = this.$route.query
     if (queryParams.inviteCode !== undefined) {
       // TODO add user to collection db via server call, and navigate them to collection
+      try {
+        const userID = this.$store.state.userID!;
+        const inviteCode = queryParams.inviteCode as string;
+        const res = await enrollUserInCollection(userID, inviteCode);
+        console.log(res);
+      } catch (error) {
+        console.log(error);
+      }
     }
 
 

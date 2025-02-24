@@ -2063,6 +2063,26 @@ const updateCollectionInviteCode = async (id: string, inviteCode: string) => {
   return out
 }
 
+const enrollUserInCollection = async (userID: string, inviteCode: string) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userID, inviteCode })
+  };
+  try {
+    const res = await fetch(url + 'enrollUserInCollection', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
 
 export { 
   getPiece,
@@ -2149,5 +2169,6 @@ export {
   deleteSavedDisplaySettings,
   getTranscriptionInstrumentation,
   updateInstrumentation,
-  updateCollectionInviteCode
+  updateCollectionInviteCode,
+  enrollUserInCollection
 }
