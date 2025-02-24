@@ -370,7 +370,7 @@ export default defineComponent({
                   recID: recID
                 }
                 this.$router.push({
-                  name: 'Files',
+                  name: 'Transcriptions',
                   query
                 });
                 this.contextMenuOpen = false
@@ -440,7 +440,7 @@ export default defineComponent({
                 recID: recID
               }
               this.$router.push({
-                name: 'Files',
+                name: 'Transcriptions',
                 query
               });
               this.contextMenuOpen = false
