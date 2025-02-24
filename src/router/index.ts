@@ -67,6 +67,7 @@ router.beforeEach((to, from, next) => {
   if (
     to.name !== 'LandingPage' && 
     to.name !== 'LogIn' && 
+    to.name !== 'Changelog' &&
     (userID === 'undefined' || userID === null || userID === undefined)
   ) {
     store.commit('update_incomingFullPath', to.fullPath)
