@@ -6,7 +6,7 @@ import {
   InstrumentTrackType,
 } from '@/ts/types.ts';
 import { Instrument } from '@/ts/enums.ts';
-import ksURL from '@/audioWorklets/KarplusStrong2.worklet.js?url';
+import ksURL from '@/audioWorklets/karplusStrong2.worklet.js?url';
 import cURL from '@/audioWorklets/chikaris2.worklet.js?url';
 import ssURL from '@/audioWorklets/sarangi.worklet.js?url';
 import caURL from '@/audioWorklets/captureAudio.worklet.js?url';
