@@ -1,6 +1,7 @@
 # Changelog
 
 
+* fix: deploy should now deploy after updates to changelog [779f707] (Jon Myers)
 * Feat: All pushes to and merges into main branch now build app and deploy to swara.studio automatically via github actions [6b3106e] (Jon Myers)
 * feat: alerts user when the piece doesn't exist or they don't have permission to view [9daa089] (Jon Myers)
 * fix: when linked to a file you don't have permission to view, you are now redirected away to the transcriptions tab [2ebbcba] (Jon Myers)
