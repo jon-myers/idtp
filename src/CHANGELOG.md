@@ -1,6 +1,9 @@
 # Changelog
 
 
+* feat: Added invite code to collections so that collection owners can enroll anyone with invite link. [4c9f031] (Jon Myers)
+### 2025-02-24
+
 * fix: error where krintin and slide middle articulations were disappearing when nudged too close to edges [a56f016] (Jon Myers)
 ### 2025-02-21
 
