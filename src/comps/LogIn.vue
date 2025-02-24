@@ -102,6 +102,9 @@ export default {
         this.firstTime = false;
         this.$store.commit('update_firstTime', this.firstTime);
         this.firstWelcome = true;
+        if (this.$store.state.incomingFullPath !== undefined) {
+          this.$router.push(this.$store.state.incomingFullPath);
+        }
         // this.returning = true
       }
     }

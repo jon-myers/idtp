@@ -16,6 +16,7 @@ const store = createStore({
       name: undefined,
       lastName: undefined,
       query: undefined,
+      incomingFullPath: undefined
     }
   },
   mutations: {
@@ -49,6 +50,10 @@ const store = createStore({
 
     update_query(state, query) {
       state.query = query
+    },
+
+    update_incomingFullPath(state, incomingFullPath) {
+      state.incomingFullPath = incomingFullPath
     }
   }
 })

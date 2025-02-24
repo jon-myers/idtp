@@ -137,17 +137,6 @@ export default defineComponent({
       } catch (err) {
         console.error(err);
       }
-      //   try {
-      //     console.log('trying this second')
-      //     const response = await googleAuthCodeLogin();
-      //     const redirURL = window.location.href;
-      //     console.log(redirURL)
-      //     const userData = await handleGoogleAuthCode(response.code, redirURL);
-      //     await this.loggedIn(userData);
-      //   } catch (error) {
-      //     console.error();
-      //   }
-      // }
     }
   },
 
@@ -169,11 +158,11 @@ export default defineComponent({
       if (!result.lastErrorObject.updatedExisting) {
         this.firstTime = true;
         this.$store.commit('update_firstTime', this.firstTime)
-        this.$router.push('/')
+        this.$router.push('/logIn')
       } else if (!result.value.waiverAgreed) {
         this.firstTime = true;
         this.$store.commit('update_firstTime', this.firstTime);
-        this.$router.push('/');
+        this.$router.push('/logIn');
       } else {
         this.returning = true
         this.$store.commit('update_returning', this.returning);
@@ -184,6 +173,9 @@ export default defineComponent({
             query: q
           })
         }
+        if (this.$store.state.incomingFullPath !== undefined) {
+          this.$router.push(this.$store.state.incomingFullPath);
+        }
       }
     },
 
@@ -192,7 +184,7 @@ export default defineComponent({
         // this.$store.commit('update_query', this.$route.query);
         this.$router.push('/logIn');
       } else {
-        if (category === '/transcriptoins') {
+        if (category === '/transcriptions') {
           useTitle('Transcriptions')
         } else if (category === '/audioEvents') {
           useTitle('Audio Events')
@@ -231,21 +223,6 @@ export default defineComponent({
     async logIn() {
       this.showUserMenu = false;
       if (this.$store.state.userID === undefined) {
-        // try {
-        //   const res = await googleOneTap({ autoLogin: false });
-        //   const userData = decodeCredential(res.credential) as UserDataType;
-        //   await this.loggedIn(userData);     
-        // } catch (err) { 
-        //   console.error(err);
-        //   try {
-        //     const response = await googleAuthCodeLogin();
-        //     const reURL = window.location.href;
-        //     const userData = await handleGoogleAuthCode(response.code, reURL);
-        //     await this.loggedIn(userData);
-        //   } catch (err) {
-        //     console.error(err)
-        //   }
-        // }
         try {
           const response = await googleAuthCodeLogin();
           const reURL = window.location.href;

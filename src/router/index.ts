@@ -1,6 +1,5 @@
 import { createWebHistory, createRouter, RouteRecordRaw } from 'vue-router';
-// import {store, VueCookies } from '@/main.ts'
-import { VueCookies } from 'vue-cookies'
+import {store } from '@/main.ts'
 import ChangelogView from '@/comps/ChangeLog.vue'
 const routes: Array<RouteRecordRaw> = [
   {
@@ -70,8 +69,9 @@ router.beforeEach((to, from, next) => {
     to.name !== 'LogIn' && 
     (userID === 'undefined' || userID === null || userID === undefined)
   ) {
-    console.log('redirecting to login')
-      next({ name: 'LogIn' })
+    store.commit('update_incomingFullPath', to.fullPath)
+    
+    next({ name: 'LogIn' })
   } else {
       next()
   }
