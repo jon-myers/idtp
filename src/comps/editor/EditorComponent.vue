@@ -899,6 +899,7 @@ export default defineComponent({
           piece = await getPiece(queryId);
 
         } else {
+          window.alert('IDTP logger: Piece does not exist, or you do not have permission to view.');
           await this.router.push({ name: 'Transcriptions' });
           throw 'IDTP logger: Piece does not exist, or you do not have \
           permission to view.'
@@ -931,6 +932,7 @@ export default defineComponent({
       useTitle(this.piece.title);
       this.editable = this.permissionToEdit(this.piece); // necessary
       if (!this.permissionToView(this.piece)) {
+        window.alert('IDTP logger: Piece does not exist, or you do not have permission to view.');
         await this.router.push({ name: 'Transcriptions' });
           throw 'IDTP logger: Piece does not exist, or you do not have \
           permission to view.'
