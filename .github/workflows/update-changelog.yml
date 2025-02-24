@@ -61,4 +61,4 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H 137.184.90.119 >> ~/.ssh/known_hosts
           sudo apt-get install -y sshpass
-          npm run deployDist
+          sshpass -e rsync -a ./dist/ root@137.184.90.119:dist
