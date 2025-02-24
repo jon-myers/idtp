@@ -58,4 +58,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y sshpass
+          mkdir -p ~/.ssh
+          ssh-keyscan -H 137.184.90.119 >> ~/.ssh/known_hosts
+          sudo apt-get install -y sshpass
           npm run deployDist
