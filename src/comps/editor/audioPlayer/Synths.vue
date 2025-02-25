@@ -429,7 +429,8 @@ export default defineComponent({
           sonifyNode
         }
       } catch (e) {
-        throw new Error('Error adding Klatt module');
+        console.error('Error adding Klatt module');
+        throw e
       }
     };
 
@@ -1009,7 +1010,8 @@ export default defineComponent({
         });
         preSetFirstEnvelopes();
       } catch (e) {
-        throw new Error('Error mounting synths');
+        console.error('Error mounting synths');
+        throw e;
       } 
     });
     return {
