@@ -59,16 +59,16 @@
           </div>
           <div class='controlBox'>
             <div>
-              <input type='checkbox' v-model='pitchChroma'/>
-              <label>Pitch Chroma</label>
+              <input id='pitchChromaToggle' type='checkbox' v-model='pitchChroma'/>
+              <label for='pitchChromaToggle'>Pitch Chroma</label>
             </div>
             <div>
-              <input type='checkbox' v-model='condensed'/>
-              <label>Condensed</label>
+              <input id='condensedToggle' type='checkbox' v-model='condensed'/>
+              <label for='condensedToggle'>Condensed</label>
             </div>
             <div>
-              <input type='checkbox' v-model='heatmap'/>
-              <label>Heatmap</label>
+              <input id='heatmapToggle' type='checkbox' v-model='heatmap'/>
+              <label for='heatmapToggle'>Heatmap</label>
             </div>
           </div>
           <div class='controlBox' v-if='segmentationType !== "Duration"'>
@@ -227,17 +227,18 @@
           </div>
           <div>
             <input 
+              id='chromaToggle'
               type='checkbox' 
               v-model='pitchChroma' 
               @change='updateChroma'
               />
-            <label>Chroma</label>
+            <label for='chromaToggle'>Chroma</label>
           </div>
         </div>
         <div class='controlBox'>
           <div class='rightInputRow'>
-            <label for='targetPitch'>Target</label>
-            <input type='checkbox' v-model='targetPitchBool'>
+            <label for='targetToggle'>Target</label>
+            <input id='targetToggle'type='checkbox' v-model='targetPitchBool'>
             <select 
               v-model='targetPitchIdx' 
               id='targetPitch' 
@@ -272,7 +273,7 @@
                   :value='patternSizes[pcIdx * 3 + prIdx]'
                   v-model='selectedPatternSizes[pcIdx * 3 + prIdx]'
                   >
-                <label>
+                <label :for='`cb_${pcIdx * 3 + prIdx}`'>
                   {{ 2 + pcIdx * 3 + prIdx }}
                 </label>
               </div>
@@ -282,7 +283,7 @@
         <div class='controlBox'>
           <div>
             <input type='checkbox' v-model='minPatternSize' id='minPatternSize'>
-            <label for='#minPatternSize'>Minimum Size</label>
+            <label for='minPatternSize'>Minimum Size</label>
           </div>
           <div v-if='minPatternSize'>
             <input 
@@ -294,7 +295,7 @@
           </div>
           <div>
             <input type='checkbox' v-model='plot' id='plot'>
-            <label for='#plot'>Plot</label>
+            <label for='plot'>Plot</label>
           </div>
         </div>
         <div class='controlBox button'>
