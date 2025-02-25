@@ -3,8 +3,8 @@
     <div class='topBox'>
       <div class='title'>{{  synthControl.inst }}</div>
       <div class='sonifyCheck'>
-        <label>Sonify</label>
-        <input type='checkbox' v-model='sonifyProxy' />
+        <label :for='`sonifyToggle${synthControl.idx}`'>Sonify</label>
+        <input :id='`sonifyToggle${synthControl.idx}`' type='checkbox' v-model='sonifyProxy' />
       </div>
     </div>
     <div :class='["controlCol", { "singleItem": sliders.length === 1 }]'>

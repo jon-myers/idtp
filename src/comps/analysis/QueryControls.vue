@@ -36,10 +36,10 @@
           @input='numQueries = Math.round(numQueries)'
           @keypress='preventDecimal'
           />
-        <label class='everySome'>Every</label>
-        <input type='radio' :value='true' v-model='all' />
-        <label class='everySome'>Some</label>
-        <input type='radio' :value='false' v-model='all' />
+        <label for='everyRadio' class='everySome'>Every</label>
+        <input id='everyRadio' type='radio' :value='true' v-model='all' />
+        <label for='someRadio' class='everySome'>Some</label>
+        <input id='someRadio' type='radio' :value='false' v-model='all' />
       </div>
       <div class='controlsRow dur'>
         <label>Min Dur: </label>
@@ -48,8 +48,9 @@
         <input type='number' v-model='maxDur' :min='minDur' step='1' />
       </div>
       <div class='controlsRow'>
-        <label>Proportional Vertical Display: </label>
+        <label for='propToggle'>Proportional Vertical Display: </label>
         <input 
+          id='propToggle'
           type='checkbox' 
           v-model='proportionalVertical' 
           @change='updateProportionalVertical'

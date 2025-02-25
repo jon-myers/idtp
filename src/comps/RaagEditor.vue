@@ -15,8 +15,8 @@
     </div>
     <div class='infoRow'>
       <div class='sapa'>
-        <label class='small'>Sa</label>
-        <input type='checkbox' v-model='rules.sa'>
+        <label for='saToggle' class='small'>Sa</label>
+        <input id='saToggle' type='checkbox' v-model='rules.sa'>
       </div>
     </div>
     <div class='infoRow'>
@@ -24,12 +24,12 @@
         <label class='small'>Re</label>
         <div class='infoCol'>
           <div class='smallInfoRow'>
-            <label>Lowered</label>
-            <input type='checkbox' v-model='rules.re.lowered'>
+            <label for='lowReToggle'>Lowered</label>
+            <input id='lowReToggle' type='checkbox' v-model='rules.re.lowered'>
           </div>
           <div class='smallInfoRow'>
-            <label>Raised</label>
-            <input type='checkbox' v-model='rules.re.raised'>
+            <label for='hiReToggle'>Raised</label>
+            <input id='hiReToggle' type='checkbox' v-model='rules.re.raised'>
           </div>
         </div>
       </div>
@@ -39,12 +39,12 @@
         <label class='small'>Ga</label>
         <div class='infoCol'>
           <div class='smallInfoRow'>
-            <label>Lowered</label>
-            <input type='checkbox' v-model='rules.ga.lowered'>
+            <label for='loGaToggle'>Lowered</label>
+            <input id='loGaToggle' type='checkbox' v-model='rules.ga.lowered'>
           </div>
           <div class='smallInfoRow'>
-            <label>Raised</label>
-            <input type='checkbox' v-model='rules.ga.raised'>
+            <label for='hiGaToggle'>Raised</label>
+            <input id='hiGaToggle' type='checkbox' v-model='rules.ga.raised'>
           </div>
         </div>
       </div>
@@ -54,20 +54,20 @@
         <label class='small'>Ma</label>
         <div class='infoCol'>
           <div class='smallInfoRow'>
-            <label>Lowered</label>
-            <input type='checkbox' v-model='rules.ma.lowered'>
+            <label for='loMaToggle'>Lowered</label>
+            <input id='loMaToggle' type='checkbox' v-model='rules.ma.lowered'>
           </div>
           <div class='smallInfoRow'>
-            <label>Raised</label>
-            <input type='checkbox' v-model='rules.ma.raised'>
+            <label for='hiMaToggle'>Raised</label>
+            <input id='hiMaToggle' type='checkbox' v-model='rules.ma.raised'>
           </div>
         </div>
       </div>
     </div>
     <div class='infoRow'>
       <div class='sapa'>
-        <label class='small'>Pa</label>
-        <input type='checkbox' v-model='rules.pa'>
+        <label for='paToggle' class='small'>Pa</label>
+        <input id='paToggle' type='checkbox' v-model='rules.pa'>
       </div>
     </div>
     <div class='infoRow'>
@@ -75,12 +75,12 @@
         <label class='small'>Dha</label>
         <div class='infoCol'>
           <div class='smallInfoRow'>
-            <label>Lowered</label>
-            <input type='checkbox' v-model='rules.dha.lowered'>
+            <label for='loDhaToggle'>Lowered</label>
+            <input id='loDhaToggle' type='checkbox' v-model='rules.dha.lowered'>
           </div>
           <div class='smallInfoRow'>
-            <label>Raised</label>
-            <input type='checkbox' v-model='rules.dha.raised'>
+            <label for='hiDhaToggle'>Raised</label>
+            <input id='hiDhaToggle' type='checkbox' v-model='rules.dha.raised'>
           </div>
         </div>
       </div>
@@ -90,12 +90,12 @@
         <label class='small'>Ni</label>
         <div class='infoCol'>
           <div class='smallInfoRow'>
-            <label>Lowered</label>
-            <input type='checkbox' v-model='rules.ni.lowered'>
+            <label for='lowNiToggle'>Lowered</label>
+            <input id='lowNiToggle' type='checkbox' v-model='rules.ni.lowered'>
           </div>
           <div class='smallInfoRow'>
-            <label>Raised</label>
-            <input type='checkbox' v-model='rules.ni.raised'>
+            <label for='hiNiToggle'>Raised</label>
+            <input id='hiNiToggle' type='checkbox' v-model='rules.ni.raised'>
           </div>
         </div>
       </div>

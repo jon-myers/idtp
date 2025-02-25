@@ -123,17 +123,23 @@
         <label>Tracks</label>
       </div>
       <div class='scrollableContainer'>
-        <div class='rowBox' v-for='track in instTracks'>
+        <div class='rowBox' v-for='(track, idx) in instTracks'>
           <label class='bold'>{{ track.inst }}</label>
           <div class='row tracks'>
-            <label>Display</label>
-            <input type='checkbox' v-model='tempTracks[track.idx].displaying'/>
+            <label :for='`displayToggle${idx}`'>Display</label>
+            <input 
+              :id='`displayToggle${idx}`'
+              type='checkbox' v-model='tempTracks[track.idx].displaying'
+            />
             <label>Traj</label>
             <input type='color' v-model='tempTracks[track.idx].color'/>
           </div>
           <div class='row tracks'>
-            <label>Sonify</label>
-            <input type='checkbox' v-model='tempTracks[track.idx].sounding'/>
+            <label :for='`instSonifyToggle${idx}`'>Sonify</label>
+            <input 
+              :id='`instSonifyToggle${idx}`'
+              type='checkbox' v-model='tempTracks[track.idx].sounding'
+              />
             <label>Sel Traj</label>
             <input type='color' v-model='tempTracks[track.idx].selColor'/>
           </div>
@@ -159,8 +165,8 @@
       </div>
       <div class='rowBox'>
         <div class='row'>
-          <label>Highlight Trajs</label>
-          <input type='checkbox' v-model='highlightTrajsProxy'/>
+          <label for='highlightTrajsToggle'>Highlight Trajs</label>
+          <input id='highlightTrajsToggle' type='checkbox' v-model='highlightTrajsProxy'/>
         </div>
       </div>
     </div>

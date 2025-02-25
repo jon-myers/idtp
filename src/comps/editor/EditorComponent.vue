@@ -83,67 +83,76 @@
           <label>Visibility</label>
         </div>
         <div class='cbRow' v-if='visibilityTab && hasRecording'>
-          <label>Spectrogram</label>
+          <label for='spectorgramToggle'>Spectrogram</label>
           <input 
+            id='spectorgramToggle'
             type='checkbox'
             v-model='showSpectrogram'
             @click='preventSpaceToggle'>
         </div>
         <div class='cbRow' v-if='visibilityTab && hasRecording'>
-          <label>Melograph</label>
-          <input 
+          <label for='melographToggle'>Melograph</label>
+          <input
+            id="melographToggle" 
             type='checkbox' 
             v-model='melographVisible'
             @change='toggleMelograph'
             @click='preventSpaceToggle'>
         </div>
         <div class='cbRow' v-if='visibilityTab'>
-          <label>Sargam</label>
+          <label for='sargamToggle'>Sargam</label>
           <input 
+            id='sargamToggle'
             type='checkbox' 
             v-model='showSargam' 
             @click='preventSpaceToggle'>
         </div>
         <div class='cbRow' v-if='visibilityTab'>
-          <label>Sargam Lines</label>
+          <label for='sargamLinesToggle'>Sargam Lines</label>
           <input 
+            id='sargamLinesToggle'
             type='checkbox' 
             v-model='showSargamLines' 
             @click='preventSpaceToggle'>
         </div>
         <div v-if='visibilityTab && hasSitar' class='cbRow' >
-          <label>Bols</label>
+          <label for='bolsToggle'>Bols</label>
           <input 
+            id='bolsToggle'
             type='checkbox' 
             v-model='showBols' 
             @click='preventSpaceToggle'>
         </div>
         <div v-if='visibilityTab' class='cbRow'>
-          <label>Transcription</label>
+          <label for='transcriptionToggle'>Transcription</label>
           <input 
+            id='transcriptionToggle'
             type='checkbox' 
             v-model='showMelody' 
             @click='preventSpaceToggle'
             @change='updateTranscriptionVisibility'>
         </div>
         <div v-if='visibilityTab' class='cbRow'>
-          <label>Meter</label>
+          <label for='meterToggle'>Meter</label>
           <input 
+            id='meterToggle'
             type='checkbox' 
             v-model='showMeter' 
             @click='preventSpaceToggle'
             >
         </div>
         <div class='cbRow' v-if='visibilityTab && vocal'>
-          <label>Phonemes</label>
+          <label for='phonemesToggle'>Phonemes</label>
           <input 
+            id='phonemesToggle'
             type='checkbox' 
             v-model='showPhonemes' 
             @click='preventSpaceToggle'>
         </div>
         <div class='cbRow' v-if='visibilityTab'>
-          <label>Phrase Divs</label>
+          <label for='phraseDivsToggle'>Phrase Divs</label>
           <input 
+            id='phraseDivsToggle'
             type='checkbox' 
             v-model='viewPhrases' 
             @click='preventSpaceToggle'>
@@ -153,33 +162,37 @@
           </div>
         </div>
         <div class='cbRow'>
-          <label>Loop</label>
-          <input type='checkbox' v-model='loop' @click='updateLoop'>
+          <label for='loop'>Loop</label>
+          <input id='loop' type='checkbox' v-model='loop' @click='updateLoop'>
         </div>
         <div class='cbRow'>
-          <label>Playhead Return</label>
+          <label for='playheadReturn'>Playhead Return</label>
           <input 
+            id='playheadReturn'
             type='checkbox' 
             v-model='playheadReturn' 
             @click='preventSpaceToggle'>
         </div>
         <div class='cbRow'>
-          <label>Meter Magnet</label>
+          <label for='meterMagnet'>Meter Magnet</label>
           <input
+            id='meterMagnet'
             type='checkbox'
             v-model='meterMagnetMode'
             @click='preventSpaceToggle'>
         </div>
         <div class='cbRow'>
-          <label>Sargam Magnet</label>
+          <label for='sargamMagnet'>Sargam Magnet</label>
           <input
+            id='sargamMagnet'
             type='checkbox'
             v-model='sargamMagnetMode'
             @click='preventSpaceToggle'>
         </div>
         <div class='cbRow' v-if='vocal'>
-          <label>Uniform Vowel</label>
+          <label for='uniformVowel'>Uniform Vowel</label>
           <input
+            id='uniformVowel'
             type='checkbox'
             v-model='uniformVowel'
             @click='preventSpaceToggle'>
