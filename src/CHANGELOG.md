@@ -1,6 +1,9 @@
 # Changelog
 
 
+* fix: All labels now associated with appropriate checkbox or radio button [ebe2ca8] (Jon Myers)
+### 2025-02-25
+
 * fix: deploy should now deploy after updates to changelog [779f707] (Jon Myers)
 * Feat: All pushes to and merges into main branch now build app and deploy to swara.studio automatically via github actions [6b3106e] (Jon Myers)
 * feat: alerts user when the piece doesn't exist or they don't have permission to view [9daa089] (Jon Myers)
