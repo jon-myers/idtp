@@ -1,6 +1,9 @@
 # Changelog
 
 
+* fix: prevents the creation of transcriptions with non-implemented instrumentation. [657b115] (Jon Myers)
+### 2025-02-26
+
 * Feat: added reset audio button [68ffce0] (Jon Myers)
 * fix: updated vite config so that assetsIncluded hack only happens for buildi (not for running dev server). Now audio synths work again. [db7b7fa] (Jon Myers)
 * fix: All labels now associated with appropriate checkbox or radio button [ebe2ca8] (Jon Myers)
