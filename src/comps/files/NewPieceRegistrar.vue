@@ -286,7 +286,7 @@ type NewPieceRegistrarDataType = {
   permissionTypes: string[];
   rulesTemplate: RulesType;
   instrumentation: Instrument[];
-  instruments?: string[];
+  instruments: Instrument[];
   noAE: boolean;
   looseRecs: RecType[];
   noRec: boolean;
@@ -373,7 +373,12 @@ export default defineComponent({
         }
       },
       instrumentation: [Instrument.Sitar],
-      instruments: undefined,
+      instruments: [
+        Instrument.Sarangi,
+        Instrument.Sitar,
+        Instrument.Vocal_F,
+        Instrument.Vocal_M,
+      ],
       noAE: false,
       looseRecs: [],
       noRec: false,
@@ -458,7 +463,9 @@ export default defineComponent({
         const parsed = JSON.parse(this.$route.query.afName as string);
         this.recording = allRecNames.indexOf(parsed);
         this.raga = Object.keys(recs[this.recording].raags)[0];
-        this.instrumentation = this.getInstrumentation();
+        const instrumentation = this.getInstrumentation();
+        this.instrumentation = this.filterInstrumentation(instrumentation);
+        console.log(this.instrumentation)
       } else if (this.$route.query.recID) {
         const id = this.$route.query.recID as string;
         this.noAE = true;
@@ -466,9 +473,9 @@ export default defineComponent({
         await this.$nextTick();
         this.recording = this.looseRecs.find(rec => rec._id === id)!;
         this.raga = Object.keys(this.recording.raags)[0];
-        this.instrumentation = this.getInstrumentation();
+        const instrumentation = this.getInstrumentation();
+        this.instrumentation = this.filterInstrumentation(instrumentation);
       }
-      this.instruments = await getInstruments();
     } catch (err) {
       console.log(err)
     } 
@@ -516,6 +523,7 @@ export default defineComponent({
             throw new Error('audioID is undefined')
           }
           this.instrumentation = await getInstrumentation(audioID)
+          this.instrumentation = this.filterInstrumentation(this.instrumentation);
         }
         this.updateErrors();
       } catch (err) {
@@ -547,8 +555,11 @@ export default defineComponent({
       this.updateErrors();
     },
 
-    instrumentation(newInst) {
+    instrumentation: {
+      handler(newInst) {
       this.updateErrors();
+      },
+      deep: true
     },
   },
   
@@ -572,6 +583,29 @@ export default defineComponent({
       if (noAudio && !this.noRec) {
         this.errors.push('No audio event or recording has been selected. If no \
           recording is desired, "None" must be checked.' )
+      }
+      const disallowedInsts = [
+        Instrument.Bansuri,
+        Instrument.Esraj,
+        Instrument.Rabab,
+        Instrument.Santoor,
+        Instrument.Sarod,
+        Instrument.Shehnai,
+        Instrument.Surbahar,
+        Instrument.Veena_Saraswati,
+        Instrument.Veena_Vichitra,
+        Instrument.Veena_Rudra_Bin,
+        Instrument.Violin,
+        Instrument.Harmonium
+      ]
+      const wrongInstrumentation = this.instrumentation.filter(inst => {
+        if (disallowedInsts.includes(inst)) {
+          return inst
+        }
+      })
+      if (wrongInstrumentation.length > 0) {
+        this.errors.push('The following instruments are not allowed: ' + 
+          wrongInstrumentation.join(', '))
       }
     },
 
@@ -784,6 +818,36 @@ export default defineComponent({
         }
       })
       return instrumentation
+    },
+
+    filterInstrumentation(instrumentation: Instrument[]): Instrument[] {
+      return instrumentation.map(inst => {
+        if (inst === Instrument.Bansuri) {
+          return Instrument.Sarangi
+        } else if (inst === Instrument.Esraj) {
+          return Instrument.Sarangi
+        } else if (inst === Instrument.Santoor) {
+          return Instrument.Sitar
+        } else if (inst === Instrument.Sarod) {
+          return Instrument.Sitar
+        } else if (inst === Instrument.Shehnai) {
+          return Instrument.Sarangi
+        } else if (inst === Instrument.Surbahar) {
+          return Instrument.Sitar
+        } else if (inst === Instrument.Veena_Saraswati) {
+          return Instrument.Sitar
+        } else if (inst === Instrument.Veena_Vichitra) {
+          return Instrument.Sitar
+        } else if (inst === Instrument.Veena_Rudra_Bin) {
+          return Instrument.Sitar
+        } else if (inst === Instrument.Violin) {
+          return Instrument.Sarangi
+        } else if (inst === Instrument.Harmonium) {
+          return Instrument.Sarangi
+        } else {
+          return inst
+        }
+      })
     },
 
     getSoloist(rec: RecType): string | undefined {
