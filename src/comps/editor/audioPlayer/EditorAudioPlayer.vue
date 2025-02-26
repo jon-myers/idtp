@@ -321,6 +321,7 @@
       @update:zoomFactors='$emit("update:zoomFactors", $event)'
       />
       <Synths
+        :key='synthsKey'
         ref='synths'
         v-if='ac !== undefined && instTracks.length > 0 && synthControls.length > 0'
         :ac='ac'
@@ -331,6 +332,7 @@
         :curPlayTime='curPlayTime'
         :transposition='transposition'
         :uniformVowel='uniformVowel'
+        @synthsMounted='afterSynthsMounted'
       />
   </div>
 </template>
@@ -468,7 +470,6 @@ type EditorAudioPlayerData = {
   inited: boolean;
   modsLoaded: boolean;
   transposition: number;
-  transposable: boolean;
   string: boolean | undefined;
   vocal: boolean | undefined;
   sarangi: boolean;
@@ -513,7 +514,6 @@ type EditorAudioPlayerData = {
   endRecTime?: number;
   audioBuffer?: AudioBuffer;
   gainNode?: GainNode;
-  moduleCt: number;
   synthLoopBufSourceNode?: AudioBufferSourceNode;
   firstEnvelope: Float32Array;
   firstLPEnvelope: Float32Array;
@@ -537,6 +537,7 @@ type EditorAudioPlayerData = {
   mixedGainVal: number,
   tempMixedGainVal: number,
   startAtCurrentTime: boolean,
+  synthsKey: number,
 }
 
 interface RubberBandNodeType extends AudioWorkletNode {
@@ -701,7 +702,6 @@ export default defineComponent({
       inited: false,
       modsLoaded: false,
       transposition: 0,
-      transposable: false,
       string: undefined,
       vocal: undefined,
       dragStartX: undefined,
@@ -741,7 +741,6 @@ export default defineComponent({
       klattNode: undefined,
       firstLPEnvelope: new Float32Array(256),
       firstEnvelope: new Float32Array(256),
-      moduleCt: 0,
       ac: undefined,
       intSynthGainNode: undefined,
       ruleSet: undefined,
@@ -794,6 +793,7 @@ export default defineComponent({
       mixedGainVal: 1,
       tempMixedGainVal: 1,
       startAtCurrentTime: false,
+      synthsKey: 0,
     };
   },
   props: {
@@ -963,24 +963,11 @@ export default defineComponent({
       const controlsImg = this.$refs.controlsImg as HTMLImageElement;
       controlsImg.classList.remove('showControls');
     }
-    this.ac = new AudioContext({ sampleRate: 48000 });
-    this.gainNode = this.ac.createGain();
-    this.gainNode.gain.setValueAtTime(this.recGain, this.now());
-    this.initializeStretching();
-    this.moduleCt = 0;
-    const browser = detect();
-    const mac = browser!.os === 'Mac OS';
-    const safari = browser!.name === 'safari';
-    const firefox = browser!.name === 'firefox';
-    if (mac && (!safari) && (!firefox)) {
-      this.transposable = true;
-    }
-    this.gainNode.connect(this.ac.destination);    
-    if (this.audioDBDoc && this.piece) this.gatherInfo();
-    this.synthLoopBufSourceNode = this.ac.createBufferSource();
-    this.synthLoopBufSourceNode.loop = true; 
+    this.initializeAudio();
     this.addDragger();
   },
+
+
   beforeUnmount() {
     this.tuningGains.forEach((_, i) => {
       this.tuningGains[i] = 0;
@@ -1028,11 +1015,6 @@ export default defineComponent({
       console.log('getting triggered?')
       const newVal = 2 ** (cents / 1200);
       this.rubberBandNode!.setPitch(newVal);
-      // this.preSetFirstEnvelope(256);
-      // if (this.playing) {
-      //   this.cancelPlayTrajs(this.now(), false);
-      //   this.playTrajs(this.getCurTime(), this.now());
-      // }
       const raga = this.piece.raga;
       const freqs = raga.chikariPitches.map((p) => p.frequency);
       const transp = 2 ** (this.transposition / 1200);
@@ -1147,6 +1129,42 @@ export default defineComponent({
     }
   },
   methods: {
+
+    async resetAudio() {
+      this.playing = false;
+      try {
+        if (this.ac) {
+          await this.ac.close();
+        }
+        this.initializeAudio();
+        this.synthsKey++;
+
+      } catch (e) {
+        console.error(e);
+      }
+    },
+
+    afterSynthsMounted(mounted: boolean) {
+      if (mounted) {
+        const sc = this.$refs.synthControls as 
+            InstanceType<typeof SynthesisControls>;
+        if (sc && sc.reemitAllInstrumentControlParams) {
+          sc.reemitAllInstrumentControlParams();
+        }
+      }
+    },
+
+    initializeAudio() {
+      this.ac = new AudioContext({ sampleRate: 48000 });
+      this.gainNode = this.ac.createGain();
+      this.gainNode.gain.setValueAtTime(this.recGain, this.now());
+      this.initializeStretching();
+      this.gainNode.connect(this.ac.destination);    
+      if (this.audioDBDoc && this.piece) this.gatherInfo();
+      this.synthLoopBufSourceNode = this.ac.createBufferSource();
+      this.synthLoopBufSourceNode.loop = true; 
+      
+    },
 
     copyShareLink() {
       navigator.clipboard.writeText(this.shareLink);
@@ -1293,36 +1311,6 @@ export default defineComponent({
 
     goToSection(sIdx: number) {
       this.$emit('goToSectionEmit', sIdx)
-    },
-
-    reinitializeAC() {
-      console.log('reinitializing audio context');
-      if (this.ac) this.ac.close();
-      this.ac = new AudioContext({ sampleRate: 48000 });
-      this.gainNode = this.ac.createGain();
-      this.gainNode.gain.setValueAtTime(this.recGain, this.now());
-      this.synthGainNode = this.ac.createGain();
-      this.synthGainNode.gain.setValueAtTime(this.synthGain, this.now());
-      this.intSynthGainNode = this.ac.createGain();
-      this.intSynthGainNode.connect(this.synthGainNode);
-      this.chikariGainNode = this.ac.createGain();
-      this.chikariGainNode.connect(this.ac.destination);
-      this.chikariGainNode.gain.setValueAtTime(this.chikariGain, this.now());
-      this.synthGainNode.connect(this.ac.destination);
-      this.moduleCt = 0;
-      const browser = detect();
-      const mac = browser!.os === 'Mac OS';
-      const safari = browser!.name === 'safari';
-      const firefox = browser!.name === 'firefox';
-      if (mac && (!safari) && (!firefox)) {
-        this.transposable = true;
-      }
-      this.gainNode.connect(this.ac.destination);
-      if (this.audioDBDoc && this.piece) this.gatherInfo();
-      this.synthLoopBufSourceNode = this.ac.createBufferSource();
-      this.synthLoopBufSourceNode.loop = true; 
-      this.inited = false;
-      this.parentLoaded();
     },
 
     onSoundTouchInit() {
@@ -1559,7 +1547,8 @@ export default defineComponent({
         mixGainNode.setValueAtTime(curGain, this.now());
         mixGainNode.linearRampToValueAtTime(0, this.now() + this.lagTime);
         this.mixedGainVal = 0;
-        const sc = this.$refs.synthControls as InstanceType<typeof SynthesisControls>;
+        const sc = this.$refs.synthControls as 
+          InstanceType<typeof SynthesisControls>;
         if (this.instTracks.length > 1) {
           sc.mixedGainSliderDisabled = true;
         } else {

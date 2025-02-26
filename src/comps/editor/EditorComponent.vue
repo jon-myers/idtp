@@ -198,7 +198,7 @@
             @click='preventSpaceToggle'>
         </div>
         <div class='cbRow'>
-          <!-- <button @click='resetAudio'>Reset Audio</button> -->
+          <button @click='resetAudio'>Reset Audio</button>
           <button @click='savePiece'>Save</button>
         </div>
         <div class='cbRow'>
@@ -2443,13 +2443,11 @@ export default defineComponent({
     },
 
     resetAudio(e: MouseEvent) {
-      const ap = this.$refs.audioPlayer as APType;
-      ap.reinitializeAC();
-      // also, need to (if Pitch Shift is checked), uncheck pitch shift, and 
-      // set its default back to 0.
+
       const eap = this.$refs.audioPlayer as APType;
       eap.shiftOn = false;
       eap.transposition = 0
+      eap.resetAudio();
     },
 
     shiftTrajByOctave(traj: Trajectory, offset = 1) {
