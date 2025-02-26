@@ -142,7 +142,14 @@ export default defineComponent({
       } else {
         emit('update:gainNode', slider)
       }
-    }
+    };
+
+    const reemitParams = () => {
+      sliders.value.forEach(slider => {
+        // Create a dummy input event if needed (or simply pass undefined)
+        updateParam(slider, new Event('input'));
+      });
+    };
 
 
     const mainStyle = computed(() => {
@@ -160,7 +167,8 @@ export default defineComponent({
       updateParam,
       slider0Disabled,
       slider,
-      slider0TempVal
+      slider0TempVal,
+      reemitParams
      }
   }
 })

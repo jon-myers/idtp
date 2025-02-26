@@ -75,7 +75,7 @@ export default defineComponent({
       required: true
     }
   },
-  setup(props) {
+  setup(props, { emit }) {
     const bursts: { [key: string]: AudioBufferSourceNode } = {};
     const now = () => props.ac.currentTime;
     const mixNode = props.ac.createGain();
@@ -981,6 +981,7 @@ export default defineComponent({
 
     onMounted(async () => {
       // add capture worklet
+      emit('synthsMounted', false);
       try {
         await props.ac.audioWorklet.addModule(caURL);
         const synthPromises = props.instTracks.map(async (track, idx) => {
@@ -1009,6 +1010,7 @@ export default defineComponent({
           }
         });
         preSetFirstEnvelopes();
+        emit('synthsMounted', true);
       } catch (e) {
         console.error('Error mounting synths');
         throw e;

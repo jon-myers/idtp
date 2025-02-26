@@ -165,6 +165,14 @@ export default defineComponent({
 
     const instControl = ref<InstanceType<typeof InstrumentControl>[] | null>(null);
 
+      const reemitAllInstrumentControlParams = () => {
+      if (instControl.value) {
+        instControl.value.forEach(control => {
+          control.reemitParams();
+        });
+      }
+    };
+
     const transpositionProxy = computed({
       get() {
         return props.transposition
@@ -246,7 +254,8 @@ export default defineComponent({
       mixedGainValProxy,
       recGainValProxy,
       mixedGainSliderDisabled,
-      instControl
+      instControl,
+      reemitAllInstrumentControlParams
     }
 
   }
