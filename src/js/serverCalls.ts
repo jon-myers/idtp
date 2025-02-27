@@ -595,6 +595,7 @@ const updateAudioRecording = async (
   parentTrackNum?: number | string
   ) => {
   // update audio recording
+  console.log(updates)
   let out;
   if (aeId !== undefined && parentTrackNum === undefined) {
     throw new Error('parentTrackNum must be defined if ae_id is defined')

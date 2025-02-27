@@ -386,7 +386,8 @@ const runServer = async () => {
         parentTitle: 1,
         parentTrackNumber: 1,
         userID: 1,
-        explicitPermissions: 1
+        explicitPermissions: 1,
+        title: 1
       }
       try {
         const out = await audioRecordings.find().project(projection).toArray();

@@ -415,6 +415,7 @@ type RecType = {
   },
   dateModified: string | Date,
   userID: string,
+  title?: string,
 }
 
 type AudioEventType = {
@@ -481,7 +482,8 @@ type RecUpdateType = {
     publicView: boolean,
     edit: string[],
     view: string[]
-  }
+  },
+  title?: string,
 };
 
 type EditingSecType = {
