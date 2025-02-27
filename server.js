@@ -2117,7 +2117,40 @@ const runServer = async () => {
         res.status(500).send(err);
       }
     })
-      
+
+    app.post('/updateTranscriptionViewed', async (req, res) => {
+      try {
+        const query = { _id: ObjectId(req.body.userID) };
+        const update = { 
+          $set: {
+            [`transcriptionsViewed.${req.body.transcriptionID}`]: new Date()
+          }
+        }
+        const result = await users.updateOne(query, update);
+        res.json(result);
+        
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    })
+
+    app.post('/getUsersLastViewedTranscriptions', async (req, res) => {
+      try {
+        // Expecting a JSON body with { userId: "someUserId" }
+        const userID = req.body.userId;
+        const query = { _id: ObjectId(userID) };
+        const projection = { projection: { transcriptionsViewed: 1, _id: 0 } };
+        const user = await users.findOne(query, projection);
+        if (!user) {
+          return res.status(404).send('User not found');
+        }
+        res.json(user.transcriptionsViewed);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send(err);
+      }
+    });
 
     const setNoCache = res => {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');

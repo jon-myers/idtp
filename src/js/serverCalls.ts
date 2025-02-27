@@ -2084,6 +2084,51 @@ const enrollUserInCollection = async (userID: string, inviteCode: string) => {
   return out
 }
 
+const updateTranscriptionViewed = async (
+  userID: string, 
+  transcriptionID: string
+) => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userID, transcriptionID })
+  };
+  try {
+    const res = await fetch(url + 'updateTranscriptionViewed', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
+const getUsersLastViewedTranscriptions = async (
+  userId: string
+): Promise<{ [key: string]: string }> => {
+  let out;
+  const request = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ userId })
+  }
+  try {
+    const res = await fetch(url + 'getUsersLastViewedTranscriptions', request);
+    if (res.ok) {
+      out = await res.json()
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  return out
+}
+
 
 export { 
   getPiece,
@@ -2171,5 +2216,7 @@ export {
   getTranscriptionInstrumentation,
   updateInstrumentation,
   updateCollectionInviteCode,
-  enrollUserInCollection
+  enrollUserInCollection,
+  updateTranscriptionViewed,
+  getUsersLastViewedTranscriptions
 }
