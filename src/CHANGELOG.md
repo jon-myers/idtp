@@ -1,6 +1,7 @@
 # Changelog
 
 
+* Fix: spectrogram now updates current canvas when changing max or min pitch [caecf0a] (Jon Myers)
 * Feat: added title to audio recoridngs [b3b3c2c] (Jon Myers)
 ### 2025-02-27
 
