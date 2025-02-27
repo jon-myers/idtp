@@ -113,6 +113,7 @@ import {
   getAllUsers,
   getEditableCollections,
   getSortedMusicians,
+  getUsersLastViewedTranscriptions
 } from '@/js/serverCalls.ts';
 import NewPieceRegistrar from '@/comps/files/NewPieceRegistrar.vue';
 import AddToCollection from '@/comps/AddToCollection.vue';
@@ -179,6 +180,7 @@ type FileManagerDataType = {
   ftLabels: FilterableTableType[],
   allMusicians?: MusicianNameType[],
   showEditInstrumentation: boolean,
+  viewedTranscriptions: { [key: string]: string }
 }
 
 type PieceInfoType = [string?, string?, string?, string?, string?, string?];
@@ -288,9 +290,18 @@ export default defineComponent({
           getDisplay: this.getModifiedDisplay as GetDisplayType
         },
         {
+          label: 'Viewed',
+          minWidth: 110,
+          prioritization: 7,
+          sortFunction: this.viewedSorter as SortFuncType,
+          growable: false,
+          initSortState: SortState.up,
+          getDisplay: this.getViewedDisplay as GetDisplayType
+        },
+        {
           label: 'Editable',
           minWidth: 105,
-          prioritization: 7,
+          prioritization: 8,
           sortFunction: this.editableSorter as SortFuncType,
           growable: false,
           initSortState: SortState.down,
@@ -298,6 +309,7 @@ export default defineComponent({
         }
       ],
       showEditInstrumentation: false,
+      viewedTranscriptions: {}
     };
   },
 
@@ -348,6 +360,10 @@ export default defineComponent({
       this.fileContainerHeight = window.innerHeight - this.navHeight;
     });
     try {
+      const userID = this.$store.state.userID!;
+      this.viewedTranscriptions = await getUsersLastViewedTranscriptions(userID);
+      const ft = this.$refs.filterableTable as InstanceType<typeof FilterableTable>;
+      ft.toggleSort(7, true);
       this.allUsers = await getAllUsers();
       if (this.allUsers !== undefined) {
         this.allNames = this.allUsers.map(user => {
@@ -356,9 +372,10 @@ export default defineComponent({
       } else {
         throw new Error('this.allUsers is undefined');
       }
-      const userID = this.$store.state.userID!;
+      
       this.editableCols = await getEditableCollections(userID);
       this.allMusicians = await getSortedMusicians(true);
+      
       
     } catch (err) {
       console.log(err)
@@ -688,6 +705,24 @@ export default defineComponent({
       }
       return 0;
     },
+    
+    viewedSorter(a: TransMetadataType, b: TransMetadataType) {
+      const dateStringA = this.viewedTranscriptions[a._id!] ? 
+        this.viewedTranscriptions[a._id!] : 
+        '0';
+      const dateStringB = this.viewedTranscriptions[b._id!] ? 
+        this.viewedTranscriptions[b._id!] : 
+        '0';
+      const dateA = new Date(dateStringA);
+      const dateB = new Date(dateStringB);
+      if (dateA < dateB) {
+        return -1;
+      }
+      if (dateA > dateB) {
+        return 1;
+      }
+      return 0;
+    },
 
     editableSorter(a: TransMetadataType, b: TransMetadataType) {
       const id = this.$store.state.userID!;
@@ -728,6 +763,15 @@ export default defineComponent({
 
     getModifiedDisplay(item: TransMetadataType) {
       return this.writeDate(new Date(item.dateModified));
+    },
+
+    getViewedDisplay(item: TransMetadataType) {
+      const dateString = this.viewedTranscriptions[item._id!];
+      if (dateString) {
+        return this.writeDate(new Date(dateString));
+      } else {
+        return 'Never';
+      }
     },
 
     getEditableDisplay(item: TransMetadataType) {

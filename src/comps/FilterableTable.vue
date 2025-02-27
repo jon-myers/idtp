@@ -156,6 +156,9 @@ export default defineComponent({
     this.$el.style.setProperty('--search-bar-height', `${this.searchBarHeight}px`);
     window.addEventListener('resize', this.resetWidths);
 
+    this.$nextTick(() => {
+      this.toggleSort(7, true)
+    })
 
   },
 
