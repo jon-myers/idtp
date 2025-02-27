@@ -413,6 +413,7 @@ import instructionsText from '@/assets/texts/editor_instructions.html?raw';
 import AutomationWindow from '@/comps/editor/AutomationWindow.vue';
 import Renderer from '@/comps/editor/Renderer.vue';
 import TranscriptionLayer from '@/comps/editor/renderer/TranscriptionLayer.vue';
+import SpectrogramLayer from '@/comps/editor/renderer/SpectrogramLayer.vue';
 import YAxis from '@/comps/editor/renderer/YAxis.vue';
 import Tooltip from '@/comps/Tooltip.vue';
 import Synths from '@/comps/editor/audioPlayer/Synths.vue';
@@ -510,6 +511,7 @@ type TSPType = InstanceType<typeof TrajSelectPanel>;
 type RendererType = InstanceType<typeof Renderer>;
 type APType = InstanceType<typeof EditorAudioPlayer>;
 type TLayerType = InstanceType<typeof TranscriptionLayer>;
+type SLayerType = InstanceType<typeof SpectrogramLayer>;
 type YAxisType = InstanceType<typeof YAxis>;
 type LabelEditorType = InstanceType<typeof LabelEditor>;
 type MeterControlsType = InstanceType<typeof MeterControls>;
@@ -1373,7 +1375,11 @@ export default defineComponent({
       const yAxis = r.yAxis as YAxisType;
       yAxis.resetAxis();
       const tLayer = r.$refs.transcriptionLayer as TLayerType;
-      this.$nextTick(() => tLayer.resetTranscription());
+      const sLayer = r.$refs.spectrogramLayer as SLayerType;
+      this.$nextTick(() => {
+        tLayer.resetTranscription();
+        sLayer.resetCanvases();
+      });
     },
 
     updateMaxPitch(p: Pitch) {
@@ -1385,7 +1391,11 @@ export default defineComponent({
       const yAxis = r.yAxis as YAxisType;
       yAxis.resetAxis();
       const tLayer = r.$refs.transcriptionLayer as TLayerType;
-      this.$nextTick(() => tLayer.resetTranscription());
+      const sLayer = r.$refs.spectrogramLayer as SLayerType;
+      this.$nextTick(() => {
+        tLayer.resetTranscription();
+        sLayer.resetCanvases();
+      });
     },
 
     zoomInY() {

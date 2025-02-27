@@ -493,7 +493,6 @@ export default defineComponent({
         emit('update:maxPitch', maxPitchObj.value);
         if (spectrogramWorker !== undefined) {
           nextTick(() => {
-            console.log('maxPitchIdx set');
             const processOptions = {
               type: 'crop',
               logMin: logSaFreq.value - lowOctOffset.value,
