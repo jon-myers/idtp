@@ -109,7 +109,10 @@
         </div>
 
         <div class='editingSubFrame' v-if='editRecIdx === 0'>
-        <!-- editing num of musicians, and their attributes -->
+          <div class='modalRow'>
+            <label>Title</label>
+            <input type='text' v-model='recTitle'>
+          </div>
           <div class='modalRow numMusicians'>
             <label>Number of Musicians</label>
             <input 
@@ -484,6 +487,7 @@ type UploadRecordingDataType = {
   startedUpload: boolean,
   visible: boolean,
   allUsers: UserType[],
+  recTitle: string,
 }
 export default defineComponent({
   data(): UploadRecordingDataType {
@@ -546,7 +550,8 @@ export default defineComponent({
       aeTypes: [],
       startedUpload: false,
       visible: true,
-      allUsers: []
+      allUsers: [],
+      recTitle: '',
     };
   },
 
@@ -872,6 +877,7 @@ export default defineComponent({
         saVerified: this.saVerified,
         octOffset: this.octOffset,
         explicitPermissions: this.editingRec!.explicitPermissions!,
+        title: this.recTitle,
 
       };
       try {
@@ -1026,6 +1032,9 @@ export default defineComponent({
           
 
         }
+        if (this.editingRec.title !== undefined) {
+          this.recTitle = this.editingRec.title;
+        }
 
         if (this.numMusicians === 0) {
           this.numMusicians = 1;
@@ -1153,7 +1162,7 @@ export default defineComponent({
   background-color: lightgrey;
   padding: 20px;
   border-radius: 4px;
-  height: 460px;
+  height: 500px;
   width: 700px;
   display: flex;
   flex-direction: column;
@@ -1233,7 +1242,7 @@ export default defineComponent({
 }
 
 .modalRow.tall {
-  height: 160px;
+  height: 200px;
 }
 
 .modalRow.tall.musicians {

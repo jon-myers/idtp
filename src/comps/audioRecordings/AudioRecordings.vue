@@ -194,6 +194,15 @@ export default defineComponent({
         getDisplay: this.getPSecDisplay as GetDisplayType
       },
       {
+        label: 'Title',
+        minWidth: 100,
+        prioritization: 4,
+        sortFunction: this.eventSorter as SortFuncType,
+        growable: true,
+        initSortState: SortState.down,
+        getDisplay: this.getTitleDisplay as GetDisplayType
+      },
+      {
         label: 'Duration',
         minWidth: 100,
         prioritization: 4,
@@ -333,6 +342,10 @@ export default defineComponent({
       return rec.parentTitle !== undefined && rec.parentTitle !== null ? 
         rec.parentTitle : 
         'None';
+    },
+
+    getTitleDisplay(rec: RecType) {
+      return rec.title ? rec.title : '';
     },
 
     getTrackNumDisplay(rec: RecType) {
