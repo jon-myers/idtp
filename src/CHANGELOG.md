@@ -1,6 +1,9 @@
 # Changelog
 
 
+* Feat: added title to audio recoridngs [b3b3c2c] (Jon Myers)
+### 2025-02-27
+
 * fix: prevents the creation of transcriptions with non-implemented instrumentation. [657b115] (Jon Myers)
 ### 2025-02-26
 
