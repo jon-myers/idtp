@@ -151,6 +151,7 @@
               @deleteMeter='$emit("deleteMeter", $event)'
               @toggle:sargamMagnet='$emit("toggle:sargamMagnet")'
               @clearTSP='$emit("clearTSP")'
+              @open:addToCollection='$emit("open:addToCollection")'
             />
           />
         </div>
@@ -418,6 +419,7 @@ export default defineComponent({
     'deleteMeter',
     'toggle:sargamMagnet',
     'clearTSP',
+    'open:addToCollection'
   ],
   setup(props, { emit }) {
     const layersContainer = ref<HTMLDivElement | null>(null);

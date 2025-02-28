@@ -135,9 +135,9 @@ import {
   GetDisplayType,
   UserCheckType,
   MusicianNameType,
-  RuleSetType
+  RuleSetType,
 } from '@/ts/types.ts';
-import { SortState } from '@/ts/enums.ts';
+import { SortState, Instrument } from '@/ts/enums.ts';
 import EditInstrumentation from '@/comps/EditInstrumentation.vue';
 
 type FileManagerDataType = {
@@ -805,14 +805,14 @@ export default defineComponent({
             id: number;
             durTot: number;
             fundID12: number;
-            instrumentation?: string;
+            instrumentation?: Instrument;
           } = {
             id: 12,
             durTot: durTot,
             fundID12: npi.raga.fundamental,
           };
           if (npi.instrumentation) {
-            tObj.instrumentation = npi.instrumentation[0];
+            tObj.instrumentation = Instrument[npi.instrumentation[0] as keyof typeof Instrument];
           }
           const traj = new Trajectory(tObj);
           npi.phrases = [

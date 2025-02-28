@@ -295,7 +295,8 @@ export default defineComponent({
     'update:selectedMeter',
     'deleteMeter',
     'toggle:sargamMagnet',
-    'clearTSP'
+    'clearTSP',
+    'open:addToCollection'
   ],
   setup(props, { emit }) {
     const tranContainer = ref<HTMLDivElement | null>(null);
@@ -4975,6 +4976,14 @@ export default defineComponent({
         },
         enabled: true
       });
+      contextMenuChoices.value.push({
+        text: `Add to Collection`,
+        action: () => {
+          contextMenuClosed.value = true;
+          emit('open:addToCollection');
+        }, 
+        enabled: true
+      })
 
       
     }

@@ -75,6 +75,7 @@
       @deleteMeter='removeMeter($event)'
       @toggle:sargamMagnet='sargamMagnetMode = !sargamMagnetMode'
       @clearTSP='clearTSP'
+      @open:addToCollection='showAddToCollection = true'
       />
     <div class='controlBox'>
       <div class='scrollingControlBox'>
@@ -354,6 +355,14 @@
       :open='tooltipOpen'
       :text='tooltipText'
     />
+    <AddToCollection
+      v-if='showAddToCollection'
+      :possibleCollections='editableCols'
+      :navHeight='navHeight'
+      :tID='piece._id'
+      @close='showAddToCollection = false'
+      addType='transcription'
+      />
 </template>
 <script lang='ts'>
 const getClosest = (counts: number[], goal: number) => {
@@ -401,7 +410,8 @@ import {
   savePiece,
   makeSpectrograms,
   pieceExists,
-  getMelographJSON
+  getMelographJSON,
+  getEditableCollections,
 } from '@/js/serverCalls.ts';
 import { Meter, Pulse } from '@/js/meter.ts';
 import EditorAudioPlayer from '@/comps/editor/audioPlayer/EditorAudioPlayer.vue';
@@ -417,6 +427,7 @@ import SpectrogramLayer from '@/comps/editor/renderer/SpectrogramLayer.vue';
 import YAxis from '@/comps/editor/renderer/YAxis.vue';
 import Tooltip from '@/comps/Tooltip.vue';
 import Synths from '@/comps/editor/audioPlayer/Synths.vue';
+import AddToCollection from '@/comps/AddToCollection.vue';
 import { detect, BrowserInfo } from 'detect-browser';
 import { throttle } from 'lodash';
 import { defineComponent } from 'vue';
@@ -433,7 +444,8 @@ import {
   TrajRenderObj,
   TrajTimePoint,
   LabelEditorOptions,
-  TooltipData
+  TooltipData,
+  CollectionType,
 } from '@/ts/types';
 import { EditorMode, Instrument, ControlsMode, PlayheadAnimations } from '@/ts/enums';
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
@@ -675,7 +687,9 @@ type EditorDataType = {
   throttledRefreshSargamLines: ReturnType<typeof throttle> | undefined,
   zoomYFactor: number,
   zoomXFactor: number,
-  queryTime: number
+  queryTime: number,
+  showAddToCollection: boolean,
+  editableCols: CollectionType[],
 }
 
 export { findClosestStartTime }
@@ -837,7 +851,9 @@ export default defineComponent({
       throttledRefreshSargamLines: undefined,
       zoomYFactor: 1,
       zoomXFactor: 1,
-      queryTime: 0
+      queryTime: 0,
+      showAddToCollection: false,
+      editableCols: [],
     }
   },
   setup() {
@@ -851,7 +867,8 @@ export default defineComponent({
     ContextMenu,
     AutomationWindow,
     Renderer,
-    Tooltip
+    Tooltip,
+    AddToCollection,
   },
   created() {
     window.addEventListener('keydown', this.handleKeydown);
@@ -1026,6 +1043,8 @@ export default defineComponent({
       if (this.queryTime !== 0) {
         this.currentTime = this.queryTime;
       }
+      const userID = this.$store.state.userID!;
+      this.editableCols = await getEditableCollections(userID);
     } catch (err) {
       console.error(err)
     }
