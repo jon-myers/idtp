@@ -1,6 +1,8 @@
 # Changelog
 
 
+* Feat: "remove from collection" now accessible from editor [ffbb8dd] (Jon Myers)
+* Feat: Add to collection is now available from within editor via the context menu [9b77cb6] (Jon Myers)
 * Feat: Transcriptions are now sortable by most recently viewed (by the current user). Also, this is now the default sort state. [40aea20] (Jon Myers)
 * Fix: spectrogram now updates current canvas when changing max or min pitch [caecf0a] (Jon Myers)
 * Feat: added title to audio recoridngs [b3b3c2c] (Jon Myers)
