@@ -91,7 +91,8 @@ import {
   ContextMenuOptionType,
   LabelEditorOptions,
   StrokeNicknameType,
-  BolDisplayType
+  BolDisplayType,
+  CollectionType
 } from '@/ts/types.ts';
 import { Meter, Pulse } from '@/js/meter.ts';
 import ContextMenu from'@/comps/ContextMenu.vue';
@@ -270,6 +271,10 @@ export default defineComponent({
     preZoomMiddleTime: {
       type: Number,
       required: true
+    },
+    editableCols: {
+      type: Object as PropType<CollectionType[]>,
+      required: true
     }
   },
   emits: [
@@ -295,7 +300,9 @@ export default defineComponent({
     'update:selectedMeter',
     'deleteMeter',
     'toggle:sargamMagnet',
-    'clearTSP'
+    'clearTSP',
+    'open:addToCollection',
+    'open:removeFromCollection',
   ],
   setup(props, { emit }) {
     const tranContainer = ref<HTMLDivElement | null>(null);
@@ -422,25 +429,6 @@ export default defineComponent({
       threshold: 0.0
     });
 
-    // const resetTrajRenderStatus = (persistingTrajUIds: string[] = [], redraw = true) => {
-    //   for (let i = 0; i < props.piece.instrumentation.length; i++) {
-    //     if (trajRenderStatus.value[i] === undefined) {
-    //       trajRenderStatus.value.push([])
-    //     }
-    //     trajRenderStatus.value[i] = props.piece.allTrajectories(i).map(t => {
-    //       const prev = trajRenderStatus.value[i].find(obj => {
-    //         return obj.uniqueId === t.uniqueId
-    //       });
-    //       let status = redraw ? false : prev ? prev.renderStatus : false;
-    //       return { 
-    //         uniqueId: t.uniqueId!, 
-    //         renderStatus: status,
-    //         selectedStatus: persistingTrajUIds.includes(t.uniqueId!),
-    //         track: i
-    //       }
-    //     })
-    //   }
-    // }
     const resetTrajRenderStatus = (persistingTrajUIds: string[] = [], redraw = true) => {
       // Convert the persisting IDs into a Set for fast lookups.
       const persistingSet = new Set(persistingTrajUIds);
@@ -591,6 +579,11 @@ export default defineComponent({
       } else {
         return false
       }
+    })
+    const removableCols = computed(() => {
+      return props.editableCols.filter(c => {
+        return c.transcriptions.includes(props.piece._id!)
+      })
     })
 
     // watched values
@@ -4975,8 +4968,25 @@ export default defineComponent({
         },
         enabled: true
       });
+      contextMenuChoices.value.push({
+        text: `Add to Collection`,
+        action: () => {
+          contextMenuClosed.value = true;
+          emit('open:addToCollection');
+        }, 
+        enabled: true
+      })
+      if (removableCols.value.length > 0) {
+        contextMenuChoices.value.push({
+          text: `Remove from Collection`,
+          action: () => {
+            contextMenuClosed.value = true;
+            emit('open:removeFromCollection');
 
-      
+          },
+          enabled: true
+        })
+      }
     }
  
     const handleClick = (e: MouseEvent) => {

@@ -128,6 +128,7 @@
               :playheadAnimation='playheadAnimation'
               :preZoomPlayheadPxl='preZoomPlayheadPxl'
               :preZoomMiddleTime='preZoomMiddleTime'
+              :editableCols='editableCols'
               @update:prevMeter='$emit("update:prevMeter", $event)'
               @update:selectedMode='$emit("update:selectedMode", $event)'
               @unsavedChanges='$emit("unsavedChanges", $event)'
@@ -151,6 +152,8 @@
               @deleteMeter='$emit("deleteMeter", $event)'
               @toggle:sargamMagnet='$emit("toggle:sargamMagnet")'
               @clearTSP='$emit("clearTSP")'
+              @open:addToCollection='$emit("open:addToCollection")'
+              @open:removeFromCollection='$emit("open:removeFromCollection")'
             />
           />
         </div>
@@ -195,7 +198,9 @@ import * as d3 from 'd3';
 import { 
   InstrumentTrackType, 
   ContextMenuOptionType,
-  TransMetadataType } from '@/ts/types.ts';
+  TransMetadataType,
+  CollectionType
+} from '@/ts/types.ts';
 import { EditorMode, Instrument, PlayheadAnimations } from '@/ts/enums.ts';
 import { BrowserInfo } from 'detect-browser';
 import ContextMenu from '@/comps/ContextMenu.vue';
@@ -388,6 +393,10 @@ export default defineComponent({
     queryTime: {
       type: Number,
       required: true
+    },
+    editableCols: {
+      type: Object as PropType<CollectionType[]>,
+      required: true
     }
   },
   emits: [
@@ -418,6 +427,8 @@ export default defineComponent({
     'deleteMeter',
     'toggle:sargamMagnet',
     'clearTSP',
+    'open:addToCollection',
+    'open:removeFromCollection',
   ],
   setup(props, { emit }) {
     const layersContainer = ref<HTMLDivElement | null>(null);
