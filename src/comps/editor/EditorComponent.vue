@@ -422,6 +422,7 @@ import {
   pieceExists,
   getMelographJSON,
   getEditableCollections,
+  updateTranscriptionViewed
 } from '@/js/serverCalls.ts';
 import { Meter, Pulse } from '@/js/meter.ts';
 import EditorAudioPlayer from '@/comps/editor/audioPlayer/EditorAudioPlayer.vue';
@@ -983,6 +984,11 @@ export default defineComponent({
           throw 'IDTP logger: Piece does not exist, or you do not have \
           permission to view.'
       }
+
+      await updateTranscriptionViewed(this.$store.state.userID, this.piece._id);
+
+
+
       this.oldHeight = window.innerHeight;
       const ap = this.$refs.audioPlayer as APType;
       ap.parentLoaded();
