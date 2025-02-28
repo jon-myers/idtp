@@ -48,6 +48,7 @@
       :highlightTrajs='highlightTrajs'
       :playheadAnimation='playheadAnimation'
       :queryTime='queryTime'
+      :editableCols='editableCols'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
@@ -76,6 +77,7 @@
       @toggle:sargamMagnet='sargamMagnetMode = !sargamMagnetMode'
       @clearTSP='clearTSP'
       @open:addToCollection='showAddToCollection = true'
+      @open:removeFromCollection='showRemoveFromCollection = true'
       />
     <div class='controlBox'>
       <div class='scrollingControlBox'>
@@ -360,9 +362,17 @@
       :possibleCollections='editableCols'
       :navHeight='navHeight'
       :tID='piece._id'
-      @close='showAddToCollection = false'
+      @close='closeAddToCollection'
       addType='transcription'
-      />
+    />
+    <RemoveFromCollection
+      v-if='showRemoveFromCollection'
+      :possibleCollections='removableCols'
+      :navHeight='navHeight'
+      :tID='piece._id'
+      @close='closeRemoveFromCollection'
+      removeType='transcription'
+    />
 </template>
 <script lang='ts'>
 const getClosest = (counts: number[], goal: number) => {
@@ -428,6 +438,7 @@ import YAxis from '@/comps/editor/renderer/YAxis.vue';
 import Tooltip from '@/comps/Tooltip.vue';
 import Synths from '@/comps/editor/audioPlayer/Synths.vue';
 import AddToCollection from '@/comps/AddToCollection.vue';
+import RemoveFromCollection from '@/comps/RemoveFromCollection.vue';
 import { detect, BrowserInfo } from 'detect-browser';
 import { throttle } from 'lodash';
 import { defineComponent } from 'vue';
@@ -690,6 +701,7 @@ type EditorDataType = {
   queryTime: number,
   showAddToCollection: boolean,
   editableCols: CollectionType[],
+  showRemoveFromCollection: boolean,
 }
 
 export { findClosestStartTime }
@@ -854,6 +866,7 @@ export default defineComponent({
       queryTime: 0,
       showAddToCollection: false,
       editableCols: [],
+      showRemoveFromCollection: false,
     }
   },
   setup() {
@@ -869,6 +882,7 @@ export default defineComponent({
     Renderer,
     Tooltip,
     AddToCollection,
+    RemoveFromCollection,
   },
   created() {
     window.addEventListener('keydown', this.handleKeydown);
@@ -1208,9 +1222,42 @@ export default defineComponent({
       if (!tLayer) return undefined;
       return tLayer.regionEndX;
     },
+
+    removableCols() {
+      return this.editableCols.filter(c => {
+        return c.transcriptions.includes(this.piece._id!);
+      })
+    }
   },
 
   methods: {
+
+    async closeAddToCollection() {
+      this.showAddToCollection = false;
+      try {
+        this.updateEditableCols();
+      } catch (err) {
+        console.error(err);
+      }
+    },
+
+    async closeRemoveFromCollection() {
+      this.showRemoveFromCollection = false;
+      try {
+        this.updateEditableCols();
+      } catch (err) {
+        console.error(err);
+      }
+    },
+
+    async updateEditableCols() {
+      try {
+        const userID = this.$store.state.userID!;
+        this.editableCols = await getEditableCollections(userID);
+      } catch (err) {
+        console.error(err);
+      }
+    },
 
     updateSelectedMode(mode: EditorMode) {
       if (mode !== EditorMode.None && mode !== EditorMode.Region) {
