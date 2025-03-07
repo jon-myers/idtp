@@ -1,6 +1,11 @@
 # Changelog
 
 
+* Fix: bug where incorrect sargam line was moving in response to tuning changes [564c1e2] (Jon Myers)
+### 2025-03-07
+
+## March 2025
+
 * Feat: "remove from collection" now accessible from editor [ffbb8dd] (Jon Myers)
 * Feat: Add to collection is now available from within editor via the context menu [9b77cb6] (Jon Myers)
 * Feat: Transcriptions are now sortable by most recently viewed (by the current user). Also, this is now the default sort state. [40aea20] (Jon Myers)
