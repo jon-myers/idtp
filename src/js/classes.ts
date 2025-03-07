@@ -3627,7 +3627,7 @@ class Raga {
 
   getPitches({ low=100, high=800 } = {}) {
     const sargam = Object.keys(this.ruleSet);
-    const pitches: Pitch[] = [];
+    let pitches: Pitch[] = [];
     sargam.forEach(s => {
       if (typeof(this.ruleSet[s]) === 'boolean' && this.ruleSet[s]) {
         const freq = this.tuning[s] as number * this.fundamental;
@@ -3673,6 +3673,9 @@ class Raga {
       }
     });
     pitches.sort((a, b) => a.frequency - b.frequency)
+    pitches = pitches.filter(p => {
+      return p.frequency >= low && p.frequency <= high
+    })
     return pitches
   }
 
