@@ -985,7 +985,7 @@ export default defineComponent({
           permission to view.'
       }
 
-      await updateTranscriptionViewed(this.$store.state.userID, this.piece._id);
+      await updateTranscriptionViewed(this.$store.state.userID!, this.piece._id!);
 
 
 
