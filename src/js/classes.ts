@@ -577,7 +577,25 @@ class Pitch {
     } else {
       throw new SyntaxError(`invalid swara: ${this.swara}`)
     }
+  }
 
+  get a440CentsDeviation(): string {
+    const c0 = 16.3516;
+    const deviation = 1200 * Math.log2(this.frequency / c0);
+    const oct = Math.floor(deviation / 1200);
+    let pitchIdx = Math.round(deviation % 1200 / 100);
+    let cents = Math.round(deviation % 100);
+    let sign = '+';
+    if (cents > 50) {
+      cents = 100 - cents;
+      sign = '-';
+      pitchIdx += 1;
+      pitchIdx = pitchIdx % 12;
+    }
+    
+    let pitch = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G',
+      'G#', 'A', 'A#', 'B'][pitchIdx];
+    return `${pitch}${oct} (${sign}${cents}\u00A2)`
   }
 
   get chroma() {

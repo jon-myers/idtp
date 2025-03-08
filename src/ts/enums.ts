@@ -53,7 +53,7 @@ enum ScaleSystem {
   Sargam = 'Sargam',
   Solfege = 'Solfege',
   PitchClass = 'Pitch Class',
-  Chromatic = 'Chromatic',
+  Cents = 'Cents',
 }
 
 

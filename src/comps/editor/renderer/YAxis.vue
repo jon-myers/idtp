@@ -114,6 +114,7 @@ export default defineComponent({
         if (props.scaleSystem === ScaleSystem.Sargam) return p.octavedSargamLetter
         else if (props.scaleSystem === ScaleSystem.Solfege) return p.octavedSolfegeLetter
         else if (props.scaleSystem === ScaleSystem.PitchClass) return p.octavedChroma
+        else if (props.scaleSystem === ScaleSystem.Cents) return p.a440CentsDeviation
         else throw new Error('Invalid scale system');
       });
     });
@@ -192,6 +193,10 @@ export default defineComponent({
   height: var(--scaledHeight);
   background-color: #f0f0f0;
   overflow-y: hidden
+}
+
+.tick > text {
+  white-space: pre-line
 }
 </style>
 

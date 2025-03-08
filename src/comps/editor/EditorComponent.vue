@@ -554,7 +554,7 @@ type EditorDataType = {
   durTot: number,
   backColor: string,
   axisColor: string,
-  yAxWidth: number,
+  // yAxWidth: number,
   xAxHeight: number,
   minDrawDur: number,
   initViewDur: number,
@@ -725,7 +725,7 @@ export default defineComponent({
       durTot: 600,
       backColor: '#f0f8ff', // aliceblue
       axisColor: '#c4b18b', // tan
-      yAxWidth: 30,
+      // yAxWidth: 30,
       xAxHeight: 30,
       minDrawDur: 0.01, //this could be smaller, potentially
       initViewDur: 20,
@@ -1154,6 +1154,10 @@ export default defineComponent({
   },
 
   computed: {
+
+    yAxWidth() {
+      return this.scaleSystem === ScaleSystem.Cents ? 70 : 30;
+    },
     hasRecording() {
       return this.audioDBDoc !== undefined;
     },
