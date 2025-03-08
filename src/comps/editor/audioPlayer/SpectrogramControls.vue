@@ -172,6 +172,20 @@
     </div>
     <div class='col'>
       <div class='titleBox'>
+        <label>Scale System</label>
+      </div>
+      <div class='rowBox'>
+        <div class='row'>
+          <select v-model='scaleSystemProxy'>
+            <option v-for='system in possibleScaleSystems' :value='system'>
+              {{ system }}
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class='col'>
+      <div class='titleBox'>
         <label>Display Settings</label>
       </div>
       <div class='rowBox'>
@@ -222,20 +236,6 @@
               >
             New Save
           </button>
-        </div>
-      </div>
-    </div>
-    <div class='col'>
-      <div class='titleBox'>
-        <label>Scale System</label>
-      </div>
-      <div class='rowBox'>
-        <div class='row'>
-          <select v-model='scaleSystemProxy'>
-            <option v-for='system in possibleScaleSystems' :value='system'>
-              {{ system }}
-            </option>
-          </select>
         </div>
       </div>
     </div>
@@ -444,7 +444,8 @@ export default defineComponent({
       },
       "playheadAnimationStyle": PlayheadAnimations.Animated,
       "highlightTrajs": true,
-      "uniqueId": "ffa38001-f592-4778-a91e-c4ef5c99b081"
+      "uniqueId": "ffa38001-f592-4778-a91e-c4ef5c99b081",
+      "scaleSystem": ScaleSystem.Sargam,
     } as DisplaySettings;
 
     const intensityPower = ref(1);
@@ -791,7 +792,8 @@ export default defineComponent({
         playheadAnimationStyle: playheadAnimationProxy.value,
         highlightTrajs: highlightTrajsProxy.value,
         zoomXFactor: props.zoomXFactor,
-        zoomYFactor: props.zoomYFactor
+        zoomYFactor: props.zoomYFactor,
+        scaleSystem: scaleSystemProxy.value
       }
     };
     const resyncToServerSettings = async (selectedId?: string) => {
@@ -849,7 +851,9 @@ export default defineComponent({
       if (s.zoomXFactor !== undefined && s.zoomYFactor !== undefined) {
         emit('update:zoomFactors', {x: s.zoomXFactor, y: s.zoomYFactor});
       }
-      
+      if (s.scaleSystem !== undefined) {
+        scaleSystemProxy.value = s.scaleSystem;
+      }
     };
 
     const setAsDefaultSetting = () => {
