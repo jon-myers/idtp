@@ -11,7 +11,7 @@ import {
   ValueFn
 } from 'd3';
 
-import { Instrument, PlayheadAnimations } from '@/ts/enums';
+import { Instrument, PlayheadAnimations, ScaleSystem } from '@/ts/enums';
 
 type CollectionType = {
   _id?: string;
@@ -902,6 +902,7 @@ type DisplaySettings = {
   playheadAnimationStyle: PlayheadAnimations,
   highlightTrajs: boolean,
   uniqueId: string,
+  scaleSystem?: ScaleSystem
 }
 
 interface LoopSourceNode extends AudioBufferSourceNode {

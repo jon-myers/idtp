@@ -17,6 +17,7 @@ import {
 import * as d3 from 'd3';
 import { Raga } from '@/js/classes.ts';
 import { getContrastingTextColor } from '@/ts/utils.ts';
+import { ScaleSystem } from '@/ts/enums.ts';
 
 export default defineComponent({
   name: 'YAxis',
@@ -48,6 +49,10 @@ export default defineComponent({
     axisColor: {
       type: String,
       required: true
+    }, 
+    scaleSystem: {
+      type: String as PropType<ScaleSystem>,
+      required: true
     }
   },
   setup(props) {
@@ -65,7 +70,6 @@ export default defineComponent({
         resetAxis();
       }
     })
-
     watch(() => props.axisColor, newColor => {
       if (aySvg.value) {
         const svg = d3.select(aySvg.value)
@@ -78,6 +82,9 @@ export default defineComponent({
           .style('stroke', textColor.value)
         
       }
+    })
+    watch(() => props.scaleSystem, () => {
+      resetAxis();
     })
 
     const dynamicStyle = computed(() => {
@@ -103,7 +110,13 @@ export default defineComponent({
       return props.raga.getPitches({
         low: 2 ** logMin.value,
         high: 2 ** logMax.value
-      }).map(p => p.octavedSargamLetter);
+      }).map(p => {
+        if (props.scaleSystem === ScaleSystem.Sargam) return p.octavedSargamLetter
+        else if (props.scaleSystem === ScaleSystem.Solfege) return p.octavedSolfegeLetter
+        else if (props.scaleSystem === ScaleSystem.PitchClass) return p.octavedChroma
+        else if (props.scaleSystem === ScaleSystem.Cents) return p.a440CentsDeviation
+        else throw new Error('Invalid scale system');
+      });
     });
 
     const axis = ref(d3.axisLeft(props.scale)
@@ -180,6 +193,10 @@ export default defineComponent({
   height: var(--scaledHeight);
   background-color: #f0f0f0;
   overflow-y: hidden
+}
+
+.tick > text {
+  white-space: pre-line
 }
 </style>
 

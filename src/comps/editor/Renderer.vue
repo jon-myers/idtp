@@ -46,6 +46,7 @@
           :highOctOffset='highOctOffset'
           :lowOctOffset='lowOctOffset'
           :axisColor='axisColor'
+          :scaleSystem='scaleSystem'
           ref='yAxis'/>
       </div>
       <div class='verticalZoomControls'>
@@ -201,7 +202,12 @@ import {
   TransMetadataType,
   CollectionType
 } from '@/ts/types.ts';
-import { EditorMode, Instrument, PlayheadAnimations } from '@/ts/enums.ts';
+import { 
+  EditorMode, 
+  Instrument, 
+  PlayheadAnimations, 
+  ScaleSystem 
+} from '@/ts/enums.ts';
 import { BrowserInfo } from 'detect-browser';
 import ContextMenu from '@/comps/ContextMenu.vue';
 import EditInstrumentation from '@/comps/EditInstrumentation.vue';
@@ -396,6 +402,10 @@ export default defineComponent({
     },
     editableCols: {
       type: Object as PropType<CollectionType[]>,
+      required: true
+    },
+    scaleSystem: {
+      type: String as PropType<ScaleSystem>,
       required: true
     }
   },

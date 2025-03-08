@@ -495,8 +495,52 @@ class Pitch {
     return s
   }
 
+  get solfegeLetter() {
+    const solfege = [
+      'Do', 'Ra', 'Re', 'Me', 'Mi', 'Fa', 'Fi', 'Sol', 'Le', 'La', 'Te', 'Ti'
+    ]
+    let s = solfege[this.chroma as number];
+    return s
+  }
+
   get octavedSargamLetter() {
     let s = this.sargamLetter;
+    if (this.oct === -2) {
+      s = s + '\u0324'
+    } else if (this.oct === -1) {
+      s = s + '\u0323'
+    } else if (this.oct === 1) {
+      s = s + '\u0307'
+    } else if (this.oct === 2) {
+      s = s + '\u0308'
+    } else if (this.oct === -3) {
+      s = s + '\u20E8'
+    } else if (this.oct === 3) {
+      s = s + '\u20DB'
+    }
+    return s
+  }
+
+  get octavedSolfegeLetter() {
+    let s = this.solfegeLetter;
+    if (this.oct === -2) {
+      s = s + '\u0324'
+    } else if (this.oct === -1) {
+      s = s + '\u0323'
+    } else if (this.oct === 1) {
+      s = s + '\u0307'
+    } else if (this.oct === 2) {
+      s = s + '\u0308'
+    } else if (this.oct === -3) {
+      s = s + '\u20E8'
+    } else if (this.oct === 3) {
+      s = s + '\u20DB'
+    }
+    return s
+  }
+
+  get octavedChroma() {
+    let s = String(this.chroma)
     if (this.oct === -2) {
       s = s + '\u0324'
     } else if (this.oct === -1) {
@@ -533,7 +577,25 @@ class Pitch {
     } else {
       throw new SyntaxError(`invalid swara: ${this.swara}`)
     }
+  }
 
+  get a440CentsDeviation(): string {
+    const c0 = 16.3516;
+    const deviation = 1200 * Math.log2(this.frequency / c0);
+    const oct = Math.floor(deviation / 1200);
+    let pitchIdx = Math.round(deviation % 1200 / 100);
+    let cents = Math.round(deviation % 100);
+    let sign = '+';
+    if (cents > 50) {
+      cents = 100 - cents;
+      sign = '-';
+      pitchIdx += 1;
+      pitchIdx = pitchIdx % 12;
+    }
+    
+    let pitch = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G',
+      'G#', 'A', 'A#', 'B'][pitchIdx];
+    return `${pitch}${oct} (${sign}${cents}\u00A2)`
   }
 
   get chroma() {
