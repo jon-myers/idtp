@@ -1,6 +1,7 @@
 # Changelog
 
 
+* Feat: Implemented various scaleSystem settings for yAxis [20c6ded] (Jon Myers)
 * Fix: bug where incorrect sargam line was moving in response to tuning changes [564c1e2] (Jon Myers)
 ### 2025-03-07
 
