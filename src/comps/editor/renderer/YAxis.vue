@@ -113,6 +113,7 @@ export default defineComponent({
       }).map(p => {
         if (props.scaleSystem === ScaleSystem.Sargam) return p.octavedSargamLetter
         else if (props.scaleSystem === ScaleSystem.Solfege) return p.octavedSolfegeLetter
+        else if (props.scaleSystem === ScaleSystem.PitchClass) return p.octavedChroma
         else throw new Error('Invalid scale system');
       });
     });

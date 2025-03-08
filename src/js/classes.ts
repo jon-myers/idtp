@@ -539,6 +539,24 @@ class Pitch {
     return s
   }
 
+  get octavedChroma() {
+    let s = String(this.chroma)
+    if (this.oct === -2) {
+      s = s + '\u0324'
+    } else if (this.oct === -1) {
+      s = s + '\u0323'
+    } else if (this.oct === 1) {
+      s = s + '\u0307'
+    } else if (this.oct === 2) {
+      s = s + '\u0308'
+    } else if (this.oct === -3) {
+      s = s + '\u20E8'
+    } else if (this.oct === 3) {
+      s = s + '\u20DB'
+    }
+    return s
+  }
+
 
   get numberedPitch(): number { 
     // something like a midi pitch, but centered on 0 instead of 60
