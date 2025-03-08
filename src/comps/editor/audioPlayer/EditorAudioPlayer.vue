@@ -304,6 +304,7 @@
       :highlightTrajs='highlightTrajs'
       :zoomXFactor='zoomXFactor'
       :zoomYFactor='zoomYFactor'
+      :scaleSystem='scaleSystem'
       @specCanvas='handleSpecCanvas'
       @update:backgroundColor='$emit("update:backgroundColor", $event)'
       @update:axisColor='$emit("update:axisColor", $event)'
@@ -319,6 +320,7 @@
       @update:playheadAnimation='$emit("update:playheadAnimation", $event)'
       @update:highlightTrajs='$emit("update:highlightTrajs", $event)'
       @update:zoomFactors='$emit("update:zoomFactors", $event)'
+      @update:scaleSystem='$emit("update:scaleSystem", $event)'
       />
       <Synths
         :key='synthsKey'
@@ -386,7 +388,8 @@ import {
   EditorMode, 
   PlayheadAnimations,
   ControlsMode,
-  Instrument
+  Instrument,
+  ScaleSystem
  } from '@/ts/enums.ts';
 import { AudioWorklet } from '@/audio-worklet';
 import { excelData, jsonData } from '@/js/serverCalls.ts';
@@ -944,6 +947,10 @@ export default defineComponent({
     },
     zoomYFactor: {
       type: Number,
+      required: true
+    },
+    scaleSystem: {
+      type: String as PropType<ScaleSystem>,
       required: true
     },
   },

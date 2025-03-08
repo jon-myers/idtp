@@ -49,6 +49,13 @@ enum PlayheadAnimations {
   None = 'None',
 }
 
+enum ScaleSystem {
+  Sargam = 'Sargam',
+  Solfege = 'Solfege',
+  PitchClass = 'Pitch Class',
+  Chromatic = 'Chromatic',
+}
+
 
 
 export {
@@ -56,5 +63,6 @@ export {
   EditorMode,
   Instrument,
   ControlsMode,
-  PlayheadAnimations
+  PlayheadAnimations,
+  ScaleSystem,
 }

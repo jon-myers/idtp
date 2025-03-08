@@ -49,6 +49,7 @@
       :playheadAnimation='playheadAnimation'
       :queryTime='queryTime'
       :editableCols='editableCols'
+      :scaleSystem='scaleSystem'
       @zoomInY='zoomInY'
       @zoomOutY='zoomOutY'
       @zoomInX='zoomInX'
@@ -304,6 +305,7 @@
   :selectedMeter='selMeter'
   :zoomXFactor='zoomXFactor'
   :zoomYFactor='zoomYFactor'
+  :scaleSystem='scaleSystem'
   @resizeHeightEmit='resizeHeight'
   @currentTimeEmit='setCurrentTime'
   @updateSargamLinesEmit='updateSargamLines'
@@ -336,6 +338,7 @@
   @update:sonify='handleUpdateSonify'
   @scrollBackForPlayheadReturn='scrollBackForPlayhead'
   @update:zoomFactors='updateZoomFactors'
+  @update:scaleSystem='scaleSystem = $event'
   />
   <ContextMenu 
     :x='contextMenuX'
@@ -459,7 +462,13 @@ import {
   TooltipData,
   CollectionType,
 } from '@/ts/types';
-import { EditorMode, Instrument, ControlsMode, PlayheadAnimations } from '@/ts/enums';
+import { 
+  EditorMode, 
+  Instrument, 
+  ControlsMode, 
+  PlayheadAnimations,
+  ScaleSystem 
+} from '@/ts/enums';
 const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
 
 const getStarts = (durArray: number[]) => {
@@ -703,6 +712,7 @@ type EditorDataType = {
   showAddToCollection: boolean,
   editableCols: CollectionType[],
   showRemoveFromCollection: boolean,
+  scaleSystem: ScaleSystem,
 }
 
 export { findClosestStartTime }
@@ -868,6 +878,7 @@ export default defineComponent({
       showAddToCollection: false,
       editableCols: [],
       showRemoveFromCollection: false,
+      scaleSystem: ScaleSystem.Sargam,
     }
   },
   setup() {

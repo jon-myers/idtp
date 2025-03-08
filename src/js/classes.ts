@@ -495,8 +495,34 @@ class Pitch {
     return s
   }
 
+  get solfegeLetter() {
+    const solfege = [
+      'Do', 'Ra', 'Re', 'Me', 'Mi', 'Fa', 'Fi', 'Sol', 'Le', 'La', 'Te', 'Ti'
+    ]
+    let s = solfege[this.chroma as number];
+    return s
+  }
+
   get octavedSargamLetter() {
     let s = this.sargamLetter;
+    if (this.oct === -2) {
+      s = s + '\u0324'
+    } else if (this.oct === -1) {
+      s = s + '\u0323'
+    } else if (this.oct === 1) {
+      s = s + '\u0307'
+    } else if (this.oct === 2) {
+      s = s + '\u0308'
+    } else if (this.oct === -3) {
+      s = s + '\u20E8'
+    } else if (this.oct === 3) {
+      s = s + '\u20DB'
+    }
+    return s
+  }
+
+  get octavedSolfegeLetter() {
+    let s = this.solfegeLetter;
     if (this.oct === -2) {
       s = s + '\u0324'
     } else if (this.oct === -1) {

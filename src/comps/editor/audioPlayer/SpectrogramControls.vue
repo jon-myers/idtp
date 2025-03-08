@@ -225,6 +225,20 @@
         </div>
       </div>
     </div>
+    <div class='col'>
+      <div class='titleBox'>
+        <label>Scale System</label>
+      </div>
+      <div class='rowBox'>
+        <div class='row'>
+          <select v-model='scaleSystemProxy'>
+            <option v-for='system in possibleScaleSystems' :value='system'>
+              {{ system }}
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -243,7 +257,7 @@ import {
 } from 'vue';
 import { getWorker } from '@/ts/workers/workerManager.ts'
 import { CMap, InstrumentTrackType, DisplaySettings } from '@/ts/types.ts';
-import { PlayheadAnimations } from '@/ts/enums';
+import { PlayheadAnimations, ScaleSystem } from '@/ts/enums';
 import SwatchSelect from '@/comps/SwatchSelect.vue';
 import {
   Pitch, 
@@ -366,6 +380,10 @@ export default defineComponent({
     zoomYFactor: {
       type: Number,
       required: true
+    },
+    scaleSystem: {
+      type: String as PropType<ScaleSystem>,
+      required: true
     }
   },
   emits: [
@@ -385,6 +403,7 @@ export default defineComponent({
     'update:playheadAnimation',
     'update:highlightTrajs',
     'update:zoomFactors',
+    'update:scaleSystem',
   ],
   setup(props, { emit }) {
 
@@ -453,6 +472,7 @@ export default defineComponent({
     const displaySettingsTitle = ref('');
     const savedSettings = ref<DisplaySettings[]>([]);
     const selectedSetting = ref<DisplaySettings>(defaultSetting);
+    const possibleScaleSystems = Object.values(ScaleSystem);
 
     const playheadAnimations = Object.values(PlayheadAnimations);
 
@@ -472,6 +492,15 @@ export default defineComponent({
         emit('update:highlightTrajs', val);
       }
     });
+
+    const scaleSystemProxy = computed({
+      get() {
+        return props.scaleSystem;
+      },
+      set(val) {
+        emit('update:scaleSystem', val);
+      }
+    })
     const store = useStore();
 
     const pitchIsEqual = (p1: Pitch, p2: Pitch) => {
@@ -915,7 +944,9 @@ export default defineComponent({
       deleteSetting,
       playheadAnimations,
       playheadAnimationProxy,
-      highlightTrajsProxy
+      highlightTrajsProxy,
+      possibleScaleSystems,
+      scaleSystemProxy,
     }
   }
 })
