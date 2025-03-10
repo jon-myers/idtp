@@ -1,6 +1,10 @@
 # Changelog
 
 
+* feat: Visibility settings can now be saved via Display Settings [a8c5fcb] (Jon Myers)
+* feat: moved visibility controls away from upper right and into "imaging and color controls" [fce3f98] (Jon Myers)
+### 2025-03-10
+
 * Feat: Implemented various scaleSystem settings for yAxis [20c6ded] (Jon Myers)
 * Fix: bug where incorrect sargam line was moving in response to tuning changes [564c1e2] (Jon Myers)
 ### 2025-03-07
