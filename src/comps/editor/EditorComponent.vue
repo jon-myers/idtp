@@ -82,89 +82,6 @@
       />
     <div class='controlBox'>
       <div class='scrollingControlBox'>
-        <div class='cbRow visibilityToggle' @click='toggleVisibility'>
-          <span :style='{ transform: `rotate(${rotation}deg)` }'>▼</span>
-          <label>Visibility</label>
-        </div>
-        <div class='cbRow' v-if='visibilityTab && hasRecording'>
-          <label for='spectorgramToggle'>Spectrogram</label>
-          <input 
-            id='spectorgramToggle'
-            type='checkbox'
-            v-model='showSpectrogram'
-            @click='preventSpaceToggle'>
-        </div>
-        <div class='cbRow' v-if='visibilityTab && hasRecording'>
-          <label for='melographToggle'>Melograph</label>
-          <input
-            id="melographToggle" 
-            type='checkbox' 
-            v-model='melographVisible'
-            @change='toggleMelograph'
-            @click='preventSpaceToggle'>
-        </div>
-        <div class='cbRow' v-if='visibilityTab'>
-          <label for='sargamToggle'>Sargam</label>
-          <input 
-            id='sargamToggle'
-            type='checkbox' 
-            v-model='showSargam' 
-            @click='preventSpaceToggle'>
-        </div>
-        <div class='cbRow' v-if='visibilityTab'>
-          <label for='sargamLinesToggle'>Sargam Lines</label>
-          <input 
-            id='sargamLinesToggle'
-            type='checkbox' 
-            v-model='showSargamLines' 
-            @click='preventSpaceToggle'>
-        </div>
-        <div v-if='visibilityTab && hasSitar' class='cbRow' >
-          <label for='bolsToggle'>Bols</label>
-          <input 
-            id='bolsToggle'
-            type='checkbox' 
-            v-model='showBols' 
-            @click='preventSpaceToggle'>
-        </div>
-        <div v-if='visibilityTab' class='cbRow'>
-          <label for='transcriptionToggle'>Transcription</label>
-          <input 
-            id='transcriptionToggle'
-            type='checkbox' 
-            v-model='showMelody' 
-            @click='preventSpaceToggle'
-            @change='updateTranscriptionVisibility'>
-        </div>
-        <div v-if='visibilityTab' class='cbRow'>
-          <label for='meterToggle'>Meter</label>
-          <input 
-            id='meterToggle'
-            type='checkbox' 
-            v-model='showMeter' 
-            @click='preventSpaceToggle'
-            >
-        </div>
-        <div class='cbRow' v-if='visibilityTab && vocal'>
-          <label for='phonemesToggle'>Phonemes</label>
-          <input 
-            id='phonemesToggle'
-            type='checkbox' 
-            v-model='showPhonemes' 
-            @click='preventSpaceToggle'>
-        </div>
-        <div class='cbRow' v-if='visibilityTab'>
-          <label for='phraseDivsToggle'>Phrase Divs</label>
-          <input 
-            id='phraseDivsToggle'
-            type='checkbox' 
-            v-model='viewPhrases' 
-            @click='preventSpaceToggle'>
-        </div>
-        <div class='lineBreakParent' v-if='visibilityTab'>
-          <div class='lineBreak'>
-          </div>
-        </div>
         <div class='cbRow'>
           <label for='loop'>Loop</label>
           <input id='loop' type='checkbox' v-model='loop' @click='updateLoop'>
@@ -306,6 +223,17 @@
   :zoomXFactor='zoomXFactor'
   :zoomYFactor='zoomYFactor'
   :scaleSystem='scaleSystem'
+  :hasSitar='hasSitar'
+  :hasVocal='vocal'
+  :showSpectrogram='showSpectrogram'
+  :showMelograph='melographVisible'
+  :showSargam='showSargam'
+  :showSargamLines='showSargamLines'
+  :showBols='showBols'
+  :showTranscription='showMelody'
+  :showMeter='showMeter'
+  :showPhonemes='showPhonemes'
+  :showPhraseDivs='viewPhrases'
   @resizeHeightEmit='resizeHeight'
   @currentTimeEmit='setCurrentTime'
   @updateSargamLinesEmit='updateSargamLines'
@@ -339,6 +267,15 @@
   @scrollBackForPlayheadReturn='scrollBackForPlayhead'
   @update:zoomFactors='updateZoomFactors'
   @update:scaleSystem='scaleSystem = $event'
+  @update:showSpectrogram='showSpectrogram = $event'
+  @update:showMelograph='melographVisible = $event'
+  @update:showSargam='showSargam = $event'
+  @update:showSargamLines='showSargamLines = $event'
+  @update:showBols='showBols = $event'
+  @update:showTranscription='showMelody = $event'
+  @update:showMeter='showMeter = $event'
+  @update:showPhonemes='showPhonemes = $event'
+  @update:showPhraseDivs='viewPhrases = $event'
   />
   <ContextMenu 
     :x='contextMenuX'

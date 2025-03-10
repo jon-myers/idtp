@@ -305,6 +305,18 @@
       :zoomXFactor='zoomXFactor'
       :zoomYFactor='zoomYFactor'
       :scaleSystem='scaleSystem'
+      :hasSitar='hasSitar'
+      :hasVocal='hasVocal'
+      :hasRecording='hasRecording'
+      :showSpectrogram='showSpectrogram'
+      :showMelograph='showMelograph'
+      :showSargam='showSargam'
+      :showSargamLines='showSargamLines'
+      :showBols='showBols'
+      :showTranscription='showTranscription'
+      :showMeter='showMeter'
+      :showPhonemes='showPhonemes'
+      :showPhraseDivs='showPhraseDivs'
       @specCanvas='handleSpecCanvas'
       @update:backgroundColor='$emit("update:backgroundColor", $event)'
       @update:axisColor='$emit("update:axisColor", $event)'
@@ -321,6 +333,15 @@
       @update:highlightTrajs='$emit("update:highlightTrajs", $event)'
       @update:zoomFactors='$emit("update:zoomFactors", $event)'
       @update:scaleSystem='$emit("update:scaleSystem", $event)'
+      @update:showSpectrogram='$emit("update:showSpectrogram", $event)'
+      @update:showMelograph='$emit("update:showMelograph", $event)'
+      @update:showSargam='$emit("update:showSargam", $event)'
+      @update:showSargamLines='$emit("update:showSargamLines", $event)'
+      @update:showBols='$emit("update:showBols", $event)'
+      @update:showTranscription='$emit("update:showTranscription", $event)'
+      @update:showMeter='$emit("update:showMeter", $event)'
+      @update:showPhonemes='$emit("update:showPhonemes", $event)'
+      @update:showPhraseDivs='$emit("update:showPhraseDivs", $event)'
       />
       <Synths
         :key='synthsKey'
@@ -951,6 +972,50 @@ export default defineComponent({
     },
     scaleSystem: {
       type: String as PropType<ScaleSystem>,
+      required: true
+    },
+    hasSitar: {
+      type: Boolean,
+      required: true
+    },
+    hasVocal: {
+      type: Boolean,
+      required: true
+    },
+    showSpectrogram: {
+      type: Boolean,
+      required: true
+    },
+    showMelograph: {
+      type: Boolean,
+      required: true
+    },
+    showSargam: {
+      type: Boolean,
+      required: true
+    },
+    showSargamLines: {
+      type: Boolean,
+      required: true
+    },
+    showBols: {
+      type: Boolean,
+      required: true
+    },
+    showTranscription: {
+      type: Boolean,
+      required: true
+    },
+    showMeter: {
+      type: Boolean,
+      required: true
+    },
+    showPhonemes: {
+      type: Boolean,
+      required: true
+    },
+    showPhraseDivs: {
+      type: Boolean,
       required: true
     },
   },
