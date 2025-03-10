@@ -902,7 +902,18 @@ type DisplaySettings = {
   playheadAnimationStyle: PlayheadAnimations,
   highlightTrajs: boolean,
   uniqueId: string,
-  scaleSystem?: ScaleSystem
+  scaleSystem?: ScaleSystem,
+  visibility?: {
+    spectrogram: boolean,
+    melograph: boolean,
+    sargam: boolean,
+    sargamLines: boolean,
+    bols: boolean,
+    transcription: boolean,
+    meter: boolean,
+    phonemes: boolean,
+    phraseDivs: boolean,
+  }
 }
 
 interface LoopSourceNode extends AudioBufferSourceNode {

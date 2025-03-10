@@ -1004,6 +1004,17 @@ export default defineComponent({
           oct: minPitchObj.value.oct
         }
       };
+      const visibility = {
+        spectrogram: spectrogramToggleProxy.value,
+        melograph: melographToggleProxy.value,
+        sargam: sargamToggleProxy.value,
+        sargamLines: sargamLinesToggleProxy.value,
+        bols: bolsToggleProxy.value,
+        transcription: transcriptionToggleProxy.value,
+        meter: meterToggleProxy.value,
+        phonemes: phonemesToggleProxy.value,
+        phraseDivs: phraseDivsToggleProxy.value
+      }
       const uId = id ? id : uuidv4();
       return {
         title: displaySettingsTitle.value,
@@ -1016,7 +1027,8 @@ export default defineComponent({
         highlightTrajs: highlightTrajsProxy.value,
         zoomXFactor: props.zoomXFactor,
         zoomYFactor: props.zoomYFactor,
-        scaleSystem: scaleSystemProxy.value
+        scaleSystem: scaleSystemProxy.value,
+        visibility
       }
     };
     const resyncToServerSettings = async (selectedId?: string) => {
@@ -1076,6 +1088,17 @@ export default defineComponent({
       }
       if (s.scaleSystem !== undefined) {
         scaleSystemProxy.value = s.scaleSystem;
+      }
+      if (s.visibility !== undefined) {
+        spectrogramToggleProxy.value = s.visibility.spectrogram;
+        melographToggleProxy.value = s.visibility.melograph;
+        sargamToggleProxy.value = s.visibility.sargam;
+        sargamLinesToggleProxy.value = s.visibility.sargamLines;
+        bolsToggleProxy.value = s.visibility.bols;
+        transcriptionToggleProxy.value = s.visibility.transcription;
+        meterToggleProxy.value = s.visibility.meter;
+        phonemesToggleProxy.value = s.visibility.phonemes;
+        phraseDivsToggleProxy.value = s.visibility.phraseDivs;
       }
     };
 
