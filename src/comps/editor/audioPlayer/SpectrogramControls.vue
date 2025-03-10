@@ -82,6 +82,7 @@
         </div>
       </div>
     </div>
+
     <div class='col colors'>
       <div class='titleBox'>
         <label>Colors</label>
@@ -116,8 +117,98 @@
           <input type='color' v-model='selPlayheadColor'/>
         </div>
       </div>
-      
     </div>
+
+    <div class='col visibility'>
+      <div class='titleBox'>
+        <label>Visibility</label>
+      </div>
+      <div class='rowBox tall'>
+        <div class='row' v-if='hasRecording'>
+          <label for='spectrogramToggle'>Spectrogram</label>
+          <input 
+            id='spectrogramToggle' 
+            type='checkbox'
+            v-model='spectrogramToggleProxy'
+            @click='preventSpaceToggle'
+          />
+        </div>
+        <div class='row' v-if='hasRecording'>
+          <label for='melographToggle'>Melograph</label>
+          <input 
+            id='melographToggle' 
+            type='checkbox'
+            v-model='melographToggleProxy'
+            @click='preventSpaceToggle'
+          />
+        </div>
+        <div class='row'>
+          <label for='sargamToggle'>Sargam</label>
+          <input 
+            id='sargamToggle' 
+            type='checkbox'
+            v-model='sargamToggleProxy'
+            @click='preventSpaceToggle'
+          />
+        </div>
+        <div class='row'>
+          <label for='sargamLinesToggle'>Sargam Lines</label>
+          <input 
+            id='sargamLinesToggle' 
+            type='checkbox'
+            v-model='sargamLinesToggleProxy'
+            @click='preventSpaceToggle'
+          />
+        </div>
+        <div class='row' v-if='hasSitar'>
+          <label for='bolsToggle'>Bols</label>
+          <input 
+            id='bolsToggle' 
+            type='checkbox'
+            v-model='bolsToggleProxy'
+            @click='preventSpaceToggle'
+          />
+        </div>
+        <div class='row'>
+          <label for='transcriptionToggle'>Transcription</label>
+          <input
+            id='transcriptionToggle'
+            type='checkbox'
+            v-model='transcriptionToggleProxy'
+            @click='preventSpaceToggle'
+          />
+        </div>
+        <div class='row'>
+          <label for='meterToggle'>Meter</label>
+          <input 
+            id='meterToggle' 
+            type='checkbox'
+            v-model='meterToggleProxy'
+            @click='preventSpaceToggle'
+          />
+        </div>
+        <div class='row' v-if='hasVocal'>
+          <label for='phonemesToggle'>Phonemes</label>
+          <input 
+            id='phonemesToggle' 
+            type='checkbox'
+            v-model='phonemesToggleProxy'
+            @click='preventSpaceToggle'
+          />
+        </div>
+        <div class='row'>
+          <label for='phraseDivsToggle'>Phrase Divs</label>
+          <input 
+            id='phraseDivsToggle' 
+            type='checkbox'
+            v-model='phraseDivsToggleProxy'
+            @click='preventSpaceToggle'
+          />
+        </div>
+      </div>
+    </div>
+
+
     <div class='col'>
       <div class='titleBox'>
         <label>Tracks</label>
@@ -384,7 +475,55 @@ export default defineComponent({
     scaleSystem: {
       type: String as PropType<ScaleSystem>,
       required: true
-    }
+    },
+    hasSitar: {
+      type: Boolean,
+      required: true
+    },
+    hasVocal: {
+      type: Boolean,
+      required: true
+    },
+    hasRecording: {
+      type: Boolean,
+      required: true
+    },
+    showSpectrogram: {
+      type: Boolean,
+      required: true
+    },
+    showMelograph: {
+      type: Boolean,
+      required: true
+    },
+    showSargam: {
+      type: Boolean,
+      required: true
+    },
+    showSargamLines: {
+      type: Boolean,
+      required: true
+    },
+    showBols: {
+      type: Boolean,
+      required: true
+    },
+    showTranscription: {
+      type: Boolean,
+      required: true
+    },
+    showMeter: {
+      type: Boolean,
+      required: true
+    },
+    showPhonemes: {
+      type: Boolean,
+      required: true
+    },
+    showPhraseDivs: {
+      type: Boolean,
+      required: true
+    },
   },
   emits: [
     'update:backgroundColor',
@@ -404,6 +543,15 @@ export default defineComponent({
     'update:highlightTrajs',
     'update:zoomFactors',
     'update:scaleSystem',
+    'update:showSpectrogram',
+    'update:showMelograph',
+    'update:showSargam',
+    'update:showSargamLines',
+    'update:showBols',
+    'update:showTranscription',
+    'update:showMeter',
+    'update:showPhonemes',
+    'update:showPhraseDivs'
   ],
   setup(props, { emit }) {
 
@@ -476,6 +624,7 @@ export default defineComponent({
     const possibleScaleSystems = Object.values(ScaleSystem);
 
     const playheadAnimations = Object.values(PlayheadAnimations);
+    const store = useStore();
 
     const playheadAnimationProxy = computed({
       get() {
@@ -493,7 +642,6 @@ export default defineComponent({
         emit('update:highlightTrajs', val);
       }
     });
-
     const scaleSystemProxy = computed({
       get() {
         return props.scaleSystem;
@@ -502,7 +650,82 @@ export default defineComponent({
         emit('update:scaleSystem', val);
       }
     })
-    const store = useStore();
+    const spectrogramToggleProxy = computed({
+      get() {
+        return props.showSpectrogram;
+      },
+      set(val) {
+        emit('update:showSpectrogram', val);
+      }
+    })
+    const melographToggleProxy = computed({
+      get() {
+        return props.showMelograph;
+      },
+      set(val) {
+        emit('update:showMelograph', val);
+      }
+    })
+    const sargamToggleProxy = computed({
+      get() {
+        return props.showSargam;
+      },
+      set(val) {
+        emit('update:showSargam', val);
+      }
+    })
+    const sargamLinesToggleProxy = computed({
+      get() {
+        return props.showSargamLines;
+      },
+      set(val) {
+        emit('update:showSargamLines', val);
+      }
+    })
+    const bolsToggleProxy = computed({
+      get() {
+        return props.showBols;
+      },
+      set(val) {
+        emit('update:showBols', val);
+      }
+    })
+    const transcriptionToggleProxy = computed({
+      get() {
+        return props.showTranscription;
+      },
+      set(val) {
+        emit('update:showTranscription', val);
+      }
+    })
+    const meterToggleProxy = computed({
+      get() {
+        return props.showMeter;
+      },
+      set(val) {
+        emit('update:showMeter', val);
+      }
+    })
+    const phonemesToggleProxy = computed({
+      get() {
+        return props.showPhonemes;
+      },
+      set(val) {
+        emit('update:showPhonemes', val);
+      }
+    })
+    const phraseDivsToggleProxy = computed({
+      get() {
+        return props.showPhraseDivs;
+      },
+      set(val) {
+        emit('update:showPhraseDivs', val);
+      }
+    })
+
+
+
+    
 
     const pitchIsEqual = (p1: Pitch, p2: Pitch) => {
       const swara = p1.swara === p2.swara;
@@ -781,6 +1004,17 @@ export default defineComponent({
           oct: minPitchObj.value.oct
         }
       };
+      const visibility = {
+        spectrogram: spectrogramToggleProxy.value,
+        melograph: melographToggleProxy.value,
+        sargam: sargamToggleProxy.value,
+        sargamLines: sargamLinesToggleProxy.value,
+        bols: bolsToggleProxy.value,
+        transcription: transcriptionToggleProxy.value,
+        meter: meterToggleProxy.value,
+        phonemes: phonemesToggleProxy.value,
+        phraseDivs: phraseDivsToggleProxy.value
+      }
       const uId = id ? id : uuidv4();
       return {
         title: displaySettingsTitle.value,
@@ -793,7 +1027,8 @@ export default defineComponent({
         highlightTrajs: highlightTrajsProxy.value,
         zoomXFactor: props.zoomXFactor,
         zoomYFactor: props.zoomYFactor,
-        scaleSystem: scaleSystemProxy.value
+        scaleSystem: scaleSystemProxy.value,
+        visibility
       }
     };
     const resyncToServerSettings = async (selectedId?: string) => {
@@ -854,6 +1089,17 @@ export default defineComponent({
       if (s.scaleSystem !== undefined) {
         scaleSystemProxy.value = s.scaleSystem;
       }
+      if (s.visibility !== undefined) {
+        spectrogramToggleProxy.value = s.visibility.spectrogram;
+        melographToggleProxy.value = s.visibility.melograph;
+        sargamToggleProxy.value = s.visibility.sargam;
+        sargamLinesToggleProxy.value = s.visibility.sargamLines;
+        bolsToggleProxy.value = s.visibility.bols;
+        transcriptionToggleProxy.value = s.visibility.transcription;
+        meterToggleProxy.value = s.visibility.meter;
+        phonemesToggleProxy.value = s.visibility.phonemes;
+        phraseDivsToggleProxy.value = s.visibility.phraseDivs;
+      }
     };
 
     const setAsDefaultSetting = () => {
@@ -872,6 +1118,10 @@ export default defineComponent({
       } catch (e) {
         console.error(e);
       }
+    }
+
+    const preventSpaceToggle = (e: MouseEvent) => {
+      if (e && e.clientX === 0) e.preventDefault();
     }
 
 
@@ -951,6 +1201,16 @@ export default defineComponent({
       highlightTrajsProxy,
       possibleScaleSystems,
       scaleSystemProxy,
+      preventSpaceToggle,
+      spectrogramToggleProxy,
+      melographToggleProxy,
+      sargamToggleProxy,
+      sargamLinesToggleProxy,
+      bolsToggleProxy,
+      transcriptionToggleProxy,
+      meterToggleProxy,
+      phonemesToggleProxy,
+      phraseDivsToggleProxy
     }
   }
 })
@@ -1088,5 +1348,14 @@ select {
   min-height: 160px;
   overflow-y: scroll;
   overflow-x: hidden;
+}
+
+.visibility .row {
+  min-height: 22px;
+  justify-content: center;
+}
+
+.visibility .row > input {
+  margin-left: 10px;
 }
 </style>
